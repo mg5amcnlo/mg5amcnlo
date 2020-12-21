@@ -13,6 +13,8 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import subprocess
 import unittest
 import os
@@ -23,7 +25,7 @@ import logging
 import time
 import tempfile
 import math
-from __builtin__ import True
+
 
 logger = logging.getLogger('test_cmd')
 
@@ -91,7 +93,7 @@ class TestMECmdShell(unittest.TestCase):
 
         try:
             shutil.rmtree(self.run_dir)
-        except Exception, error:
+        except Exception as error:
             pass
         interface = MGCmd.MasterCmd()
         interface.no_notification()
@@ -111,22 +113,22 @@ class TestMECmdShell(unittest.TestCase):
             stderr=devnull
 
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            print "install pythia-pgs"
+            print("install pythia-pgs")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
-            print "install MadAnalysis"
+            print("install MadAnalysis")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install MadAnalysis4')
+            out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
         if not misc.which('root'):
-            raise Exception, 'root is require for this test'
+            raise Exception('root is require for this test')
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
@@ -160,6 +162,16 @@ class TestMECmdShell(unittest.TestCase):
         if not self.debugging or not os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
             self.generate('d d~ > u u~', 'sm')
             run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            # Some test checking that some cut are absent/present by default
+            self.assertTrue('ptj' in run_card.user_set)
+            self.assertTrue('drjj' in run_card.user_set)
+            self.assertTrue('ptj2min' in run_card.user_set)
+            self.assertFalse('ptj3min' in run_card.user_set)
+            self.assertTrue('mmjj'  in run_card.user_set)
+            self.assertFalse('ptheavy'  in run_card.user_set)
+            self.assertFalse('Ej'  in run_card.user_set)
+            
+            
             run_card.set('bias_module','ptj_bias',user=True)
             run_card.set('bias_parameters',"{'ptj_bias_target_ptj': 1000.0,'ptj_bias_enhancement_power': 4.0}",user=True)
             run_card.set('use_syst',False)
@@ -216,6 +228,18 @@ class TestMECmdShell(unittest.TestCase):
         ff.write(orig_card)
         ff.close()
         
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertFalse('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertTrue('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertFalse('polbeam1'  in run_card.user_set)
+        self.assertFalse('ptl' in run_card.user_set)
+        
         #reduce the number of events
         files.cp(pjoin(_file_path, 'input_files', 'run_card_matching.dat'),
                  pjoin(self.out_dir, 'Cards/run_card.dat'))
@@ -251,6 +275,16 @@ class TestMECmdShell(unittest.TestCase):
         # check that the run_card do not have cut
         run_card = banner.RunCard(pjoin(self.run_dir,'Cards','run_card.dat'))
         self.assertEqual(run_card['ptj'], 0)
+        self.assertTrue('ptj' in run_card.user_set)
+        self.assertTrue('drjj' in run_card.user_set)
+        self.assertTrue('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertTrue('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertFalse('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
         
         self.do('calculate_decay_widths -f')        
         
@@ -367,9 +401,9 @@ class TestMECmdShell(unittest.TestCase):
         
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
         
-        self.check_parton_output(syst=True)
+        self.check_parton_output(syst=False)
         self.check_parton_output('run_02', target_event=44, syst=False)
-        self.check_pythia_output(syst=True)        
+        self.check_pythia_output(syst=False)        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
         self.assertNotEqual(f1.split('\n'), f2.split('\n'))
@@ -429,6 +463,20 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.no_notification()
         self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertTrue('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertFalse('el'  in run_card.user_set)
+        self.assertFalse('ej'  in run_card.user_set)
+        self.assertTrue('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
+        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir) 
         
@@ -473,6 +521,7 @@ class TestMECmdShell(unittest.TestCase):
         target = 440.779
         self.assertTrue(misc.equal(target, val1, 4*err1))                
         
+
         # run madspin
         fsock = open(pjoin(self.run_dir, 'Cards', 'madspin_card.dat'),'w')
         fsock.write('decay t > w+ b \n launch')
@@ -569,6 +618,19 @@ class TestMECmdShell(unittest.TestCase):
         mg_cmd.exec_cmd('output %s/' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.no_notification()
+        
+        # couple of test checking that default run_card is as expected
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+        self.assertFalse('ptj' in run_card.user_set)
+        self.assertFalse('drjj' in run_card.user_set)
+        self.assertFalse('ptj2min' in run_card.user_set)
+        self.assertFalse('ptj3min' in run_card.user_set)
+        self.assertFalse('mmjj'  in run_card.user_set)
+        self.assertFalse('ptheavy'  in run_card.user_set)
+        self.assertTrue('el'  in run_card.user_set)
+        self.assertTrue('polbeam1'  in run_card.user_set)
+        self.assertTrue('ptl' in run_card.user_set)
+        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         
@@ -672,12 +734,12 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """import model sm
@@ -748,7 +810,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
@@ -814,7 +876,7 @@ class TestMEfromfile(unittest.TestCase):
         cwd = os.getcwd()
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -829,7 +891,7 @@ class TestMEfromfile(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs')
+            out = p.communicate('install pythia-pgs'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
@@ -919,7 +981,7 @@ class TestMEfromfile(unittest.TestCase):
         
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = MGCmd.MasterCmd()
@@ -951,7 +1013,7 @@ class TestMEfromPdirectory(unittest.TestCase):
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
         
         interface = MGCmd.MasterCmd()

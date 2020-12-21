@@ -37,6 +37,7 @@ c
         LOGICAL GOODHEL(NCOMB,2)
 	INTEGER NTRY(2)
         common/BLOCK_GOODHEL/NTRY,GOODHEL
+
 C  
 C LOCAL VARIABLES 
 C  
@@ -51,7 +52,12 @@ C
         INTEGER JHEL(2), J, JJ
         INTEGER THIS_NTRY(2)
         SAVE THIS_NTRY
-        DATA THIS_NTRY /0,0/
+	INTEGER NB_FAIL
+	SAVE NB_FAIL
+	DATA THIS_NTRY /0,0/
+	DATA NB_FAIL /0/
+	
+c
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
 C  
@@ -62,12 +68,18 @@ C
    
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
+
+    INTEGER NB_SPIN_STATE_in(2)
+    common /nb_hel_state/ nb_spin_state_in
     
     INTEGER IMIRROR
     COMMON/TO_MIRROR/ IMIRROR
  
     REAL*8 POL(2)
     COMMON/TO_POLARIZATION/ POL
+
+	double precision small_width_treatment
+	common/narrow_width/small_width_treatment
     
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
@@ -87,6 +99,7 @@ C  To be able to control when the matrix<i> subroutine can add entries to the gr
 C ----------
 C BEGIN CODE
 C ----------
+
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
     THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1 
     DO I=1,NEXTERNAL
@@ -116,9 +129,9 @@ C ----------
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                  T=T*ABS(POL(JJ))
+                  T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
                ELSE IF(POL(JJ).NE.1d0)THEN
-                  T=T*(2d0-ABS(POL(JJ)))
+                  T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE_IN(JJ)/2d0
                ENDIF
             ENDDO
 			IF (ISUM_HEL.NE.0.and.DS_get_dim_status('Helicity').eq.0.and.ALLOW_HELICITY_GRID_ENTRIES) then
@@ -202,8 +215,13 @@ c         Set right sign for ANS, based on sign of chosen helicity
         IF (XTOT.NE.0D0) THEN
 %(set_amp2_line)s
         ELSE IF(ANS.ne.0d0) THEN
+	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
+			
 	        stop 1
+            else
+	    nb_fail = nb_fail +1
+	    endif
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
@@ -255,6 +273,11 @@ C
 C   Needed for v4 models
     COMPLEX*16 DUM0,DUM1
     DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+
+	%(fake_width_declaration)s
+	logical first
+	data first /.true./
+	save first
 C
 C FUNCTION
 C
@@ -265,6 +288,9 @@ C
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
+
+	double precision small_width_treatment
+	common/narrow_width/small_width_treatment
 C  
 C COLOR DATA
 C  
@@ -272,6 +298,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+if (first) then
+	first=.false.
+	%(fake_width_definitions)s
+endif
+
+
 %(helas_calls)s
 %(jamp_lines)s
 

@@ -15,6 +15,7 @@
 """Unit test Library for the objects in decay module."""
 from __future__ import division
 
+from __future__ import absolute_import
 import math
 import copy
 import os
@@ -31,6 +32,8 @@ import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+from six.moves import range
+from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -115,12 +118,9 @@ class TestDiagramSymmetry(unittest.TestCase):
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                 subproc_group)
 
-        self.assertEqual(len([s for s in symmetry if s > 0]), 23)
+        self.assertEqual(len([s for s in symmetry if s > 0]), 19)
 
-        self.assertEqual(symmetry,
-                         [1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                          1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13,
-                          -14, -15, -16, -17, -21, -22, -23])
+        self.assertEqual(symmetry,[1, 1, 1, 1, -2, -3, -4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -8, -9, -10, -11, -12, -13, -14, -18, -19])
 
         return
 
@@ -209,7 +209,7 @@ class TestDiagramSymmetry(unittest.TestCase):
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                 subproc_group)
         
-        sol_perms = [range(8), range(8), [0,1,5,6,7,2,3,4]]  
+        sol_perms = [list(range(8)), list(range(8)), [0,1,5,6,7,2,3,4]]  
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 2)
         self.assertEqual(symmetry, [1, 1, -2])

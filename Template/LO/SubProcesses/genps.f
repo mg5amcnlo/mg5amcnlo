@@ -185,7 +185,8 @@ c
 c     External function
       double precision SumDot
       external SumDot
-
+      logical dummy_boostframe
+      external dummy_boostframe
 c
 c     data
 c
@@ -304,8 +305,12 @@ c
 c     First Generate Momentum for initial state particles
 c
       if (lpp(1).eq.9.or.lpp(2).eq.9)then
-         p(:,1) = pi1(:)
-         p(:,2) = pi2(:)
+         if (dummy_boostframe())then
+            call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
+         else
+            p(:,1) = pi1(:)
+            p(:,2) = pi2(:)
+         endif
       else if(nincoming.eq.2) then
         call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
       else
@@ -567,6 +572,8 @@ c        Set stot
             if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (abs(lpp(1)) .eq. 4) m1 = 0.105658d0
+            if (abs(lpp(2)) .eq. 4) m2 = 0.105658d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
             if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
@@ -661,7 +668,8 @@ c
 c      data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
-      double precision ma2,mb2,m12,mn2,s1
+      double precision ma2,mb2,m12,mn2,s1, mi2
+      double precision tmass(-max_branch:-1)
 c
 c     External
 c
@@ -840,7 +848,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
-         call yminmax(s1,t,m12,ma2,mb2,mn2,tmin,tmax)
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
 c
 c     Call for 0<x<1
 c
@@ -859,7 +867,7 @@ c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0, -tmin/stot)
+     $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
 
       else
@@ -888,7 +896,14 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi,
+
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi, mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
@@ -997,7 +1012,7 @@ c-----
       endif
       end
 
-      subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
+      subroutine gentcms(pa,pb,t,phi,ma2,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
 c     given the values t, and phi
@@ -1033,7 +1048,6 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-      ma2 = dot(pa,pa)
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c
@@ -1114,6 +1128,7 @@ C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 91 eqs 5.28
 C     It is used to determine physical limits for Y based on inputs
+C     Y is not used in this formula (called with dummy value)
 C**************************************************************************
       implicit none
 c
@@ -1257,6 +1272,48 @@ c      eta = 0d0
 
       END
       
+
+C     -----------------------------------------
+C     Subroutine to return momenta in a dedicated frame
+C     frame_id is the tag of the particle to put at rest
+C     frame_id follow the convention of cluster.f (sum 2**(N-1))
+C     -----------------------------------------
+
+      subroutine boost_to_frame(P1, frame_id, P2)
+
+      implicit none
+
+      include 'nexternal.inc'
+
+      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      DOUBLE PRECISION P2(0:3,NEXTERNAL)
+      DOUBLE PRECISION PBOOST(0:3)
+      integer frame_id
+
+      integer ids(nexternal)
+      integer i,j
+
+c     uncompress
+      call mapid(frame_id, ids)
+      pboost(:) = 0d0
+      p2(:,:) = 0d0
+c     find the boost momenta --sum of particles--
+      do i=1,nexternal
+       if (ids(i).eq.1)then
+            do j=0,3
+	           Pboost(j) = Pboost(j) + P1(j,i)
+            enddo
+         endif
+      enddo
+      do j=1,3	
+          Pboost(j) = -1 * Pboost(j)
+      enddo	    
+      do i=1, nexternal
+         call boostx(p1(0,i), pboost, p2(0,i))
+      enddo   
+      return
+      end
+
 
 
 

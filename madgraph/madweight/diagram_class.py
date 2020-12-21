@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import logging
 import os
 import stat
 import re
+import six
+from six.moves import range
 
 logger = logging.getLogger('madweight.diagram_class')
 
@@ -208,7 +212,7 @@ class MG_diagram(diagram):
                 logger.info('particle with pdg %s has no transfer function define: Treated as missing energy' % part.pid)
                 label = None
             if not part.neutrino:
-                if dico_type_to_tflevel.has_key(label):
+                if label in dico_type_to_tflevel:
                     part.tf_level=dico_type_to_tflevel[label]
                 else:
                     part.tf_level=0  #delta is the default            
@@ -286,7 +290,7 @@ class MG_diagram(diagram):
 
     def define_twin(self): #This routine is not used any more#
         """ not use anymore: define the twin for all particle in the diagram """
-        print 'WARNING: MG_diagram.define_twin() is an old routine. This routine has not been updated since 1/2/08'
+        print('WARNING: MG_diagram.define_twin() is an old routine. This routine has not been updated since 1/2/08')
         #but perhaps no update are needed
         for particle in self.content.values():
             particle.def_twin()
@@ -358,7 +362,7 @@ class MG_diagram(diagram):
                 if out:
                     return out
             #no config found
-            print "no config found"
+            print("no config found")
             return 0
         
         #step 2:
@@ -389,7 +393,7 @@ class MG_diagram(diagram):
                 if i==len(order_particle)-1: #all suceed
                     return order_particle    #return succeed info
 
-        print 'error 392'
+        print('error 392')
         return 0
 
 
@@ -434,7 +438,7 @@ class MG_diagram(diagram):
                     value=abs(value/ambiguous_area[i].width)
                 else:
                     value=1e500
-                if not deviation.has_key(value):
+                if value not in deviation:
                     deviation[value]=[ambiguous_area[i]]
                 else:
                     deviation[value].append(ambiguous_area[i])
@@ -561,7 +565,7 @@ class MG_diagram(diagram):
                     solution+=ECS_equi_list
 
         if not at_least_one_sol:
-            print self
+            print(self)
             sys.exit('FATAL ERROR: NO CHANGE OF VARIABLE\n\
                       you probably put bad option in your card')
 
@@ -789,7 +793,7 @@ class Option:
 
     def __init__(self,info='default'):
        "initialize option"
-       if isinstance(info, basestring) and info!='default':
+       if isinstance(info, six.string_types) and info!='default':
             info=MW_param.read_card(info)
        # DEFAULT VALUE:
        self.ecs_fuse=1
@@ -866,7 +870,7 @@ if(__name__=="__main__"):
         diag=MG_diagram('./SubProcesses/MW_P_mu+mu-_mu+mu-e+e-/','param_card.dat','./Source/transfer_function/ordering_file.inc',i)
         diag.define_Constraint_sector()
         diag.solve_blob_sector()
-        print diag
+        print(diag)
 
             
 

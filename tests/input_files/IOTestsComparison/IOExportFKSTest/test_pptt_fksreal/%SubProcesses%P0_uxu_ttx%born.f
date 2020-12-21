@@ -11,10 +11,10 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -134,8 +134,8 @@ C          different coupling combinations
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX_B(J, I)
           ENDDO
-          IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY) AMP_SPLIT(ORDERS_TO_AMP_SPL
-     $IT_POS(AMP_ORDERS)) = ANS(1,I)
+          IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY)
+     $      AMP_SPLIT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) = ANS(1,I)
         ENDIF
       ENDDO
 C     this is to avoid fake non-zero contributions 
@@ -172,10 +172,12 @@ C             will be multiplied by the corresponding squared coupling
               IF (K.EQ.J) AMP_ORDERS(K) = AMP_ORDERS(K) + 2
             ENDDO
 C           this is to avoid fake non-zero contributions 
-            IF (ABS(ANS(1,I)).GT.MAX_VAL*TINY) AMP_SPLIT_CNT(ORDERS_TO_
-     $AMP_SPLIT_POS(AMP_ORDERS),1,J) = ANS(1,I)
-            IF (ABS(ANS(2,I)).GT.MAX_VAL*TINY) AMP_SPLIT_CNT(ORDERS_TO_
-     $AMP_SPLIT_POS(AMP_ORDERS),2,J) = ANS(2,I)
+            IF (ABS(ANS(1,I)).GT.MAX_VAL*TINY)
+     $        AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1,J) =
+     $        ANS(1,I)
+            IF (ABS(ANS(2,I)).GT.MAX_VAL*TINY)
+     $        AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),2,J) =
+     $        ANS(2,I)
           ENDIF
         ENDDO
 C       this is to avoid fake non-zero contributions 
@@ -199,10 +201,10 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -369,10 +371,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: u~ u > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c~ c > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -602,8 +604,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSPLITORDERS
-        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDER
-     $B,I)
+        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)
+     $   +AMPSPLITORDERS(AMPORDERB,I)
       ENDDO
       SQSOINDEXB=SQSOINDEXB_FROM_ORDERS(SQORDERS)
       END

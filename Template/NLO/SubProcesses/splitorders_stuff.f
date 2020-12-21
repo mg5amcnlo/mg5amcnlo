@@ -33,15 +33,53 @@ C array an integer number
       integer i,j
       integer base, step
       parameter(base=100)
+      ! this is for the printout of the informations
+      logical firsttime, firsttime_contr(amp_split_size)
+      data firsttime/.true./
+      data firsttime_contr/amp_split_size * .true./
+      integer orders_to_amp_split_pos
+
+      ! print out some extra informations
+      if (firsttime) write(*,fmt='(a)',advance="NO") 
+     $    "INFO: orders_tag_plot is computed as:"
 
       get_orders_tag=0
       step=1
       do i =1, nsplitorders
+        if (firsttime) write(*,fmt='(3a,i8)',advance="NO") 
+     $      "         + ", ordernames(i), " * ", step
         get_orders_tag=get_orders_tag+step*ord(i)
         step=step*100
       enddo
+      if (firsttime) then
+        write(*,*)
+        firsttime=.false.
+      endif
+
+      if (firsttime_contr(orders_to_amp_split_pos(ord))) then
+        write(*,*) 'orders_tag_plot= ', get_orders_tag, ' for ',
+     #     (ordernames(i),",",i=1,nsplitorders), ' = ',
+     #     (ord(i),",",i=1,nsplitorders)
+        firsttime_contr(orders_to_amp_split_pos(ord)) = .false.
+      endif
 
       return 
+      end
+
+
+      integer function get_orders_tag_from_amp_pos(iamp)
+C     calls get_orders_tag for the orders corresponding to 
+C     the iamp-th amp_split
+      implicit none
+      integer iamp
+      include 'orders.inc'
+      integer ord(nsplitorders)
+      integer get_orders_tag
+
+      call amp_split_pos_to_orders(iamp, ord)
+      get_orders_tag_from_amp_pos = get_orders_tag(ord)
+
+      return
       end
       
       
@@ -127,6 +165,7 @@ C sanity check
       subroutine check_amp_split()
 C check that amp_split_pos_to_orders and orders_to_amp_split_pos behave
 C as expected (one the inverse of the other)
+C Check also get_orders_tag vs get_orders_tag_from_amp_pos
 C Stop the code if anything wrong is found
 C Also, print on screen a summary of the orders in amp_split 
       implicit none
@@ -134,19 +173,30 @@ C Also, print on screen a summary of the orders in amp_split
       integer orders_to_amp_split_pos
       integer i, pos
       integer ord(nsplitorders)
+      integer get_orders_tag, get_orders_tag_from_amp_pos
 
       do i = 1, amp_split_size
         call amp_split_pos_to_orders(i, ord)
         pos = orders_to_amp_split_pos(ord)
+
         if (pos.ne.i) then
-          write(*,*) 'ERROR in check amp_split', pos, i 
+          write(*,*) 'ERROR#1 in check amp_split', pos, i 
           write(*,*) 'ORD is ', ord
           stop 1
         endif
+
+        if (get_orders_tag(ord).ne.get_orders_tag_from_amp_pos(i)) then
+          write(*,*) 'ERROR#2 in check amp_split', get_orders_tag(ord), 
+     $    get_orders_tag_from_amp_pos(i) 
+          write(*,*) 'I, ORD ', i, ord
+          stop 1
+        endif
+
         write(*,*) 'AMP_SPLIT: ', i, 'correspond to S.O.', ord
       enddo
 
       return
       end
 
-      
+
+

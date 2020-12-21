@@ -4,13 +4,15 @@ import lorentz
 import parameters
 import vertices
 import coupling_orders
-import write_param_card
+import function_library
+import object_library
+#from . import write_param_card
 try:
     import decays
 except ImportError:
     pass    
 try:
-    import build_restrict
+    from . import build_restrict
 except ImportError:
     pass
 

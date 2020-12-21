@@ -15,6 +15,7 @@
 
 """Methods and classes to export matrix elements to Python format."""
 
+from __future__ import absolute_import
 import fractions
 import glob
 import itertools
@@ -81,8 +82,7 @@ class ProcessExporterPython(object):
         self.helas_call_writer = python_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.PythonUFOHelasCallWriter):
-            raise Exception, \
-                "helas_call_writer not PythonUFOHelasCallWriter"
+            raise Exception("helas_call_writer not PythonUFOHelasCallWriter")
 
         self.matrix_methods = {}
 
@@ -327,7 +327,7 @@ class ProcessExporterPython(object):
 
         info = misc.get_pkg_info()
         info_lines = ""
-        if info and info.has_key('version') and  info.has_key('date'):
+        if info and 'version' in info and  'date' in info:
             info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
@@ -378,10 +378,10 @@ class ProcessExporterPython(object):
         
         return "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
-                         % {"param": param} for param in parameters]) + \
+                         % {"param": param} for param in sorted(parameters)]) + \
                "\n        " + "\n        ".join([\
                          "%(coup)s = model.get(\'coupling_dict\')[\"%(coup)s\"]"\
-                              % {"coup": coup} for coup in couplings])
+                              % {"coup": coup} for coup in sorted(couplings)])
 
 #===============================================================================
 # Global helper methods

@@ -99,12 +99,14 @@ C     dressed leptons
 
 
       ipart=ipdg
-      if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22) ipart=7
-      iporg=ipart
-
+      if(iabs(ipart).eq.21) then
+         ipart=0
+      else if(iabs(ipart).eq.22) then
+         ipart=7
+      else if(iabs(ipart).eq.7) then
+         ipart=7
+      else if(iabs(ipart).gt.7)then
 c     This will be called for any PDG code, but we only support up to 7
-      if(iabs(ipart).gt.7)then
 C         write(*,*) 'PDF not supported for pdg ',ipdg
 C         write(*,*) 'For lepton colliders, please set the lpp* '//
 C     $    'variables to 0 in the run_card'  
@@ -115,6 +117,7 @@ C         stop 1
          return
       endif
 
+      iporg=ipart
       ireuse = 0
       ii=i_replace
       do i=1,20

@@ -3,6 +3,8 @@ c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
+      use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -11,16 +13,13 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      INTEGER    ITMAX,   NCALL
-
-      common/citmax/itmax,ncall
       integer ncall_virt,ncall_novi
       character*4 abrv
       common /to_abrv/ abrv
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,ndim,nevts
+      integer i,j,k,l,l1,l2,nndim,nevts
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -30,10 +29,9 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
-      include "mint.inc"
       
 c Vegas stuff
-      common/tosigint/ndim
+      common/tosigint/nndim
 
       real*8 sigintF
       external sigintF
@@ -47,34 +45,17 @@ c Vegas stuff
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual(0:n_ave_virt,maxchannels)
-     $     ,virtual_fraction(maxchannels)
-      common/c_avg_virt/average_virtual,virtual_fraction
       include 'orders.inc'
-      integer              n_ord_virt
-      common /c_n_ord_virt/n_ord_virt
 
       double precision weight,event_weight,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
-c For MINT:
-      real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
-     $     ,ndimmax,maxchannels),ymax_virt(0:maxchannels),ans(nintegrals
-     $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
-     $     ,0:maxchannels),x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
-      integer ifold(ndimmax) 
-      common /cifold/ifold
-      integer ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      integer ixi_i,iphi_i,iy_ij,vn
       logical putonshell
-      logical only_virt
-      integer imode
-      common /c_imode/imode,only_virt
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision ran2
+      double precision ran2,x(ndimmax)
       external ran2
       
       integer ifile,ievents
@@ -94,11 +75,6 @@ c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
 
-c general MadFKS parameters
-      include "FKSParams.inc"
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
-
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
       integer ntot_granny,derntot,ncase(0:6)
@@ -110,6 +86,9 @@ c general MadFKS parameters
 C-----
 C  BEGIN CODE
 C-----  
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
@@ -122,6 +101,7 @@ C-----
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      min_virt_fraction_mint=min_virt_fraction
       do i=0,n_ave_virt
          average_virtual(i,1)=0d0
       enddo
@@ -154,15 +134,16 @@ c
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       call initcluster
+      call check_amp_split 
 c     
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,imode,
+      call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
-         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
       else
          doreweight=.false.
          do_rwgt_scale=.false.
@@ -182,6 +163,7 @@ c Only do the reweighting when actually generating the events
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      nndim=ndim
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -192,146 +174,46 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
+      write(*,*) "about to integrate ", ndim,ncalls0,itmax,iconfig
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
+c     Prepare the MINT folding
+      do j=1,ndimmax
+         if (j.le.ndim) then
+            ifold(j)=1
+         else
+            ifold(j)=0
+         endif
+      enddo
+      ifold_energy=ndim-2
+      ifold_yij=ndim-1
+      ifold_phi=ndim
+      ifold(ifold_energy)=ixi_i
+      ifold(ifold_phi)=iphi_i
+      ifold(ifold_yij)=iy_ij
 
 c*************************************************************
 c     setting of the grids
 c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
-         if(imode.eq.0)then
-c initialize grids
-            do j=0,nintervals
-               do i=1,ndimmax
-                  xgrid(j,i,1)=0.d0
-               enddo
-            enddo
-         else
-c to restore grids:
-            open (unit=12, file='mint_grids',status='old')
-            do j=0,nintervals
-               read (12,*) (xgrid(j,i,1),i=1,ndim)
-            enddo
-            do j=1,nintervals_virt
-               do k=0,n_ord_virt
-                  read (12,*) (ave_virt(j,i,k,1),i=1,ndim)
-               enddo
-            enddo
-            read (12,*) (ans(i,1),i=1,nintegrals)
-            read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virtual_fraction(1),average_virtual(0,1)
-            close (12)
-         endif
-c
          write (*,*) 'imode is ',imode
-         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2,nhits_in_grids)
+         call mint(sigintF)
          call deallocate_weight_lines
-         open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
-         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         close(58)
-         write(*,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
-         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
          close(58)
-c
-c to save grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         do j=0,nintervals
-            write (12,*) (xgrid(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            do k=0,n_ord_virt
-               write (12,*) (ave_virt(j,i,k,1),i=1,ndim)
-            enddo
-         enddo
-         write (12,*) (ans(i,1),i=1,nintegrals)
-         write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virtual_fraction(1),average_virtual(0,1)
-         close (12)
-
 c*************************************************************
 c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
-c to restore grids:
-         open (unit=12, file='mint_grids',status='old')
-         do j=0,nintervals
-            read (12,*) (xgrid(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            do k=0,n_ord_virt
-               read (12,*) (ave_virt(j,i,k,1),i=1,ndim)
-            enddo
-         enddo
-         read (12,*) (ans(i,1),i=1,nintegrals)
-         read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virtual_fraction(1),average_virtual(0,1)
-         close (12)
-
-c Prepare the MINT folding
-         do j=1,ndimmax
-            if (j.le.ndim) then
-               ifold(j)=1
-            else
-               ifold(j)=0
-            endif
-         enddo
-         ifold(ifold_energy)=ixi_i
-         ifold(ifold_phi)=iphi_i
-         ifold(ifold_yij)=iy_ij
-         
          write (*,*) 'imode is ',imode
-         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2,nhits_in_grids)
+         call mint(sigintF)
          call deallocate_weight_lines
-         
-c If integrating the virtuals alone, we include the virtuals in
-c ans(1). Therefore, no need to have them in ans(5) and we have to set
-c them to zero.
-         if (only_virt) then
-            ans(3,1)=0d0 ! virtual Xsec
-            ans(5,1)=0d0 ! ABS virtual Xsec
-         endif
-
-         open(unit=58,file='res_1',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
-     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
-         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         close(58)
-         write(*,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
-     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
-         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
-c write the results.dat file 
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*)ans(1,1)+ans(5,1), unc(2,1), 0d0, 0, 0, 0, 0, 0d0 ,0d0, ans(2,1) 
+         write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
+     $        ,ans(2,1) 
          close(58)
-
-c to save grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         write (12,*) (xgrid(0,i,1),i=1,ndim)
-         do j=1,nintervals
-            write (12,*) (xgrid(j,i,1),i=1,ndim)
-            write (12,*) (ymax(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            do k=0,n_ord_virt
-               write (12,*) (ave_virt(j,i,k,1),i=1,ndim)
-            enddo
-         enddo
-         write (12,*) ymax_virt(1)
-         write (12,*) (ifold(i),i=1,ndim)
-         write (12,*) (ans(i,1),i=1,nintegrals)
-         write (12,*) (unc(i,1),i=1,nintegrals)
-         write (12,*) virtual_fraction(1),average_virtual(0,1)
-         close (12)
-
 c*************************************************************
 c     event generation
 c*************************************************************
@@ -354,30 +236,15 @@ c Mass-shell stuff. This is MC-dependent
      &           'No events needed for this channel...skipping it'
             stop
          endif
-         ncall=nevts ! Update ncall with the number found in 'nevts'
+         ncalls0=nevts ! Update ncall with the number found in 'nevts'
 
-c to restore grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         read (12,*) (xgrid(0,i,1),i=1,ndim)
-         do j=1,nintervals
-            read (12,*) (xgrid(j,i,1),i=1,ndim)
-            read (12,*) (ymax(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            do k=0,n_ord_virt
-               read (12,*) (ave_virt(j,i,k,1),i=1,ndim)
-            enddo
-         enddo
-         read (12,*) ymax_virt(1)
-         read (12,*) (ifold(i),i=1,ndim)
-         read (12,*) (ans(i,1),i=1,nintegrals)
-         read (12,*) (unc(i,1),i=1,nintegrals)
-         read (12,*) virtual_fraction(1),average_virtual(0,1)
-         close (12)
+c     to restore grids:
+
+         call read_grids_from_file
 
 c determine how many events for the virtual and how many for the no-virt
-         ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncall)
-         ncall_novi=ncall-ncall_virt
+         ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncalls0)
+         ncall_novi=ncalls0-ncall_virt
 
          write (*,*) "Generating virt :: novi approx.",ncall_virt
      $        ,ncall_novi
@@ -386,13 +253,13 @@ c determine how many events for the virtual and how many for the no-virt
 
 c fill the information for the write_header_init common block
          ifile=lunlhe
-         ievents=ncall
+         ievents=ncalls0
          inter=ans(2,1)
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
 
          if (event_norm(1:4).ne.'bias') then
-            weight=(ans(1,1)+ans(5,1))/ncall
+            weight=(ans(1,1)+ans(5,1))/ncalls0
          else
             weight=event_weight
          endif
@@ -405,25 +272,25 @@ c fill the information for the write_header_init common block
 
          write (*,*) 'imode is ',imode
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
-         do j=1,ncall
+         call gen(sigintF,0,vn,x)
+         do j=1,ncalls0
             if (abrv(1:4).eq.'born') then
                vn=3
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               call gen(sigintF,1,vn,x)
             else
                if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   else
                      vn=1
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   endif
                else
                   abrv='novi'
                   vn=2
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  call gen(sigintF,1,vn,x)
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
@@ -438,14 +305,7 @@ c Randomly pick the contribution that will be written in the event file
          enddo
          call deallocate_weight_lines
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
-         write (*,*) 'Generation efficiencies:',x(1),x(4)
-c Uncomment the next to lines to print the integral from the PS points
-c trown during event generation. This corresponds only to the cross
-c section if these points are thrown flat, so not using the xmmm() stuff
-c in mint.
-c         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c         write (*,*) 'Integral from virt points computed',x(5),x(6)
+         call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
@@ -528,10 +388,10 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncall,tTot
+         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
       else
          write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
-     $        ,unc(2,1),itmax,ncall,tTot
+     $        ,unc(2,1),itmax,ncalls0,tTot
       endif
       close(12)
 
@@ -565,25 +425,25 @@ c timing statistics
       end
 
 
-      subroutine get_user_params(ncall,itmax,
-     &     imode,ixi_i,iphi_i,iy_ij,SHsep)
+      subroutine get_user_params(ncall,nitmax,
+     &     ixi_i,iphi_i,iy_ij,SHsep)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
 c
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
 c
 c     Arguments
 c
-      integer ncall,itmax,jconfig
+      integer ncall,nitmax
 c
 c     Local
 c
@@ -633,19 +493,14 @@ c alazi and beazi are the parameters that control gfunazi
 c
 c MINT stuff
 c
-      integer imode,ixi_i,iphi_i,iy_ij
-
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
+      integer ixi_i,iphi_i,iy_ij
 
 c-----
 c  Begin Code
 c-----
-      mint=.true.
-      usexinteg=.false.
       write(*,'(a)') 'Enter number of events and iterations: '
-      read(*,*) ncall,itmax
-      write(*,*) 'Number of events and iterations ',ncall,itmax
+      read(*,*) ncall,nitmax
+      write(*,*) 'Number of events and iterations ',ncall,nitmax
 
       write(*,'(a)') 'Enter desired fractional accuracy: '
       read(*,*) accuracy
@@ -736,7 +591,7 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) 'MINT running mode:',imode
       if (imode.eq.2)then
          write (*,*) 'Generating events, doing only one iteration'
-         itmax=1
+         nitmax=1
       endif
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
@@ -790,8 +645,8 @@ c
 
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
+      use mint_module
       implicit none
-      include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
@@ -817,25 +672,22 @@ c
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
-      double precision           virt_wgt_mint(0:n_ave_virt),
-     &                           born_wgt_mint(0:n_ave_virt)
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       logical       nbody
       common/cnbody/nbody
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       character*4      abrv
       common /to_abrv/ abrv
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      logical               only_virt
-      integer         imode
-      common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      if (new_point .and. ifl.ne.2) then
+         pass_cuts_check=.false.
+      endif
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -887,15 +739,17 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          else
             jac=0.5d0
          endif
-         call generate_momenta(ndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
+            pass_cuts_check=.true.
             if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
+            call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
                call compute_born
             endif
@@ -926,7 +780,7 @@ c for different nFKSprocess.
             gfactsf=1.d0
             gfactcl=1.d0
             MCcntcalled=.false.
-            call generate_momenta(ndim,iconfig,jac,x,p)
+            call generate_momenta(nndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
@@ -970,11 +824,13 @@ c
                endif
             endif               
             if (passcuts_nbody .and. abrv.ne.'real') then
+               pass_cuts_check=.true.
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
+                  call include_multichannel_enhance(4)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
@@ -989,6 +845,7 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
+               call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)
                call set_cms_stuff(ione)
@@ -1000,9 +857,11 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
+               pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
+               call include_multichannel_enhance(2)
                sudakov_damp=probne
                call compute_real_emission(p,sudakov_damp)
             endif
@@ -1280,26 +1139,26 @@ c     include all quarks (except top quark) and the gluon.
       end
 
       subroutine update_vegas_x(xx,x)
+      use mint_module
       implicit none
-      include 'mint.inc'
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer         ndim
-      common/tosigint/ndim
-      character*4 abrv
+      integer         nndim
+      common/tosigint/nndim
+      character*4      abrv
       common /to_abrv/ abrv
       do i=1,99
          if (abrv.eq.'born') then
-            if(i.le.ndim-3)then
+            if(i.le.nndim-3)then
                x(i)=xx(i)
-            elseif(i.le.ndim) then
+            elseif(i.le.nndim) then
                x(i)=ran2()      ! Choose them flat when not including real-emision
             else
                x(i)=0.d0
             endif
          else
-            if(i.le.ndim)then
+            if(i.le.nndim)then
                x(i)=xx(i)
             else
                x(i)=0.d0

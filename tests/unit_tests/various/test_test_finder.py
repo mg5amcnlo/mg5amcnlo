@@ -15,6 +15,7 @@
 
 """Unit test library for the Misc routine library in the I/O package"""
 
+from __future__ import absolute_import
 import tests.unit_tests as unittest
 import tests.test_manager as test_manager
 

@@ -9,10 +9,10 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: u g > t t~ u [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c g > t t~ c [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: d g > t t~ d [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s g > t t~ s [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u g > t t~ u [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c g > t t~ c [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -87,8 +87,8 @@ C          different coupling combinations
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX3(J, I)
           ENDDO
-          IF (ABS(ANS(I)).GT.ANS_MAX*TINY) AMP_SPLIT(ORDERS_TO_AMP_SPLI
-     $T_POS(AMP_ORDERS)) = ANS(I)
+          IF (ABS(ANS(I)).GT.ANS_MAX*TINY)
+     $      AMP_SPLIT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) = ANS(I)
         ENDIF
       ENDDO
 
@@ -111,10 +111,10 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: u g > t t~ u [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c g > t t~ c [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: d g > t t~ d [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s g > t t~ s [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u g > t t~ u [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c g > t t~ c [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -238,10 +238,10 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: u g > t t~ u [ real = QED QCD ] QCD^2=6 QED^2=0
-C     Process: c g > t t~ c [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: d g > t t~ d [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s g > t t~ s [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u g > t t~ u [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c g > t t~ c [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -384,8 +384,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSPLITORDERS
-        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDER
-     $B,I)
+        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)
+     $   +AMPSPLITORDERS(AMPORDERB,I)
       ENDDO
       SQSOINDEX3=SQSOINDEX_FROM_ORDERS3(SQORDERS)
       END

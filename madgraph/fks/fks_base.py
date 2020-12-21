@@ -15,6 +15,8 @@
 
 """Definitions of the objects needed for the implementation of MadFKS"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -27,6 +29,7 @@ import logging
 import array
 import madgraph.various.misc as misc
 from madgraph import InvalidCmd
+from six.moves import range
 
 logger = logging.getLogger('madgraph.fks_base')
 
@@ -49,7 +52,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
-        if not 'OLP' in self.keys():
+        if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
             self['ncores_for_proc_gen'] = 0
     
@@ -65,28 +68,23 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         if name == 'born_processes':
             if not isinstance(value, FKSProcessList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list for born_processes " % str(value)                             
+                raise self.PhysicsObjectError("%s is not a valid list for born_processes " % str(value))                             
 
         if name == 'real_amplitudes':
             if not isinstance(value, diagram_generation.AmplitudeList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list for real_amplitudes " % str(value)
+                raise self.PhysicsObjectError("%s is not a valid list for real_amplitudes " % str(value))
                                                   
         if name == 'real_pdgs':
             if not isinstance(value, list):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid list for real_amplitudes " % str(value)
+                raise self.PhysicsObjectError("%s is not a valid list for real_amplitudes " % str(value))
         
         if name == 'OLP':
             if not isinstance(value,str):
-                raise self.PhysicsObjectError, \
-                    "%s is not a valid string for OLP " % str(value)
+                raise self.PhysicsObjectError("%s is not a valid string for OLP " % str(value))
 
         if name == 'ncores_for_proc_gen':
             if not isinstance(value,int):
-                raise self.PhysicsObjectError, \
-                    "%s is not a valid value for ncores_for_proc_gen " % str(value)
+                raise self.PhysicsObjectError("%s is not a valid value for ncores_for_proc_gen " % str(value))
                                                      
         return super(FKSMultiProcess,self).filter(name, value)
 
@@ -136,12 +134,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         # OLP option
         olp='MadLoop'
-        if 'OLP' in options.keys():
+        if 'OLP' in list(options.keys()):
             olp = options['OLP']
             del options['OLP']
 
         self['init_lep_split']=False
-        if 'init_lep_split' in options.keys():
+        if 'init_lep_split' in list(options.keys()):
             self['init_lep_split']=options['init_lep_split']
             del options['init_lep_split']
 
@@ -150,7 +148,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         #   0 : do things the old way
         #   > 0 use ncores_for_proc_gen
         #   -1 : use all cores
-        if 'ncores_for_proc_gen' in options.keys():
+        if 'ncores_for_proc_gen' in list(options.keys()):
             ncores_for_proc_gen = options['ncores_for_proc_gen']
             del options['ncores_for_proc_gen']
 
@@ -160,12 +158,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
-            raise NoBornException, "Born diagrams could not be generated for the "+\
+            raise NoBornException("Born diagrams could not be generated for the "+\
                self['process_definitions'][0].nice_string().replace('Process',\
                'process')+". Notice that aMC@NLO does not handle loop-induced"+\
                " processes yet, but you can still use MadLoop if you want to "+\
                "only generate them."+\
-               " For this, use the 'virt=' mode, without multiparticle labels."
+               " For this, use the 'virt=' mode, without multiparticle labels.")
 
         self['OLP'] = olp
         self['ncores_for_proc_gen'] = ncores_for_proc_gen
@@ -318,22 +316,16 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                      '%s at the output stage only.'%self['OLP'])
             return
 
-        # determine the orders to be used to generate the loop
-#MZ        loop_orders = {}
-#        for  born in self['born_processes']:
-#            for coup, val in fks_common.find_orders(born.born_amp).items():
-#                try:
-#                    loop_orders[coup] = max([loop_orders[coup], val])
-#                except KeyError:
-#                    loop_orders[coup] = val
-
         for i, born in enumerate(self['born_processes']):
             myproc = copy.copy(born.born_amp['process'])
+            # if [orders] are not specified, then
             # include all particles in the loops
             # i.e. allow all orders to be perturbed
-            myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
+            # (this is the case for EW corrections, where only squared oders 
+            # are imposed)
+            if not myproc['orders']:
+                myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
-#MZ            myproc['orders'] = loop_orders
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
                     % (myproc.nice_string(print_weighted = False).replace(\
@@ -393,7 +385,6 @@ class FKSRealProcess(object):
                 self.process['perturbation_couplings'].append(o)
         # set the orders to empty, to force the use of the squared_orders
         self.process['orders'] = copy.copy(born_proc['orders'])
-        self.process['orders'] = {}
 
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
@@ -798,6 +789,7 @@ class FKSProcess(object):
                         info['i'], info['j'], info['ij'])
 
 
+
     def find_reals(self, pert_orders = []):
         """finds the FKS real configurations for a given process.
         self.reals[i] is a list of dictionaries corresponding to the real 
@@ -809,11 +801,19 @@ class FKSProcess(object):
         """
         
         model = self.born_amp['process']['model']
+        # if [orders] are not specified, then
+        # include all kind of splittings
+        # i.e. allow all orders to be perturbed
+        # (this is the case for EW corrections, where only squared oders 
+        # are imposed)
         if not pert_orders:
-            pert_orders = model['coupling_orders']
+            if not self.born_amp['process']['orders']:
+                pert_orders = model['coupling_orders']
+            else:
+                pert_orders = self.born_amp['process']['perturbation_couplings']
 
         leglist = self.get_leglist()
-        if range(len(leglist)) != [l['number']-1 for l in leglist]:
+        if list(range(len(leglist))) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
 
         if [ i['state'] for i in leglist].count(False) == 1:

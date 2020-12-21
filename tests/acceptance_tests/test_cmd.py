@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -36,6 +37,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
+from tests import test_manager
 
 #===============================================================================
 # TestCmd
@@ -50,7 +52,8 @@ class TestCmdShell1(unittest.TestCase):
     
     @staticmethod
     def join_path(*path):
-        """join path and treat spaces"""     
+        """join path and treat spaces"""   
+
         combine = os.path.join(*path)
         return combine.replace(' ','\ ')        
     
@@ -157,7 +160,7 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
-                    'pjfry': 'auto',
+                    #'pjfry': 'auto',
                     'golem': 'auto',
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
@@ -180,7 +183,9 @@ class TestCmdShell1(unittest.TestCase):
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
                     'output_dependencies': 'external',
-                    'lhapdf': 'lhapdf-config',  
+                    'lhapdf': 'lhapdf-config',
+                    'lhapdf_py2': None,
+                    'lhapdf_py3': None,  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',
                     'notification_center':True,
@@ -192,13 +197,14 @@ class TestCmdShell1(unittest.TestCase):
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
                     'f2py_compiler':None,
+                    'f2py_compiler_py2':None,
+                    'f2py_compiler_py3':None,
                     'cluster_retry_wait': 300,
                     'syscalc_path':'./SysCalc',
                     'collier':'./HEPTools/lib',
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
-                    'amcfast': 'amcfast-config',
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,
@@ -207,6 +213,8 @@ class TestCmdShell1(unittest.TestCase):
                     'low_mem_multicore_nlo_generation': False,
                     'ninja': './HEPTools/lib',
                     'samurai': None,
+                    'max_t_for_channel': 99,
+                    'zerowidth_tchannel': True
                     }
 
         self.assertEqual(config, expected)
@@ -245,7 +253,7 @@ class TestCmdShell2(unittest.TestCase,
         
     def tearDown(self):
         if not self.debugging and os.path.exists(self.out_dir):
-            shutil.rmtree(self.tmpdir)
+            shutil.rmtree(self.out_dir)
     
     join_path = TestCmdShell1.join_path
 
@@ -344,7 +352,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n')
+        proc.communicate('100 2 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -410,7 +418,7 @@ class TestCmdShell2(unittest.TestCase,
         os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
-                            self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
+                            TestCmdShell1.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
         self.cmd = Cmd.MasterCmd()
@@ -755,7 +763,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n')
+        proc.communicate('100 2 0.1 .false.\n'.encode())
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -781,14 +789,14 @@ C
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
+      COMPLEX*16 COUP
+      COMPLEX*16 F1(*)
       COMPLEX*16 F2(*)
+      REAL*8 M3
+      REAL*8 P3(0:3)
       COMPLEX*16 V3(6)
       REAL*8 W3
-      REAL*8 P3(0:3)
-      REAL*8 M3
-      COMPLEX*16 F1(*)
       COMPLEX*16 DENOM
-      COMPLEX*16 COUP
       V3(1) = +F1(1)+F2(1)
       V3(2) = +F1(2)+F2(2)
       P3(0) = -DBLE(V3(1))
@@ -812,9 +820,8 @@ C
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV1P0_3.f')).read()
         
         self.assertFalse('OM3' in text)
-        self.assertEqual(ffv1p0.split('\n'), text.split('\n'))
+        self.assertEqual(ffv1p0, text)
         
-
         ffv2 = """C     This File is Automatically generated by ALOHA 
 C     The process calculated in this file is: 
 C     Gamma(3,2,-1)*ProjM(-1,1)
@@ -823,16 +830,16 @@ C
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
-      COMPLEX*16 DENOM
-      COMPLEX*16 V3(6)
-      COMPLEX*16 TMP1
-      REAL*8 W3
-      REAL*8 P3(0:3)
-      REAL*8 M3
+      COMPLEX*16 COUP
       COMPLEX*16 F1(*)
       COMPLEX*16 F2(*)
+      REAL*8 M3
       REAL*8 OM3
-      COMPLEX*16 COUP
+      REAL*8 P3(0:3)
+      COMPLEX*16 TMP1
+      COMPLEX*16 V3(6)
+      REAL*8 W3
+      COMPLEX*16 DENOM
       OM3 = 0D0
       IF (M3.NE.0D0) OM3=1D0/M3**2
       V3(1) = +F1(1)+F2(1)
@@ -861,18 +868,18 @@ C
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
-      COMPLEX*16 DENOM
-      COMPLEX*16 V3(6)
-      REAL*8 W3
-      REAL*8 P3(0:3)
-      REAL*8 M3
-      COMPLEX*16 F1(*)
       COMPLEX*16 COUP1
-      COMPLEX*16 F2(*)
       COMPLEX*16 COUP2
+      COMPLEX*16 F1(*)
+      COMPLEX*16 F2(*)
+      REAL*8 M3
       REAL*8 OM3
-      INTEGER*4 I
+      REAL*8 P3(0:3)
+      COMPLEX*16 V3(6)
       COMPLEX*16 VTMP(6)
+      REAL*8 W3
+      COMPLEX*16 DENOM
+      INTEGER*4 I
       CALL FFV2_3(F1,F2,COUP1,M3,W3,V3)
       CALL FFV4_3(F1,F2,COUP2,M3,W3,VTMP)
       DO I = 3, 6
@@ -884,6 +891,8 @@ C
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV2_3.f')).read()
         self.assertTrue('OM3' in text)
+        misc.sprint(text)
+        self.assertEqual(ffv2.split('\n'), text.split('\n'))
         self.assertEqual(ffv2, text)        
         
         
@@ -957,7 +966,7 @@ C
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -983,6 +992,7 @@ C
                             stdout=subprocess.PIPE)
         #output = p.stdout.read()
         for line in p.stdout:
+            line = line.decode('utf8')
             if 'Matrix element' in line:
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
@@ -998,6 +1008,7 @@ C
                             stdout=subprocess.PIPE)
         #output = p.stdout.read()
         for line in p.stdout:
+            line = line.decode('utf8')
             if 'Matrix element' in line:
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
@@ -1090,12 +1101,12 @@ C
                                                'lib', 'libpdf.a')))
         # Check that combine_events, gen_ximprove, combine_runs 
         # compile
-        status = subprocess.call(['make', '../bin/internal/combine_events'],
-                                 stdout=devnull, 
-                                 cwd=os.path.join(self.out_dir, 'Source'))
-        self.assertEqual(status, 0)
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
-                                               'bin','internal', 'combine_events')))
+        #status = subprocess.call(['make', '../bin/internal/combine_events'],
+        #                         stdout=devnull, 
+        #                         cwd=os.path.join(self.out_dir, 'Source'))
+        #self.assertEqual(status, 0)
+        #self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        #                                       'bin','internal', 'combine_events')))
         status = subprocess.call(['make', '../bin/internal/gen_ximprove'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'Source'))
@@ -1117,7 +1128,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -1191,7 +1202,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
 
 
@@ -1283,7 +1294,7 @@ P1_qq_wp_wp_lvl
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -1323,7 +1334,8 @@ P1_qq_wp_wp_lvl
             self.assertTrue(os.path.isdir(os.path.join(self.out_dir,
                                                        'SubProcesses',
                                                        d)))
-        
+    
+    @test_manager.bypass_for_py3
     def test_madevent_triplet_diquarks(self):
         """Test MadEvent output of triplet diquarks"""
 
@@ -1365,7 +1377,7 @@ P1_qq_wp_wp_lvl
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n')
+        proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         
         # Check that madevent compiles

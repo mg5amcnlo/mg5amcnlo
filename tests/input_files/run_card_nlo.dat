@@ -150,5 +150,5 @@
 #***********************************************************************
 # For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
 #***********************************************************************
- 0 = iappl   ! aMCfast switch (0=OFF, 1=prepare APPLgrids, 2=fill grids)
+ 0 = iappl   ! aMCfast switch (0=OFF, 1=fill grids)
 #***********************************************************************

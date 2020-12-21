@@ -13,6 +13,8 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import os
 import sys
@@ -29,6 +31,7 @@ from functools import wraps
 
 import aloha
 import aloha.aloha_lib as aloha_lib
+from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -121,10 +124,10 @@ class IOTest(object):
         LoopAmplitude object, so it does not have to be specified here."""
 
         if testedFiles is None:
-            raise MadGraph5Error, "TestedFiles must be specified in IOTest."
+            raise MadGraph5Error("TestedFiles must be specified in IOTest.")
         
         if outputPath is None:
-            raise MadGraph5Error, "outputPath must be specified in IOTest."
+            raise MadGraph5Error("outputPath must be specified in IOTest.")
         
         self.testedFiles = testedFiles
         self.test_instance = test_instance
@@ -134,8 +137,8 @@ class IOTest(object):
         # Security mesure
         if not str(path.dirname(_file_path)) in str(outputPath) and \
                                         not str(outputPath).startswith('/tmp/'):
-            raise MadGraph5Error, "OutputPath must be within MG directory or"+\
-                                                                     " in /tmp/"            
+            raise MadGraph5Error("OutputPath must be within MG directory or"+\
+                                                                     " in /tmp/")            
         else:
             self.outputPath = outputPath
 
@@ -168,7 +171,7 @@ class IOTest(object):
         """ Remove the output_path if existing. Careful!"""
         if not str(path.dirname(_file_path)) in str(self.outputPath) and \
                                    not str(self.outputPath).startswith('/tmp/'):
-            raise MadGraph5Error, "Cannot safely remove %s."%str(self.outputPath)
+            raise MadGraph5Error("Cannot safely remove %s."%str(self.outputPath))
         else:
             if path.isdir(self.outputPath):
                 shutil.rmtree(self.outputPath)
@@ -304,10 +307,10 @@ class CustomIOTest(IOTest):
             else:
                 pathsToClean.extend(paths)
             if prevent_cleanUp:
-                print colored%(31,
-                    "Clean up of the following of temporary folders prevented:")
+                print(colored%(31,
+                    "Clean up of the following of temporary folders prevented:"))
                 for path in pathsToClean:
-                    print colored%(31,"  > %s"%str(path))
+                    print(colored%(31,"  > %s"%str(path)))
        
         try:
             for path in pathsToClean:
@@ -315,7 +318,7 @@ class CustomIOTest(IOTest):
                     shutil.rmtree(path)
                 else:
                     os.remove(path)
-        except OSError,error:
+        except OSError as error:
             pass               
 
 #===============================================================================
@@ -369,7 +372,7 @@ class IOTestManager(unittest.TestCase):
     
     def runTest(self,*args,**opts):
         """ This method is added so that one can instantiate this class """
-        raise MadGraph5Error, 'runTest in IOTestManager not supposed to be called.'
+        raise MadGraph5Error('runTest in IOTestManager not supposed to be called.')
     
     def assertFileContains(self, source, solution):
         """ Check the content of a file """
@@ -421,7 +424,7 @@ class IOTestManager(unittest.TestCase):
                     return False
         
         if not folderName is None and not testName is None:
-            if (folderName,testName) in cls.all_tests.keys() and \
+            if (folderName,testName) in list(cls.all_tests.keys()) and \
                (folderName,testName) in cls.instance_tests:
                 return False
 
@@ -467,10 +470,9 @@ class IOTestManager(unittest.TestCase):
             self.instance_tests.append((folderName, testName))
             
         # Add this to the global test_list            
-        if (folderName, testName) in self.all_tests.keys() and \
+        if (folderName, testName) in list(self.all_tests.keys()) and \
                           self.all_tests[(folderName, testName)]!=(IOtest,self):
-            raise MadGraph5Error, \
-                          "Test (%s,%s) already defined."%(folderName, testName)
+            raise MadGraph5Error("Test (%s,%s) already defined."%(folderName, testName))
         else:
             # We store the manager with self here too because it might have
             # variables related to its IOTests stored in it so that we will
@@ -512,12 +514,10 @@ class IOTestManager(unittest.TestCase):
                 tar.extractall(path.dirname(_hc_comparison_files))
                 tar.close()
             else:
-                raise MadGraph5Error, \
-              "Could not find the comparison tarball %s."%_hc_comparison_tarball
+                raise MadGraph5Error("Could not find the comparison tarball %s."%_hc_comparison_tarball)
         else:
             if not path.isdir(_hc_comparison_files):
-                raise MadGraph5Error, \
-              "Could not find the comparison tarball %s."%_hc_comparison_tarball
+                raise MadGraph5Error("Could not find the comparison tarball %s."%_hc_comparison_tarball)
 
         # In update = True mode, we keep track of the modification to 
         # provide summary information
@@ -534,16 +534,16 @@ class IOTestManager(unittest.TestCase):
         if testKeys == 'instanceList':
             testKeys = self.instance_tests
         
-        if verbose: print "\n== "+colored%(32,"Operational mode")+\
-            " : file %s ==\n"%(colored%(34,('UPDATE' if update else 'TESTING')))
+        if verbose: print("\n== "+colored%(32,"Operational mode")+\
+            " : file %s ==\n"%(colored%(34,('UPDATE' if update else 'TESTING'))))
         for (folder_name, test_name) in testKeys:
             try:
                 (iotest, iotestManager) = self.all_tests[(folder_name, test_name)]
             except KeyError:
-                raise MadGraph5Error, 'Test (%s,%s) could not be found.'\
-                                                       %(folder_name, test_name)
-            if verbose: print "Processing %s in %s"%(
-                                colored%(32,test_name),colored%(34,folder_name))
+                raise MadGraph5Error('Test (%s,%s) could not be found.'\
+                                                       %(folder_name, test_name))
+            if verbose: print("Processing %s in %s"%(
+                                colored%(32,test_name),colored%(34,folder_name)))
             
             files_path = iotest.run(iotestManager)
             try:
@@ -554,8 +554,8 @@ class IOTestManager(unittest.TestCase):
                 if not verbose:
                     raise e
                 else:
-                    print colored%(31,"  Test %s "%test_name+\
-                              "crashed with the following error:\n  %s."%str(e))
+                    print(colored%(31,"  Test %s "%test_name+\
+                              "crashed with the following error:\n  %s."%str(e)))
                     continue
 
             # First create the list of files to check as the user might be using
@@ -594,8 +594,8 @@ class IOTestManager(unittest.TestCase):
                                     %(test_name,fn),default="y")
                         modifications['missing'].append(
                         "%s/%s/%s"%(folder_name,test_name,path.basename(fname)))
-                        if verbose: print "    > [ %s ] "%(colored%(31,"MISSING"))+\
-                          "%s/%s/%s"%(folder_name,test_name,path.basename(fname))
+                        if verbose: print("    > [ %s ] "%(colored%(31,"MISSING"))+\
+                          "%s/%s/%s"%(folder_name,test_name,path.basename(fname)))
                     else:
                         if fname.startswith('-'):
                             veto_rules.append(fn)
@@ -621,28 +621,28 @@ class IOTestManager(unittest.TestCase):
                         continue
                     if path.basename(file) not in activeFiles:
                         if force==0 or (force==1 and \
-                         path.basename(file) not in reviewed_file_names.keys()):
+                         path.basename(file) not in list(reviewed_file_names.keys())):
                             answer = Cmd.timed_input(question=
 """Obsolete ref. file %s in %s/%s detected, delete it? [y/n] >"""\
                                     %(path.basename(file),folder_name,test_name)
                                                                    ,default="y")
                             reviewed_file_names[path.basename(file)] = answer
                         elif (force==1 and \
-                             path.basename(file) in reviewed_file_names.keys()):
+                             path.basename(file) in list(reviewed_file_names.keys())):
                             answer = reviewed_file_names[path.basename(file)]
                         else:
                             answer = 'Y'
                             
                         if answer not in ['Y','y','']:
                             if verbose: 
-                                print "    > [ %s ] "%(colored%(31,"IGNORED"))+\
+                                print("    > [ %s ] "%(colored%(31,"IGNORED"))+\
                           "file deletion %s/%s/%s"%(folder_name,test_name,
-                                                            path.basename(file))
+                                                            path.basename(file)))
                             continue
 
                         os.remove(file)
-                        if verbose: print "    > [ %s ] "%(colored%(31,"REMOVED"))+\
-                          "%s/%s/%s"%(folder_name,test_name,path.basename(file))
+                        if verbose: print("    > [ %s ] "%(colored%(31,"REMOVED"))+\
+                          "%s/%s/%s"%(folder_name,test_name,path.basename(file)))
                         modifications['removed'].append(
                                             '/'.join(str(file).split('/')[-3:]))
 
@@ -685,15 +685,14 @@ class IOTestManager(unittest.TestCase):
                     if not os.path.isfile(comparison_path):
                         iotest.clean_output()
                         if not verbose:
-                            raise MadGraph5Error,\
-                                "Missing ref. files for test %s\n"%test_name+\
-                                "Create them with './test_manager.py -U %s'"%test_name
+                            raise MadGraph5Error("Missing ref. files for test %s\n"%test_name+\
+                                "Create them with './test_manager.py -U %s'"%test_name)
                             continue
                         else:
-                            print colored%(31,'The ref. file %s'
-                            %str('/'.join(comparison_path.split('/')[-3:]))+' does not exist.')
-                            print colored%(34,'Consider creating it with '+
-                                            './test_manager.py -U %s'%test_name)
+                            print(colored%(31,'The ref. file %s'
+                            %str('/'.join(comparison_path.split('/')[-3:]))+' does not exist.'))
+                            print(colored%(34,'Consider creating it with '+
+                                            './test_manager.py -U %s'%test_name))
                             exit(0)
                     goal = open(comparison_path).read()%misc.get_pkg_info()
                     if not verbose:
@@ -703,7 +702,7 @@ class IOTestManager(unittest.TestCase):
                             self.assertFileContains(open(file_path), goal)
                         except AssertionError:
                             if verbose: 
-                                print "    > %s differs from the reference."%fname
+                                print("    > %s differs from the reference."%fname)
                             
                 else:                        
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name)):
@@ -715,11 +714,11 @@ class IOTestManager(unittest.TestCase):
                                                                    ,default="y")
                             if answer not in ['Y','y','']:
                                 refused_Folders.append(folder_name)
-                                if verbose: print "    > [ %s ] folder %s"\
-                                           %(colored%(31,"IGNORED"),folder_name)
+                                if verbose: print("    > [ %s ] folder %s"\
+                                           %(colored%(31,"IGNORED"),folder_name))
                                 continue
-                        if verbose: print "    > [ %s ] folder %s"%\
-                                            (colored%(32,"CREATED"),folder_name)                        
+                        if verbose: print("    > [ %s ] folder %s"%\
+                                            (colored%(32,"CREATED"),folder_name))                        
                         os.makedirs(pjoin(_hc_comparison_files,folder_name))
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name)):
@@ -731,11 +730,11 @@ class IOTestManager(unittest.TestCase):
                                                                    ,default="y")
                             if answer not in ['Y','y','']:
                                 refused_testNames.append((folder_name,test_name))
-                                if verbose: print "    > [ %s ] test %s/%s"\
-                                 %(colored%(31,"IGNORED"),folder_name,test_name)
+                                if verbose: print("    > [ %s ] test %s/%s"\
+                                 %(colored%(31,"IGNORED"),folder_name,test_name))
                                 continue
-                        if verbose: print "    > [ %s ] test %s/%s"\
-                                 %(colored%(32,"CREATED"),folder_name,test_name)
+                        if verbose: print("    > [ %s ] test %s/%s"\
+                                 %(colored%(32,"CREATED"),folder_name,test_name))
                         os.makedirs(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name))
                     # Transform the package information to make it a template
@@ -767,21 +766,21 @@ class IOTestManager(unittest.TestCase):
                             file.write(target)
                             file.close()
                             if force==0 or (force==1 and path.basename(\
-                            comparison_path) not in reviewed_file_names.keys()):
+                            comparison_path) not in list(reviewed_file_names.keys())):
                                 text = \
 """File %s in test %s/%s differs by the following (reference file first):
 """%(fname,folder_name,test_name)
                                 text += misc.Popen(['diff',str(comparison_path),
                                   str(tmp_path)],stdout=subprocess.PIPE).\
-                                                                communicate()[0]
+                                                                communicate()[0].decode('utf-8')
                                 # Remove the last newline
                                 if text[-1]=='\n':
                                     text=text[:-1]
                                 if (len(text.split('\n'))<15):
-                                    print text
+                                    print(text)
                                 else:
                                     pydoc.pager(text)
-                                    print "Difference displayed in editor."
+                                    print("Difference displayed in editor.")
                                 answer = ''
                                 while answer not in ['y', 'n']:
                                     answer = Cmd.timed_input(question=
@@ -791,22 +790,22 @@ class IOTestManager(unittest.TestCase):
                                         if answer == 'r':
                                             pydoc.pager(text)
                                         else:
-                                            print "reference path: %s" % comparison_path
-                                            print "code returns: %s" % tmp_path
+                                            print("reference path: %s" % comparison_path)
+                                            print("code returns: %s" % tmp_path)
                                 
                                 
                                 os.remove(tmp_path)
                                 reviewed_file_names[path.basename(\
                                                       comparison_path)] = answer        
                             elif (force==1 and path.basename(\
-                                comparison_path) in reviewed_file_names.keys()):
+                                comparison_path) in list(reviewed_file_names.keys())):
                                 answer = reviewed_file_names[path.basename(\
                                                                comparison_path)]
                             else:
                                 answer = 'Y'
                             if answer not in ['Y','y','']:
-                                if verbose: print "    > [ %s ] %s"%\
-                                                  (colored%(31,"IGNORED"),fname)
+                                if verbose: print("    > [ %s ] %s"%\
+                                                  (colored%(31,"IGNORED"),fname))
                                 continue
                             
                             # Copying the existing reference as a backup
@@ -815,30 +814,30 @@ class IOTestManager(unittest.TestCase):
                             if os.path.isfile(back_up_path):
                                 os.remove(back_up_path)
                             cp(comparison_path,back_up_path)
-                            if verbose: print "    > [ %s ] %s"\
-                                                 %(colored%(32,"UPDATED"),fname)
+                            if verbose: print("    > [ %s ] %s"\
+                                                 %(colored%(32,"UPDATED"),fname))
                             modifications['updated'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     else:
                         if force==0 or (force==1 and path.basename(\
-                            comparison_path) not in reviewed_file_names.keys()):
+                            comparison_path) not in list(reviewed_file_names.keys())):
                             answer = Cmd.timed_input(question=
 """New file %s detected, create it? [y/n] >"""%fname
                                                                    ,default="y")
                             reviewed_file_names[path.basename(\
                                                       comparison_path)] = answer
                         elif (force==1 and path.basename(\
-                                comparison_path) in reviewed_file_names.keys()):
+                                comparison_path) in list(reviewed_file_names.keys())):
                             answer = reviewed_file_names[\
                                                  path.basename(comparison_path)]
                         else:
                             answer = 'Y'
                         if answer not in ['Y','y','']:
-                            if verbose: print "    > [ %s ] %s"%\
-                                                  (colored%(31,"IGNORED"),fname)
+                            if verbose: print("    > [ %s ] %s"%\
+                                                  (colored%(31,"IGNORED"),fname))
                             continue
-                        if verbose: print "    > [ %s ] %s"%\
-                                                  (colored%(32,"CREATED"),fname)
+                        if verbose: print("    > [ %s ] %s"%\
+                                                  (colored%(32,"CREATED"),fname))
                         modifications['created'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     file = open(comparison_path,'w')

@@ -39,6 +39,9 @@ C
       LOGICAL GOODHEL(NCOMB)
       INTEGER NTRY
       COMMON/BLOCK_GOODHEL/NTRY,GOODHEL
+      INTEGER NB_SPIN_STATE(2)
+      DATA  NB_SPIN_STATE /2,2/
+      COMMON /NB_HEL_STATE/ NB_SPIN_STATE
 C     
 C     LOCAL VARIABLES 
 C     
@@ -51,6 +54,7 @@ C
       INTEGER IDUM, NGOOD, IGOOD(NCOMB), JHEL, J, JJ
       REAL     XRAN1
       EXTERNAL XRAN1
+
 C     
 C     GLOBAL VARIABLES
 C     
@@ -71,6 +75,7 @@ C
       DATA IDUM /-1/
       DATA XTRY, XREJ, NGOOD /0,0,0/
       SAVE YFRAC, IGOOD, JHEL
+
       DATA (NHEL(I,   1),I=1,4) / 1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,4) / 1,-1,-1, 1/
       DATA (NHEL(I,   3),I=1,4) / 1,-1, 1,-1/
@@ -120,9 +125,9 @@ C     ----------
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))
+                T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2D0  ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))
+                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2D0
               ENDIF
             ENDDO
             IF (ISUM_HEL.NE.0) THEN
@@ -150,8 +155,8 @@ C     ----------
           JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
             DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB))
-     $          THEN
+              IF (.NOT.GOODHEL(I) .AND. (DABS(TS(I)).GT.ANS*LIMHEL
+     $         /NCOMB)) THEN
                 GOODHEL(I)=.TRUE.
                 NGOOD = NGOOD +1
                 IGOOD(NGOOD) = I
@@ -261,6 +266,13 @@ C
 C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
+
+      DOUBLE PRECISION FK_ZERO
+      SAVE FK_ZERO
+
+      LOGICAL FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
 C     
 C     FUNCTION
 C     
@@ -271,6 +283,9 @@ C
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
       INCLUDE 'coupl.inc'
+
+      DOUBLE PRECISION SMALL_WIDTH_TREATMENT
+      COMMON/NARROW_WIDTH/SMALL_WIDTH_TREATMENT
 C     
 C     COLOR DATA
 C     
@@ -283,17 +298,22 @@ C     1 T(4,3,2,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
+      IF (FIRST) THEN
+        FIRST=.FALSE.
+        FK_ZERO = 0D0
+      ENDIF
+
       CALL IXXXXX(P(0,1),ZERO,NHEL(1),+1*IC(1),W(1,1))
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL VXXXXX(P(0,4),ZERO,NHEL(4),+1*IC(4),W(1,4))
-      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO,ZERO,W(1,5))
+      CALL FFV1_3(W(1,1),W(1,2),GQQ,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 1
       CALL VVV1_0(W(1,3),W(1,4),W(1,5),G,AMP(1))
-      CALL FFV1_2(W(1,1),W(1,3),GQQ,ZERO,ZERO,W(1,5))
+      CALL FFV1_2(W(1,1),W(1,3),GQQ,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,5),W(1,2),W(1,4),GQQ,AMP(2))
-      CALL FFV1_2(W(1,1),W(1,4),GQQ,ZERO,ZERO,W(1,5))
+      CALL FFV1_2(W(1,1),W(1,4),GQQ,ZERO, FK_ZERO,W(1,5))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_0(W(1,5),W(1,2),W(1,3),GQQ,AMP(3))
 C     JAMPs contributing to orders ALL_ORDERS=1
@@ -367,8 +387,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -462,8 +482,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
-     $ //'DEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 

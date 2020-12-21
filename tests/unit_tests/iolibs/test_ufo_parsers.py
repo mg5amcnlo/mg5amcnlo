@@ -15,6 +15,7 @@
 
 """Unit test library for the UFO parsing"""
 
+from __future__ import absolute_import
 import tests.unit_tests as unittest
 import madgraph.interface.master_interface as Cmd
 import madgraph.iolibs.ufo_expression_parsers as parsers
@@ -233,7 +234,7 @@ class UFOParserTest(unittest.TestCase):
                  ('reglogm(z)','reglogm(DCMPLX(z))'),
                  ('arg(z)','arg(DCMPLX(z))'),
                  ('recms(cms==1.0,z)','RECMS(cms.EQ.1.000000d+00,DCMPLX(z))'),
-                 ('grreglog(logswitch,z1,z2)','GRREGLOG(logswitch,DCMPLX(z1),DCMPLX(z2))'),
+#                 ('grreglog(logswitch,z1,z2)','GRREGLOG(logswitch,DCMPLX(z1),DCMPLX(z2))'),
                  ('grreglog(logswitch,z1,z2)','grreglog(DBLE(logswitch),DCMPLX(z1) , DCMPLX(z2))'),
                  ('regsqrt(z)','regsqrt(DCMPLX(z))'),
                  ('crecms(cms==1.0,z)','crecms(cms.EQ.1.000000d+00,DCMPLX(z))'),
@@ -244,8 +245,8 @@ class UFOParserTest(unittest.TestCase):
         
 
         for toParse, sol in tests:
+ #           print(toParse, sol)
             self.assertEqual(self.calc.parse(toParse), sol)
-
         # same for MP
 
         tests = [('cond(a,b,c)','MP_COND(CMPLX(mp__a,KIND=16),CMPLX(mp__b,KIND=16),CMPLX(mp__c,KIND=16))'),

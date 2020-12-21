@@ -141,7 +141,8 @@ C ----------
 
       character(512) path
       character(512) dummy      
-
+      character(512) epath ! path of the executable
+      integer pos
       character(512) prefix,fpath
       character(17) nameToCheck
       parameter (nameToCheck='MadLoopParams.dat')
@@ -185,11 +186,42 @@ C     Try to automatically find the path
           close(1)
           prefix='../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-          OPEN(1, FILE=fpath, ERR=66, STATUS='OLD',ACTION='READ')
+          OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
-66        continue
+ 3        continue
           close(1)
+c
+c     Try to automatically find the path from the executable location
+c     particularly usefull in gridpack readonly mode
+c
+	  call getarg(0,path) !path is the PATH to the madevent executable (either global or from launching directory)
+	  pos = index(path,'/',.true.)
+	  prefix = path(:pos)
+          call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) 'test', fpath
+	  OPEN(1, FILE=fpath, ERR=4, STATUS='OLD',ACTION='READ')
+          MLPath=prefix
+          goto 10
+4         continue
+          close(1)
+          prefix= prefix // '/MadLoop5_resources/'
+          call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) 'test', fpath
+          OPEN(1, FILE=fpath, ERR=5, STATUS='OLD',ACTION='READ')
+          MLPath=prefix
+          goto 10
+5         continue
+          close(1)
+          prefix= path(:pos) // '/../MadLoop5_resources/'
+          call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) 'test', fpath
+ 	  OPEN(1, FILE=fpath, ERR=6, STATUS='OLD',ACTION='READ')
+          MLPath=prefix
+          goto 10
+ 6        continue
+          close(1)
+
 c     We could not automatically find the auxiliary files
           write(*,*) '==='
           write(*,*) 'ERROR: MadLoop5 could not automatically find the file MadLoopParams.dat.'
@@ -215,9 +247,9 @@ C     Make sure there is a separator added
 
 C     Check that the FilePath set is correct
       call joinPath(MLPath,nameToCheck,fpath)
-      OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',ACTION='READ')
+      OPEN(1, FILE=fpath, ERR=33, STATUS='OLD',ACTION='READ')
       goto 11
-3     continue
+33     continue
       close(1)
       write(*,*) '==='
       write(*,*) 'ERROR: The MadLoop5 auxiliary files could not be found in ',MLPath
@@ -606,7 +638,7 @@ C     arrays since these are not the most optimized sorting algorithms.
       IMPLICIT  NONE
       INTEGER MAXNREF_EVALS
       PARAMETER (MAXNREF_EVALS=100)
-      INTEGER, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
+      Double Precision, DIMENSION(MAXNREF_EVALS), INTENT(IN) :: x
       INTEGER, INTENT(IN)							  :: mStart, mEnd
       INTEGER										  :: Minimum
       INTEGER										  :: Location

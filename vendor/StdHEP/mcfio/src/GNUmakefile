@@ -13,7 +13,7 @@ BINDIR = ../../bin
 include ../arch_mcfio
  
 FINC = -I.
-CINC = -I.
+CINC = -I. -I/usr/include/tirpc
 HLIB =
 ifdef HISTO_DIR
    CFLAGS += -DHISTO

@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 #Extension
-import string,os,sys,re,popen2,time,stat,filecmp
+from __future__ import absolute_import
+from __future__ import print_function
+import string,os,sys,re,time,stat,filecmp
+from six.moves import range
+from six.moves import input
 
 try: 
     import madgraph.madweight.mod_file as mod_file
@@ -108,7 +112,7 @@ def cut_is_active(filename):
 
 def bw_cut_is_active(filename):
     """ check is the bw_cutt is active or not """
-    for line in file('./SubProcesses/'+filename):
+    for line in open('./SubProcesses/'+filename):
         if 'DESACTIVATE_BW_CUT' in line:
             return 1
         elif 'ACTIVATE_BW_CUT' in line:
@@ -201,17 +205,17 @@ class check_Subprocesses_update:
 
     def printwarning(self,filename1,filename2):
         
-                print """ WARNING: those file are supposed to be identical (symbolic link):\n\
-                          ./SubProcesses/"""+filename1+"""\n./SubProcesses/"""+filename2
-                print """ define the tag MW_run/901 to change the rule for modification """
+                print(""" WARNING: those file are supposed to be identical (symbolic link):\n\
+                          ./SubProcesses/"""+filename1+"""\n./SubProcesses/"""+filename2)
+                print(""" define the tag MW_run/901 to change the rule for modification """)
                 if self.usemodif==0:
-                    print """ no modification to the file are done """
+                    print(""" no modification to the file are done """)
                 elif self.usemodif==1:
-                    print """ modify the file """
+                    print(""" modify the file """)
 
     def printintmode(self,file):
 
-        a=raw_input('modify file '+file+'with rule'+self.modifrule+'? (y/n)')
+        a=input('modify file '+file+'with rule'+self.modifrule+'? (y/n)')
         if a=='y':
             return 1
         elif a=='n':
@@ -239,7 +243,7 @@ def activate_acceptance_run():
     if not( os.path.isfile('./Cards/pythia_card.dat') and
             os.path.isfile('./Cards/pgs_card.dat') and
             os.path.isdir('../MW_pythia-pgs')):
-        raise AcceptanceError, 'Cards or MW_pythia-pgs missing... impossible to load acceptance module'
+        raise AcceptanceError('Cards or MW_pythia-pgs missing... impossible to load acceptance module')
         
     #1. test if the acc is already loaded
     if os.path.isfile('./Source/MadWeight_file/acc.in'):
@@ -318,7 +322,7 @@ class create_dir:
     #2 ##############################################################################
     def all(self):
         
-        print 'creating all directories'
+        print('creating all directories')
 
 # Pierre
 #        if self.MWparam.norm_with_cross:
@@ -347,14 +351,14 @@ class create_dir:
             if self.MWparam['mw_run']['22']:
                 self.add_events()
             else:
-                print 'create M dir'
+                print('create M dir')
                 self.create_M_dir()
         else:
             if self.MWparam['mw_run']['22']:
                 return
             self.create_P_dir()
             
-        print 'created',self.created,'directories'
+        print('created',self.created,'directories')
         self.created=0
 
     #2 ##############################################################################
@@ -398,7 +402,7 @@ class create_dir:
         #update events
         #progress bar
         list_card=self.MWparam.actif_param
-        list_event=range(0,number_of_event)
+        list_event=list(range(0,number_of_event))
         if (len(list_card))*(len(list_event))*len(self.MWparam.MW_listdir)>0:
             pbar = progressbar.progbar('update MWdir',(len(list_card))*(len(list_event))*len(self.MWparam.P_listdir))
         for dir in self.MWparam.MW_listdir:
@@ -421,7 +425,7 @@ class create_dir:
 
         nb_exist_event=self.find_exist_event()
         list_card=self.MWparam.actif_param
-        list_event=range(nb_exist_event,nb_exist_event+self.MWparam.nb_event)
+        list_event=list(range(nb_exist_event,nb_exist_event+self.MWparam.nb_event))
         pbar = progressbar.progbar('create_dir',(len(list_card))*(len(list_event)))
         for card in list_card:
             for event in list_event:
@@ -453,7 +457,7 @@ class create_dir:
         #progress bar
         pbar = progressbar.progbar('create_dir',(len(list_card))*(self.MWparam.nb_event_MW[dirname]))
         for card in list_card:
-            list_event=range(0, self.MWparam.nb_event_MW[dirname])
+            list_event=list(range(0, self.MWparam.nb_event_MW[dirname]))
             try:
                 os.mkdir(self.Sdir_pos+'/'+self.MWparam.name+'/card_'+str(card))
             except:
@@ -579,17 +583,17 @@ class create_dir:
         #verification du format des dossiers
         list_dir=os.listdir(os.pardir)
         if self.MWparam.info['mw_run']['22']:
-            print self.Sdir_pos.split('/')[-1],': no deleting'
+            print(self.Sdir_pos.split('/')[-1],': no deleting')
             return output
 
-        print self.Sdir_pos.split('/')[-1],': deleting old run directory'
-        print os.getcwd()
+        print(self.Sdir_pos.split('/')[-1],': deleting old run directory')
+        print(os.getcwd())
         os.system('mkdir '+self.Sdir_pos+'/'+self.MWparam.name+'/')
         for datafile in os.listdir(self.Sdir_pos+'/'+self.MWparam.name):
             if datafile not in ['verif.lhco']:
                 try: os.system('rm '+self.Sdir_pos+'/'+self.MWparam.name+'/'+datafile+' -rf')
                 except:
-                    print "WARNING: this directory ", os.getcwd()+'/'+self.Sdir_pos+'/'+self.MWparam.name," are not deleted"
+                    print("WARNING: this directory ", os.getcwd()+'/'+self.Sdir_pos+'/'+self.MWparam.name," are not deleted")
                     output=0
                     
 

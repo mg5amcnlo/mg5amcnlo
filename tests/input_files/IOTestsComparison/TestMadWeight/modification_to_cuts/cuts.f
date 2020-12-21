@@ -1372,10 +1372,10 @@ C
 C
     2 IF (N.EQ.1)            RETURN
       IF (MODE)    10,20,30
-   10 CALL SORTTI (A,INDEX,N)
+   10 STOP 5 ! CALL SORTTI (A,INDEX,N)
       GO TO 40
 C
-   20 CALL SORTTC(A,INDEX,N)
+   20 STOP 5 ! CALL SSORTTC(A,INDEX,N)
       GO TO 40
 C
    30 CALL SORTTF (A,INDEX,N)
@@ -1570,6 +1570,7 @@ C     Set masses. Currently no way of getting those?
       m0d = 0.0
       m0c = 1.5
       m0s = 0.0
+      m0b = 4.7 
       m0t = 172.5
       m0w = 80.4
       m0z = 91.188

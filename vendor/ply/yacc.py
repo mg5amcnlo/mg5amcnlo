@@ -63,6 +63,8 @@
 # own risk!
 # ----------------------------------------------------------------------------
 
+from __future__ import absolute_import
+from six.moves import range
 __version__    = "3.3"
 __tabversion__ = "3.2"       # Table version
 
@@ -89,28 +91,29 @@ resultlimit = 40               # Size limit of results when running in debug mod
 pickle_protocol = 0            # Protocol to use when writing pickle files
 
 import re, types, sys, os.path
-from cStringIO import StringIO
+from six import StringIO
 
 # Compatibility function for python 2.6/3.0
 if sys.version_info[0] < 3:
     def func_code(f):
-        return f.func_code
+        return f.__code__
 else:
     def func_code(f):
         return f.__code__
 
 # Compatibility
 try:
-    MAXINT = sys.maxint
+    MAXINT = sys.maxsize
 except AttributeError:
     MAXINT = sys.maxsize
 
 # Python 2.x/3.0 compatibility.
 def load_ply_lex():
-    if sys.version_info[0] < 3:
-        import lex
-    else:
-        import ply.lex as lex
+    from . import lex
+    #if sys.version_info[0] < 3:
+    #    from . import lex
+    #else:
+    #    import ply.lex as lex
     return lex
 
 # This object is a stand-in for a logging object created by the 
@@ -199,9 +202,14 @@ class YaccProduction:
         self.stack = stack
         self.lexer = None
         self.parser= None
-    def __getitem__(self,n):
-        if n >= 0: return self.slice[n].value
-        else: return self.stack[n].value
+
+    def __getitem__(self, n):
+        if isinstance(n, slice):
+            return [s.value for s in self.slice[n]]
+        elif n >= 0:
+            return self.slice[n].value
+        else:
+            return self.stack[n].value
 
     def __setitem__(self,n,v):
         self.slice[n].value = v
@@ -1849,7 +1857,7 @@ class LRTable(object):
 
     def read_pickle(self,filename):
         try:
-            import cPickle as pickle
+            import six.moves.cPickle as pickle
         except ImportError:
             import pickle
 
@@ -2670,7 +2678,7 @@ del _lr_goto_items
 
     def pickle_table(self,filename,signature=""):
         try:
-            import cPickle as pickle
+            import six.moves.cPickle as pickle
         except ImportError:
             import pickle
         outf = open(filename,"wb")
@@ -2802,6 +2810,31 @@ class ParserReflect(object):
 
     # Compute a signature over the grammar
     def signature(self):
+
+        found_md5=True
+        try:
+            from hashlib import md5
+        except ImportError:
+            try:
+                from md5 import md5
+            except:
+                found_md5=False
+        if found_md5:
+            try:
+                sig = md5()
+                if self.start:
+                    sig.update(self.start.encode('latin-1'))
+                if self.prec:
+                    sig.update("".join(["".join(p) for p in self.prec]).encode('latin-1'))
+                if self.tokens:
+                    sig.update(" ".join(self.tokens).encode('latin-1'))
+                for f in self.pfuncs:
+                    if f[3]:
+                        sig.update(f[3].encode('latin-1'))
+            except (TypeError,ValueError):
+                pass
+            return sig.digest()
+
         import madgraph.various.misc as md5
         text = StringIO()
         if self.start:

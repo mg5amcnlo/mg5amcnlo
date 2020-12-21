@@ -52,8 +52,8 @@ foreach $infile (@ARGV) {
   # Keep track if we are in the init block or not
   $initblock = 0;
 
-  # LHE version extracted from current file ; 1 by default
-  $lhe_version = 1.0;
+  # LHE version extracted from current file ; 3 by default
+  $lhe_version = 3.0;
 
   while (1) {
     $gzbytes = $gzin->gzreadline($gzline);

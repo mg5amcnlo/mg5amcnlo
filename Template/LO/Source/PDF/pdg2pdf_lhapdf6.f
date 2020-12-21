@@ -24,7 +24,7 @@ C
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
      &     ,i_replace,ii,ipartlast(20)
       double precision xlast(20),xmulast(20),pdflast(-7:7,20)
-      double precision epa_proton
+      double precision epa_proton, epa_lepton
       save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
       data ipartlast/20*-99/
@@ -54,12 +54,14 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
       ipart=ipdg
-      if(iabs(ipart).eq.21) ipart=0
-      if(iabs(ipart).eq.22) ipart=7
-      iporg=ipart
-
+      if(iabs(ipart).eq.21) then
+         ipart=0
+      else if(iabs(ipart).eq.22) then 
+         ipart=7
+      else if (iabs(ipart).eq.7) then
+         ipart=7
 c     This will be called for any PDG code, but we only support up to 7
-      if(iabs(ipart).gt.7)then
+      else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
      $    'variables to 0 in the run_card'  
@@ -68,6 +70,7 @@ c     This will be called for any PDG code, but we only support up to 7
          stop 1
       endif
 
+      iporg=ipart
 c     Determine the iset used in lhapdf
       call getnset(iset)
       if (iset.ne.1) then
@@ -136,6 +139,8 @@ c     be saved
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
          pdg2pdf=pdg2pdf/x
+      else if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron
+            pdg2pdf=epa_lepton(x,xmu*xmu, ih)
       else if(ih.eq.2) then ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu)
       else

@@ -26,62 +26,61 @@ set output "CKKWL_djrs_output.ps"
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line  1 lt 1 lc rgb "#009e73" lw 1.3
+set style line   1 lt 1 lc rgb "#009e73" lw 1.3
 set style line 101 lt 1 lc rgb "#009e73" lw 1.3 dt (6,3)
-set style line 11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
-set style line 21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
-set style line 31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
-set style line 41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
+set style line  11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
+set style line  21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
+set style line  31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
+set style line  41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
 
-set style line  2 lt 1 lc rgb "#0072b2" lw 1.3
-set style line  102 lt 1 lc rgb "#0072b2" lw 1.3 dt (6,3)
-set style line 12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
-set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
-set style line 32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
-set style line 42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
+set style line   2 lt 1 lc rgb "#0072b2" lw 1.3
+set style line 102 lt 1 lc rgb "#0072b2" lw 1.3 dt (6,3)
+set style line  12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
+set style line  22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
+set style line  32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
+set style line  42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
 
-
-set style line  3 lt 1 lc rgb "#d55e00" lw 1.3
+set style line   3 lt 1 lc rgb "#d55e00" lw 1.3
 set style line 103 lt 1 lc rgb "#d55e00" lw 1.3 dt (6,3)
-set style line 13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
-set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
-set style line 33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
-set style line 43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
+set style line  13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
+set style line  23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
+set style line  33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
+set style line  43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
 
-set style line  4 lt 1 lc rgb "#f0e442" lw 1.3
-set style line  104 lt 1 lc rgb "#f0e442" lw 1.3 dt (6,3)
-set style line 14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
-set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
-set style line 34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
-set style line 44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
+set style line   4 lt 1 lc rgb "#f0e442" lw 1.3
+set style line 104 lt 1 lc rgb "#f0e442" lw 1.3 dt (6,3)
+set style line  14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
+set style line  24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
+set style line  34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
+set style line  44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
 
-set style line  5 lt 1 lc rgb "#56b4e9" lw 1.3
-set style line  105 lt 1 lc rgb "#56b4e9" lw 1.3 dt (6,3)
-set style line 15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
-set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
-set style line 35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
-set style line 45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
+set style line   5 lt 1 lc rgb "#56b4e9" lw 1.3
+set style line 105 lt 1 lc rgb "#56b4e9" lw 1.3 dt (6,3)
+set style line  15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
+set style line  25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
+set style line  35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
+set style line  45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
 
-set style line  6 lt 1 lc rgb "#cc79a7" lw 1.3
-set style line  106 lt 1 lc rgb "#cc79a7" lw 1.3 dt (6,3)
-set style line 16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
-set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
-set style line 36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
-set style line 46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
+set style line   6 lt 1 lc rgb "#cc79a7" lw 1.3
+set style line 106 lt 1 lc rgb "#cc79a7" lw 1.3 dt (6,3)
+set style line  16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
+set style line  26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
+set style line  36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
+set style line  46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
 
-set style line  7 lt 1 lc rgb "#e69f00" lw 1.3
-set style line  107 lt 1 lc rgb "#e69f00" lw 1.3 dt (6,3)
-set style line 17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
-set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
-set style line 37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
-set style line 47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
+set style line   7 lt 1 lc rgb "#e69f00" lw 1.3
+set style line 107 lt 1 lc rgb "#e69f00" lw 1.3 dt (6,3)
+set style line  17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
+set style line  27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
+set style line  37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
+set style line  47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
 
-set style line  8 lt 1 lc rgb "black" lw 1.3
-set style line  108 lt 1 lc rgb "black" lw 1.3 dt (6,3)
-set style line 18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
-set style line 28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
-set style line 38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
-set style line 48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
+set style line   8 lt 1 lc rgb "black" lw 1.3
+set style line 108 lt 1 lc rgb "black" lw 1.3 dt (6,3)
+set style line  18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
+set style line  28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
+set style line  38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
+set style line  48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
 
 
 set style line 999 lt 1 lc rgb "gray" lw 1.3
@@ -112,7 +111,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [8.3799e-11:4.0170e-07]
+set yrange [7.3061e-11:4.0170e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -122,9 +121,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'CKKWL_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 3 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 3 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -144,7 +143,7 @@ sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.3218e-01:2.4954e-01]
+set yrange [-2.3463e-01:2.5414e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -186,7 +185,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [7.7524e-11:5.2950e-07]
+set yrange [7.3558e-11:5.2950e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -196,9 +195,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'CKKWL_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 7 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 7 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -218,7 +217,7 @@ sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.5008e-01:3.0001e-01]
+set yrange [-2.5271e-01:3.0303e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -260,7 +259,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [8.3880e-11:5.4483e-07]
+set yrange [7.3558e-11:5.4483e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -270,9 +269,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'CKKWL_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 11 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 11 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -292,7 +291,7 @@ sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.1679e-01:2.7482e-01]
+set yrange [-2.1789e-01:2.7500e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -334,7 +333,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [8.4280e-11:6.0376e-07]
+set yrange [7.3558e-11:6.0376e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -344,9 +343,9 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
-sqrt(-1) ls 11 title 'all jet samples, scale variation',\
-sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
 sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
+sqrt(-1) ls 21 title 'all jet samples, PDF variation',\
+sqrt(-1) ls 11 title 'all jet samples, scale variation',\
 'CKKWL_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)):4 w yerrorbar ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 15 using (($1+$2)/2):($3 >= 0 ? sqrt(-1) : abs($3)) ls 104 title '',\
 'CKKWL_djrs_output.HwU' index 15 using (($1+$2)/2):($3 < 0 ? sqrt(-1) : $3):4 w yerrorbar ls 4 title '',\
@@ -366,7 +365,7 @@ sqrt(-1) ls 31 title 'all jet samples, merging scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.0692e-01:2.3076e-01]
+set yrange [-2.0733e-01:2.3279e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2

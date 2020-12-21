@@ -14,7 +14,10 @@
 ##   last-modif:24/01/09                                                ##
 ##                                                                      ##
 ##########################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
+from six.moves import input
 # patch if symbolic directory replace by real file
 sys.path.append('./Source/MadWeight/Python')
 sys.path.append('../Source/MadWeight/Python')
@@ -52,7 +55,7 @@ class banner:
 
     def write_card(self,pos):
 
-        print 'writing', pos
+        print('writing', pos)
         ff=open(pos,'w')
         for line in self.file:
             if self.pat_end.search(line):
@@ -62,7 +65,7 @@ class banner:
                 ff.writelines(line)
 
     def FindCardName(self,tag):
-        if tag in dico.keys():
+        if tag in list(dico.keys()):
             if '.' not in dico[tag]:
                 return dico[tag]+'.dat'
             else:
@@ -77,9 +80,9 @@ if __name__=='__main__':
     import MW_param
     MW_param.go_to_main_dir()
     opt=sys.argv
-    print opt
+    print(opt)
     if len(opt)<2:
-       name=raw_input('enter the run name to restore or the position of a banner file\n')
+       name=input('enter the run name to restore or the position of a banner file\n')
     else:
         name=opt[1]
 
@@ -91,15 +94,15 @@ if __name__=='__main__':
         pos='/'.join([part for part in name.split('/')[:-1]])
         
     ban.split()
-    print 'done'
+    print('done')
     
     if len(opt)==3:
         import_lhco=opt[2]
     else:
-        import_lhco=raw_input('Do you want import the input.lhco file? (1/0)\n')
+        import_lhco=input('Do you want import the input.lhco file? (1/0)\n')
 
     
     if int(import_lhco):
         os.system('cp '+pos+'/input.lhco ./Events')
-        print 'replace Events/input.lhco by '+pos+'/input.lhco'
+        print('replace Events/input.lhco by '+pos+'/input.lhco')
 

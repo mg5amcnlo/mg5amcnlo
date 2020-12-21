@@ -9,8 +9,11 @@ NFILE=$4
 
 export %(ld_library_path)s=$%(ld_library_path)s:%(extralibs)s
 
-# this is for py8 runs
-export PYTHIA8DATA=`pwd`/xmldoc
+if [ $SHOWER == "HERWIGPP" ] ; then
+    export PYTHIA8DATA=""
+else
+    export PYTHIA8DATA=`pwd`/xmldoc
+fi
 
 # if one is splitting file cd to a new dir and link all files here
 if [[ "$NFILE" != "" ]]; then

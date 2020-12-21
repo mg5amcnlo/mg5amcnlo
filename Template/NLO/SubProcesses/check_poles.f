@@ -2,6 +2,8 @@
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
+      use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -9,7 +11,7 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked
+      integer npointsChecked
       integer i, j, k
       integer return_code
       double precision tolerance, tolerance_default
@@ -63,8 +65,6 @@ cc
       common /to_polecheck/force_polecheck, polecheck_passed
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
-      include 'FKSParams.inc'
-      include 'mint.inc'
       
 C-----
 C  BEGIN CODE
@@ -466,16 +466,3 @@ c     Just a wrapper to ran2
       return 
       end
 
-      subroutine outfun(p, a, b, i)
-c     just a dummy subroutine
-      implicit none
-      include 'nexternal.inc'
-      double precision p(0:3, nexternal), a, b
-      integer i
-      write(*,*) 'THIS FUNCTION SHOULD NEVER BE CALLED'
-      return
-      end
-
-      
-      subroutine initplot
-      end
