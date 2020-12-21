@@ -179,7 +179,7 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       ! the Bjorken x's
       implicit none
       double precision expo
-      parameter (expo=0.95d0)
+      parameter (expo=0.96d0)
       get_ee_expo = expo
       return
       end
