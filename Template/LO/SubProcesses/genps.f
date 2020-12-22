@@ -937,11 +937,11 @@ c
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
          if (nt_channel.ge.2)then
-            tmin = max(tmin, tmin_for_channel*stot)
+            tmin = max(tmin, -stot)
          endif
-      if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
+      if ((tmax-tmin)/stot.gt.0.1)then
             call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $           0d0, -tmin_for_channel)
+     $           0d0, 1d0)
          t = stot*(-x(-ibranch))
       
       else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
@@ -1146,11 +1146,11 @@ c         write(*,*) 'tmin, tmax',tmin,tmax
 
 c     test of impact of low t part
          if (nt_channel.ge.2)then
-            tmin = max(tmin,  tmin_for_channel*stot)
+            tmin = max(tmin,  -stot)
          endif
-      if ((tmax-tmin)/stot.gt.0.1*dabs(tmin_for_channel))then
+      if ((tmax-tmin)/stot.gt.0.1)then
             call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $           0d0, -tmin_for_channel)
+     $           0d0, 1d0)
          t = stot*(-x(-ibranch))
 c     if (dabs(tmax - tmin)/stot.gt.0.05d0) then
 c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
@@ -1686,8 +1686,14 @@ c      	      	      	   2 means approximation by the	denominator of the propaga
       
       include 'configs.inc'
 
+      if(sde_strat.eq.1.and.tmin_for_channel.eq.-1)then
+         get_channel_cut = 1d0
+         return
+      endif
+      
       if (first_time) then
-      include 'props.inc'
+         include 'props.inc'
+         first_time=.false.
       endif
       
       do i = 1, nexternal
@@ -1741,10 +1747,10 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
 c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
             t = t/stot 
             if (t.lt.tmin_for_channel)then
-               get_channel_cut = 0.
-               return
-            else if(t.gt.2*tmin_for_channel)then
-               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
+                get_channel_cut = get_channel_cut * exp((t-tmin_for_channel)/(t+1))
+c               get_channel_cut = get_channel_cut * (t+1)/(1+tmin_for_channel)
+c            else if(t.gt.2*tmin_for_channel)then
+c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
             endif
          else
             if(sde_strat.eq.2)then
