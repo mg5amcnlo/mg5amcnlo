@@ -5926,7 +5926,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
         # 
         if self.run_card:
-            if not 'SDE_strategy' in self.run_card.user_set:
+            if not 'sde_strategy' in self.run_card.user_set:
                 if proc_charac['single_color']:
                     self.run_card['SDE_strategy'] = 2
                 else:
