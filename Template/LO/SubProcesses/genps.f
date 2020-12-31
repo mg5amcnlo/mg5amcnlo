@@ -1672,6 +1672,7 @@ c      	      	      	   2 means approximation by the	denominator of the propaga
       integer ns_channel
       integer nb_tchannel
       integer nbranch
+      double precision tmp, tmp2
       
       double precision ZERO
       parameter (ZERO=0d0)
@@ -1757,7 +1758,9 @@ c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
                Width = prwidth(-i, config)
-               get_channel_cut = get_channel_cut / (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2)
+               tmp = (t-Mass)*(t+Mass)
+               tmp2 = Mass*Width
+               get_channel_cut = get_channel_cut* (tmp**2 - tmp2**2)/(tmp**2 + tmp2**2)**2 
             endif
 c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
          endif
