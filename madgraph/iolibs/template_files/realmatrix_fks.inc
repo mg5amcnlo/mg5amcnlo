@@ -114,6 +114,7 @@ C
       data ic /nexternal*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C COLOR DATA
 C  

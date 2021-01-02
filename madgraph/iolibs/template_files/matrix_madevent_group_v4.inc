@@ -297,7 +297,7 @@ C LOCAL VARIABLES
 C  
     INTEGER I,J,M,N
     COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+    REAL*8 CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
 C   Needed for v4 models
@@ -370,7 +370,7 @@ endif
         ENDDO
 		DO N = 1, NAMPSO
 		  %(select_configs_if)s
-             MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+             MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
 	      %(select_configs_endif)s
 		ENDDO
       ENDDO

@@ -5925,7 +5925,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
                 
         # 
-        if self.run_card:
+        if self.run_card and isinstance(self.run_card,banner_mod.RunCardLO):
             if not 'sde_strategy' in self.run_card.user_set:
                 if proc_charac['single_color']:
                     self.run_card['SDE_strategy'] = 2

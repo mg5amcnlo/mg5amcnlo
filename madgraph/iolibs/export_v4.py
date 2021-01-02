@@ -166,6 +166,7 @@ class ProcessExporterFortran(VirtualExporter):
                         'output_options':{}
                         }
     grouped_mode = False
+    jamp_optim = False
 
     def __init__(self,  dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
@@ -1073,7 +1074,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 enumerate(matrix_element.get('color_matrix').\
                                                  get_line_denominators()):
                 # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+                #ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
@@ -1083,10 +1084,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5i" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                
                 my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
                 ret_list.append("C %s" % repr(my_cs))
-
+            misc.sprint(ret_list)
             return ret_list
 
 
@@ -1407,7 +1409,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     if not coefficient:
                         continue
                     value = (1j if coefficient[2] else 1)* coefficient[0] * coefficient[1] * fractions.Fraction(3)**coefficient[3]
-                    all_element[(i+1, amp_number)] = value
+                    if (i+1, amp_number) not in all_element:
+                        all_element[(i+1, amp_number)] = value
+                    else:
+                        all_element[(i+1, amp_number)] += value
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1426,19 +1431,31 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     res = res + ')'
     
                 res_list.append(res)
-           
-        if not 'jamp_optim' in self.cmd_options:
-            return res_list, 0
+        
+        if 'jamp_optim' in self.cmd_options:
+            jamp_optim = banner_mod.ConfigFile.format_variable(self.cmd_options['jamp_optim'], bool, 'jamp_optim')
+        else:
+            # class default
+            jamp_optim = self.jamp_optim
                 
-        logger.info("Computing Color-Flow optimization [%s term]", len(all_element))
-        start_time = time.time()
+        if not jamp_optim:
+            return res_list, 0
+        else:
+            saved = list(res_list)
+        
+        if len(all_element) > 1000:
+            logger.info("Computing Color-Flow optimization [%s term]", len(all_element))
+            start_time = time.time()
+        else: 
+            start_time = 0
         
         res_list = []
         #misc.sprint(len(all_element))  
         
         self.myjamp_count = 0
         new_mat, defs = self.optimise_jamp(all_element)
-        logger.info("Color-Flow passed to %s term in %ss. Introduce %i contraction", len(new_mat), int(time.time()-start_time), len(defs))
+        if start_time:
+            logger.info("Color-Flow passed to %s term in %ss. Introduce %i contraction", len(new_mat), int(time.time()-start_time), len(defs))
         
         
         #misc.sprint("number of iteration", self.myjamp_count)
@@ -1484,7 +1501,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for i in range(1,max_jamp+1):
             name = JAMP_format % i
             res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
-
+            
         return res_list, len(defs)
 
     def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
@@ -1548,8 +1565,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         
                     all_element[(i,-added)] = v1
                     del all_element[(i,j1)] #= 0
-                    del all_element[(i,j2)] #= 0     
-        misc.sprint(len(to_add))
+                    del all_element[(i,j2)] #= 0 
+
+        logger.log(5,"Define %d new shortcut reused %d times", len(to_add), max_count)
         new_element, new_def =  self.optimise_jamp(all_element, nb_line=nb_line, nb_col=nb_col, added=added)
         for one_def in to_add:
             new_def.insert(0, one_def)
@@ -2713,7 +2731,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
             self.write_check_sa_splitOrders(squared_orders,split_orders,
               nexternal,ninitial,proc_prefix,check_sa_writer)
-        misc.sprint(nb_tmp_jamp)
+
         if write:
             writers.FortranWriter('nsqso_born.inc').writelines(
                 """INTEGER NSQSO_BORN
@@ -3692,6 +3710,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         'output_options':{},
                         'hel_recycling': False
                         }
+    jamp_optim = True
     
     def __init__(self,  dir_path = "", opt=None):
         

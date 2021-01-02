@@ -168,6 +168,7 @@ C
       data ic /nmo*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor)
+      COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C GLOBAL VARIABLES
 C  

@@ -2016,8 +2016,10 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
 
         # Set the size of Wavefunction
         if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
@@ -2109,8 +2111,9 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
@@ -2272,20 +2275,15 @@ c     this subdir has no soft singularities
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = line.replace('JAMP', 'JAMP1')
-            new_jamp_lines.append(line)
-        replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP1(%s)")
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
     
+        
         matrix_element.set('color_basis', link['link_basis'] )
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = line.replace( 'JAMP', 'JAMP2')
-            new_jamp_lines.append(line)
-        replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP2(%s)")
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = max(nb_tmp_jamp, replace_dict['nb_temp_jamp'])
     
     
         # Extract the number of FKS process
@@ -2526,9 +2524,9 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             replace_dict['wavefunctionsize'] = 8
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-    
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
     
         realfile = open(os.path.join(_file_path, \
                              'iolibs/template_files/realmatrix_fks.inc')).read()
@@ -3389,6 +3387,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    jamp_optim = True 
 
     def finalize(self, *args, **opts):
         ProcessExporterFortranFKS.finalize(self, *args, **opts)

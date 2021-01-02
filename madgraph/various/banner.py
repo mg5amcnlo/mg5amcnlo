@@ -2965,7 +2965,7 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
+        self.add_param("dynamical_scale_choice", 3, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
                                                 allowed=[-1,0,1,2,3,4])
         
         # Bias module options
@@ -3130,7 +3130,7 @@ class RunCardLO(RunCard):
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
         self.add_param('hard_survey', 0, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
-        self.add_param('tmin_for_channel', -0.2, hidden=True, comment='limit the non-singular reach of --some-- channel of integration related to T-channel diagram')
+        self.add_param('tmin_for_channel', -1, hidden=True, comment='limit the non-singular reach of --some-- channel of integration related to T-channel diagram')
         self.add_param("second_refine_treshold", 0.9, hidden=True, include=False, comment="set a treshold to bypass the use of a second refine. if the ratio of cross-section after survey by the one of the first refine is above the treshold, the  second refine will not be done.")
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
