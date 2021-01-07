@@ -254,7 +254,7 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
 	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
       COMPLEX*16 W(20,NWAVEFUNCS)
@@ -286,7 +286,7 @@ C ----------
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 		  DO N = 1, NAMPSO
-            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))
 		  ENDDO
         ENDDO
 	  ENDDO

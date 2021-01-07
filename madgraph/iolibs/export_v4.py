@@ -1088,7 +1088,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 
                 my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
                 ret_list.append("C %s" % repr(my_cs))
-            misc.sprint(ret_list)
             return ret_list
 
 
@@ -4835,7 +4834,7 @@ c           This is dummy particle used in multiparticle vertices
             # pass to ping-pong strategy for t-channel for 3 ore more T-channel
             #  this is directly related to change in genps.f
             tstrat = self.opt.get('t_strategy', 0)
-            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat)
+            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat, self.model)
             
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
@@ -4923,11 +4922,12 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     ordering = 0    
     @staticmethod
-    def reorder_tchannels(tchannels, tstrat):
+    def reorder_tchannels(tchannels, tstrat, model):
         
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
-        ProcessExporterFortranME.ordering +=1
+        #ProcessExporterFortranME.ordering +=1
+        #misc.sprint(ProcessExporterFortranME.ordering)
         if len(tchannels) < 3 or tstrat == 2:
             return tchannels, 2
         elif tstrat == 1:
@@ -4935,8 +4935,17 @@ c           This is dummy particle used in multiparticle vertices
         elif len(tchannels) < 4:
             #
             first = tchannels[0]['legs'][1]['number']
+            t1 =  tchannels[0]['legs'][-1]['id']
             last = tchannels[-1]['legs'][1]['number']
-            if first > last:
+            t2 = tchannels[-1]['legs'][0]['id']
+            m1  = model.get_particle(t1).get('mass') == 'ZERO'
+            m2  = model.get_particle(t2).get('mass') == 'ZERO'
+            
+            if m2 and not m1:
+                return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+            elif m1 and not m2:
+                return tchannels, 2
+            elif first < last:
                 return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
             else:
                 return tchannels, 2 #-2 is ping-pong strategy but does not matter here
