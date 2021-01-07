@@ -846,7 +846,7 @@ c
 c     From here, on we can just pretend this is a 2->2 scattering with
 c     Pa                    + Pb     -> P1          + P2
 
-      if (tstrategy.eq.-2) then
+      if (tstrategy.eq.-2.or.tstrategy.eq.-1) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
 cc       T-channel ping-pong strategy starting with 2
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -876,7 +876,7 @@ c         smax = (m(ibranch) - m(itree(2,ibranch)))**2
             iopposite = ibranch +1
          else
             pother(:) = p(:,2)
-            iopposite = 2
+            iopposite = abs(tstrategy)
          endif
          s1  = m(ibranch)**2                        !Total mass available
          ma2 = dot(pother, pother)
@@ -936,27 +936,27 @@ c
 
 c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
 
-         if (nt_channel.ge.2)then
-            tmin = max(tmin, -stot)
-         endif
-      if ((tmax-tmin)/stot.gt.0.1)then
-            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $           0d0, 1d0)
-         t = stot*(-x(-ibranch))
+c         if (nt_channel.ge.2)then
+c            tmin = max(tmin, -stot)
+c         endif
+c      if ((tmax-tmin)/stot.gt.0.1)then
+c            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $           0d0, 1d0)
+c         t = stot*(-x(-ibranch))
       
-      else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
+c      else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
 c         tmax = max(tmax,0d0) !This line if want really t freedom
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0d0, -tmin/stot)
-         t = stot*(-x(-ibranch))
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0, -tmin/stot)
+c         t = stot*(-x(-ibranch))
 
-      else
+c      else
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
          t = stot*(-x(-ibranch))
-      endif
+c      endif
 
 c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
       if (t .lt. tmin .or. t .gt. tmax) then

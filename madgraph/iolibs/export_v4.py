@@ -4926,12 +4926,15 @@ c           This is dummy particle used in multiparticle vertices
         
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
-        #ProcessExporterFortranME.ordering +=1
-        #misc.sprint(ProcessExporterFortranME.ordering)
+        ProcessExporterFortranME.ordering +=1
         if len(tchannels) < 3 or tstrat == 2:
             return tchannels, 2
         elif tstrat == 1:
             return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+        elif tstrat == -2:
+            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+        elif tstrat == -1:
+            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1        
         elif len(tchannels) < 4:
             #
             first = tchannels[0]['legs'][1]['number']
@@ -4950,7 +4953,21 @@ c           This is dummy particle used in multiparticle vertices
             else:
                 return tchannels, 2 #-2 is ping-pong strategy but does not matter here
         else:
-            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+            first = tchannels[0]['legs'][1]['number']
+            t1 =  tchannels[0]['legs'][-1]['id']
+            last = tchannels[-1]['legs'][1]['number']
+            t2 = tchannels[-1]['legs'][0]['id']
+            m1  = model.get_particle(t1).get('mass') == 'ZERO'
+            m2  = model.get_particle(t2).get('mass') == 'ZERO'
+            
+            if m2 and not m1:
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1
+            elif m1 and not m2:
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+            elif first < last:
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1
+            else:
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
 
     @staticmethod
     def reorder_tchannels_flipside(tchannels):
@@ -5032,7 +5049,7 @@ c           This is dummy particle used in multiparticle vertices
                 
             #copy the vertex /leglist to avoid side effects
             new_vert = base_objects.Vertex(old_vert)
-            new_vert['legs'] = [base_objects.Leg(l) for l in old_vert['legs']]
+            new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
             # vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 
             # -N X > -N+1 (and then relabel -N and -N+1  
@@ -5066,7 +5083,7 @@ c           This is dummy particle used in multiparticle vertices
         return out
     
     @staticmethod
-    def reorder_tchannels_pingpong(tchannels):
+    def reorder_tchannels_pingpong(tchannels, id=2):
         """change the tchannel ordering to pass to a ping-pong strategy.
            assume ninitial == 2
         
@@ -5136,26 +5153,32 @@ c           This is dummy particle used in multiparticle vertices
         # Setup the last vertex to refenence the second id beam
         # -N (need to setup it to 2.
         initialid = tchannels[-1]['legs'][-1]['number']       
-        oldid2new[initialid] = 2
-        
+        oldid2new[initialid] = id
+
 
         
         i = 0 
         while tchannels:
             #ping pong by taking first/last element in aternance
-            if i % 2 == 0:
-                old_vert = tchannels.pop(0)
+            if id ==2:
+                if i % 2 == 0:
+                    old_vert = tchannels.pop(0)
+                else:
+                    old_vert = tchannels.pop()
             else:
-                old_vert = tchannels.pop()
-                
+                if i % 2 != 0:
+                    old_vert = tchannels.pop(0)
+                else:
+                    old_vert = tchannels.pop()
+                    
             #copy the vertex /leglist to avoid side effects
             new_vert = base_objects.Vertex(old_vert)
-            new_vert['legs'] = [base_objects.Leg(l) for l in old_vert['legs']]
+            new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
             # if vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 
             # -N X > -N+1 (and then relabel -N and -N+1
             # to be secure  we also support (X -N+1 > -N)
-            if i % 2 ==1: 
+            if (i % 2 ==1 and id ==2) or (i %2 == 0 and id ==1): 
                 legs = new_vert['legs'] # shorcut
                 id1 = legs[0]['number']
                 id2 = legs[1]['number'] 
@@ -5169,6 +5192,9 @@ c           This is dummy particle used in multiparticle vertices
             old_propa_id = new_vert['legs'][-1]['number'] 
             oldid2new[old_propa_id] = propa_id
 
+            if i==0 and id==1:
+                legs[0]['number'] = 2
+            
             #pass to new convention for leg numbering:
             for l in new_vert['legs']:
                 if l['number'] in  oldid2new:
