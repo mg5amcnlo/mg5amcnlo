@@ -395,11 +395,33 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===============================================================================
     # write a initial states map, useful for the fast PDF NLO interface
     #===============================================================================
+    def write_maxproc_files(self, nmaxpdf, subproc_path):
+        """write the c++ and fortran header files with the max number of pdf pairs
+        """
+        # fortran
+        content = "      integer mxpdflumi\n      integer max_nproc\n      parameter(mxpdflumi=%d,max_nproc=%d)\n" \
+                % (nmaxpdf, nmaxpdf)
+        fout = open(pjoin(subproc_path, 'pineappl_maxproc.inc'), 'w')
+        fout.write(content)
+        fout.close()
+
+        # c++
+        content = "#define  __max_nproc__ %d" % (nmaxpdf)
+        fout = open(pjoin(subproc_path, 'pineappl_maxproc.h'), 'w')
+        fout.write(content)
+        fout.close()
+
+
+
+    #===============================================================================
+    # write a initial states map, useful for the fast PDF NLO interface
+    #===============================================================================
     def write_init_map(self, file_pos, initial_states):
         """ Write an initial state process map. Each possible PDF
         combination gets an unique identifier."""
         
         text=''
+        i=0
         for i,e in enumerate(initial_states):
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
@@ -417,6 +439,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff = open(file_pos, 'w')
         ff.write(text)
         ff.close()
+
+        return i+1
 
     def get_ME_identifier(self, matrix_element, *args, **opts):
         """ A function returning a string uniquely identifying the matrix 
@@ -590,9 +614,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                              nexternal, ninitial)
 
         filename = 'orders.inc'
-        amp_split_orders = self.write_orders_file(
+        amp_split_orders, amp_split_size, amp_split_size_born = \
+			   self.write_orders_file(
                             writers.FortranWriter(filename),
                             matrix_element)
+
+        filename = 'orders.h'
+        self.write_orders_c_header_file(
+                            writers.CPPWriter(filename),
+                            amp_split_size, amp_split_size_born)
 
         filename = 'amp_split_orders.inc'
         self.write_amp_split_orders_file(
@@ -631,10 +661,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
-                     'appl_interface.cc',
-                     'appl_interface_dummy.f',
-                     'appl_common.inc',
-                     'reweight_appl.inc',
+                     'pineappl_interface.cc',
+                     'pineappl_interface_dummy.f',
+                     'pineappl_common.inc',
+                     'reweight_pineappl.inc',
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
                      'fjcore.cc',
@@ -644,6 +674,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_powers.inc',
                      'fks_singular.f',
                      'splitorders_stuff.f',
+                     'orderstags_glob.f',
                      'chooser_functions.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
@@ -672,6 +703,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
+                     'recmom.f',
                      'test_soft_col_limits.f',
                      'symmetry_fks_v3.f',
                      'vegas2.for',
@@ -688,6 +720,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
+                     'pineappl_maxproc.inc',
+                     'pineappl_maxproc.h',
                      'timing_variables.inc',
                      'polfit.f']
 
@@ -1052,19 +1086,27 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
+    def write_orders_c_header_file(self, writer, amp_split_size, amp_split_size_born):
+        """writes the header file including the amp_split_size declaration for amcblast
+	"""
+        text = "#define __amp_split_size %d\n" % amp_split_size
+        text+= "#define __amp_split_size_born %d" % amp_split_size_born
+
+        writer.writelines(text)
+
+
+
     def write_orders_file(self, writer, matrix_element):
         """writes the include file with the informations about coupling orders.
         In particular this file should contain the constraints requested by the user
         for all the orders which are split"""
 
         born_orders = {}
-        for ordd, val in matrix_element.born_me['processes'][0]['born_orders'].items():
-            # factor 2 to pass to squared orders
-            born_orders[ordd] = 2 * val 
+        for ordd, val in matrix_element.born_me['processes'][0]['born_sq_orders'].items():
+            born_orders[ordd] = val 
 
         nlo_orders = {}
         for ordd, val in matrix_element.born_me['processes'][0]['squared_orders'].items():
-            # no need to multiply by 2 here
             nlo_orders[ordd] = val
         
         split_orders = \
@@ -1185,7 +1227,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         writer.writelines(text)
 
-        return amp_split_orders
+        return amp_split_orders, amp_split_size, amp_split_size_born
 
 
     #===============================================================================

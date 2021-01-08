@@ -205,7 +205,6 @@ class TestCmdShell1(unittest.TestCase):
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
-                    'amcfast': 'amcfast-config',
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,

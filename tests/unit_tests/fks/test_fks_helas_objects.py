@@ -72,8 +72,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0, 'QCD':4},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 0, 'QCD':6},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QCD'],
@@ -87,8 +86,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 2, 'QCD':2},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 2, 'QCD':4},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QED'],
@@ -102,8 +100,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0, 'QCD':4},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 0, 'QCD':6},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QCD'],
@@ -117,8 +114,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 2, 'QCD':2},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 2, 'QCD':4},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QED'],
@@ -146,8 +142,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg]))
 
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':0},
-                        'orders': {'QED':1,'QCD':2},
+                        'born_sq_orders': {'QED':2,'QCD':0},
                         'squared_orders': {'QED':2,'QCD':2},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -183,8 +178,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg]))
 
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':0},
-                        'orders': {'QED':1,'QCD':2},
+                        'born_sq_orders': {'QED':2,'QCD':0},
                         'squared_orders': {'QED':2,'QCD':2},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -213,8 +207,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg, z_leg]))
         mymodel = import_ufo.import_model('RS')
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QCD':0, 'QED':2, 'QTD':2},
-                        'orders': {'QCD':2, 'QED':2, 'QTD':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4, 'QTD':4},
                         'squared_orders': {'QCD':2, 'QED':4, 'QTD':4},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -278,8 +271,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([w_leg, j_leg]))
         
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':1},
-                        'orders': {'QED':1,'QCD':3},
+                        'born_sq_orders': {'QED':2,'QCD':2},
                         'squared_orders': {'QED':2,'QCD':4},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -376,8 +368,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([t, tx]))
         
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'orders': {'QCD':4, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':6, 'QED':0},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],

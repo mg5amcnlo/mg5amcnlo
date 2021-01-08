@@ -29,8 +29,8 @@ c
       integer nevents
       character*7 event_norm
       common /event_normalisation/event_norm
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer idum
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
