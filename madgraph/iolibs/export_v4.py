@@ -4920,13 +4920,14 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # reoder t-channels
     #===========================================================================
-    ordering = 0    
+    
+    #ordering = 0    
     @staticmethod
     def reorder_tchannels(tchannels, tstrat, model):
         
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
-        ProcessExporterFortranME.ordering +=1
+        #ProcessExporterFortranME.ordering +=1
         if len(tchannels) < 3 or tstrat == 2:
             return tchannels, 2
         elif tstrat == 1:
@@ -4943,7 +4944,6 @@ c           This is dummy particle used in multiparticle vertices
             t2 = tchannels[-1]['legs'][0]['id']
             m1  = model.get_particle(t1).get('mass') == 'ZERO'
             m2  = model.get_particle(t2).get('mass') == 'ZERO'
-            
             if m2 and not m1:
                 return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
             elif m1 and not m2:
@@ -4951,7 +4951,7 @@ c           This is dummy particle used in multiparticle vertices
             elif first < last:
                 return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
             else:
-                return tchannels, 2 #-2 is ping-pong strategy but does not matter here
+                return tchannels, 2 
         else:
             first = tchannels[0]['legs'][1]['number']
             t1 =  tchannels[0]['legs'][-1]['id']
@@ -4960,14 +4960,32 @@ c           This is dummy particle used in multiparticle vertices
             m1  = model.get_particle(t1).get('mass') == 'ZERO'
             m2  = model.get_particle(t2).get('mass') == 'ZERO'
             
+            t12 =  tchannels[1]['legs'][-1]['id']
+            m12 = model.get_particle(t12).get('mass') == 'ZERO'
+            t22 = tchannels[-2]['legs'][0]['id']
+            m22 = model.get_particle(t22).get('mass') == 'ZERO'
             if m2 and not m1:
-                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1
+                if m22:
+                    return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+                else:
+                    return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
             elif m1 and not m2:
+                if m12:
+                    return tchannels, 2
+                else:
+                    return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+            elif m1 and m2 and  len(tchannels) == 4 and not m12: # 3 T propa
                 return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
-            elif first < last:
-                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1
+                # this case seems quite sensitive we tested method 2 specifically and this was not helping in general 
+            elif not m1 and not m2 and  len(tchannels) == 4 and m12:
+                if first < last:
+                    return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+                return tchannels, 2
             else:
                 return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+
+
+                
 
     @staticmethod
     def reorder_tchannels_flipside(tchannels):
