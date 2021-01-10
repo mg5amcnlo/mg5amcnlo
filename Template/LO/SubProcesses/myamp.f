@@ -78,7 +78,8 @@ c-----
          include 'props.inc'
          nbw = 0
          do i=-1,-(nexternal-3),-1
-            if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0) then
+            if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0.or.
+     &                       (nincoming.eq.2.and.iforest(1,i,iconfig) .eq. 2)) then
               cycle
             endif
             nbw=nbw+1
@@ -111,7 +112,7 @@ c     If no non-zero sprop, set iproc to 1
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
          onbw(i) = .false.
-         if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
+         if (iforest(1,i,iconfig) .eq. 1.or.(nincoming.eq.2.and.iforest(1,i,iconfig).eq.2)) tsgn=-1d0
          do j=0,3
             xp(j,i) = xp(j,iforest(1,i,iconfig))
      $           +tsgn*xp(j,iforest(2,i,iconfig))

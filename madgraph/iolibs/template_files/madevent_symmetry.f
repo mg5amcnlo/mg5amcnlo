@@ -355,7 +355,8 @@ c     Now determine which propagators are part of the same
 c     chain and could potentially conflict
 c
       i=1
-      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
+      do while (i .lt. nexternal-2 .and. .not. (
+     &    itree(1,-i) .eq. 1.or.(nincoming.eq.2.and.itree(1,-i).eq.2)))
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          mtot=mtot-xmass(-i)
          if (prwidth(-i,iconfig) .gt. 0d0) then

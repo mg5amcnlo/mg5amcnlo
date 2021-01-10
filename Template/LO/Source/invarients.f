@@ -249,7 +249,7 @@ c      if (pp) jgrid=2
       do iconfig=mincfig,maxcfig
          tchannel = .false.         
          do j=1,nbranch-1
-            if (iforest(1,-j,iconfig) .eq. 1) then
+            if (iforest(1,-j,iconfig) .eq. 1.or.(nincoming.eq.2.and.iforest(1,-j,iconfig) .eq. 2)) then
                tchannel=.true.
             endif
             jgrid=jgrid+1
