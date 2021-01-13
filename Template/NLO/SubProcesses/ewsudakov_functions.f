@@ -66,9 +66,12 @@ c exit and do nothing
 
       double precision s, rij
 
+      logical   printinewsdkf
+      common /to_printinewsdkf/printinewsdkf
+
       get_ssc_c = 0d0
 c exit and do nothing
-      return
+c      return
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -77,6 +80,29 @@ c exit and do nothing
       get_ssc_c = get_ssc_c + 2d0*smallL(s) * dlog(dabs(rij)/s) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
+
+
+      if (printinewsdkf) WRITE (72,*) , hels, ileg1, ileg2, pdgp1, pdgp2,
+     $ dble(sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)*CMPLX(1d0,-1000d0)),
+     $ dble(sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)*CMPLX(1d0,-1000d0)) 
+
+
+
+      if (printinewsdkf) print*,"get_ssc_c=",get_ssc_c,"    rij=",rij
+      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg1),",", hels(ileg1),
+     . ",", iflist(ileg1),",", pdgp1,")=",sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
+      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg2),",", hels(ileg2),
+     . ",", iflist(ileg2),",", pdgp2,")=",sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
+      if (printinewsdkf) print*,"rij=","r(",ileg1,",",ileg2,")=",rij
+
+c      if (printinewsdkf) then
+c      if (sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1) *
+c     $   sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2).ne.0d0.and. dabs(dlog(dabs(rij)/s)).ge.1d-6) then
+c        print*,"DIVERSO DA ZERO", dlog(dabs(rij)/s)
+c      else 
+c         print*,"UGUALE A ZERO"
+c      endif
+c      endif
 
       return
       end
@@ -95,7 +121,7 @@ c exit and do nothing
       double precision s, rij
 
       get_ssc_n_diag = 0d0
-c      return
+      return
 c exit and do nothing
 
 
@@ -153,9 +179,9 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
      $    (pdg_old.eq.250.and.pdg_new.eq.25)) then
         do i = 1, nexternal-1
           if (i.eq.ileg) cycle
-          get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 + 
+          get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 +
      $              sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
-     $              sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg)) 
+     $              sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
      $              * 2d0 * smallL(s) * dlog(abs(invariants(i,ileg))/s)
         enddo
       endif
@@ -185,9 +211,9 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
      $     (pdg_old1.eq.250.and.pdg_new1.eq.25)).and.
      $    ((pdg_old2.eq.25.and.pdg_new2.eq.250).or.
      $     (pdg_old2.eq.250.and.pdg_new2.eq.25))) then
-        get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 + 
+        get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 +
      $              sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
-     $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2)) 
+     $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
      $              * 2d0 * smallL(s) * dlog(abs(invariants(ileg1,ileg2))/s)
       endif
 
@@ -195,6 +221,8 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
       end
 
 
+
+      
       double complex function get_xxc_diag(pdglist, hels, iflist, invariants)
       implicit none
       include 'nexternal.inc'
@@ -237,8 +265,11 @@ c exit and do nothing
 
       return
       end
-      
-      
+
+ 
+
+
+ 
       double complex function bigL(s)
       implicit none
       double precision s
@@ -324,6 +355,16 @@ C charged goldstones / W boson
 C the product of pdg code * helicity  
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
+
+C!!!!						ATTENTION						      !!!!
+C!!!! following the notation of Denner and Pozzorini, the prime index pdgp is the first and pdg is the second !!!!
+C!!!! It is not working for logitudinally polarised Z in the initial state (ifsign=-1), both as pdg or pdgp   !!!!                        
+
+      if (ifsign.eq.-1.and.(pdg.eq.250.or.pdgp.eq.250)) then
+        print*,"Error: Tpm invovling longitudinally polarised 
+     .          Z not implemented for the initial state"
+      endif
+
       if (hel.ne.0) then
         s_pdg = pdg*hel
       else
@@ -355,17 +396,27 @@ C left handed down quark / right handed antidown quark
       endif
 
 C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
-      if (abs(s_pdg).eq.251) sdk_tpm = sign(1d0,dble(s_pdg)) 
-      if (abs(s_pdg).eq.250) sdk_tpm = sign(1d0,dble(s_pdg)) 
-      if (abs(s_pdg).eq.25) sdk_tpm = sign(1d0,dble(s_pdg)) 
+      if (abs(s_pdg).eq.251.and.pdgp.eq.25) sdk_tpm = sign(1d0,dble(s_pdg)) 
+      if (abs(s_pdg).eq.251.and.pdgp.eq.250) sdk_tpm = CMPLX(0d0,-1d0)
+
+
+c following last .and. conditions are not strictly necessary
+      if (abs(s_pdg).eq.250.and.abs(pdgp*ifsign).eq.251) sdk_tpm =  CMPLX(0d0,1d0)
+      if (abs(s_pdg).eq.25.and.abs(pdgp*ifsign).eq.251) sdk_tpm = sign(1d0,dble((pdgp*ifsign))) 
+
+      if (sdk_tpm.ne.0d0) then
+         sdk_tpm = sdk_tpm / (2d0 * dsqrt(sw2))
+         return
+      endif
+      
+
 
 C vector bosons
-      if (abs(pdg*ifsign).eq.24.and.pdgp.eq.22) sdk_tpm = -sign(1d0,dble(pdg*ifsign))
+      if (abs(pdg*ifsign).eq.24.and.pdgp.eq.22) sdk_tpm = sign(1d0,dble(pdg*ifsign))
       if (pdg.eq.22.and.abs(pdgp*ifsign).eq.24) sdk_tpm = sign(1d0,dble(pdgp*ifsign))
-      if (abs(pdg*ifsign).eq.24.and.pdgp.eq.23) sdk_tpm = sign(1d0,dble(pdg*ifsign)) / dsqrt(cw2/sw2)
-      if (pdg.eq.23.and.abs(pdgp*ifsign).eq.24) sdk_tpm = -sign(1d0,dble(pdgp*ifsign)) / dsqrt(cw2/sw2)
+      if (abs(pdg*ifsign).eq.24.and.pdgp.eq.23) sdk_tpm = -sign(1d0,dble(pdg*ifsign)) * dsqrt(cw2/sw2)
+      if (pdg.eq.23.and.abs(pdgp*ifsign).eq.24) sdk_tpm = -sign(1d0,dble(pdgp*ifsign)) * dsqrt(cw2/sw2)
 
-      sdk_tpm = sdk_tpm / dsqrt(2d0*sw2)
 
       return
       end

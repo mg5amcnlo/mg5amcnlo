@@ -84,8 +84,9 @@ cc
        double precision s,t,u,invm2_04
        external invm2_04
        INTEGER HELS(NEXTERNAL-1)
-       double precision invariants((NEXTERNAL-1)*(NEXTERNAL-2)/2)
-     
+       double precision invarianti((NEXTERNAL-1)*(NEXTERNAL-2)/2)
+       logical   printinewsdkf
+       common /to_printinewsdkf/printinewsdkf
 
 
 
@@ -93,6 +94,8 @@ cc
 C-----
 C  BEGIN CODE
 C-----  
+
+      printinewsdkf=.False.
       
       debug=.True.
 
@@ -128,7 +131,7 @@ c     Set the energy to be characteristic of the run
       enddo
       energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
 
-      energy=1d3
+      energy=1d5
 c     Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
       ren_scale = energy/2.0d0
@@ -273,9 +276,9 @@ c      u=invm2_04(p_born(0,1),p_born(0,4),-1d0)
          WRITE (*,*) "(p_",i,"+p_",j,")^2/s=",invm2_04(p_born(0,i),p_born(0,j),1d0)/s
          k=k+1         
          if(i.le.2.and.j.ge.3) then
-          invariants(k)=invm2_04(p_born(0,i),p_born(0,j),-1d0)
+          invarianti(k)=invm2_04(p_born(0,i),p_born(0,j),-1d0)
           else
-          invariants(k)=invm2_04(p_born(0,i),p_born(0,j),1d0)
+          invarianti(k)=invm2_04(p_born(0,i),p_born(0,j),1d0)
          endif       
          if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s/(dble(nexternal)-3d0+0.5d0)) then
           WRITE (*,*) "(p_",i,"+p_",j,")^2 is too small compared to s, 
@@ -350,16 +353,21 @@ c               if (amp_split_born(iamp).eq.0) cycle
 
           OPEN(70, FILE='Lead_Hel.dat', ACTION='WRITE') 
           OPEN(71, FILE='Born_Sud.dat', ACTION='WRITE')
+          OPEN(72, FILE='NonDiag_structure.dat', ACTION='WRITE')
 
 
-          WRITE (70,*) , invariants
+          WRITE (70,*) , invarianti
+          WRITE (72,*) , invarianti
           WRITE (71,*) , s
 
           WRITE (70,*) , nexternal-1
           WRITE (71,*) , nexternal-1
+          WRITE (72,*) , nexternal-1
+
 
           WRITE (70,*) , pdg_type
           WRITE (71,*) , pdg_type
+          WRITE (72,*) , pdg_type
 
 
 
@@ -368,17 +376,21 @@ c               if (amp_split_born(iamp).eq.0) cycle
             write(*,*) ''
             WRITE (70,*) , iamp       
             WRITE (71,*) , iamp
+            WRITE (72,*) , iamp
 
 
                  write(71,*) AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(71,*) (amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
             do chosen_hel=1,total_hel
+              printinewsdkf=.False.
               EWSUD_HELSELECT=chosen_hel
               call sudakov_wrapper(p_born) 
               if (abs(BORN_HEL_MAX(iamp)).NE.0d0.AND.
-     .            abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) then              
-                    write(*,*) 'BORN for HEL CONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
+     .            abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) then 
+                    printinewsdkf=.True. 
+                    call sudakov_wrapper(p_born)            
+                    write(*,*) 'BORN for HEL LEADCONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
                  write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
      .           ' = ',(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
@@ -396,6 +408,7 @@ c               if (amp_split_born(iamp).eq.0) cycle
 
           CLOSE(70)
           CLOSE(71)
+          CLOSE(72)
 
 
           write(*,*) 'blocco qui la cosa'
