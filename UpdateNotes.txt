@@ -5,10 +5,15 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.9.0 ()
       Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
       OM: Various optimization fot T-channel integration
-          - merging Z/H channel with photon for S-channel if the process is generated with $ z h
-	  - use ping pong strategy for triple or more T-channel
-	  - let madgraph decides the ordering of T-channel for double T-channel
-	  - increase number of phase-space point/iteration for double or more T-channel
+          - use different ordering for T-channel. Four different ordering have been implemented
+	    at generation time, the code decides which ordering to use.
+	  - increase number of maximum iteration for double or more T-channel
+	  - implement an alternative to the standard multi-channel.
+	     instead of using the amplitude square it use the product of the denominator
+	     (the default strategy use depends of the process)
+      OM: New parameter in the run_card:
+          - sde_strategy: allows to change the default multi-channel strategy
+	  - a new phase-space optimization parameter are now easily availabe via the command "update ps_optim" 
 
 2.8.2 (30/10/20):
       OM: Fix a bug when setting width to zero where they were actually set to 1e-6 times the width
