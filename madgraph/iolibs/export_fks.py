@@ -2585,6 +2585,17 @@ Parameters              %(params)s\n\
         file = file % replace_dict
         writer.writelines(file)
 
+    
+    def get_sudakov_imag_power(self, base_me, sudakov_me):
+        """return the exponent of I to account for the Z -> Chi replacement.
+        Since the result is base * conj(sudakov), the exponent is the difference
+        between the number of Chi's in base_me and in sudakov_me
+        """
+        base_ids = [leg['id'] for leg in base_me['processes'][0]['legs']]
+        other_ids = [leg['id'] for leg in sudakov_me['processes'][0]['legs']]
+        return base_ids.count(250) - other_ids.count(250)
+
+
 
     def get_chargeprod(self, charge_list, ninitial, n, m):
         """return the product of charges (as a string) of particles m and n.
@@ -2902,6 +2913,9 @@ Parameters              %(params)s\n\
         # Extract color data lines
         color_data_lines = self.get_color_data_lines_from_color_matrix(color_matrix)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        # the power of the imaginary unit to compensate for the neutral Goldstones
+        replace_dict['imag_power'] = self.get_sudakov_imag_power(base_me, sudakov_me)
 
         # Extract helas calls of the base  matrix element
         helas_calls = fortran_model.get_matrix_element_calls(\
