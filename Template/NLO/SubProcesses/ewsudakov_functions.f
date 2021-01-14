@@ -230,14 +230,54 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
       double precision invariants(nexternal-1, nexternal-1)
       include 'coupl.inc'
       double precision lzow
-      double complex bigL, smallL, sdk_cew_diag, sdk_iz2_diag
-      external sdk_iz2_diag
+      double complex bigL, smallL, sdk_cew_diag, sdk_betaew_diag
+      external sdk_cew_diag, sdk_betaew_diag
       integer i
+      double precision sw2, cw2
+      double precision mass, isopart_mass
+
+      integer get_mass_from_id, get_isopart_mass_from_id
+      external get_mass_from_id, get_isopart_mass_from_id
 
       get_xxc_diag = 0d0
 
-c exit and do nothing
-      return
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
+      do i = 1, nexternal-1
+        if (abs(pdglist(i)).le.6.or.
+     %     (abs(pdglist(i)).ge.11.and.abs(pdglist(i)).le.16)) then
+          ! fermions
+          get_xxc_diag = get_xxc_diag + 
+     %       1.5d0 * sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * smallL(invariants(1,2))
+
+          mass = get_mass_from_id(pdglist(i))
+          isopart_mass = get_isopart_mass_from_id(pdglist(i))
+
+          get_xxc_diag = get_xxc_diag - 
+     %       1d0/8d0/sw2 * mass**2/mdl_mw**2 * smallL(invariants(1,2))
+          if (pdglist(i)*hels(i).lt.0) then
+            ! left-handed fermion
+            get_xxc_diag = get_xxc_diag - 
+     %         1d0/8d0/sw2 * isopart_mass**2/mdl_mw**2 * smallL(invariants(1,2))
+          else
+            ! right-handed fermion
+            get_xxc_diag = get_xxc_diag - 
+     %         1d0/8d0/sw2 * mass**2/mdl_mw**2 * smallL(invariants(1,2))
+          endif
+
+        elseif (abs(pdglist(i)).ge.22.and.abs(pdglist(i)).le.24.and.hels(i).ne.0) then
+          ! transverse W/Z/photons bosons
+          get_xxc_diag = get_xxc_diag + 
+     %     sdk_betaew_diag(pdglist(i))/2d0 * smallL(invariants(1,2))
+
+        elseif (abs(pdglist(i)).eq.250.or.abs(pdglist(i)).eq.251.or.pdglist(i).eq.25) then
+          ! goldstones or Higgs
+          get_xxc_diag = get_xxc_diag + 
+     %     (2d0*sdk_cew_diag(pdglist(i),hels(i),iflist(i)) - 
+     %      3d0/4d0/sw2*mdl_mt**2/mdl_mw**2) * smallL(invariants(1,2))
+        endif
+      enddo
 
       return
       end
@@ -248,19 +288,21 @@ c exit and do nothing
       include 'nexternal.inc'
       double precision invariants(nexternal-1, nexternal-1)
       integer pdg_old, pdg_new
-      include 'coupl.inc'
-      double precision lzow
-      double complex bigL, smallL, sdk_cew_nondiag
+      double complex bigL, smallL, sdk_betaew_nondiag
 
       ! this function is non zero only for Z/gamma mixing)
       get_xxc_nondiag = 0d0
 
-c exit and do nothing
-      return
-
       if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
      $    (pdg_old.eq.22.and.pdg_new.eq.23)) then
-        continue
+        ! pdg_old -> N, pdg_new -> N' in Denner-Pozzorini notation
+        !  pdg_old=23,  pdg_new=22, E_AZ = 1
+        !  pdg_old=22,  pdg_new=23, E_ZA = -1
+        ! Given DP eq 4.22, the only !=0 case is with E_AZ
+        if (pdg_old.eq.23) then
+          get_xxc_nondiag = get_xxc_nondiag + 
+     %      sdk_betaew_nondiag() * smallL(invariants(1,2))
+        endif
       endif
 
       return
@@ -695,6 +737,48 @@ C returns the gamma/z mixing of sdk_cew
       end
 
 
+      double complex function sdk_betaew_diag(pdg)
+      implicit none
+      integer pdg
+
+      include "coupl.inc"
+      double precision sw2, cw2
+
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
+      sdk_betaew_diag = 0d0
+
+      if (abs(pdg).eq.24) then
+        sdk_betaew_diag = 19d0/6d0/sw2
+
+      elseif (pdg.eq.23) then
+        sdk_betaew_diag = (19d0 - 38d0*sw2 -22d0*sw2**2) / 6d0/sw2/cw2
+
+      elseif (pdg.eq.22) then
+        sdk_betaew_diag = -11d0/3d0
+
+      endif
+
+      return
+      end
+
+
+      double complex function sdk_betaew_nondiag()
+      implicit none
+
+      include "coupl.inc"
+      double precision sw2, cw2
+
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
+      sdk_betaew_nondiag = -(19d0 + 22d0*sw2) / 6d0/dsqrt(sw2*cw2)
+
+      return
+      end
+
+
       subroutine sdk_get_invariants(p, iflist, invariants)
       implicit none
       include 'nexternal.inc'
@@ -765,3 +849,31 @@ C returns the gamma/z mixing of sdk_cew
 
       return
       end
+
+
+      integer function get_isopart_mass_from_id(pdg)
+      implicit none
+      ! returns the mass of the isospin partner of particle pdg.
+      ! works only for fermions
+      integer pdg
+      integer apdg, apdg_part
+
+      integer get_mass_from_id
+
+      apdg = abs(pdg)
+
+      if (apdg.le.6.or.(apdg.ge.11.and.apdg.le.16)) then
+          ! if apdg is even, the partner is apdg-1
+          ! if apdg is odd, the partner is apdg+1
+          if (mod(apdg,2).eq.0) apdg_part = apdg - 1
+          if (mod(apdg,2).eq.1) apdg_part = apdg + 1
+          get_isopart_mass_from_id = get_mass_from_id(apdg_part)
+
+      else
+        write(*,*) 'ERROR: get_isopart_mass_from_id', pdg
+      endif
+
+      return
+      end
+      
+
