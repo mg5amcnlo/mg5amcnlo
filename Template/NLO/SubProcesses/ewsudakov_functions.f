@@ -29,11 +29,13 @@ c exit and do nothing
       end
 
 
-      double complex function get_lsc_nondiag(invariants, pdg_old, pdg_new)
+      double complex function get_lsc_nondiag(pdglist, hels, iflist,
+     $                              invariants, ileg, pdg_old, pdg_new)
       implicit none
       include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
       double precision invariants(nexternal-1, nexternal-1)
-      integer pdg_old, pdg_new
+      integer ileg, pdg_old, pdg_new
       include 'coupl.inc'
       double precision lzow
       double complex bigL, smallL, sdk_cew_nondiag
@@ -41,6 +43,8 @@ c exit and do nothing
       ! this function is non zero only for Z/gamma mixing)
       get_lsc_nondiag = 0d0
 
+      ! check that the polarisation is transverse
+      if (abs(hels(ileg)).ne.1) return 
 c exit and do nothing
       return
 
@@ -283,15 +287,20 @@ c      print*,"get_ssc_n_diag=",get_ssc_n_diag
       end
 
 
-      double complex function get_xxc_nondiag(invariants, pdg_old, pdg_new)
+      double complex function get_xxc_nondiag(pdglist, hels, iflist,
+     $                              invariants, ileg, pdg_old, pdg_new)
       implicit none
       include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
       double precision invariants(nexternal-1, nexternal-1)
-      integer pdg_old, pdg_new
+      integer ileg, pdg_old, pdg_new
       double complex bigL, smallL, sdk_betaew_nondiag
 
       ! this function is non zero only for Z/gamma mixing)
       get_xxc_nondiag = 0d0
+
+      ! check that the polarisation is transverse
+      if (abs(hels(ileg)).ne.1) return 
 
       if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
      $    (pdg_old.eq.22.and.pdg_new.eq.23)) then

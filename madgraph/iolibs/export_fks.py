@@ -2685,10 +2685,10 @@ Parameters              %(params)s\n\
                 idx = non_goldstone_mes.index(mesc)
                 calls_to_me += "call EWSDK_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (idx + 1)
                 calls_to_me += "pdglist_oth = (/%s/)\n" % ','.join([str(leg['id']) for leg in mesc['matrix_element']['processes'][0]['legs']])
-                calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(invariants,%d,%d)\n" % \
-                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
-                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_nondiag(invariants,%d,%d)\n" % \
-                                        (mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
+                calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_nondiag(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d)\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
+                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_nondiag(pdglist,nhel(1,ihel),iflist,invariants,%d,%d,%d)\n" % \
+                                        (mesc['legs'][0]['number'],mesc['pdgs'][0][0], mesc['pdgs'][1][0]) # old and new pdg of the leg that changes
 
             # now the calls to the SSC non-diagonal, with one particle different wrt base amp
             mes_same_charge_ssc1 = [me for me in non_goldstone_mes_ssc_n1 if me['base_amp'] == i+1]
