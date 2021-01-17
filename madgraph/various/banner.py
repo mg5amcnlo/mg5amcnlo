@@ -2269,6 +2269,7 @@ runblock = collections.namedtuple('block', ('name', 'fields', 'template_on', 'te
 class RunCard(ConfigFile):
 
     filename = 'run_card'
+    LO = True
     blocks = [] 
                                    
     def __new__(cls, finput=None, **opt):
@@ -2744,6 +2745,9 @@ class RunCard(ConfigFile):
                     for fortran_name, onevalue in value.items():
                         line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
                         fsock.writelines(line)                       
+                elif isinstance(incname,str) and 'compile' in incname:
+                    line = '%s = %s \n' % (fortran_name, value)
+                    fsock.write(line)
                 else:
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
@@ -2925,6 +2929,7 @@ class RunCardLO(RunCard):
         runblock(name='psoptim', fields=('job_strategy', 'hard_survey', 
                                          'tmin_for_channel', 'survey_splitting',
                                          'survey_nchannel_per_job', 'refine_evt_by_job'
+                                         'global_flag','aloha_flag', 'matrix_flag'
                                          ),
             template_on=\
 """#*********************************************************************
@@ -2936,11 +2941,11 @@ class RunCardLO(RunCard):
    %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
    %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
    %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
+   %(global_flag)s = global_flag ! fortran optimization flag use for the all code
+   %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
+   %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
 """,
     template_off='# To see advanced option for Phase-Space optimization: type "update psoptim"'),
-  
-                  
-    
     ]    
     
     
@@ -3161,7 +3166,11 @@ class RunCardLO(RunCard):
         self.add_param('hel_filtering', True,  hidden=True, include=False, comment='filter in advance the zero helicities when doing helicity per helicity optimization.')
         self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
         self.add_param('hel_zeroamp', True, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
-        self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", hidden=True, comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
+        self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
+        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
+        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -O3')        
+        
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
@@ -4088,6 +4097,8 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
+    
+    LO = False
     
     def default_setup(self):
         """define the default value"""

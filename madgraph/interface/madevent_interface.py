@@ -5708,7 +5708,7 @@ tar -czf split_$1.tar.gz split_$1
             self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
-        self.update_make_opts()
+        self.update_make_opts(self.run_card)
         # reset list of Gdirectory
         self.Gdirs = None
             
