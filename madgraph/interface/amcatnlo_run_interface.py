@@ -3886,6 +3886,12 @@ RESTART = %(mint_mode)s
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
 
+        # HwU.f now contains some calls to the PineAPPL functions. One should add the 
+        #  dummy interface to have them linked
+        if "HwU.o" in self.shower_card['analyse'] and \
+          not "pineappl_interface_dummy.o" in self.shower_card['analyse']: 
+            self.shower_card['analyse'] += " pineappl_interface_dummy.o"
+
         # set the PATH for the dynamic libraries
         if sys.platform == 'darwin':
             ld_library_path = 'DYLD_LIBRARY_PATH'
