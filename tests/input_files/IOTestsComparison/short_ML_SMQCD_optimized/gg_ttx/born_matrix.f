@@ -87,6 +87,9 @@ C
       INTEGER USERHEL
       COMMON/ML5_0_HELUSERCHOICE/USERHEL
       DATA USERHEL/-1/
+      LOGICAL HELRESET
+      COMMON/ML5_0_HELRESET/HELRESET
+      DATA HELRESET/.TRUE./
 
       DATA (NHEL(I,   1),I=1,4) /-1,-1,-1, 1/
       DATA (NHEL(I,   2),I=1,4) /-1,-1,-1,-1/
@@ -114,6 +117,17 @@ C
 C     FUNCTIONS
 C     
       LOGICAL ML5_0_IS_BORN_HEL_SELECTED
+
+C     ----------
+C     Check if helreset mode is on
+C     ---------
+      IF (HELRESET) THEN
+        NTRY = 0
+        DO I=1,NCOMB
+          GOODHEL(I) = .FALSE.
+        ENDDO
+        HELRESET = .FALSE.
+      ENDIF
 
 C     ----------
 C     BEGIN CODE
