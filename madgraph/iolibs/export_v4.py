@@ -2080,6 +2080,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 %(python_information)s
   subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
+C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
@@ -2097,7 +2098,7 @@ CF2PY double precision, intent(in) :: SCALE2
   PI = 3.141592653589793D0
   G = 2* DSQRT(ALPHAS*PI)
   CALL UPDATE_AS_PARAM()
-  if (scale2.ne.0d0) stop 1
+c  if (scale2.ne.0d0) stop 1
 
 %(smatrixhel)s
 
@@ -2169,7 +2170,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
  
   
         """
-         
+        
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
