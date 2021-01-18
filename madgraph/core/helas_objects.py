@@ -5457,7 +5457,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         )      
                     # Add the decays to the list
                     decay_list.append(list(zip(fs_numbers[fs_id], prod)))
-
                 decay_lists.append(decay_list)
                  
             # Finally combine all decays for this process,
@@ -5490,12 +5489,13 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                              ", ".join([d.get('processes')[0].nice_string().\
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
-
-                if pols:
-                    if hasattr(matrix_element,'ordering_for_pol'):
-                        matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
-                    else:
-                        matrix_element.ordering_for_pol = {fs_id: ordered_for_pol}
+                
+                for fs_id in set(fs_ids):
+                    if fs_pols_dict[fs_id]:
+                        if hasattr(matrix_element,'ordering_for_pol'):
+                            matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
+                        else:
+                            matrix_element.ordering_for_pol = {fs_id: ordered_for_pol}
                         
                     
                 matrix_element.insert_decay_chains(decay_dict)
