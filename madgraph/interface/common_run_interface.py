@@ -6039,7 +6039,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC
                 # events, but there is unfortunately no way for now to specify it in the shower_card.
-                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout.decode()
                 
                 #3. ensure that those flag are in the shower card
                 for L in paths:
