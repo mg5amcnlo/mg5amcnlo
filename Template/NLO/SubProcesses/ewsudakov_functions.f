@@ -50,8 +50,6 @@ c exit and do nothing
 
       ! check that the polarisation is transverse
       if (abs(hels(ileg)).ne.1) return 
-c exit and do nothing
-      return
 
       if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
      $    (pdg_old.eq.22.and.pdg_new.eq.23)) then
