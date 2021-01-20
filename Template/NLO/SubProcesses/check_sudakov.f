@@ -70,6 +70,8 @@ cc
       common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
       double complex amp_split_ewsud_ssc(amp_split_size)
       common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+      double complex amp_split_ewsud_xxc(amp_split_size)
+      common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
       double precision amp_split_born(amp_split_size)
       integer iamp
       integer chosen_hel, total_hel
@@ -319,6 +321,7 @@ c          write(*,*) 'total_hel=', total_hel
 c               if (amp_split_born(iamp).eq.0) cycle
               write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
               write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+              write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/amp_split_born(iamp)
           enddo
 c          write(*,*) 'total_hel=', total_hel
           write(*,*) 'NOW ALL THE HELICITIES'
@@ -342,7 +345,9 @@ c             amp_split_born(:) = amp_split(:)
                  write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
                  write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                 write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
                  write(*,*) ' '
              enddo
           enddo
@@ -380,7 +385,8 @@ c               if (amp_split_born(iamp).eq.0) cycle
 
 
                  write(71,*) AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(71,*) (amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
+                 write(71,*) (amp_split_ewsud_lsc(iamp)+
+     .                        amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
             do chosen_hel=1,total_hel
               printinewsdkf=.False.
@@ -393,12 +399,12 @@ c               if (amp_split_born(iamp).eq.0) cycle
                     write(*,*) 'BORN for HEL LEADCONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
 c               if (amp_split_born(iamp).eq.0) cycle
                  write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
-     .           ' = ',(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
+     .           ' = ',(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
                  call sdk_get_hels(chosen_hel, hels)
 
                  WRITE (70,*) , hels,
-     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
      .            dble(AMP_SPLIT_BORN_ONEHEL(iamp))
 
 
