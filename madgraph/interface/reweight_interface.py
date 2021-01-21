@@ -1292,9 +1292,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if hasattr(event, 'scale'):
                 scale2 = event.scale**2
             else:
-                scale2 = 91**2
-        
-        nhel = -1
+                scale2 = 0
+                
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
