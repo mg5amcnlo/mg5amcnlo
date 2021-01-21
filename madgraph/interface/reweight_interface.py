@@ -1286,10 +1286,15 @@ class ReweightInterface(extended_cmd.Cmd):
             pid = -1
         if not self.use_eventid:
             pid = -1
-            
+        
+        if hasattr(event, 'scale'):
+            scale2 = event.scale**2
+        else:
+            scale2=0
+        
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, event.scale**2, nhel)
+                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
                                 
         # for loop we have also the stability status code
         if isinstance(me_value, tuple):

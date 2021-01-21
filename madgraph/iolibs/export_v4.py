@@ -2894,7 +2894,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         else:
             raise MadGraph5Error(error_msg % 'col_amps')
 
-        text = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
+        text, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
                                             JAMP_format=JAMP_format,
                                             AMP_format=AMP_format,
                                             split=-1)
@@ -2910,12 +2910,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text += super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
+        text += text2 
         
-        return text
+        return text, 0
 
 
 
@@ -2928,6 +2929,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     MadGraph v4 - MadWeight format."""
 
     matrix_file="matrix_standalone_v4.inc"
+    jamp_optim = False
 
     def copy_template(self, model):
         """Additional actions needed for setup of Template
@@ -3399,7 +3401,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
@@ -3717,12 +3719,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         super(ProcessExporterFortranME, self).__init__(dir_path, opt)
         
         # check and format the hel_recycling options as it should if provided 
-        if isinstance(opt['output_options'], dict) and \
+        if opt and isinstance(opt['output_options'], dict) and \
                                        'hel_recycling' in opt['output_options']:
             self.opt['hel_recycling'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['hel_recycling'], bool, 'hel_recycling')
 
-        if isinstance(opt['output_options'], dict) and \
+        if opt and isinstance(opt['output_options'], dict) and \
                                        't_strategy' in opt['output_options']:
             self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['t_strategy'], int, 't_strategy')
@@ -4925,11 +4927,10 @@ c           This is dummy particle used in multiparticle vertices
     #ordering = 0    
     @staticmethod
     def reorder_tchannels(tchannels, tstrat, model):
-        
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         #ProcessExporterFortranME.ordering +=1
-        if len(tchannels) < 3 or tstrat == 2:
+        if len(tchannels) < 3 or tstrat == 2 or not model:
             return tchannels, 2
         elif tstrat == 1:
             return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1

@@ -113,6 +113,7 @@ C
       INTEGER I,J
       REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -137,9 +138,9 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP1(1)=-AMP(1)
-      JAMP2(1)=+1D0/2D0*(+1D0/3D0*AMP(1))
-      JAMP2(2)=+1D0/2D0*(-AMP(1))
+      JAMP1(1) = (-1)*AMP(1)
+      JAMP2(1) = (1D0/6D0)*AMP(1)
+      JAMP2(2) = (-1D0/2D0)*AMP(1)
       B_SF_006 = 0.D0
       DO I = 1, NCOLOR1
         ZTEMP = (0.D0,0.D0)

@@ -783,7 +783,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
-            misc.sprint(name, fct, objs)
             format = ' %s = %s\n' % (name, self.get_fct_format(fct))
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])

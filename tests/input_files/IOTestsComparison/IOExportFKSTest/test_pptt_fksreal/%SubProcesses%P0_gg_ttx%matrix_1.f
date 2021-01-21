@@ -147,28 +147,39 @@ C
       INTEGER I,J
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(9)
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/9/
-      DATA (CF(I,  1),I=  1,  6) /   64,   -8,   -8,    1,    1,   10/
+      DATA (CF(I,  1),I=  1,  6) /7.111111111111111D+00,
+     $ -8.888888888888888D-01,-8.888888888888888D-01
+     $ ,1.111111111111111D-01,1.111111111111111D-01,1.111111111111111D
+     $ +00/
 C     1 T(1,2,5,3,4)
-      DATA DENOM(2)/9/
-      DATA (CF(I,  2),I=  1,  6) /   -8,   64,    1,   10,   -8,    1/
+      DATA (CF(I,  2),I=  1,  6) /-8.888888888888888D-01
+     $ ,7.111111111111111D+00,1.111111111111111D-01,1.111111111111111D
+     $ +00,-8.888888888888888D-01,1.111111111111111D-01/
 C     1 T(1,5,2,3,4)
-      DATA DENOM(3)/9/
-      DATA (CF(I,  3),I=  1,  6) /   -8,    1,   64,   -8,   10,    1/
+      DATA (CF(I,  3),I=  1,  6) /-8.888888888888888D-01
+     $ ,1.111111111111111D-01,7.111111111111111D+00,
+     $ -8.888888888888888D-01,1.111111111111111D+00,1.111111111111111D
+     $ -01/
 C     1 T(2,1,5,3,4)
-      DATA DENOM(4)/9/
-      DATA (CF(I,  4),I=  1,  6) /    1,   10,   -8,   64,    1,   -8/
+      DATA (CF(I,  4),I=  1,  6) /1.111111111111111D-01
+     $ ,1.111111111111111D+00,-8.888888888888888D-01
+     $ ,7.111111111111111D+00,1.111111111111111D-01,
+     $ -8.888888888888888D-01/
 C     1 T(2,5,1,3,4)
-      DATA DENOM(5)/9/
-      DATA (CF(I,  5),I=  1,  6) /    1,   -8,   10,    1,   64,   -8/
+      DATA (CF(I,  5),I=  1,  6) /1.111111111111111D-01,
+     $ -8.888888888888888D-01,1.111111111111111D+00,1.111111111111111D
+     $ -01,7.111111111111111D+00,-8.888888888888888D-01/
 C     1 T(5,1,2,3,4)
-      DATA DENOM(6)/9/
-      DATA (CF(I,  6),I=  1,  6) /   10,    1,    1,   -8,   -8,   64/
+      DATA (CF(I,  6),I=  1,  6) /1.111111111111111D+00
+     $ ,1.111111111111111D-01,1.111111111111111D-01,
+     $ -8.888888888888888D-01,-8.888888888888888D-01
+     $ ,7.111111111111111D+00/
 C     1 T(5,2,1,3,4)
 C     ----------
 C     BEGIN CODE
@@ -225,25 +236,31 @@ C     Amplitude(s) for diagram number 16
       CALL FFV1_0(W(1,4),W(1,3),W(1,11),GC_11,AMP(16))
       CALL FFV1_0(W(1,4),W(1,3),W(1,7),GC_11,AMP(17))
       CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_11,AMP(18))
-      JAMP(1)=-AMP(1)+IMAG1*AMP(3)+IMAG1*AMP(5)-AMP(6)+AMP(15)+AMP(16)
-     $ -AMP(18)
-      JAMP(2)=-AMP(4)-IMAG1*AMP(5)+IMAG1*AMP(11)+AMP(12)-AMP(15)
-     $ -AMP(16)-AMP(17)
-      JAMP(3)=+AMP(1)-IMAG1*AMP(3)+IMAG1*AMP(10)-AMP(12)-AMP(13)
-     $ +AMP(17)+AMP(18)
-      JAMP(4)=-AMP(7)+IMAG1*AMP(8)-IMAG1*AMP(10)+AMP(12)-AMP(15)
-     $ -AMP(16)-AMP(17)
-      JAMP(5)=+AMP(1)+IMAG1*AMP(2)-IMAG1*AMP(11)-AMP(12)-AMP(14)
-     $ +AMP(17)+AMP(18)
-      JAMP(6)=-AMP(1)-IMAG1*AMP(2)-IMAG1*AMP(8)-AMP(9)+AMP(15)+AMP(16)
-     $ -AMP(18)
+      TMP_JAMP(1) = AMP(12) + (-1) * AMP(17)  ! used 4 times
+      TMP_JAMP(3) = AMP(1) + (1) * AMP(18)  ! used 3 times
+      TMP_JAMP(2) = AMP(15) + (1) * AMP(16)  ! used 3 times
+      TMP_JAMP(9) = TMP_JAMP(1) + ((-0+1*IMAG1)) * AMP(11)  ! used 2 times
+      TMP_JAMP(8) = TMP_JAMP(3) + (-1) * TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(7) = TMP_JAMP(1) + (-1*IMAG1) * AMP(10)  ! used 2 times
+      TMP_JAMP(6) = TMP_JAMP(2) + (-1) * TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(5) = TMP_JAMP(3) + (-1*IMAG1) * AMP(3)  ! used 2 times
+      TMP_JAMP(4) = TMP_JAMP(2) + ((-0+1*IMAG1)) * AMP(5)  ! used 2 times
+      JAMP(1) = (-1)*AMP(6)+(1)*TMP_JAMP(4)+(-1)*TMP_JAMP(5)
+      JAMP(2) = (-1)*AMP(4)+(-1)*TMP_JAMP(4)+(1)*TMP_JAMP(9)
+      JAMP(3) = (-1)*AMP(13)+(1)*TMP_JAMP(5)+(-1)*TMP_JAMP(7)
+      JAMP(4) = (-1)*AMP(7)+(1*IMAG1)*AMP(8)+(-1*IMAG1)*AMP(10)+(-1)
+     $ *TMP_JAMP(6)
+      JAMP(5) = (1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(11)+(-1)*AMP(14)+(1)
+     $ *TMP_JAMP(8)
+      JAMP(6) = (-1)*AMP(1)+(-1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(8)+(-1)
+     $ *AMP(9)+(1)*AMP(15)+(1)*AMP(16)+(-1)*AMP(18)
       MATRIX_1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX_1 = MATRIX_1+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+        MATRIX_1 = MATRIX_1+ZTEMP*DCONJG(JAMP(I))
       ENDDO
       END
 

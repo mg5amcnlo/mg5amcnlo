@@ -153,22 +153,27 @@ C
       INTEGER I,J
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  4) /   12,    4,    4,    0/
+      DATA (CF(I,  1),I=  1,  4) /1.200000000000000D+01
+     $ ,4.000000000000000D+00,4.000000000000000D+00,0.000000000000000D
+     $ +00/
 C     1 T(1,2,4) T(3,5)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  4) /    4,   12,    0,    4/
+      DATA (CF(I,  2),I=  1,  4) /4.000000000000000D+00
+     $ ,1.200000000000000D+01,0.000000000000000D+00,4.000000000000000D
+     $ +00/
 C     1 T(1,2,5) T(3,4)
-      DATA DENOM(3)/1/
-      DATA (CF(I,  3),I=  1,  4) /    4,    0,   12,    4/
+      DATA (CF(I,  3),I=  1,  4) /4.000000000000000D+00
+     $ ,0.000000000000000D+00,1.200000000000000D+01,4.000000000000000D
+     $ +00/
 C     1 T(1,3,4) T(2,5)
-      DATA DENOM(4)/1/
-      DATA (CF(I,  4),I=  1,  4) /    0,    4,    4,   12/
+      DATA (CF(I,  4),I=  1,  4) /0.000000000000000D+00
+     $ ,4.000000000000000D+00,4.000000000000000D+00,1.200000000000000D
+     $ +01/
 C     1 T(1,3,5) T(2,4)
 C     ----------
 C     BEGIN CODE
@@ -194,17 +199,17 @@ C     Amplitude(s) for diagram number 4
       CALL FFV1_0(W(1,6),W(1,2),W(1,7),GC_11,AMP(4))
 C     Amplitude(s) for diagram number 5
       CALL VVV1_0(W(1,1),W(1,8),W(1,7),GC_10,AMP(5))
-      JAMP(1)=+1D0/2D0*(+AMP(1)+AMP(3)+IMAG1*AMP(5))
-      JAMP(2)=+1D0/2D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(4))
-      JAMP(3)=+1D0/2D0*(-1D0/3D0*AMP(2)-1D0/3D0*AMP(3))
-      JAMP(4)=+1D0/2D0*(+AMP(2)+AMP(4)-IMAG1*AMP(5))
+      JAMP(1) = (1D0/2D0)*AMP(1)+(1D0/2D0)*AMP(3)+(0.5*IMAG1)*AMP(5)
+      JAMP(2) = (-1D0/6D0)*AMP(1)+(-1D0/6D0)*AMP(4)
+      JAMP(3) = (-1D0/6D0)*AMP(2)+(-1D0/6D0)*AMP(3)
+      JAMP(4) = (1D0/2D0)*AMP(2)+(1D0/2D0)*AMP(4)+(-0.5*IMAG1)*AMP(5)
       MATRIX_2 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX_2 = MATRIX_2+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+        MATRIX_2 = MATRIX_2+ZTEMP*DCONJG(JAMP(I))
       ENDDO
       END
 

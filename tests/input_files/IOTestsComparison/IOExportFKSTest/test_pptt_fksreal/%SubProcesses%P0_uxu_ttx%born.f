@@ -199,9 +199,10 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS),
      $  JAMPH(2, NCOLOR)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -223,11 +224,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
 C     1 T(1,2) T(3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     1 T(1,4) T(3,2)
 C     ----------
 C     BEGIN CODE
@@ -289,15 +290,15 @@ C           Amplitude(s) for diagram number 1
               ENDIF
             ENDDO
           ENDIF
-          JAMP(1)=+1D0/2D0*(-1D0/3D0*AMP(1))
-          JAMP(2)=+1D0/2D0*(+AMP(1))
+          JAMP(1) = (-1D0/6D0)*AMP(1)
+          JAMP(2) = (1D0/2D0)*AMP(1)
           DO I = 1, NCOLOR
             ZTEMP = (0.D0,0.D0)
             DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
             ENDDO
             BORNS(2-(1+BACK_HEL*IHEL)/2)=BORNS(2-(1+BACK_HEL*IHEL)/2)
-     $       +ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+     $       +ZTEMP*DCONJG(JAMP(I))
           ENDDO
           DO I = 1, NGRAPHS
             AMP2(I)=AMP2(I)+AMP(I)*DCONJG(AMP(I))
@@ -314,7 +315,7 @@ C           Amplitude(s) for diagram number 1
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J)
         ENDDO
-        BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))/DENOM(I)
+        BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))
       ENDDO
       IF (GLU_IJ.NE.0) NHEL(GLU_IJ) = BACK_HEL
       END

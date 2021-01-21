@@ -574,7 +574,7 @@ class Amplitude(base_objects.PhysicsObject):
                                      process.get('overall_orders')[key])
             except KeyError:
                 process.get('orders')[key] = process.get('overall_orders')[key]
-
+                
         assert model.get('particles'), \
            "particles are missing in model: %s" %  model.get('particles')
 
