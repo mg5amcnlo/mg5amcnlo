@@ -893,7 +893,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         param_card = self.new_param_card
                     else:
                         param_card = check_param_card.ParamCard(self.orig_param_card_text)
-                    
+                    module.initialise('../Cards/param_card.dat')
                     for block in param_card:
                         if block.lower() == 'qnumbers':
                             continue
@@ -1067,6 +1067,7 @@ class ReweightInterface(extended_cmd.Cmd):
             w_orig = self.calculate_matrix_element(cevent, 0)
             w_new =  self.calculate_matrix_element(cevent, 1)
             ratio_T = w_new/w_orig
+
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
@@ -1286,10 +1287,17 @@ class ReweightInterface(extended_cmd.Cmd):
             pid = -1
         if not self.use_eventid:
             pid = -1
-            
+        
+        if not scale2: 
+            if hasattr(event, 'scale'):
+                scale2 = event.scale**2
+            else:
+                scale2 = 91**2
+        
+        nhel = -1
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, event.scale**2, nhel)
+                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
                                 
         # for loop we have also the stability status code
         if isinstance(me_value, tuple):
