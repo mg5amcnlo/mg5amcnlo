@@ -1294,7 +1294,6 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 scale2 = 0
 
-        nhel = -1
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
