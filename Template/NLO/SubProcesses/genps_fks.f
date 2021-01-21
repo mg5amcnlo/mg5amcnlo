@@ -1062,6 +1062,138 @@ c Trivial, but prevents loss of accuracy
      $          m,s,nbranch,one_body,ionebody,ns_channel,nt_channel,itree,
      $          qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
 
+
+      call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
+     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $  xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+
+c check_cnt=.false. is an exceedingly rare situation -- just dump the event
+      if(.not.pass)goto 222
+      return
+
+ 222  continue
+c
+c Born momenta have not been generated. Neither events nor counterevents exist.
+c Set all to negative values and exit
+      jac=-222
+      jac_cnt(0)=-222
+      jac_cnt(1)=-222
+      jac_cnt(2)=-222
+      p(0,1)=-99
+      do i=-2,2
+        p1_cnt(0,1,i)=-99
+      enddo
+      if (.not.only_event_phsp) p_born(0,1)=-99
+      nocntevents=.true.
+
+      return
+      end
+
+
+
+      subroutine generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
+     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $  xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+      implicit none
+
+      include 'genps.inc'
+      include 'nexternal.inc'
+
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),
+     $   stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,jac
+      double precision xbjrk_born(2)
+      double precision M(-max_branch:max_particles),m_born(nexternal-1)
+      integer ndim
+      logical input_granny_m2, pass
+
+
+      integer icountevts
+      integer ixEi,ixyij,ixpi,imother
+      double precision xmrec2,flux,m_j_fks,phi_i_fks,pwgt,rat_xi,tau,
+     $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpwgt,xpswgt,
+     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
+      integer i,j
+
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+c external
+      double precision lambda
+      external lambda
+
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
+      double precision p_ev(0:3,nexternal)
+      common/pev/p_ev
+
+      logical nocntevents
+      common/cnocntevents/nocntevents
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+      logical nbody
+      common/cnbody/nbody
+
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+
+      double complex xij_aor
+      common/cxij_aor/xij_aor
+
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     &                        sqrtshat,shat
+
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+
+      double precision tau_ev,ycm_ev
+      common/cbjrk12_ev/tau_ev,ycm_ev
+      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+      common/cbjrk12_cnt/tau_cnt,ycm_cnt
+
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision xinorm_cnt(-2:2)
+      common /cxinormcnt/xinorm_cnt
+
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+
+      integer isolsign
+      common /c_isolsign/isolsign
+
+      logical fks_as_is
+      parameter (fks_as_is=.false.)
+
+
 c
 c
 c Here we start with the FKS Stuff
@@ -1124,7 +1256,7 @@ c For final state j_fks, compute the recoil invariant mass
          call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
          if (.not.pass) then
             xjac0=-44
-            goto 222
+            return
          endif
       endif
 
@@ -1325,30 +1457,13 @@ c must stay so for the computation of enhancement factors.
      &            (jac_cnt(2).le.0.d0)
       call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
      &                  p_i_fks_ev,p_i_fks_cnt,
-     &                  xi_i_fks_ev,y_ij_fks_ev,check_cnt)
-c check_cnt=.false. is an exceedingly rare situation -- just dump the event
-      if(.not.check_cnt)goto 222
+     &                  xi_i_fks_ev,y_ij_fks_ev,pass)
 c
-c If all went well, we are done and can exit
-c
-      return
-c
- 222  continue
-c
-c Born momenta have not been generated. Neither events nor counterevents exist.
-c Set all to negative values and exit
-      jac=-222
-      jac_cnt(0)=-222
-      jac_cnt(1)=-222
-      jac_cnt(2)=-222
-      p(0,1)=-99
-      do i=-2,2
-        p1_cnt(0,1,i)=-99
-      enddo
-      if (.not.only_event_phsp) p_born(0,1)=-99
-      nocntevents=.true.
       return
       end
+
+
+
       
 
       subroutine generate_momenta_massless_final(icountevts,i_fks,j_fks
