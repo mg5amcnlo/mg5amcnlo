@@ -908,6 +908,7 @@ c local
      &     ,tau_born,ycm_born,ycmhat,fksmass,xbjrk_born(2),shat_born
      &     ,sqrtshat_born,xpswgt0,m_born(nexternal-1),rat_xi
       logical one_body,pass
+      logical use_evpr
 c external
       double precision lambda
       external lambda
@@ -1010,18 +1011,33 @@ c Trivial, but prevents loss of accuracy
         sqrtshat_born=totmass
       endif
 
-      call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
-     $          m,s,nbranch,one_body,ionebody,ns_channel,nt_channel,itree,
-     $          qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+      ! if j_fks is initial state, then use the mapping without
+      ! event-projection
+      ! CMZ fix this comment
+      use_evpr = .true.!j_fks.gt.nincoming 
 
+      if (use_evpr) then
+        ! standard mapping with event-projection
+        call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
+     $      m,s,nbranch,one_body,ionebody,ns_channel,nt_channel,itree,
+     $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
 
-      call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
-     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
-     $  xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+        call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
+     $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
 
 c check_cnt=.false. is an exceedingly rare situation -- just dump the event
-      if(.not.pass)goto 222
-      return
+        if(.not.pass)goto 222
+        return
+
+      else
+        ! new mapping without event-projection, suitable for e+e-
+        ! collisions with ISR(+beamstrahlung)
+C        call generate_noevpr_kinematics(x,ndim,xjac0,xpswgt0,
+C     $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+C     $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+
+      endif
 
  222  continue
 c
@@ -1058,19 +1074,15 @@ c Set all to negative values and exit
       integer ndim
       logical input_granny_m2, pass
 
-
       integer icountevts
       integer ixEi,ixyij,ixpi,imother
-      double precision xmrec2,flux,m_j_fks,phi_i_fks,pwgt,rat_xi,tau,
+      double precision xmrec2,m_j_fks,phi_i_fks,rat_xi,tau,
      $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
      $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
       integer i,j
 
       real*8 pi
       parameter (pi=3.1415926535897932d0)
-c external
-      double precision lambda
-      external lambda
 
       double precision pmass(nexternal)
       common /to_mass/pmass
@@ -1086,22 +1098,12 @@ c external
       common/pborn_l/p_born_l
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/p_born_ev
-      double precision p_ev(0:3,nexternal)
-      common/pev/p_ev
 
       logical nocntevents
       common/cnocntevents/nocntevents
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
 
       logical nbody
       common/cnbody/nbody
-
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
 
       double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
       common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
@@ -1116,25 +1118,9 @@ c external
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      &                        sqrtshat,shat
 
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-
-      double precision xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
 
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
@@ -1142,15 +1128,16 @@ c external
       integer isolsign
       common /c_isolsign/isolsign
 
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
       logical fks_as_is
       parameter (fks_as_is=.false.)
 
-
-c
 c
 c Here we start with the FKS Stuff
-c
-c
 c
 c icountevts=-100 is the event, -2 to 2 the counterevents
       icountevts = -100
@@ -1297,9 +1284,71 @@ c All done, so check four-momentum conservation
             goto 112
          endif
       endif
+
+      call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
 c      
+ 112  continue
+c Catch the points for which there is no viable phase-space generation
+c (still fill the common blocks with some information that is needed
+c (e.g. ycm_cnt)).
+      if (xjac .le. 0d0 ) then
+         xp(0,1)=-99d0
+      endif
+
+      call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+c
+      if(icountevts.eq.-100)then
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c skips counterevents when integrating over second fold for massive
+c j_fks
+         if( isolsign.eq.-1 )icountevts=5
+         if (only_event_phsp) return
+      else
+         icountevts=icountevts+1
+      endif
+      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
+     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
+     &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
+         goto 111
+      elseif(icountevts.eq.5) then
+c icountevts=5 only when integrating over the second fold with j_fks
+c massive. The counterevents have been skipped, so make sure their
+c momenta are unphysical. Born are physical if event was generated, and
+c must stay so for the computation of enhancement factors.
+         do i=0,2
+            jac_cnt(i)=-299
+            p1_cnt(0,1,i)=-99
+         enddo
+      endif
+      nocntevents=(jac_cnt(0).le.0.d0) .and.
+     &            (jac_cnt(1).le.0.d0) .and.
+     &            (jac_cnt(2).le.0.d0)
+      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
+c
+      return
+      end
+
+
+
+      subroutine compute_flux(shat,sqrtshat,m1,m2,xpswgt,xjac)
+      implicit none
+      include 'nexternal.inc'
+      double precision shat,sqrtshat,m1,m2,xpswgt,xjac
+
+      double precision pwgt, flux
+
+      double precision lambda
+      external lambda
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+
       if(nincoming.eq.2)then
-         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
+         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m1**2,m2**2)))
       else                      ! Decays
          flux = 1d0/(2d0*sqrtshat)
       endif
@@ -1314,13 +1363,65 @@ c the correct normalization of the phase space
       pwgt=max(xjac*xpswgt,1d-99)
       xjac = pwgt*flux
 c
- 112  continue
-c Catch the points for which there is no viable phase-space generation
-c (still fill the common blocks with some information that is needed
-c (e.g. ycm_cnt)).
-      if (xjac .le. 0d0 ) then
-         xp(0,1)=-99d0
-      endif
+      return
+      end
+
+
+
+      subroutine fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+
+      implicit none
+      integer icountevts
+      include 'nexternal.inc'
+      double precision tau,ycm,ycm_born,shat,sqrtshat,xbjrk(2),xiimax,xinorm,
+     $ xi_i_fks,xi_i_hat,p_i_fks(0:3),y_ij_fks,xp(0:3,nexternal),p(0:3,nexternal),
+     $ xjac,jac
+
+      integer i,j
+
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+
+      double precision xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+
+      double precision tau_ev,ycm_ev
+      common/cbjrk12_ev/tau_ev,ycm_ev
+      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+      common/cbjrk12_cnt/tau_cnt,ycm_cnt
+
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision xinorm_cnt(-2:2)
+      common /cxinormcnt/xinorm_cnt
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+
+      double precision p_ev(0:3,nexternal)
+      common/pev/p_ev
+
 c
 c Fill common blocks
       if (icountevts.eq.-100) then
@@ -1376,47 +1477,10 @@ c so give some non-physical values
          wgt_cnt(icountevts)=-1d99
          pswgt_cnt(icountevts)=-1d99
       endif
-c
-      if(icountevts.eq.-100)then
-         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
-            icountevts=-2
-         else
-            icountevts=0
-         endif
-c skips counterevents when integrating over second fold for massive
-c j_fks
-         if( isolsign.eq.-1 )icountevts=5
-         if (only_event_phsp) return
-      else
-         icountevts=icountevts+1
-      endif
-      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
-     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
-     &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
-         goto 111
-      elseif(icountevts.eq.5) then
-c icountevts=5 only when integrating over the second fold with j_fks
-c massive. The counterevents have been skipped, so make sure their
-c momenta are unphysical. Born are physical if event was generated, and
-c must stay so for the computation of enhancement factors.
-         do i=0,2
-            jac_cnt(i)=-299
-            p1_cnt(0,1,i)=-99
-         enddo
-      endif
-      nocntevents=(jac_cnt(0).le.0.d0) .and.
-     &            (jac_cnt(1).le.0.d0) .and.
-     &            (jac_cnt(2).le.0.d0)
-      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
-     &                  p_i_fks_ev,p_i_fks_cnt,
-     &                  xi_i_fks_ev,y_ij_fks_ev,pass)
-c
+
       return
       end
 
-
-
-      
 
       subroutine generate_momenta_massless_final(icountevts,i_fks,j_fks
      &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
