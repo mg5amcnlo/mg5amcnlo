@@ -20,14 +20,15 @@ implicit none
 C  
 C ARGUMENTS 
 C 
-      REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
+      REAL*8 P(0:3,NEXTERNAL-1) 
+      double complex ANS_SUMMED
       integer nhel(nexternal-1)
 C
 C VARIABLES
 C
       INTEGER I,j
       include 'orders.inc'
-      REAL*8 ANS(NSQAMPSO)
+      double complex ANS(NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO)
       save KEEP_ORDER
       integer amp_orders(nsplitorders)
@@ -71,7 +72,7 @@ C this is for the orders of the born to integrate
 endif
 
       CALL EWSUDAKOV_ME_%(ime)d_SPLITORDERS(P,NHEL,ANS)
-      ans_summed = 0d0
+      ans_summed = (0d0,0d0)
       max_val = 0d0
 
 C reset the amp_split_ewsud array
@@ -136,7 +137,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER NHEL(NEXTERNAL-1)
-      REAL*8 ANS(NSQAMPSO)
+      double complex ANS(NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
@@ -172,7 +173,7 @@ C Helas calls and color basis for the base amplitude
 %(jamp1_lines)s
 
     DO I = 1, NSQAMPSO
-    ANS(I) = 0d0
+    ANS(I) = (0d0,0d0)
     ENDDO
 
 C Reshuffle the momenta here
