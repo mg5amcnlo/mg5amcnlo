@@ -5042,9 +5042,7 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       end
 
 
-      subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
-     #                        p_i_fks_ev,p_i_fks_cnt,
-     #                        xi_i_fks_ev,y_ij_fks_ev,pass)
+      subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -5052,10 +5050,11 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       double precision p(0:3,-max_branch:max_particles)
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision jac,jac_cnt(-2:2)
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      double precision xi_i_fks_ev,y_ij_fks_ev
       integer izero,ione,itwo,iunit,isum
       logical verbose,pass,pass0
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
