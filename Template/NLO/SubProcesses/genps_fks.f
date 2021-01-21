@@ -78,7 +78,7 @@ c
       double precision virtgrannybar
       integer i,j,igranny_fail
       data igranny_fail /0/
-      double precision dot,dummy,pgranny(0:3),jac
+      double precision dot,pgranny(0:3),jac
       external dot
       double precision rat_xi_orig
       common /c_rat_xi/ rat_xi_orig
@@ -890,48 +890,10 @@ c     2 soft-collinear
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision p_born_l(0:3,nexternal-1)
-      common/pborn_l/p_born_l
-      double precision p_born_ev(0:3,nexternal-1)
-      common/pborn_ev/p_born_ev
-      double precision p_ev(0:3,nexternal)
-      common/pev/p_ev
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     &                        sqrtshat,shat
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
       logical nocntevents
       common/cnocntevents/nocntevents
-      double precision xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      logical nbody
-      common/cnbody/nbody
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
       integer iconfig0,iconfigsave
       common/ciconfig0/iconfig0
       save iconfigsave
@@ -940,16 +902,12 @@ c Masses of particles. Should be filled in setcuts.f
       common /to_mass/pmass
 c local
       integer i,j,nbranch,ns_channel,nt_channel,ionebody
-     &     ,fksconfiguration,icountevts,imother,ixEi,ixyij,ixpi,isolsign
+     &     ,isolsign
       double precision M(-max_branch:max_particles),totmassin,totmass
-     &     ,stot,xp(0:3,nexternal),xjac0, S(-max_branch:max_particles)
+     &     ,stot,xjac0, S(-max_branch:max_particles)
      &     ,tau_born,ycm_born,ycmhat,fksmass,xbjrk_born(2),shat_born
-     &     ,sqrtshat_born,xpswgt0
-     &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
-     &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
-     &     ,p_i_fks(0:3),pwgt,xi_i_hat
-     &     ,rat_xi
-      logical one_body,pass,check_cnt
+     &     ,sqrtshat_born,xpswgt0,m_born(nexternal-1),rat_xi
+      logical one_body,pass
 c external
       double precision lambda
       external lambda
@@ -966,12 +924,6 @@ c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
      &     ,ionebody,fksmass,nbranch
       common /c_isolsign/isolsign
-c Conflicting BW stuff
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
-     $     ,cBW_level
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
 
@@ -1110,7 +1062,7 @@ c Set all to negative values and exit
       integer icountevts
       integer ixEi,ixyij,ixpi,imother
       double precision xmrec2,flux,m_j_fks,phi_i_fks,pwgt,rat_xi,tau,
-     $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpwgt,xpswgt,
+     $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
      $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
       integer i,j
 
@@ -3255,7 +3207,7 @@ c
       integer itype,idim
       double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
      $     ,cBW_width(-1:1),jac,s
-      double precision fract,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      double precision fract,A,B,C,bs(-1:1),maxi,mini
       integer j
 c
       if (itype.eq.1) then
@@ -3459,7 +3411,6 @@ c     S=A/(B-x) transformation:
       double precision y_settozero
       parameter (y_settozero=1e-12)
       double precision lx1, lx2
-      double precision ylim0, ycm0
 
       tau = x1*x2
 
