@@ -1067,6 +1067,9 @@ c
             enddo
          enddo
       endif
+
+      ! UP TO HERE, except for boost, is in generate_born_momenta (new
+      ! version)
 C In the case of the event, store the born momenta without the radiation
 C It will be employed to compute the multi-channel enhancement factor
       if (icountevts.eq.-100) then
@@ -3514,3 +3517,153 @@ c     S=A/(B-x) transformation:
       return
       end
 
+
+
+
+      subroutine generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
+     $          m,s,
+     $          qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+      ! generate the momenta for the reduced born system
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+
+      double precision x(99), shat_born, sqrtshat_born, totmass
+      double precision S(-max_branch:max_particles),M(-max_branch:max_particles)
+      double precision xpswgt0, xjac0
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),
+     &                 granny_m2_red(-1:1),m_born(nexternal-1)
+      logical input_granny_m2
+
+      integer itree(2,-max_branch:-1)
+      integer ns_channel, nt_channel, ionebody, nbranch
+      logical one_body
+      common/born_trees/itree,ns_channel,nt_channel,ionebody,nbranch,one_body
+
+      logical pass
+      double precision pb(0:3,-max_branch:nexternal-1),p_born_CHECK(0:3,nexternal-1)
+C
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
+c Conflicting BW stuff
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
+     $     ,cBW_level
+c Common block with granny information
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+
+      integer i,j
+
+      pass = .true.
+
+c Generate the momenta for the initial state of the Born system
+      if(nincoming.eq.2) then
+        call mom2cx(sqrtshat_born,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+      else
+         pb(0,1)=sqrtshat_born
+         do i=1,2
+            pb(i,1)=0d0
+         enddo
+      endif
+      s(-nbranch)  = shat_born
+      m(-nbranch)  = sqrtshat_born
+      pb(0,-nbranch)= m(-nbranch)
+      pb(1,-nbranch)= 0d0
+      pb(2,-nbranch)= 0d0
+      pb(3,-nbranch)= 0d0
+c     
+c Generate Born-level momenta
+c
+c Start by generating all the invariant masses of the s-channels
+      if (granny_is_res) then
+         call generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &        ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass
+     &        ,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
+      else
+         call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
+     $        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
+     $        ,pass)
+      endif
+      if (.not.pass) then
+         xjac0=-139
+         return
+      endif
+c If only s-channels, also set the p1+p2 s-channel
+      if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
+         s(-nbranch+1)=s(-nbranch) 
+         m(-nbranch+1)=m(-nbranch)       !Basic s-channel has s_hat 
+         pb(0,-nbranch+1) = m(-nbranch+1)!and 0 momentum
+         pb(1,-nbranch+1) = 0d0
+         pb(2,-nbranch+1) = 0d0
+         pb(3,-nbranch+1) = 0d0
+      endif
+c
+c     Next do the T-channel branchings
+c
+      if (nt_channel.ne.0) then
+         call generate_t_channel_branchings(ns_channel,nbranch,itree
+     $        ,m,s,x,pb,xjac0,xpswgt0,pass)
+        if (.not.pass) then
+           xjac0=-140
+           return
+        endif
+      endif
+c
+c     Now generate momentum for all intermediate and final states
+c     being careful to calculate from more massive to less massive states
+c     so the last states done are the final particle states.
+c
+      call fill_born_momenta(nbranch,nt_channel,one_body,ionebody
+     &     ,x,itree,m,s,pb,xjac0,xpswgt0,pass)
+      if (.not.pass) then
+         xjac0=-141
+         return
+      endif
+c
+c  Now I have the Born momenta
+c
+      do i=1,nexternal-1
+         do j=0,3
+            p_born_l(j,i)=pb(j,i)
+            p_born_CHECK(j,i)=pb(j,i)
+         enddo
+         m_born(i)=m(i)
+      enddo
+      call phspncheck_born(sqrtshat_born,m_born,p_born_CHECK,pass)
+      if (.not.pass) then
+         xjac0=-142
+         return
+      endif
+
+      if (.not.only_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+
+      if (.not. skip_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born_ev(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+
+      return
+      end
