@@ -297,6 +297,13 @@ c      (see comments inside the fill_plots subroutine)
          appl_www_histo = www(1)
       endif
       call analysis_fill(p,istatus,ipdg,www,ibody)
+      if(pineappl)then
+        ! this call is necessary since PineAPPL
+        ! already combine the different contributions
+        ! with the same kinematics, while histograms
+        ! are filled contribution by contribution.
+        call APPL_delete_itype
+      endif
 c Fill the accumulated results
       i_wgt=1
       if (do_rwgt_scale) then
