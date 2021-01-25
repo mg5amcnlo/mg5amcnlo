@@ -1066,10 +1066,15 @@ c f_* multiplication factors for Born and nbody
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i,imode
       data inoborn_cnt /0/
+      double precision p_born_used(0:3,nexternal-1)
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/ p_born_ev
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+      double precision p_born_norad(0:3,nexternal-1)
+      common/pborn_norad/p_born_norad
       double precision p_ev(0:3,nexternal)
       common/pev/      p_ev
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
@@ -1098,6 +1103,8 @@ c f_* multiplication factors for Born and nbody
      &     ,granny_chain_real_final
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      logical use_evpr
+      common /to_use_evpr/use_evpr
 
       call cpu_time(tBefore)
 
@@ -1136,18 +1143,22 @@ c Compute the multi-channel enhancement factor 'enhance'.
       endif
 
 c In the case there is the special phase-space mapping for resonances,
+C or when not doing event projection
 c use the Born computed with those as the mapping.
       enhance_real=1.d0
-      if (granny_is_res .and. imode.eq.2) then
+      if ((granny_is_res .or. .not.use_evpr).and. imode.eq.2) then
+      !!if (granny_is_res .and. imode.eq.2) then
+         if (granny_is_res) p_born_used(:,:) = p_born_ev(:,:) 
+         if (.not.use_evpr) p_born_used(:,:) = p_born_norad(:,:) 
          if (p_born_ev(0,1).gt.0d0) then
             calculatedBorn=.false.
             pas(0:3,nexternal)=0d0
-            pas(0:3,1:nexternal-1)=p_born_ev(0:3,1:nexternal-1)
+            pas(0:3,1:nexternal-1)=p_born_used(0:3,1:nexternal-1)
             call set_alphas(pas)
-            call sborn(p_born_ev,wgt_c)
+            call sborn(p_born_used,wgt_c)
             call set_alphas(p_ev)
             calculatedBorn=.false.
-         elseif(p_born_ev(0,1).lt.0d0)then
+         elseif(p_born_used(0,1).lt.0d0)then
             if (enhance.ne.0d0) then 
                enhance_real=enhance
             else
@@ -1594,7 +1605,7 @@ c matrix elements
       wgt_ME_tree(2,icontr)=wgt_me_real
       do i=1,nexternal
          do j=0,3
-            if (p1_cnt(0,1,0).gt.0d0) then
+            if (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
                momenta_m(j,i,1,icontr)=p1_cnt(j,i,0)
             elseif (p1_cnt(0,1,1).gt.0d0) then
                momenta_m(j,i,1,icontr)=p1_cnt(j,i,1)
@@ -3955,8 +3966,13 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       double precision p(0:3,nexternal),wgt
       double precision xi_i_fks,y_ij_fks
 C  
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+
+      double precision p_born_used(0:3,nexternal-1)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -4007,10 +4023,22 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
 
       double precision iden_comp
       common /c_iden_comp/iden_comp
+
+      logical use_evpr
+      common /to_use_evpr/use_evpr
 C  
       amp_split_local(1:amp_split_size) = 0d0
 
-      if(p_born(0,1).le.0.d0)then
+C in the case of the collinear CT, use p_born_coll
+C  (when not doing event projection). 
+C For the soft-collinear one, use p_born
+      if (xi_i_fks.gt.0d0.and..not.use_evpr) then
+          p_born_used(:,:) = p_born_coll(:,:)
+      else ! if (xi_i_fks.eq.0d0) then
+          p_born_used(:,:) = p_born(:,:)
+      endif
+
+      if(p_born_used(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sborncol_isr"
          wgt=0.d0
@@ -4032,18 +4060,18 @@ C check if any extra_cnt is needed
          if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn(p_born,wgt_born)
+               call sborn(p_born_used,wgt_born)
                wgt1(1:2) = ans_cnt(1:2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
-               call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
+               call extra_cnt(p_born_used, iextra_cnt, ans_extra_cnt)
                wgt1(1:2) = ans_extra_cnt(1:2,iord)
             else
                write(*,*) 'ERROR in sborncol_isr', iord
                stop
             endif
          else
-            call sborn(p_born,wgt_born)
+            call sborn(p_born_used,wgt_born)
             wgt1(1:2) = ans_cnt(1:2,iord)
         endif
         amp_split_cnt_local(1:amp_split_size,1,iord)=
@@ -4730,6 +4758,11 @@ c Calculate the eikonal factor
       double precision p_born(0:3,nexternal-1), wgt_born
       common/pborn/p_born
 
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+
+      double precision p_born_used(0:3,nexternal-1)
+
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
@@ -4784,6 +4817,9 @@ C keep track of each split orders
      $                         amp_split_wgtdis_d
       double precision prefact_xi
 
+      logical use_evpr
+      common /to_use_evpr/use_evpr
+
       ! PDF scheme (DIS or MSbar)
       character*2 PDFscheme
       data PDFscheme /'MS'/ ! DI-> dis, MS-> msbar
@@ -4797,6 +4833,14 @@ C keep track of each split orders
       amp_split_wgtdis_l(1:amp_split_size) = 0d0
       amp_split_wgtdis_d(1:amp_split_size) = 0d0
 
+C in the case of the collinear CT, use p_born_coll
+C  (when not doing event projection). 
+C For the soft-collinear one, use p_born
+      if (xi_i_fks.gt.0d0.and..not.use_evpr) then
+          p_born_used(:,:) = p_born_coll(:,:)
+      else ! if (xi_i_fks.eq.0d0) then
+          p_born_used(:,:) = p_born(:,:)
+      endif
 
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
@@ -4810,7 +4854,7 @@ c Do not include this contribution for final-state branchings
          return
       endif
 
-      if(p_born(0,1).le.0.d0)then
+      if(p_born_used(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sreal_deg"
          collrem_xi=0.d0
@@ -4862,12 +4906,12 @@ C check if any extra_cnt is needed
         if (iextra_cnt.gt.0) then
             if (iord.eq.isplitorder_born) then
             ! this is the contribution from the born ME
-               call sborn(p_born,wgt_born)
+               call sborn(p_born_used,wgt_born)
                wgt1(1) = ans_cnt(1,iord)
                wgt1(2) = ans_cnt(2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
-               call extra_cnt(p_born,iextra_cnt,ans_extra_cnt)
+               call extra_cnt(p_born_used,iextra_cnt,ans_extra_cnt)
                wgt1(1) = ans_extra_cnt(1,iord)
                wgt1(2) = ans_extra_cnt(2,iord)
             else
@@ -4875,7 +4919,7 @@ C check if any extra_cnt is needed
                stop
             endif
         else
-           call sborn(p_born,wgt_born)
+           call sborn(p_born_used,wgt_born)
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
