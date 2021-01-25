@@ -87,6 +87,20 @@ extern "C" struct
     double xsec12, xsec11, xsec20;
 } appl_common_reco_;
 
+extern "C" struct
+{
+    int idbmup[2];
+    double ebmup[2];
+    int pdfgup[2];
+    int pdfsup[2];
+    int idwtup;
+    int nprup;
+    double xsecup[100];
+    double xerrup[100];
+    double xmaxup[100];
+    int lprup[100];
+} heprup_;
+
 extern "C" void appl_init_()
 {
     // Grid Initialization and definition of the observables.
@@ -208,6 +222,12 @@ extern "C" void appl_init_()
 
     // valid choices are: "LagrangeSubgrid", "NtupleSubgrid"
     pineappl_keyval_set_string(key_vals, "subgrid_type", "LagrangeSubgrid");
+
+    // set PDG ids of the initial states
+    pineappl_keyval_set_string(key_vals, "initial_state_1",
+        std::to_string(heprup_.idbmup[0]).c_str());
+    pineappl_keyval_set_string(key_vals, "initial_state_2",
+        std::to_string(heprup_.idbmup[1]).c_str());
 
     // Create a grid with the binning given in the "obsbins[Nbins+1]" array
     grid_obs.push_back(pineappl_grid_new(

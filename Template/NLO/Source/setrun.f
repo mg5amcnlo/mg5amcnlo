@@ -114,7 +114,7 @@ c Set alphaS(mZ)
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
-      if (nlo_ps) then
+      if (nlo_ps.or.pineappl) then
 C Fill common block for Les Houches init info
          do i=1,2
             if(lpp(i).eq.1.or.lpp(i).eq.2) then
