@@ -149,11 +149,13 @@ C
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       real*8 p_save(0:3, nexternal-1), p_resh(0:3, nexternal-1)
       logical pass_reshuffle
-C Imag power takes into account the I factor when a longitudinal Z
-C  boson is replaced by its goldstone (Chi). 
-C  It is the difference of the number of Chi's in the first and second amplitude which are interferred together
-      integer imag_power
-      data imag_power / %(imag_power)d /
+C CCC THIS IS PROBABLY UNNECESSARY, KEEP COMMENTED FOR THE TIME BEING
+C  Imag power takes into account the I factor when a longitudinal Z
+C   boson is replaced by its goldstone (Chi). 
+C   It is the difference of the number of Chi's in the first and second amplitude which are interferred together
+C       integer imag_power
+C       data imag_power / %(imag_power)d /
+
 C  
 C GLOBAL VARIABLES
 C  
@@ -201,8 +203,9 @@ C Finally interfere the two sets of color-stripped amplitudes
           ENDDO
       ENDDO
     ENDDO
-C include the imaginary factor if needed
-    if (imag_power.ne.0) ans(:) = ans(:) * imag1**imag_power 
+C C NOT NEEDED
+C  include the imaginary factor if needed
+C     if (imag_power.ne.0) ans(:) = ans(:) * imag1**imag_power 
 
     p(:,:) = p_save(:,:)
     END
