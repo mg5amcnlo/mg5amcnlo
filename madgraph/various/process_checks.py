@@ -290,8 +290,8 @@ class MatrixElementEvaluator(object):
                                                 mode='mg5',
                                                 language = 'Python'))
         for routine in aloha_model.external_routines:
-            aloha_routines.append(
-                     open(aloha_model.locate_external(routine, 'Python')).read())
+            for path in aloha_model.locate_external(routine, 'Python'):
+                aloha_routines.append(open(path).read())
 
         # Define the routines to be available globally
         previous_globals = list(globals().keys())

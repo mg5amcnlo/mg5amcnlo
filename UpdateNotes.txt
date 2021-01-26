@@ -1,5 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.8.3 (26/01/21):
+      OM: Buch of bunch fixing related to python3 issue (mainly related to unicode encoding)
+      OM: Various fix for reweighting with loop (mainly with python3 as well)
+      OM: Fix a potential bug for polarized sample with at least three polarised particles with a least two
+          identical particles and one different polarised particle.
+      OM: Fix various bug for maddm interface (thanks Daniele)
+      OM: Fix various issue with overall order usage
+      OM: Fix compatibility with MacOS 11
+      OM: fix additional GCC10 compatibility issue
+      OM: fix issue for 1>n process where width were set to zero automatically (introduced in 2.8.0)
+      OM: fix aloha output mode for python output
+      OM: avoid a bug with helicity filtering that was kept for all benchmark when using
+          multiple successive re-weighting
+      OM: Edition of the reweighting card via "set" command is not starting from the original param_card
+          used to generated the events file and not from the model default anymore.
+      OM: Interference have now their default dynamical scale set to HT/2
+
 
 2.8.2 (30/10/20):
       OM: Fix a bug when setting width to zero where they were actually set to 1e-6 times the width

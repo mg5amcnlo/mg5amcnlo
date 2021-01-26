@@ -2080,6 +2080,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 %(python_information)s
   subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
+C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
@@ -2097,7 +2098,7 @@ CF2PY double precision, intent(in) :: SCALE2
   PI = 3.141592653589793D0
   G = 2* DSQRT(ALPHAS*PI)
   CALL UPDATE_AS_PARAM()
-  if (scale2.ne.0d0) stop 1
+c  if (scale2.ne.0d0) stop 1
 
 %(smatrixhel)s
 
@@ -2121,9 +2122,13 @@ CF2PY intent(in) :: value
 
       character*512 name
       double precision value
+      
+      %(helreset_def)s
 
       include '../Source/MODEL/input.inc'
       include '../Source/MODEL/coupl.inc'
+
+      %(helreset_setup)s
 
       SELECT CASE (name)
          %(parameter_setup)s
@@ -2165,7 +2170,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
  
   
         """
-         
+        
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
@@ -2206,6 +2211,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
                                    % (key, var))
 
+        # part for the resetting of the helicity
+        helreset_def = []
+        helreset_setup = []
+        for prefix in set(allprefix):
+            helreset_setup.append(' %shelreset = .true. ' % prefix)
+            helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
+        
+
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
                           'maxpart': max_nexternal,
@@ -2215,6 +2228,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'prefix':'\',\''.join(allprefix),
                           'pids': ','.join(str(pid) for (pdg,pid) in allids),
                           'parameter_setup': '\n'.join(parameter_setup),
+                          'helreset_def' : '\n'.join(helreset_def),
+                          'helreset_setup' : '\n'.join(helreset_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting

@@ -1109,7 +1109,8 @@ class AbstractALOHAModel(dict):
 
         ext_files  = []
         for path in paths:
-            ext_files = misc.glob('%s.%s' % (name, ext), path)
+            base, amp = name.rsplit('_',1)
+            ext_files = misc.glob('%s*_%s.%s' % (base,amp, ext), path)
             if ext_files:
                 break
         else: 
@@ -1121,6 +1122,7 @@ class AbstractALOHAModel(dict):
             for filepath in ext_files:
                 
                 files.cp(filepath, output_dir)
+
         return ext_files
                     
         

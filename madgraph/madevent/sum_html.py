@@ -279,7 +279,7 @@ class OneResult(object):
         
         if isinstance(filepath, str):
             finput = open(filepath)
-        elif isinstance(filepath, file):
+        elif hasattr(filepath, 'read') and hasattr(filepath, 'name'):
             finput = filepath
         else:
             raise Exception("filepath should be a path or a file descriptor")

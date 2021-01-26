@@ -3479,20 +3479,23 @@ class RunCardLO(RunCard):
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
         no_systematics = False
+        interference = False
         for proc in proc_def:
             for oneproc in proc:
                 if '^2' in oneproc.nice_string():
-                    no_systematics = True
+                    interference = True
                     break
             else:
                 continue
             break
 
         
-        if no_systematics:
+        if interference or no_systematics:
             self['use_syst'] = False
             self['systematics_program'] = 'none'
-        
+        if interference:
+            self['dynamical_scale_choice'] = 3
+            
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles
         for plist in proc_def:

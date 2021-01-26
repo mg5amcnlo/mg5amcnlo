@@ -734,17 +734,26 @@ def stdchannel_redirected(stdchannel, dest_filename):
             libraries.append('rt')                                                                                                                                                                          
     """
 
-    try:
-        oldstdchannel = os.dup(stdchannel.fileno())
-        dest_file = open(dest_filename, 'w')
-        os.dup2(dest_file.fileno(), stdchannel.fileno())
-        yield
-    finally:
-        if oldstdchannel is not None:
-            os.dup2(oldstdchannel, stdchannel.fileno())
-            os.close(oldstdchannel)
-        if dest_file is not None:
-            dest_file.close()
+    if logger.getEffectiveLevel()>5:
+        #deactivate this for hard-core debugging level
+        try:
+            oldstdchannel = os.dup(stdchannel.fileno())
+            dest_file = open(dest_filename, 'w')
+            os.dup2(dest_file.fileno(), stdchannel.fileno())
+            yield
+        finally:
+            if oldstdchannel is not None:
+                os.dup2(oldstdchannel, stdchannel.fileno())
+                os.close(oldstdchannel)
+            if dest_file is not None:
+                dest_file.close()
+    else:
+        try:
+            logger.debug('no stdout/stderr redirection due to debug level')
+            yield
+        finally:
+            return
+        
         
 def get_open_fds():
     '''
@@ -1590,7 +1599,7 @@ class digest:
         def digest(text):
             """using mg5 for the hash"""
             t = hashlib.md5()
-            t.update(text)
+            t.update(text.encode())
             return t.hexdigest()
         return digest
     

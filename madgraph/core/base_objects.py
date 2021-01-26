@@ -2557,7 +2557,7 @@ class Diagram(PhysicsObject):
 
 
         if max_n_loop == 0:
-            max_n_loop = Vertex.max_n_loop_for_multichanneling
+            max_n_loop = int(Vertex.max_n_loop_for_multichanneling)
         
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
@@ -3138,7 +3138,7 @@ class Process(PhysicsObject):
             mystr = mystr + '[ '
             if self['NLO_mode']:
                 mystr = mystr + self['NLO_mode']
-                if not self['has_born']:
+                if not self['has_born'] and self['NLO_mode'] != 'noborn':
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 
