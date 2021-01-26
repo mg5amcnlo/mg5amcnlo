@@ -280,7 +280,7 @@ class Compile_MG5:
     def install_package(self, programs=[]):
         print("installing external package")
         if not programs:
-            programs = ['pythia-pgs','Delphes','ExRootAnalysis','MadAnalysis4','SysCalc']
+            programs = ['pythia8','Delphes','ExRootAnalysis','MadAnalysis5']
             
         for prog in programs:
             self.cmd.exec_cmd('install %s' % prog)
