@@ -475,7 +475,7 @@ c The n+1-body contributions (including counter terms)
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          ! needed for the mapping without event projection
          call set_cms_stuff(ione)
-         passcuts_coll =use_evpr.or.passcuts(p1_cnt(0,1,1),rwgt)
+         passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
          call set_cms_stuff(mohdr)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
