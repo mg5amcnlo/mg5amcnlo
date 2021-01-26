@@ -696,9 +696,9 @@ c
                    write(*,fmt="(a)", advance="no")'Sum of all orders: '
                 endif
                 if (fail_frac(iamp).lt.max_fail) then
-                   write(*,401) nFKSprocess, fail_frac(iamp)
+                   write(*,501) nFKSprocess, fail_frac(iamp)
                 else
-                   write(*,402) nFKSprocess, fail_frac(iamp)
+                   write(*,502) nFKSprocess, fail_frac(iamp)
                 endif
             enddo
          endif
