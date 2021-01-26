@@ -3138,7 +3138,7 @@ class Process(PhysicsObject):
             mystr = mystr + '[ '
             if self['NLO_mode']:
                 mystr = mystr + self['NLO_mode']
-                if not self['has_born']:
+                if not self['has_born'] and self['NLO_mode'] != 'noborn':
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 
