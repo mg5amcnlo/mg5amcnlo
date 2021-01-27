@@ -6609,8 +6609,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             """function to apply the patch"""
             text = filetext.read().decode()
             
-            pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
-            #=== renamed directory 'Template' => 'Template/LO'
+            pattern = re.compile(r'''^=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
+            #= = = renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
                 shutil.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
                 full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
