@@ -993,7 +993,7 @@ c Trivial, but prevents loss of accuracy
       ! event-projection
       ! CMZ fix this comment
       use_evpr = .true.!j_fks.gt.nincoming 
-      !use_evpr = j_fks.gt.nincoming 
+      use_evpr = j_fks.gt.nincoming 
 
       if (use_evpr) then
         ! standard mapping with event-projection
@@ -1968,9 +1968,8 @@ c
 c
 c Compute maximum allowed xi_i_fks
 C      xiimax=1-xmrec2/shat
-      !write(*,*) 'TAULB', tau_born_lower_bound
-      !!!!xiimax=1-tau_born_lower_bound/xbjrk_born(1)/xbjrk_born(2)
-      xiimax=1-tau_lower_bound/xbjrk_born(1)/xbjrk_born(2)
+C MZ checked for single-top @NLO QCD
+      xiimax=1-tau_born_lower_bound/xbjrk_born(1)/xbjrk_born(2)
       xinorm=xiimax
 c
 c Define xi_i_fks
