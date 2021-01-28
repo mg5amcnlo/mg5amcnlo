@@ -2039,8 +2039,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if not version:# not linux 
                 version = 14 # set version to remove MACFLAG
             else:
-                version = int(version.split('.')[1])
-            if version >= 14:
+                majversion, version = [int(x) for x in version.split('.',3)[:2]]
+
+            if majversion >= 11 or (majversion ==10 and version >= 14):
                 for_update['MACFLAG'] = '-mmacosx-version-min=10.8' if is_lc else ''
 
         if not root_dir:

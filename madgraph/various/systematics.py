@@ -872,7 +872,7 @@ class Systematics(object):
             if self.b2 != 0 and loinfo['pdf_pdg_code2']: 
                 muf2 = loinfo['pdf_q2'][-1]
             else:
-                muf1 =0
+                muf2 =0
         else:
             if dyn == 1: 
                 mur = event.get_et_scale(1.)
