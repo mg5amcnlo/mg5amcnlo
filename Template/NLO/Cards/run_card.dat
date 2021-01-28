@@ -179,8 +179,8 @@
   %(pt_max_pdg)s = pt_max_pdg ! Max pT for a massive particle
   %(mxx_min_pdg)s = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
-# Use PineAPPL to generate PDF-independent fast-interpolationuse       *
-# grids (https://zenodo.org/record/3992765#.X2EWy5MzbVo)               *
+# Use PineAPPL to generate PDF-independent fast-interpolation grid     *
+# (https://zenodo.org/record/3992765#.X2EWy5MzbVo)                     *
 #***********************************************************************
  %(pineappl)s = pineappl ! PineAPPL switch 
 #***********************************************************************
