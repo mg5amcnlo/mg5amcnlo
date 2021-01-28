@@ -865,11 +865,11 @@ class Systematics(object):
 
         if dyn == -1:
             mur = loinfo['ren_scale']
-            if self.b1 != 0: 
+            if self.b1 != 0 and loinfo['pdf_pdg_code1']:
                 muf1 = loinfo['pdf_q1'][-1]
             else:
                 muf1 =0
-            if self.b2 != 0: 
+            if self.b2 != 0 and loinfo['pdf_pdg_code2']: 
                 muf2 = loinfo['pdf_q2'][-1]
             else:
                 muf1 =0
@@ -887,8 +887,17 @@ class Systematics(object):
             muf1 = mur
             muf2 = mur
             loinfo = dict(loinfo)
-            loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
-            loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
+            # security for elastic photon from proton
+            if not loinfo['pdf_pdg_code1']:
+                muf1 = 0
+            else:
+                loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
+            if not loinfo['pdf_pdg_code2']:
+                muf2 = 0                
+            else:
+                loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
+
+
             
         # MUR part
         if self.b1 == 0 == self.b2:
@@ -898,10 +907,11 @@ class Systematics(object):
                 wgt = 1.0
         else:
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
+
         # MUF/PDF part
-        if self.b1:
+        if self.b1 and muf1:
             wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
-        if self.b2: 
+        if self.b2 and muf2: 
             wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:

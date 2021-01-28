@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip

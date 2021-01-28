@@ -2488,11 +2488,13 @@ class FullHelasOutputTest(test_helas_call_writers.HelasModelTestSetup,
 
     def setUp(self):
         
-        
+        super(FullHelasOutputTest, self).setUp()
         helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object =\
             staticmethod(helas_call_writers.HelasCallWriter.default_customize_argument_for_all_other_helas_object)
         
     tearDown = test_file_writers.CheckFileCreate.clean_files
+
+
 
     def test_generate_helas_diagrams_ea_ae(self):
         """Testing the helas diagram generation e- a > a e-
@@ -9879,7 +9881,8 @@ class AlohaFortranWriterTest(unittest.TestCase):
     def test_header(self):
         """ test the header of a file """
         
-        from models.sm.object_library import Lorentz
+        with misc.TMP_variable(sys, 'path', sys.path+[pjoin(MG5DIR,'models','sm')]):
+            from models.sm.object_library import Lorentz
         import aloha.create_aloha as create_aloha
         
         FFV1 = Lorentz(name = 'FFV1',
