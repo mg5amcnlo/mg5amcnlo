@@ -300,13 +300,14 @@ class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
     def help_save(self):
-        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("syntax: save %s FILENAME [OPTIONS]" % "|".join(self._save_opts),'$MG:color:BLUE')
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
         logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
+        logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
 
     def help_load(self):
         logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
@@ -804,7 +805,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
         logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
-        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")
+        logger.info("auto_convert_model <value>",'$MG:color:GREEN')   
+        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")     
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -2901,7 +2904,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_npoint_for_channel',
                     'max_t_for_channel',
                     'zerowidth_tchannel',
-                    'default_unset_couplings']
+                    'default_unset_couplings',
+                    ]
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
@@ -2952,7 +2956,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_retry_wait':300,
                        'cluster_size':100,
                        'output_dependencies':'external',
-                       'crash_on_error':False
+                       'crash_on_error':False,
+                       'auto_convert_model': False,
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3332,10 +3337,12 @@ This implies that with decay chains:
             raise Exception( 'model to convert need to provide a full path')
         model_dir = args[0]
         
-        answer = self.ask('model conversion to support both py2 and py3 are done in place.\n They are NO guarantee of success.\n It can make the model to stop working under PY2 as well.\n Do you want to proceed?',
-                 'y', ['y','n'])
-        if answer != 'y':
-            return 
+        
+        if not ('-f' not in args or self.options['auto_convert_model']): 
+            answer = self.ask('model conversion to support both py2 and py3 are done in place.\n They are NO guarantee of success.\n It can make the model to stop working under PY2 as well.\n Do you want to proceed?',
+                     'y', ['y','n'])
+            if answer != 'y':
+                return 
         
         #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
@@ -5497,8 +5504,27 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
-                self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                try:
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
+                except ufomodels.UFOError as err:
+                    model_path, _,_ = import_ufo.get_path_restrict(args[1])
+                    if six.PY3 and self.options['auto_convert_model']:
+                        logger.info("fail to load model but auto_convert_model is on True. Trying to convert the model")
+                        
+                        self.exec_cmd('convert model %s' % model_path, errorhandling=False, printcmd=True, precmd=False, postcmd=False)
+                        logger.info('retry the load of the model')
+                        tmp_opt = dict(self.options)
+                        tmp_opt['auto_convert_model'] = False
+                        with misc.TMP_variable(self, 'options', tmp_opt):
+                            try:
+                                self.exec_cmd('import %s' % line, errorhandling=False, printcmd=True, precmd=False, postcmd=False)
+                            except Exception:
+                                raise err
+                    elif six.PY3:
+                        raise self.InvalidCmd('UFO model not python3 compatible. You can convert it via the command \nconvert model %s\nYou can also type \"set auto_convert_model T\" to automatically convert all python2 module to be python3 compatible in the future.' % model_path)
+                    else:
+                        raise
                 if os.path.sep in args[1] and "import" in self.history[-1]:
                     self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
 
@@ -7763,9 +7789,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
         # True/False formatting
-        elif args[0] in ['crash_on_error']:
+        elif args[0] in ['crash_on_error', 'auto_convert_model']:
             try:
-                tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+                tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 if args[1].lower() in ['never']:
                     tmp = args[1].lower()

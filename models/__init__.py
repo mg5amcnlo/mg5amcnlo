@@ -26,6 +26,8 @@ logger = logging.getLogger('madgraph.models')
 
 pjoin = os.path.join
 
+class UFOError(Exception): pass
+
 def load_model(name, decay=False):
     
     # avoid final '/' in the path
@@ -71,11 +73,7 @@ def load_model(name, decay=False):
         try:
             __import__(path_split[-1])
         except Exception as error:
-            if six.PY3:
-                logger.critical('It is likely that your UFO model is NOT python3 compatible.\n Most common issue with python2/3 compatibility can be solve with the "convert model" command of MG5aMC.')
-                logger.warning('If you want to try that automatic conversion please run:')
-                logger.warning('convert model %s' % '/'.join(path_split))
-            raise
+            raise UFOError(str(error))
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]

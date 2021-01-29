@@ -20,6 +20,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: New parameter in the run_card:
           - sde_strategy: allows to change the default multi-channel strategy
 	  - a new phase-space optimization parameter are now easily availabe via the command "update ps_optim" 
+      OM: New global parameter "auto_convert_model"
+          if set on True (set auto_convert_model T or via input/mg5_configuration.txt)
+	  all model crashing due to a python3 compatibility issue of the UFO model will be automatically converted
+	  to a python3 compatible model. 
 
 2.8.3 (26/01/21):
       OM: Buch of bunch fixing related to python3 issue (mainly related to unicode encoding)
