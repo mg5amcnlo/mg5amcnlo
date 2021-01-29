@@ -196,7 +196,7 @@ class External(MathsObject):
     nhel_lines = ''
     num_externals = 0
     # Could get this from dag but I'm worried about preserving order
-    wavs_same_leg = []
+    wavs_same_leg = {}
     good_wav_combs = []
 
     def __init__(self, arguments, old_name):
@@ -238,22 +238,22 @@ class External(MathsObject):
             graph.store_wav(this_wavfunc)
             new_wavfuncs.append(this_wavfunc)
 
-        cls.wavs_same_leg.append(new_wavfuncs)
+        cls.wavs_same_leg[ext_num] = new_wavfuncs
 
         return new_wavfuncs
 
     @classmethod
     def get_gwc(cls):
         num_combs = len(cls.good_hel)
-        num_legs = len(cls.wavs_same_leg)
-        # TODO: is it better to have list of sets?
-        wav_comb = [[] for x in range(num_combs)]
-        # TODO: CHECK SHAPE OF HEL MAKES SENSE AND SHAPE OF SPINOR_COMB IS SAME
-        for comb, leg in product(range(num_combs), range(num_legs)):
-            for wav in cls.wavs_same_leg[leg]:
-                if cls.good_hel[comb][leg] == wav.hel:
-                    wav_comb[comb].append(wav)
-        cls.good_wav_combs = wav_comb
+        gwc = [[] for x in range(num_combs)]
+
+        for n, comb in enumerate(cls.good_hel):
+            for leg, wavs in cls.wavs_same_leg.items():
+                for wav in wavs:
+                    if comb[leg] == wav.hel:
+                        gwc[n].append(wav)
+                        
+        cls.good_wav_combs = gwc
 
     @staticmethod
     def format_name(*nums):
@@ -370,7 +370,7 @@ class HelicityRecycler():
         External.good_hel = []
         External.nhel_lines = ''
         External.num_externals = 0
-        External.wavs_same_leg = []
+        External.wavs_same_leg = {}
         External.good_wav_combs = []
 
         Internal.max_wav_num = 0
