@@ -214,7 +214,8 @@ class TestCmdShell1(unittest.TestCase):
                     'ninja': './HEPTools/lib',
                     'samurai': None,
                     'max_t_for_channel': 99,
-                    'zerowidth_tchannel': True
+                    'zerowidth_tchannel': True,
+                     'auto_convert_model': False,
                     }
 
         self.assertEqual(config, expected)
