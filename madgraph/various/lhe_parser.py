@@ -3181,28 +3181,64 @@ if '__main__' == __name__:
         output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
-    if False:
-        lhe = EventFile('unweighted_events.lhe.gz')
+    if True:
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/it4.lhe')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
         
         nb_pass = 0
-        data = []
+        data_t1 = []
+        data_t2 = []
+        wgts = []
+        colors = []
         for event in lhe:
-            etaabs = 0 
-            etafinal = 0
-            for particle in event:
-                if particle.status==1:
-                    p = FourMomentum(particle)
-                    eta = p.pseudorapidity
-                    if abs(eta) > etaabs:
-                        etafinal = eta
-                        etaabs = abs(eta)
-            if etaabs < 4:
-                data.append(etafinal)
-                nb_pass +=1     
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors.append('red')
+            else:
+                colors.append('blue')
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/unweighted.lhe')
+        import numpy as np
+        import matplotlib.pyplot as plt
+        data2_t1 = []
+        data2_t2 = []
+        wgts = []
+        colors2 = []
+        for event in lhe:
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data2_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data2_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors2.append('black')
+            else:
+                colors2.append('green')
 
+
+        
+#        colors = (0,0,0)
+        area = np.pi*3
+
+        # Plot
+#        ax.set_xlim([10^-20,13000**2])
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('pa')
+        plt.ylabel('pmu')
+        plt.scatter(data_t1, data_t2, c=colors, label='weighted')#, s=area, c=colors, alpha=0.5)
+        plt.scatter(data2_t1, data2_t2, c=colors2, label='unweighted')#, s=area, c=colors, alpha=0.5)
+        plt.legend()        
+        
+        plt.show()
+            
                         
         print(nb_pass)
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
@@ -3215,7 +3251,6 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
-        ax.set_xlim([-4,4])
         print("bin value:", n)
         print("start/end point of bins", bins)
         plt.axis('on')

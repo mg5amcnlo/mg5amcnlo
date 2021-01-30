@@ -221,7 +221,9 @@ class WriteALOHA:
             self.declaration.add(('complex',coup))
             
         if self.offshell:
-            if aloha.complex_mass:
+            if 'P1N' in self.tag:
+                pass
+            elif aloha.complex_mass:
                 call_arg.append(('complex','M%s' % self.outgoing))              
                 self.declaration.add(('complex','M%s' % self.outgoing))
             else:
@@ -590,7 +592,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         """Define the Header of the fortran file. This include
             - momentum conservation
             - definition of the impulsion"""
-                    
+                        
         out = StringIO()
         
         # Define all the required momenta
@@ -612,11 +614,15 @@ class ALOHAWriterForFortran(WriteALOHA):
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
-                
+        
         # define the resulting momenta
-        if self.offshell:
-            
-            
+        bypass = False
+        if 'P1N' in self.tag:
+            if  not self.declaration.is_used('P%s' % (self.outgoing)):
+                bypass = True
+
+        if self.offshell and not bypass:
+
             energy_pos = out_size -2
             type = self.particles[self.outgoing-1]
             
@@ -816,23 +822,29 @@ class ALOHAWriterForFortran(WriteALOHA):
                 coeff = 'denom*'    
                 if not aloha.complex_mass:
                     if self.routine.denominator:
-                        out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
+                        if 'P1N' not in self.tag:
+                            out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
                         out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
                                   {'i': self.outgoing, 'COUP': coup_name})
                 else:
                     if self.routine.denominator:
-                        raise Exception('modify denominator are not compatible with complex mass scheme')                
-
-                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
+                        if 'P1N' not in self.tag:
+                            raise Exception('modify denominator are not compatible with complex mass scheme', self.tag)                
+                    if 'P1N' not in self.tag:
+                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
-                self.declaration.add(('complex','denom'))
+                if 'P1N' not in self.tag:
+                    self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
                     ptype = 'list_complex'
                 else:
                     ptype = 'list_double'
-                self.declaration.add((ptype,'P%s' % self.outgoing))
+                if 'P1N' not in self.tag:
+                    self.declaration.add((ptype,'P%s' % self.outgoing))
+                else:
+                    coeff = 'COUP*'  
             else:
                 if coup_name == 'COUP':
                     coeff = 'COUP*'

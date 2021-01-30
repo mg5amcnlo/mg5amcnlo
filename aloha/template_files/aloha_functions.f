@@ -2036,4 +2036,37 @@ c spin-3/2 fermion wavefunction
       return
       end
 
+      subroutine CombineAmp(nb, ihels, iwfcts, W1, Wall, Amp)
 
+      integer nb ! size of the vectors
+      integer ihels(*), iwfcts(*)
+      double complex W1(6)
+      double complex Wall(6,*)
+      double complex Amp(*)
+c     local variable
+      integer i
+
+      do i = 1, nb
+         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i)) +
+     &                    W1(4) * Wall(4,iwfcts(i))+
+     &                    W1(5) * Wall(5,iwfcts(i))+
+     &                    W1(6) * Wall(6,iwfcts(i))
+      enddo
+      return
+      end
+      
+      subroutine CombineAmpS(nb, ihels, iwfcts, W1, Wall, Amp)
+
+      integer nb ! size of the vectors
+      integer ihels(*), iwfcts(*)
+      double complex W1(3)
+      double complex Wall(6,*)
+      double complex Amp(*)
+c     local variable
+      integer i
+
+      do i = 1, nb
+         Amp(ihels(i)) =  W1(3) * Wall(3,iwfcts(i))
+      enddo
+      return
+      end

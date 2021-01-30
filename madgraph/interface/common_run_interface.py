@@ -3967,7 +3967,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.deal_multiple_categories(completion, formatting)
         
 
-    def update_make_opts(self):
+    def update_make_opts(self, run_card=None):
         """update the make_opts file writing the environmental variables
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
@@ -3981,6 +3981,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.make_opts_var['PYTHIA8_PATH']=self.options['pythia8_path']
 
         self.make_opts_var['MG5AMC_VERSION'] = misc.get_pkg_info()['version']
+
+        if run_card and run_card.LO:
+            if __debug__ and 'global_flag' not in run_card.user_set:
+                self.make_opts_var['GLOBAL_FLAG'] = "-O -fbounds-check"
+            else:
+                self.make_opts_var['ALOHA_FLAG'] = run_card['global_flag']     
+            self.make_opts_var['ALOHA_FLAG'] = run_card['aloha_flag']     
+            self.make_opts_var['MATRIX_FLAG'] = run_card['matrix_flag']
 
         return self.update_make_opts_full(make_opts, self.make_opts_var)
 
@@ -5924,6 +5932,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
                 
+        # 
+        if self.run_card and isinstance(self.run_card,banner_mod.RunCardLO):
+            if not 'sde_strategy' in self.run_card.user_set:
+                if proc_charac['single_color']:
+                    self.run_card['SDE_strategy'] = 2
+                else:
+                    self.run_card['SDE_strategy'] = 1
+                logger.debug("set SDE to %s", self.run_card['SDE_strategy'])
+            else:
+                 logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
         ########################################################################
         #       NLO specific check

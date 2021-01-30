@@ -954,7 +954,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
         if self['mothers']:
             nb_t_channel= sum(int(wf.is_t_channel()) for wf in self['mothers'])
-            #raise Exception
         else:
             return True
             
@@ -3935,11 +3934,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Extract all wavefunctions contributing to this amplitude
                     diagram_wfs = HelasWavefunctionList()
                     for amplitude in diagram.get('amplitudes'):
-                        wavefunctions = \
-                          sorted(HelasWavefunctionList.\
-                               extract_wavefunctions(amplitude.get('mothers')),
-                                 key=lambda wf: wf.get('number'))
-                        for wf in wavefunctions:
+                        wavefunctions = HelasWavefunctionList.\
+                               extract_wavefunctions(amplitude.get('mothers'))
+
+                        for wf in reversed(wavefunctions):
                             # Check if wavefunction already used, otherwise add
                             if wf.get('number') not in wf_numbers and \
                                    wf not in diagram_wfs:

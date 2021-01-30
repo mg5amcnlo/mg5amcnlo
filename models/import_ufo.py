@@ -198,10 +198,7 @@ def import_model_from_db(model_name, local_dir=False):
         raise Exception("Impossible to unpack the model. Please install it manually")
     return True
 
-def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
-                                                    complex_mass_scheme = None):
-    """ a practical and efficient way to import a model"""
-    
+def get_path_restrict(model_name, restrict=True):
     # check if this is a valid path or if this include restriction file       
     try:
         model_path = find_ufo_path(model_name)
@@ -240,6 +237,14 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                 restrict_file = restrict
             else:
                 raise Exception("%s is not a valid path for restrict file" % restrict)
+    
+    return model_path, restrict_file, restrict_name
+
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
+                                                    complex_mass_scheme = None):
+    """ a practical and efficient way to import a model"""
+    
+    model_path, restrict_file, restrict_name = get_path_restrict(model_name, restrict)
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)

@@ -3083,6 +3083,56 @@ class test_aloha_creation(unittest.TestCase):
         for ind in abstract.expr.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0,'fail')
 
+    def test_short_aloha_FFVP1N(self):
+        """ Check that the special routine for P1N propagator --no propagator--
+            can correctly compute the vertex with a simple scalar product"""
+                
+        FFV = self.Lorentz(name = 'FFV',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,2)')
+        
+        V =  create_aloha.AbstractRoutineBuilder(FFV).compute_routine(0, tag=[],factorize=False)  
+        N1 = create_aloha.AbstractRoutineBuilder(FFV).compute_routine(1, tag=['P1N'],factorize=False)
+        N2 = create_aloha.AbstractRoutineBuilder(FFV).compute_routine(2, tag=['P1N'],factorize=False)
+        N3 = create_aloha.AbstractRoutineBuilder(FFV).compute_routine(3, tag=['P1N'],factorize=False)
+
+        F1_1, F1_2, F1_3, F1_4  = 5, 6, 7, 8
+        F2_1, F2_2, F2_3, F2_4  = 1, 2, 3, 4
+        V3_1, V3_2, V3_3, V3_4  = 9,10,11,12
+        
+        j = complex(0,1)
+        P3_0,P3_1,P3_2,P3_3 = 20, 21, 22, 23
+        
+        #evaluate all contraction 
+        for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
+            exec('%s = %s' % (name, cexpr))
+            
+        # evaluate FFV_0
+        val_V = eval(str(V.expr.get_rep((0,))))
+
+        # evaluate the FFVP1N_ output -> vector
+        vN1 = []
+        vN2 = []
+        vN3 = []
+        for i in range(4):
+            vN1.append(eval(str(N1.expr.get_rep((i,)))))
+            vN2.append(eval(str(N2.expr.get_rep((i,)))))
+            vN3.append(eval(str(N3.expr.get_rep((i,)))))
+        
+        # contract them to get the value which should be the same as the _0
+        val_N1 = F1_1 * vN1[0] + F1_2 * vN1[1] + F1_3 * vN1[2] + F1_4 * vN1[3] 
+        val_N2 = F2_1 * vN2[0] + F2_2 * vN2[1] + F2_3 * vN2[2] + F2_4 * vN2[3] 
+        val_N3 = V3_1 * vN3[0] + V3_2 * vN3[1] + V3_3 * vN3[2] + V3_4 * vN3[3]     
+        
+        # check that
+        self.assertAlmostEqual(val_V, val_N1)
+        self.assertAlmostEqual(val_V, val_N2)
+        self.assertAlmostEqual(val_V, val_N3)
+
+
+
+
+
     def test_short_aloha_FFV_MG4(self):
         """ test the FFV creation of vertex against MG4 """ 
         

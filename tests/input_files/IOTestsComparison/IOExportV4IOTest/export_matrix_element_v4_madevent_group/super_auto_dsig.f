@@ -105,6 +105,8 @@ C      and to 0 to reset the cache.
       DATA LAST_ICONF/-1/
       COMMON/TO_LAST_ICONF/LAST_ICONF
 
+      LOGICAL INIT_MODE
+      COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -191,7 +193,7 @@ C     IMODE.EQ.0, regular run mode
         CALL DS_SET_MIN_POINTS(10,'grouped_processes')
         DO J=1,SYMCONF(0)
           DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
               DO IMIRROR=1,2
                 IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -214,7 +216,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
       LAST_ICONF=0
       DO J=1,SYMCONF(0)
         DO IPROC=1,MAXSPROC
-          IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+          IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
             DO IMIRROR=1,2
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
@@ -262,7 +264,7 @@ C        switchmom
         LAST_ICONF=0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
               DO K=1,2
                 IF(K.EQ.1.OR.MIRRORPROCS(I))THEN
                   IPROC=I
@@ -283,7 +285,11 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+                  IF(INIT_MODE) THEN
+                    SELPROC(K,I,J) = 1D0
+                  ELSE
+                    SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+                  ENDIF
                   SUMPROB = SUMPROB + SELPROC(K,I,J)
                 ENDIF
               ENDDO
@@ -311,7 +317,7 @@ C      all, then we pick a point based on PDF only.
         TOTWGT=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
               DO K=1,2
                 TOTWGT=TOTWGT+SELPROC(K,I,J)
                 IF(R.LT.TOTWGT)THEN
@@ -596,5 +602,10 @@ C
 
 
 
+      SUBROUTINE PRINT_ZERO_AMP()
 
+      CALL PRINT_ZERO_AMP_1()
+      CALL PRINT_ZERO_AMP_2()
+      RETURN
+      END
 

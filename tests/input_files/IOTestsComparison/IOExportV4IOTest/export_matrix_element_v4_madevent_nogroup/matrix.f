@@ -260,8 +260,8 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 ZTEMP, TMP_JAMP(0)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
       COMPLEX*16 W(18,NWAVEFUNCS)
 C     Needed for v4 models
@@ -290,11 +290,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/3/
-      DATA (CF(I,  1),I=  1,  2) /   16,   -2/
+      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
+     $ -6.666666666666666D-01/
 C     1 T(3,4,2,1)
-      DATA DENOM(2)/3/
-      DATA (CF(I,  2),I=  1,  2) /   -2,   16/
+      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+     $ ,5.333333333333333D+00/
 C     1 T(4,3,2,1)
 C     ----------
 C     BEGIN CODE
@@ -318,8 +318,8 @@ C     Amplitude(s) for diagram number 2
 C     Amplitude(s) for diagram number 3
       CALL FFV1_0(W(1,5),W(1,2),W(1,3),GQQ,AMP(3))
 C     JAMPs contributing to orders ALL_ORDERS=1
-      JAMP(1,1)=-IMAG1*AMP(1)+AMP(3)
-      JAMP(2,1)=+IMAG1*AMP(1)+AMP(2)
+      JAMP(1,1) = (-1*IMAG1)*AMP(1)+(1)*AMP(3)
+      JAMP(2,1) = (1*IMAG1)*AMP(1)+(1)*AMP(2)
 
       MATRIX = 0.D0
       DO M = 1, NAMPSO
@@ -330,7 +330,7 @@ C     JAMPs contributing to orders ALL_ORDERS=1
           ENDDO
           DO N = 1, NAMPSO
             IF (CHOSEN_SO_CONFIGS(SQSOINDEX(M,N))) THEN
-              MATRIX = MATRIX + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+              MATRIX = MATRIX + ZTEMP*DCONJG(JAMP(I,N))
             ENDIF
           ENDDO
         ENDDO

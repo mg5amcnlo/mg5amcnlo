@@ -3359,7 +3359,23 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
-            
+
+        if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
+            jobs, P_zero_result = ajobcreator.get_helicity()
+        else:
+            for p in subproc:
+                for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    new_file = f.replace('_orig','_optim')
+                    files.cp(f, f.replace('_orig','_optim'))
+                    f = '%s.o' % f[:-2]
+                    if os.path.exists(f):
+                        files.cp(f, f.replace('_orig','_optim'))
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', p, 'Hel', 'selection'))
+            except Exception as error:
+                logger.debug(error)
+                pass
+                                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -5692,7 +5708,7 @@ tar -czf split_$1.tar.gz split_$1
             self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
-        self.update_make_opts()
+        self.update_make_opts(self.run_card)
         # reset list of Gdirectory
         self.Gdirs = None
             

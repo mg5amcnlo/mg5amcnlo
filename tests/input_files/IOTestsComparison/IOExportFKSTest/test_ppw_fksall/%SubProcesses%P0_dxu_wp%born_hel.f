@@ -113,6 +113,7 @@ C
       INTEGER I,J
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -123,8 +124,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    3/
+      DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/
 C     1 T(1,2)
 C     ----------
 C     BEGIN CODE
@@ -138,7 +138,7 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP(1)=-AMP(1)
+      JAMP(1) = (-1)*AMP(1)
       BORN_HEL = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)

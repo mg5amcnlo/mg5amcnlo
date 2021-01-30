@@ -1501,7 +1501,9 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('limitations', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)  
+        self.add_param('hel_recycling', False)  
+        self.add_param('single_color', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -2267,6 +2269,7 @@ runblock = collections.namedtuple('block', ('name', 'fields', 'template_on', 'te
 class RunCard(ConfigFile):
 
     filename = 'run_card'
+    LO = True
     blocks = [] 
                                    
     def __new__(cls, finput=None, **opt):
@@ -2466,7 +2469,7 @@ class RunCard(ConfigFile):
                     else:
                         data[name] = "['%s']" % "', '".join(str(v) for v in data[name])
                 text = text % data
-        else:                        
+        else:  
             text = ""
             for line in open(template,'r'):                  
                 nline = line.split('#')[0]
@@ -2493,6 +2496,7 @@ class RunCard(ConfigFile):
                 elif len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
+                    
                     name = nline[1].strip().lower()
                     value = self[name]
                     if name in self.list_parameter:
@@ -2526,7 +2530,7 @@ class RunCard(ConfigFile):
                 if all(f in written for f in b.fields):
                     continue
 
-                to_add = []
+                to_add = ['']
                 for line in b.template_on.split('\n'):                  
                     nline = line.split('#')[0]
                     nline = nline.split('!')[0]
@@ -2549,7 +2553,7 @@ class RunCard(ConfigFile):
                     else:
                         raise Exception
                 
-                if b.template_off in text:
+                if b.template_off and b.template_off in text:
                     text = text.replace(b.template_off, '\n'.join(to_add))
                 else:
                     text += '\n'.join(to_add)
@@ -2741,6 +2745,9 @@ class RunCard(ConfigFile):
                     for fortran_name, onevalue in value.items():
                         line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
                         fsock.writelines(line)                       
+                elif isinstance(incname,str) and 'compile' in incname:
+                    line = '%s = %s \n' % (fortran_name, value)
+                    fsock.write(line)
                 else:
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
@@ -2890,7 +2897,7 @@ class RunCardLO(RunCard):
 """, 
     template_off= ''),        
 #    MERGING BLOCK:  MLM           
-        runblock(name='MLM', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
+        runblock(name='mlm', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
             template_on=\
 """#*********************************************************************
 # Matching parameter (MLM only)
@@ -2906,7 +2913,7 @@ class RunCardLO(RunCard):
             template_off='# To see MLM/CKKW  merging options: type "update MLM" or "update CKKW"'),
 
 #    MERGING BLOCK:  CKKW         
-        runblock(name='CKKW', fields=(),
+        runblock(name='ckkw', fields=('ktdurhham','dparameter','ptlund','pdgs_for_merging_cut'),
             template_on=\
 """#***********************************************************************
 # Turn on either the ktdurham or ptlund cut to activate                *
@@ -2917,8 +2924,28 @@ class RunCardLO(RunCard):
  %(ptlund)s  =  ptlund
  %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
 """,
-            template_off=''),    
-    
+            template_off=''),
+    #    PS-OPTIM BLOCK:  PSOPTIM           
+        runblock(name='psoptim', fields=('job_strategy', 'hard_survey', 
+                                         'tmin_for_channel', 'survey_splitting',
+                                         'survey_nchannel_per_job', 'refine_evt_by_job'
+                                         'global_flag','aloha_flag', 'matrix_flag'
+                                         ),
+            template_on=\
+"""#*********************************************************************
+# Phase-Space Optim (advanced)
+#*********************************************************************
+   %(job_strategy)s = job_strategy ! see appendix of 1507.00020 (page 26)
+   %(hard_survey)s =  hard_survey ! force to have better estimate of the integral at survey for difficult mode like interference
+   %(tmin_for_channel)s = tmin_for_channel ! limit the non-singular reach of --some-- channel of integration related to T-channel diagram (value between -1 and 0), -1 is no impact
+   %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
+   %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
+   %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
+   %(global_flag)s = global_flag ! fortran optimization flag use for the all code
+   %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
+   %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
+""",
+    template_off='# To see advanced option for Phase-Space optimization: type "update psoptim"'),
     ]    
     
     
@@ -3128,11 +3155,21 @@ class RunCardLO(RunCard):
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False, allowed=[0,1,2], comment='see appendix of 1507.00020 (page 26)')
         self.add_param('hard_survey', 0, hidden=True, include=False, comment='force to have better estimate of the integral at survey for difficult mode like VBF')
+        self.add_param('tmin_for_channel', -1., hidden=True, comment='limit the non-singular reach of --some-- channel of integration related to T-channel diagram')
         self.add_param("second_refine_treshold", 0.9, hidden=True, include=False, comment="set a treshold to bypass the use of a second refine. if the ratio of cross-section after survey by the one of the first refine is above the treshold, the  second refine will not be done.")
         self.add_param('survey_splitting', -1, hidden=True, include=False, comment="for loop-induced control how many core are used at survey for the computation of a single iteration.")
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
+        #hel recycling
+        self.add_param('hel_recycling', True, hidden=True, include=False, comment='allowed to deactivate helicity optimization at run-time --code needed to be generated with such optimization--')
+        self.add_param('hel_filtering', True,  hidden=True, include=False, comment='filter in advance the zero helicities when doing helicity per helicity optimization.')
+        self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
+        self.add_param('hel_zeroamp', True, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
+        self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
+        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
+        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -O3')        
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -3259,6 +3296,14 @@ class RunCardLO(RunCard):
         if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
             raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]")
 
+        if six.PY2 and self['hel_recycling']:
+            self['hel_recycling'] = False
+            logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
+            In general this optimization speed up the computation be a factor of two.""")
+        elif self['hel_recycling']:
+            if self['gridpack']:
+                self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
+                
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:
             if self['lpp%s' % i ] not in [1,2]:
@@ -3274,7 +3319,18 @@ class RunCardLO(RunCard):
                 if self['ebeam%i' %i] == 0:
                     logger.warning("At rest ion mode set: Energy beam set to %s" % self['mass_ion%i' % i])
                     self.set('ebeam%i' %i, self['mass_ion%i' % i])
+                    
+                    
+        # check the tmin_for_channel is negative
+        if self['tmin_for_channel'] == 0:
+            raise InvalidRunCard('tmin_for_channel can not be set to 0.')
+        elif self['tmin_for_channel'] > 0:
+            logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
+            self.set('tmin_for_channel',  -self['tmin_for_channel'])
+            
 
+            
+            
     def update_system_parameter_for_include(self):
         
         # polarization
@@ -3348,6 +3404,7 @@ class RunCardLO(RunCard):
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """
+
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
@@ -3473,8 +3530,10 @@ class RunCardLO(RunCard):
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
                 self['systematics_arguments'].append('--alps=0.5,1,2')
-                self.display_block.append('MLM')
-                self.display_block.append('CKKW')
+                self.display_block.append('mlm')
+                self.display_block.append('ckkw')
+                self['dynamical_scale_choice'] = -1
+                
                 
         # For interference module, the systematics are wrong.
         # automatically set use_syst=F and set systematics_program=none
@@ -3495,6 +3554,24 @@ class RunCardLO(RunCard):
             self['systematics_program'] = 'none'
         if interference:
             self['dynamical_scale_choice'] = 3
+            self['sde_strategy'] = 2
+        
+        # set default integration strategy
+        # interference case is already handle above
+        # here pick strategy 2 if only one QCD color flow
+        # and for pure multi-jet case
+        if proc_characteristic['single_color']:
+            self['sde_strategy'] = 2
+        else:
+            # check if  multi-jet j 
+            is_multijet = True
+            jet_id = [21] + list(range(1, self['maxjetflavor']+1))
+            for proc in proc_def:
+                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
+                    is_multijet = False
+                    break
+            if is_multijet:
+                self['sde_strategy'] = 2
             
         # if polarization is used, set the choice of the frame in the run_card
         # But only if polarization is used for massive particles
@@ -4020,6 +4097,8 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
+    
+    LO = False
     
     def default_setup(self):
         """define the default value"""

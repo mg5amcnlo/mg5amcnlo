@@ -469,6 +469,8 @@ c
       include 'run.inc'
       include 'run_config.inc'
 
+
+      
 c
 c     Arguments
 c
@@ -505,6 +507,9 @@ c
 C     
 C     GLOBAL
 C
+      logical init_mode
+      common/to_determine_zero_hel/init_mode
+      
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
@@ -552,7 +557,7 @@ C  BEGIN CODE
 C-----
       
       if ((nw .ge. maxevents).and.do_write_events) return
-
+      if (init_mode) return
 C     if all the necessary inputs to write the events have already been
 C     computed in the bias module, then directly jump to write_events
       if (AlreadySetInBiasModule) then

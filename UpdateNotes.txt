@@ -1,5 +1,30 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.0 (30/01/21)    **** Major speed-up update for LO computation ***
+      Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
+                - This fasten LO computation by a factor around 2
+		- This can be turned off via the command "output PATH --hel_recycling=False"
+      OM: Various optimization fot T-channel integration
+          - use different ordering for T-channel. Four different ordering have been implemented
+	    at generation time, the code decides which ordering to use channel-per-channel.
+	    This can be turned off via the command "output PATH --t_strategy=2"
+	  - increase number of maximum iteration for double or more T-channel
+	  - implement an alternative to the standard multi-channel.
+	     instead of using the amplitude square it use the product of the denominator
+	     (the default strategy use depends of the process)
+	  - speed-up for VBF type of process  are often around 100 times faster
+	  - This fixes a lot of issue for processes failing to generate the targetted number of events.
+      OM: Better version of the color-computation (but this leads to only modest gain but for very complex processes.)
+          This optimizations leads to a longer generation time of the code (only for complex processes).
+	  This can be turned off  via "output PATH --jamp_optim=False"
+      OM: New parameter in the run_card:
+          - sde_strategy: allows to change the default multi-channel strategy
+	  - a new phase-space optimization parameter are now easily availabe via the command "update ps_optim" 
+      OM: New global parameter "auto_convert_model"
+          if set on True (set auto_convert_model T or via input/mg5_configuration.txt)
+	  all model crashing due to a python3 compatibility issue of the UFO model will be automatically converted
+	  to a python3 compatible model. 
+
 2.8.3 (26/01/21):
       OM: Buch of bunch fixing related to python3 issue (mainly related to unicode encoding)
       OM: Various fix for reweighting with loop (mainly with python3 as well)
