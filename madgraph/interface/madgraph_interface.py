@@ -6819,8 +6819,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         else:
             raise self.InvalidCmd('Unknown mode for command install update')
 
-        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')) or \
-                os.path.exists(os.path.join(MG5DIR,'.bzr')):
+        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')):# or \
+                #os.path.exists(os.path.join(MG5DIR,'.bzr')):
             error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
             1) This version was loaded via bazaar (use bzr pull to update instead).
             2) This version is a beta release of MG5."""
@@ -6836,7 +6836,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             return
 
         # read the data present in .autoupdate
-        data = {}
+        data = {'last_message':0}
         for line in open(os.path.join(MG5DIR,'input','.autoupdate')):
             if not line.strip():
                 continue
@@ -6866,9 +6866,16 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
+            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
             signal.alarm(0)
-            web_version = int(filetext.read().strip())
+            text = filetext.read().decode().split('\n')
+            web_version = int(text[0].strip())
+            try:
+                msg_version = int(text[1].strip())
+                message = '\n'.join(text[2:])
+            except:
+                msg_version = 0
+                message = ""
         except (TimeOutError, ValueError, IOError):
             signal.alarm(0)
             print('failed to connect server')
@@ -6876,17 +6883,35 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 # wait 24h before next check
                 fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
                 fsock.write("version_nb   %s\n" % data['version_nb'])
-                fsock.write("last_check   %s\n" % \
-                int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1))
+                fsock.write("last_check   %s\n" % (\
+                int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1)))
+                fsock.write("last_message   %s\n" % data['last_message'])
                 fsock.close()
             return
 
+        if msg_version > data['last_message']:
+            data['last_message'] = msg_version
+            logger.info("************* INFORMATION *************", '$MG:BOLD')
+            logger.info(message.replace('\n','\n    '))
+            logger.info("************* INFORMATION *************", '$MG:BOLD')
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % (\
+            int(time.time()) - 3600 * 24 * (int(self.options['auto_update']) -1)))
+            fsock.write("last_message   %s\n" % data['last_message'])
+            fsock.close()
+            
+        if os.path.exists(os.path.join(MG5DIR,'.bzr')):
+            logger.info("bzr version: use bzr pull to update")
+            return 
+        
         if web_version == data['version_nb']:
             logger.info('No new version of MG5 available')
             # update .autoupdate to prevent a too close check
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.write("last_message   %s\n" % data['last_message'])
             fsock.close()
             return
         elif data['version_nb'] > web_version:
@@ -6894,6 +6919,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.write("last_message   %s\n" % data['last_message'])
             fsock.close()
             return
         else:
