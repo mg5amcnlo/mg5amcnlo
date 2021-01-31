@@ -224,6 +224,7 @@ class External(MathsObject):
             new_hels = [int_to_string(i) for i in new_hels]
         else:
             # Spinor must be a scalar so give it hel = 0
+            ext_num = int(re.search(r'\(0,(\d+)\)', old_args[0]).group(1)) -1
             new_hels = [' 0']
 
         new_wavfuncs = []
@@ -237,22 +238,40 @@ class External(MathsObject):
 
             graph.store_wav(this_wavfunc)
             new_wavfuncs.append(this_wavfunc)
-
-        cls.wavs_same_leg[ext_num] = new_wavfuncs
-
+        if ext_num in cls.wavs_same_leg:
+            cls.wavs_same_leg[ext_num] += new_wavfuncs
+        else:
+            cls.wavs_same_leg[ext_num] = new_wavfuncs
+        
         return new_wavfuncs
 
     @classmethod
     def get_gwc(cls):
         num_combs = len(cls.good_hel)
-        gwc = [[] for x in range(num_combs)]
-
+        gwc_old = [[] for x in range(num_combs)]
+        gwc=[]
         for n, comb in enumerate(cls.good_hel):
+            sols = [[]]
             for leg, wavs in cls.wavs_same_leg.items():
+                valid = []
+                #misc.sprint(wavs)
                 for wav in wavs:
                     if comb[leg] == wav.hel:
-                        gwc[n].append(wav)
-                        
+                        valid.append(wav)
+                        gwc_old[n].append(wav)
+                if len(valid) == 1:
+                    for sol in sols:
+                        sol.append(valid[0])
+                else:
+                    tmp = []
+                    for w in valid:
+                        for sol in sols:
+                            tmp2 = list(sol)
+                            tmp2.append(w)
+                            tmp.append(tmp2)
+                    sols = tmp
+            gwc += sols
+
         cls.good_wav_combs = gwc
 
     @staticmethod
@@ -355,7 +374,6 @@ class Amplitude(MathsObject):
                 # Offset because Fortran counts from 1
                 amp_num = i + 1
         if amp_num < 1:
-            set_trace()
             print('Failed to find amp_num')
             exit(1)
         if cls.max_amp_num < amp_num:
@@ -377,7 +395,7 @@ class HelicityRecycler():
         Internal.num_internals = 0
 
         Amplitude.max_amp_num = 0
-
+        self.last_category = None
         self.good_elements = good_elements
         self.bad_amps = bad_amps
         self.bad_amps_perhel = bad_amps_perhel
@@ -598,21 +616,17 @@ class HelicityRecycler():
 
             return apply_args(line, [i.args for i in new_objs])
 
-    def get_gwc(self, line):
-        if self.got_gwc:
+    def get_gwc(self, line, category):
+
+        #self.last_category = 
+        if category not in ['external', 'internal', 'amplitude']:
             return
-        
-        num_found = len({obj.old_name for obj in self.template_dict['helas_calls']
-                         if isinstance(obj, External)})
-            
-        try:
-            num_exts = len(External.good_hel[0])
-        except IndexError:
+        if self.last_category != 'external':
+            self.last_category = category
             return
-        if num_found <= num_exts:
-            External.get_gwc()
-        if num_found == num_exts :
-            self.got_gwc=True
+
+        External.get_gwc()
+        self.last_category = category
 
     def get_good_hel(self, line):
         if 'DATA (NHEL' in line:
@@ -674,9 +688,11 @@ class HelicityRecycler():
                 self.get_old_name(line)
                 self.get_good_hel(line)
                 self.get_amp_stuff(line_num, line)
-                self.get_gwc(line)
-
                 call_type = self.function_call(line)
+                self.get_gwc(line, call_type)
+
+                
+                
                 if call_type in ['external', 'internal', 'amplitude']:
                     self.template_dict['helas_calls'] += self.unfold_helicities(
                         line, call_type)
