@@ -1,5 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.1 (01/02/21)
+      Kiran+OM: Fixing issue for the MSSM model
+      OM: Fixing issue with mac support
+      
+
 2.9.0 (30/01/21)    **** Major speed-up update for LO computation ***
       Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
                 - This fasten LO computation by a factor around 2
