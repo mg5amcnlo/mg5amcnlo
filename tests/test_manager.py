@@ -964,7 +964,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 
     usage = "usage: %prog [expression1]... [expressionN] [options] "
     parser = optparse.OptionParser(usage=usage)
-    parser.add_option("-v", "--verbose", default=1,
+    parser.add_option("-v", "--verbose", default=1, type="int",
                       help="defined the verbosity level [%default]")
     parser.add_option("-r", "--reopt", type="int", default=0,
                   help="regular expression tag [%default]")

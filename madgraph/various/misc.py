@@ -800,7 +800,7 @@ def detect_cpp_std_lib_dependence(cpp_compiler):
                 # we venture a guess here.
                 return '-lc++'
             else:
-                maj, v = float(v.rsplit('.')[:2])
+                maj, v = [float(x) for x in v.rsplit('.')[:2]]
                 if maj >=11 or (maj ==10 and v >= 9):
                    return '-lc++'
                 else:
@@ -1503,6 +1503,10 @@ def sprint(*args, **opt):
 
     return 
 
+class misc(object):
+    @staticmethod
+    def sprint(*args, **opt):
+        return sprint(*args, **opt)
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
