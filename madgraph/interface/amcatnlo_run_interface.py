@@ -5357,7 +5357,7 @@ RESTART = %(mint_mode)s
             passing_cmd.append(mode)
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
-                              mode=mode, force=force,
+                              mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
                               return_instance=True)
 
