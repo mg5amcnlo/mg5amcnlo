@@ -1,9 +1,12 @@
 basedir=$(pwd)
-for x in ls -s P0*
+
+dirs=$(ls -d P0*)
+for x in $dirs
 do
   echo $x
   cd $x
   ln -s ../input_check_sudakov.dat
+  cp V0*/nsqso_born.inc .
   make check_sudakov > check_sudakov_make.log
   ./check_sudakov < input_check_sudakov.dat > output_check_sudakov.dat 
   cd $basedir

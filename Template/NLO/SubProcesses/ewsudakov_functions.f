@@ -1,3 +1,14 @@
+! sud_mod:
+! 0 = Dropping Lem and lem contributions (like Sherpa)
+! 1 = totally excluding QED contribution
+! 2 = including Lem and lem in DR ---> for MadLoop comparison
+       BLOCK DATA Sudakov_mode 
+       implicit none
+       Integer sud_mod
+       COMMON /to_sud_mod/ sud_mod
+       DATA sud_mod/ 2 / 
+       END    
+
       !! MZ declare all functions as double complex, since some (few)
       !  terms can be imaginary
       
@@ -10,22 +21,53 @@
       include 'coupl.inc'
       double precision lzow
       double complex bigL, smallL, sdk_cew_diag, sdk_iz2_diag
-      external sdk_iz2_diag
+      double complex sdk_chargesq, bigLem, fordeb
+      external sdk_iz2_diag,  sdk_chargesq, bigLem
       integer i
+      double precision get_mass_from_id,mass
+      external get_mass_from_id
+
+
+      logical   printinewsdkf
+      common /to_printinewsdkf/printinewsdkf
+
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
+
+
+      double precision lzfordebug
 
       get_lsc_diag = 0d0
+      lzfordebug = 0d0
 
 c exit and do nothing
-      return
+c      return
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
 
       do i = 1, nexternal-1
+        mass = get_mass_from_id(pdglist(i))
         get_lsc_diag = get_lsc_diag - 0.5d0 * 
      %   (sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * bigL(invariants(1,2))
+     %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2))+
+     %    sdk_chargesq(pdglist(i),hels(i),iflist(i))*bigLem(invariants(1,2),mass**2)
+     %)
+        
+
+        lzfordebug = lzfordebug - 0.5d0 * (
      %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2)))
       enddo
+
+      if(printinewsdkf) print*, "L-->  ",(get_lsc_diag -lzfordebug )/bigL(invariants(1,2))
+      if(printinewsdkf) print*, "lz--> ",(lzfordebug )/smallL(invariants(1,2))
+
+
+      
+      if(deb_settozero.ne.0) get_lsc_diag=0d0
+
       return
+
       end
 
 
@@ -43,13 +85,17 @@ c exit and do nothing
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       ! this function is non zero only for Z/gamma mixing)
       get_lsc_nondiag = 0d0
-c exit and do nothing
-      return
 
       ! check that the polarisation is transverse
       if (abs(hels(ileg)).ne.1) return 
+
+c exit and do nothing
+c      return
 
       if ((pdg_old.eq.23.and.pdg_new.eq.22).or.
      $    (pdg_old.eq.22.and.pdg_new.eq.23)) then
@@ -57,9 +103,11 @@ c exit and do nothing
         get_lsc_nondiag = -0.5d0 * sdk_cew_nondiag() * bigL(invariants(1,2))
 
       if (printinewsdkf) WRITE (72,*) , hels, ileg, pdg_new, dble(sdk_cew_nondiag())
-     
 
       endif
+
+      if(deb_settozero.ne.0.and.deb_settozero.ne.10.and.deb_settozero.ne.111) get_lsc_nondiag=0d0
+
 
       return
       end
@@ -80,9 +128,12 @@ c exit and do nothing
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       get_ssc_c = 0d0
 c exit and do nothing
-      return
+c      return
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -93,12 +144,17 @@ c exit and do nothing
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
 
+
+
+
+
       if (printinewsdkf) WRITE (72,*) , hels, ileg1, ileg2, pdgp1, pdgp2,
      $ dble(sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)*CMPLX(1d0,-1000d0)),
      $ dble(sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)*CMPLX(1d0,-1000d0)) 
 
 
-
+c      if (printinewsdkf) print*," "
+c      if (printinewsdkf) print*, "ileg1=",ileg1,"ileg2=",ileg2
 c      if (printinewsdkf) print*,"get_ssc_c=",get_ssc_c,"    rij=",rij
 c      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg1),",", hels(ileg1),
 c     . ",", iflist(ileg1),",", pdgp1,")=",sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
@@ -106,14 +162,11 @@ c      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg2),",", hels(ileg2),
 c     . ",", iflist(ileg2),",", pdgp2,")=",sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 c      if (printinewsdkf) print*,"rij=","r(",ileg1,",",ileg2,")=",rij
 
-ccc      if (printinewsdkf) then
-ccc      if (sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1) *
-ccc     $   sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2).ne.0d0.and. dabs(dlog(dabs(rij)/s)).ge.1d-6) then
-ccc        print*,"DIVERSO DA ZERO", dlog(dabs(rij)/s)
-ccc      else 
-ccc         print*,"UGUALE A ZERO"
-ccc      endif
-ccc      endif
+
+      if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_c = 0d0
+
+
+
 
       return
       end
@@ -126,17 +179,22 @@ ccc      endif
       double precision invariants(nexternal-1, nexternal-1)
       include 'coupl.inc'
       double precision lzow
-      double complex bigL, smallL, sdk_ia_diag, sdk_iz_diag
-
+      double complex bigL, smallL, sdk_ia_diag, sdk_iz_diag, smallLem
+      external smallLem
+ 
       integer i,j
       double precision s, rij
 
+      logical   printinewsdkf
+      common /to_printinewsdkf/printinewsdkf
+
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       get_ssc_n_diag = 0d0
-      return
+c      return
 c exit and do nothing
 
-
-c      print*,"CI ENTRO"
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -145,26 +203,28 @@ c      print*,"CI ENTRO"
         do j = 1, i-1
           rij = invariants(i,j)
           ! photon, Lambda = MW
-          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(dabs(rij/s)) 
+
+c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
+
+          get_ssc_n_diag = get_ssc_n_diag + 2d0*(smallL(s)+2d0/3d0*smallLem(0d0)) * dlog(dabs(rij/s)) 
      %      * sdk_ia_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_ia_diag(pdglist(j),hels(j),iflist(j))
 
-ccc      print*,"sdk_ia_diag(pdglist(,",i,"),hels(",i,"),iflist(",i,"))=", sdk_ia_diag(pdglist(i),hels(i),iflist(i))
-ccc      print*,"sdk_ia_diag(pdglist(,",j,"),hels(",j,"),iflist(",j,"))=", sdk_ia_diag(pdglist(j),hels(j),iflist(j))
-ccc      print*,"get_ssc_n_diag=",get_ssc_n_diag
           ! Z
           get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(dabs(rij/s)) 
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
 
-ccc      print*,"sdk_iz_diag(pdglist(,",i,"),hels(",i,"),iflist(",i,"))=", sdk_iz_diag(pdglist(i),hels(i),iflist(i))
-ccc      print*,"sdk_iz_diag(pdglist(,",j,"),hels(",j,"),iflist(",j,"))=", sdk_iz_diag(pdglist(j),hels(j),iflist(j))
-ccc      print*,"get_ssc_n_diag=",get_ssc_n_diag
-
-
-
         enddo
       enddo
+
+      if(printinewsdkf) print*, "log(t/u)ls  SSCN diag -->  ", 
+     .       get_ssc_n_diag/(smallL(s)*dlog(dabs(invariants(1,3)/invariants(1,4))))
+
+      if(deb_settozero.ne.0) get_ssc_n_diag = 0d0
+
+
+
       return
       end
 
@@ -182,11 +242,14 @@ ccc      print*,"get_ssc_n_diag=",get_ssc_n_diag
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       ! this function corresponds to the case when *one* out of the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
       ! by the Z).
       get_ssc_n_nondiag_1 = 0d0
-      return
+c      return
 c exit and do nothing
 
       s = invariants(1,2)
@@ -195,6 +258,9 @@ c exit and do nothing
      $    (pdg_old.eq.250.and.pdg_new.eq.25)) then
         do i = 1, nexternal-1
           if (i.eq.ileg) cycle
+
+! Multiplied by 1-1000*I only when printed in NonDiag_structure.dat
+
           if (printinewsdkf) WRITE (72,*) , hels, ileg, i, pdg_new,pdglist(i),
      $    dble(sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))*CMPLX(1d0,-1000d0)),
      $    dble(sdk_iz_diag(pdglist(i),hels(i),iflist(i))*CMPLX(1d0,-1000d0))
@@ -205,6 +271,8 @@ c exit and do nothing
      $              * 2d0 * smallL(s) * dlog(abs(invariants(i,ileg))/s)
         enddo
       endif
+
+      if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_1 = 0d0
 
       return
       end
@@ -222,11 +290,16 @@ c exit and do nothing
       double precision s
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
+
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       ! this function corresponds to the case when both the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
       ! by the Z).
       get_ssc_n_nondiag_2 = 0d0
-      return
+
+c      return
 c exit and do nothing
 
       s = invariants(1,2)
@@ -237,6 +310,8 @@ c exit and do nothing
      $     (pdg_old2.eq.250.and.pdg_new2.eq.25))) then
 
 
+! Multiplied by 1-1000*I only when printed in NonDiag_structure.dat
+
         if (printinewsdkf) WRITE (72,*) , hels, ileg1, ileg2, pdg_new1, pdg_new2,
      $   dble(sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1))*CMPLX(1d0,-1000d0)),
      $   dble(sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))*CMPLX(1d0,-1000d0))
@@ -246,6 +321,9 @@ c exit and do nothing
      $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
      $              * 2d0 * smallL(s) * dlog(abs(invariants(ileg1,ileg2))/s)
       endif
+
+      if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_2 = 0d0
+
 
       return
       end
@@ -269,11 +347,20 @@ c exit and do nothing
       double precision get_mass_from_id, get_isopart_mass_from_id
       external get_mass_from_id, get_isopart_mass_from_id
 
+
+      double complex sdk_chargesq, smallLem,dZemAA_logs
+      external sdk_chargesq, smallLem,dZemAA_logs
+
+
+
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       get_xxc_diag = 0d0
-      return
+c      return
 c exit and do nothing
 
       cw2 = mdl_mw**2 / mdl_mz**2
@@ -285,47 +372,120 @@ c exit and do nothing
         if (abs(pdglist(i)).le.6.or.
      %     (abs(pdglist(i)).ge.11.and.abs(pdglist(i)).le.16)) then
           ! fermions
+
           get_xxc_diag = get_xxc_diag + 
      %       1.5d0 * sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * smallL(invariants(1,2))
 
           mass = get_mass_from_id(pdglist(i))
           isopart_mass = get_isopart_mass_from_id(pdglist(i))
 
-c          if (printinewsdkf) print*, "masses=", mass, isopart_mass
-
           get_xxc_diag = get_xxc_diag - 
      %       1d0/8d0/sw2 * mass**2/mdl_mw**2 * smallL(invariants(1,2))
           if (pdglist(i)*hels(i).lt.0) then
+
             ! left-handed fermion
+
             get_xxc_diag = get_xxc_diag - 
      %         1d0/8d0/sw2 * isopart_mass**2/mdl_mw**2 * smallL(invariants(1,2))
           else
+
             ! right-handed fermion
+
             get_xxc_diag = get_xxc_diag - 
      %         1d0/8d0/sw2 * mass**2/mdl_mw**2 * smallL(invariants(1,2))
           endif
 
+          get_xxc_diag = get_xxc_diag + sdk_chargesq(pdglist(i),hels(i),iflist(i))*smallLem(mass**2)
+
+
         elseif (abs(pdglist(i)).ge.22.and.abs(pdglist(i)).le.24.and.hels(i).ne.0) then
+
           ! transverse W/Z/photons bosons
+
           get_xxc_diag = get_xxc_diag + 
      %     sdk_betaew_diag(pdglist(i))/2d0 * smallL(invariants(1,2))
 
+          if (abs(pdglist(i)).eq.24) get_xxc_diag = get_xxc_diag + sdk_chargesq(pdglist(i),hels(i),iflist(i))*smallLem(mdl_mw**2)
+
+          if (abs(pdglist(i)).eq.22) get_xxc_diag = get_xxc_diag + 0.5d0*dZemAA_logs()
+
         elseif (abs(pdglist(i)).eq.250.or.abs(pdglist(i)).eq.251.or.pdglist(i).eq.25) then
+
           ! goldstones or Higgs
+
           get_xxc_diag = get_xxc_diag + 
      %     (2d0*sdk_cew_diag(pdglist(i),hels(i),iflist(i)) - 
      %      3d0/4d0/sw2*mdl_mt**2/mdl_mw**2) * smallL(invariants(1,2))
+
+          if (abs(pdglist(i)).eq.251) get_xxc_diag = get_xxc_diag + smallLem(mdl_mw**2)
         endif
 
 c      if(printinewsdkf) print*, pdglist(i), hels(i), (get_xxc_diag-tmp)/smallL(invariants(1,2)) 
-      
-
-
-      tmp= get_xxc_diag
+        tmp= get_xxc_diag
 
       enddo
 
-c      if(printinewsdkf) print*,"in total, ", get_xxc_diag/smallL(invariants(1,2)), smallL(invariants(1,2)) 
+
+
+      if(printinewsdkf) print*, "lC diag --> ",(get_xxc_diag)/smallL(invariants(1,2))
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!! BEGIN: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+      if(printinewsdkf) then
+         if(abs(pdglist(3)).eq.5.or.
+     .      abs(pdglist(3)).eq.6.or.
+     .      abs(pdglist(3)).eq.13.or.
+     .          pdglist(3).eq.22.or.
+     .          pdglist(3).eq.23.or.
+     .      abs(pdglist(3)).eq.24  ) then
+
+!!! MANUAL IMPLEMENTATION OF PR logs for Denner and Pozzorini
+           
+             write(*,*) "sto mettendo PR logs a mano"
+             if (abs(pdglist(3)).eq.5.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+                get_xxc_diag = get_xxc_diag -16.6d0 * smallL(invariants(1,2))  
+             elseif (abs(pdglist(3)).eq.6.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+                 get_xxc_diag = get_xxc_diag -12.2d0 * smallL(invariants(1,2))  
+             elseif (abs(pdglist(3)).eq.13.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+                 get_xxc_diag = get_xxc_diag -9.03d0 * smallL(invariants(1,2))  
+             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.-1.and.hels(2).eq.1) then
+                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
+             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.1.and.hels(2).eq.-1) then
+                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
+             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
+     .               abs(pdglist(4)).eq.22.and.hels(2).eq.1) then
+                 get_xxc_diag = get_xxc_diag +(15.1d0) * smallL(invariants(1,2)) 
+             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
+     .               abs(pdglist(4)).eq.23.and.hels(2).eq.1) then
+                 get_xxc_diag = get_xxc_diag +(26.6d0) * smallL(invariants(1,2))
+             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
+     .               abs(pdglist(4)).eq.22.and.hels(2).eq.-1) then
+                 get_xxc_diag = get_xxc_diag +(-17.1d0) * smallL(invariants(1,2)) 
+             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
+     .               abs(pdglist(4)).eq.23.and.hels(2).eq.-1) then
+                 get_xxc_diag = get_xxc_diag +(-37.9d0) * smallL(invariants(1,2)) 
+             elseif (abs(pdglist(3)).eq.24.and.hels(1).eq.1.and.
+     .               abs(hels(3)).eq.1.and.abs(hels(4)).eq.1) then
+                 get_xxc_diag = get_xxc_diag +(-14.2d0) * smallL(invariants(1,2))  
+             elseif (pdglist(3).ne.22.and.pdglist(3).ne.23.and.abs(pdglist(3)).ne.24) then
+                get_xxc_diag = get_xxc_diag +8.80d0 * smallL(invariants(1,2))
+             endif
+        print*, "PR log --> ",(get_xxc_diag-tmp)/smallL(invariants(1,2))
+        endif
+      endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!! END: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+ 
+      if(deb_settozero.ne.0) get_xxc_diag = 0d0
+
 
       return
       end
@@ -343,9 +503,12 @@ c      if(printinewsdkf) print*,"in total, ", get_xxc_diag/smallL(invariants(1,2
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      integer   deb_settozero
+      common /to_deb_settozero/deb_settozero
+
       ! this function is non zero only for Z/gamma mixing)
       get_xxc_nondiag = 0d0
-      return
+c      return
 c exit and do nothing
 
       ! check that the polarisation is transverse
@@ -366,6 +529,8 @@ c exit and do nothing
           if (printinewsdkf) WRITE (72,*) , hels, ileg, -666d0 , pdg_new, pdg_old,
      $    dble(get_xxc_nondiag), -666d0
 
+      if(deb_settozero.ne.0.and.deb_settozero.ne.100.and.deb_settozero.ne.111) get_xxc_nondiag = 0d0
+
 
       return
       end
@@ -385,8 +550,7 @@ c exit and do nothing
 
       return
       end
-      
-      
+
       double complex function smallL(s)
       implicit none
       double precision s
@@ -398,6 +562,172 @@ c exit and do nothing
 
       return
       end
+
+      
+      
+      double complex function log_a_over_b_sing(a,b)
+      implicit none
+      double precision a,b,aok,bok
+      include "q_es.inc"
+      double precision pi
+
+
+      if ((dabs(a).lt.1d0.and.dabs(a).ne.0d0).or.
+     .     (dabs(b).lt.1d0.and.dabs(b).ne.0d0)) then
+        print*,"Strange: in l_a_over_b_sin there is 
+     .          a very small but not zero mass. a=",
+     .  a," b=",b
+        stop
+      endif
+
+      aok=a
+      bok=b
+      if (a.eq.0d0) aok= QES2
+      if (b.eq.0d0) bok= QES2
+
+c      print*, "QES2=",QES2
+      
+      log_a_over_b_sing = dlog(aok/bok)
+
+      return
+      end
+
+      double complex function smallL_a_over_b_sing(a,b)
+      implicit none
+      double precision a,b
+      double complex log_a_over_b_sing
+      external log_a_over_b_sing
+      include 'coupl.inc'
+      include "q_es.inc"
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      smallL_a_over_b_sing = dble(gal(1))**2 / (4d0*pi)**2 * log_a_over_b_sing(a,b)
+
+      return
+      end
+
+
+      double complex function bigL_a_over_b_sing(a,b)
+      implicit none
+      double precision a,b
+      double complex log_a_over_b_sing
+      external log_a_over_b_sing
+      include 'coupl.inc'
+      include "q_es.inc"
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      bigL_a_over_b_sing = dble(gal(1))**2 / (4d0*pi)**2 * log_a_over_b_sing(a,b)**2
+
+c      print*, "in bigL a over b", " a=", a, " b=", b
+
+      return
+      end
+
+      double complex function bigLem(s,m2k)
+      implicit none
+      double precision m2k,s
+      double complex log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL
+      external log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL
+      include 'coupl.inc'
+      include "q_es.inc"
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      if (sud_mod.eq.0.or.sud_mod.eq.1) then
+        bigLem = 0d0
+        return
+      elseif (sud_mod.eq.2) then
+       bigLem = 2*smallL(s) * log_a_over_b_sing(mdl_mw**2,0d0)+
+     .          bigL_a_over_b_sing(mdl_mw**2,0d0)-
+     .          bigL_a_over_b_sing(m2k,0d0)
+c       print*, "bigLem=", bigLem
+        return
+      else
+        print*,"sud_mod=",sud_mod,". It is not defined."
+        stop
+      endif
+
+      end
+
+      double complex function smallLem(m2k)
+      implicit none
+      double precision m2k
+      double complex log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL
+      external log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL
+      include 'coupl.inc'
+      include "q_es.inc"
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      if (sud_mod.eq.0.or.sud_mod.eq.1) then
+        smallLem = 0d0
+        return
+      elseif (sud_mod.eq.2) then
+       smallLem = 0.5d0*smallL_a_over_b_sing(mdl_mw**2, m2k)+
+     .          smallL_a_over_b_sing(mdl_mw**2, 0d0)
+        return
+      else
+        print*,"sud_mod=",sud_mod,". It is not defined."
+        stop
+      endif
+
+      end
+
+
+      double complex function dZemAA_logs()
+      implicit none
+      double precision m2k
+      double complex log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL,smallLem
+      external log_a_over_b_sing, bigL_a_over_b_sing, smallL_a_over_b_sing,smallL,smallLem
+      include 'coupl.inc'
+      include "q_es.inc"
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      if (sud_mod.eq.0.or.sud_mod.eq.1) then
+        dZemAA_logs= 0d0
+        return
+      elseif (sud_mod.eq.2) then
+c up and down quarks    
+       dZemAA_logs=3d0*(3d0*(1d0/3d0)**2+2d0*(2d0/3d0)**2) 
+c charged lep
+       dZemAA_logs=dZemAA_logs+1d0*3d0*1d0
+c total factor
+
+c 2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
+
+       dZemAA_logs=dZemAA_logs*(-4d0/3d0)*2d0/3d0*smallLem(0d0)
+
+      return
+      else
+        print*,"sud_mod=",sud_mod,". It is not defined."
+        stop
+      endif
+
+      end
+
+
+
+
+
+
       
       
       double complex function sdk_chargesq(pdg, hel, ifsign)
@@ -499,27 +829,29 @@ C left handed down quark / right handed antidown quark
         return
       endif
 
-C goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
-      if (abs(s_pdg).eq.251.and.pdgp.eq.25) sdk_tpm = sign(1d0,dble(s_pdg)) 
+c goldstones, they behave like left handed leptons (charged) or neutrinos (neutrals)
+      if (abs(s_pdg).eq.251.and.pdgp.eq.25) sdk_tpm = sign(1d0,dble(s_pdg))
       if (abs(s_pdg).eq.251.and.pdgp.eq.250) sdk_tpm = CMPLX(0d0,-1d0)
+
 
 
 c following last .and. conditions are not strictly necessary
       if (abs(s_pdg).eq.250.and.abs(pdgp*ifsign).eq.251) sdk_tpm =  CMPLX(0d0,1d0)
-      if (abs(s_pdg).eq.25.and.abs(pdgp*ifsign).eq.251) sdk_tpm = sign(1d0,dble((pdgp*ifsign))) 
+      if (abs(s_pdg).eq.25.and.abs(pdgp*ifsign).eq.251) sdk_tpm = sign(1d0,dble((pdgp*ifsign)))
 
       if (sdk_tpm.ne.0d0) then
          sdk_tpm = sdk_tpm / (2d0 * dsqrt(sw2))
          return
       endif
       
-
-
-C vector bosons
+c vector bosons
       if (abs(pdg*ifsign).eq.24.and.pdgp.eq.22) sdk_tpm = sign(1d0,dble(pdg*ifsign))
       if (pdg.eq.22.and.abs(pdgp*ifsign).eq.24) sdk_tpm = sign(1d0,dble(pdgp*ifsign))
       if (abs(pdg*ifsign).eq.24.and.pdgp.eq.23) sdk_tpm = -sign(1d0,dble(pdg*ifsign)) * dsqrt(cw2/sw2)
       if (pdg.eq.23.and.abs(pdgp*ifsign).eq.24) sdk_tpm = -sign(1d0,dble(pdgp*ifsign)) * dsqrt(cw2/sw2)
+
+
+c       print* , "sdk_tpm= ", sdk_tpm
 
 
       return
@@ -615,6 +947,7 @@ C left handed down quark / right handed antidown quark
 
 C goldstones, they behave like left handed leptons (charged); neutrals
 C mix
+
       if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
 
       return
@@ -665,9 +998,23 @@ C mix
       integer pdg, hel, ifsign
       double complex sdk_charge
 
-      sdk_ia_diag = -sdk_charge(pdg,hel,ifsign)
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
 
-      return
+
+      if (sud_mod.eq.0.or.sud_mod.eq.2) then
+        sdk_ia_diag = -sdk_charge(pdg,hel,ifsign)
+        return
+      elseif (sud_mod.eq.1) then
+        sdk_ia_diag = 0
+        return
+      else
+        print*,"sud_mod=",sud_mod,". It is not defined."
+        stop
+      endif
+
+
+
       end
 
 
@@ -734,9 +1081,19 @@ C transverse W boson
       include "coupl.inc"
       double precision sw2, cw2
 
+      double complex sdk_chargesq
+      external sdk_chargesq
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
 C the product of pdg code * helicity  
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
+
+
+    
+
       if (hel.ne.0) then
         s_pdg = pdg*hel
       else
@@ -780,7 +1137,16 @@ C transverse Z boson
 C (transverse) photon
       if (abs(s_pdg).eq.22) sdk_cew_diag = 2d0 
 
-      return
+      if (sud_mod.eq.0.or.sud_mod.eq.2) then
+        return
+      elseif (sud_mod.eq.1) then
+        sdk_cew_diag =  sdk_cew_diag - sdk_chargesq(pdg, hel, ifsign)
+        return
+      else
+        print*,"sud_mod=",sud_mod,". It is not defined."
+        stop 
+      endif
+
       end
 
 
@@ -806,13 +1172,27 @@ C returns the gamma/z mixing of sdk_cew
       include "coupl.inc"
       double precision sw2, cw2
 
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
 
       sdk_betaew_diag = 0d0
 
       if (abs(pdg).eq.24) then
-        sdk_betaew_diag = 19d0/6d0/sw2
+
+        if (sud_mod.eq.0.or.sud_mod.eq.2) then
+          sdk_betaew_diag = 19d0/6d0/sw2
+          return
+        elseif (sud_mod.eq.1) then
+          sdk_betaew_diag = 19d0/6d0/sw2 - 11d0/3d0
+          return
+        else
+          print*,"sud_mod=",sud_mod,". It is not defined."
+          stop
+        endif
 
       elseif (pdg.eq.23) then
         sdk_betaew_diag = (19d0 - 38d0*sw2 -22d0*sw2**2) / 6d0/sw2/cw2
@@ -888,20 +1268,23 @@ C returns the gamma/z mixing of sdk_cew
         do ihel = -1, 1, 2 
           do i = 1,npdgs
             ! t3-y-q relation
-            write(*,*) 'Q=t3+yo2_diag'
+c            write(*,*) 'Q=t3+yo2_diag'
             q = sdk_charge(pdg_list(i), ihel, ifsign)
             t3 = sdk_t3_diag(pdg_list(i), ihel, ifsign) 
             yo2 = sdk_yo2_diag(pdg_list(i),ihel, ifsign)
             if (abs(q - (t3+yo2)).gt.1d-4) then
+              write(*,*) 'Q=t3+yo2_diag'
               write(*,*) 'WRONG', pdg_list(i), ihel, ifsign,
      %                 q, t3, yo2
+            stop
             endif
             
             ! t3-q-iz2 relation
-            write(*,*) 'IZ=t3-sw Q / sw cw'
+c            write(*,*) 'IZ=t3-sw Q / sw cw'
             iz2 = sdk_iz2_diag(pdg_list(i),ihel, ifsign)
 
             if (abs(iz2 - (t3-sw2*q)**2/sw2/cw2).gt.1d-4) then
+              write(*,*) 'IZ=t3-sw Q / sw cw'
               write(*,*) 'WRONG', pdg_list(i), ihel, ifsign,
      %                 q, t3, (t3-sw2*q)**2/sw2/cw2, iz2
             endif

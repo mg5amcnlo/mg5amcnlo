@@ -246,6 +246,10 @@ c Average over initial state helicities
             stop
          endif
       endif
+     
+      print*,"SALTO checkpoles"
+      return
+
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
