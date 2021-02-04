@@ -2957,6 +2957,15 @@ Parameters              %(params)s\n\
             # Extract JAMP lines
             jamp_lines = self.get_JAMP_lines(sudakov_me)
         else:
+            squared_orders, amp_orders = sudakov_me.get_split_orders_mapping()
+            # safety check
+            if replace_dict['nAmpSplitOrders'] != len(amp_orders) or \
+               replace_dict['nSqAmpSplitOrders'] != len(squared_orders) or \
+               replace_dict['nSplitOrders'] != len(split_orders):
+                raise MadGraph5Error("ERROR in write_sudakov_me (%d,%d,%d) != (%d,%d,%d)" % (
+                             replace_dict['nAmpSplitOrders'],replace_dict['nSqAmpSplitOrders'],replace_dict['nSplitOrders'],
+                                len(amp_orders),len(squared_orders),len(split_orders)))
+
             jamp_lines = self.get_JAMP_lines_split_order(\
                        sudakov_me,amp_orders,split_order_names=split_orders)
 
