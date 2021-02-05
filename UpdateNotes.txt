@@ -1,6 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.9.1.2 (02/02/21)
+      MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
+        The generation of tau was not taking into account the information.
       Kiran+OM: Fixing issue for the MSSM model
       OM: Fixing issue with mac support
       OM: fix a bug introduced within 2.8.2 related to a wrong phase-space mapping of conflicting resonances.

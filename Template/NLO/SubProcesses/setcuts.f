@@ -401,7 +401,6 @@ c                    assume smin apply always on the same set of particle
                      else
                         smin_update = dsqrt(smin_update)/nb_iden_pdg ! share over N particle, and change dimension
                      endif
-                     smin_update = emass(i)
                      ! update in sqrt(s) so take the 
                      if  (j_fks.gt.nincoming) then
                         taumin(iFKS,ichan)=taumin(iFKS,ichan) + smin_update
