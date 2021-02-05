@@ -1322,3 +1322,27 @@ c            write(*,*) 'IZ=t3-sw Q / sw cw'
       end
       
 
+
+      subroutine get_par_ren_alphamz(invariants)
+      implicit none
+      include 'nexternal.inc'
+      double precision invariants(nexternal-1, nexternal-1)
+
+      include 'orders.inc'
+      integer imaxpara
+      parameter (imaxpara=5)
+      double complex amp_split_ewsud_der(amp_split_size,imaxpara)
+      common /to_amp_split_ewsud_der/ amp_split_ewsud_der
+C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
+
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
+
+      ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
+      ! the various parameters, amp_split_ewsud are filled with
+      ! the parameter-renormalisation contribution
+
+      ! LEAVE EMPTY FOR THE MOMENT
+
+      return
+      end

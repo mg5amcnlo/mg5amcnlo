@@ -1999,6 +1999,17 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
             self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
                          sud_me['matrix_element'], j, fortran_model)
+            # the file where the numeric derivative for the parameter renormalisation
+            #   is computed 
+            filename = "numder_ewsudakov_goldstone_me_%d.f" % (j + 1)
+            self.write_numder_me(writers.FortranWriter(filename),
+                         j, fortran_model)
+
+        # the file where the numeric derivative for the parameter renormalisation
+        #   is computed for the born 
+        filename = "numder_born.f" 
+        self.write_numder_me(writers.FortranWriter(filename),
+                         None, fortran_model)
 
         # Then, the interferences with the goldstones or with the born amplitudes
         for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] != 'goldstone']):
@@ -2654,6 +2665,7 @@ Parameters              %(params)s\n\
                     calls_to_me += "else\n"
                 calls_to_me += "call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)\n"
                 calls_to_me += "comp_idfac = 1d0\n"
+                par_ren = "par_ren_sborn_onehel"
                 i = -1 # so that i+1 is 0
             else:
                 # these will use the ME's with goldstones
@@ -2667,6 +2679,7 @@ Parameters              %(params)s\n\
                 calls_to_me += " (%s) then\n" % ".and.".join(conditions)
                 calls_to_me += "call EWSDK_GOLD_ME_%d(p,nhel(1,ihel),ans_summed)\n" % (i + 1)
                 calls_to_me += "comp_idfac = compensate_identical_factor(%d)\n" % (i + 1)
+                par_ren = "par_ren_EWSDK_GOLD_ME_%d" % (i + 1)
 
             # here the calls to all contributions where the particles of base_amp are not changed
             calls_to_me += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
@@ -2674,9 +2687,12 @@ Parameters              %(params)s\n\
             calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
             calls_to_me += "C the SSC term (neutral/diagonal)\n" 
             calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
-
             calls_to_me += "C the C term (diagonal)\n" 
             calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_diag(pdglist,nhel(1,ihel),iflist,invariants)\n"
+            calls_to_me += "C the parameter renormalisation\n"
+            calls_to_me += "call %s(P,nhel(1,ihel),ihel,invariants)\n" % par_ren
+            calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)\n"
+
             # now the call to the LSC and C non-diagonal
             mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]
             if mes_same_charge_lsc:
@@ -2728,6 +2744,7 @@ Parameters              %(params)s\n\
             calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)*comp_idfac\n"
             calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)*comp_idfac\n"
             calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)*comp_idfac\n"
+            calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)*comp_idfac\n"
 
         if goldstone_mes:
             calls_to_me += "endif\n"
@@ -2736,6 +2753,35 @@ Parameters              %(params)s\n\
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_wrapper.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return 
+
+
+
+    #===============================================================================
+    # write_sudakov_goldstone_me
+    #===============================================================================
+    def write_numder_me(self, writer, ime, fortran_model):
+        """Create the file where the derivative of the ime-th sudakov matrix element 
+        (or of the Born, if ime=None) is computed
+        """
+
+        replace_dict = {}
+        
+        if ime != None:
+            replace_dict['mename'] = 'EWSDK_GOLD_ME_%d' % (ime + 1)
+            replace_dict['hell'] = ''
+        else:
+            replace_dict['mename'] = 'SBORN_ONEHEL'
+            replace_dict['hell'] = 'hell,'
+
+        logger.warning('Warning, the parameter renormalisation should be done in the alpha(MZ) scheme')
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_numder_me_alphamz.inc')).read()
         file = file % replace_dict
         
         # Write the file

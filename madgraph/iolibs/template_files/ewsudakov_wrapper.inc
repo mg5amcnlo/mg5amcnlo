@@ -22,6 +22,8 @@ DOUBLE COMPLEX AMP_SPLIT_EWSUD_SSC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_XXC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
+DOUBLE COMPLEX AMP_SPLIT_EWSUD_PAR(AMP_SPLIT_SIZE)
+common /to_amp_ewsud_PAR/amp_split_ewsud_PAR
 DOUBLE COMPLEX AMP_SPLIT_BORN_ONEHEL(AMP_SPLIT_SIZE)
 common /to_amp_born_onehel/amp_split_born_onehel
 
@@ -51,6 +53,7 @@ CALCULATEDBORN=.FALSE.
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_XXC(:) = dcmplx(0d0,0d0)
+AMP_SPLIT_EWSUD_PAR(:) = dcmplx(0d0,0d0)
 
 %(iflist)s
 
