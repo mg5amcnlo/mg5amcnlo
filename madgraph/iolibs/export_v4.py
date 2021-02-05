@@ -173,7 +173,8 @@ class ProcessExporterFortran(VirtualExporter):
         self.mgme_dir = MG5DIR
         self.dir_path = dir_path
         self.model = None
-
+        self.beam_polarization = True
+        
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
