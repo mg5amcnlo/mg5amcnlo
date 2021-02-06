@@ -370,16 +370,8 @@ class Amplitude(MathsObject):
         amp_num = -1
         exts = graph.external_wavs        
         hel_amp = tuple([w.hel for w in sorted(cls.ext_deps, key=lambda x: x.mg)])
-        return External.map_hel[hel_amp] +1 # Offset because Fortran counts from 1
-        return External.good_hel.index(hel_amp) +1
-        #raise Exception
-        for i, comb in enumerate(External.good_wav_combs):
-            if set(comb) == set(cls.ext_deps):
-                # Offset because Fortran counts from 1
-                amp_num = i + 1
-        if amp_num < 1:
-            print('Failed to find amp_num')
-            exit(1)
+        amp_num  = External.map_hel[hel_amp] +1 # Offset because Fortran counts from 1
+
         if cls.max_amp_num < amp_num:
             cls.max_amp_num = amp_num 
         return amp_num  
