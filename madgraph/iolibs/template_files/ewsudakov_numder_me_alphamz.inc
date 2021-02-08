@@ -60,6 +60,7 @@ C       vary the parameter up
           mdl_mw = xup
         else if (i.eq.4) then
           mdl_mt = xup
+          mdl_ymt = xup
         else if (i.eq.5) then
           mdl_mh = xup
         endif
@@ -77,6 +78,7 @@ C       vary the parameter down
           mdl_mw = xdn
         else if (i.eq.4) then
           mdl_mt = xdn
+          mdl_ymt = xdn
         else if (i.eq.5) then
           mdl_mh = xdn
         endif
@@ -96,6 +98,7 @@ C       reset the parameter
           mdl_mw = xsave
         else if (i.eq.4) then
           mdl_mt = xsave
+          mdl_ymt = xsave
         else if (i.eq.5) then
           mdl_mh = xsave
         endif
