@@ -163,7 +163,8 @@ c
 
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
 
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -321,7 +322,7 @@ c
       endif
       pswgt = 1d0
       jac   = 1d0
-      call one_tree(iforest(1,-max_branch,iconfig),mincfig,
+      call one_tree(iforest(1,-max_branch,iconfig), tstrategy(iconfig),mincfig,
      &     nbranch,P,M,S,X,jac,pswgt)
 c
 c     Add what I think are the essentials
@@ -520,7 +521,7 @@ c     local
       integer nbranch,ndim,nconfigs
       integer ninvar
       integer nparticles,nfinal
-
+      integer nb_tchannel
 
 c
 c     Arguments
@@ -595,7 +596,7 @@ c        Start graph mapping
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
-         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
          maxwgt=0d0
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
@@ -632,7 +633,7 @@ c     Initialize dsig (needed for subprocess group running mode)
       return
       end
 
-      subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
+      subroutine one_tree(itree,tstrategy,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
 c     Calculates the momentum for everything below in the tree until
 c     it reaches the end.
@@ -652,8 +653,10 @@ c
 c     Arguments
 c
       integer itree(2,-max_branch:-1) !Structure of configuration
+      integer tstrategy ! current strategy for t-channel
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
+      double precision pother(0:3), ptemp(0:3), pboost(0:3), ptemp2(0:3)
       double precision M(-max_branch:max_particles)
       double precision S(-max_branch:0)
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
@@ -664,12 +667,13 @@ c
 c     Local
 c
       logical pass
+      double precision tmass(-max_branch:-1)
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
-c      data nerr/0/
+      integer iopposite ! index for t-channel mapping for the part not handle by itree
+c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
       double precision ma2,mb2,m12,mn2,s1, mi2
-      double precision tmass(-max_branch:-1)
 c
 c     External
 c
@@ -703,7 +707,12 @@ c     Determine number of s channel branches, this doesn't count
 c     the s channel p1+p2
 c
       ns_channel=1
-      do while(itree(1,-ns_channel) .ne. 1 .and.ns_channel.lt.nbranch)
+      iopposite = 1
+      if (abs(tstrategy).eq.1) then
+         iopposite = 2
+      endif
+      
+      do while(itree(1,-ns_channel) .ne. iopposite .and.ns_channel.lt.nbranch)
          m(-ns_channel)=0d0                 
          ns_channel=ns_channel+1         
       enddo
@@ -713,7 +722,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-
 c
 c     Determine masses for all intermediate states.  Starting
 c     from outer most (real particle) states
@@ -811,7 +819,7 @@ c
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
-
+         
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -837,18 +845,239 @@ c     Particle Kinematics Chapter 6 section 3 page 166
 c
 c     From here, on we can just pretend this is a 2->2 scattering with
 c     Pa                    + Pb     -> P1          + P2
+
+      if (tstrategy.eq.-2.or.tstrategy.eq.-1) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
+cc       T-channel ping-pong strategy starting with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+         
+c     No -flipping case:      
+c      p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       -  M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)
+c
+c     With flipping case
+c      p(0,itree(ibranch,1)) + pother -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       - pother = p(0,itree(ibranch,1)) -p(0,itree(ibranch,2))         
+c       - M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)      
+c
+c     This assumes that P(0, ibranch) is set to the T-channel propa (likely)
+c      do ibranch = -ns_channel-1,-nbranch,-1
+c         totmass=totmass+m(itree(2,ibranch))
+c      enddo
+      do ibranch=-ns_channel-1,-nbranch+1,-1
+c         totmass=totmass-m(itree(2,ibranch))      !for remaining particles
+c         smin = totmass**2                        !This affects t_min/max
+c         smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
+         if (ibranch.ne.-ns_channel-1)then
+            pother(:) = P(:,ibranch+1)
+            iopposite = ibranch +1
+         else
+            pother(:) = p(:,2)
+            iopposite = abs(tstrategy)
+         endif
+         s1  = m(ibranch)**2                        !Total mass available
+         ma2 = dot(pother, pother)
+         mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
+         m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+c
+c$$$         write(*,*) itree(1, ibranch), '-----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+c$$$         write(*,*)        '                       |           '
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)   	   '                       | ',ibranch
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)        '                       |           '
+c$$$         if (ibranch.ne.-ns_channel-1)then
+c$$$            write(*,*) iopposite, '-----------T---------- m=', m(ibranch-1)
+c$$$         else
+c$$$            write(*,*) 2, '-----------T---------- m=', m(ibranch-1)
+c$$$            write(*,*) m(1), m(2), m(3), m(4), m(5)
+c$$$         endif
+c$$$         write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+c$$$         if (ibranch.ne.-ns_channel-1) then
+c$$$            write(*,*) 'Pb', P(0,iopposite),P(1,iopposite),P(2,iopposite), P(3,iopposite)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,itree(1, ibranch)) + P(i,ibranch+1) 
+c$$$            enddo
+c$$$         else
+c$$$            write(*,*) 'Pb', P(0,2),P(1,2),P(2,2),P(3,2)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,1) + P(i,2)
+c$$$            enddo
+c$$$         endif
+c$$$         do i=0,3
+c$$$            pother(i) = P(i,itree(1, ibranch)) + P(i,iopposite)
+c$$$         enddo
+c$$$         write(*,*) 'DSQRT(s1) = ', m(ibranch), DSQRT(dot(pother, pother))
+c$$$c         if (m(ibranch)**2.ne.dot(pother, pother)) stop 1
+c$$$         write(*,*) 'm12= Pd**2 = ', m12 ,DSQRT(m12)
+c$$$         write(*,*) 'mn2 = Pc**2 =', mn2, DSQRT(mn2)
+         
+C     WRITE(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
+         
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+c         call yminmax(s1,0d0,m12,ma2,mb2,smax,tmin_temp,tmax_temp)
+c         if (tmin_temp.lt.tmin) tmin = tmin_temp
+c         if (tmax_temp.gt.tmax) tmax = tmax_temp
+         
+c
+c     Call for 0<x<1
+c
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     &        .5d0*(tmin/stot+1d0),
+c     &        .5d0*(tmax/stot+1d0))
+c         t   = Stot*(x(-ibranch)*2d0-1d0)
+c
+c     call for -1<x<1
+c
+
+c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
+
+c         if (nt_channel.ge.2)then
+c            tmin = max(tmin, -stot)
+c         endif
+c      if ((tmax-tmin)/stot.gt.0.1)then
+c            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $           0d0, 1d0)
+c         t = stot*(-x(-ibranch))
+      
+c      else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         tmax = max(tmax,0d0) !This line if want really t freedom
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+
+c      else
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        -tmax/stot, -tmin/stot)
+         t = stot*(-x(-ibranch))
+c      endif
+
+c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
+      if (t .lt. tmin .or. t .gt. tmax) then
+         jac=-3d0
+         return
+      endif
+c
+c     tmin and tmax set to -s,+s for jacobian because part of jacobian
+c     was determined from choosing the point x from the grid based on
+c     tmin and tmax.  (ie wgt contains some of the jacobian)
+c
+         tmin=-stot
+         tmax= stot
+         call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+         phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+         jac = jac*(tmax-tmin)*2d0*pi /2d0 ! I need /2d0 if -1<x<1
+
+         
+c
+c     Finally generate the momentum. The call is of the form
+c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
+c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
+c
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,iopposite),t,phi,mi2,
+     &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
+     &        p(0,ibranch),jac)
+c$$$         write(*,*) 'RESULT'
+c$$$         write(*,*) 'pa', p(0,itree(1,ibranch)),p(1,itree(1,ibranch)),p(2,itree(1,ibranch)),p(3,itree(1,ibranch))
+c$$$         write(*,*) 'pb', p(0,iopposite),p(1,iopposite),p(2,iopposite),p(3,iopposite)
+c$$$         write(*,*) '->'
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         do i =0,3
+c$$$            pother(i) = p(i,itree(1,ibranch)) + p(i,iopposite) - p(i,itree(2,ibranch))
+c$$$         enddo
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         write(*,*) 'pd', pother(0), pother(1), pother(2), pother(3) , DSQRT(dot(pother,pother))
+c$$$         write(*,*) 'T channel'
+c$$$         write(*,*) 'pr', p(0,ibranch),p(1,ibranch),p(2,ibranch),p(3,ibranch)
+c$$$         write(*,*) 'pa-pc', p(0,itree(1,ibranch))-p(0,itree(2,ibranch)),p(1,itree(1,ibranch))-p(1,itree(2,ibranch))
+
+
+         
+         if (jac .lt. 0d0) then
+c            nerr=nerr+1
+c            if(nerr.le.5)
+c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
+            return              !Failed, probably due to negative x
+         endif
+
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      enddo
+
+c     
+c     We need to get the momentum of the last external particle.
+c     This should just be the sum of p(0,2) and the remaining
+c     momentum from our last t channel 2->2
+c
+      if (nt_channel.eq.1) then
+c$$$         write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         enddo
+      else
+c$$$                  write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,-nbranch+2)
+         enddo
+      endif
+
+
+      else if (tstrategy.eq.2.or.tstrategy.eq.1) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cc       T-channel One side eat all strategy ending with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c
+c     Now perform the t-channel decay sequence. Most of this comes from: 
+c     Particle Kinematics Chapter 6 section 3 page 166
+c
+c     From here, on we can just pretend this is a 2->2 scattering with
+c     Pa                    + Pb     -> P1          + P2
 c     p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
 c     M(ibranch) is the total mass available (Pa+Pb)^2
 c     M(ibranch-1) is the mass of P2  (all the remaining particles)
 c
       do ibranch=-ns_channel-1,-nbranch+1,-1
          s1  = m(ibranch)**2                        !Total mass available
-         ma2 = m(2)**2
+         ma2 = m(tstrategy)**2
          mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
          call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+
+         if(.false.) then
+             write(*,*) itree(1, ibranch), 'a----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+             write(*,*)        '                       |           '
+             write(*,*)   	   '                       |           '
+             write(*,*)   	   '                       | ',ibranch
+             write(*,*)   	   '                       |           '
+             write(*,*)        '                       |           '
+             write(*,*) tstrategy, '-----------T---------- m=', m(ibranch-1), ibranch-1
+             write(*,*) 'S', dsqrt(s1), 'm_top=', dsqrt(mb2), 'M_bottom', dsqrt(ma2)
+             
+c     write(*,*) m(1), m(2), m(3), m(4), m(5)
+            write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+         endif
 c
 c     Call for 0<x<1
 c
@@ -861,15 +1090,80 @@ c     call for -1<x<1
 c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
+         if(.false.) then
+            ! NOT VALIDATED METHOD, momenta are ok but not jacobian
+            
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0d0, 1d0)
+            costh= 2d0*x(-ibranch)-1d0
+            call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+            phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+            jac = jac * 4d0*pi
+                     m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+         call mom2cx(dsqrt(s1),m(itree(2,ibranch)),m(ibranch-1),costh,phi,
+     &        p(0,itree(2,ibranch)),pother)
 
-      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+         I= itree(2,ibranch)
+         DO I=0,3
+            pboost(I) = P(I,tstrategy) + P(I,itree(1, ibranch))
+         ENDDO
+         
+         call boostm(p(0,itree(2,ibranch)),pboost,m(itree(2,ibranch)),p(0,itree(2,ibranch)))
+         call boostm(pother,pboost,m(ibranch),pother)
+
+         do I=0,3
+            p(I,ibranch) = pother(i) - p(i, tstrategy)
+         enddo
+         if(.false.)then
+         write(*,*) 'input'
+         write(*,*) 'p(tstrategy=',tstrategy,')', p(0,tstrategy), p(1,tstrategy), p(2,tstrategy), p(3,tstrategy)
+         I=itree(1, ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'output'
+         I= itree(2,ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'pother', pother(0),pother(1),pother(2),pother(3)
+         write(*,*) 'check'
+         do i=0,3
+            ptemp(i) = p(i,tstrategy) + p(i, itree(1, ibranch))
+         enddo
+         write(*,*) 'pa+pb', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         do i=0,3
+            ptemp(i) = pother(i) + p(i,itree(2,ibranch))
+         enddo
+         write(*,*) 'p1+p2', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         
+         write(*,*) 'Tchannel'
+         I = ibranch
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i), dot(p(0,I), p(0,I))
+         endif
+         
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+
+      else
+
+c     test of impact of low t part
+         if (nt_channel.ge.2)then
+            tmin = max(tmin,  -stot)
+         endif
+      if ((tmax-tmin)/stot.gt.0.1)then
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, 1d0)
+         t = stot*(-x(-ibranch))
+c     if (dabs(tmax - tmin)/stot.gt.0.05d0) then
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0,  1d0)
+c     set tmax to 0 and tmin to -1 The idea is to avoid dimension correlation
+c     the condition ensure a minimum efficiency in the generation of events
+c         t = stot*(-x(-ibranch))
+      else if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
-c         tmax = max(tmax,0d0) !This line if want really t freedom
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        0d0, -tmin/stot)
          t = stot*(-x(-ibranch))
-
       else
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
@@ -903,7 +1197,7 @@ c
             mi2 = tmass(itree(1,ibranch))
          endif
          tmass(ibranch) = t
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi, mi2,
+         call gentcms(p(0,itree(1,ibranch)),p(0,tstrategy),t,phi, mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
@@ -915,6 +1209,7 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
          endif
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      endif
       enddo
 c
 c     We need to get the momentum of the last external particle.
@@ -922,9 +1217,15 @@ c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
 c
       do i=0,3
-         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,tstrategy)
       enddo
 
+
+      
+      else
+         write(*,*) 'not supported tstrategy'
+         stop 2
+      endif
 
       endif                     !t-channel stuff
 
@@ -960,6 +1261,18 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
          call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
+c$$$      write(*,*) '****'
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'mass', i, m(i)
+c$$$      enddo
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$      enddo
+c$$$      do i =0,3
+c$$$         pother(i) = p(i,1) + p(i,2) - p(i,3) -p(i,4)
+c$$$      enddo
+c$$$      write(*,*) 'p5 expected', pother(0), pother(1),pother(2),pother(3)
+
       jac = jac*wgt
       if (.not. pass) jac = -99
       end
@@ -1024,7 +1337,7 @@ c*************************************************************************
 c
 c     Arguments
 c
-      double precision t,phi,m1,m2               !inputs
+      double precision t,phi,m1,m2,ma               !inputs
       double precision pa(0:3),pb(0:3),jac
       double precision p1(0:3),pr(0:3)           !outputs
 c
@@ -1314,6 +1627,146 @@ c     find the boost momenta --sum of particles--
       return
       end
 
+      double precision function get_channel_cut(p, config)
+      implicit none
 
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'maxamps.inc'
+      include 'coupl.inc'
+c     include 'run.inc'
+
+      double precision p(0:3, nexternal)
+      integer config
+      
+
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
+
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
+      double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+      
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
+
+      double precision      spole(maxinvar),swidth(maxinvar),bwjac
+      common/to_brietwigner/spole          ,swidth          ,bwjac
+
+      double precision ptemp(0:3, -nexternal:nexternal)
+      integer i,j
+      integer d1, d2
+      double precision t
+      double precision dot
+      external dot
+      integer ns_channel
+      integer nb_tchannel
+      integer nbranch
+      double precision tmp, tmp2
+      
+      double precision ZERO
+      parameter (ZERO=0d0)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      logical first_time
+      save prmass,prwidth,pow
+      data first_time /.true./
+
+      double precision Mass, Width
+      
+      include 'configs.inc'
+
+      if(sde_strat.eq.1.and.tmin_for_channel.eq.-1)then
+         get_channel_cut = 1d0
+         return
+      endif
+      
+      if (first_time) then
+         include 'props.inc'
+         first_time=.false.
+      endif
+      
+      do i = 1, nexternal
+         do j =0,3
+            ptemp(j,i) = p(j,i)
+            ptemp(j,-i) = 0d0
+         enddo
+      enddo
+
+      nbranch = nexternal -2
+      ns_channel=1
+      do while((iforest(1,-ns_channel,config) .ne. 1.and.iforest(1,-ns_channel,config) .ne. 2).and.ns_channel.lt.nbranch)
+         ns_channel=ns_channel+1
+      enddo
+      ns_channel=ns_channel - 1
+      nb_tchannel=nbranch-ns_channel-1
+c      write(*,*) 'T-channel found: ',nb_tchannel
+
+
+
+
+
+      
+      get_channel_cut = 1.
+      if (nb_tchannel.lt.2.and.sde_strat.eq.1)then
+         get_channel_cut = 1.
+         return
+      endif
+      
+      do i = 1, nexternal-3
+         d1 = iforest(1, -i, config)
+         d2 = iforest(2, -i, config)
+         do j=0,3
+            if (d1.gt.0.and.d1.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
+            endif
+            if (d2.gt.0.and.d2.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)
+            endif
+         enddo
+         if (tprid(-i,config).ne.0)then
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
+            endif
+c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
+            t = t/stot 
+            if (t.lt.tmin_for_channel)then
+                get_channel_cut = get_channel_cut * exp((t-tmin_for_channel)/(t+1))
+c               get_channel_cut = get_channel_cut * (t+1)/(1+tmin_for_channel)
+c            else if(t.gt.2*tmin_for_channel)then
+c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
+            endif
+         else
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               Width = prwidth(-i, config)
+               tmp = (t-Mass)*(t+Mass)
+               tmp2 = Mass*Width
+               get_channel_cut = get_channel_cut* (tmp**2 - tmp2**2)/(tmp**2 + tmp2**2)**2 
+            endif
+c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
+         endif
+      enddo
+c      write(*,*) 'final for config', config, get_channel_cut
+      return
+      end
 
 

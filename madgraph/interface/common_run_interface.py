@@ -2460,7 +2460,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                      LoggerStream=logstream,forced=forced, 
                                                      no_compilation=not compilation)
         except Exception as e:
-            if six.PY3:
+            if six.PY3 and not __debug__:
                 logger.info('MadAnalysis5 instalation not python3 compatible')
                 return None
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
@@ -3970,7 +3970,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.deal_multiple_categories(completion, formatting)
         
 
-    def update_make_opts(self):
+    def update_make_opts(self, run_card=None):
         """update the make_opts file writing the environmental variables
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
@@ -3984,6 +3984,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.make_opts_var['PYTHIA8_PATH']=self.options['pythia8_path']
 
         self.make_opts_var['MG5AMC_VERSION'] = misc.get_pkg_info()['version']
+
+        if run_card and run_card.LO:
+            if __debug__ and 'global_flag' not in run_card.user_set:
+                self.make_opts_var['GLOBAL_FLAG'] = "-O -fbounds-check"
+            else:
+                self.make_opts_var['ALOHA_FLAG'] = run_card['global_flag']     
+            self.make_opts_var['ALOHA_FLAG'] = run_card['aloha_flag']     
+            self.make_opts_var['MATRIX_FLAG'] = run_card['matrix_flag']
 
         return self.update_make_opts_full(make_opts, self.make_opts_var)
 
@@ -5928,6 +5936,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
                 
+        # 
+        if self.run_card and isinstance(self.run_card,banner_mod.RunCardLO):
+            if not 'sde_strategy' in self.run_card.user_set:
+                if proc_charac['single_color']:
+                    self.run_card['SDE_strategy'] = 2
+                else:
+                    self.run_card['SDE_strategy'] = 1
+                logger.debug("set SDE to %s", self.run_card['SDE_strategy'])
+            else:
+                 logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
         ########################################################################
         #       NLO specific check
@@ -5972,6 +5990,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
                 self.do_set('run_card store_rwgt_info True')
         
+            #check relation between ickkw and shower_card
+            if 'run' in self.allow_arg and self.run_card['ickkw'] == 3 :
+                if 'shower' in self.allow_arg:
+                    if self.shower_card['qcut'] == -1:
+                        self.do_set('shower_card qcut %f' % (2*self.run_card['ptj'])) 
+                    elif self.shower_card['qcut'] < self.run_card['ptj']*2:
+                        logger.error("ptj cut [in run_card: %s] is more than half the value of QCUT [shower_card: %s] This is not recommended:\n see http://amcatnlo.web.cern.ch/amcatnlo/FxFx_merging.htm ",
+                                     self.run_card['ptj'], self.shower_card['qcut'])
+                        
+                    if self.shower_card['njmax'] == -1:
+                        if not proc_charac: #shoud not happen in principle 
+                            raise Exception( "Impossible to setup njmax automatically. Please setup that value manually.")
+                        njmax = proc_charac['max_n_matched_jets']
+                        self.do_set('shower_card njmax %i' % njmax) 
+                    if self.shower_card['njmax'] == 0:
+                        raise Exception("Invalid njmax parameter. Can not be set to 0")
+                    
+                
        
         
         # Check the extralibs flag.
@@ -6010,7 +6046,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC
                 # events, but there is unfortunately no way for now to specify it in the shower_card.
-                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout.decode()
                 
                 #3. ensure that those flag are in the shower card
                 for L in paths:

@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import collections
 import fractions
 import logging
+import math
 import os
 import re
 import sys
@@ -197,10 +198,7 @@ def import_model_from_db(model_name, local_dir=False):
         raise Exception("Impossible to unpack the model. Please install it manually")
     return True
 
-def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
-                                                    complex_mass_scheme = None):
-    """ a practical and efficient way to import a model"""
-    
+def get_path_restrict(model_name, restrict=True):
     # check if this is a valid path or if this include restriction file       
     try:
         model_path = find_ufo_path(model_name)
@@ -239,6 +237,14 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                 restrict_file = restrict
             else:
                 raise Exception("%s is not a valid path for restrict file" % restrict)
+    
+    return model_path, restrict_file, restrict_name
+
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
+                                                    complex_mass_scheme = None):
+    """ a practical and efficient way to import a model"""
+    
+    model_path, restrict_file, restrict_name = get_path_restrict(model_name, restrict)
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
@@ -445,10 +451,27 @@ class UFOMG5Converter(object):
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
-       
-        if hasattr(model, '__arxiv__'):
-            logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
-       
+
+        if hasattr(model, '__header__'):
+            header = model.__header__
+            if len(header) > 500 or header.count('\n') > 5:
+                logger.debug("Too long header")
+            else:
+                logger.info("\n"+header)
+        else:
+            f =collections.defaultdict(lambda : 'n/a')
+            for key in ['author', 'version', 'email', 'arxiv']:
+                if hasattr(model, '__%s__' % key):
+                    val = getattr(model, '__%s__' % key)
+                    if 'Duhr' in val:
+                        continue
+                    f[key] = getattr(model, '__%s__' % key)
+                    
+            if len(f)>2:
+                logger.info("This model [version %(version)s] is provided by %(author)s (email: %(email)s). Please cite %(arxiv)s" % f, '$MG:color:BLACK')
+            elif hasattr(model, '__arxiv__'):
+                logger.info('Please cite %s when using this model', model.__arxiv__, '$MG:color:BLACK')
+            
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
         self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
@@ -1872,6 +1895,11 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
         self.coupling_order_dict ={}
+        self.autowidth =  []
+     
+    def modify_autowidth(self, cards, id):
+        self.autowidth.append([int(id[0])])
+        return math.log10(2*len(self.autowidth))
      
     def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
                                                       complex_mass_scheme=None):
@@ -1891,7 +1919,8 @@ class RestrictModel(model_reader.ModelReader):
         # compute the value of all parameters
         # Get the list of definition of model functions, parameter values. 
         model_definitions = self.set_parameters_and_couplings(param_card, 
-                                        complex_mass_scheme=complex_mass_scheme)
+                                        complex_mass_scheme=complex_mass_scheme,
+                                        auto_width=self.modify_autowidth)
         
         # Simplify conditional statements
         logger.log(self.log_level, 'Simplifying conditional expressions')
@@ -1944,8 +1973,23 @@ class RestrictModel(model_reader.ModelReader):
                 self['parameter_dict'][name] = 1
             elif value == 0.000001e-99:
                 self['parameter_dict'][name] = 0
+                
+        #
+        # restore auto-width value 
+        #
+        #for lhacode in self.autowidth:
+        for parameter in self['parameters'][('external',)]:
+            if parameter.lhablock.lower() == 'decay' and parameter.lhacode in self.autowidth:
+                parameter.value = 'auto'
+                if parameter.name in self['parameter_dict']:
+                    self['parameter_dict'][parameter.name] = 'auto'
+                elif parameter.name.startswith('mdl_'):
+                    self['parameter_dict'][parameter.name[4:]] = 'auto'
+                else:
+                    raise Exception
 
-                    
+
+        
     def locate_coupling(self):
         """ create a dict couplings_name -> vertex or (particle, counterterm_key) """
         
@@ -2492,6 +2536,7 @@ class RestrictModel(model_reader.ModelReader):
             logger_mod.log(self.log_level,'remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
+            
 
     def optimise_interaction(self, interaction):
         

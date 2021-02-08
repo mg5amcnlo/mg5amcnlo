@@ -16,7 +16,6 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-from distutils import dir_util
 import glob
 import logging
 import os
@@ -100,8 +99,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
             for card in ['plot_card']:
                 if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
@@ -1873,7 +1872,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_temp_jamp = self.get_JAMP_lines(matrix_element)
         else:
             split_orders_name = matrix_element['processes'][0]['split_orders']
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
@@ -1888,11 +1887,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             replace_dict['sqsplitorders']= \
     'C the values listed below are for %s\n' % ', '.join(split_orders_name)
             replace_dict['sqsplitorders']+='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
+            jamp_lines, nb_temp_jamp = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
-
+            
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+        
         if proc_type=='born':
             file = open(pjoin(_file_path, \
             'iolibs/template_files/bornmatrix_splitorders_fks.inc')).read()
@@ -2383,6 +2383,24 @@ Parameters              %(params)s\n\
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
+            
+        # Add information relevant for FxFx matching:
+        # Maximum QCD power in all the contributions
+        max_qcd_order = 0
+        for diag in matrix_element.get('diagrams'):
+            orders = diag.calculate_orders()
+            if 'QCD' in orders:
+                max_qcd_order = max(max_qcd_order,orders['QCD'])  
+        max_n_light_final_partons = max(len([1 for id in proc.get_final_ids() 
+        if proc.get('model').get_particle(id).get('mass')=='ZERO' and
+               proc.get('model').get_particle(id).get('color')>1])
+                                    for proc in matrix_element.get('processes'))
+        # Maximum number of final state light jets to be matched
+        self.proc_characteristic['max_n_matched_jets'] = max(
+                               self.proc_characteristic['max_n_matched_jets'],
+                                   min(max_qcd_order,max_n_light_final_partons))    
+            
+            
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
     
@@ -2439,8 +2457,10 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
 
         # Set the size of Wavefunction
         if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
@@ -2533,8 +2553,9 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
@@ -2685,7 +2706,7 @@ Parameters              %(params)s\n\
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP1(%s)")
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
@@ -2696,23 +2717,24 @@ Parameters              %(params)s\n\
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
-
-        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines).replace('JAMP', 'JAMP1')    
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                                      matrix_element,amp_orders,split_order_names=split_orders,
+                                                                      JAMP_format="JAMP1(%s)")
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         matrix_element.set('color_basis', link['link_basis'] )
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP2(%s)")
         else:
-            jamp_lines = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
-
-        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('JAMP','JAMP2')
-    
-    
+            jamp_lines,nb_tmp_jamp  = self.get_JAMP_lines_split_order(\
+                                            matrix_element,amp_orders,split_order_names=split_orders,
+                                            JAMP_format="JAMP2(%s)")
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = max(nb_tmp_jamp, replace_dict['nb_temp_jamp'])
+        
         # Extract the number of FKS process
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
@@ -3820,6 +3842,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    jamp_optim = True 
 
     def finalize(self, *args, **opts):
         ProcessExporterFortranFKS.finalize(self, *args, **opts)
@@ -3844,8 +3867,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)
             # Copy plot_card
             for card in ['plot_card']:

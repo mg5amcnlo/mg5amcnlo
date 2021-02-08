@@ -3359,7 +3359,23 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
-            
+
+        if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
+            jobs, P_zero_result = ajobcreator.get_helicity()
+        else:
+            for p in subproc:
+                for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    new_file = f.replace('_orig','_optim')
+                    files.cp(f, f.replace('_orig','_optim'))
+                    f = '%s.o' % f[:-2]
+                    if os.path.exists(f):
+                        files.cp(f, f.replace('_orig','_optim'))
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', p, 'Hel', 'selection'))
+            except Exception as error:
+                logger.debug(error)
+                pass
+                                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -3422,6 +3438,9 @@ Beware that this can be dangerous for local multicore runs.""")
         self.nb_refine += 1
         args = self.split_arg(line)
         treshold=None
+               
+
+        
         for a in args:
             if a.startswith('--treshold='):
                 treshold = float(a.split('=',1)[1])
@@ -4173,10 +4192,12 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
                         PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
-            
-            for scale in PY8_Card['SysCalc:tmsList']:
-                if scale<self.run_card[CKKW_cut]:
-                    logger.error(
+                #else:
+                #    PY8_Card.MadGraphSet('SysCalc:tmsList', [], force=True)
+            if PY8_Card['SysCalc:tmsList']!='auto':
+                for scale in PY8_Card['SysCalc:tmsList']:
+                    if float(scale)<float(self.run_card[CKKW_cut]):
+                        logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
@@ -5687,7 +5708,7 @@ tar -czf split_$1.tar.gz split_$1
             self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
-        self.update_make_opts()
+        self.update_make_opts(self.run_card)
         # reset list of Gdirectory
         self.Gdirs = None
             
@@ -6531,11 +6552,11 @@ class GridPackCmd(MadEventCmd):
         if not self.readonly:
             self.exec_cmd('store_events')
             self.print_results_in_shell(self.results.current)
-            if self.run_card['systematics_program'] == 'systematics':
+            if self.run_card['systematics_program'] == 'systematics' and self.run_card['use_syst']:
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        else:
+        elif self.run_card['use_syst']:
             self.exec_cmd('systematics %s --from_card' % 
                           pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
                                                postcmd=False,printcmd=False)

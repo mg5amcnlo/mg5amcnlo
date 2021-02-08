@@ -377,8 +377,19 @@ class DiagramTagChainLink(object):
                 return True
             elif isinstance(self.vertex_id[0], tuple) and isinstance(other.vertex_id[0], int):
                 return False
+            elif isinstance(self.vertex_id[0], str) and isinstance(other.vertex_id[0], tuple):
+                return True
+            elif isinstance(self.vertex_id[0], tuple) and isinstance(other.vertex_id[0], str):
+                return False            
             else:
-                return self.vertex_id[0] < other.vertex_id[0]
+                try:
+                    return self.vertex_id[0] < other.vertex_id[0]
+                except TypeError as error:
+                    if error.args == "'<' not supported between instances of 'tuple' and 'str'":
+                        return False
+                    else:
+                        return True
+                    
 
         for i, link in enumerate(self.links):
             if i > len(other.links) - 1:
@@ -563,7 +574,7 @@ class Amplitude(base_objects.PhysicsObject):
                                      process.get('overall_orders')[key])
             except KeyError:
                 process.get('orders')[key] = process.get('overall_orders')[key]
-
+                
         assert model.get('particles'), \
            "particles are missing in model: %s" %  model.get('particles')
 

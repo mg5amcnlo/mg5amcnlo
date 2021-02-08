@@ -38,7 +38,8 @@ c     Global
 c
       include 'maxamps.inc'
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest,	tstrategy
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
@@ -77,7 +78,8 @@ c-----
          include 'props.inc'
          nbw = 0
          do i=-1,-(nexternal-3),-1
-            if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0) then
+            if (iforest(1,i,iconfig) .eq. 1 .or. prwidth(i,iconfig).le.0.or.
+     &                       (nincoming.eq.2.and.iforest(1,i,iconfig) .eq. 2)) then
               cycle
             endif
             nbw=nbw+1
@@ -110,7 +112,7 @@ c     If no non-zero sprop, set iproc to 1
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
          onbw(i) = .false.
-         if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
+         if (iforest(1,i,iconfig) .eq. 1.or.(nincoming.eq.2.and.iforest(1,i,iconfig).eq.2)) tsgn=-1d0
          do j=0,3
             xp(j,i) = xp(j,iforest(1,i,iconfig))
      $           +tsgn*xp(j,iforest(2,i,iconfig))
@@ -247,7 +249,8 @@ c
       common/to_smin/ Smin
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest,	tstrategy
 
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
@@ -354,8 +357,10 @@ c     Look for identical particles to map radiation processes
 
 c     Start loop over propagators
       do i=-1,-(nexternal-3),-1
-         if (iforest(1,i,iconfig) .eq. 1) tsgn=-1d0
-         if (tsgn .eq. 1d0) then                         !s channel
+         if (iforest(1,i,iconfig) .eq. 1.or.iforest(1,i,iconfig) .eq. 2)then
+              tsgn=-1d0
+         endif
+         if (tsgn .eq. 1d0) then !s channel
             xm(i) = xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig))
             xe(i) = xe(iforest(1,i,iconfig))+xe(iforest(2,i,iconfig))
             mtot = mtot - xm(i)

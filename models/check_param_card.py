@@ -646,7 +646,8 @@ class ParamCard(dict):
                                                           (block, lhaid, value))
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-                logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
+                if block != 'loop':
+                    logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
                                    (block, lhaid, value))
             value = str(value).lower()
             #special handling for negative mass -> set width negative
@@ -1324,7 +1325,7 @@ class ParamCardRule(object):
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0), '$MG:BOLD')                            
                         elif log:
-                            logger.log(log,'For model consistency, update %s with id %s to value %s',
+                            logger.log(log,'For model consistency, update %s with id %s to value %s' %
                                         (block, id, 1.0))
 
         

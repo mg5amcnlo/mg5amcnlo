@@ -198,7 +198,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
 
     aloha_object = ['P', 'PBar', 'PVec','Gamma','Gamma5','Sigma','Mass','PSlash',
                     'OverMass2','Width','Scalar','Spinor','Vector',
-                    'Spin2','Spin32','C','Epsilon','Metric','Identity',
+                    'Spin2','Spin32','C','Epsilon','Metric','Identity', 'IdentityL',
                     'ProjM','ProjP','Coup','Norm', 'EPSL', 'EPST1', 'EPST2', 'PT',
                     'UFP', 'UFM', 'UFPC', 'UFMC',
                     'VFP', 'VFM', 'VFPC', 'VFMC',

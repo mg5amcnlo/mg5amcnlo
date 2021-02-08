@@ -27,6 +27,7 @@ import sys
 import optparse
 import time
 import shutil
+import stat
 import traceback
 import gzip as ziplib
 from distutils.version import LooseVersion, StrictVersion
@@ -733,17 +734,26 @@ def stdchannel_redirected(stdchannel, dest_filename):
             libraries.append('rt')                                                                                                                                                                          
     """
 
-    try:
-        oldstdchannel = os.dup(stdchannel.fileno())
-        dest_file = open(dest_filename, 'w')
-        os.dup2(dest_file.fileno(), stdchannel.fileno())
-        yield
-    finally:
-        if oldstdchannel is not None:
-            os.dup2(oldstdchannel, stdchannel.fileno())
-            os.close(oldstdchannel)
-        if dest_file is not None:
-            dest_file.close()
+    if logger.getEffectiveLevel()>5:
+        #deactivate this for hard-core debugging level
+        try:
+            oldstdchannel = os.dup(stdchannel.fileno())
+            dest_file = open(dest_filename, 'w')
+            os.dup2(dest_file.fileno(), stdchannel.fileno())
+            yield
+        finally:
+            if oldstdchannel is not None:
+                os.dup2(oldstdchannel, stdchannel.fileno())
+                os.close(oldstdchannel)
+            if dest_file is not None:
+                dest_file.close()
+    else:
+        try:
+            logger.debug('no stdout/stderr redirection due to debug level')
+            yield
+        finally:
+            return
+        
         
 def get_open_fds():
     '''
@@ -790,8 +800,8 @@ def detect_cpp_std_lib_dependence(cpp_compiler):
                 # we venture a guess here.
                 return '-lc++'
             else:
-                v = float(v.rsplit('.')[1])
-                if v >= 9:
+                maj, v = float(v.rsplit('.')[:2])
+                if maj >=11 or (maj ==10 and v >= 9):
                    return '-lc++'
                 else:
                    return '-lstdc++'
@@ -939,6 +949,35 @@ def call_stdout(arg, *args, **opt):
         
     str_out = out.stdout.read().decode().strip()
     return str_out
+
+
+
+def copytree(src, dst, symlinks = False, ignore = None):
+  if not os.path.exists(dst):
+    os.makedirs(dst)
+    shutil.copystat(src, dst)
+  lst = os.listdir(src)
+  if ignore:
+    excl = ignore(src, lst)
+    lst = [x for x in lst if x not in excl]
+  for item in lst:
+    s = os.path.join(src, item)
+    d = os.path.join(dst, item)
+    if symlinks and os.path.islink(s):
+      if os.path.lexists(d):
+        os.remove(d)
+      os.symlink(os.readlink(s), d)
+      try:
+        st = os.lstat(s)
+        mode = stat.S_IMODE(st.st_mode)
+        os.lchmod(d, mode)
+      except:
+        pass # lchmod not available
+    elif os.path.isdir(s):
+      copytree(s, d, symlinks, ignore)
+    else:
+      shutil.copy2(s, d)
+
     
 
 @multiple_try()
@@ -1560,7 +1599,7 @@ class digest:
         def digest(text):
             """using mg5 for the hash"""
             t = hashlib.md5()
-            t.update(text)
+            t.update(text.encode())
             return t.hexdigest()
         return digest
     
@@ -2066,7 +2105,7 @@ def import_python_lhapdf(lhapdfconfig):
                             if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
         except OSError:
             candidates=[]
-        sprint(candidates, lhapdf_libdir+'64')
+
         for candidate in candidates:
             if os.path.isdir(os.path.join(lhapdf_libdir+'64',candidate,'site-packages')):
                 sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
@@ -2219,6 +2258,9 @@ the file and returns last line in an internal buffer."""
             return line
         else:
             raise StopIteration
+def tqdm(iterator, **opts):
+    return iterator
+
         
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
@@ -2243,3 +2285,5 @@ the file and returns last line in an internal buffer."""
 #    return newfile(*args)
 #__builtin__.file = newfile
 #__builtin__.open = newopen
+
+

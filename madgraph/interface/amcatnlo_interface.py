@@ -85,6 +85,11 @@ def generate_directories_fks_async(i):
     infile.close()      
     
     calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
+
+    nexternal = curr_exporter.proc_characteristic['nexternal']
+    ninitial = curr_exporter.proc_characteristic['ninitial']
+    max_n_matched_jets = curr_exporter.proc_characteristic['max_n_matched_jets']
+    #processes = me.born_matrix_element.get('processes')
     processes = me.born_me.get('processes')
     
     #only available after export has been done, so has to be returned from here
@@ -92,9 +97,9 @@ def generate_directories_fks_async(i):
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic, processes]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets]
     else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, curr_exporter.proc_characteristic]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -783,11 +788,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c
                 logger.info('Writing directories...')
+                if six.PY3:
+                    ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
+                else:
+                    ctx = multiprocessing
                 original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 if self.ncores_for_proc_gen < 0: # use all cores
-                    pool = multiprocessing.Pool(maxtasksperchild=1)
+                    pool = ctx.Pool(maxtasksperchild=1)
                 else:
-                    pool = multiprocessing.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
+                    pool = ctx.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
                 signal.signal(signal.SIGINT, original_sigint_handler)
                 try:
                     # the very large timeout passed to get is to be able to catch
@@ -813,6 +822,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 if len(ninitial_set) != 1:
                     raise MadGraph5Error("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
+                
+                #  max_n_matched_jets
+                njet_set = set([int(diroutput[6]) for diroutput in diroutputmap])
+                proc_charac['max_n_matched_jets'] = max(njet_set)
 
                 self.born_processes = []
                 self.born_processes_for_olp = []

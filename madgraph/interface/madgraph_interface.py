@@ -300,13 +300,14 @@ class HelpToCmd(cmd.HelpCmd):
     """ The Series of help routine for the MadGraphCmd"""
 
     def help_save(self):
-        logger.info("syntax: save %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
+        logger.info("syntax: save %s FILENAME [OPTIONS]" % "|".join(self._save_opts),'$MG:color:BLUE')
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
         logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
+        logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
 
     def help_load(self):
         logger.info("syntax: load %s FILENAME" % "|".join(self._save_opts),'$MG:color:BLUE')
@@ -466,6 +467,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      -nojpeg: no jpeg diagrams will be generated.")
         logger.info("      --noeps=True: no jpeg and eps diagrams will be generated.")
         logger.info("      -name: the postfix of the main file in pythia8 mode.")
+        logger.info("      --jamp_optim=[True|False]: [madevent(default:True)|standalone(default:False)] allows a more efficient code computing the color-factor.")
+        logger.info("      --t_strategy: [madevent] allows to change ordering strategy for t-channel.")
+        logger.info("      --hel_recycling=False: [madevent] forbids helicity recycling optimization")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone MYRUN -f",'$MG:color:GREEN')
@@ -579,7 +583,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   orders to ensure maximum number of QCD vertices.")
         logger.info(" > Desired coupling orders combination can be specified directly for")
         logger.info("   the squared matrix element by appending '^2' to the coupling name.")
-        logger.info("   For example, 'p p > j j QED^2==2 QCD^==2' selects the QED-QCD")
+        logger.info("   For example, 'p p > j j QED^2==2 QCD^2==2' selects the QED-QCD")
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
@@ -803,7 +807,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > T channel propagators. Such channel can sometimes be quite slow to integrate")
         logger.info("zerowidth_tchannel <value>",'$MG:color:GREEN')
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
-        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")        
+        logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")
+        logger.info("auto_convert_model <value>",'$MG:color:GREEN')   
+        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")     
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -2464,7 +2470,8 @@ class CompleteForCmd(cmd.CompleteCmd):
     @cmd.debug()
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
-                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True']):
+                        possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
+                                                 '--jamp_optim=', '--t_strategy=']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -2473,7 +2480,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
                             'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha',
-                            'matchbox', 'matchbox_cpp', 'tests']
+                            'matchbox', 'matchbox_cpp', 'tests', 'launch']
 
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
@@ -2902,7 +2909,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_npoint_for_channel',
                     'max_t_for_channel',
                     'zerowidth_tchannel',
-                    'default_unset_couplings']
+                    'default_unset_couplings',
+                    ]
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
@@ -2953,7 +2961,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_retry_wait':300,
                        'cluster_size':100,
                        'output_dependencies':'external',
-                       'crash_on_error':False
+                       'crash_on_error':False,
+                       'auto_convert_model': False,
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3088,7 +3097,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         existing amplitudes
         or merge two model
         """
-
+        
         args = self.split_arg(line)
 
         
@@ -3189,47 +3198,51 @@ This implies that with decay chains:
                 
 
             self._curr_proc_defs.append(myprocdef)
-            
-            # Negative coupling order contraints can be given on at most one
-            # coupling order (and either in squared orders or orders, not both)
-            if len([1 for val in list(myprocdef.get('orders').values())+\
-                          list(myprocdef.get('squared_orders').values()) if val<0])>1:
-                raise MadGraph5Error("Negative coupling order constraints"+\
-                  " can only be given on one type of coupling and either on"+\
-                               " squared orders or amplitude orders, not both.")
 
-            if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
-                logger.warning('''Computation of interference term with decay is not 100% validated.  
-                Please check carefully your result.
-                One suggestion is also to compare the generation of your process with and without
-                set group_subprocesses True
-                (to write Before the generate command)
-                ''')
-
-            cpu_time1 = time.time()
-
-            # Generate processes
-            if self.options['group_subprocesses'] == 'Auto':
-                    collect_mirror_procs = True
-            else:
-                collect_mirror_procs = self.options['group_subprocesses']
-            ignore_six_quark_processes = \
-                           self.options['ignore_six_quark_processes'] if \
-                           "ignore_six_quark_processes" in self.options \
-                           else []
-
-            myproc = diagram_generation.MultiProcess(myprocdef,
-                                     collect_mirror_procs = collect_mirror_procs,
-                                     ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize, diagram_filter=diagram_filter)
-
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                elif warning_duplicate:
-                    raise self.InvalidCmd("Duplicate process %s found. Please check your processes." % \
-                                                amp.nice_string_processes())
+            try:
+                # Negative coupling order contraints can be given on at most one
+                # coupling order (and either in squared orders or orders, not both)
+                if len([1 for val in list(myprocdef.get('orders').values())+\
+                              list(myprocdef.get('squared_orders').values()) if val<0])>1:
+                    raise MadGraph5Error("Negative coupling order constraints"+\
+                      " can only be given on one type of coupling and either on"+\
+                                   " squared orders or amplitude orders, not both.")
+    
+                if myprocdef.get_ninitial() ==1 and  myprocdef.get('squared_orders'):
+                    logger.warning('''Computation of interference term with decay is not 100% validated.  
+                    Please check carefully your result.
+                    One suggestion is also to compare the generation of your process with and without
+                    set group_subprocesses True
+                    (to write Before the generate command)
+                    ''')
+    
+                cpu_time1 = time.time()
+    
+                # Generate processes
+                if self.options['group_subprocesses'] == 'Auto':
+                        collect_mirror_procs = True
+                else:
+                    collect_mirror_procs = self.options['group_subprocesses']
+                ignore_six_quark_processes = \
+                               self.options['ignore_six_quark_processes'] if \
+                               "ignore_six_quark_processes" in self.options \
+                               else []
+    
+                myproc = diagram_generation.MultiProcess(myprocdef,
+                                         collect_mirror_procs = collect_mirror_procs,
+                                         ignore_six_quark_processes = ignore_six_quark_processes,
+                                         optimize=optimize, diagram_filter=diagram_filter)
+    
+    
+                for amp in myproc.get('amplitudes'):
+                    if amp not in self._curr_amps:
+                        self._curr_amps.append(amp)
+                    elif warning_duplicate:
+                        raise self.InvalidCmd( "Duplicate process %s found. Please check your processes." % \
+                                                    amp.nice_string_processes())
+            except Exception:
+                self._curr_proc_defs.pop(-1)
+                raise
 
             # Reset _done_export, since we have new process
             self._done_export = False
@@ -3330,14 +3343,20 @@ This implies that with decay chains:
             raise Exception( 'model to convert need to provide a full path')
         model_dir = args[0]
         
-        answer = self.ask('model conversion to support both py2 and py3 are done in place.\n They are NO guarantee of success.\n It can make the model to stop working under PY2 as well.\n Do you want to proceed?',
-                 'y', ['y','n'])
-        if answer != 'y':
-            return 
         
-        #Object_library (.iteritems() -> .items())
+        if not ('-f' not in args or self.options['auto_convert_model']): 
+            answer = self.ask('model conversion to support both py2 and py3 are done in place.\n They are NO guarantee of success.\n It can make the model to stop working under PY2 as well.\n Do you want to proceed?',
+                     'y', ['y','n'])
+            if answer != 'y':
+                return 
+        
+        #Object_library 
         text = open(pjoin(model_dir, 'object_library.py')).read()
+        #(.iteritems() -> .items())
         text = text.replace('.iteritems()', '.items()')
+        # raise UFOError, "" -> raise UFOError()
+        text = re.sub('raise (\w+)\s*,\s*["\']([^"]+)["\']',
+                      'raise \g<1>("\g<2>")', text)
         text = open(pjoin(model_dir, 'object_library.py'),'w').write(text)
         
         # write_param_card.dat -> copy the one of the sm model
@@ -3514,16 +3533,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                        self._curr_model['parameters'].values()])
             keys = list(self._curr_model['parameters'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['parameters'][key]
                 text += '\nparameter type: %s\n' % str(key)
@@ -5209,6 +5224,7 @@ This implies that with decay chains:
 
         # Reset _done_export, since we have new process
         self._done_export = False
+        self._curr_proc_defs.append(myprocdef)
 
         cpu_time2 = time.time()
 
@@ -5415,20 +5431,20 @@ This implies that with decay chains:
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
+        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*\<?=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
             line = proc_number_re.group(1)
             if proc_number_re.group(3):
-                order_pattern = re.compile("^(.*?)\s*(\w+)\s*=\s*(\d+)\s*$")
+                order_pattern = re.compile("^(.*?)\s*(\w+)\s*\<?=\s*(\d+)\s*$")
                 order_line = proc_number_re.group(3)
                 order_re = order_pattern.match(order_line)
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)                
+                    order_re = order_pattern.match(order_line)            
             logger.info(line)
             
 
@@ -5531,8 +5547,27 @@ This implies that with decay chains:
                 else:
                     aloha.aloha_prefix=''
                 
-                self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                try:
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
                         complex_mass_scheme=self.options['complex_mass_scheme'])
+                except ufomodels.UFOError as err:
+                    model_path, _,_ = import_ufo.get_path_restrict(args[1])
+                    if six.PY3 and self.options['auto_convert_model']:
+                        logger.info("fail to load model but auto_convert_model is on True. Trying to convert the model")
+                        
+                        self.exec_cmd('convert model %s' % model_path, errorhandling=False, printcmd=True, precmd=False, postcmd=False)
+                        logger.info('retry the load of the model')
+                        tmp_opt = dict(self.options)
+                        tmp_opt['auto_convert_model'] = False
+                        with misc.TMP_variable(self, 'options', tmp_opt):
+                            try:
+                                self.exec_cmd('import %s' % line, errorhandling=False, printcmd=True, precmd=False, postcmd=False)
+                            except Exception:
+                                raise err
+                    elif six.PY3:
+                        raise self.InvalidCmd('UFO model not python3 compatible. You can convert it via the command \nconvert model %s\nYou can also type \"set auto_convert_model T\" to automatically convert all python2 module to be python3 compatible in the future.' % model_path)
+                    else:
+                        raise
                 if os.path.sep in args[1] and "import" in self.history[-1]:
                     self.history[-1] = 'import model %s' % self._curr_model.get('modelpath+restriction')
 
@@ -6067,9 +6102,11 @@ This implies that with decay chains:
             if six.PY3:
                 self.options['lhapdf_py3'] = pjoin(prefix,'lhapdf6_py3','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py3' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py3']
             else:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
+                self.options['lhapdf'] = self.options['lhapdf_py2']
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
@@ -6470,6 +6507,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 pass
             shutil.move(pjoin(os.path.join(MG5DIR, name)), os.path.join(MG5DIR, 'PLUGIN', name))
             # read the __init__.py to check if we need to add a new executable
+            pyvers=sys.version[0]
             try:
                 __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
                 plugin = sys.modules['PLUGIN.%s' % name] 
@@ -6479,29 +6517,43 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
                 maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
             except Exception as error:
-                raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
-                
+                if six.PY2:
+                    raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
+                elif six.PY3:
+                    logger.warning('Plugin not python3 compatible! It will run with python2')
+                    text = open(os.path.join(MG5DIR, 'PLUGIN', name, '__init__.py')).read()
+                    if re.search('^\s*new_interface\s*=\s*(?!None).', text, re.M):
+                        new_interface = True
+                        pyvers = 2
+                    else:
+                        misc.sprint(text)
+                new_output = []
+                latest_validated_version = ''
+                minimal_mg5amcnlo_version = ''
+                maximal_mg5amcnlo_version = ''
+                misc.sprint(pyvers)
+                    
             logger.info('Plugin %s correctly interfaced. Latest official validition for MG5aMC version %s.' % (name, '.'.join(repr(i) for i in latest_validated_version)))
             if new_interface:
                 ff = open(pjoin(MG5DIR, 'bin', '%s.py' % name) , 'w') 
                 if __debug__:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -tt %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                    
+'''.format(name,'' if pyvers == 2 else pyvers)                    
                 else:
-                    text = '''#! /usr/bin/env python
+                    text = '''#! /usr/bin/env python{1}
 import os
 import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
 os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''.format(name)                     
+'''.format(name,'' if pyvers == 2 else pyvers)                     
                 ff.write(text)
                 ff.close()
                 import stat
@@ -6645,10 +6697,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         def apply_patch(filetext):
             """function to apply the patch"""
-            text = filetext.read()
+            text = filetext.read().decode()
             
-            pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
-            #=== renamed directory 'Template' => 'Template/LO'
+            pattern = re.compile(r'''^=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
+            #= = = renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
                 shutil.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
                 full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
@@ -6831,8 +6883,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         else:
             raise self.InvalidCmd('Unknown mode for command install update')
 
-        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')) or \
-                os.path.exists(os.path.join(MG5DIR,'.bzr')):
+        if not os.path.exists(os.path.join(MG5DIR,'input','.autoupdate')):# or \
+                #os.path.exists(os.path.join(MG5DIR,'.bzr')):
             error_text = """This version of MG5 doesn\'t support auto-update. Common reasons are:
             1) This version was loaded via bazaar (use bzr pull to update instead).
             2) This version is a beta release of MG5."""
@@ -6848,7 +6900,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             return
 
         # read the data present in .autoupdate
-        data = {}
+        data = {'last_message':0}
         for line in open(os.path.join(MG5DIR,'input','.autoupdate')):
             if not line.strip():
                 continue
@@ -6865,7 +6917,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             data['last_check'] = time.time()
 
         #check if we need to update.
-        if time.time() - data['last_check'] < update_delay:
+        if time.time() - float(data['last_check']) < float(update_delay):
             return
 
         logger.info('Checking if MG5 is up-to-date... (takes up to %ss)' % timeout)
@@ -6878,9 +6930,16 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
+            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
             signal.alarm(0)
-            web_version = int(filetext.read().strip())
+            text = filetext.read().decode().split('\n')
+            web_version = int(text[0].strip())
+            try:
+                msg_version = int(text[1].strip())
+                message = '\n'.join(text[2:])
+            except:
+                msg_version = 0
+                message = ""
         except (TimeOutError, ValueError, IOError):
             signal.alarm(0)
             print('failed to connect server')
@@ -6888,17 +6947,35 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 # wait 24h before next check
                 fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
                 fsock.write("version_nb   %s\n" % data['version_nb'])
-                fsock.write("last_check   %s\n" % \
-                int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1))
+                fsock.write("last_check   %s\n" % (\
+                int(time.time()) - 3600 * 24 * (self.options['auto_update'] -1)))
+                fsock.write("last_message   %s\n" % data['last_message'])
                 fsock.close()
             return
 
+        if msg_version > data['last_message']:
+            data['last_message'] = msg_version
+            logger.info("************* INFORMATION *************", '$MG:BOLD')
+            logger.info(message.replace('\n','\n    '))
+            logger.info("************* INFORMATION *************", '$MG:BOLD')
+            fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
+            fsock.write("version_nb   %s\n" % data['version_nb'])
+            fsock.write("last_check   %s\n" % (\
+            int(time.time()) - 3600 * 24 * (int(self.options['auto_update']) -1)))
+            fsock.write("last_message   %s\n" % data['last_message'])
+            fsock.close()
+            
+        if os.path.exists(os.path.join(MG5DIR,'.bzr')):
+            logger.info("bzr version: use bzr pull to update")
+            return 
+        
         if web_version == data['version_nb']:
             logger.info('No new version of MG5 available')
             # update .autoupdate to prevent a too close check
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.write("last_message   %s\n" % data['last_message'])
             fsock.close()
             return
         elif data['version_nb'] > web_version:
@@ -6906,6 +6983,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             fsock.write("version_nb   %s\n" % data['version_nb'])
             fsock.write("last_check   %s\n" % int(time.time()))
+            fsock.write("last_message   %s\n" % data['last_message'])
             fsock.close()
             return
         else:
@@ -7801,9 +7879,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
         # True/False formatting
-        elif args[0] in ['crash_on_error']:
+        elif args[0] in ['crash_on_error', 'auto_convert_model']:
             try:
-                tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+                tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 if args[1].lower() in ['never']:
                     tmp = args[1].lower()
@@ -7874,8 +7952,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     
         if '--postpone_model' in args:
             flaglist.append('store_model')
-        
-        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
+        if '--hel_recycling=False' in args:
+            flaglist.append('no_helrecycling')
+                    
+        line_options = dict( (arg[2:].split('=')  if "=" in arg else (arg[2:], True))
+                             for arg in args if arg.startswith('--'))
+#        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' not in arg)
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
@@ -8001,7 +8083,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 ||   -> add process <proc_def>
 """)
                     group_processes = False
-
+    
         #Exporter + Template
         if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
@@ -8060,7 +8142,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
                 options['zerowidth_tchannel'] = False
             
-            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model, options=options)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
         if version:
@@ -8313,6 +8395,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
+
+            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist:
+                for (name, flag, out) in wanted_lorentz[:]:
+                    if out == 0:
+                        newflag = list(flag) + ['P1N']
+                        wanted_lorentz.append((name, tuple(newflag), -1))
+                
             # For a unique output of multiple type of exporter need to store this
             # information.             
             if hasattr(self, 'previous_lorentz'):

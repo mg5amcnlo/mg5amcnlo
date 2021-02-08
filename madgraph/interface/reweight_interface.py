@@ -268,9 +268,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
-        elif order.startswith(('noborn=')):
+        elif order.startswith(('noborn')):
             # pass in sqrvirt=
-            return "add process %s [%s] %s;" % (process, order.replace('noborn=', 'sqrvirt='), final)
+            return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
         elif order.startswith('LOonly'):
             #remove [LOonly] flag
             return "add process %s %s;" % (process, final)
@@ -559,6 +559,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
+
+                
             weight = self.calculate_weight(event)
             if not isinstance(weight, dict):
                 weight = {'':weight}
@@ -717,7 +719,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-                
+            with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
+                fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line,
                                    write_file=False, return_instance=True
@@ -885,19 +888,21 @@ class ReweightInterface(extended_cmd.Cmd):
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):                    
                     if 'second' in path or tag == 3:
                         param_card = self.new_param_card
                     else:
                         param_card = check_param_card.ParamCard(self.orig_param_card_text)
-                    
+                    module.initialise('../Cards/param_card.dat')
                     for block in param_card:
-
+                        if block.lower() == 'qnumbers':
+                            continue
                         for param   in param_card[block]:
                             lhacode = param.lhacode
                             value = param.value
                             name = '%s_%s' % (block.upper(), '_'.join([str(i) for i in lhacode]))
                             module.change_para(name, value)
+#                    misc.sprint("recompute module")
                     module.update_all_coup()
                         
         return param_card_iterator, tag_name
@@ -960,7 +965,6 @@ class ReweightInterface(extended_cmd.Cmd):
     dynamical_scale_warning=True
     def change_kinematics(self, event):
  
-
         if isinstance(self.run_card, banner.RunCardLO):
             jac = event.change_ext_mass(self.new_param_card)
             new_event = event
@@ -1063,13 +1067,14 @@ class ReweightInterface(extended_cmd.Cmd):
             w_orig = self.calculate_matrix_element(cevent, 0)
             w_new =  self.calculate_matrix_element(cevent, 1)
             ratio_T = w_new/w_orig
+
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
                 w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
                 w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
-                ratio_V = w_newV/w_origV
+                ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
@@ -1283,6 +1288,12 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.use_eventid:
             pid = -1
         
+        if not scale2: 
+            if hasattr(event, 'scale'):
+                scale2 = event.scale**2
+            else:
+                scale2 = 0
+
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
@@ -1788,7 +1799,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
-                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):      
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
                     mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
                     if mod_name in list(sys.modules.keys()):
@@ -1797,17 +1808,24 @@ class ReweightInterface(extended_cmd.Cmd):
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        if True:#six.PY3:
-                            mymod = __import__(mod_name, globals(), locals(), [])
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1)  
-                    else:
-                        if True:#six.PY3:
-                            mymod = __import__(mod_name, globals(), locals(), [])    
+                        if six.PY3:
+                            import importlib
+                            mymod = importlib.import_module(mod_name,)
+                            #mymod = __import__(mod_name, globals(), locals(), [])
                         else:
                             mymod = __import__(mod_name, globals(), locals(), [],-1) 
-                    S = mymod.SubProcesses
-                    mymod = getattr(S, 'allmatrix%spy' % tag)
+                            S = mymod.SubProcesses
+                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                    else:
+                        if six.PY3:
+                            import importlib
+                            mymod = importlib.import_module(mod_name,)
+                            #mymod = __import__(mod_name, globals(), locals(), [])    
+                        else:
+                            mymod = __import__(mod_name, globals(), locals(), [],-1)
+                            S = mymod.SubProcesses
+                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                    
                 
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod
