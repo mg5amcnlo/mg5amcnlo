@@ -200,17 +200,28 @@ class CmdExtended(cmd.Cmd):
                             info['date'])
 
         if os.path.exists(pjoin(MG5DIR, '.bzr')):
-            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrname,_ = proc.communicate()
-            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrversion,_ = proc.communicate() 
-            bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
-            len_name = len(bzrname)
-            len_version = len(bzrversion)            
-            info_line += "#*         BZR %s %s %s         *\n" % \
-                            (bzrname,
-                            (34 - len_name - len_version) * ' ',
-                            bzrversion)
+            try: 
+                proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
+            except OSError:
+                logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
+                info_line += "#*     UNKNOWN DEVELOPMENT VERSION. NOT FOR PRODUCTION      *\n"
+            else:
+                bzrname,_ = proc.communicate()
+                proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                bzrversion,_ = proc.communicate() 
+                bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
+                len_name = len(bzrname)
+                len_version = len(bzrversion)            
+                info_line += "#*         BZR %s %s %s         *\n" % \
+                                (bzrname,
+                                (34 - len_name - len_version) * ' ',
+                                bzrversion)
+        elif os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
+            logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
+            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
+            info_line += "\033[1;31m#*          WARNING: UNKNOWN DEVELOPMENT VERSION.           *\033[1;0m\n"
+            info_line += "\033[1;31m#*            WARNING: DO NOT USE FOR PRODUCTION            *\033[1;0m\n"
+            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
