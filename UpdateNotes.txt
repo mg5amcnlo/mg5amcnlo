@@ -3,7 +3,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                         ** PARRALEL VERSION FOR EW branch **
 
 3.0.4 (21/08/20)
-    ALL: include all changes up to 2.9.0 of the official release
+    ALL: include all changes up to 2.9.1.2 of the official release
     ALL: pass to python3 by default
     MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
         The generation of tau was not taking into account the information.
@@ -60,6 +60,14 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
                              ** Main Branch (version 2.x) Update **
+2.9.1.2 (02/02/21)
+      Kiran+OM: Fixing issue for the MSSM model
+      OM: Fixing issue with mac support
+      OM: fix a bug introduced within 2.8.2 related to a wrong phase-space mapping of conflicting resonances.
+          Leading to zero cross-section and/or potential bias cross-section for more complex cases.
+	  The issue occurs only if you have a conflicting resonances followed by a massless propopagator.
+	  one example is generate p p > z h , z > e+ e-, h > b b~ a
+
 2.9.0 (30/01/21)    **** Major speed-up update for LO computation ***
       Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
                 - This fasten LO computation by a factor around 2
