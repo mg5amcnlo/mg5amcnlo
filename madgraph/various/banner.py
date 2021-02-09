@@ -1001,6 +1001,10 @@ class ConfigFile(dict):
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput, **opt)
 
+
+
+
+
     def default_setup(self):
         pass
 
@@ -1762,6 +1766,11 @@ class PY8Card(ConfigFile):
         
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
+
+    def __copy__(self):
+        newone = type(self)(dict(self))
+        newone.__dict__.update(self.__dict__)
+        return newone
 
     def add_param(self, name, value, hidden=False, always_write_to_card=True, 
                                                                   comment=None):

@@ -5466,7 +5466,7 @@ RESTART = %(mint_mode)s
         ####mode = None # allow to overwrite it due to EW
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
-                              mode=mode, force=force,
+                              mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
                               return_instance=True)
 
