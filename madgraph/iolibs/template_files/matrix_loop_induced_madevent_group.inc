@@ -426,3 +426,6 @@ c   ----
 	ENDIF
 
     END 
+
+    SUBROUTINE print_zero_amp_%(proc_id)s()
+    END

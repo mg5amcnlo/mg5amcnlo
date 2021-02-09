@@ -5622,7 +5622,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_driver(writers.FortranWriter(filename),ncomb,
                                   n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
-        self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
+        try:
+            self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
+        except KeyError:
+            self.proc_characteristic['hel_recycling'] = False
+            self.opt['hel_recycling'] = False
         for ime, matrix_element in \
                 enumerate(matrix_elements):
             if self.opt['hel_recycling']:
