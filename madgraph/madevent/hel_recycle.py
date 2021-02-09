@@ -784,6 +784,8 @@ def apply_args(old_line, all_the_args):
     return ''.join(new_lines)
 
 def split_amps(line, new_amps):
+    if not new_amps:
+        return ''
     fct = line.split('(',1)[0].split('_0')[0]
     for i,amp in enumerate(new_amps):
         if i == 0:
