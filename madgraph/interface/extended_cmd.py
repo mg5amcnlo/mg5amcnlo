@@ -1630,7 +1630,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def compile(self, *args, **opts):
         """ """
-        
+        import multiprocessing
+        if not self.options['nb_core'] or self.options['nb_core'] == 'None':
+            self.options['nb_core'] = multiprocessing.cpu_count()
         return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):
