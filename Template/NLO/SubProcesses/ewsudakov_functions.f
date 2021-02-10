@@ -1338,11 +1338,46 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
+      double complex ls
+      double complex dalpha, dcw, dmw, dmz
+      double complex smallL, sdk_betaew_diag, sdk_cew_diag
+      external smallL, sdk_betaew_diag, sdk_cew_diag
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      include 'coupl.inc'
+      INCLUDE '../../Source/MODEL/input.inc'
+
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
       ! the parameter-renormalisation contribution
 
+      amp_split_ewsud(:) = (0d0,0d0)
+
+      ls = smallL(invariants(1,2))
+
+      ! the parameter renormalisation in Denner-Pozzorini reads:
+      !  dM/de de + dM/dcw dcw + dM/dht dht + dM/dhh dhh
+
+      ! 1) dM/de de = dM/dalpha dalpha, with dalpha=2 Z_e / 4Pi
+      !    remember, we derive wrt alpha^-1
+      dalpha = -sdk_betaew_diag(22) / (4d0*pi) 
+      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
+     $       dAlpha * ls
+
+      ! 2) dM/dcw = dM/dmw dmw + dM/dmz dmz
+      dmw = - (sdk_betaew_diag(24)/2d0 - 2d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2*mdl_mz**2/4d0/mdl_mw**4
+
+      dmz = - (sdk_betaew_diag(23)/2d0 - 2d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2*mdl_mz**2/4d0/mdl_mw**4
+
+      amp_split_ewsud(:) = amp_split_ewsud(:) + 
+     $      amp_split_ewsud_der(:,2) * dmz * ls +
+     $      amp_split_ewsud_der(:,3) * dmw * ls
+
       ! LEAVE EMPTY FOR THE MOMENT
+       
 
       return
       end
