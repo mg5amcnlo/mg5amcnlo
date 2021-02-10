@@ -91,6 +91,8 @@ cc
        common /to_printinewsdkf/printinewsdkf
        integer   deb_settozero
        common /to_deb_settozero/deb_settozero
+       Integer sud_mod
+       COMMON /to_sud_mod/ sud_mod
 
        double complex smallL,bigL
        external smallL,bigL
@@ -112,11 +114,16 @@ c      COMMON/USERCHOICE/USERHEL
 
       REAL*8 virthel(0:3,0:ANS_DIMENSION)
 
+      integer maximumtries, tries
 
 C-----
 C  BEGIN CODE
 C-----  
 
+      tries=0
+      maximumtries=20000
+
+c Do not change deb_settozero here
       deb_settozero=0
       printinewsdkf=.False.
       
@@ -316,14 +323,24 @@ c         if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s/(dble(nexternal)-3
 c          WRITE (*,*) "(p_",i,"+p_",j,")^2 is too small compared to s, 
 c     .    so regenerate momenta"
 c UNCOMMENT FOR KEEPING A FIXED t/s VALUE
-         if (abs(t)/s.gt.0.1d0+1d-3.or.abs(t)/s.lt.0.1d0-1d-3) then
-          WRITE (*,*) " t is not what we want 
-     .    so regenerate momenta"
-          goto 200
+         if (abs(t)/s.gt.0.05d0+1d-3.or.abs(t)/s.lt.0.05d0-1d-3) then
+c          WRITE (*,*) " t is not what we want 
+c     .    so regenerate momenta"
+          tries=tries+1
+          if (tries.gt.maximumtries) then
+            write(*,*), "after doing more than ", maximumtries, "tries, the good PS point was not found
+     ."
+            stop
+          else
+            goto 200
+          endif
          endif
        enddo
       enddo   
 
+      write(*,*), "after doing", tries, "tries, the good PS point was found
+     ."
+      tries=0
 
       OPEN(90, FILE='PS.input', ACTION='WRITE')
       
@@ -432,6 +449,7 @@ c               if (amp_split_born(iamp).eq.0) cycle
 
             do chosen_hel=1,total_hel
 
+c Change deb_settozero here if you need
               deb_settozero=0
 
               printinewsdkf=.False.
@@ -473,25 +491,25 @@ ccc             111    ---> all non_diagonal
      .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(u)/s))
                       write(*,*) '(1-t/u)log(|t|/s)ls SSC Non diag-->',
      .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s)*(1-t/u))
-                       write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
+                       write(*,*),'s= ',s ,'t= ', t, "u =", u, "(t/u)=" , (t/u)
 
                     F2t=(u/s*dlog(dabs(t)/s)+t/s*dlog(dabs(u)/s))
                     F1t=(t/s*dlog(dabs(t)/s)+u/s*dlog(dabs(u)/s))
                       Write(*,*),"F1t= ",F1t, "F2t=",F2t
                     
                       write(*,*) 'F1t F2 test AZ',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F1t-8.09*F2t),
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F2t-8.09*F1t),
-     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+8.09*F2t)/F1t,
-     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-17.0*F1t)/F2t
+     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F1t-8.09*F2t))
+c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F2t-8.09*F1t),
+c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+8.09*F2t)/F1t,
+c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-17.0*F1t)/F2t
                       write(*,*) 'F1t F2 test ZZ',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F1t-45.4*F2t),
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F2t-45.4*F1t),
-     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+45.4*F2t)/F1t,
-     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-25.1*F1t)/F2t
+     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F1t-45.4*F2t))
+c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F2t-45.4*F1t),
+c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+45.4*F2t)/F1t,
+c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-25.1*F1t)/F2t
 
                       write(*,*) 'F1t test AA',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(F1t)
+     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(F1t))
 
                     endif
 
@@ -556,7 +574,10 @@ ccc             111    ---> all non_diagonal
      .            dble((virthel(1,iamp)/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp)) 
-
+                  if(deb_settozero.ne.0) write(73,*), "Set deb_settozero to zero if you want sensible resutls here
+     ."
+                  if(sud_mod.ne.2) write(73,*), "Set sud_mod to 2 in ewsudakov_functions.f if you want sensible resutls here
+     ."
 
 
 
