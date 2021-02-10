@@ -43,12 +43,14 @@ class TestFKSProcess(unittest.TestCase):
     # the model, import the SM but remove 2nd and 3rd gen quarks
     remove_list = [3,4,5,6,-3,-4,-5,-6]
     mymodel = import_ufo.import_model('sm')
-    for p in mymodel['particles']:
+    for p in mymodel['particles'][:]:
         if p.get_pdg_code() in remove_list:
             mymodel['particles'].remove(p)
-    for ii in mymodel['interactions']:
-        if any([p.get_pdg_code() in remove_list for p in ii['particles']]):
+    for ii in mymodel['interactions'][:]:
+        for p in ii['particles']:
+            if p.get_pdg_code() in remove_list:
                 mymodel['interactions'].remove(ii)
+                break
 
     myleglist = MG.LegList()
     # PROCESS: u g > u g 

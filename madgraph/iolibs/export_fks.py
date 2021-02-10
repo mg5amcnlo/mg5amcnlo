@@ -1891,7 +1891,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                        matrix_element,amp_orders,split_order_names=split_orders)
             
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+        replace_dict['nb_temp_jamp'] = nb_temp_jamp
         
         if proc_type=='born':
             file = open(pjoin(_file_path, \
