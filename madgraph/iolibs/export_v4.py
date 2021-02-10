@@ -6251,11 +6251,16 @@ class UFO_model_to_mg4(object):
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
         for i in range(nb_coup_indep):
-            # For the independent couplings, we compute the double and multiple
-            # precision ones together
+            ##### For the independent couplings, we compute the double and multiple
+            ##### precision ones together
+            # For the EW sudakov approximation, because of the numerical derivatives
+            # we need to separate MP vs DP also here
             data = self.coups_indep[nb_def_by_file * i: 
                              min(len(self.coups_indep), nb_def_by_file * (i+1))]
-            self.create_couplings_part(i + 1, data, dp=True, mp=self.opt['mp'])
+            self.create_couplings_part(i + 1, data, dp=True, mp=False)
+
+            if self.opt['mp']:
+                self.create_couplings_part( i + 1, data, dp=False,mp=True)
             
         for i in range(nb_coup_dep):
             # For the dependent couplings, we compute the double and multiple
@@ -6309,10 +6314,25 @@ class UFO_model_to_mg4(object):
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
+
+        # the MP-version is there also for those couplings which do not depend 
+        #  on the PSP
         if self.opt['mp']:
+            fsock.write_comments('\ncouplings in multiple precision\n')
+
+            fsock.writelines('if (updateloop) then\n')
+
+            fsock.writelines('\n'.join(\
+                    ['call mp_coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+        
+            fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
             fsock.writelines('\n'.join(\
                     ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                       for i in range(nb_coup_dep)]))
+
+            fsock.writelines('\nendif\n')
+
         fsock.writelines('''\n return \n end\n''')
 
         fsock.writelines("""subroutine update_as_param()
@@ -6926,8 +6946,10 @@ class UFO_model_to_mg4(object):
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
-            couplings_files+=['mp_couplings%s.o' % (i+1) for i in \
-                               range(nb_coup_dep,nb_coup_dep + nb_coup_indep) ]
+            # this part changed to include also the couplings which do not 
+            # depend on the PSP
+            couplings_files+=['mp_couplings%s.o' % (i+1) \
+                                for i in range(nb_coup_dep + nb_coup_indep) ]
         text += ' '.join(couplings_files)
         fsock.writelines(text)
         
