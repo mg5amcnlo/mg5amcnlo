@@ -2719,7 +2719,8 @@ Parameters              %(params)s\n\
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
             jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
                                       matrix_element,amp_orders,split_order_names=split_orders,
-                                                                      JAMP_format="JAMP1(%s)")
+                                                                      JAMP_format="JAMP1(%s,{0})")
+                                                                      
         replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
@@ -2731,7 +2732,7 @@ Parameters              %(params)s\n\
         else:
             jamp_lines,nb_tmp_jamp  = self.get_JAMP_lines_split_order(\
                                             matrix_element,amp_orders,split_order_names=split_orders,
-                                            JAMP_format="JAMP2(%s)")
+                                            JAMP_format="JAMP2(%s,{0})")
         replace_dict['jamp2_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = max(nb_tmp_jamp, replace_dict['nb_temp_jamp'])
         

@@ -1279,7 +1279,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
     def get_JAMP_lines_split_order(self, col_amps, split_order_amps, 
-          split_order_names=None, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)"):
+          split_order_names=None, JAMP_format="JAMP(%s,{0})", AMP_format="AMP(%s)"):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
         defined as a matrix element or directly as a color_amplitudes dictionary.
         The split_order_amps specifies the group of amplitudes sharing the same
@@ -1345,11 +1345,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                                 amp_order[0])]))
             if self.opt['export_format'] in ['madloop_matchbox']:
                 res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)),
-                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1)))[0])
+                                   JAMP_format=JAMP_format.format(str(i+1)),
+                                   JAMP_formatLC="LN"+JAMP_format.format(str(i+1)))[0])
             else:
                 toadd, nb_tmp = self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)))
+                                   JAMP_format=JAMP_format.format(str(i+1)))
                 res_list.extend(toadd)
                 max_tmp = max(max_tmp, nb_tmp)         
 
