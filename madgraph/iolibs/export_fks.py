@@ -2560,7 +2560,9 @@ Parameters              %(params)s\n\
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
+        misc.sprint(replace_dict['den_factor_lines'])
+        replace_dict['den_factor_lines'] = ''
+
         # Extract the number of FKS process
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
@@ -2720,7 +2722,7 @@ Parameters              %(params)s\n\
             jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
                                       matrix_element,amp_orders,split_order_names=split_orders,
                                                                       JAMP_format="JAMP1(%s,{0})")
-                                                                      
+
         replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
@@ -3631,14 +3633,16 @@ Parameters              %(params)s\n\
             my_cs = color.ColorString()
             for index, denominator in \
                 enumerate(color_matrix.get_line_denominators()):
-                # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+#                # First write the common denominator for this color matrix line
+#                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
                 num_list = color_matrix.get_line_numerators(index, denominator)    
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+
+            
             return ret_list
 
     #===========================================================================
