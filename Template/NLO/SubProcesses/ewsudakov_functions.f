@@ -434,6 +434,8 @@ c      if(printinewsdkf) print*, pdglist(i), hels(i), (get_xxc_diag-tmp)/smallL(
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
+
+
       if(printinewsdkf) then
          if(abs(pdglist(3)).eq.5.or.
      .      abs(pdglist(3)).eq.6.or.
@@ -476,6 +478,11 @@ c      if(printinewsdkf) print*, pdglist(i), hels(i), (get_xxc_diag-tmp)/smallL(
         print*, "PR log --> ",(get_xxc_diag-tmp)/smallL(invariants(1,2))
         endif
       endif
+
+
+c    PR LOG are then removed by get_xxc_diag
+      get_xxc_diag = tmp
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! END: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1339,10 +1346,10 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
       double complex ls
-      double complex dalpha, dcw, dmw, dmz
+      double complex dalpha, dcw, dmw2, dmz2 
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
       external smallL, sdk_betaew_diag, sdk_cew_diag
-      double precision pi
+      double precision pi, cw2, sw2
       parameter (pi=3.14159265358979323846d0)
 
       include 'coupl.inc'
@@ -1351,6 +1358,10 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
       ! the parameter-renormalisation contribution
+
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
 
       amp_split_ewsud(:) = (0d0,0d0)
 
@@ -1361,23 +1372,31 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       ! 1) dM/de de = dM/dalpha dalpha, with dalpha=2 Z_e / 4Pi
       !    remember, we derive wrt alpha^-1
-      dalpha = -sdk_betaew_diag(22) / (4d0*pi) 
+      dalpha = -sdk_betaew_diag(22) / aewm1 
+      dalpha = dalpha * ls
       amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
-     $       dAlpha * ls
+     $       dAlpha 
 
       ! 2) dM/dcw = dM/dmw dmw + dM/dmz dmz
-      dmw = - (sdk_betaew_diag(24)/2d0 - 2d0 * sdk_cew_diag(250,0,1))
-     $      - 3d0*mdl_mt**2*mdl_mz**2/4d0/mdl_mw**4
+      dmw2 = - (sdk_betaew_diag(24) - 4d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2/2d0/mdl_mw**2/sw2
+      dmw2 =  dmw2 * mdl_mw**2 * ls
 
-      dmz = - (sdk_betaew_diag(23)/2d0 - 2d0 * sdk_cew_diag(250,0,1))
-     $      - 3d0*mdl_mt**2*mdl_mz**2/4d0/mdl_mw**4
+      dmz2 = - (sdk_betaew_diag(23) - 4d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2/2d0/mdl_mw**2/sw2
+      dmz2 =  dmz2 * mdl_mz**2 * ls
+
+
 
       amp_split_ewsud(:) = amp_split_ewsud(:) + 
-     $      amp_split_ewsud_der(:,2) * dmz * ls +
-     $      amp_split_ewsud_der(:,3) * dmw * ls
+     $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
+     $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 
 
       ! LEAVE EMPTY FOR THE MOMENT
-       
+      
+
+!    correct by a factor 2 ok?
+      amp_split_ewsud(:)=amp_split_ewsud(:)/2d0
 
       return
       end

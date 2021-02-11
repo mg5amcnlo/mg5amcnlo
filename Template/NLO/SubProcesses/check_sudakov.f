@@ -73,6 +73,8 @@ cc
       double complex amp_split_ewsud_xxc(amp_split_size)
       common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
       double precision amp_split_born(amp_split_size)
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_PAR(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_EWSUD_PAR/AMP_SPLIT_EWSUD_PAR
       integer iamp
       integer chosen_hel, total_hel
        double complex amp_split_born_onehel(amp_split_size)
@@ -81,7 +83,7 @@ cc
        common/to_ewsud_helselect/ewsud_helselect
        INTEGER  SDK_GET_NCOMB
        external SDK_GET_NCOMB
-       double complex BORN_HEL_MAX(amp_split_size) 
+       double complex BORN_HEL_MAX(amp_split_size), BORN_HEL(amp_split_size) 
        logical debug 
        double precision s,t,u,invm2_04
        external invm2_04
@@ -164,7 +166,7 @@ c     Set the energy to be characteristic of the run
       enddo
       energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
 
-      energy=4d2
+      energy=1d3
 c     In check_sa: Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
 c     Here: QES2=energy**2 is mandatory, ren_scale?
@@ -379,6 +381,8 @@ c               if (amp_split_born(iamp).eq.0) cycle
               write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
               write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
               write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/amp_split_born(iamp)
+              write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
           enddo
 
           write(*,*) 'NOW ALL THE HELICITIES'
@@ -388,20 +392,25 @@ c               if (amp_split_born(iamp).eq.0) cycle
           do chosen_hel=1,total_hel
              write(*,*) 'HELICITY CONFIGURATION NUMBER ', chosen_hel
              EWSUD_HELSELECT=chosen_hel
-             call sudakov_wrapper(p_born)
+c             call sudakov_wrapper(p_born)
+             call sdk_get_hels(chosen_hel, hels)
              do iamp = 1, amp_split_size
-               if ( AMP_SPLIT_BORN_ONEHEL(iamp).eq.0) cycle
+              CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+              if ( BORN_HEL(iamp).eq.0) cycle
                 
-                 if(abs(BORN_HEL_MAX(iamp)).lt.abs(AMP_SPLIT_BORN_ONEHEL(iamp))) then
-                    BORN_HEL_MAX(iamp)=AMP_SPLIT_BORN_ONEHEL(iamp)
+                 if(abs(BORN_HEL_MAX(iamp)).lt.abs(BORN_HEL(iamp))) then
+                    BORN_HEL_MAX(iamp)=BORN_HEL(iamp)
                  endif
 
+                 call sudakov_wrapper(p_born)
+ 
                  write(*,*) 'SPLITORDER', iamp
                  write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
 
                  write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
 
                  write(*,*) ' '
              enddo
@@ -445,7 +454,8 @@ c               if (amp_split_born(iamp).eq.0) cycle
 
                  write(71,*) AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(71,*) (amp_split_ewsud_lsc(iamp)+
-     .                        amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
+     .                        amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)+
+     .                        AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
             do chosen_hel=1,total_hel
 
@@ -454,10 +464,22 @@ c Change deb_settozero here if you need
 
               printinewsdkf=.False.
               EWSUD_HELSELECT=chosen_hel
-              call sudakov_wrapper(p_born)
+c              call sudakov_wrapper(p_born)
+              call sdk_get_hels(chosen_hel, hels)
+              CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+
+
+c              print*, "confronto", AMP_SPLIT_BORN_ONEHEL(iamp), born_hel(iamp)
+c              if (AMP_SPLIT_BORN_ONEHEL(iamp).ne.born_hel(iamp)) then
+c                 print*, "non va bene"
+c                 stop
+c              endif
+
+
               print*,"look into hel number",chosen_hel 
               if (abs(BORN_HEL_MAX(iamp)).NE.0d0  
-     .        .AND.    abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) 
+c     .        .AND.    abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) 
+     .        .AND.    abs(BORN_HEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) 
      .             then 
 
 
@@ -537,9 +559,17 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
                  write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                  write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
+                 write(*,*) 'PAR/ls', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/smallL(s)
+
+
                   write(*,*) '     '
                  write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
-     .           ' = ',(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
+     .           ' = ',(amp_split_ewsud_lsc(iamp)+
+     .                  amp_split_ewsud_ssc(iamp)+
+     .                  amp_split_ewsud_xxc(iamp)+
+     .                  AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! END: to be at some point removed or modified  !!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -549,7 +579,10 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
                  call sdk_get_hels(chosen_hel, hels)
 
                  WRITE (70,*) , hels,
-     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+     .            dble((amp_split_ewsud_lsc(iamp)+
+     .                  amp_split_ewsud_ssc(iamp)+
+     .                  amp_split_ewsud_xxc(iamp)+
+     .                  AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
      .            dble(AMP_SPLIT_BORN_ONEHEL(iamp))
 
 
@@ -570,9 +603,11 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
 !   the division by 4 comes from the 4 possible polarization of the massless initial state of 2 -> n
 
                   write(73,*), energy, chosen_hel, dble(virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
-     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
      .            dble((virthel(1,iamp)/2d0 /4d0
-     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)))/
+     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp)) 
                   if(deb_settozero.ne.0) write(73,*), "Set deb_settozero to zero if you want sensible resutls here
      ."
@@ -645,7 +680,7 @@ C         Otherwise, perform the check
           write(*,*)
 
 !modify here to increment energy next point
-          energy=energy*(10d0)**(3d0/20d0)
+          energy=energy*(10d0)**(3d0/4d0)
           ren_scale = energy!/2.0d0
           QES2=energy**2
 
