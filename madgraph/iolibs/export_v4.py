@@ -194,10 +194,45 @@ class ProcessExporterFortran(VirtualExporter):
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            # check handling for the polarization
+            for m in matrix_elements:
+                for me in m.get('matrix_elements'):
+                    for p in me.get('processes'):
+                        for pid in p.get_initial_ids():
+                            spin = p.get('model').get_particle(pid).get('spin')
+                            if spin != 2:
+                                self.beam_polarization = False
+                                break
+                        else:
+                            continue
+                        break
+                    else:
+                        continue
+                    break
+                else:
+                    continue
+                break
+
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory(\
                                           me_group, fortran_model, group_number)
         else:
+             # check handling for the polarization
+            self.beam_polarization = True
+            for me in matrix_elements.get_matrix_elements():
+                for p in me.get('processes'):
+                    for pid in p.get_initial_ids():
+                        spin = p.get('model').get_particle(pid).get('spin')
+                        if spin != 2:
+                            self.beam_polarization = False
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    continue
+                break 
+
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory(\
                                                    me, fortran_model, me_number)    
@@ -4417,6 +4452,21 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_temp
 
+        if self.beam_polarization:
+            replace_dict['beam_polarization'] = """
+                         DO JJ=1,nincoming
+               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                 T=T*ABS(POL(JJ))
+               ELSE IF(POL(JJ).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(JJ)))
+               ENDIF
+             ENDDO
+            """
+        else:
+            replace_dict['beam_polarization'] = ""
+
+
+
         replace_dict['template_file'] = pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
         replace_dict['template_file2'] = pjoin(_file_path, \
@@ -4533,7 +4583,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         helicity_lines = self.get_helicity_lines(matrix_element)
         replace_dict['helicity_lines'] = helicity_lines
         
-
         if not isinstance(self, ProcessExporterFortranMEGroup):            
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         else:

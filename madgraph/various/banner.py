@@ -3294,7 +3294,7 @@ class RunCardLO(RunCard):
         # check if lpp = 
         for i in [1,2]:
             if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
+                logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
                 time.sleep(5)
         
             if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:

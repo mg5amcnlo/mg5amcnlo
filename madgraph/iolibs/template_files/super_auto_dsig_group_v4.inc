@@ -523,7 +523,7 @@ C
      integer function get_nhel(hel,partid)
       implicit none
       integer hel,partid
-      write(*,*) "this type of pdf is not support with group_subprocess=True"
+      write(*,*) "this type of pdf is not support with group_subprocess=True. regenerate process with: set group_subprocesses false"
       stop 1
       return
       end

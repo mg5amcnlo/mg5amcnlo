@@ -183,7 +183,7 @@ C-------------------------------------------------
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
-     $   'ewa',
+     $   'eva',
      $   'iww',
      $   'mrs02nl',
      $   'mrs02nn',

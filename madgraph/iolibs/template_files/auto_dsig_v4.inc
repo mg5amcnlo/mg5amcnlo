@@ -163,15 +163,16 @@ C
      return
      end
 
-     integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
-     implicit none
-     integer hel,i,ipart,ncomb
-     include 'nexternal.inc'
-     integer one_nhel(nexternal)
-     parameter (ncomb=%(ncomb)d)
-     integer nhel(nexternal,ncomb)
-     %(helicity_lines)s
+	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
+	  implicit none
+	  integer hel,i, ipart
+	  Include 'nexternal.inc'
+	  integer one_nhel(nexternal)
+	  INTEGER                 NCOMB
+	  PARAMETER (             NCOMB=%(ncomb)d)
+	  INTEGER NHEL(NEXTERNAL,NCOMB)
+	  %(helicity_lines)s
 
-     get_nhel%(proc_id)s = nhel(ipart,hel)
-     return
-     end
+	  get_nhel%(proc_id)s = nhel(ipart, hel)
+	  return
+	  end

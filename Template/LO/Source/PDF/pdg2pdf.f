@@ -42,15 +42,14 @@ c     effective w/z/a approximation (leading log, not resummed)
       common/hel_picked/hel_picked,hel_jacobian
       integer get_nhel
       external get_nhel
-      real*8 beamPol(2),fLPol
-      common/to_polarization/beamPol
+      real*8 pol(2),fLPol
+      common/to_polarization/pol
 
 c     collider configuration
       integer lpp(2)
       double precision ebeam(2),xbk(2),q2fact(2)
       common/to_collider/ebeam,xbk,q2fact,lpp
 
-c      write(*,*) 'pdlabel = ',pdlabel
       if (ih.eq.9) then
          pdg2pdf = 1d0
          return
@@ -152,6 +151,45 @@ c     saved. 'pdflast' is filled below.
       xmulast(ireuse)=xmu
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
+
+
+      if(pdlabel.eq.'eva') then
+         if(iabs(ipart).ne.7.and.
+     &      iabs(ipart).ne.23.and.
+     &      iabs(ipart).ne.24 ) then
+            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
+            stop 24
+         else
+c         write(*,*) 'running eva'
+            select case (iabs(ih))
+c            case (0:2)
+            case (0,2)
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
+               stop 24
+c            case (3) ! e+/-
+            case (1,3) ! e+/-               
+               ppid = 11
+            case (4) ! mu+/-
+               ppid = 14
+            case default
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
+               stop 24
+            end select
+            ppid = ppid * ih/iabs(ih) ! get sign 
+            ! problem here: ih is always positive
+            fLPol = 0.d0
+            q2max=xmu*xmu
+c            write(*,*) 'HEL_PICKED = ',HEL_PICKED
+c            stop 24
+c            problem here: hel starts at -1...
+c              check iolibs
+c            hel = iabs(GET_NHEL(HEL_PICKED, beamid))
+            hel = 0
+            pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
+            return
+         endif
+      endif
+
 
       if(iabs(ipart).eq.7.and.ih.gt.1) then
          q2max=xmu*xmu

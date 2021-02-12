@@ -103,13 +103,7 @@ C ----------
         DO I=1,NCOMB
            IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)) THEN
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
-             DO JJ=1,nincoming
-               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
-               ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2d0
-               ENDIF
-             ENDDO
+            %(beam_polarization)s
 			 IF (ISUM_HEL.NE.0) then
 			   call DS_add_entry('Helicity',I,T)
 			 endif
@@ -153,13 +147,7 @@ C           The helicity configuration was chosen already by genps and put in a 
             I = HEL_PICKED
 			
 			T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
-            DO JJ=1,nincoming
-              IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                T=T*ABS(POL(JJ))
-              ELSE IF(POL(JJ).NE.1d0)THEN
-                T=T*(2d0-ABS(POL(JJ)))
-              ENDIF
-            ENDDO
+            %(beam_polarization)s
 c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
