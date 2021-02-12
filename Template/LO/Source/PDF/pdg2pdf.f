@@ -33,6 +33,19 @@ C
       data pdlabellast/2*'abcdefg'/
       data ihlast/2*-99/
 
+c     effective w/z/a approximation (leading log, not resummed)
+      double precision eva_get_pdf_by_PID
+      external eva_get_pdf_by_PID
+      integer hel, ppid
+      double precision hel_jacobian
+      integer hel_picked
+      common/hel_picked/hel_picked,hel_jacobian
+      integer get_nhel
+      external get_nhel
+      real*8 pol(2)
+      common/to_polarization/pol
+
+
       if (ih.eq.9) then
          pdg2pdf = 1d0
          return

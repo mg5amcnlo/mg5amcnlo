@@ -24,33 +24,33 @@ c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *            
 c     /* ********************************************************* *
-      real*8 function eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function eva_fX_to_vp(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
       implicit none
       integer ievo
-      real*8 gg2,gL2,gR2,fLpol,mv2,x,mu2
-      real*8 eva_fL_to_vp,eva_fR_to_vp
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision eva_fL_to_vp,eva_fR_to_vp
 
       eva_fX_to_vp =       fLpol*eva_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
      &             + (1d0-fLpol)*eva_fR_to_vp(gg2,gL2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *
-      real*8 function eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function eva_fX_to_vm(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
       implicit none
       integer ievo
-      real*8 gg2,gL2,gR2,fLpol,mv2,x,mu2
-      real*8 eva_fL_to_vm,eva_fR_to_vm
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision eva_fL_to_vm,eva_fR_to_vm
 
       eva_fX_to_vm =       fLpol*eva_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
      &             + (1d0-fLpol)*eva_fR_to_vm(gg2,gL2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *
-      real*8 function eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
+      double precision function eva_fX_to_v0(gg2,gL2,gR2,fLpol,mv2,x,mu2,ievo)
       implicit none
       integer ievo
-      real*8 gg2,gL2,gR2,fLpol,mv2,x,mu2
-      real*8 eva_fL_to_v0,eva_fR_to_v0
+      double precision gg2,gL2,gR2,fLpol,mv2,x,mu2
+      double precision eva_fL_to_v0,eva_fR_to_v0
 
       eva_fX_to_v0 =       fLpol*eva_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
      &             + (1d0-fLpol)*eva_fR_to_v0(gg2,gL2,mv2,x,mu2,ievo)
@@ -58,11 +58,11 @@ c     /* ********************************************************* *
       end
 c     /* ********************************************************* *      
 c     EVA (1/6) for f_L > v_+
-      real*8 function eva_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function eva_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gL2,mv2,x,mu2
-      real*8 coup2,split,xxlog,fourPiSq
+      double precision gg2,gL2,mv2,x,mu2
+      double precision coup2,split,xxlog,fourPiSq
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
 
 c      print*,'gg2,gL2,mv2,x,mu2,ievo',gg2 !3,gL2,mv2,x,mu2,ievo
@@ -79,11 +79,11 @@ c      print*,'gg2,gL2,mv2,x,mu2,ievo',gg2 !3,gL2,mv2,x,mu2,ievo
       end
 c     /* ********************************************************* *
 c     EVA (2/6) for f_L > v_-
-      real*8 function eva_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function eva_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gL2,mv2,x,mu2
-      real*8 coup2,split,xxlog,fourPiSq
+      double precision gg2,gL2,mv2,x,mu2
+      double precision coup2,split,xxlog,fourPiSq
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
       
       coup2 = gg2*gL2/fourPiSq
@@ -99,11 +99,11 @@ c     EVA (2/6) for f_L > v_-
       end
 c     /* ********************************************************* *
 c     EVA (3/6) for f_L > v_0
-      real*8 function eva_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
+      double precision function eva_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gL2,mv2,x,mu2
-      real*8 coup2,split,xxlog,fourPiSq
+      double precision gg2,gL2,mv2,x,mu2
+      double precision coup2,split,xxlog,fourPiSq
       data fourPiSq/39.47841760435743d0/ ! = 4pi**2
 c
       coup2 = gg2*gL2/fourPiSq
@@ -115,33 +115,33 @@ c
       end
 c     /* ********************************************************* *
 c     EVA (4/6) for f_R > v_+
-      real*8 function eva_fR_to_vp(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function eva_fR_to_vp(gg2,gR2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gR2,mv2,x,mu2
-      real*8 eva_fL_to_vm
+      double precision gg2,gR2,mv2,x,mu2
+      double precision eva_fL_to_vm
 
       eva_fR_to_vp = eva_fL_to_vm(gg2,gR2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *
 c     EVA (5/6) for f_R > v_-
-      real*8 function eva_fR_to_vm(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function eva_fR_to_vm(gg2,gR2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gR2,mv2,x,mu2
-      real*8 eva_fL_to_vp
+      double precision gg2,gR2,mv2,x,mu2
+      double precision eva_fL_to_vp
 
       eva_fR_to_vm = eva_fL_to_vp(gg2,gR2,mv2,x,mu2,ievo)
       return
       end      
 c     /* ********************************************************* *
 c     EVA (6/6) for f_R > v_0
-      real*8 function eva_fR_to_v0(gg2,gR2,mv2,x,mu2,ievo)
+      double precision function eva_fR_to_v0(gg2,gR2,mv2,x,mu2,ievo)
       implicit none
       integer ievo              ! evolution by q2 or pT2
-      real*8 gg2,gR2,mv2,x,mu2
-      real*8 eva_fL_to_v0
+      double precision gg2,gR2,mv2,x,mu2
+      double precision eva_fL_to_v0
 
       eva_fR_to_v0 = eva_fL_to_v0(gg2,gR2,mv2,x,mu2,ievo)
       return

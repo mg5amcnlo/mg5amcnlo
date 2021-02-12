@@ -22,16 +22,16 @@ c     - assign right couplings of fermion by vPID and fPID
 c     subroutine eva_get_gL2_by_PID
 c     - assign left couplings of fermion by vPID and fPID
 c     /* ********************************************************* *
-      real*8 function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2)
+      double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2)
       implicit none
       integer vPID,fPID,vpol
-      real*8 fLpol,x,mu2
-      real*8 eva_get_pdf_by_PID_evo
-      real*8 eva_get_pdf_photon_evo
+      double precision fLpol,x,mu2
+      double precision eva_get_pdf_by_PID_evo
+      double precision eva_get_pdf_photon_evo
       include 'ElectroweakFlux.inc'
       
       integer ievo
-      real*8 tiny,mu2min
+      double precision tiny,mu2min
       ievo  = 0 ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       tiny  = 1d-8
       mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID  
@@ -74,7 +74,7 @@ c     also set by PID lower bound no mu2 scale evolution
             eva_get_pdf_by_PID = 0d0
             return
          endif
-      case (22) ! photon (special treatment for mu2min)
+      case (7,22) ! photon (special treatment for mu2min)
          if(iabs(fPID).lt.5) then ! catch light quarks
             mu2min = (2d0)**2   ! set evolution boundary; 2 GeV is arbitrary
          else ! all others
@@ -109,7 +109,7 @@ c     4. check evolution scale
       endif
 
 c     celebrate by calling the PDF
-      if(vPID.eq.22) then
+      if(vPID.eq.22.or.vPID.eq.7) then
          eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
       else
          eva_get_pdf_by_PID = eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
@@ -120,13 +120,13 @@ c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *
-      real*8 function eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+      double precision function eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
       implicit none
       integer vPID,fPID,vpol,ievo
-      real*8 fLpol,x,mu2
-      real*8 eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
+      double precision fLpol,x,mu2
+      double precision eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
       
-      real*8 gg2,gL2,gR2,mv2,tmpPDF
+      double precision gg2,gL2,gR2,mv2,tmpPDF
       call eva_get_mv2_by_PID(mv2,vPID)
       call eva_get_gg2_by_PID(gg2,vPID,fPID)
       if( fPID/iabs(fPID).gt.0 ) then ! particle
@@ -152,13 +152,13 @@ c     /* ********************************************************* *
       return
       end
 c     /* ********************************************************* *
-      real*8 function eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+      double precision function eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
       implicit none
       integer vPID,fPID,vpol,ievo
-      real*8 fLpol,x,mu2
-      real*8 eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
+      double precision fLpol,x,mu2
+      double precision eva_fX_to_vm,eva_fX_to_v0,eva_fX_to_vp
       
-      real*8 gg2,gL2,gR2,mf2,tmpPDF
+      double precision gg2,gL2,gR2,mf2,tmpPDF
       call eva_get_mf2_by_PID(mf2,fPID)
       call eva_get_gg2_by_PID(gg2,vPID,fPID)
       if( fPID/iabs(fPID).gt.0 ) then ! particle
@@ -189,11 +189,11 @@ c     /* ********************************************************* *
       subroutine eva_get_mv2_by_PID(mv2,vPID)
       implicit none
       integer vPID
-      real*8 mv2
+      double precision mv2
       include 'ElectroweakFlux.inc'
       
       select case (iabs(vPID))
-      case (22)
+      case (7,22)
          mv2 = eva_zero
       case (23)
          mv2 = eva_mz2
@@ -214,7 +214,7 @@ c     /* ********************************************************* *
       subroutine eva_get_mf2_by_PID(mf2,fPID)
       implicit none
       integer fPID
-      real*8 mf2
+      double precision mf2
       include 'ElectroweakFlux.inc'
       
       select case (iabs(fPID))
@@ -247,11 +247,11 @@ c     /* ********************************************************* *
       subroutine eva_get_gg2_by_PID(gg2,vPID,fPID)
       implicit none
       integer vPID,fPID
-      real*8 gg2
+      double precision gg2
       include 'ElectroweakFlux.inc'
       
       select case (iabs(vPID))
-      case (22)         
+      case (7,22)         
 c     ******************************
          select case (iabs(fPID)) ! nested select case
          case (1)               ! down
@@ -300,11 +300,11 @@ c     /* ********************************************************* *
       subroutine eva_get_gR2_by_PID(gR2,vPID,fPID)
       implicit none
       integer vPID,fPID
-      real*8 gR2
+      double precision gR2
       include 'ElectroweakFlux.inc'
       
       select case (iabs(vPID))
-      case (22)
+      case (7,22)
          gR2 = eva_one
       case (23)
 c     ******************************
@@ -349,11 +349,11 @@ c     /* ********************************************************* *
       subroutine eva_get_gL2_by_PID(gL2,vPID,fPID)
       implicit none
       integer vPID,fPID
-      real*8 gL2
+      double precision gL2
       include 'ElectroweakFlux.inc'
       
       select case (iabs(vPID))
-      case (22)
+      case (7,22)
          gL2 = eva_one
       case (23)
 c     ******************************

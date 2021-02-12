@@ -5,20 +5,20 @@ c     File: ElectroweakFlux.inc
 c     R. Ruiz (2021 February)
 c     For details, see companion paper by Costantini, et al [arXiv:]
 c     /* ********************************************************* *
-	real*8 eva_one,eva_zero,eva_half,eva_pi
-	real*8 eva_mz, eva_mw, eva_mh, eva_mx
-	real*8 eva_mz2,eva_mw2,eva_mh2,eva_mx2
-	real*8 eva_aEM,eva_ee2
-	real*8 eva_cw2,eva_sw2,eva_gw2,eva_gz2
-	real*8 eva_qeu, eva_qed, eva_qev, eva_qee
-	real*8 eva_qeu2,eva_qed2,eva_qev2,eva_qee2
-	real*8 eva_tLu,eva_tLd,eva_tLv,eva_tLe
-	real*8 eva_zRu,eva_zRd,eva_zRv,eva_zRe
-	real*8 eva_zLu,eva_zLd,eva_zLv,eva_zLe
-	real*8 eva_mu, eva_md, eva_mc, eva_ms, eva_mt, eva_mb
-	real*8 eva_mu2,eva_md2,eva_mc2,eva_ms2,eva_mt2,eva_mb2	
-	real*8 eva_me, eva_mm, eva_ml
-	real*8 eva_me2,eva_mm2,eva_ml2	
+	double precision eva_one,eva_zero,eva_half,eva_pi
+	double precision eva_mz, eva_mw, eva_mh, eva_mx
+	double precision eva_mz2,eva_mw2,eva_mh2,eva_mx2
+	double precision eva_aEM,eva_ee2
+	double precision eva_cw2,eva_sw2,eva_gw2,eva_gz2
+	double precision eva_qeu, eva_qed, eva_qev, eva_qee
+	double precision eva_qeu2,eva_qed2,eva_qev2,eva_qee2
+	double precision eva_tLu,eva_tLd,eva_tLv,eva_tLe
+	double precision eva_zRu,eva_zRd,eva_zRv,eva_zRe
+	double precision eva_zLu,eva_zLd,eva_zLv,eva_zLe
+	double precision eva_mu, eva_md, eva_mc, eva_ms, eva_mt, eva_mb
+	double precision eva_mu2,eva_md2,eva_mc2,eva_ms2,eva_mt2,eva_mb2	
+	double precision eva_me, eva_mm, eva_ml
+	double precision eva_me2,eva_mm2,eva_ml2	
 c
 c	math
 	parameter (eva_one = 1.d0)
