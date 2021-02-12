@@ -1455,8 +1455,8 @@ C     Number of configs
         The first color link is used.
         """
         
-        goal = ["DATA DENOM(1)/1/",
-                "DATA (CF(I,  1),I=  1,  1) /    3/"
+        goal = [
+                "DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/"
                 ]
         process_exporter = export_fks.ProcessExporterFortranFKS()
 

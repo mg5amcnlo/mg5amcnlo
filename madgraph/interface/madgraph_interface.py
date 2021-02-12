@@ -6935,14 +6935,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
+                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file

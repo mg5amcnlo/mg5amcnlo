@@ -97,7 +97,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8  CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
@@ -130,7 +130,7 @@ C ----------
           DO J = 1, NCOLOR2
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J)
           ENDDO
-          B_SF_%(iborn)3.3d =B_SF_%(iborn)3.3d+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)   
+          B_SF_%(iborn)3.3d =B_SF_%(iborn)3.3d+ZTEMP*DCONJG(JAMP1(I))   
       ENDDO
       END
        
