@@ -168,7 +168,7 @@ C
      integer hel,i,ipart,ncomb
      include 'nexternal.inc'
      integer one_nhel(nexternal)
-     parameter (ncomb=%(ncomb)d))
+     parameter (ncomb=%(ncomb)d)
      integer nhel(nexternal,ncomb)
      %(helicity_lines)s
 

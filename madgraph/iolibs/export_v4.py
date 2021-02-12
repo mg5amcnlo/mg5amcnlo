@@ -4531,8 +4531,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
 
-        if not isinstance(self, ProcessExporterFortranMEGroup):
-            ncomb=matrix_element.get_helicity_combinations()
+        # extract and replace ncombinations, helicity lines
+        ncomb=matrix_element.get_helicity_combinations()
+        replace_dict['ncomb']= ncomb
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+        
+
+        if not isinstance(self, ProcessExporterFortranMEGroup):            
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         else:
             replace_dict['read_write_good_hel'] = ""
