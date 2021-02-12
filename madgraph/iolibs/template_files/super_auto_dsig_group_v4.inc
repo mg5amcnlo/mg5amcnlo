@@ -518,3 +518,12 @@ C
      %(print_zero_amp)s
      return
      end
+
+
+     integer function get_nhel(hel,partid)
+      implicit none
+      integer hel,partid
+      write(*,*) "this type of pdf is not support with group_subprocess=True"
+      stop 1
+      return
+      end
