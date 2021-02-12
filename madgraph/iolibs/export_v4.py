@@ -1500,7 +1500,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         for i in range(1,max_jamp+1):
             name = JAMP_format % i
             res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
-            
+
         return res_list, len(defs)
 
     def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
@@ -1514,13 +1514,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         if not nb_line:
             for i,j in all_element:
-                if i > nb_line:
+                if i+1 > nb_line:
                     nb_line = i+1
-                if j> nb_col:
-                    nb_col = j+1
-        
-        #misc.sprint(nb_line, nb_col)
-        
+                if j+1> nb_col:
+                    nb_col = j+1      
 
         max_count = 0
         all_index = []
@@ -1535,7 +1532,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     if not R:
                         continue
                     
-                    #misc.sprint(j1,j2)
                     operation[(j1,j2)][R] +=1 
                     if operation[(j1,j2)][R] > max_count:
                         max_count = operation[(j1,j2)][R]

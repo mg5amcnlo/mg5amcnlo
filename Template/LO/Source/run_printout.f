@@ -22,12 +22,17 @@ c
       write(6,*)  'Collider parameters:'
       write(6,*)  '--------------------'
 
+      ab(1) = '?'
+      ab(2) = '?'
       do i=1,2
          IF(LPP(i).EQ. 0) ab(i)='e'
          IF(LPP(i).EQ. 1) ab(i)='P'
          IF(LPP(i).EQ.-1) ab(i)='Pb'
-         IF(LPP(i).EQ.2) ab(i)='a2'
-         IF(LPP(i).EQ.3) ab(i)='a3'
+         IF(LPP(i).EQ.2) ab(i)='a'
+         IF(LPP(i).EQ.3) ab(i)='e-'
+         IF(LPP(i).EQ.-3) ab(i)='e+'
+         IF(LPP(i).EQ.4) ab(i)='m-'
+         IF(LPP(i).EQ.-4) ab(i)='m+'
       enddo
 
       ene=2d0*dsqrt(ebeam(1)*ebeam(2))
