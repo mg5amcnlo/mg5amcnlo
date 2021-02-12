@@ -28,7 +28,8 @@
 #*********************************************************************
 # Collider type and energy                                           *
 # lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
-#                3=photon from electron, 4=photon from muon          *
+#             +/-3=photon from electron/positron beam                *
+#             +/-4=photon from muon/antimuon beam                    *
 #*********************************************************************
      %(lpp1)s        = lpp1    ! beam 1 type 
      %(lpp2)s        = lpp2    ! beam 2 type
@@ -37,7 +38,10 @@
 $beam_pol
 $frame
 #*********************************************************************
-# PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
+# PDF CHOICE: this automatically fixes alpha_s and its evol.         *
+# pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
+#          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
+#          eva=Effective W/Z/A Approx.       [21yy.zzzzz]            *
 #*********************************************************************
      %(pdlabel)s    = pdlabel     ! PDF set                                     
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number

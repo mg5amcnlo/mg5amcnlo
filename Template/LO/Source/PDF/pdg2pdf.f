@@ -42,8 +42,13 @@ c     effective w/z/a approximation (leading log, not resummed)
       common/hel_picked/hel_picked,hel_jacobian
       integer get_nhel
       external get_nhel
-      real*8 pol(2)
-      common/to_polarization/pol
+      real*8 beamPol(2),fLPol
+      common/to_polarization/beamPol
+
+c     collider configuration
+      integer lpp(2)
+      double precision ebeam(2),xbk(2),q2fact(2)
+      common/to_collider/ebeam,xbk,q2fact,lpp
 
 
       if (ih.eq.9) then
@@ -71,17 +76,23 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
       ipart=ipdg
-      if(iabs(ipart).eq.21) then
+      if(iabs(ipart).eq.21) then ! g
          ipart=0
-      else if(iabs(ipart).eq.22) then
+      else if(ipart.eq.24) then  ! w+
+         ipart=24
+      else if(ipart.eq.-24) then ! w-
+         ipart=-24
+      else if(iabs(ipart).eq.23) then ! z
+         ipart=23
+      else if(iabs(ipart).eq.22) then ! a
          ipart=7
-      else if(iabs(ipart).eq.7) then
+      else if(iabs(ipart).eq.7) then  ! a
          ipart=7
-c     This will be called for any PDG code, but we only support up to 7
+c     This will be called for any PDG code, but we only support up to 7 and 23,24
       else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
-     $    'variables to 0 in the run_card'  
+     $    'variables to 0 in the run_card current is' , ih  
          open(unit=26,file='../../../error',status='unknown')
          write(26,*) 'Error: PDF not supported for pdg ',ipdg
          stop 1
