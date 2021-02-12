@@ -2299,9 +2299,9 @@ class RunCard(ConfigFile):
         self.hidden_param = []
         # in which include file the parameer should be written
         self.includepath = collections.defaultdict(list)
-        #some parameter have different name in fortran code
+        #some parameters have a different name in fortran code
         self.fortran_name = {}
-        #parameter which are not supported anymore. (no action on the code)
+        #parameters which are not supported anymore. (no action on the code)
         self.legacy_parameter = {}
         #a list with all the cuts variable and which type object impacted
         # L means charged lepton (l) and neutral lepton (n)
@@ -2983,7 +2983,7 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva']), 
+        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva'],fortran_name="pdlabel"), 
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)

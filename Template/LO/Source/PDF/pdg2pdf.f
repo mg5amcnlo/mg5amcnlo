@@ -50,7 +50,7 @@ c     collider configuration
       double precision ebeam(2),xbk(2),q2fact(2)
       common/to_collider/ebeam,xbk,q2fact,lpp
 
-
+c      write(*,*) 'pdlabel = ',pdlabel
       if (ih.eq.9) then
          pdg2pdf = 1d0
          return
@@ -109,7 +109,7 @@ c     Check if result can be reused since any of last two calls
       enddo
 
 c     Reuse previous result, if possible
-      if (ireuse.gt.0.)then
+      if (ireuse.gt.0.and.iabs(iporg).lt.8)then
          if (pdflast(iporg,ireuse).ne.-99d9) then
             pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
      $                         nb_neutron(beamid))
