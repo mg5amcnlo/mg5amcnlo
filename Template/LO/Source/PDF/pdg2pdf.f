@@ -162,12 +162,12 @@ c     saved. 'pdflast' is filled below.
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))
-c            case (0:2)
-            case (0,2)
+c            case (0:2) ! restore this line
+            case (0,2) ! remove this line
                write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
                stop 24
-c            case (3) ! e+/-
-            case (1,3) ! e+/-               
+c            case (3) ! e+/- ! restore this line
+            case (1,3) ! e+/- ! remove this line
                ppid = 11
             case (4) ! mu+/-
                ppid = 14
@@ -179,12 +179,7 @@ c            case (3) ! e+/-
             ! problem here: ih is always positive
             fLPol = 0.d0
             q2max=xmu*xmu
-c            write(*,*) 'HEL_PICKED = ',HEL_PICKED
-c            stop 24
-c            problem here: hel starts at -1...
-c              check iolibs
-c            hel = iabs(GET_NHEL(HEL_PICKED, beamid))
-            hel = 0
+            hel = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
             return
          endif
