@@ -1499,7 +1499,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         for i in range(1,max_jamp+1):
             name = JAMP_format % i
-            res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
+            if not jamp_res[i]:
+                res_list.append(" %s = 0d0" %(name))
+            else:
+                res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
 
         return res_list, len(defs)
 

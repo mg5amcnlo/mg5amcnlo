@@ -101,7 +101,7 @@ C     Amplitude(s) for UVCT diagram with ID 40
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 41
       CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(1,81))
-      AMPL(1,81)=AMPL(1,81)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
+      AMPL(1,81)=AMPL(1,81)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1+2.0D0
      $ *UVWFCT_T_0)
 C     Amplitude(s) for UVCT diagram with ID 42
       CALL FFV1_0(W(1,4),W(1,6),W(1,2),GC_5,AMPL(2,82))
@@ -109,7 +109,7 @@ C     Amplitude(s) for UVCT diagram with ID 42
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 43
       CALL FFV1_0(W(1,4),W(1,6),W(1,2),GC_5,AMPL(1,83))
-      AMPL(1,83)=AMPL(1,83)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
+      AMPL(1,83)=AMPL(1,83)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1+2.0D0
      $ *UVWFCT_T_0)
 C     Amplitude(s) for UVCT diagram with ID 44
       CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMPL(2,84))
@@ -117,7 +117,7 @@ C     Amplitude(s) for UVCT diagram with ID 44
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 45
       CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMPL(1,85))
-      AMPL(1,85)=AMPL(1,85)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
+      AMPL(1,85)=AMPL(1,85)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1+2.0D0
      $ *UVWFCT_T_0)
 C     At this point, all UVCT amps needed for (QCD=6), i.e. of split
 C      order ID=1, are computed.

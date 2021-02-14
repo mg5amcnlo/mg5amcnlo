@@ -1735,6 +1735,9 @@ class Applenotification(object):
             self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
         except:
             self.working=False
+            if which('osascript'):
+                self.working = 'osascript'
+            return
         self.working=True
 
     def __call__(self,subtitle, info_text, userInfo={}):
@@ -1743,18 +1746,27 @@ class Applenotification(object):
             self.load_notification()
         if not self.working:
             return
-        try:
-            notification = self.NSUserNotification.alloc().init()
-            notification.setTitle_('MadGraph5_aMC@NLO')
-            notification.setSubtitle_(subtitle)
-            notification.setInformativeText_(info_text)
+        elif self.working is True:
             try:
-                notification.setUserInfo_(userInfo)
+                notification = self.NSUserNotification.alloc().init()
+                notification.setTitle_('MadGraph5_aMC@NLO')
+                notification.setSubtitle_(subtitle)
+                notification.setInformativeText_(info_text)
+                try:
+                    notification.setUserInfo_(userInfo)
+                except:
+                    pass
+                self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
             except:
                 pass
-            self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
-        except:
-            pass        
+
+        elif self.working=='osascript':
+            try:
+                os.system("""
+              osascript -e 'display notification "{}" with title "MadGraph5_aMC@NLO" subtitle "{}"'
+              """.format(info_text, subtitle))
+            except:
+                pass
         
 
 

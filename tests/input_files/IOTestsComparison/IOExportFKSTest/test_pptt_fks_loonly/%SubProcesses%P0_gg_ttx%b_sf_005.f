@@ -109,7 +109,7 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8  CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
       COMPLEX*16 TMP_JAMP(0)
 C     
@@ -122,10 +122,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/3/
-      DATA (CF(I,  1),I=  1,  2) /   16,    6/
-      DATA DENOM(2)/3/
-      DATA (CF(I,  2),I=  1,  2) /   -2,    6/
+      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00
+     $ ,2.000000000000000D+00/
+      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+     $ ,2.000000000000000D+00/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -148,7 +148,7 @@ C     ----------
         DO J = 1, NCOLOR2
           ZTEMP = ZTEMP + CF(J,I)*JAMP2(J)
         ENDDO
-        B_SF_005 =B_SF_005+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)
+        B_SF_005 =B_SF_005+ZTEMP*DCONJG(JAMP1(I))
       ENDDO
       END
 
