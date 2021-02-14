@@ -149,7 +149,7 @@ C
       DATA IC /NEXTERNAL*1/
       REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS)
-      COMPLEX*16 TMP_JAMP(9)
+      COMPLEX*16 TMP_JAMP(10)
 C     
 C     COLOR DATA
 C     
@@ -236,15 +236,16 @@ C     Amplitude(s) for diagram number 16
       CALL FFV1_0(W(1,4),W(1,3),W(1,11),GC_11,AMP(16))
       CALL FFV1_0(W(1,4),W(1,3),W(1,7),GC_11,AMP(17))
       CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_11,AMP(18))
+      TMP_JAMP(3) = AMP(15) + (1) * AMP(16)  ! used 4 times
+      TMP_JAMP(2) = AMP(1) + (1) * AMP(18)  ! used 4 times
       TMP_JAMP(1) = AMP(12) + (-1) * AMP(17)  ! used 4 times
-      TMP_JAMP(3) = AMP(1) + (1) * AMP(18)  ! used 3 times
-      TMP_JAMP(2) = AMP(15) + (1) * AMP(16)  ! used 3 times
+      TMP_JAMP(10) = TMP_JAMP(3) + (-1) * TMP_JAMP(2)  ! used 2 times
       TMP_JAMP(9) = TMP_JAMP(1) + ((-0+1*IMAG1)) * AMP(11)  ! used 2 times
-      TMP_JAMP(8) = TMP_JAMP(3) + (-1) * TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(8) = TMP_JAMP(2) + (-1) * TMP_JAMP(1)  ! used 2 times
       TMP_JAMP(7) = TMP_JAMP(1) + (-1*IMAG1) * AMP(10)  ! used 2 times
-      TMP_JAMP(6) = TMP_JAMP(2) + (-1) * TMP_JAMP(1)  ! used 2 times
-      TMP_JAMP(5) = TMP_JAMP(3) + (-1*IMAG1) * AMP(3)  ! used 2 times
-      TMP_JAMP(4) = TMP_JAMP(2) + ((-0+1*IMAG1)) * AMP(5)  ! used 2 times
+      TMP_JAMP(6) = TMP_JAMP(3) + (-1) * TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(5) = TMP_JAMP(2) + (-1*IMAG1) * AMP(3)  ! used 2 times
+      TMP_JAMP(4) = TMP_JAMP(3) + ((-0+1*IMAG1)) * AMP(5)  ! used 2 times
       JAMP(1) = (-1)*AMP(6)+(1)*TMP_JAMP(4)+(-1)*TMP_JAMP(5)
       JAMP(2) = (-1)*AMP(4)+(-1)*TMP_JAMP(4)+(1)*TMP_JAMP(9)
       JAMP(3) = (-1)*AMP(13)+(1)*TMP_JAMP(5)+(-1)*TMP_JAMP(7)
@@ -252,8 +253,8 @@ C     Amplitude(s) for diagram number 16
      $ *TMP_JAMP(6)
       JAMP(5) = (1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(11)+(-1)*AMP(14)+(1)
      $ *TMP_JAMP(8)
-      JAMP(6) = (-1)*AMP(1)+(-1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(8)+(-1)
-     $ *AMP(9)+(1)*AMP(15)+(1)*AMP(16)+(-1)*AMP(18)
+      JAMP(6) = (-1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(8)+(-1)*AMP(9)+(1)
+     $ *TMP_JAMP(10)
       MATRIX_1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)

@@ -1,5 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.2(14/02/21)
+      MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
+        The generation of tau was not taking into account the information.
+      OM: fix an issue when running with python3 where the normalization of pythia8 file were wrong
+          when pythia8 was run in parralel.
+      OM: Fix some wrong scale variation at NLO+PS (introduced in 2.9.0)
+      OM: Fix loop-induced which was not working anymore
+      OM: Fix an issue with the installation of pythia-pgs
+      
+
 2.9.1.2 (02/02/21)
       Kiran+OM: Fixing issue for the MSSM model
       OM: Fixing issue with mac support

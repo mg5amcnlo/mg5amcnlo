@@ -196,7 +196,6 @@ C ----------
       glu_ij = ij_values(nfksprocess)
       BORN = 0d0
       BORNTILDE = (0d0,0d0)
-      back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
       if (glu_ij.ne.0) then

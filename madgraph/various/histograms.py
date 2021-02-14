@@ -1814,8 +1814,9 @@ class HwUList(histograms_PhysicsObjectList):
                     all_weights[-1][property[0].strip()] = property[1].strip()
                 elif len(property)==1:
                     all_weights[-1][property[0].strip()] = None
-                else:
-                    raise MadGraph5Error("The weight label property %s could not be parsed."%wgt_item)
+                #else:
+                #    misc.sprint(all_weights)
+                #    raise MadGraph5Error("The weight label property %s could not be parsed."%wgt_item)
         
         # Now make sure that for all weights, there is 'PDF', 'MUF' and 'MUR' 
         # and 'MERGING' defined. If absent we specify '-1' which implies that

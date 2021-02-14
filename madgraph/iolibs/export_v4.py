@@ -1499,8 +1499,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         for i in range(1,max_jamp+1):
             name = JAMP_format % i
-            res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
-            
+            if not jamp_res[i]:
+                res_list.append(" %s = 0d0" %(name))
+            else:
+                res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
+
         return res_list, len(defs)
 
     def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
@@ -1514,13 +1517,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         if not nb_line:
             for i,j in all_element:
-                if i > nb_line:
+                if i+1 > nb_line:
                     nb_line = i+1
-                if j> nb_col:
-                    nb_col = j+1
-        
-        #misc.sprint(nb_line, nb_col)
-        
+                if j+1> nb_col:
+                    nb_col = j+1      
 
         max_count = 0
         all_index = []
@@ -1535,7 +1535,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     if not R:
                         continue
                     
-                    #misc.sprint(j1,j2)
                     operation[(j1,j2)][R] +=1 
                     if operation[(j1,j2)][R] > max_count:
                         max_count = operation[(j1,j2)][R]
@@ -5622,7 +5621,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_driver(writers.FortranWriter(filename),ncomb,
                                   n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
-        self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
+        try:
+            self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
+        except KeyError:
+            self.proc_characteristic['hel_recycling'] = False
+            self.opt['hel_recycling'] = False
         for ime, matrix_element in \
                 enumerate(matrix_elements):
             if self.opt['hel_recycling']:

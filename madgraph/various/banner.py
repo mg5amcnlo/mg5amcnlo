@@ -1001,6 +1001,10 @@ class ConfigFile(dict):
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput, **opt)
 
+
+
+
+
     def default_setup(self):
         pass
 
@@ -1760,6 +1764,11 @@ class PY8Card(ConfigFile):
         
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
+
+    def __copy__(self):
+        newone = type(self)(dict(self))
+        newone.__dict__.update(self.__dict__)
+        return newone
 
     def add_param(self, name, value, hidden=False, always_write_to_card=True, 
                                                                   comment=None):
@@ -2961,7 +2970,7 @@ class RunCardLO(RunCard):
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3,4,-4],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,4,-4],
-                       comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
+                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,

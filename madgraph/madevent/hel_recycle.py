@@ -202,6 +202,7 @@ class External(MathsObject):
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
         self.hel = int(self.args[2])
+        self.mg = int(arguments[0].split(',')[-1][:-1])
         self.hel_ranges = []
         self.raise_num()
 
@@ -254,7 +255,6 @@ class External(MathsObject):
             sols = [[]]
             for leg, wavs in cls.wavs_same_leg.items():
                 valid = []
-                #misc.sprint(wavs)
                 for wav in wavs:
                     if comb[leg] == wav.hel:
                         valid.append(wav)
@@ -368,14 +368,10 @@ class Amplitude(MathsObject):
     def get_number(cls, *args):
         wavs, graph = args
         amp_num = -1
-        exts = graph.external_wavs
-        for i, comb in enumerate(External.good_wav_combs):
-            if set(comb) == set(cls.ext_deps):
-                # Offset because Fortran counts from 1
-                amp_num = i + 1
-        if amp_num < 1:
-            print('Failed to find amp_num')
-            exit(1)
+        exts = graph.external_wavs        
+        hel_amp = tuple([w.hel for w in sorted(cls.ext_deps, key=lambda x: x.mg)])
+        amp_num  = External.map_hel[hel_amp] +1 # Offset because Fortran counts from 1
+
         if cls.max_amp_num < amp_num:
             cls.max_amp_num = amp_num 
         return amp_num  
@@ -487,7 +483,6 @@ class HelicityRecycler():
     def add_amp_index(self, matchobj):
         old_pat = matchobj.group()
         new_pat = old_pat.replace('AMP(', 'AMP( %s,' % self.loop_var)
-        #misc.sprint(self.loop_var, old_pat)
         
         #new_pat = f'{self.loop_var},{old_pat[:-1]}{old_pat[-1]}'
         return new_pat
@@ -641,6 +636,7 @@ class HelicityRecycler():
             else:
                 External.good_hel = self.all_hel
 
+            External.map_hel=dict([(hel,i) for i,hel in  enumerate(External.good_hel)])
             External.hel_ranges = [set() for hel in External.good_hel[0]]
             for comb in External.good_hel:
                 for i, hel in enumerate(comb):
@@ -788,6 +784,8 @@ def apply_args(old_line, all_the_args):
     return ''.join(new_lines)
 
 def split_amps(line, new_amps):
+    if not new_amps:
+        return ''
     fct = line.split('(',1)[0].split('_0')[0]
     for i,amp in enumerate(new_amps):
         if i == 0:

@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
 import glob
 import logging
 import os
@@ -3174,13 +3175,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             for index, denominator in \
                 enumerate(color_matrix.get_line_denominators()):
                 # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+                #ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
-                num_list = color_matrix.get_line_numerators(index, denominator)    
+                num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))  
             return ret_list
 
     #===========================================================================
