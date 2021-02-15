@@ -59,6 +59,7 @@ import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
+from models import UFOError
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -908,7 +909,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             try:
                 with misc.MuteLogger(['madgraph.models'], [60]):
                     aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
-            except ImportError:
+            except (ImportError, UFOError):
                 aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
