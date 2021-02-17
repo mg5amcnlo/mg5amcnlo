@@ -259,7 +259,7 @@ enddo
 
 do i = 1, nsqampso
     if (keep_order(i)) then
-     ANS_SUMMED = ans_summed + ANS(1,I)
+     ANS_SUMMED = ans_summed + ANS(1,I) / iden
      do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
      enddo
