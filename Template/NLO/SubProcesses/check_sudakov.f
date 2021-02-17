@@ -21,7 +21,7 @@ C
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3,100)
-      double precision p_born(0:3,nexternal-1)
+      double precision p_born(0:3,nexternal-1),p_born_first(0:3,nexternal-1)
       common/pborn/p_born
       double precision pswgt
       double precision fks_double, fks_single
@@ -50,7 +50,7 @@ cc
       include 'coupl.inc'
       include 'q_es.inc'
       integer nsqso,MLResArrayDim
-      double precision pmass(nexternal), pmass_rambo(100)
+      double precision pmass(nexternal), pmass_first(nexternal), pmass_rambo(100)
       integer nfail
       logical first_time
       data first_time/.TRUE./
@@ -84,11 +84,13 @@ cc
        INTEGER  SDK_GET_NCOMB
        external SDK_GET_NCOMB
        double complex BORN_HEL_MAX(amp_split_size), BORN_HEL(amp_split_size) 
-       logical debug 
+       logical debug
+       common/ew_debug/debug 
        double precision s,t,u,invm2_04
        external invm2_04
        INTEGER HELS(NEXTERNAL-1)
        double precision invarianti((NEXTERNAL-1)*(NEXTERNAL-2)/2)
+       double precision invariantifirst((NEXTERNAL-1)*(NEXTERNAL-2)/2)
        logical   printinewsdkf
        common /to_printinewsdkf/printinewsdkf
        integer   deb_settozero
@@ -114,22 +116,36 @@ c      COMMON/USERCHOICE/USERHEL
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
 
-      REAL*8 virthel(0:3,0:ANS_DIMENSION)
+       REAL*8        virthel(0:3,0:ANS_DIMENSION), born_leadhel(0:ANS_DIMENSION),
+     .               virt_leadhel(0:ANS_DIMENSION),sud_leadhel(0:ANS_DIMENSION),
+     .               born_allhel(0:ANS_DIMENSION),
+     .               virt_allhel(0:ANS_DIMENSION),sud_allhel(0:ANS_DIMENSION)      
 
       integer maximumtries, tries
+      logical first_time_momenta
+      double precision trimomsquared, energy_increase_factor,min_inv_frac,
+     .                 tolerance_next_point,frac_lead_hel
 
 C-----
 C  BEGIN CODE
 C-----  
 
       tries=0
-      maximumtries=20000
+      maximumtries=20000000
+      energy_increase_factor=2.5d0
+c Set a number that is possible. E.g. > 0.5d0 for a 2->2 
+      min_inv_frac=1d0/3.5d0
+      tolerance_next_point=1d-3
+      frac_lead_hel=1d-3
 
 c Do not change deb_settozero here
       deb_settozero=0
       printinewsdkf=.False.
       
-      debug=.True.
+c      debug=.True.
+      debug=.False.
+
+      first_time_momenta=.True.
 
       force_polecheck = .true.
       if (first_time) then
@@ -166,7 +182,7 @@ c     Set the energy to be characteristic of the run
       enddo
       energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
 
-      energy=1d3
+      energy=1d4
 c     In check_sa: Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
 c     Here: QES2=energy**2 is mandatory, ren_scale?
@@ -237,6 +253,9 @@ c initialization
           single=0d0
           double=0d0
           calculatedborn = .false.
+
+          if (.not.first_time_momenta) goto 201
+
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
      1         pmass_rambo, prambo)
@@ -297,7 +316,50 @@ c initialization
 
 c----------
 
+201   continue
 
+      if(first_time_momenta) then
+          do j = 0, 3
+            do k = 1, nexternal-1
+              p_born_first(j,k) = p_born(j,k)
+              pmass_first(k)=pmass(k)
+            enddo
+          enddo
+       else
+          energy=0d0
+          do k = nincoming+1, nexternal-1 
+            trimomsquared=0d0
+            do j = 1, 3
+              p_born(j,k) = p_born_first(j,k)*energy_increase_factor
+              trimomsquared=trimomsquared+p_born(j,k)**2
+            enddo
+            p_born(0,k)=dsqrt(pmass_first(k)**2+trimomsquared)
+            energy=energy+p_born(0,k)
+          enddo
+                            p_born(0,1) = energy/2d0
+                  p_born(1,1) = 0d0
+                  p_born(2,1) = 0d0
+                  p_born(3,1) = energy/2d0
+                  if (pmass(1) > 0d0)
+     1               p_born(3,1) = dsqrt(energy**2/4d0 - pmass(1)**2)
+                  p_born(0,2) = energy/2
+                  p_born(1,2) = 0d0
+                  p_born(2,2) = 0d0
+                  p_born(3,2) = -energy/2d0
+                  if (pmass(2) > 0d0)
+     1               p_born(3,2) = -dsqrt(energy**2/4d0 - pmass(1)**2)
+ 
+          do j = 0, 3
+            do k = 1, nexternal-1
+              p_born_first(j,k) = p_born(j,k)
+              pmass_first(k)=pmass(k)
+            enddo
+          enddo
+
+
+
+
+      endif 
 
 
 
@@ -310,78 +372,124 @@ c----------
       endif
       k=0
 
-c      WRITE (*,*) "s=",s 
+
       do i=1,nexternal-1
        do j=i+1, nexternal-1
-c         WRITE (*,*) "(p_",i,"+p_",j,")^2/s=",invm2_04(p_born(0,i),p_born(0,j),1d0)/s
          k=k+1         
          if(i.le.2.and.j.ge.3) then
           invarianti(k)=invm2_04(p_born(0,i),p_born(0,j),-1d0)
           else
           invarianti(k)=invm2_04(p_born(0,i),p_born(0,j),1d0)
          endif       
-c UNCOMMENT FOR A MINIMUM VALUES OF INVARIANTS 
-c         if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s/(dble(nexternal)-3d0+0.5d0)) then
-c          WRITE (*,*) "(p_",i,"+p_",j,")^2 is too small compared to s, 
-c     .    so regenerate momenta"
-c UNCOMMENT FOR KEEPING A FIXED t/s VALUE
-         if (abs(t)/s.gt.0.05d0+1d-3.or.abs(t)/s.lt.0.05d0-1d-3) then
-c          WRITE (*,*) " t is not what we want 
-c     .    so regenerate momenta"
-          tries=tries+1
-          if (tries.gt.maximumtries) then
-            write(*,*), "after doing more than ", maximumtries, "tries, the good PS point was not found
+
+
+
+         if (first_time_momenta) then
+
+           invariantifirst(k)=invarianti(k)
+
+           if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s*min_inv_frac) then
+            tries=tries+1
+            if (tries.gt.maximumtries) then
+              write(*,*), "after doing more than ", maximumtries, "tries, the good first PS point was not found
      ."
-            stop
-          else
-            goto 200
-          endif
-         endif
+              stop
+            else
+              goto 200
+            endif
+           endif
+
+         else
+
+
+
+           if (abs(invarianti(k)/s-invariantifirst(k)/invariantifirst(1)).gt.tolerance_next_point) then
+              write(*,*), "A good similar PS point was not found, try to increase tolerance_next_point
+     ."
+
+              print*, "invarianti=",invarianti
+              print*, "invariantifirst=",invariantifirst
+           
+              stop
+           endif
+
+         endif        
+
+
        enddo
       enddo   
 
-      write(*,*), "after doing", tries, "tries, the good PS point was found
-     ."
-      tries=0
 
-      OPEN(90, FILE='PS.input', ACTION='WRITE')
+
+     
+      if(first_time_momenta) then
+
+
+        write(*,*), "After doing", tries, "tries, the good PS point was found
+     ."
+        tries=0
+
+        OPEN(90, FILE='PS.input', ACTION='WRITE')
       
  
-      do l=1,nexternal-1
+        do l=1,nexternal-1
       
-       write (90,*) P_born(0,l),P_born(1,l),P_born(2,l),P_born(3,l)
+         write (90,*) P_born(0,l),P_born(1,l),P_born(2,l),P_born(3,l)
 
-       do k=0,3
-        if(debug) WRITE (*,*) "p(",k,",",l,")=",p_born(k,l)
-       enddo
-        if(debug) WRITE (*,*) " "
-      enddo
+         do k=0,3
+          if(debug) WRITE (*,*) "p(",k,",",l,")=",p_born(k,l)
+         enddo
+          if(debug) WRITE (*,*) " "
+        enddo
 
       CLOSE(90)
 
 
+      first_time_momenta=.False.
+
+      endif
 
 
 
 c----------
 
+         OPEN(73, FILE='Sud_Approx.dat', ACTION='WRITE')
+         write(73,*), "energy    ", "helicity     ", "loop/born     ",
+     .            "sud/born     ", "(loop-sud)/born     "
+
+
 
           CALL UPDATE_AS_PARAM()
           total_hel=SDK_GET_NCOMB()
           chosen_hel=0
+          EWSUD_HELSELECT=chosen_hel
           call sborn(p_born, born)
           amp_split_born(:) = amp_split(:)
           call sudakov_wrapper(p_born)
           call BinothLHA(p_born, born, virt_wgt)
+          call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
+     $ ,RET_CODE)
           do iamp = 1, amp_split_size
             if (amp_split_born(iamp).eq.0) cycle
-              write(*,*) 'SPLITORDER', iamp
-              write(*,*) 'BORN: ', amp_split_born(iamp)
-c               if (amp_split_born(iamp).eq.0) cycle
-              write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
-              write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
-              write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/amp_split_born(iamp)
-              write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+              if(debug) then
+                write(*,*) 'SUMMED OVER HELICITIES'
+                write(*,*) 'SPLITORDER', iamp
+                write(*,*) 'BORN: ', amp_split_born(iamp)
+                write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/amp_split_born(iamp)
+                write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
+                write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/amp_split_born(iamp)
+                write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN(iamp)
+              endif
+
+              write(73,*), energy, "    summed", dble(virthel(1,iamp)/AMP_SPLIT_BORN(iamp)/2d0 /4d0),
+     .        dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN(iamp)),
+     .        dble((virthel(1,iamp)/2d0 /4d0
+     .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .        +AMP_SPLIT_EWSUD_PAR(iamp)))/
+     .        AMP_SPLIT_BORN(iamp))
+
+
 
           enddo
 
@@ -389,44 +497,91 @@ c               if (amp_split_born(iamp).eq.0) cycle
           do iamp = 1, amp_split_size
             BORN_HEL_MAX(iamp)= (0D0,0D0)
           enddo
+
           do chosen_hel=1,total_hel
-             write(*,*) 'HELICITY CONFIGURATION NUMBER ', chosen_hel
+             if(debug) write(*,*) 'HELICITY CONFIGURATION NUMBER ', chosen_hel
              EWSUD_HELSELECT=chosen_hel
 c             call sudakov_wrapper(p_born)
+
+
+
              call sdk_get_hels(chosen_hel, hels)
              do iamp = 1, amp_split_size
-              CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+
+               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+!!!!!!!!!!! METTI A POSTO!!!!!! born_hel non deve essere un array !!!!!i
+!!!!!!! funziona solo perche' abbiamo uno spilt order solo!!!!!!!!
+!!!!!!!DEBUG
+               if(debug) then
+                 call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
+     $ ,RET_CODE)
+
+                 call sudakov_wrapper(p_born)
+
+                 if (chosen_hel.eq.1) then
+                     born_allhel(iamp)=(0d0,0d0)
+                     virt_allhel(iamp)=(0d0,0d0)
+                     sud_allhel(iamp)=(0d0,0d0)
+                 endif
+
+                 born_allhel(iamp)=born_allhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
+                 virt_allhel(iamp)=virt_allhel(iamp)+virthel(1,iamp)/2d0 /4d0
+                 sud_allhel(iamp)=sud_allhel(iamp)+(amp_split_ewsud_lsc(iamp)+
+     .                            amp_split_ewsud_ssc(iamp)+
+     .                            amp_split_ewsud_xxc(iamp)+
+     .                            AMP_SPLIT_EWSUD_PAR(iamp))
+
+
+
+                 if (chosen_hel.eq.total_hel) then
+                    write(73,*), energy,
+     .              "all hel summed",
+     .              dble(virt_allhel(iamp)/born_allhel(iamp)),
+     .              dble(sud_allhel(iamp)/born_allhel(iamp)),
+     .              dble((virt_allhel(iamp)-sud_allhel(iamp))/born_allhel(iamp)), born_allhel(iamp)
+                 endif
+
+               endif
+!!!!!!!DEBUG
+
               if ( BORN_HEL(iamp).eq.0) cycle
                 
                  if(abs(BORN_HEL_MAX(iamp)).lt.abs(BORN_HEL(iamp))) then
                     BORN_HEL_MAX(iamp)=BORN_HEL(iamp)
                  endif
 
-                 call sudakov_wrapper(p_born)
- 
-                 write(*,*) 'SPLITORDER', iamp
-                 write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
 
-                 write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                 if(debug) then 
+                   write(*,*) 'SPLITORDER', iamp
+                   write(*,*) 'BORN: ', AMP_SPLIT_BORN_ONEHEL(iamp)
 
-                 write(*,*) ' '
+                   write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
+                   write(*,*) ' '
+
+                 endif
+
              enddo
           enddo
 
-          write(*,*) 'NOW ONLY DOMINANT HELICITIES'
-          write(*,*) ''
+
+
+
+
+
+
+          if(debug) write(*,*) 'NOW ONLY DOMINANT HELICITIES'
+          if(debug) write(*,*) ''
        
 
           OPEN(70, FILE='Lead_Hel.dat', ACTION='WRITE') 
           OPEN(71, FILE='Born_Sud.dat', ACTION='WRITE')
           OPEN(72, FILE='NonDiag_structure.dat', ACTION='WRITE')
-          OPEN(73, FILE='Sud_Approx.dat', ACTION='WRITE')
 
-          write(73,*), "energy    ", "helicity     ", "loop/born       ",
-     .            "sud/born     ", "(loop-sud)/born     "          
+
 
 
           WRITE (70,*) , invarianti
@@ -445,8 +600,8 @@ c             call sudakov_wrapper(p_born)
 
 
           do iamp = 1, amp_split_size
-            write(*,*) 'DOMINANT HELICITIES FOR iamp=',iamp
-            write(*,*) ''
+            if(debug) write(*,*) 'DOMINANT HELICITIES FOR iamp=',iamp
+            if(debug) write(*,*) ''
             WRITE (70,*) , iamp       
             WRITE (71,*) , iamp
             WRITE (72,*) , iamp
@@ -457,9 +612,19 @@ c             call sudakov_wrapper(p_born)
      .                        amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)+
      .                        AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
+            born_leadhel(iamp)=(0d0,0d0)
+            virt_leadhel(iamp)=(0d0,0d0)
+            sud_leadhel(iamp)=(0d0,0d0)
+
             do chosen_hel=1,total_hel
 
 c Change deb_settozero here if you need
+c deb_settozero: if it is 0 keeps everything, otherwise only the following NON_DIAGONAL contributions are kept for each deb_settozero value
+ccc             1      ---> all the SSC non_diagonal
+ccc             10     ---> LSC non_diagonal
+ccc             100    ---> xxC non_diagonal
+ccc             111    ---> all non_diagonal
+
               deb_settozero=0
 
               printinewsdkf=.False.
@@ -469,25 +634,28 @@ c              call sudakov_wrapper(p_born)
               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
 
 
-c              print*, "confronto", AMP_SPLIT_BORN_ONEHEL(iamp), born_hel(iamp)
-c              if (AMP_SPLIT_BORN_ONEHEL(iamp).ne.born_hel(iamp)) then
-c                 print*, "non va bene"
-c                 stop
-c              endif
 
 
-              print*,"look into hel number",chosen_hel 
+
+
+
+
+
+              if(debug) print*,"look into hel number",chosen_hel,
+     .        "It is ",
+     .         abs(BORN_HEL(iamp))/abs(BORN_HEL_MAX(iamp)),
+     .        "of BORN_HEL_MAX"
+
               if (abs(BORN_HEL_MAX(iamp)).NE.0d0  
-c     .        .AND.    abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) 
-     .        .AND.    abs(BORN_HEL(iamp)).GT.1d-3*abs(BORN_HEL_MAX(iamp))) 
+     .        .AND.    abs(BORN_HEL(iamp)).GT.frac_lead_hel*abs(BORN_HEL_MAX(iamp))) 
      .             then 
 
 
 
 
-                    printinewsdkf=.True. 
-                    write(*,*) 'HEL LEADCONF =',chosen_hel 
-                    write(*,*) '    '
+                    if (debug) printinewsdkf=.True. 
+                    if(debug) write(*,*) 'HEL LEADCONF =',chosen_hel 
+                    if(debug) write(*,*) '    '
                     call sudakov_wrapper(p_born) 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -496,14 +664,14 @@ c     .        .AND.    abs(AMP_SPLIT_BORN_ONEHEL(iamp)).GT.1d-3*abs(BORN_HEL_MA
 
 
 
-                    write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
+                    if(debug) write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
 cc deb_settozero: if it is 0 keeps everything, otherwise only the following NON_DIAGONAL contributions are kept for each deb_settozero value
 ccc             1      ---> all the SSC non_diagonal
 ccc             10     ---> LSC non_diagonal
 ccc             100    ---> xxC non_diagonal
 ccc             111    ---> all non_diagonal
 
-                    if(deb_settozero.eq.1.or.deb_settozero.eq.111) then
+                    if(deb_settozero.eq.1.or.deb_settozero.eq.111.and.debug) then
 
 
 
@@ -515,62 +683,64 @@ ccc             111    ---> all non_diagonal
      .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s)*(1-t/u))
                        write(*,*),'s= ',s ,'t= ', t, "u =", u, "(t/u)=" , (t/u)
 
-                    F2t=(u/s*dlog(dabs(t)/s)+t/s*dlog(dabs(u)/s))
-                    F1t=(t/s*dlog(dabs(t)/s)+u/s*dlog(dabs(u)/s))
-                      Write(*,*),"F1t= ",F1t, "F2t=",F2t
-                    
-                      write(*,*) 'F1t F2 test AZ',
-     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F1t-8.09*F2t))
-c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F2t-8.09*F1t),
-c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+8.09*F2t)/F1t,
-c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-17.0*F1t)/F2t
-                      write(*,*) 'F1t F2 test ZZ',
-     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F1t-45.4*F2t))
-c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F2t-45.4*F1t),
-c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))+45.4*F2t)/F1t,
-c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))-25.1*F1t)/F2t
+c                    F2t=(u/s*dlog(dabs(t)/s)+t/s*dlog(dabs(u)/s))
+c                    F1t=(t/s*dlog(dabs(t)/s)+u/s*dlog(dabs(u)/s))
+c                      Write(*,*),"F1t= ",F1t, "F2t=",F2t
+c                    
+c                      write(*,*) 'F1t F2 test AZ',
+c     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F1t-8.09*F2t))
 
-                      write(*,*) 'F1t test AA',
-     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(F1t))
+
+
+c                      write(*,*) 'F1t F2 test ZZ',
+c     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F1t-45.4*F2t))
+
+
+
+
+c                      write(*,*) 'F1t test AA',
+c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(F1t))
 
                     endif
 
                     
 
 
-                    if(deb_settozero.eq.10.or.deb_settozero.eq.111) then
+                    if(deb_settozero.eq.10.or.deb_settozero.eq.111.and.debug) then
                       write(*,*) 'LSC Non diag-->',
      .                (amp_split_ewsud_lsc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(bigL(s))
                     endif
 
-                    if(deb_settozero.eq.100.or.deb_settozero.eq.111) then
+                    if(deb_settozero.eq.100.or.deb_settozero.eq.111.and.debug) then
                       write(*,*) 'xxC Non diag-->',
      .                (amp_split_ewsud_xxc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))
                     endif
 
 
 
-                 write(*,*) '    '
+                 if(debug)  write(*,*) '    '
            
                     write(*,*) 'BORN for HEL LEADCONF ',chosen_hel,' = ', AMP_SPLIT_BORN_ONEHEL(iamp)
 
-                 if(deb_settozero.ne.0) write(*,*) ' !!!!!!SUDAKOV/BORN!!!! is !!!! wrong !!!.
+                 if(deb_settozero.ne.0.and.debug) write(*,*) ' !!!!!!SUDAKOV/BORN!!!! is !!!! wrong !!!.
      .                     You have to set deb_settozero to zero'
-                 write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
 
-                 write(*,*) 'PAR/ls', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/smallL(s)
+                 if(debug) then
+                   write(*,*) 'SUDAKOV/BORN: LSC', amp_split_ewsud_lsc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+
+                   write(*,*) 'PAR/ls', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/smallL(s)
 
 
-                  write(*,*) '     '
-                 write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
+                   write(*,*) '     '
+                   write(*,*) 'SUDAKOV/BORN for HEL CONF ',chosen_hel,
      .           ' = ',(amp_split_ewsud_lsc(iamp)+
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
      .                  AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)
-
+                 endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! END: to be at some point removed or modified  !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -589,19 +759,25 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
                  call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
 
-                   
+                 born_leadhel(iamp)=born_leadhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
+                 virt_leadhel(iamp)=virt_leadhel(iamp)+virthel(1,iamp)/2d0 /4d0   
+                 sud_leadhel(iamp)=sud_leadhel(iamp)+(amp_split_ewsud_lsc(iamp)+
+     .                  amp_split_ewsud_ssc(iamp)+
+     .                  amp_split_ewsud_xxc(iamp)+
+     .                  AMP_SPLIT_EWSUD_PAR(iamp))
 
-                 print*, 'virthel/born/2  and / 4  for HEL LEADCONF ',
-     .                chosen_hel,' = ', virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0
-                  write(*,*) '     '
-                 print*, 'PREC_FOUND=', PREC_FOUND, 'RET_CODE=', RET_CODE
+                 if(debug) print*, 
+     .            'virthel/born/2  and / 4  for HEL LEADCONF ',
+     .            chosen_hel,' = ', virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0
+                 if(debug) write(*,*) '     '
+                 if(debug) print*, 'PREC_FOUND=', PREC_FOUND, 
+     .            'RET_CODE=', RET_CODE
 
+                
 
-
-                 write(*,*) '    '
+                 if(debug) write(*,*) '    '
 
 !   the division by 4 comes from the 4 possible polarization of the massless initial state of 2 -> n
-
                   write(73,*), energy, chosen_hel, dble(virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
      .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
@@ -609,6 +785,7 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp)) 
+c                  write (73,*) "invarianti/s=",invarianti/invarianti(1)
                   if(deb_settozero.ne.0) write(73,*), "Set deb_settozero to zero if you want sensible resutls here
      ."
                   if(sud_mod.ne.2) write(73,*), "Set sud_mod to 2 in ewsudakov_functions.f if you want sensible resutls here
@@ -618,11 +795,22 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
 
               endif
             enddo
+
+            if (born_leadhel(iamp).ne.0d0) then 
+              write(73,*), energy, 
+     .        "lead hel summed",
+     .         dble(virt_leadhel(iamp)/born_leadhel(iamp)),
+     .         dble(sud_leadhel(iamp)/born_leadhel(iamp)),  
+     .         dble((virt_leadhel(iamp)-sud_leadhel(iamp))/born_leadhel(iamp)), born_leadhel(iamp)
+            endif
+
           enddo
 
           CLOSE(70)
           CLOSE(71)
           CLOSE(72)
+
+
 
 
 
@@ -640,7 +828,7 @@ c     .                ((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/
 
 
 
-          write(*,*) 'blocco qui la cosa'
+          if(debug) write(*,*) 'I go to the next point'
 c          return    
 
 
@@ -680,7 +868,7 @@ C         Otherwise, perform the check
           write(*,*)
 
 !modify here to increment energy next point
-          energy=energy*(10d0)**(3d0/4d0)
+c          energy=energy
           ren_scale = energy!/2.0d0
           QES2=energy**2
 
