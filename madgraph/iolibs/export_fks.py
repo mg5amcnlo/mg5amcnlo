@@ -1995,6 +1995,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # finally the matrix elements needed for the sudakov approximation
         # of ew corrections. 
         # First, the squared amplitudes involving the goldstones
+        filename = 'has_ewsudakov.inc'
+        self.write_has_ewsudakov(writers.FortranWriter(filename), matrix_element.ewsudakov)
+
+
         for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] == 'goldstone']):
             filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
             self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
@@ -2786,6 +2790,22 @@ Parameters              %(params)s\n\
         
         # Write the file
         writer.writelines(file)
+    
+        return 
+
+
+
+    def write_has_ewsudakov(self, writer, has_sudakov):
+        """Write the include file which tells whether the process
+        has been generated with or without Sudakov matrix elements
+        """
+
+        bool_dict = {True: '.true.', False: '.false.'}
+        text = "      logical has_ewsudakov\n      parameter (has_ewsudakov=%s)\n" % \
+                bool_dict[has_sudakov]
+        
+        # Write the file
+        writer.writelines(text)
     
         return 
 

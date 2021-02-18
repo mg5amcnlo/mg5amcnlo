@@ -733,6 +733,7 @@ class FKSHelasProcess(object):
                 self.virt_matrix_element = None
 
             self.sudakov_matrix_elements = []
+            self.ewsudakov = fksproc.ewsudakov
             for amp in fksproc.sudakov_amps:
                 sudakov_dict = {}
                 for key in amp.keys():

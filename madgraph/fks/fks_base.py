@@ -594,6 +594,7 @@ class FKSProcess(object):
                 self.find_reals()
 
             # if ewsudakov is true, then look for the corresponding matrix elements
+            self.ewsudakov = ewsudakov
             if ewsudakov:
                 self.sudakov_amps = sudakov.get_sudakov_amps(self.born_amp)
 

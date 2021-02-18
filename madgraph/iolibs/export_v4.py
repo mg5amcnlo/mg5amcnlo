@@ -6301,7 +6301,9 @@ class UFO_model_to_mg4(object):
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
         if self.opt['mp']:
+            fsock.writelines("if (updateloop) then\n")
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
+            fsock.writelines("endif\n")
         
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 

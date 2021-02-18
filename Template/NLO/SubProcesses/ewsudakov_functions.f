@@ -9,6 +9,15 @@
        DATA sud_mod/ 2 / 
        END    
 
+C filter hel: if set to true, helicities which do not contribute
+C at the Born are skipped 
+       BLOCK DATA sud_filter_helicities
+       implicit none
+       logical sud_filter_hel
+       COMMON /to_filter_hel/ sud_filter_hel
+       DATA sud_filter_hel / .true. / 
+       END    
+
       !! MZ declare all functions as double complex, since some (few)
       !  terms can be imaginary
       

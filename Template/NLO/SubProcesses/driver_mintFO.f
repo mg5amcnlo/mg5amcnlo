@@ -266,7 +266,7 @@ c
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write)
+     $     +t_write+t_ewsud)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -285,6 +285,7 @@ c
       write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in EW_sudakov : ',t_ewsud
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -371,6 +372,8 @@ c timing statistics
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
+      include 'has_ewsudakov.inc'
+
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -434,6 +437,9 @@ c The nbody contributions
          endif
          if (abrv.ne.'born') then
             call compute_nbody_noborn
+         endif
+         if (abrv.ne.'born'.and.abrv(1:2).ne.'vi'.and.has_ewsudakov) then
+            call compute_ewsudakov
          endif
       endif
 

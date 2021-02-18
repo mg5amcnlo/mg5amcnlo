@@ -48,6 +48,13 @@ double precision compensate_identical_factor
 external compensate_identical_factor
 double precision comp_idfac
 
+logical good_hel(ncomb), firsttime_hel(ncomb)
+data good_hel  /ncomb*.true./
+data firsttime_hel  /ncomb*.true./
+integer iamp
+logical sud_filter_hel
+COMMON /to_filter_hel/ sud_filter_hel
+
 CALCULATEDBORN=.FALSE.
 
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
@@ -64,9 +71,20 @@ do ihel=1, ncomb
 C if an helicity is selected, then filter it
 if (ewsud_helselect.ne.0.and.ewsud_helselect.ne.ihel) cycle
 
+if (.not.good_hel(ihel).and.sud_filter_hel) cycle
+
 C call the born amplitude and store the result
 call sborn_onehel(p,nhel(1,ihel),ihel,ans_summed)
 amp_split_born_onehel(:) = amp_split_ewsud(:) 
+
+if (firsttime_hel(ihel)) then
+    good_hel(ihel) = .false.
+    do iamp = 1, amp_split_size
+      good_hel(ihel) = good_hel(ihel).or.amp_split_born_onehel(iamp).ne.0d0
+    enddo
+    write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel, nhel(:,ihel), good_hel(ihel)
+    firsttime_hel(ihel) = .false.
+endif
 
 C call the amplitudes with the goldstones for the longitudinally-polarised legs and the born for all-transverse
 %(calls_to_me)s

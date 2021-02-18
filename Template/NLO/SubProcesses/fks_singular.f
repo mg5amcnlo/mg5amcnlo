@@ -170,6 +170,74 @@ C      gluon in the initial state
       end
 
 
+      subroutine compute_ewsudakov
+c This subroutine computes the NLO EW corrections in the Sudakov
+c   approximation
+      use extra_weights
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'timing_variables.inc'
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+
+      double precision wgt_c
+      double precision wgt1
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+      double precision      f_b,f_nb
+      common /factor_nbody/ f_b,f_nb
+      double precision     xiScut_used,xiBSVcut_used
+      common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision g22
+      integer get_orders_tag
+
+      double complex amp_split_ewsud_lsc(amp_split_size)
+      common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
+      double complex amp_split_ewsud_ssc(amp_split_size)
+      common /to_amp_ewsud_ssc/amp_split_ewsud_ssc
+      double complex amp_split_ewsud_xxc(amp_split_size)
+      common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
+      double complex amp_split_ewsud_par(amp_split_size)
+      common /to_amp_ewsud_par/amp_split_ewsud_par
+
+      call cpu_time(tBefore)
+      if (f_b.eq.0d0) return
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+      call sudakov_wrapper(p_born)
+      do iamp=1, amp_split_size
+        if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_ssc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
+     $      amp_split_ewsud_par(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        ! increase the EW-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born
+        orders(qed_pos)=orders(qed_pos)+2
+        QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders)
+        wgt1=(amp_split_ewsud_lsc(iamp)+
+     $        amp_split_ewsud_ssc(iamp)+
+     $        amp_split_ewsud_xxc(iamp)+
+     $        amp_split_ewsud_par(iamp))
+     $       *f_b/g**(qcd_power)
+        wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+        call add_wgt(2,orders,wgt1,0d0,0d0)
+      enddo
+      call cpu_time(tAfter)
+      t_ewsud=t_ewsud+(tAfter-tBefore)
+      return
+      end
+
+
 
 
       subroutine compute_nbody_noborn
