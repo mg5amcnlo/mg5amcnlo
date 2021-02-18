@@ -84,7 +84,7 @@ cc
        INTEGER  SDK_GET_NCOMB
        external SDK_GET_NCOMB
        double complex BORN_HEL_MAX(amp_split_size), BORN_HEL(amp_split_size) 
-       logical debug
+       logical debug,deepdebug
        common/ew_debug/debug 
        double precision s,t,u,invm2_04
        external invm2_04
@@ -97,6 +97,10 @@ cc
        common /to_deb_settozero/deb_settozero
        Integer sud_mod
        COMMON /to_sud_mod/ sud_mod
+c from MAdLoop
+       integer USERHEL
+       COMMON/USERCHOICE/USERHEL       
+
 
        double complex smallL,bigL
        external smallL,bigL
@@ -111,8 +115,6 @@ cc
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
 
-c      INTEGER USERHEL
-c      COMMON/USERCHOICE/USERHEL
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
 
@@ -142,8 +144,10 @@ c Do not change deb_settozero here
       deb_settozero=0
       printinewsdkf=.False.
       
-c      debug=.True.
-      debug=.False.
+      debug=.True.
+c      debug=.False
+      deepdebug=.False.
+      if(deepdebug) debug=.True.      
 
       first_time_momenta=.True.
 
@@ -318,6 +322,8 @@ c----------
 
 201   continue
 
+
+
       if(first_time_momenta) then
           do j = 0, 3
             do k = 1, nexternal-1
@@ -455,11 +461,16 @@ c----------
 
          OPEN(73, FILE='Sud_Approx.dat', ACTION='WRITE')
          write(73,*), "energy    ", "helicity     ", "loop/born     ",
-     .            "sud/born     ", "(loop-sud)/born     "
+     .            "sud/born     ", "(loop-sud)/born     ", "born     "
+
 
 
 
           CALL UPDATE_AS_PARAM()
+
+
+
+
           total_hel=SDK_GET_NCOMB()
           chosen_hel=0
           EWSUD_HELSELECT=chosen_hel
@@ -467,6 +478,7 @@ c----------
           amp_split_born(:) = amp_split(:)
           call sudakov_wrapper(p_born)
           call BinothLHA(p_born, born, virt_wgt)
+          USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
           do iamp = 1, amp_split_size
@@ -481,14 +493,13 @@ c----------
                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN(iamp)
               endif
 
-              write(73,*), energy, "    summed", dble(virthel(1,iamp)/AMP_SPLIT_BORN(iamp)/2d0 /4d0),
+              write(73,*), energy, "    summed", dble(virthel(1,iamp)/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0),
      .        dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN(iamp)),
-     .        dble((virthel(1,iamp)/2d0 /4d0
+     .        dble((virthel(1,iamp)/2d0 /4d0*4d0
      .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .        +AMP_SPLIT_EWSUD_PAR(iamp)))/
-     .        AMP_SPLIT_BORN(iamp))
-
+     .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
 
 
           enddo
@@ -512,7 +523,7 @@ c             call sudakov_wrapper(p_born)
 !!!!!!!!!!! METTI A POSTO!!!!!! born_hel non deve essere un array !!!!!i
 !!!!!!! funziona solo perche' abbiamo uno spilt order solo!!!!!!!!
 !!!!!!!DEBUG
-               if(debug) then
+               if(deepdebug) then
                  call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
 
@@ -665,11 +676,6 @@ c              call sudakov_wrapper(p_born)
 
 
                     if(debug) write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
-cc deb_settozero: if it is 0 keeps everything, otherwise only the following NON_DIAGONAL contributions are kept for each deb_settozero value
-ccc             1      ---> all the SSC non_diagonal
-ccc             10     ---> LSC non_diagonal
-ccc             100    ---> xxC non_diagonal
-ccc             111    ---> all non_diagonal
 
                     if(deb_settozero.eq.1.or.deb_settozero.eq.111.and.debug) then
 
@@ -784,8 +790,8 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
      .            dble((virthel(1,iamp)/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
-     .            AMP_SPLIT_BORN_ONEHEL(iamp)) 
-c                  write (73,*) "invarianti/s=",invarianti/invarianti(1)
+     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
+
                   if(deb_settozero.ne.0) write(73,*), "Set deb_settozero to zero if you want sensible resutls here
      ."
                   if(sud_mod.ne.2) write(73,*), "Set sud_mod to 2 in ewsudakov_functions.f if you want sensible resutls here
@@ -802,7 +808,10 @@ c                  write (73,*) "invarianti/s=",invarianti/invarianti(1)
      .         dble(virt_leadhel(iamp)/born_leadhel(iamp)),
      .         dble(sud_leadhel(iamp)/born_leadhel(iamp)),  
      .         dble((virt_leadhel(iamp)-sud_leadhel(iamp))/born_leadhel(iamp)), born_leadhel(iamp)
+
             endif
+
+
 
           enddo
 
