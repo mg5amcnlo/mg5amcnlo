@@ -10,7 +10,7 @@ INTEGER     NCOMB
 PARAMETER ( NCOMB=  %(ncomb)d )
 INTEGER NHEL(NEXTERNAL-1,NCOMB)
 %(helicity_lines)s
-double precision ans_summed
+double complex ans_summed
 
 include 'orders.inc'
 DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
