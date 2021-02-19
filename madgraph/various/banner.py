@@ -3293,7 +3293,7 @@ class RunCardLO(RunCard):
 
         # check if lpp = 
         for i in [1,2]:
-            if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
+            if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale'] and self['dsqrt_q2fact%s'%i] == 91.188:
                 logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
                 time.sleep(5)
         
@@ -3302,8 +3302,8 @@ class RunCardLO(RunCard):
                 time.sleep(5)
                 
         # if both lpp1/2 are on PA mode -> force fixed factorization scale
-        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
-            raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]")
+        if (abs(self['lpp1']) == 2 and abs(self['lpp2']) in [2, 3,4] or abs(self['lpp2']) == 2 and abs(self['lpp1']) in [2, 3,4]) and not self['fixed_fac_scale']:
+            raise InvalidRunCard("Having one beam in `elastic photon from proton' mode requires fixed_fac_scale be True [since this is use as cutoff]")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
