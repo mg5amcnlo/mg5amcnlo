@@ -115,6 +115,8 @@ c from MAdLoop
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
 
+c      INTEGER USERHEL
+c      COMMON/USERCHOICE/USERHEL
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
 
@@ -146,7 +148,9 @@ c Do not change deb_settozero here
       
       debug=.True.
 c      debug=.False
-      deepdebug=.False.
+
+      deepdebug=.True.
+c      deepdebug=.False.
       if(deepdebug) debug=.True.      
 
       first_time_momenta=.True.
@@ -318,6 +322,8 @@ c initialization
             enddo
           enddo
 
+
+
 c----------
 
 201   continue
@@ -463,6 +469,10 @@ c----------
          write(73,*), "energy    ", "helicity     ", "loop/born     ",
      .            "sud/born     ", "(loop-sud)/born     ", "born     "
 
+         OPEN(74, FILE='allhel_Sud_Approx.dat', ACTION='WRITE')
+         write(74,*), "energy    ", "helicity     ", "loop/born     ",
+     .            "sud/born     ", "(loop-sud)/born     ", "born     "
+
 
 
 
@@ -474,6 +484,7 @@ c----------
           total_hel=SDK_GET_NCOMB()
           chosen_hel=0
           EWSUD_HELSELECT=chosen_hel
+
           call sborn(p_born, born)
           amp_split_born(:) = amp_split(:)
           call sudakov_wrapper(p_born)
@@ -500,7 +511,6 @@ c----------
      .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .        +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
-
 
           enddo
 
@@ -543,6 +553,15 @@ c             call sudakov_wrapper(p_born)
      .                            AMP_SPLIT_EWSUD_PAR(iamp))
 
 
+                  write(74,*), energy, chosen_hel, dble(virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
+     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+     .            dble((virthel(1,iamp)/2d0 /4d0
+     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
+     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
+
+
 
                  if (chosen_hel.eq.total_hel) then
                     write(73,*), energy,
@@ -550,6 +569,7 @@ c             call sudakov_wrapper(p_born)
      .              dble(virt_allhel(iamp)/born_allhel(iamp)),
      .              dble(sud_allhel(iamp)/born_allhel(iamp)),
      .              dble((virt_allhel(iamp)-sud_allhel(iamp))/born_allhel(iamp)), born_allhel(iamp)
+
                  endif
 
                endif
