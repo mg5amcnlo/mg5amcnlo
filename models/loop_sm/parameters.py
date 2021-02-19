@@ -3,8 +3,8 @@
 # Date: Wed 6 Jul 2011 14:07:37
 
 from __future__ import absolute_import
-from .object_library import all_parameters, Parameter
-from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from object_library import all_parameters, Parameter
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',

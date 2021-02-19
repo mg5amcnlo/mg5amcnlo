@@ -6298,10 +6298,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         #check outdated install
         substitution={'Delphes2':'Delphes','pythia-pgs':'pythia8'}
         if args[0] in substitution:
-            logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
+            logger.critical("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
                "  You should consider installing and using %s, with:\n"%substitution[args[0]]+
                "   > install %s"%substitution[args[0]])
-
+            ans = self.ask('Do you really want to continue?', 'n', ['y','n'])
+            if ans !='y':
+                return
+            
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except Exception:

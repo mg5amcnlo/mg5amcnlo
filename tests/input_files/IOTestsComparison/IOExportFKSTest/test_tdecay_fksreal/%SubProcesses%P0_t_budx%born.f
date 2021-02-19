@@ -228,7 +228,6 @@ C     ----------
       GLU_IJ = IJ_VALUES(NFKSPROCESS)
       BORN = 0D0
       BORNTILDE = (0D0,0D0)
-      BACK_HEL = NHEL(GLU_IJ)
       BORNS(1) = 0D0
       BORNS(2) = 0D0
       IF (GLU_IJ.NE.0) THEN
