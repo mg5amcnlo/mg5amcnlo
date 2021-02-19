@@ -168,7 +168,7 @@ c         write(*,*) 'running eva'
             case (3) ! e+/-
                ppid = 11
             case (4) ! mu+/-
-               ppid = 14
+               ppid = 13
             case default
                write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
                stop 24
