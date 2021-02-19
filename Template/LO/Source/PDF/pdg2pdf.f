@@ -174,16 +174,12 @@ c         write(*,*) 'running eva'
                stop 24
             end select
             ppid = ppid * ih/iabs(ih) ! get sign of parent
-            write(*,*) 'ppid,ih =',ppid,ih
-            fLPol = 0.50d0
+c            write(*,*) 'ppid,ih =',ppid,ih
+            fLPol = 0.50d0 ! temporary; must align with pol in run_card
             q2max=xmu*xmu
-c            write(*,*)'HEL_PICKED, beamid=',HEL_PICKED, beamid
-c            if(HEL_PICKED.lt.0) then
-c               HEL_PICKED = -HEL_PICKED
-c            endif
             hel = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
-            write(*,*) 'pdg2pdf = ',pdg2pdf
+c            write(*,*) 'pdg2pdf = ',pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility
