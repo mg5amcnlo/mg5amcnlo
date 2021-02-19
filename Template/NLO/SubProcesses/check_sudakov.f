@@ -66,6 +66,10 @@ cc
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
 
+      double complex amp_split_ewsud(amp_split_size)
+      common /to_amp_split_ewsud/ amp_split_ewsud
+      double complex born_from_sborn_onehel(amp_split_size)
+
       double complex amp_split_ewsud_lsc(amp_split_size)
       common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
       double complex amp_split_ewsud_ssc(amp_split_size)
@@ -474,6 +478,14 @@ c----------
      .            "sud/born     ", "(loop-sud)/born     ", "born     "
 
 
+          ren_scale = energy !/2.0d0
+
+c          print*, "here energy is =", energy
+
+          QES2=energy**2
+
+          mu_r = ren_scale
+          qes2 = ren_scale**2
 
 
           CALL UPDATE_AS_PARAM()
@@ -492,7 +504,7 @@ c----------
           USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
-          do iamp = 1, amp_split_size
+          do iamp = 1, amp_split_size_born
             if (amp_split_born(iamp).eq.0) cycle
               if(debug) then
                 write(*,*) 'SUMMED OVER HELICITIES'
@@ -514,8 +526,10 @@ c----------
 
           enddo
 
+c          print*, "g from QCD=",g
+
           write(*,*) 'NOW ALL THE HELICITIES'
-          do iamp = 1, amp_split_size
+          do iamp = 1, amp_split_size_born
             BORN_HEL_MAX(iamp)= (0D0,0D0)
           enddo
 
@@ -527,9 +541,12 @@ c             call sudakov_wrapper(p_born)
 
 
              call sdk_get_hels(chosen_hel, hels)
-             do iamp = 1, amp_split_size
+             do iamp = 1, amp_split_size_born
+               
 
                CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
+               born_from_sborn_onehel(:)=amp_split_ewsud(:)
+
 !!!!!!!!!!! METTI A POSTO!!!!!! born_hel non deve essere un array !!!!!i
 !!!!!!! funziona solo perche' abbiamo uno spilt order solo!!!!!!!!
 !!!!!!!DEBUG
@@ -575,10 +592,10 @@ c             call sudakov_wrapper(p_born)
                endif
 !!!!!!!DEBUG
 
-              if ( BORN_HEL(iamp).eq.0) cycle
+              if ( born_from_sborn_onehel(iamp).eq.0) cycle
                 
-                 if(abs(BORN_HEL_MAX(iamp)).lt.abs(BORN_HEL(iamp))) then
-                    BORN_HEL_MAX(iamp)=BORN_HEL(iamp)
+                 if(abs(BORN_HEL_MAX(iamp)).lt.abs(born_from_sborn_onehel(iamp))) then
+                    BORN_HEL_MAX(iamp)=born_from_sborn_onehel(iamp)
                  endif
 
 
@@ -630,7 +647,7 @@ c             call sudakov_wrapper(p_born)
 
 
 
-          do iamp = 1, amp_split_size
+          do iamp = 1, amp_split_size_born
             if(debug) write(*,*) 'DOMINANT HELICITIES FOR iamp=',iamp
             if(debug) write(*,*) ''
             WRITE (70,*) , iamp       
@@ -663,7 +680,7 @@ ccc             111    ---> all non_diagonal
 c              call sudakov_wrapper(p_born)
               call sdk_get_hels(chosen_hel, hels)
               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
-
+              born_from_sborn_onehel(:)=amp_split_ewsud(:)
 
 
 
@@ -674,11 +691,11 @@ c              call sudakov_wrapper(p_born)
 
               if(debug) print*,"look into hel number",chosen_hel,
      .        "It is ",
-     .         abs(BORN_HEL(iamp))/abs(BORN_HEL_MAX(iamp)),
+     .         abs(born_from_sborn_onehel(iamp))/abs(BORN_HEL_MAX(iamp)),
      .        "of BORN_HEL_MAX"
 
               if (abs(BORN_HEL_MAX(iamp)).NE.0d0  
-     .        .AND.    abs(BORN_HEL(iamp)).GT.frac_lead_hel*abs(BORN_HEL_MAX(iamp))) 
+     .        .AND.    abs(born_from_sborn_onehel(iamp)).GT.frac_lead_hel*abs(BORN_HEL_MAX(iamp))) 
      .             then 
 
 
