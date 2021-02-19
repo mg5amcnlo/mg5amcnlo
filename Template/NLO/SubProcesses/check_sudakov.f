@@ -115,9 +115,9 @@ c from MAdLoop
        integer RET_CODE
 
       INCLUDE 'nsqso_born.inc'
-
-      INTEGER    NSQUAREDSO
-      PARAMETER (NSQUAREDSO=1)
+      INCLUDE 'nsquaredSO.inc'
+c      INTEGER    NSQUAREDSO
+c      PARAMETER (NSQUAREDSO=1)
 
 c      INTEGER USERHEL
 c      COMMON/USERCHOICE/USERHEL
@@ -134,6 +134,10 @@ c      COMMON/USERCHOICE/USERHEL
       double precision trimomsquared, energy_increase_factor,min_inv_frac,
      .                 tolerance_next_point,frac_lead_hel
 
+      integer orders(nsplitorders), iampvirt(amp_split_size_born)
+
+
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -142,7 +146,7 @@ C-----
       maximumtries=20000000
       energy_increase_factor=2.5d0
 c Set a number that is possible. E.g. > 0.5d0 for a 2->2 
-      min_inv_frac=1d0/3.5d0
+      min_inv_frac=1d0/8d0
       tolerance_next_point=1d-3
       frac_lead_hel=1d-3
 
@@ -153,7 +157,7 @@ c Do not change deb_settozero here
       debug=.True.
 c      debug=.False
 
-      deepdebug=.True.
+      deepdebug=.False.
 c      deepdebug=.False.
       if(deepdebug) debug=.True.      
 
@@ -488,8 +492,9 @@ c          print*, "here energy is =", energy
           qes2 = ren_scale**2
 
 
-          CALL UPDATE_AS_PARAM()
 
+
+          
 
 
 
@@ -504,6 +509,40 @@ c          print*, "here energy is =", energy
           USERHEL=-1
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
+          
+          do j= iamp, amp_split_size_born
+             iampvirt(iamp)=0
+          enddo
+
+          
+
+          do iamp=1,amp_split_size_born
+            call amp_split_pos_to_orders(iamp, orders)
+            print*, "NSQUAREDSO=",NSQUAREDSO
+            do j= 1, NSQUAREDSO
+              print*,"alpha_s", orders(1) ,GETORDPOWFROMINDEX_ML5(1, j)
+              print*,"alpha_em", orders(2) ,GETORDPOWFROMINDEX_ML5(2, j) 
+              if(orders(1).eq.GETORDPOWFROMINDEX_ML5(1, j).and.
+     .         orders(2).eq.(GETORDPOWFROMINDEX_ML5(2, j)-2) ) then
+c                 print*,"beccato"
+                 iampvirt(iamp)=j
+              endif
+            enddo
+            
+c            print*, "ordersloop=", GETORDPOWFROMINDEX_ML5(1, iamp), GETORDPOWFROMINDEX_ML5(2, iamp)
+c            print*,"orders=",orders
+c            print*,"born/virt check"
+c            print*,"iamp=",iamp
+c            print*,"born =", dble(amp_split_born(iamp))
+c            do j = 0,3 
+c               print*,"iampvirt(",iamp,")=",iampvirt(iamp)
+c             print*,"virthel(",j,",",iampvirt(iamp),") =", dble(virthel(j,iampvirt(iamp)))
+c            enddo
+
+c            print*," "
+
+          enddo
+
           do iamp = 1, amp_split_size_born
             if (amp_split_born(iamp).eq.0) cycle
               if(debug) then
@@ -516,10 +555,10 @@ c          print*, "here energy is =", energy
                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN(iamp)
               endif
 
-              write(73,*), energy, "    summed", dble(virthel(1,iamp)/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0),
+              write(73,*), energy, "    summed", dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0),
      .        dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN(iamp)),
-     .        dble((virthel(1,iamp)/2d0 /4d0*4d0
+     .        dble((virthel(1,iampvirt(iamp))/2d0 /4d0*4d0
      .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .        +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
@@ -563,24 +602,24 @@ c             call sudakov_wrapper(p_born)
                  endif
 
                  born_allhel(iamp)=born_allhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
-                 virt_allhel(iamp)=virt_allhel(iamp)+virthel(1,iamp)/2d0 /4d0
+                 virt_allhel(iamp)=virt_allhel(iamp)+virthel(1,iampvirt(iamp))/2d0 /4d0
                  sud_allhel(iamp)=sud_allhel(iamp)+(amp_split_ewsud_lsc(iamp)+
      .                            amp_split_ewsud_ssc(iamp)+
      .                            amp_split_ewsud_xxc(iamp)+
      .                            AMP_SPLIT_EWSUD_PAR(iamp))
 
 
-                  write(74,*), energy, chosen_hel, dble(virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
+                  write(74,*), energy, chosen_hel, dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
      .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
-     .            dble((virthel(1,iamp)/2d0 /4d0
+     .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
 
 
 
-                 if (chosen_hel.eq.total_hel) then
+                 if (born_allhel(iamp).ne.0d0.and.chosen_hel.eq.total_hel) then
                     write(73,*), energy,
      .              "all hel summed",
      .              dble(virt_allhel(iamp)/born_allhel(iamp)),
@@ -803,7 +842,7 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
      $ ,RET_CODE)
 
                  born_leadhel(iamp)=born_leadhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
-                 virt_leadhel(iamp)=virt_leadhel(iamp)+virthel(1,iamp)/2d0 /4d0   
+                 virt_leadhel(iamp)=virt_leadhel(iamp)+virthel(1,iampvirt(iamp))/2d0 /4d0   
                  sud_leadhel(iamp)=sud_leadhel(iamp)+(amp_split_ewsud_lsc(iamp)+
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
@@ -811,7 +850,7 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
 
                  if(debug) print*, 
      .            'virthel/born/2  and / 4  for HEL LEADCONF ',
-     .            chosen_hel,' = ', virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0
+     .            chosen_hel,' = ', virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0
                  if(debug) write(*,*) '     '
                  if(debug) print*, 'PREC_FOUND=', PREC_FOUND, 
      .            'RET_CODE=', RET_CODE
@@ -821,10 +860,10 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
                  if(debug) write(*,*) '    '
 
 !   the division by 4 comes from the 4 possible polarization of the massless initial state of 2 -> n
-                  write(73,*), energy, chosen_hel, dble(virthel(1,iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
+                  write(73,*), energy, chosen_hel, dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
      .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
-     .            dble((virthel(1,iamp)/2d0 /4d0
+     .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
      .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
