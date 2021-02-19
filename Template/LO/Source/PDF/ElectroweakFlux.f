@@ -31,7 +31,7 @@ c     /* ********************************************************* *
       double precision eva_fL_to_vp,eva_fR_to_vp
 
       eva_fX_to_vp =       fLpol*eva_fL_to_vp(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*eva_fR_to_vp(gg2,gL2,mv2,x,mu2,ievo)
+     &             + (1d0-fLpol)*eva_fR_to_vp(gg2,gR2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *
@@ -42,7 +42,7 @@ c     /* ********************************************************* *
       double precision eva_fL_to_vm,eva_fR_to_vm
 
       eva_fX_to_vm =       fLpol*eva_fL_to_vm(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*eva_fR_to_vm(gg2,gL2,mv2,x,mu2,ievo)
+     &             + (1d0-fLpol)*eva_fR_to_vm(gg2,gR2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *
@@ -53,7 +53,7 @@ c     /* ********************************************************* *
       double precision eva_fL_to_v0,eva_fR_to_v0
 
       eva_fX_to_v0 =       fLpol*eva_fL_to_v0(gg2,gL2,mv2,x,mu2,ievo)
-     &             + (1d0-fLpol)*eva_fR_to_v0(gg2,gL2,mv2,x,mu2,ievo)
+     &             + (1d0-fLpol)*eva_fR_to_v0(gg2,gR2,mv2,x,mu2,ievo)
       return
       end
 c     /* ********************************************************* *      

@@ -117,7 +117,7 @@ c Calculated a new value: replace the value computed longest ago
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      if(ih.eq.1) then
+      if(iabs(ih).eq.1) then
          if (nb_proton(beamid).eq.1.and.nb_neutron(beamid).eq.0) then
             call evolvepart(ipart,x,xmu,pdg2pdf)
             pdflast(ipart, i_replace)=pdg2pdf
@@ -139,9 +139,9 @@ c     be saved
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
          pdg2pdf=pdg2pdf/x
-      else if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron
-            pdg2pdf=epa_lepton(x,xmu*xmu, ih)
-      else if(ih.eq.2) then ! photon from a proton without breaking
+      else if(iabs(ih).eq.3.or.iabs(ih).eq.4) then       !from the electron
+            pdg2pdf=epa_lepton(x,xmu*xmu, iabs(ih))
+      else if(iabs(ih).eq.2) then ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu, beamid)
 
       else

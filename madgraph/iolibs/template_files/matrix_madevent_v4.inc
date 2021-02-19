@@ -115,8 +115,8 @@ C ----------
            call reset_cumulative_variable() ! avoid biais of the initialization
         ENDIF
 	IF (ISUM_HEL.NE.0) then
-!         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
-		  HEL_PICKED = -1
+!         We set HEL_PICKED to -HEL_PICKED here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+		  HEL_PICKED = iabs(HEL_PICKED)
 !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
 		  hel_jacobian   = 1.0d0
 		  IF(DS_get_dim_status('Helicity').eq.1) then 

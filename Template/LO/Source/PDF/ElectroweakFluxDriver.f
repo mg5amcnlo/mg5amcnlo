@@ -32,6 +32,7 @@ c     /* ********************************************************* *
       
       integer ievo
       double precision tiny,mu2min
+      double precision QW,Qf
       ievo  = 0 ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       tiny  = 1d-8
       mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID  
@@ -41,6 +42,7 @@ c     1. momentum fraction, x
 c     2. fermion polarization fraction, fLpol
 c     3. vector boson polarization by PID, vpol vPID
 c     4. evolution scale, mu2
+c     5. QED conservation check
 c     start checks
 c     1. check momentum fraction
       if(x.lt.tiny.or.x.gt.(1d0-tiny)) then
@@ -62,7 +64,7 @@ c     also set by PID lower bound no mu2 scale evolution
          mu2min = eva_mz2
          if(iabs(vPol).ne.1.and.vPol.ne.0) then
             write(*,*) 'vPol out of range',vPol
-            stop
+            stop 23
             eva_get_pdf_by_PID = 0d0
             return
          endif
@@ -70,7 +72,7 @@ c     also set by PID lower bound no mu2 scale evolution
          mu2min = eva_mw2
          if(iabs(vPol).ne.1.and.vPol.ne.0) then
             write(*,*) 'vPol out of range',vPol
-            stop
+            stop 24
             eva_get_pdf_by_PID = 0d0
             return
          endif
@@ -82,7 +84,7 @@ c     also set by PID lower bound no mu2 scale evolution
          endif
          if(iabs(vPol).ne.1) then
             write(*,*) 'vPol out of range',vPol
-            stop
+            stop 25
             eva_get_pdf_by_PID = 0d0
             return
          endif         
@@ -90,13 +92,13 @@ c      case (32) (eva for bsm)
 c         mu2min = eva_mx2
 c         if(iabs(vPol).ne.1.and.vPol.ne.0) then
 c            write(*,*) 'vPol out of range',vPol
-c            stop
+c            stop 26
 c            eva_get_pdf_by_PID = 0d0
 c            return
 c         endif
       case default         
          write(*,*) 'vPID out of range',vPID
-         stop
+         stop 27
          eva_get_pdf_by_PID = 0d0
          return
       end select
@@ -104,10 +106,27 @@ c     4. check evolution scale
       if(mu2.lt.mu2min) then
          write(*,*) 'mu2 too small. setting to mu2min',mu2,mu2min
          mu2 = mu2min
-         eva_get_pdf_by_PID = 0d0
-         return
       endif
-
+c     5. QED conservation check
+c      if(iabs(vPID).eq.24) then
+c         QW = dble(vPID/iabs(vPID))
+c         call eva_get_qEM_by_PID(Qf,fPID)
+c         if(dabs(Qf-QW).gt.eva_one) then
+c            write(*,*) 'QED charge violation with w emission by fPID =',fPID
+c            write(*,*)'vPID,QW,fPID,Qf = ',vPID,QW,fPID,Qf 
+c            eva_get_pdf_by_PID = 0d0
+c            stop
+c         return
+c         endif
+c      endif
+c      if(iabs(vPID).eq.22.and.(
+c     &      iabs(fPID).eq.12.or.
+c     &      iabs(fPID).eq.14.or.
+c     &      iabs(fPID).eq.16)) then
+c            write(*,*) 'QED charge violation with a emission by neutrino'
+c            eva_get_pdf_by_PID = 0d0
+c         return
+c      endif
 c     celebrate by calling the PDF
       if(vPID.eq.22.or.vPID.eq.7) then
          eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
@@ -293,6 +312,46 @@ c     ******************************
       case default
          gg2 = eva_gw2
       end select
+      return
+      end
+c     /* ********************************************************* * 
+c     /* ********************************************************* *      
+      subroutine eva_get_qEM_by_PID(qEM,fPID)
+      implicit none
+      integer fPID
+      double precision qEM
+      include 'ElectroweakFlux.inc'
+
+      select case (iabs(fPID)) ! nested select case
+      case (1)               ! down
+         qEM = eva_qed * fPID/iabs(fPID)
+      case (2)               ! up
+         qEM = eva_qeu * fPID/iabs(fPID)
+      case (3)               ! strange
+         qEM = eva_qed * fPID/iabs(fPID)
+      case (4)               ! charm
+         qEM = eva_qeu * fPID/iabs(fPID)
+      case (5)               ! bottom
+         qEM = eva_qed * fPID/iabs(fPID)
+      case (6)               ! top
+         qEM = eva_qeu * fPID/iabs(fPID)
+      case (11)              ! electron
+         qEM = eva_qee * fPID/iabs(fPID)
+      case (12)              ! electron-neutrino
+         qEM = eva_zero
+      case (13)              ! muon
+         qEM = eva_qee2 * fPID/iabs(fPID)
+      case (14)              ! muon-neutrino
+         qEM = eva_zero
+      case (15)              ! tau
+         qEM = eva_qee2 * fPID/iabs(fPID)
+      case (16)              ! tau-neutrino
+         qEM = eva_zero
+      case default
+         write(*,*) 'eva: setting QED charge to zero. unknown fPID:', fPID
+         qEM = eva_zero
+      end select
+c     ******************************                     
       return
       end
 c     /* ********************************************************* *      

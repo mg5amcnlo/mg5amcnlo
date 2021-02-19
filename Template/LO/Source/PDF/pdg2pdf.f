@@ -50,7 +50,7 @@ c     collider configuration
       double precision ebeam(2),xbk(2),q2fact(2)
       common/to_collider/ebeam,xbk,q2fact,lpp
 
-      if (ih.eq.9) then
+      if (iabs(ih).eq.9) then
          pdg2pdf = 1d0
          return
       endif
@@ -162,12 +162,10 @@ c     saved. 'pdflast' is filled below.
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))
-c            case (0:2) ! restore this line
-            case (0,2) ! remove this line
+            case (0:2)
                write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
                stop 24
-c            case (3) ! e+/- ! restore this line
-            case (1,3) ! e+/- ! remove this line
+            case (3) ! e+/-
                ppid = 11
             case (4) ! mu+/-
                ppid = 14
@@ -175,21 +173,25 @@ c            case (3) ! e+/- ! restore this line
                write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
                stop 24
             end select
-            ppid = ppid * ih/iabs(ih) ! get sign 
-            ! problem here: ih is always positive
-            fLPol = 0.d0
+            ppid = ppid * ih/iabs(ih) ! get sign of parent
+            write(*,*) 'ppid,ih =',ppid,ih
+            fLPol = 0.50d0
             q2max=xmu*xmu
-            write(*,*)'HEL_PICKED, beamid=',HEL_PICKED, beamid
+c            write(*,*)'HEL_PICKED, beamid=',HEL_PICKED, beamid
+c            if(HEL_PICKED.lt.0) then
+c               HEL_PICKED = -HEL_PICKED
+c            endif
             hel = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
+            write(*,*) 'pdg2pdf = ',pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility
-         if(iabs(ipart).eq.7.and.ih.gt.1) then
+         if(iabs(ipart).eq.7.and.iabs(ih).gt.1) then
             q2max=xmu*xmu
-            if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron or muonn
-               pdg2pdf=epa_lepton(x,q2max, ih)
-            elseif(ih .eq. 2) then !from a proton without breaking
+            if(iabs(ih).eq.3.or.iabs(ih).eq.4) then       !from the electron or muonn
+               pdg2pdf=epa_lepton(x,q2max, iabs(ih))
+            elseif(iabs(ih) .eq. 2) then !from a proton without breaking
                pdg2pdf=epa_proton(x,q2max,beamid)
             endif 
             pdflast(iporg,ireuse)=pdg2pdf
@@ -222,7 +224,7 @@ C        Be carefull u and d are flipped inside cteq6
             pdflast(iporg,ireuse)=pdg2pdf
          endif
       else
-         call pftopdg(ih,x*nb_hadron,xmu,pdflast(-7,ireuse))
+         call pftopdg(iabs(ih),x*nb_hadron,xmu,pdflast(-7,ireuse))
          pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
      $                         nb_neutron(beamid))
       endif      

@@ -1456,11 +1456,11 @@ c
 c       It is important to divide the wgt stored in the grid by the 
 c       corresponding jacobian otherwise it flattens the sampled
 c       distribution.
-C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
+C       Also, if HEL_PICKED is greater than 0, it means that MadEvent
 C       is in the initialization stage where all helicity were probed
 c       and added individually to the grid directly by matrix<i>.f so
 c       that they shouldn't be added here.
-        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1.and.
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.gt.0.and.
      &                            (.NOT.CUTSDONE.or.CUTSPASSED)) then
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
