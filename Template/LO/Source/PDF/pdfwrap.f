@@ -261,13 +261,13 @@ C
 
 c---------------------------------------------------------------
 c---------------------------------------------------------------
-      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'iww') then
+      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'iww'.or.pdlabel.eq.'none') then
             asmz=asmz            
       else
           write(6,*) 'Unimplemented distribution= ',pdlabel
           write(6,*) 'Implemented are: ',
      . 'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,',
-     . 'nn23lo,','nn23lo1,','nn23nlo,','eva,','iww,'
+     . 'nn23lo,','nn23lo1,','nn23nlo,','eva,','iww,','none,'
 c
 c     make madgraph to stop evaluating
       stop 1

@@ -179,23 +179,26 @@ c            case (3) ! e+/- ! restore this line
             ! problem here: ih is always positive
             fLPol = 0.d0
             q2max=xmu*xmu
+            write(*,*)'HEL_PICKED, beamid=',HEL_PICKED, beamid
             hel = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
             return
          endif
+      else ! this ensure backwards compatibility
+         if(iabs(ipart).eq.7.and.ih.gt.1) then
+            q2max=xmu*xmu
+            if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron or muonn
+               pdg2pdf=epa_lepton(x,q2max, ih)
+            elseif(ih .eq. 2) then !from a proton without breaking
+               pdg2pdf=epa_proton(x,q2max,beamid)
+            endif 
+            pdflast(iporg,ireuse)=pdg2pdf
+            return
+         endif         
       endif
 
 
-      if(iabs(ipart).eq.7.and.ih.gt.1) then
-         q2max=xmu*xmu
-         if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron or muonn
-            pdg2pdf=epa_lepton(x,q2max, ih)
-         elseif(ih .eq. 2) then !from a proton without breaking
-            pdg2pdf=epa_proton(x,q2max,beamid)
-         endif 
-         pdflast(iporg,ireuse)=pdg2pdf
-         return
-      endif
+
       
       if (pdlabel(1:5) .eq. 'cteq6') then
 C        Be carefull u and d are flipped inside cteq6
