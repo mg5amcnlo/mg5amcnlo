@@ -1356,7 +1356,7 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
       double complex ls
-      double complex dalpha, dcw, dmw2, dmz2, dmt 
+      double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
       external smallL, sdk_betaew_diag, sdk_cew_diag
       double precision pi, cw2, sw2, Qt
@@ -1399,8 +1399,19 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       dmt = 1d0/4d0/sw2 + 1d0/8d0/sw2/cw2 + 3d0/2d0/cw2*Qt - 3d0/cw2*Qt**2  
      $     + 3d0/8d0/sw2 * mdl_mt**2/mdl_mw**2
+
+      dmt =  dmt * mdl_mt * ls
+
+      dmh2 = 1d0/2d0/sw2 
+     $ * (
+     $ 9d0*mdl_mw**2/mdl_mh**2 * (1d0 + 1d0/2d0/cw2**2) 
+     $ - 3d0/2d0 * (1d0 + 1d0/2d0/cw2) + 15d0/4d0 * mdl_mh**2/mdl_mw**2
+     $) + 3d0/2d0/sw2 * mdl_mt**2/mdl_mw**2 * (1d0-6d0*mdl_mt**2/mdl_mh**2 )
+
+      dmh2 = dmh2 * mdl_mh**2 * ls
+
  
-      dmt =  dmt * mdl_mt * ls 
+
 
 
 
@@ -1409,7 +1420,8 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
      $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 +
-     $      amp_split_ewsud_der(:,4) * dmt 
+     $      amp_split_ewsud_der(:,4) * dmt +
+     $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2
 
       ! LEAVE EMPTY FOR THE MOMENT
       
