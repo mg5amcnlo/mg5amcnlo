@@ -2020,6 +2020,7 @@ class Leg(PhysicsObject):
         else :
             return False
 
+
     # Make sure sort() sorts lists of legs according to 'number'
     def __lt__(self, other):
         return self['number'] < other['number']

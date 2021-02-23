@@ -1019,11 +1019,19 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          for process in matrix_element.get('processes')])
 
 
-    def get_helicity_lines(self, matrix_element,array_name='NHEL'):
+    def get_helicity_lines(self, matrix_element,array_name='NHEL', add_nb_comb=False):
         """Return the Helicity matrix definition lines for this matrix element"""
 
         helicity_line_list = []
-        i = 0
+        i = 0            
+        if add_nb_comb:
+            spins = matrix_element.get_spin_state()
+            misc.sprint(spins)
+            spins.insert(0, len(spins))
+            helicity_line_list.append(\
+                ("DATA ("+array_name+"(I,0),I=1,%d) /" + \
+                 ",".join(['%2r'] * (len(spins)-1)) + "/") % tuple(spins))
+            
         for helicities in matrix_element.get_helicity_matrix():
             i = i + 1
             int_list = [i, len(helicities)]
@@ -4583,7 +4591,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # extract and replace ncombinations, helicity lines
         ncomb=matrix_element.get_helicity_combinations()
         replace_dict['ncomb']= ncomb
-        helicity_lines = self.get_helicity_lines(matrix_element)
+        helicity_lines = self.get_helicity_lines(matrix_element, add_nb_comb=True)
         replace_dict['helicity_lines'] = helicity_lines
         
         if not isinstance(self, ProcessExporterFortranMEGroup):            
