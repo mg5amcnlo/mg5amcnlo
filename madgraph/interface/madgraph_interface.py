@@ -5909,6 +5909,8 @@ This implies that with decay chains:
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
+                else:
+                    add_options.append('--with_fastjet')
            
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
