@@ -36,7 +36,7 @@ C
 c     effective w/z/a approximation (leading log, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
-      integer hel, ppid
+      integer hel,helMulti,ppid
       double precision hel_jacobian
       integer hel_picked
       common/hel_picked/hel_picked,hel_jacobian
@@ -174,12 +174,11 @@ c         write(*,*) 'running eva'
                stop 24
             end select
             ppid = ppid * ih/iabs(ih) ! get sign of parent
-c            write(*,*) 'ppid,ih =',ppid,ih
             fLPol = 0.50d0 ! temporary; must align with pol in run_card
             q2max=xmu*xmu
-            hel = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
-            pdg2pdf = eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
-c            write(*,*) 'pdg2pdf = ',pdg2pdf
+            hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
+            helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
+            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
             return
          endif
       else ! this ensure backwards compatibility
