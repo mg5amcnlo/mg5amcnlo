@@ -138,7 +138,7 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP(1) = (1)*AMP(1)
+      JAMP(1) = AMP(1)
       BORN_HEL = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)

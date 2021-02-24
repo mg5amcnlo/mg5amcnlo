@@ -289,8 +289,8 @@ C           Amplitude(s) for diagram number 3
               ENDIF
             ENDDO
           ENDIF
-          JAMP(1) = (1*IMAG1)*AMP(1)+(-1)*AMP(2)
-          JAMP(2) = (-1*IMAG1)*AMP(1)+(-1)*AMP(3)
+          JAMP(1) = (1*IMAG1)*AMP(1)+(-1.0)*AMP(2)
+          JAMP(2) = (-1*IMAG1)*AMP(1)+(-1.0)*AMP(3)
           DO I = 1, NCOLOR
             ZTEMP = (0.D0,0.D0)
             DO J = 1, NCOLOR
