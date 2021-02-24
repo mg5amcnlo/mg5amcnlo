@@ -136,6 +136,10 @@ c      COMMON/USERCHOICE/USERHEL
 
       integer orders(nsplitorders), iampvirt(amp_split_size_born)
 
+      double precision QCDlogs, logfromLOip1
+      double precision print_loop_over_born, print_sud_over_born,
+     .                 print_loopminussud_over_born, print_born
+
 
 
 C-----
@@ -219,7 +223,7 @@ c      call sdk_test_functions()
           IRPoleCheckThreshold = tolerance
       endif
 
-      mu_r = ren_scale
+c      mu_r = ren_scale
       qes2 = ren_scale**2
 
       do i = nincoming+1, nexternal-1
@@ -425,7 +429,7 @@ c----------
 
            if (abs(invarianti(k)/s-invariantifirst(k)/invariantifirst(1)).gt.tolerance_next_point) then
               write(*,*), "A good similar PS point was not found, try to increase tolerance_next_point
-     ."
+     . or min_inv_frac"
 
               print*, "invarianti=",invarianti
               print*, "invariantifirst=",invariantifirst
@@ -488,7 +492,7 @@ c          print*, "here energy is =", energy
 
           QES2=energy**2
 
-          mu_r = ren_scale
+c          mu_r = ren_scale
           qes2 = ren_scale**2
 
 
@@ -520,26 +524,35 @@ c          print*, "here energy is =", energy
             call amp_split_pos_to_orders(iamp, orders)
             print*, "NSQUAREDSO=",NSQUAREDSO
             do j= 1, NSQUAREDSO
-              print*,"alpha_s", orders(1) ,GETORDPOWFROMINDEX_ML5(1, j)
-              print*,"alpha_em", orders(2) ,GETORDPOWFROMINDEX_ML5(2, j) 
+c              print*,"alpha_s", orders(1) ,GETORDPOWFROMINDEX_ML5(1, j)
+c              print*,"alpha_em", orders(2) ,GETORDPOWFROMINDEX_ML5(2, j) 
               if(orders(1).eq.GETORDPOWFROMINDEX_ML5(1, j).and.
      .         orders(2).eq.(GETORDPOWFROMINDEX_ML5(2, j)-2) ) then
-c                 print*,"beccato"
                  iampvirt(iamp)=j
               endif
             enddo
             
-c            print*, "ordersloop=", GETORDPOWFROMINDEX_ML5(1, iamp), GETORDPOWFROMINDEX_ML5(2, iamp)
-c            print*,"orders=",orders
-c            print*,"born/virt check"
-c            print*,"iamp=",iamp
-c            print*,"born =", dble(amp_split_born(iamp))
-c            do j = 0,3 
-c               print*,"iampvirt(",iamp,")=",iampvirt(iamp)
-c             print*,"virthel(",j,",",iampvirt(iamp),") =", dble(virthel(j,iampvirt(iamp)))
-c            enddo
 
-c            print*," "
+
+c            print*, "born1 orders =", orders(1),  orders(2)
+c            print*,"born1 =", dble(amp_split_born(iamp))
+c            print*,"iampvirt(iamp) = ", iampvirt(iamp)
+            if (iampvirt(iamp).gt.0.and.iamp+1.le.amp_split_size_born) then
+              call amp_split_pos_to_orders(iamp+1, orders)
+              print*, "born2 orders =",orders(1),  orders(2)
+c              print*,"born2 =", dble(amp_split_born(iamp+1))
+              print*, "born2 =",virthel(0,iampvirt(iamp))
+c              print*, virthel(0,iampvirt(iamp)-1)/AMP_SPLIT_BORN(iamp)
+            else
+             print*, "born2 orders are not present"
+            endif
+
+
+
+
+
+
+
 
           enddo
 
@@ -555,17 +568,63 @@ c            print*," "
                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN(iamp)
               endif
 
-              write(73,*), energy, "    summed", dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0),
-     .        dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
-     .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN(iamp)),
-     .        dble((virthel(1,iampvirt(iamp))/2d0 /4d0*4d0
-     .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .        +AMP_SPLIT_EWSUD_PAR(iamp)))/
-     .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
+!!!!!deb!!!!
+c              write(73,*), energy, "summed no QCD", dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0),
+c     .        dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+c     .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN(iamp)),
+c     .        dble((virthel(1,iampvirt(iamp))/2d0 /4d0*4d0
+c     .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+c     .        +AMP_SPLIT_EWSUD_PAR(iamp)))/ 
+c     .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
+!!!!!debend!!!
 
+              QCDlogs=4d0/3d0 * (G**2/4d0/pi)/(2d0*pi) * (1d0) * 
+     .        ( (dlog(qes2/mdl_mt**2))**2 +  1d0 * dlog(qes2/mdl_mt**2)      )
+
+              logfromLOip1=0d0
+
+
+              if (iampvirt(iamp).gt.0.and.virthel(0,iampvirt(iamp)).ne.0d0.and.iamp+1.le.amp_split_size_born) then
+                do i=1,nexternal-1
+                  if(abs(pdg_type(i)).eq.6) logfromLOip1=
+     .            logfromLOip1+QCDlogs*virthel(0,iampvirt(iamp))/4d0
+                enddo 
+              
+        
+                call amp_split_pos_to_orders(iamp, orders)
+
+                logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .          *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
+              endif
+   
+!!deb!!!!                                
+c              write(73,*), energy, "summed from QCD", "     ", 
+c     .                    dble(logfromLOip1/AMP_SPLIT_BORN(iamp))/4d0*4d0, virthel(0,iampvirt(iamp))
+!!!debend!!
+
+              print_loop_over_born = dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN(iamp)/2d0 /4d0*4d0)
+
+              print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1)/AMP_SPLIT_BORN(iamp))
+
+              print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0*4d0
+     .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .        +AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1))/
+     .        AMP_SPLIT_BORN(iamp))
+
+              print_born = dble(AMP_SPLIT_BORN(iamp))
+             
+
+              write(73,*), energy, "summed", print_loop_over_born, print_sud_over_born,
+     .        print_loopminussud_over_born, print_born  
+
+
+
+
+ 
           enddo
 
-c          print*, "g from QCD=",g
+
 
           write(*,*) 'NOW ALL THE HELICITIES'
           do iamp = 1, amp_split_size_born
@@ -581,15 +640,17 @@ c             call sudakov_wrapper(p_born)
 
              call sdk_get_hels(chosen_hel, hels)
              do iamp = 1, amp_split_size_born
-               
+
+         
 
                CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
                born_from_sborn_onehel(:)=amp_split_ewsud(:)
 
-!!!!!!!!!!! METTI A POSTO!!!!!! born_hel non deve essere un array !!!!!i
-!!!!!!! funziona solo perche' abbiamo uno spilt order solo!!!!!!!!
-!!!!!!!DEBUG
+
+
+
                if(deepdebug) then
+                 if (born_from_sborn_onehel(iamp).eq.0d0) cycle
                  call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
 
@@ -601,22 +662,45 @@ c             call sudakov_wrapper(p_born)
                      sud_allhel(iamp)=(0d0,0d0)
                  endif
 
+                 logfromLOip1=0d0
+
+                 if (iampvirt(iamp).gt.0.and.virthel(0,iampvirt(iamp)).ne.0d0.and.iamp+1.le.amp_split_size_born) then
+                   do i=1,nexternal-1
+                     if(abs(pdg_type(i)).eq.6) logfromLOip1=
+     .               logfromLOip1+QCDlogs*virthel(0,iampvirt(iamp))/4d0
+                   enddo
+                 
+
+                   call amp_split_pos_to_orders(iamp, orders)
+
+                   logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
+
+                 endif
+
+
                  born_allhel(iamp)=born_allhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
                  virt_allhel(iamp)=virt_allhel(iamp)+virthel(1,iampvirt(iamp))/2d0 /4d0
                  sud_allhel(iamp)=sud_allhel(iamp)+(amp_split_ewsud_lsc(iamp)+
      .                            amp_split_ewsud_ssc(iamp)+
      .                            amp_split_ewsud_xxc(iamp)+
-     .                            AMP_SPLIT_EWSUD_PAR(iamp))
+     .                            AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0)
 
 
-                  write(74,*), energy, chosen_hel, dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
-     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
-     .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
-     .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
-     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
-     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
+                 print_loop_over_born = dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0)
 
+                 print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .            +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0)/AMP_SPLIT_BORN_ONEHEL(iamp))
+
+                 print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0
+     .           -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .           +AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0))/
+     .            AMP_SPLIT_BORN_ONEHEL(iamp))
+
+                 print_born = dble(AMP_SPLIT_BORN_ONEHEL(iamp))
+
+                 write(74,*), energy, chosen_hel, print_loop_over_born, print_sud_over_born,
+     .           print_loopminussud_over_born, print_born
 
 
                  if (born_allhel(iamp).ne.0d0.and.chosen_hel.eq.total_hel) then
@@ -629,7 +713,7 @@ c             call sudakov_wrapper(p_born)
                  endif
 
                endif
-!!!!!!!DEBUG
+
 
               if ( born_from_sborn_onehel(iamp).eq.0) cycle
                 
@@ -761,9 +845,9 @@ c              call sudakov_wrapper(p_born)
      .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s))
                       write(*,*) 'log(|u|/s)ls SSC Non diag-->',
      .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(u)/s))
-                      write(*,*) '(1-t/u)log(|t|/s)ls SSC Non diag-->',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s)*(1-t/u))
-                       write(*,*),'s= ',s ,'t= ', t, "u =", u, "(t/u)=" , (t/u)
+c                      write(*,*) '(1-t/u)log(|t|/s)ls SSC Non diag-->',
+c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s)*(1-t/u))
+c                       write(*,*),'s= ',s ,'t= ', t, "u =", u, "(t/u)=" , (t/u)
 
 c                    F2t=(u/s*dlog(dabs(t)/s)+t/s*dlog(dabs(u)/s))
 c                    F1t=(t/s*dlog(dabs(t)/s)+u/s*dlog(dabs(u)/s))
@@ -841,12 +925,28 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
                  call SLOOPMATRIXHEL_THRES(p_born,chosen_hel,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
 
+                 logfromLOip1=0d0
+
+                 if (iampvirt(iamp).gt.0.and.virthel(0,iampvirt(iamp)).ne.0d0.and.iamp+1.le.amp_split_size_born) then
+                   do i=1,nexternal-1
+                     if(abs(pdg_type(i)).eq.6) logfromLOip1=
+     .               logfromLOip1+QCDlogs*virthel(0,iampvirt(iamp))/4d0
+                   enddo
+
+
+                   call amp_split_pos_to_orders(iamp, orders)
+
+                   logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
+
+                 endif
+
                  born_leadhel(iamp)=born_leadhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
                  virt_leadhel(iamp)=virt_leadhel(iamp)+virthel(1,iampvirt(iamp))/2d0 /4d0   
                  sud_leadhel(iamp)=sud_leadhel(iamp)+(amp_split_ewsud_lsc(iamp)+
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
-     .                  AMP_SPLIT_EWSUD_PAR(iamp))
+     .                  AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0)
 
                  if(debug) print*, 
      .            'virthel/born/2  and / 4  for HEL LEADCONF ',
@@ -860,13 +960,67 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
                  if(debug) write(*,*) '    '
 
 !   the division by 4 comes from the 4 possible polarization of the massless initial state of 2 -> n
-                  write(73,*), energy, chosen_hel, dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
-     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
-     .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+
+               !!!! deb!!!!!
+c                  write(73,*), energy, chosen_hel, "no QCD",  dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0),
+c     .            dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+c     .                 +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)),
+c     .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
+c     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+c     .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
+c     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
+              !!!! end deb!!!!!
+
+
+                  logfromLOip1=0d0
+
+                 if (iampvirt(iamp).gt.0.and.virthel(0,iampvirt(iamp)).ne.0d0.and.iamp+1.le.amp_split_size_born) then
+                    do i=1,nexternal-1
+                      if(abs(pdg_type(i)).eq.6) logfromLOip1=
+     .                logfromLOip1+QCDlogs*virthel(0,iampvirt(iamp))/4d0
+                    enddo
+
+
+                    call amp_split_pos_to_orders(iamp, orders)
+
+                    logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .              *dble(orders(1)-2)  * dlog(qes2/mdl_mt**2)
+
+                  endif
+
+
+
+
+
+               !!!! deb!!!!!
+c                  write(73,*), energy ,chosen_hel, "from QCD", "     ",
+c     .                    dble(logfromLOip1/AMP_SPLIT_BORN_ONEHEL(iamp))/4d0
+              !!!! end deb!!!!!
+
+                  print_loop_over_born = dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0)
+
+                  print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
+     .            +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0)/AMP_SPLIT_BORN_ONEHEL(iamp))
+
+                  print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0
+     .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0))/
+     .            AMP_SPLIT_BORN_ONEHEL(iamp))
+
+                  print_born = dble(AMP_SPLIT_BORN_ONEHEL(iamp))
+             
+                  write(73,*), energy, chosen_hel, print_loop_over_born, print_sud_over_born,
+     .            print_loopminussud_over_born, print_born  
+
+
+                  if(deepdebug) write(73,*), energy, chosen_hel,
+     .             "(loop-sud/born2)", 
      .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .            +AMP_SPLIT_EWSUD_PAR(iamp)))/
-     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)) 
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)+logfromLOip1/4d0))/
+     .            virthel(0,iampvirt(iamp))),
+     .             dble(virthel(0,iampvirt(iamp)))
+
 
                   if(deb_settozero.ne.0) write(73,*), "Set deb_settozero to zero if you want sensible resutls here
      ."
