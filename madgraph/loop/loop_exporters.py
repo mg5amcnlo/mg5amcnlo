@@ -103,7 +103,6 @@ class LoopExporterFortran(object):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
-
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
@@ -201,6 +200,7 @@ class LoopExporterFortran(object):
         """
         if not hasattr(self, 'aloha_model'):
             self.aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
+
         return self.aloha_model
 
     #===========================================================================

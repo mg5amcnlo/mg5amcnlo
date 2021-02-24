@@ -794,13 +794,20 @@ class AbstractALOHAModel(dict):
         if hasattr(self, 'cached_interaction_infos'):
             # Now try to recover it
             for info_key in infos:
+                all_done = True
                 try:
                     returned_dict[info] = self.cached_interaction_infos[\
                                          (lorentzname,outgoing,tuple(tag),info)]
                 except KeyError:
                     # Some information has never been computed before, so they
                     # will be computed later.
-                    pass             
+                    all_done = False
+                    pass
+            if all_done:             
+                if isinstance(info, str):
+                    return returned_dict[info]
+                else:
+                    return returned_dict
         elif cached:
             self.cached_interaction_infos = {}
 
