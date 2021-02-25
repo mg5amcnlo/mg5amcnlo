@@ -140,17 +140,26 @@ c      COMMON/USERCHOICE/USERHEL
       double precision print_loop_over_born, print_sud_over_born,
      .                 print_loopminussud_over_born, print_born
 
-
-
+      double precision QES2_value, ren_scale_value
+      logical use_QES2_value, use_ren_scale_value
 C-----
 C  BEGIN CODE
 C-----  
+      energy=1d4
+      
+      QES2_value=1d4
+      ren_scale_value=1d2
+      use_QES2_value=.false.
+      use_ren_scale_value=.false.
+
+
+
 
       tries=0
       maximumtries=20000000
       energy_increase_factor=2.5d0
 c Set a number that is possible. E.g. > 0.5d0 for a 2->2 
-      min_inv_frac=1d0/8d0
+      min_inv_frac=1d0/4.7d0
       tolerance_next_point=1d-3
       frac_lead_hel=1d-3
 
@@ -197,18 +206,24 @@ c      deepdebug=.False.
       iconfigs(1)=iconfig
 c     Set the energy to be characteristic of the run
       totmass = 0.0d0
-      do i=1,nexternal
-        totmass = totmass + pmass(i)
-      enddo
-      energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
 
-      energy=1d4
+      if (energy.le.0d0) then
+        do i=1,nexternal
+          totmass = totmass + pmass(i)
+        enddo
+        energy = max((ebeam(1)+ebeam(2))/4.0d0,2.0d0*totmass)
+      endif
+
 c     In check_sa: Set the renormalization scale to be of the order of sqrt(s) but
 c     not equal to it so as to be sensitive to all logs in the check.
 c     Here: QES2=energy**2 is mandatory, ren_scale?
 
-      ren_scale = energy !/2.0d0
-      QES2=energy**2
+c      ren_scale = energy !/2.0d0
+
+c      QES2=QES2_value
+c      ren_scale=ren_scale_value
+c      QES2=energy**2
+
 c      call sdk_test_functions()
 
       write(*,*)' Insert the number of points to test'
@@ -223,8 +238,8 @@ c      call sdk_test_functions()
           IRPoleCheckThreshold = tolerance
       endif
 
-c      mu_r = ren_scale
-      qes2 = ren_scale**2
+      mu_r = ren_scale
+c      qes2 = energy**2 
 
       do i = nincoming+1, nexternal-1
           pmass_rambo(i-nincoming) = pmass(i)
@@ -486,14 +501,22 @@ c----------
      .            "sud/born     ", "(loop-sud)/born     ", "born     "
 
 
-          ren_scale = energy !/2.0d0
 
-c          print*, "here energy is =", energy
+           if(use_ren_scale_value) then
+             ren_scale = ren_scale_value
+           else
+             ren_scale = energy
+           endif
 
-          QES2=energy**2
 
-c          mu_r = ren_scale
-          qes2 = ren_scale**2
+           if(use_QES2_value) then
+             QES2=QES2_value
+           else
+             QES2=energy**2
+           endif
+
+           mu_r = ren_scale
+c          qes2 =100d0! ren_scale**2
 
 
 
@@ -1108,8 +1131,8 @@ C         Otherwise, perform the check
 
 !modify here to increment energy next point
 c          energy=energy
-          ren_scale = energy!/2.0d0
-          QES2=energy**2
+c          ren_scale = energy!/2.0d0
+c          QES2=100d0!energy**2
 
       if (npointsChecked.lt.npoints) goto 200 
 
