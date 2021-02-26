@@ -218,7 +218,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                              amp.get('process').nice_string().replace('Process', ''))
                 continue
 
-            logger.info("Generating FKS-subtracted matrix elements for process%s (%d / %d)" \
+            logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
                 % (amp['process'].nice_string(print_weighted=False, print_perturbated=False).replace('Process', ''),
                    i + 1, len(amps)))
 
