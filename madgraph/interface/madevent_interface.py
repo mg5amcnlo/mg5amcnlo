@@ -2117,6 +2117,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         self.load_results_db()        
         self.results.def_web_mode(self.web)
+
+        self.Gdirs = None
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
@@ -2457,6 +2459,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         self.banner = None
         self.Gdirs = None
+        
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2797,6 +2800,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.ask_run_configuration('parton')
         self.banner = None
         self.Gdirs = None
+
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -3386,7 +3390,9 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
-                
+            self.get_Gdir()
+            for P in P_zero_result:
+                self.Gdirs[0][pjoin(self.me_dir,'SubProcesses',P)] = []
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \

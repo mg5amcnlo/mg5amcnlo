@@ -1485,7 +1485,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             else:
                 amp2 = "TMP_JAMP(%d)" % -amp2
             
-            misc.sprint(frac)
             if frac not in  [1., -1]:
                 res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
             elif frac == 1.:
