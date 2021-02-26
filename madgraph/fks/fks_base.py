@@ -218,8 +218,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                              amp.get('process').nice_string().replace('Process', ''))
                 continue
 
-            logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
-                % (amp['process'].nice_string(print_weighted=False).replace('Process', ''),
+            logger.info("Generating FKS-subtracted matrix elements for process%s (%d / %d)" \
+                % (amp['process'].nice_string(print_weighted=False, print_perturbated=False).replace('Process', ''),
                    i + 1, len(amps)))
 
             born = FKSProcess(amp, ncores_for_proc_gen = self['ncores_for_proc_gen'], \
@@ -328,7 +328,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             # take the orders that are actually used bu the matrix element
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
-                    % (myproc.nice_string(print_weighted = False).replace(\
+                    % (myproc.nice_string(print_weighted= False, print_perturbated= False).replace(\
                                                              'Process', ''),
                         i + 1, len(self['born_processes'])))
             try:
@@ -779,7 +779,7 @@ class FKSProcess(object):
         which configuration in the real correspond to which in the born
         """
         # remove and fix in order to take into account mixed expansion
-        logger.debug('link_born_real: skipping')
+        logger.log(5, 'link_born_real: skipping')
         return
 
         for real in self.real_amps:

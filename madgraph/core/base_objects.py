@@ -3005,7 +3005,7 @@ class Process(PhysicsObject):
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
                 'NLO_mode', 'split_orders', 'born_sq_orders']
 
-    def nice_string(self, indent=0, print_weighted = True, prefix=True):
+    def nice_string(self, indent=0, print_weighted=True, prefix=True, print_perturbated=True):
         """Returns a nicely formated string about current process
         content. Since the WEIGHTED order is automatically set and added to 
         the user-defined list of orders, it can be ommitted for some info
@@ -3079,7 +3079,7 @@ class Process(PhysicsObject):
                     for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
-        if self['perturbation_couplings']:
+        if print_perturbated and self['perturbation_couplings']:
             mystr = mystr + '[ '
             if self['NLO_mode']!='tree':
                 if self['NLO_mode']=='virt' and not self['has_born']:
