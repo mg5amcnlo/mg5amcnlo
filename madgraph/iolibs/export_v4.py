@@ -2561,6 +2561,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             writers.FortranWriter('nsqso_born.inc').writelines(
                 """INTEGER NSQSO_BORN
                    PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
+            files.cp('nsqso_born.inc', '..')
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
 

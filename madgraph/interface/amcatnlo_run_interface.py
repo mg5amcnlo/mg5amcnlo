@@ -5311,6 +5311,7 @@ RESTART = %(mint_mode)s
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
+                tests.append('check_sudakov')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -5416,6 +5417,8 @@ RESTART = %(mint_mode)s
             content+= '\n'.join(["-1"] * 50) #random diagram (=first diagram)
         elif test == 'check_poles':
             content = '20 \n -1\n'
+        elif test == 'check_sudakov':
+            content = '7 \n -1\n'
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':

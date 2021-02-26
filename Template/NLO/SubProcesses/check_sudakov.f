@@ -1057,7 +1057,7 @@ c     .                    dble(logfromLOip1/AMP_SPLIT_BORN_ONEHEL(iamp))/4d0
 
             if (born_leadhel(iamp).ne.0d0) then 
               write(73,*), energy, 
-     .        "lead hel summed",
+     .        "lead-hel-summed",
      .         dble(virt_leadhel(iamp)/born_leadhel(iamp)),
      .         dble(sud_leadhel(iamp)/born_leadhel(iamp)),  
      .         dble((virt_leadhel(iamp)-sud_leadhel(iamp))/born_leadhel(iamp)), born_leadhel(iamp)

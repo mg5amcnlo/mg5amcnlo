@@ -2896,6 +2896,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         writers.FortranWriter('nsquaredSO.inc').writelines(
 """INTEGER NSQUAREDSO
 PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
+        files.cp('nsquaredSO.inc', '..')
         
         replace_dict = copy.copy(matrix_element.rep_dict)
         # Build the general array mapping the split orders indices to their
