@@ -1029,8 +1029,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     logger.debug('WEIGHTED^2%s%s encoutered. Please check behavior for' + \
                             'https://bazaar.launchpad.net/~maddevelopers/mg5amcnlo/3.0.1/revision/613', \
                             (process.get_squared_order_type(user_sqso), sqsos[split_orders.index(user_sqso)]))
-
-                if (process.get_squared_order_type(user_sqso) =='==' and \
+                if user_sqso not in split_orders:
+                    is_a_match = False
+                elif (process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \

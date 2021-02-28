@@ -477,13 +477,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # set the orders
         # if some orders have been set by the user,
         # check that all the orders of the model have been specified
-        # set to zero those which have not been specified and warn the user
+        # set to default those which have not been specified and warn the user
         if myprocdef['orders'] and not all([o in list(myprocdef['orders'].keys()) for o in myprocdef['model'].get_coupling_orders()]):
             for o in myprocdef['model'].get_coupling_orders():
                 if o not in list(myprocdef['orders'].keys()):
-                    myprocdef['orders'][o] = 0
-                    logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
-                                   'If this is not what you need, please regenerate with the correct orders.') % o)
+                    myprocdef['orders'][o] = self.options['default_unset_couplings']
+                    logger.warning(('%s order is missing in the process definition. It will be set to "default unser couplings": %s\n' + \
+                                   'If this is not what you need, please regenerate with the correct orders.') % (o,myprocdef['orders'][o]))
 
         # this is in case no orders have been passed
         if not myprocdef['squared_orders'] and not myprocdef['orders']:
@@ -496,22 +496,40 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             # this is a very rough attempt, and works only to guess QED/QCD
             qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+
             if qed < 0 or qcd < 0:
                 raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.')
-            orders = {'QED': 2*qed, 'QCD': 2*qcd}
-            # set all the other coupling to zero
-            for o in myprocdef['model'].get_coupling_orders():
-                if o not in ['QED', 'QCD']:
-                    orders[o] = 0
+            if proc_type[1] != 'only':
+                orders = {'QED': 2*qed, 'QCD': 2*qcd}
+                # set all the other coupling to zero
+                for o in myprocdef['model'].get_coupling_orders():
+                    if o not in ['QED', 'QCD']:
+                        orders[o] = 0
 
-            myprocdef.set('squared_orders', orders)
-            # warn the user of what happened
-            logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
-                            'If this is not what you need, please regenerate with the correct orders.'), 
-                            ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
-                            '$MG:BOLD')
+                myprocdef.set('squared_orders', orders)
+                # warn the user of what happened
+                logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
+                                'If this is not what you need, please regenerate with the correct orders.'), 
+                                ' '.join(['%s^2<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
+                                '$MG:BOLD')
+            else:
+                orders = {'QED': qed, 'QCD': qcd}
+                sqorders = {'QED': 2*qed, 'QCD': 2*qcd}
+                # set all the other coupling to zero
+                for o in myprocdef['model'].get_coupling_orders():
+                    if o not in ['QED', 'QCD']:
+                        orders[o] = 0
+                        sqorders[o] = 0
+
+                myprocdef.set('orders', orders)
+                myprocdef.set('squared_orders', sqorders)
+                # warn the user of what happened
+                logger.info(('Setting the born orders automatically in the process definition to %s.\n' + \
+                                'If this is not what you need, please regenerate with the correct orders.'), 
+                                ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['orders'].items()]), 
+                                '$MG:BOLD')                
 
         # now check that all couplings that are there in orders also appear
         # in squared_orders. If not, set the corresponding one
@@ -530,6 +548,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         myprocdef['born_sq_orders'] = copy.copy(myprocdef['squared_orders'])
         # split all orders in the model, for the moment it's the simplest solution
         # mz02/2014
+        #if proc_type[1] != 'only':
         myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
                 if o not in myprocdef['split_orders']]
 
@@ -541,10 +560,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # then increase the orders which are perturbed
         for pert in myprocdef['perturbation_couplings']:
+
+            if proc_type[1] == 'only' and pert not in proc_type[2]:
+                    continue
+
+
             # if orders have been specified increase them
             if list(myprocdef['orders'].keys()) != ['WEIGHTED']:
                 try:
-                    myprocdef['orders'][pert] += 2
+                    myprocdef['orders'][pert] += 1
                 except KeyError:
                     # if the order is not specified
                     # then MG does not put any bound on it
@@ -572,7 +596,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # This is necessary because when doing EW corrections one only specifies
         # squared-orders constraints. In that case, all kind of splittings/loop-particles
         # must be included
-        if not myprocdef['orders']:
+        if not myprocdef['orders'] and proc_type[1] != 'only':
             myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
         self._curr_proc_defs.append(myprocdef)

@@ -241,7 +241,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 for real in born.real_amps:
                     real.find_fks_j_from_i(born_pdg_list)
             if amps:
-                if self['process_definitions'][0].get('NLO_mode') == 'all':
+                if self['process_definitions'][0].get('NLO_mode') in ['all', 'only']:
                     self.generate_virtuals()
                 
                 elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
@@ -324,7 +324,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             # (this is the case for EW corrections, where only squared oders 
             # are imposed)
             if not myproc['orders']:
-                myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
+                if myproc['NLO_mode'] != 'only':
+                    myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \

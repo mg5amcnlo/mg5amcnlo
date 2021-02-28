@@ -211,7 +211,7 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD( \
                     'The NLO mode %s is not valid. Please choose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode in ['all', 'real', 'LOonly']:
+                elif nlo_mode in ['all', 'real', 'LOonly', 'only']:
                     self.change_principal_cmd('aMC@NLO', allow_switch)
                 elif nlo_mode in ['virt', 'sqrvirt']:
                     self.change_principal_cmd('MadLoop', allow_switch)
@@ -245,7 +245,7 @@ class Switcher(object):
             if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCMD(\
                 'The NLO mode %s is not valid. Please chose one among: %s' \
                 % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-            elif nlo_mode == 'all':
+            elif nlo_mode in ['all', 'only']:
                 self.change_principal_cmd('MadLoop')
             elif nlo_mode == 'real':
                 raise self.InvalidCMD('Mode [real=...] not valid for checking processes.')
@@ -268,7 +268,7 @@ class Switcher(object):
                 if not nlo_mode in self._valid_nlo_modes: raise self.InvalidCmd( \
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
-                elif nlo_mode in ['all', 'real', 'LOonly']:
+                elif nlo_mode in ['all', 'real', 'LOonly', 'only']:
                     self._fks_multi_proc = fks_base.FKSMultiProcess()
                     self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
