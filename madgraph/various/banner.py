@@ -974,7 +974,7 @@ class ConfigFile(dict):
         a file, a path to a file, or simply Nothing"""                
         
         if isinstance(finput, self.__class__):
-            dict.__init__(self, finput)
+            dict.__init__(self)
             for key in finput.__dict__:
                 setattr(self, key, copy.copy(getattr(finput, key)) )
             for key,value in finput.items():
@@ -1765,10 +1765,7 @@ class PY8Card(ConfigFile):
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
 
-    def __copy__(self):
-        newone = type(self)(dict(self))
-        newone.__dict__.update(self.__dict__)
-        return newone
+
 
     def add_param(self, name, value, hidden=False, always_write_to_card=True, 
                                                                   comment=None):

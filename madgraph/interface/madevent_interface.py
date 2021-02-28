@@ -4082,15 +4082,17 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList, force=True)
+            
 
-            for scale in PY8_Card['SysCalc:qCutList']:
-                if scale<(1.5*self.run_card['xqcut']):
-                    logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
-        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
-        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
-        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
-        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+            if PY8_Card['SysCalc:qCutList']!='auto':
+                for scale in PY8_Card['SysCalc:qCutList']:
+                    if scale<(1.5*self.run_card['xqcut']):
+                        logger.error(
+            'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
+            " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+            "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+            ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+            'It would be better/safer to use a larger qCut or a smaller xqcut.')
                 
             # Specific MLM settings
             # PY8 should not implement the MLM veto since the driver should do it
@@ -4459,6 +4461,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 shutil.copy(pythia_main,parallelization_dir)
                 # Add a safe card in parallelization
                 ParallelPY8Card = copy.copy(PY8_Card)
+                assert ParallelPY8Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
+
                 # Normalize the name of the HEPMCouput and lhe input
                 if HepMC_event_output:
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
