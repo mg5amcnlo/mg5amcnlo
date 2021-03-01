@@ -5585,7 +5585,8 @@ class UFO_model_to_mg4(object):
             self.opt.update(opt)
             
         self.coups_dep = []    # (name, expression, type)
-        self.coups_indep = []  # (name, expression, type)
+        self.coups_indep_noloop = []  # (name, expression, type)
+        self.coups_indep_loop = []  # (name, expression, type)
         self.params_dep = []   # (name, expression, type)
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
@@ -5683,10 +5684,15 @@ class UFO_model_to_mg4(object):
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
             else:
-                self.coups_indep += [c for c in coup_list if
+                self.coups_indep_noloop += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
-                                      wanted_couplings)]
-                
+                                      wanted_couplings) and \
+                                      not any([tag in c.name.lower() for tag in ['uv', 'r2']])]
+                self.coups_indep_loop += [c for c in coup_list if
+                                     (not wanted_couplings or c.name in \
+                                      wanted_couplings) and \
+                                      any([tag in c.name.lower() for tag in ['uv', 'r2']])]
+               
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -5944,7 +5950,7 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+w for w in widths])+'\n\n')
         
         # Write the Couplings
-        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
+        coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
@@ -5983,7 +5989,7 @@ class UFO_model_to_mg4(object):
             return 'write(*,2) \'%(name)s = \', %(name)s' % {'name': coupl.name}
         
         # Write the Couplings
-        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep]       
+        lines = [format(coupl) for coupl in self.coups_dep + self.coups_indep_noloop + self.coups_indep_loop]       
         fsock.writelines('\n'.join(lines))
         
         
@@ -6248,24 +6254,38 @@ class UFO_model_to_mg4(object):
         nb_def_by_file = 25
         
         self.create_couplings_main(nb_def_by_file)
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
-        for i in range(nb_coup_indep):
+        for i in range(nb_coup_indep_noloop):
             ##### For the independent couplings, we compute the double and multiple
             ##### precision ones together
             # For the EW sudakov approximation, because of the numerical derivatives
             # we need to separate MP vs DP also here
-            data = self.coups_indep[nb_def_by_file * i: 
-                             min(len(self.coups_indep), nb_def_by_file * (i+1))]
+            data = self.coups_indep_noloop[nb_def_by_file * i: 
+                             min(len(self.coups_indep_noloop), nb_def_by_file * (i+1))]
             self.create_couplings_part(i + 1, data, dp=True, mp=False)
 
             if self.opt['mp']:
                 self.create_couplings_part( i + 1, data, dp=False,mp=True)
+
+        for i in range(nb_coup_indep_loop):
+            ##### For the independent couplings, we compute the double and multiple
+            ##### precision ones together
+            # For the EW sudakov approximation, because of the numerical derivatives
+            # we need to separate MP vs DP also here
+            data = self.coups_indep_loop[nb_def_by_file * i: 
+                             min(len(self.coups_indep_loop), nb_def_by_file * (i+1))]
+            self.create_couplings_part(i + 1 + nb_coup_indep_noloop, data, dp=True, mp=False)
+
+            if self.opt['mp']:
+                self.create_couplings_part( i + 1 + nb_coup_indep_noloop, data, dp=False,mp=True)
             
         for i in range(nb_coup_dep):
             # For the dependent couplings, we compute the double and multiple
             # precision ones in separate subroutines.
+            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
@@ -6306,11 +6326,18 @@ class UFO_model_to_mg4(object):
             fsock.writelines("""include \'mp_intparam_definition.inc\'\n""")
             fsock.writelines("endif\n")
         
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
+                    ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep_noloop)]))
+
+        fsock.writelines('if (updateloop) then\n')
+        fsock.writelines('\n'.join(\
+                    ['call coup%s()' %  (i + 1 + nb_coup_indep_noloop) for i in range(nb_coup_indep_loop)]))
+        fsock.writelines('\nendif\n')
         
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
@@ -6355,7 +6382,9 @@ class UFO_model_to_mg4(object):
                             include \'intparam_definition.inc\'\n
                          """)
             
-        nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
@@ -6402,7 +6431,9 @@ class UFO_model_to_mg4(object):
                                 include \'mp_intparam_definition.inc\'\n
                              """)
             
-            nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
+            nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // nb_def_by_file 
+            nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // nb_def_by_file 
+            nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                     
             fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
@@ -6944,8 +6975,10 @@ class UFO_model_to_mg4(object):
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
         
-        nb_coup_indep = 1 + len(self.coups_dep) // 25 
-        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // 25 
+        nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // 25
+        nb_coup_indep = nb_coup_indep_noloop + nb_coup_indep_loop
+        nb_coup_dep = 1 + len(self.coups_dep) // 25
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
