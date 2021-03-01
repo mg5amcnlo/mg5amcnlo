@@ -39,17 +39,110 @@ C-----Local
       integer ihowresh
       parameter(ihowresh=1) ! 1->initial, 2->final
 
-      if (ihowresh.eq.1) then
-        call reshuffle_initial(p,q,iresh,pdg_old,pdg_new,pass)
-      else if (ihowresh.eq.2) then
-        call reshuffle_final(p,q,iresh,pdg_old,pdg_new,pass)
+      if (iresh.gt.nincoming) then
+          ! for the reshuffling of a final-state particle, 
+          ! two options exist: recoil on all other FS particles,
+          ! or recoil on the initial state
+          if (ihowresh.eq.1) then
+            call reshuffle_initial(p,q,iresh,pdg_old,pdg_new,pass)
+          else if (ihowresh.eq.2) then
+            call reshuffle_final(p,q,iresh,pdg_old,pdg_new,pass)
+          else
+            write(*,*) 'ERROR: reshuffle momenta, wrong option', ihowresh
+            stop 1
+          endif
       else
-        write(*,*) 'ERROR: reshuffle momenta, wrong option', ihowresh
-        stop 1
+          ! for the reshuffling of an initial statem momentum,
+          ! the only option is to recoil on all FS particles
+          call reshuffle_initial_state(p,q,iresh,pdg_old,pdg_new,pass)
       endif
 
       return
       end
+
+
+      subroutine reshuffle_initial_state(p,q,iresh,pdg_old,pdg_new,pass)
+************************************************************************
+*     Authors: Marco Zaro                                              *
+*     Given momenta p(nu,nexternal-1) produce q(nu,external-1) with    * 
+*     the mass of particle iresh set according to pdg_new.             *
+*     In this case, iresh is in the initial stete.                     *
+*     The spatial components of the IS momenta are set such that       *
+*     No change is needed for the final state ones                     *
+************************************************************************
+      implicit none 
+      include 'nexternal.inc'
+C-----Arguments      
+      double precision p(0:3,nexternal-1), q(0:3,nexternal-1)
+      integer iresh, pdg_old, pdg_new
+      double precision mass_old, mass_new
+      logical pass
+C-----Local
+      integer i, j, nu
+      double precision preco(0:3), qreco(0:3), pcom(0:3)
+      double precision qinboost(0:3,nincoming)
+      double precision shat, newmom, m2_other
+      double precision msq_reco, totmass
+      double precision a, b
+      double precision dot, threedot, sumdot, get_mass_from_id
+      external dot, threedot, sumdot, get_mass_from_id
+      double precision rescale_init
+C--------------- 
+C     BEGIN CODE                                                                   
+C---------------    
+
+      pass = .true.
+      mass_old = get_mass_from_id(pdg_old)
+      ! check that we start from a massless particle
+      !  (should always be the case)
+      if (mass_old.ne.0d0) then
+          write(*,*)'ERROR reshuffle initial state with mass_old!=0', mass_old
+      endif
+      ! check that we are in the partonic com
+      if (abs(p(3,1)+p(3,2))/(abs(p(3,1))+abs(p(3,2))).gt.1d-6) then
+          write(*,*)'ERROR reshuffle initial state, no com',
+     $     p(:,1), p(:,2)
+      endif
+      mass_new = get_mass_from_id(pdg_new)
+
+      ! under these assumptions, we go in the frame where the
+      ! reshuffled particle with mas = mass_new is on shell
+      ! The com energy is always conserved
+      shat = sumdot(p(0,1), p(0,2), 1d0)
+      do i = 1,nincoming
+        if (i.eq.iresh) then
+            qinboost(0,i) = mass_new
+            qinboost(1:3,i) = 0d0 
+        else
+            m2_other = dot(p(0,i),p(0,i))
+            qinboost(0,i) = (shat - m2_other - mass_new**2) / 2d0 / mass_new
+            qinboost(1:2,i) = 0d0
+            ! check that it is physical
+            if (qinboost(0,i)**2 - m2_other.lt.0d0.or.qinboost(0,i).lt.0d0) then
+                pass = .false.
+                return
+            endif
+            qinboost(3,i) = dsqrt(qinboost(0,i)**2 - m2_other)
+        endif
+      enddo
+
+      ! now boost the momenta back to the com frame
+      pcom(:) = qinboost(:,1) + qinboost(:,2)
+
+      do i=1, nincoming
+        call invboostx(qinboost(0,i), pcom, q(0,i))
+      enddo
+
+      do i = nincoming+1, nexternal-1
+        q(:,i) = p(:,i)
+      enddo
+
+      ! check the momenta before returning
+      call check_reshuffled_momenta(p, q, iresh, mass_new)
+
+      return     
+      end
+
 
 
 
@@ -129,7 +222,7 @@ C satisfy the mass-shell conditions q(iresh)^2 = mass_new^2, qreco^2=m_reco^2
 C *** other recoiling particles
 C boost them to the preco rest frame and then back to
 C the lab frame using qreco
-      do i=1, nexternal
+      do i=1, nexternal-1
         if (i.eq.iresh) cycle
         call invboostx(p(0,i), preco, ptmp)
         call boostx(ptmp, qreco, q(0,i))

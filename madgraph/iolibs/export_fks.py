@@ -3033,7 +3033,10 @@ Parameters              %(params)s\n\
 
         # the calls for the momentum reshuffling
         replace_dict['reshuffle_calls'] = 'pass_reshuffle = .true.\n'
-        for leg, pdg_old, pdg_new in zip(legs, pdgs[0], pdgs[1]):
+        # the 'sorted' below is to do the reshuffling from the last leg
+        # this ensures that reshuffling of initial-state legs is always done AFTER
+        # the one of FS legs
+        for leg, pdg_old, pdg_new in sorted(zip(legs, pdgs[0], pdgs[1]), reverse=True):
             # call the reshuffling function only if the masses are different
             if model['particle_dict'][pdg_old]['mass'] != model['particle_dict'][pdg_new]['mass']:
                 replace_dict['reshuffle_calls'] += "call reshuffle_momenta(p,p_resh,%d,%d,%d,pass_reshuffle)\n" \
