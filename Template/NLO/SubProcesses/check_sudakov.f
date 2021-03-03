@@ -111,8 +111,8 @@ c from MAdLoop
 
        double precision F1t, F2t
 
-       double precision PREC_FOUND
-       integer RET_CODE
+c       double precision PREC_FOUND
+c       integer RET_CODE
 
       INCLUDE 'nsqso_born.inc'
       INCLUDE 'nsquaredSO.inc'
@@ -121,6 +121,11 @@ c      PARAMETER (NSQUAREDSO=1)
 
 c      INTEGER USERHEL
 c      COMMON/USERCHOICE/USERHEL
+
+       double precision PREC_FOUND(0:NSQUAREDSO)
+       integer RET_CODE
+
+
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
 
@@ -159,7 +164,7 @@ C-----
       maximumtries=20000000
       energy_increase_factor=2.5d0
 c Set a number that is possible. E.g. > 0.5d0 for a 2->2 
-      min_inv_frac=1d0/4.7d0
+      min_inv_frac=1d0/8d0
       tolerance_next_point=1d-3
       frac_lead_hel=1d-3
 
@@ -537,7 +542,7 @@ c          qes2 =100d0! ren_scale**2
           call SLOOPMATRIX_THRES(p_born,virthel,1d-3,PREC_FOUND
      $ ,RET_CODE)
           
-          do j= iamp, amp_split_size_born
+          do iamp= 1, amp_split_size_born
              iampvirt(iamp)=0
           enddo
 
@@ -618,6 +623,16 @@ c     .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
 
                 logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .          *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
+
+                do i=1,nexternal-1
+c                  print*, i, "becco un gluone"
+                  if(abs(pdg_type(i)).eq.21) then
+c                    print*, i, "becco un gluone"
+                    logfromLOip1=
+     .              logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .            * dlog(qes2/mdl_mt**2)
+                  endif
+                enddo
               endif
    
 !!deb!!!!                                
@@ -698,6 +713,17 @@ c             call sudakov_wrapper(p_born)
 
                    logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
+
+                   do i=1,nexternal-1
+c                  print*, i, "becco un gluone"
+                     if(abs(pdg_type(i)).eq.21) then
+c                    print*, i, "becco un gluone"
+                       logfromLOip1=
+     .                 logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .               * dlog(qes2/mdl_mt**2)
+                     endif
+                   enddo
+
 
                  endif
 
@@ -962,6 +988,17 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
                    logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
 
+                   do i=1,nexternal-1
+c                  print*, i, "becco un gluone"
+                     if(abs(pdg_type(i)).eq.21) then
+c                       print*, i, "becco un gluone"
+                       logfromLOip1=
+     .                 logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .               * dlog(qes2/mdl_mt**2)
+                     endif
+                   enddo
+
+
                  endif
 
                  born_leadhel(iamp)=born_leadhel(iamp)+AMP_SPLIT_BORN_ONEHEL(iamp)
@@ -1009,9 +1046,17 @@ c     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)
                     logfromLOip1=logfromLOip1+1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .              *dble(orders(1)-2)  * dlog(qes2/mdl_mt**2)
 
-                  endif
+                    do i=1,nexternal-1
+c                  print*, i, "becco un gluone"
+                      if(abs(pdg_type(i)).eq.21) then
+c                    print*, i, "becco un gluone"
+                        logfromLOip1=
+     .                  logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
+     .                * dlog(qes2/mdl_mt**2)
+                      endif
+                    enddo
 
-
+                 endif
 
 
 
