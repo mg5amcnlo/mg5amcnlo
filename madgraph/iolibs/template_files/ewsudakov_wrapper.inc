@@ -54,8 +54,15 @@ data firsttime_hel  /ncomb*.true./
 integer iamp
 logical sud_filter_hel
 COMMON /to_filter_hel/ sud_filter_hel
-
-CALCULATEDBORN=.FALSE.
+C stuff for the MC over helicities
+LOGICAL SUD_MC_HEL
+COMMON /TO_MC_HEL/ SUD_MC_HEL
+integer igood_hel(ncomb), HEL(0:ncomb)
+DATA IGOOD_HEL  /NCOMB * 0/
+logical firsttime
+data firsttime /.true./
+integer hel_min, hel_max, hel_pick
+double precision volh
 
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
@@ -66,8 +73,22 @@ AMP_SPLIT_EWSUD_PAR(:) = dcmplx(0d0,0d0)
 
 call sdk_get_invariants(p, iflist, invariants)
 
+if (firsttime.or..not.sud_mc_hel) then
+ hel_min = 1
+ hel_max = ncomb
+ hel(:)=0
+ volh=1d0
+ firsttime=.false.
+else
+ call pickhelicitymc(p,igood_hel,hel,hel_pick,volh)
+ hel_min = hel(hel_pick)
+ hel_max = hel_min
+endif
+
+CALCULATEDBORN=.FALSE.
+
 C Main loop over the helicities
-do ihel=1, ncomb
+DO IHEL=hel_min, hel_max
 C if an helicity is selected, then filter it
 if (ewsud_helselect.ne.0.and.ewsud_helselect.ne.ihel) cycle
 
@@ -82,6 +103,12 @@ if (firsttime_hel(ihel)) then
     do iamp = 1, amp_split_size
       good_hel(ihel) = good_hel(ihel).or.amp_split_born_onehel(iamp).ne.0d0
     enddo
+
+    if (good_hel(ihel)) then
+      hel(0) = hel(0)+1
+      hel(hel(0)) = ihel
+      igood_hel(hel(0)) = 1
+    endif
     write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel, nhel(:,ihel), good_hel(ihel)
     firsttime_hel(ihel) = .false.
 endif
@@ -89,6 +116,11 @@ endif
 C call the amplitudes with the goldstones for the longitudinally-polarised legs and the born for all-transverse
 %(calls_to_me)s
 enddo
+
+AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)/volh
+AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)/volh
+AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)/volh
+AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)/volh
 
 CALCULATEDBORN=.FALSE.
 

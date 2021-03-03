@@ -18,6 +18,12 @@ C at the Born are skipped
        DATA sud_filter_hel / .true. /
        END
 
+       BLOCK DATA sud_mc_helicities
+       implicit none
+       logical sud_mc_hel
+       COMMON /to_mc_hel/ sud_mc_hel
+       DATA sud_mc_hel / .true. / 
+       END    
 
       !! MZ declare all functions as double complex, since some (few)
       !  terms can be imaginary
