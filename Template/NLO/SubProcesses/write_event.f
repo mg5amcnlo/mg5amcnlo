@@ -297,8 +297,8 @@ c********************************************************************
       return
       end
 
-      subroutine fill_HEPEUP_event_2(p, wgt, npart, id, status, mothers,
-     &           cols, spin, scalup, scales, scales_a)
+      subroutine fill_HEPEUP_event(p, wgt, npart, id, status, mothers,
+     &           cols, spin, scalup, scales_a)
       implicit none
       double precision pi
       parameter (pi=3.1415926535897932385d0)
@@ -306,32 +306,32 @@ c********************************************************************
       include "coupl.inc"
       include 'hep_event_streams.inc'
       double precision wgt, aqcd, aqed, scalup
+
       double precision p(0:3,nexternal)
       integer id(nexternal)
       integer mothers(2,nexternal)
       integer cols(2,nexternal)
       integer status(nexternal)
       integer spin(nexternal)
-      double precision scales(nexternal)
       double precision scales_a(nexternal,nexternal)
       double precision pmass(nexternal)
+
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
-      integer npart, i, j, proc_code, iscale
+
+      integer npart, i, j, proc_code, iscale(nexternal)
       logical firsttime
       data firsttime/.true./
+
 c
       scalup_out = scalup
-      do i=1,nexternal
-         do j=1,nexternal
-            scalup_out_a(i,j) = scales_a(i,j)
-         enddo
-      enddo
+
 c     Read the particle masses.
       include "pmass.inc"
-c
+
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
 c
@@ -342,6 +342,9 @@ c alpha_s to the one in the param_card.dat (without any running).
          call fill_HEPRUP_init()
          firsttime=.false.
       endif
+
+c
+
 c********************************************************************
 c     Fill in LesHouches event block according to conventions
 c     ic(1,*) = Particle ID
@@ -358,41 +361,52 @@ c********************************************************************
       XWGTUP_out=wgt
       AQEDUP_out=aqed
       AQCDUP_out=aqcd
-      iscale=1
+
       do i=1,maxpup_out
-         IDUP_out(i)=0
-         ISTUP_out(i)=0
-         MOTHUP_out(1,i)=0
-         MOTHUP_out(2,i)=0
-         ICOLUP_out(1,i)=0
-         ICOLUP_out(2,i)=0
-         PUP_out(1,i)=0.0
-         PUP_out(2,i)=0.0
-         PUP_out(3,i)=0.0
-         PUP_out(4,i)=0.0
-         PUP_out(5,i)=0.0
-         VTIMUP_out(i)=0.0
-         SPINUP_out(i)=0.0
+        IDUP_out(i)=0
+        ISTUP_out(i)=0
+        MOTHUP_out(1,i)=0
+        MOTHUP_out(2,i)=0
+        ICOLUP_out(1,i)=0
+        ICOLUP_out(2,i)=0
+        PUP_out(1,i)=0.0
+        PUP_out(2,i)=0.0
+        PUP_out(3,i)=0.0
+        PUP_out(4,i)=0.0
+        PUP_out(5,i)=0.0
+        VTIMUP_out(i)=0.0
+        SPINUP_out(i)=0.0
+        SCALES_out(1,i)=-1.0
+        SCALES_out(2,i)=-1.0
+        iscale(i)=0
       enddo
+
       do i=1,NUP_out
-         IDUP_out(i)=id(i)
-         ISTUP_out(i)=status(i)
-         MOTHUP_out(1,i)=mothers(1,i)
-         MOTHUP_out(2,i)=mothers(2,i)
-         ICOLUP_out(1,i)=cols(1,i)
-         ICOLUP_out(2,i)=cols(2,i)
-         PUP_out(1,i)=p(1,i)
-         PUP_out(2,i)=p(2,i)
-         PUP_out(3,i)=p(3,i)
-         PUP_out(4,i)=p(0,i)
-         PUP_out(5,i)=pmass(i)
-         VTIMUP_out(i)=0.d0
-         SPINUP_out(i)=dfloat(spin(i))
-         SCALES_out(1,i)=scales(i)
-         SCALES_out(2,i)=scales(i)
+        IDUP_out(i)=id(i)
+        ISTUP_out(i)=status(i)
+        MOTHUP_out(1,i)=mothers(1,i)
+        MOTHUP_out(2,i)=mothers(2,i)
+        ICOLUP_out(1,i)=cols(1,i)
+        ICOLUP_out(2,i)=cols(2,i)
+        PUP_out(1,i)=p(1,i)
+        PUP_out(2,i)=p(2,i)
+        PUP_out(3,i)=p(3,i)
+        PUP_out(4,i)=p(0,i)
+        PUP_out(5,i)=pmass(i)
+        VTIMUP_out(i)=0.d0
+        SPINUP_out(i)=dfloat(spin(i))
+c scale information relevant to S-event configuration
+        do j=i+1,NUP_out
+           if(scales_a(i,j).gt.0d0)then
+              iscale(i)=iscale(i)+1
+              SCALES_out(iscale(i),i)=scales_a(i,j)
+           endif
+        enddo
       enddo
+
       ifks_out = i_fks
       jfks_out = j_fks
+
       return
       end
 

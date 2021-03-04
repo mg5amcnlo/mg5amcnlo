@@ -1420,6 +1420,8 @@ c
       common/cisspecial/isspecial
       double precision qMC_a2(nexternal-1,nexternal-1)
       common /to_complete/qMC_a2
+      double precision scales_for_HEPEUP(nexternal,nexternal)
+
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1546,9 +1548,18 @@ c Boost H-event momenta to lab frame before passing to pythia
          call boostwdir2(chy,shy,chymo,xdir,p(0,i),p_lab(0,i))
       enddo
 
-      call fill_HEPEUP_event_2(p_lab, wgt, nexternal_now, idup_h,
+c Call fill_HEPEUP_event with S scale information.
+c If it is an H event, this information should not be
+c used by Pythia, hence a dummy -1d0 value is passed
+      if(Hevents)then
+         scales_for_HEPEUP = -1d0
+      else
+         scales_for_HEPEUP = SCALUP_tmp_S
+      endif
+c
+      call fill_HEPEUP_event(p_lab, wgt, nexternal_now, idup_h,
      &       istup_local, mothup_h, icolup_h, spinup_local,
-     &       emsca, emscav_tmp, emscav_tmp_a)
+     &       emsca, scales_for_HEPEUP)
       xscales=-1d0
       xmasses=-1d0
       dzones=.true.
