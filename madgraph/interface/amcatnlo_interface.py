@@ -385,7 +385,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     #check that if one requests the virt diagrams, there are virt_amplitudes
                     if args[1] == 'loop' and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
-                    self.draw(' '.join(args[2:]),type = args[1])
+                    self.draw(' '.join(args[2:]), Dtype = args[1])
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
