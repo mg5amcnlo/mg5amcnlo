@@ -2481,7 +2481,7 @@ class RunCard(ConfigFile):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
-                nline = nline.split('=')
+                nline = nline.rsplit('=',1)
                 if python_template and nline[0].startswith('$'):
                     block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
