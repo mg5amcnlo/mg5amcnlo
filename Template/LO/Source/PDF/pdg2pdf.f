@@ -74,7 +74,15 @@ c     instead of stopping the code, as this might accidentally happen.
          endif
       endif
 
-      ipart=ipdg
+c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
+c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
+c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
+      if(pdlabel.eq.'eva') then
+         ipart=ipdg
+      else 
+         ipart=ipdg*ih/iabs(ih)
+      endif      
+
       if(iabs(ipart).eq.21) then ! g
          ipart=0
       else if(ipart.eq.24) then  ! w+
@@ -87,7 +95,7 @@ c     instead of stopping the code, as this might accidentally happen.
          ipart=7
       else if(iabs(ipart).eq.7) then  ! a
          ipart=7
-c     This will be called for any PDG code, but we only support up to 7 and 23,24
+c     This will be called for any PDG code. We only support up to 7 and 22-24
       else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
@@ -163,14 +171,14 @@ c     saved. 'pdflast' is filled below.
 c         write(*,*) 'running eva'
             select case (iabs(ih))
             case (0:2)
-               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
                stop 24
             case (3) ! e+/-
                ppid = 11
             case (4) ! mu+/-
                ppid = 13
             case default
-               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for ih',ih
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
                stop 24
             end select
             ppid = ppid * ih/iabs(ih) ! get sign of parent
@@ -179,6 +187,7 @@ c         write(*,*) 'running eva'
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
             pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
+c            write(*,*)'ih,ppid,ipart,pdg2pdf = ',ih,ppid,ipart,pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility

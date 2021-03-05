@@ -104,21 +104,19 @@ c         endif
       end select
 c     4. check evolution scale
       if(mu2.lt.mu2min) then
-         write(*,*) 'mu2 too small. setting to mu2min',mu2,mu2min
+         write(*,*) 'muf2 too small. setting muf2 to muf2min:',mu2,mu2min
          mu2 = mu2min
       endif
 c     5. QED conservation check
-c      if(iabs(vPID).eq.24) then
-c         QW = dble(vPID/iabs(vPID))
-c         call eva_get_qEM_by_PID(Qf,fPID)
-c         if(dabs(Qf-QW).gt.eva_one) then
-c            write(*,*) 'QED charge violation with w emission by fPID =',fPID
-c            write(*,*)'vPID,QW,fPID,Qf = ',vPID,QW,fPID,Qf 
-c            eva_get_pdf_by_PID = 0d0
-c            stop
-c         return
-c         endif
-c      endif
+      if(iabs(vPID).eq.24) then
+         QW = dble(vPID/iabs(vPID))
+         call eva_get_qEM_by_PID(Qf,fPID)
+         if(dabs(Qf-QW).gt.eva_one) then
+            write(*,*) 'Setting EVA pdf to zero: QED charge violation with emission of vPID=',vPID,' by fPID =',fPID
+            eva_get_pdf_by_PID = 0d0
+         return
+         endif
+      endif
 c      if(iabs(vPID).eq.22.and.(
 c     &      iabs(fPID).eq.12.or.
 c     &      iabs(fPID).eq.14.or.
@@ -285,20 +283,10 @@ c     ******************************
             gg2 = eva_ee2*eva_qed2
          case (6)               ! top
             gg2 = eva_ee2*eva_qeu2
-         case (11)              ! electron
+         case (11,13,15)        ! electron/muon/tau
             gg2 = eva_ee2*eva_qee2
-         case (12)              ! electron-neutrino
-            write(*,*) 'eva: nu_e has zero QED charge.'
-            gg2 = eva_zero
-         case (13)              ! muon
-            gg2 = eva_ee2*eva_qee2
-         case (14)              ! muon-neutrino
-            write(*,*) 'eva: nu_m has zero QED charge.'
-            gg2 = eva_zero
-         case (15)              ! tau
-            gg2 = eva_ee2*eva_qee2
-         case (16)              ! tau-neutrino
-            write(*,*) 'eva: nu_tau has zero QED charge.'
+         case (12,14,16)      ! electron/muon/tau-neutrino
+            write(*,*) 'eva: nu has zero QED charge.'
             gg2 = eva_zero
          case default
             write(*,*) 'eva: setting QED coup to (e*Q_e). unknown fPID:', fPID
@@ -307,10 +295,30 @@ c     ******************************
 c     ******************************                     
       case (23)
          gg2 = eva_gz2
+c     ******************************                              
       case (24)
          gg2 = eva_gw2/2.d0
+         if(vPID.eq.24) then ! w+
+            select case (fPID)
+            case (-1,2,-3,4,-5,6,-11,12,-13,14,-15,16)
+               gg2 = gg2
+            case default
+               write(*,*) 'eva: violation of QED conservation. setting w+ffbar coup to zero'
+               gg2 = eva_zero
+            end select
+         else ! w-
+            select case (fPID)
+            case (1,-2,3,-4,5,-6,11,-12,13,-14,15,-16)
+               gg2 = gg2
+            case default
+               write(*,*) 'eva: violation of QED conservation. setting w-ffbar coup to zero'
+               gg2 = eva_zero
+            end select
+         endif 
+c     ******************************                              
       case default
-         gg2 = eva_gw2
+         write(*,*) 'eva: setting coup to zero. unknown vPID:', vPID
+         gg2 = eva_zero
       end select
       return
       end
@@ -340,11 +348,11 @@ c     /* ********************************************************* *
       case (12)              ! electron-neutrino
          qEM = eva_zero
       case (13)              ! muon
-         qEM = eva_qee2 * fPID/iabs(fPID)
+         qEM = eva_qee * fPID/iabs(fPID)
       case (14)              ! muon-neutrino
          qEM = eva_zero
       case (15)              ! tau
-         qEM = eva_qee2 * fPID/iabs(fPID)
+         qEM = eva_qee * fPID/iabs(fPID)
       case (16)              ! tau-neutrino
          qEM = eva_zero
       case default

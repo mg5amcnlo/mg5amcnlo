@@ -5,9 +5,10 @@ c     File: ElectroweakFlux.inc
 c     R. Ruiz (2021 February)
 c     For details, see companion paper by Costantini, et al [arXiv:]
 c     /* ********************************************************* *
-	double precision eva_one,eva_zero,eva_half,eva_pi
+	double precision eva_one,eva_zero,eva_half,eva_pi,eva_sqr2
 	double precision eva_mz, eva_mw, eva_mh, eva_mx
 	double precision eva_mz2,eva_mw2,eva_mh2,eva_mx2
+	double precision eva_Gf,eva_vv2
 	double precision eva_aEM,eva_ee2
 	double precision eva_cw2,eva_sw2,eva_gw2,eva_gz2
 	double precision eva_qeu, eva_qed, eva_qev, eva_qee
@@ -21,10 +22,11 @@ c     /* ********************************************************* *
 	double precision eva_me2,eva_mm2,eva_ml2	
 c
 c	math
-	parameter (eva_one = 1.d0)
+	parameter (eva_one  = 1.d0)
 	parameter (eva_zero = 0.d0)
 	parameter (eva_half = 0.5d0)
 	parameter (eva_pi   = 3.141592653589793d0)
+	parameter (eva_sqr2 = 1.414213562373095d0)
 c	boson mass inputs 2020 PDG
 	parameter (eva_mw = 80.379d0)
 	parameter (eva_mz = 91.1876d0)
@@ -54,12 +56,17 @@ c	fermion mass inputs 2020 PDG
 	parameter (eva_mm2 = eva_mm**2)
 	parameter (eva_ml2 = eva_ml**2)	
 c	coupling inputs
-	parameter (eva_aEM = 1.d0/1.279000d2)
+	parameter (eva_Gf  = 1.1663787d-5)
+	parameter (eva_vv2 = 1.d0/(eva_sqr2*eva_Gf))
+	parameter (eva_gw2 = 4.d0*eva_mw2/eva_vv2) 	! GF,MW,MZ scheme
+c	parameter (eva_aEM = 1.d0/1.279000d2)		! aEM,MW,MZ scheme
+c	parameter (eva_ee2 = 4.d0*eva_pi*eva_aEM)	! aEM,MW,MZ scheme
 	parameter (eva_cw2 = eva_mw2/eva_mz2)
 	parameter (eva_sw2 = 1.d0 - eva_cw2)
-	parameter (eva_ee2 = 4.d0*eva_pi*eva_aEM)
-	parameter (eva_gw2 = eva_ee2/eva_sw2)
+c	parameter (eva_gw2 = eva_ee2/eva_sw2) 		! aEM,MW,MZ scheme
 	parameter (eva_gz2 = eva_gW2/eva_cw2)
+	parameter (eva_ee2 = eva_gw2*eva_sw2) 		! GF,MW,MZ scheme
+	parameter (eva_aEM = eva_ee2/(4.d0*eva_pi)) ! GF,MW,MZ scheme
 c	gauge charges
 	parameter (eva_qeu = +2d0/3d0)
 	parameter (eva_qed = -1d0/3d0)
