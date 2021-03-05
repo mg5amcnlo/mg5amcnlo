@@ -1603,7 +1603,7 @@ class digest:
         def digest(text):
             """using mg5 for the hash"""
             t = hashlib.md5()
-            t.update(text.encode())
+            t.update(text)
             return t.hexdigest()
         return digest
     
@@ -2026,11 +2026,16 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
+    if six.PY2:
+        level = -1
+    else:
+        level = 0
+
     try:
-        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
     except ImportError:
         try:
-            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, level)
         except ImportError:
             raise MadGraph5Error(error_msg)
     
