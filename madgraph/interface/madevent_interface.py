@@ -3611,6 +3611,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
+
     
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -3627,7 +3628,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        
+
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
@@ -3640,15 +3641,20 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+
+                if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                    os.remove(pjoin(Gdir, 'events.lhe'))
+                    continue
+
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
                              result.get('axsec')
                              )
-                sum_xsec += result.get('xsec')
-                sum_xerru.append(result.get('xerru'))
-                sum_axsec += result.get('axsec')
-                
+ 
                 if len(AllEvent) >= 80: #perform a partial unweighting
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
@@ -3678,7 +3684,7 @@ Beware that this can be dangerous for local multicore runs.""")
                    
         self.results.add_detail('nb_event', nb_event)
     
-        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
         
         

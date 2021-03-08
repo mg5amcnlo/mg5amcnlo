@@ -1825,8 +1825,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 #        logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
-        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
-                                                x.get('luminosity') > 0 else -1) 
+        all_channels.sort(key=lambda x : x.get('luminosity'), reverse=True)
                           
         to_refine = []
         for C in all_channels:
