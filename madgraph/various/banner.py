@@ -3306,9 +3306,7 @@ class RunCardLO(RunCard):
             self['hel_recycling'] = False
             logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
             In general this optimization speed up the computation be a factor of two.""")
-        elif self['hel_recycling']:
-            if self['gridpack']:
-                self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
+
                 
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:
