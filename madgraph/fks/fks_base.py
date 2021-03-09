@@ -45,13 +45,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     """A multi process class that contains informations on the born processes 
     and the reals.
     """
-    
+
     def default_setup(self):
         """Default values for all properties"""
         super(FKSMultiProcess, self).default_setup()
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
+
         if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
             self['ncores_for_proc_gen'] = 0
@@ -122,6 +123,13 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
         legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
+
+
+        if 'nlo_mixed_expansion' in options:
+            self['nlo_mixed_expansion'] = options['nlo_mixed_expansion']
+            del options['nlo_mixed_expansion']
+
+
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
                        logging.getLogger('madgraph.loop_diagram_generation')]
@@ -241,7 +249,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 for real in born.real_amps:
                     real.find_fks_j_from_i(born_pdg_list)
             if amps:
-                if self['process_definitions'][0].get('NLO_mode') in ['all', 'only']:
+                if self['process_definitions'][0].get('NLO_mode') in ['all']:
                     self.generate_virtuals()
                 
                 elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
@@ -324,7 +332,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             # (this is the case for EW corrections, where only squared oders 
             # are imposed)
             if not myproc['orders']:
-                if myproc['NLO_mode'] != 'only':
+                if self['nlo_mixed_expansion']:
                     myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))

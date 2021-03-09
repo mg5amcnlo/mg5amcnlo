@@ -501,7 +501,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.')
-            if proc_type[1] != 'only':
+            if self.options['nlo_mixed_expansion']:
                 orders = {'QED': 2*qed, 'QCD': 2*qcd}
                 # set all the other coupling to zero
                 for o in myprocdef['model'].get_coupling_orders():
@@ -561,7 +561,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # then increase the orders which are perturbed
         for pert in myprocdef['perturbation_couplings']:
 
-            if proc_type[1] == 'only' and pert not in proc_type[2]:
+            if not self.options['nlo_mixed_expansion'] and pert not in proc_type[2]:
                     continue
 
 
@@ -596,7 +596,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # This is necessary because when doing EW corrections one only specifies
         # squared-orders constraints. In that case, all kind of splittings/loop-particles
         # must be included
-        if not myprocdef['orders'] and proc_type[1] != 'only':
+        if not myprocdef['orders'] and self.options['nlo_mixed_expansion']:
             myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
         self._curr_proc_defs.append(myprocdef)
@@ -619,7 +619,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         fks_options = {'OLP': self.options['OLP'],
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
-                       'ncores_for_proc_gen': self.ncores_for_proc_gen}
+                       'ncores_for_proc_gen': self.ncores_for_proc_gen,
+                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion']}
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
         except AttributeError: 
