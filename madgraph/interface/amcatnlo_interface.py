@@ -458,10 +458,19 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             run_interface.check_compiler(self.options, block=False)
         #validate_model will reset self._generate_info; to avoid
         #this store it
+        
         if not aMCatNLOInterface.display_expansion:
             if proc_type[2] != ['QCD'] and proc_type[1] == 'all':
                 aMCatNLOInterface.display_expansion = True
-                logger.info(
+                if 'QED' in proc_type[2]:
+                    logger.info(
+"""------------------------------------------------------------------------
+This computation involves NLO EW corrections.
+Please also cite ref. 'arXiv:1804.10017' when using results from this code.
+------------------------------------------------------------------------
+""", '$MG:BOLD')
+                else:
+                    logger.info(
 """------------------------------------------------------------------------
 This computation involve not SM-QCD corrections at NLO.
 Please also cite ref. 'arXiv:1804.10017' when using results from this code.
