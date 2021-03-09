@@ -650,12 +650,13 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             self._fks_multi_proc = fksproc
 
         if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
-            base = None
+            base = {}
             for amp in self._fks_multi_proc.get_born_amplitudes():
-                for diag in amp['diagrams']:
-                    if not base:
-                        base = diag.get('orders')
-                    elif base != diag.get('orders'):
+                nb_part = len(amp['process']['legs'])
+                for diag in amp['diagrams']:   
+                    if nb_part not in  base:
+                        base[nb_part] = diag.get('orders')
+                    elif base[nb_part] != diag.get('orders'):
                         aMCatNLOInterface.display_expansion = True
                         logger.info(
 """------------------------------------------------------------------------
