@@ -328,6 +328,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                          'real_processes', 'born_processes', 'virt_processes']
 
     _nlo_modes_for_completion = ['all','real']
+    display_expansion = False
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
@@ -621,10 +622,33 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion']}
+
+        fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
-            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
+            self._fks_multi_proc.add(fksproc)
         except AttributeError: 
-            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,fks_options)
+            self._fks_multi_proc = fksproc
+
+        if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
+            base = None
+            for amp in self._fks_multi_proc.get_born_amplitudes():
+                for diag in amp['diagrams']:
+                    if not base:
+                        base = diag.get('orders')
+                    elif base != diag.get('orders'):
+                        aMCatNLOInterface.display_expansion = True
+                        logger.info(
+"""------------------------------------------------------------------------
+This computation can involve not only purely SM-QCD corrections at NLO.
+Please also cite ref. 'arXiv:1804.10017' when using results from this code.
+------------------------------------------------------------------------
+""", '$MG:BOLD')
+                        break
+                else:
+                    continue
+                break
+
+
 
 
     def do_output(self, line):
