@@ -228,10 +228,10 @@ class Switcher(object):
         try:
             return  self.cmd.do_add(self, line, *args, **opts)
         except fks_base.NoBornException:
-            logger.info("------------------------------------------------------------------------", '$MG:BOLD')
+            logger.info("---------------------------------------------------------------------------", '$MG:BOLD')
             logger.info(" No Born diagrams found. Now switching to the loop-induced mode.        ", '$MG:BOLD')
-            logger.info(" Please cite ref. 'arXiv:1507.00020' when using results from this mode. ", '$MG:BOLD')
-            logger.info("------------------------------------------------------------------------", '$MG:BOLD')            
+            logger.info(" Please also cite ref. 'arXiv:1507.00020' when using results from this mode. ", '$MG:BOLD')
+            logger.info("---------------------------------------------------------------------------", '$MG:BOLD')            
             self.change_principal_cmd('MadGraph',allow_switch)
             return self.cmd.create_loop_induced(self, line, *args, **opts)
 
