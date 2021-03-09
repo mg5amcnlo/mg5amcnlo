@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -18,6 +18,8 @@
 """This is the main executable, a simple frontend to set up the PYTHONPATH
 and call immediately the command line interface scripts"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 if sys.version_info[1] < 7:
     sys.exit('MadGraph/MadEvent 5 works only with python 2.7/3.7 or later.\n\
@@ -69,7 +71,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print('Running MG5 in debug mode')
 
 
 # Set logging level according to the logging level given by options
@@ -88,13 +90,12 @@ import internal.madevent_interface as cmd_interface
 # Call the cmd interface main loop
 
 
-
 try:
     cmd_line = cmd_interface.GridPackCmd(me_dir=root_path, nb_event=args[0], seed=args[1], gran=args[2])            
 except KeyboardInterrupt:
-    print 'Quit on KeyboardInterrupt' 
+    print('Quit on KeyboardInterrupt') 
 
-print 'DONE'
+print('DONE')
 
 try:
     # Remove lock file
