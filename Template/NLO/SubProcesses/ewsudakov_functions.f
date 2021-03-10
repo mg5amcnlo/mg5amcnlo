@@ -25,6 +25,17 @@ C at the Born are skipped
        DATA sud_mc_hel / .false. / 
        END    
 
+       BLOCK DATA Model_usual_or_FAV4
+       implicit none
+       logical FAV4
+       COMMON /to_FAV4/ FAV4
+       DATA FAV4 / .true. /
+       END
+
+
+
+
+
       !! MZ declare all functions as double complex, since some (few)
       !  terms can be imaginary
       
@@ -66,6 +77,7 @@ c      return
         mass = get_mass_from_id(pdglist(i))
         get_lsc_diag = get_lsc_diag - 0.5d0 * 
      %   (sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * bigL(invariants(1,2))
+!mio
      %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2))+
      %    sdk_chargesq(pdglist(i),hels(i),iflist(i))*bigLem(invariants(1,2),mass**2)
      %)
@@ -147,6 +159,10 @@ c      return
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      double complex imlog
+
       get_ssc_c = 0d0
 c exit and do nothing
 c      return
@@ -155,12 +171,16 @@ c      return
       s = invariants(1,2)
 
       rij = invariants(ileg1,ileg2)
-      get_ssc_c = get_ssc_c + 2d0*smallL(s) * dlog(dabs(rij)/s) 
+
+      imlog= CMPLX(0d0,0d0)
+      if(rij.lt.0d0) imlog= CMPLX(0d0,pi)
+
+      get_ssc_c = get_ssc_c + 2d0*smallL(s) * (dlog(dabs(rij)/s) + imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
-
-
+      print*, "newlog=", (dlog(dabs(rij)/s) + imlog) 
+c      print*
 
 
 
@@ -207,6 +227,10 @@ c      if (printinewsdkf) print*,"rij=","r(",ileg1,",",ileg2,")=",rij
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      double complex imlog
+
       get_ssc_n_diag = 0d0
 c      return
 c exit and do nothing
@@ -219,15 +243,18 @@ c exit and do nothing
         do j = 1, i-1
           rij = invariants(i,j)
           ! photon, Lambda = MW
-
+          imlog= CMPLX(0d0,0d0)
+          if(rij.lt.0d0) imlog= CMPLX(0d0,pi)
 c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
-          get_ssc_n_diag = get_ssc_n_diag + 2d0*(smallL(s)+2d0/3d0*smallLem(0d0)) * dlog(dabs(rij/s)) 
+          get_ssc_n_diag = get_ssc_n_diag + 2d0*(smallL(s)+2d0/3d0*smallLem(0d0)) 
+     %      * (dlog(dabs(rij/s))+imlog) 
      %      * sdk_ia_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_ia_diag(pdglist(j),hels(j),iflist(j))
 
           ! Z
-          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s) * dlog(dabs(rij/s)) 
+          get_ssc_n_diag = get_ssc_n_diag + 2d0*smallL(s)
+     %      * (dlog(dabs(rij/s))+imlog) 
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
 
@@ -771,6 +798,9 @@ c 2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
       integer s_pdg
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
       s_pdg = pdg*ifsign
 
       sdk_charge = 0d0
@@ -794,6 +824,9 @@ C charged goldstones / W boson
       if (s_pdg.eq.251.or.s_pdg.eq.24) sdk_charge = 1d0
       if (s_pdg.eq.-251.or.s_pdg.eq.-24) sdk_charge = -1d0
 
+
+      if (.not.FAV4) sdk_charge = -1 * sdk_charge
+
       return
       end
 
@@ -809,6 +842,8 @@ C charged goldstones / W boson
       include "coupl.inc"
       double precision sw2, cw2
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
 C the product of pdg code * helicity  
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
@@ -848,7 +883,11 @@ C left handed down quark / right handed antidown quark
       ! if it has already been set, then add the correct normalisation
       ! and return
       if (sdk_tpm.ne.0d0) then
+
         sdk_tpm = sdk_tpm / dsqrt(2d0*sw2)
+
+        if (.not.FAV4) sdk_tpm=  sdk_tpm *-1d0
+
         return
       endif
 
@@ -864,6 +903,11 @@ c following last .and. conditions are not strictly necessary
 
       if (sdk_tpm.ne.0d0) then
          sdk_tpm = sdk_tpm / (2d0 * dsqrt(sw2))
+
+
+         if (.not.FAV4) sdk_tpm=  sdk_tpm *-1d0
+
+
          return
       endif
       
@@ -874,7 +918,11 @@ c vector bosons
       if (pdg.eq.23.and.abs(pdgp*ifsign).eq.24) sdk_tpm = -sign(1d0,dble(pdgp*ifsign)) * dsqrt(cw2/sw2)
 
 
-c       print* , "sdk_tpm= ", sdk_tpm
+
+
+
+c     if (.not.FAV4)    sdk_tpm=  sdk_tpm * (-1d0)
+
 
 
       return
@@ -890,6 +938,8 @@ c       print* , "sdk_tpm= ", sdk_tpm
       include "coupl.inc"
       double precision sw2, cw2
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
 C the product of pdg code * helicity  
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
@@ -923,6 +973,9 @@ C mix
 C transverse W boson
       if (abs(s_pdg).eq.24) sdk_t3_diag = sign(1d0,dble(ifsign*pdg))
 
+
+      if (.not.FAV4)  sdk_t3_diag =  sdk_t3_diag * -1
+
       return
       end
 
@@ -936,6 +989,8 @@ C transverse W boson
       include "coupl.inc"
       double precision sw2, cw2
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
 C the product of pdg code * helicity  
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
@@ -973,6 +1028,10 @@ C mix
 
       if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
 
+!      mio
+        if (.not.FAV4) sdk_yo2_diag=sdk_yo2_diag*-1
+
+
       return
       end
 
@@ -984,11 +1043,17 @@ C mix
       double precision sw2, cw2
       double complex sdk_t3_diag, sdk_charge
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
 
       sdk_iz_diag = sdk_t3_diag(pdg,hel,ifsign) - sw2*sdk_charge(pdg,hel,ifsign)
       sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
+
+
+      if (.not.FAV4) sdk_iz_diag= sdk_iz_diag * (-1d0)
 
       return
       end
@@ -999,6 +1064,9 @@ C mix
       integer pdg, hel, ifsign
       include "coupl.inc"
       double precision sw2, cw2
+
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1011,6 +1079,8 @@ C mix
         if (pdg.eq.250) sdk_iz_nondiag = ifsign * dcmplx(0d0,1d0) / 2d0
         sdk_iz_nondiag = sdk_iz_nondiag / sqrt(sw2*cw2)
       endif
+
+      if (.not.FAV4)  sdk_iz_nondiag = sdk_iz_nondiag * -1
 
       return
       end
@@ -1179,10 +1249,15 @@ C returns the gamma/z mixing of sdk_cew
       include "coupl.inc"
       double precision sw2, cw2
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
 
       sdk_cew_nondiag = - 2 / sw2 * dsqrt(cw2*sw2) 
+
+      if (.not.FAV4) sdk_cew_nondiag = sdk_cew_nondiag * (-1d0)
 
       return
       end
