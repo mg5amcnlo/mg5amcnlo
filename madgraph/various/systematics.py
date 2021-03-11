@@ -1002,7 +1002,6 @@ class Systematics(object):
                 
         return wgt
                             
-
 def call_systematics(args, result=sys.stdout, running=True,
                      log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
@@ -1134,7 +1133,51 @@ if __name__ == "__main__":
     call_systematics(sys_args)
     
 
-   
+def call_eva_get_w0_scaleRatio(wgt,muf0,Dmuf,vPID,fPID):
+    wgt = 1e0
+
+def call_eva_get_wT_scaleRatio(wgt,muf0,Dmuf,vPID,fPID):
+    muf0 = muf0
+    muf1 = muf0*Dmuf
+    mufMin=0e0
+    call_eva_get_mufMin_byPID(mufMin,vPID,fPID)
+    if(muf1 < mufMin*1.001):
+        wgt=0e0
+    else:
+        wgt = math.log(muf1/mufMin) / math.log(muf0/mufMin)
+
+def call_eva_get_mufMin_byPID(mufMin,vPID,fPID):
+    switch(abs(vPID)){
+        case 7:     call_eva_get_mf_by_PID(mufMin,fPID);  break
+        case 22:    call_eva_get_mf_by_PID(mufMin,fPID);  break
+        case 23:    call_eva_get_mv_by_PID(mufMin,vPID);  break
+        case 24:    call_eva_get_mv_by_PID(mufMin,vPID);  break
+        default:    raise SystematicsError("unknow vPID %s" % vPID)
+    }
+
+def call_eva_get_mf_by_PID(mf,fPID):
+    # these must be the same as in ElectroweakFlux.inc
+    switch(abs(fPID)){
+        case 1:     mf = 4.67e-3; break;
+        case 2:     mf = 2.16e-3; break;
+        case 3:     mf = 93.0e-3; break;
+        case 4:     mf = 1.27e0;  break;
+        case 5:     mf = 4.18e0;  break;
+        case 6:     mf = 172.76e0;        break;
+        case 11:    mf = 0.5109989461e-3; break;
+        case 13:    mf = 105.6583745e-3;  break;
+        case 15:    mf = 1.77686e0;       break;
+        default:    raise SystematicsError("unknow fPID %s" % fPID)
+    }
+
+def call_eva_get_mv_by_PID(mv,vPID):
+    switch(abs(vPID)){
+        case 7:     mv = 0; break
+        case 22:    mv = 0; break
+        case 23:    mv = 91.1876e0;   break
+        case 24:    mv = 80.379e0;    break
+        default:    raise SystematicsError("unknow vPID %s" % vPID)
+    }   
    
         
         

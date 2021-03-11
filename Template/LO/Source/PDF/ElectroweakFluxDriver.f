@@ -77,11 +77,11 @@ c     also set by PID lower bound no mu2 scale evolution
             return
          endif
       case (7,22) ! photon (special treatment for mu2min)
-         if(iabs(fPID).lt.5) then ! catch light quarks
-            mu2min = (2d0)**2   ! set evolution boundary; 2 GeV is arbitrary
-         else ! all others
+c         if(iabs(fPID).lt.5) then ! catch light quarks
+c            mu2min = (2d0)**2   ! set evolution boundary; 2 GeV is arbitrary
+c         else ! all others
             call eva_get_mf2_by_PID(mu2min,fPID) ! set scale to mass of parent fermion
-         endif
+c         endif
          if(iabs(vPol).ne.1) then
             write(*,*) 'vPol out of range',vPol
             stop 25
