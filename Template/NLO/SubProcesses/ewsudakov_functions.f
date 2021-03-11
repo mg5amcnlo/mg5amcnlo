@@ -29,7 +29,7 @@ C at the Born are skipped
        implicit none
        logical FAV4
        COMMON /to_FAV4/ FAV4
-       DATA FAV4 / .false. /
+       DATA FAV4 / .true. /
        END
 
 
