@@ -29,7 +29,7 @@ C at the Born are skipped
        implicit none
        logical FAV4
        COMMON /to_FAV4/ FAV4
-       DATA FAV4 / .true. /
+       DATA FAV4 / .false. /
        END
 
 
@@ -572,7 +572,7 @@ c exit and do nothing
         ! Given DP eq 4.22, the only !=0 case is with E_AZ
         if (pdg_old.eq.23) then
           get_xxc_nondiag = get_xxc_nondiag + 
-     %      sdk_betaew_nondiag() * smallL(invariants(1,2))
+     %    sdk_betaew_nondiag() * smallL(invariants(1,2))
         endif
       endif
 
@@ -921,7 +921,7 @@ c vector bosons
 
 
 
-c     if (.not.FAV4)    sdk_tpm=  sdk_tpm * (-1d0)
+      if ((.not.FAV4).and.(pdg.eq.23.or.pdgp.eq.23))    sdk_tpm=  sdk_tpm * (-1d0)
 
 
 
@@ -1310,10 +1310,16 @@ C returns the gamma/z mixing of sdk_cew
       include "coupl.inc"
       double precision sw2, cw2
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
+
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
 
       sdk_betaew_nondiag = -(19d0 + 22d0*sw2) / 6d0/dsqrt(sw2*cw2)
+
+      if(.not.FAV4) sdk_betaew_nondiag= sdk_betaew_nondiag *(-1d0)     
 
       return
       end
