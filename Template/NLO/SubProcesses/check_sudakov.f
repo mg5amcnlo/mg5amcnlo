@@ -95,6 +95,7 @@ cc
        INTEGER HELS(NEXTERNAL-1)
        double precision invarianti((NEXTERNAL-1)*(NEXTERNAL-2)/2)
        double precision invariantifirst((NEXTERNAL-1)*(NEXTERNAL-2)/2)
+       double precision invariantiprevious((NEXTERNAL-1)*(NEXTERNAL-2)/2)
        logical   printinewsdkf
        common /to_printinewsdkf/printinewsdkf
        integer   deb_settozero
@@ -143,13 +144,26 @@ c      COMMON/USERCHOICE/USERHEL
 
       double precision QCDlogs, logfromLOip1
       double precision print_loop_over_born, print_sud_over_born,
-     .                 print_loopminussud_over_born, print_born
-
+     .                 print_loopminussud_over_born, print_born,
+     ,                 previous_print_loopminussud_over_born(0:ANS_DIMENSION),
+     .                 previous_print_loopminussud_over_born_hel(0:ANS_DIMENSION,3**8),          
+     .                 previous_loopminussud(0:ANS_DIMENSION), 
+     .                 previous_loopminussud_hel(0:ANS_DIMENSION,3**8)
       double precision QES2_value, ren_scale_value
       logical use_QES2_value, use_ren_scale_value
+
+      double precision error_inv, sprevious
+
 C-----
 C  BEGIN CODE
 C-----  
+
+      if (nexternal-1.gt.8) then
+        print*, "redefine range of previous_print_loopminussud_over_born_hel,
+     .  too many particles"
+        stop
+      endif
+
       energy=1d4
       
       QES2_value=1d4
@@ -416,6 +430,7 @@ c----------
       endif
       k=0
 
+      error_inv=0d0
 
       do i=1,nexternal-1
        do j=i+1, nexternal-1
@@ -431,7 +446,12 @@ c----------
          if (first_time_momenta) then
 
            invariantifirst(k)=invarianti(k)
-
+           if(k.eq.1) then
+             sprevious=invarianti(1)
+           else
+             invariantiprevious(k)=invarianti(k)
+           endif
+           
            if (abs(invm2_04(p_born(0,i),p_born(0,j),1d0)).lt.s*min_inv_frac) then
             tries=tries+1
             if (tries.gt.maximumtries) then
@@ -446,6 +466,7 @@ c----------
          else
 
 
+c           error_inv=0d0
 
            if (abs(invarianti(k)/s-invariantifirst(k)/invariantifirst(1)).gt.tolerance_next_point) then
               write(*,*), "A good similar PS point was not found, try to increase tolerance_next_point
@@ -455,14 +476,37 @@ c----------
               print*, "invariantifirst=",invariantifirst
            
               stop
+           else
+           write(*,*), "delta inv/s for ", k, "= ", abs(invarianti(k)/s-invariantiprevious(k)/invariantiprevious(1))
+
+           error_inv=error_inv+(abs(invarianti(k)/s-invariantiprevious(k)/invariantiprevious(1)))**2
+
+
+           if(k.eq.1) then
+             sprevious=invarianti(1)
+           else
+             invariantiprevious(k)=invarianti(k)
+           endif
+          
+
+
+     
+ 
            endif
 
          endif        
-
+       
+c         error_inv=dsqrt(error_inv)
+c         print*, "error_inv=", error_inv
 
        enddo
       enddo   
 
+      invariantiprevious(1)=sprevious
+
+      error_inv=dsqrt(error_inv)
+      if(.not.first_time_momenta) WRITE(75,*),
+     .        "error_invariants from previous step =", error_inv
 
 
      
@@ -489,7 +533,7 @@ c----------
       CLOSE(90)
 
 
-      first_time_momenta=.False.
+c      first_time_momenta=.False.
 
       endif
 
@@ -505,6 +549,9 @@ c----------
          write(74,*), "energy    ", "helicity     ", "loop/born     ",
      .            "sud/born     ", "(loop-sud)/born     ", "born     "
 
+         OPEN(75, FILE='Deltas_Sud_Approx.dat', ACTION='WRITE')
+         if(.not.first_time_momenta) write(75,*), "energy    ", "helicity     ", "loop-sud     ",
+     .             "(loop-sud)/born     "
 
 
            if(use_ren_scale_value) then
@@ -652,14 +699,16 @@ c     .                    dble(logfromLOip1/AMP_SPLIT_BORN(iamp))/4d0*4d0, virt
 
               print_born = dble(AMP_SPLIT_BORN(iamp))
              
-
+            
               write(73,*), energy, "summed", print_loop_over_born, print_sud_over_born,
      .        print_loopminussud_over_born, print_born  
 
+              if(.not.first_time_momenta) write(75,*),  energy, "summed",  
+     .        print_loopminussud_over_born*AMP_SPLIT_BORN(iamp) - previous_loopminussud(iamp),
+     .        print_loopminussud_over_born - previous_print_loopminussud_over_born(iamp)
 
-
-
- 
+              previous_print_loopminussud_over_born(iamp)=print_loopminussud_over_born
+              previous_loopminussud(iamp)= print_loopminussud_over_born*AMP_SPLIT_BORN(iamp)
           enddo
 
 
@@ -1095,7 +1144,14 @@ c     .                    dble(logfromLOip1/AMP_SPLIT_BORN_ONEHEL(iamp))/4d0
                   if(sud_mod.ne.2) write(73,*), "Set sud_mod to 2 in ewsudakov_functions.f if you want sensible resutls here
      ."
 
+                  if(.not.first_time_momenta) write(75,*),  energy, chosen_hel,
+     .            print_loopminussud_over_born * AMP_SPLIT_BORN_ONEHEL(iamp) - 
+     .            previous_loopminussud_hel(iamp,chosen_hel),
+     .            print_loopminussud_over_born - previous_print_loopminussud_over_born_hel(chosen_hel,iamp)
 
+                  previous_print_loopminussud_over_born_hel(chosen_hel,iamp) = print_loopminussud_over_born
+                  previous_loopminussud_hel(iamp,chosen_hel)= print_loopminussud_over_born 
+     .            * AMP_SPLIT_BORN_ONEHEL(iamp)
 
               endif
             enddo
@@ -1112,6 +1168,8 @@ c     .                    dble(logfromLOip1/AMP_SPLIT_BORN_ONEHEL(iamp))/4d0
 
 
           enddo
+
+          first_time_momenta=.False.
 
           CLOSE(70)
           CLOSE(71)
