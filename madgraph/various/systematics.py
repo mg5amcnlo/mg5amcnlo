@@ -118,12 +118,13 @@ class Systematics(object):
         # update in case of e/mu beams with eva
         isEVA=False
         isNoPDF=False
+        print(beam1,beam2)
         if self.banner.run_card['pdlabel']=='eva':      
-            if abs(beam1) == 11 or abs(beam1) == 13:
+            if abs(beam1) == 11 or abs(beam1) == 4:
                 self.b1 = beam1
             else:
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b1)
-            if abs(beam2) == 11 or abs(beam2) == 13:
+            if abs(beam2) == 11 or abs(beam2) == 4:
                 self.b2 = beam2
             else:
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
