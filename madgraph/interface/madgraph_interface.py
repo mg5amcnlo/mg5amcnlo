@@ -3583,16 +3583,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                         self._curr_model['couplings'].values()])
             keys = list(self._curr_model['couplings'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['couplings'][key]
                 text += '\ncouplings type: %s\n' % str(key)
