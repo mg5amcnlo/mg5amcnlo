@@ -29,7 +29,7 @@ C at the Born are skipped
        implicit none
        logical FAV4
        COMMON /to_FAV4/ FAV4
-       DATA FAV4 / .true. /
+       DATA FAV4 / .false. /
        END
 
 
@@ -173,13 +173,28 @@ c      return
       rij = invariants(ileg1,ileg2)
 
       imlog= CMPLX(0d0,0d0)
-      if(rij.lt.0d0) imlog= CMPLX(0d0,pi)
+      if(rij.lt.0d0) then
+      imlog= CMPLX(0d0,1d0*pi)
+      else
+         if(.not.(ileg1.eq.1.and.ileg2.eq.2)) then
+               imlog= CMPLX(0d0,-1d0*pi)
+         else
+               imlog= CMPLX(0d0, 1d0*pi)
+         endif
+      endif
+
+c      if(rij.lt.0d0.and.(abs(pdgp1).eq.24.or.abs(pdgp2).eq.24)) then
+c      if(rij.lt.0d0.and.(pdgp1.eq.-24.or.pdgp2.eq.-24)) then
+c        imlog= CMPLX(0d0,0d0*pi)
+c      endif
+
+      print*, "pdgp1 and 2=", pdgp1, pdgp2
 
       get_ssc_c = get_ssc_c + 2d0*smallL(s) * (dlog(dabs(rij)/s) + imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
-      print*, "newlog=", (dlog(dabs(rij)/s) + imlog) 
+      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s 
 c      print*
 
 
