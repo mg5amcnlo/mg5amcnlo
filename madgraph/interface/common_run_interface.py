@@ -1752,7 +1752,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return
                 else:
                     raise self.InvalidCmd('systematics not available for decay processes.')
-                
+        
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception as error:
@@ -1789,7 +1789,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid if onelha != 0]
         except Exception as error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
