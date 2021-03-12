@@ -2936,6 +2936,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
+                       'ePDF':'ePDF-config',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -7689,6 +7690,28 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                      " needed for loop color flow computation.")
                 self.do_set('loop_optimized_output True',False)
 
+        elif args[0] == 'ePDF':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                output = output.decode()
+                res = 0
+            except Exception:
+                res = 1
+
+            if res != 0 or error:
+                logger.info('%s does not seem to correspond to a valid ePDF-config ' % args[1] + \
+                 'executable.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/ePDF-config (including ePDF-config).' +
+                        '\n MG5_aMC> set ePDF /PATH/TO/ePDF-config\n')
+                self.options[args[0]] = None
+                if self.history and 'ePDF' in self.history[-1]:
+                    self.history.pop()
+            else: #everything is fine
+                logger.info('set ePDF to %s' % args[1])
+                self.options[args[0]] = args[1]
+
         elif args[0] == 'fastjet':
             try:
                 p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
@@ -8341,7 +8364,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
-                                                                    'hepmc_path']
+                                                                    'hepmc_path', 'ePDF']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:

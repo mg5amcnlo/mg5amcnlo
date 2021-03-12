@@ -5064,6 +5064,57 @@ RESTART = %(mint_mode)s
         return input_files, output_files, required_output,  args
 
 
+    def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
+        """links and copies the libraries/PDFs from ePDF
+        pdlabel is in the form epdf:setname
+        """
+        logger.info('Using ePDF for leptonic densities')
+
+        epdflibdir = subprocess.Popen([self.options['ePDF'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        epdfdatadir = subprocess.Popen([self.options['ePDF'], '--data'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        # update the LHAPDF data path
+
+        if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
+        else:
+            os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
+
+        pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
+        pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
+
+        self.make_opts_var['epdf'] = self.options['ePDF']
+
+        # link the static library in lib
+        lib = 'libePDF.a'
+
+        if os.path.exists(pjoin(libdir, lib)):
+            files.rm(pjoin(libdir, lib))
+        files.ln(pjoin(epdflibdir, lib), libdir)
+
+        # create the PDFsets dir
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+
+        #clean previous set of pdf used
+        for name in os.listdir(pjoin(libdir, 'PDFsets')):
+            if name not in pdfsetname:
+                try:
+                    if os.path.isdir(pjoin(libdir, 'PDFsets', name)):
+                        shutil.rmtree(pjoin(libdir, 'PDFsets', name))
+                    else:
+                        os.remove(pjoin(libdir, 'PDFsets', name))
+                except Exception as error:
+                    logger.debug('%s', error)
+
+        # copy the ePDF set in the PDFsets dir
+        for setname in pdfsetname:
+            shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
+
+
     def copy_lep_densities(self, name, sourcedir):
         """copies the leptonic densities so that they are correctly compiled
         """
@@ -5158,8 +5209,14 @@ RESTART = %(mint_mode)s
             # force not to use LHAPDF in this case
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
-            # copy the files for the chosen density
-            self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
+
+            elif self.run_card['pdlabel'].startswith('epdf'):
+                # this is if the PDFs from ePDF are employed
+                self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
+
+            else:
+                # using internal densities: copy the files for the chosen density
+                self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
 
         # bare leptons, or anything else
         else:
@@ -5190,7 +5247,7 @@ RESTART = %(mint_mode)s
 
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
-        
+
         # add the make_opts_var to make_opts
         self.update_make_opts()
         

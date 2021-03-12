@@ -169,6 +169,10 @@
 #!  If None: try to find one available on the system
 # fastjet = fastjet-config
 
+#! ePDF-config 
+#!  If None: try to find one available on the system
+# ePDF = ePDF-config
+
 #! MCatNLO-utilities 
 #!  relative path starting from main directory
 # MCatNLO-utilities_path = ./MCatNLO-utilities
