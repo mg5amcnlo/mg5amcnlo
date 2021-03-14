@@ -115,10 +115,10 @@ class Systematics(object):
         else:             
             self.b1 = beam1//2212
             self.b2 = beam2//2212
-        # update in case of e/mu beams with eva
+
+            # update in case of e/mu beams with eva
         isEVA=False
         isNoPDF=False
-        print(beam1,beam2)
         if self.banner.run_card['pdlabel']=='eva':      
             if abs(beam1) == 11 or abs(beam1) == 4:
                 self.b1 = beam1
@@ -196,7 +196,8 @@ class Systematics(object):
         if not lhapdf and not isEVA:
             log('fail to load lhapdf: doe not perform systematics')
             return
-        lhapdf.setVerbosity(0)
+        elif lhapdf:
+            lhapdf.setVerbosity(0)
         self.pdfsets = {}  
         if isinstance(pdf, str):
             pdf = pdf.split(',')
@@ -956,8 +957,7 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 vPol = event[0].helicity
                 vPID = event[0].pid
-#                print(1,call_eva_get_vx_scaleRatio(muf1,Dmuf*muf1,vPID,self.b1,vPol))
-                wgt *= call_eva_get_vx_scaleRatio(muf1,Dmuf*muf1,vPID,self.b1,vPol)
+                wgt *= self.call_eva_get_vx_scaleRatio(Dmuf*muf1,vPID,self.b1,vPol)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
@@ -965,7 +965,7 @@ class Systematics(object):
                 vPol = event[1].helicity
                 vPID = event[1].pid
 #                print(2,call_eva_get_vx_scaleRatio(muf1,Dmuf*muf1,vPID,self.b1,vPol))
-                wgt *= call_eva_get_vx_scaleRatio(muf2,Dmuf*muf1,vPID,self.b2,vPol)
+                wgt *= self.call_eva_get_vx_scaleRatio(Dmuf*muf2,vPID,self.b2,vPol)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
@@ -1057,7 +1057,63 @@ class Systematics(object):
                         raise Exception('not enough agreement between stored value and computed one')
                 
         return wgt
-                            
+
+
+    def call_eva_get_vx_scaleRatio(self, muf1, vPID, fPID, vPol):
+        if abs(vPol) == 1:
+            return self.call_eva_get_vT_scaleRatio(muf1,vPID,fPID)
+        elif vPol == 0:
+            return self.call_eva_get_v0_scaleRatio(muf1,vPID,fPID)
+        else:
+            raise SystematicsError("unknow EVA vPol %s " % vPol)
+
+    def call_eva_get_v0_scaleRatio(self, muf1, vPID, fPID):
+        return 1e0
+
+    def call_eva_get_vT_scaleRatio(self,  muf1, vPID, fPID):
+        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        if(mufMin<0):
+            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
+        if(muf1 < mufMin*1.001):
+            return 0e0
+        else:
+            return math.log(muf1/mufMin) 
+
+    def call_eva_get_mufMin_byPID(self, vPID, fPID):
+        return {
+            7:  self.call_eva_get_mf_by_PID(fPID),
+            22: self.call_eva_get_mf_by_PID(fPID),
+            23: self.call_eva_get_mv_by_PID(vPID),
+            24: self.call_eva_get_mv_by_PID(vPID)
+        }.get(abs(vPID),-1)
+
+    def call_eva_get_mf_by_PID(self, fPID):
+        # these must be the same as in ElectroweakFlux.inc
+        return {
+            1:  4.67e-3,
+            2:  2.16e-3,
+            3:  93.0e-3,
+            4:  1.27e0,
+            5:  4.18e0,
+            6:  172.76e0,
+            11: 0.5109989461e-3,
+            13: 105.6583745e-3,
+            15: 1.77686e0
+        }.get(abs(fPID),-1)
+
+    def call_eva_get_mv_by_PID(self, vPID):
+        # these must be the same as in ElectroweakFlux.inc
+         return {
+            7:      0e0,
+            22:     0e0,
+            23:     91.1876e0,
+            24:     80.379e0
+        }.get(abs(vPID),-1)
+       
+        
+
+
+    
 def call_systematics(args, result=sys.stdout, running=True,
                      log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
@@ -1187,56 +1243,3 @@ if __name__ == "__main__":
     if not lhapdf:
             sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf_config=')
     call_systematics(sys_args)
-    
-def call_eva_get_vx_scaleRatio(muf0,muf1,vPID,fPID,vPol):
-    if abs(vPol) == 1:
-        return call_eva_get_vT_scaleRatio(muf0,muf1,vPID,fPID)
-    elif vPol == 0:
-        return call_eva_get_v0_scaleRatio(muf0,muf1,vPID,fPID)
-    else:
-        raise SystematicsError("unknow EVA vPol %s " % vPol)
-
-def call_eva_get_v0_scaleRatio(muf0,muf1,vPID,fPID):
-    return 1e0
-
-def call_eva_get_vT_scaleRatio(muf0,muf1,vPID,fPID):
-    mufMin=call_eva_get_mufMin_byPID(vPID,fPID)
-    if(mufMin<0):
-        raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-    if(muf1 < mufMin*1.001):
-        return 0e0
-    else:
-        return math.log(muf1/mufMin) / math.log(muf0/mufMin)
-
-def call_eva_get_mufMin_byPID(vPID,fPID):
-    return {
-        7:  call_eva_get_mf_by_PID(fPID),
-        22: call_eva_get_mf_by_PID(fPID),
-        23: call_eva_get_mv_by_PID(vPID),
-        24: call_eva_get_mv_by_PID(vPID)
-    }.get(abs(vPID),-1)
-
-def call_eva_get_mf_by_PID(fPID):
-    # these must be the same as in ElectroweakFlux.inc
-    return {
-        1:  4.67e-3,
-        2:  2.16e-3,
-        3:  93.0e-3,
-        4:  1.27e0,
-        5:  4.18e0,
-        6:  172.76e0,
-        11: 0.5109989461e-3,
-        13: 105.6583745e-3,
-        15: 1.77686e0
-    }.get(abs(fPID),-1)
-
-def call_eva_get_mv_by_PID(vPID):
-    # these must be the same as in ElectroweakFlux.inc
-     return {
-        7:      0e0,
-        22:     0e0,
-        23:     91.1876e0,
-        24:     80.379e0
-    }.get(abs(vPID),-1)
-   
-        
