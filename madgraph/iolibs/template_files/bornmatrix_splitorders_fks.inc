@@ -220,12 +220,18 @@ C
       REAL*8 borns(2,0:NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO)
       common /c_keep_order_B/ keep_order
+
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
+
       integer amp_orders(nsplitorders)
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
       double complex amp_split_ewsud(amp_split_size)
       common /to_amp_split_ewsud/ amp_split_ewsud
+      double complex amp_split_ewsud_LO2(amp_split_size)
+      common /to_amp_split_ewsud_LO2/ amp_split_ewsud_LO2
       integer iden
       logical force_ijglu_zero
       common /to_force_ijglu/ force_ijglu_zero
@@ -265,6 +271,21 @@ do i = 1, nsqampso
      enddo
      !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,I)
      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+    endif
+C the following is for the LO2
+    if (keep_order_cnt(qcd_pos,i)) then
+     do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+     enddo
+C here we need to trick the code, putting the result into the LO1 position
+C even if it belongs to LO2. This may fail, so it is better to check
+      amp_orders(qcd_pos) = amp_orders(qcd_pos) + 2
+      amp_orders(qed_pos) = amp_orders(qed_pos) - 2
+      if (amp_orders(qed_pos).lt.0) then
+        write(*,*) 'failed to determine LO2', amp_orders, i
+        stop 1 
+      endif
+      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
     endif
 enddo
 
