@@ -8333,7 +8333,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
 
-            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist:
+            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist and \
+                not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude):
+                raise Exception(self.current_interface)
                 for (name, flag, out) in wanted_lorentz[:]:
                     if out == 0:
                         newflag = list(flag) + ['P1N']
