@@ -77,7 +77,6 @@ c      return
         mass = get_mass_from_id(pdglist(i))
         get_lsc_diag = get_lsc_diag - 0.5d0 * 
      %   (sdk_cew_diag(pdglist(i),hels(i),iflist(i)) * bigL(invariants(1,2))
-!mio
      %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2))+
      %    sdk_chargesq(pdglist(i),hels(i),iflist(i))*bigLem(invariants(1,2),mass**2)
      %)
@@ -183,19 +182,14 @@ c      return
          endif
       endif
 
-c      if(rij.lt.0d0.and.(abs(pdgp1).eq.24.or.abs(pdgp2).eq.24)) then
-c      if(rij.lt.0d0.and.(pdgp1.eq.-24.or.pdgp2.eq.-24)) then
-c        imlog= CMPLX(0d0,0d0*pi)
-c      endif
-
-      print*, "pdgp1 and 2=", pdgp1, pdgp2
+c      print*, "pdgp1 and 2=", pdgp1, pdgp2
 
       get_ssc_c = get_ssc_c + 2d0*smallL(s) * (dlog(dabs(rij)/s) + imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
-      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s 
-c      print*
+c      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s 
+
 
 
 
@@ -203,15 +197,6 @@ c      print*
      $ dble(sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)*CMPLX(1d0,-1000d0)),
      $ dble(sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)*CMPLX(1d0,-1000d0)) 
 
-
-c      if (printinewsdkf) print*," "
-c      if (printinewsdkf) print*, "ileg1=",ileg1,"ileg2=",ileg2
-c      if (printinewsdkf) print*,"get_ssc_c=",get_ssc_c,"    rij=",rij
-c      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg1),",", hels(ileg1),
-c     . ",", iflist(ileg1),",", pdgp1,")=",sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
-c      if (printinewsdkf) print*,"sdk_tpm(",pdglist(ileg2),",", hels(ileg2),
-c     . ",", iflist(ileg2),",", pdgp2,")=",sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
-c      if (printinewsdkf) print*,"rij=","r(",ileg1,",",ileg2,")=",rij
 
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_c = 0d0
@@ -260,6 +245,7 @@ c exit and do nothing
           ! photon, Lambda = MW
           imlog= CMPLX(0d0,0d0)
           if(rij.lt.0d0) imlog= CMPLX(0d0,pi)
+
 c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
           get_ssc_n_diag = get_ssc_n_diag + 2d0*(smallL(s)+2d0/3d0*smallLem(0d0)) 
@@ -331,6 +317,7 @@ c exit and do nothing
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_1 = 0d0
+
 
       return
       end
@@ -478,8 +465,8 @@ c exit and do nothing
           if (abs(pdglist(i)).eq.251) get_xxc_diag = get_xxc_diag + smallLem(mdl_mw**2)
         endif
 
-c      if(printinewsdkf) print*, pdglist(i), hels(i), (get_xxc_diag-tmp)/smallL(invariants(1,2)) 
-        tmp= get_xxc_diag
+c uncomment if uncomment the full block down
+c        tmp= get_xxc_diag
 
       enddo
 
@@ -490,56 +477,56 @@ c      if(printinewsdkf) print*, pdglist(i), hels(i), (get_xxc_diag-tmp)/smallL(
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! BEGIN: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-      if(printinewsdkf) then
-         if(abs(pdglist(3)).eq.5.or.
-     .      abs(pdglist(3)).eq.6.or.
-     .      abs(pdglist(3)).eq.13.or.
-     .          pdglist(3).eq.22.or.
-     .          pdglist(3).eq.23.or.
-     .      abs(pdglist(3)).eq.24  ) then
-
-!!! MANUAL IMPLEMENTATION OF PR logs for Denner and Pozzorini
-           
-             write(*,*) "sto mettendo PR logs a mano"
-             if (abs(pdglist(3)).eq.5.and.hels(1).eq.1.and.hels(3).eq.-1) then 
-                get_xxc_diag = get_xxc_diag -16.6d0 * smallL(invariants(1,2))  
-             elseif (abs(pdglist(3)).eq.6.and.hels(1).eq.1.and.hels(3).eq.-1) then 
-                 get_xxc_diag = get_xxc_diag -12.2d0 * smallL(invariants(1,2))  
-             elseif (abs(pdglist(3)).eq.13.and.hels(1).eq.1.and.hels(3).eq.-1) then 
-                 get_xxc_diag = get_xxc_diag -9.03d0 * smallL(invariants(1,2))  
-             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.-1.and.hels(2).eq.1) then
-                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
-             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.1.and.hels(2).eq.-1) then
-                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
-             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
-     .               abs(pdglist(4)).eq.22.and.hels(2).eq.1) then
-                 get_xxc_diag = get_xxc_diag +(15.1d0) * smallL(invariants(1,2)) 
-             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
-     .               abs(pdglist(4)).eq.23.and.hels(2).eq.1) then
-                 get_xxc_diag = get_xxc_diag +(26.6d0) * smallL(invariants(1,2))
-             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
-     .               abs(pdglist(4)).eq.22.and.hels(2).eq.-1) then
-                 get_xxc_diag = get_xxc_diag +(-17.1d0) * smallL(invariants(1,2)) 
-             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
-     .               abs(pdglist(4)).eq.23.and.hels(2).eq.-1) then
-                 get_xxc_diag = get_xxc_diag +(-37.9d0) * smallL(invariants(1,2)) 
-             elseif (abs(pdglist(3)).eq.24.and.hels(1).eq.1.and.
-     .               abs(hels(3)).eq.1.and.abs(hels(4)).eq.1) then
-                 get_xxc_diag = get_xxc_diag +(-14.2d0) * smallL(invariants(1,2))  
-             elseif (pdglist(3).ne.22.and.pdglist(3).ne.23.and.abs(pdglist(3)).ne.24) then
-                get_xxc_diag = get_xxc_diag +8.80d0 * smallL(invariants(1,2))
-             endif
-        print*, "PR log --> ",(get_xxc_diag-tmp)/smallL(invariants(1,2))
-        endif
-      endif
-
-
-c    PR LOG are then removed by get_xxc_diag
-      get_xxc_diag = tmp
+c
+c
+c
+c
+c      if(printinewsdkf) then
+c         if(abs(pdglist(3)).eq.5.or.
+c     .      abs(pdglist(3)).eq.6.or.
+c     .      abs(pdglist(3)).eq.13.or.
+c     .          pdglist(3).eq.22.or.
+c     .          pdglist(3).eq.23.or.
+c     .      abs(pdglist(3)).eq.24  ) then
+c
+c!!! MANUAL IMPLEMENTATION OF PR logs for Denner and Pozzorini
+c           
+c             write(*,*) "sto mettendo PR logs a mano"
+c             if (abs(pdglist(3)).eq.5.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+c                get_xxc_diag = get_xxc_diag -16.6d0 * smallL(invariants(1,2))  
+c             elseif (abs(pdglist(3)).eq.6.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+c                 get_xxc_diag = get_xxc_diag -12.2d0 * smallL(invariants(1,2))  
+c             elseif (abs(pdglist(3)).eq.13.and.hels(1).eq.1.and.hels(3).eq.-1) then 
+c                 get_xxc_diag = get_xxc_diag -9.03d0 * smallL(invariants(1,2))  
+c             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.-1.and.hels(2).eq.1) then
+c                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
+c             elseif (abs(pdglist(3)).eq.22.and.hels(1).eq.1.and.hels(2).eq.-1) then
+c                 get_xxc_diag = get_xxc_diag +(3.67d0) * smallL(invariants(1,2)) 
+c             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
+c     .               abs(pdglist(4)).eq.22.and.hels(2).eq.1) then
+c                 get_xxc_diag = get_xxc_diag +(15.1d0) * smallL(invariants(1,2)) 
+c             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.-1 .and.
+c     .               abs(pdglist(4)).eq.23.and.hels(2).eq.1) then
+c                 get_xxc_diag = get_xxc_diag +(26.6d0) * smallL(invariants(1,2))
+c             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
+c     .               abs(pdglist(4)).eq.22.and.hels(2).eq.-1) then
+c                 get_xxc_diag = get_xxc_diag +(-17.1d0) * smallL(invariants(1,2)) 
+c             elseif (abs(pdglist(3)).eq.23.and.hels(1).eq.1 .and.
+c     .               abs(pdglist(4)).eq.23.and.hels(2).eq.-1) then
+c                 get_xxc_diag = get_xxc_diag +(-37.9d0) * smallL(invariants(1,2)) 
+c             elseif (abs(pdglist(3)).eq.24.and.hels(1).eq.1.and.
+c     .               abs(hels(3)).eq.1.and.abs(hels(4)).eq.1) then
+c                 get_xxc_diag = get_xxc_diag +(-14.2d0) * smallL(invariants(1,2))  
+c             elseif (pdglist(3).ne.22.and.pdglist(3).ne.23.and.abs(pdglist(3)).ne.24) then
+c                get_xxc_diag = get_xxc_diag +8.80d0 * smallL(invariants(1,2))
+c             endif
+c        print*, "PR log --> ",(get_xxc_diag-tmp)/smallL(invariants(1,2))
+c        endif
+c      endif
+c
+c
+cc    PR LOG are then removed by get_xxc_diag
+c      get_xxc_diag = tmp
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -712,7 +699,7 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
        bigLem = 2*smallL(s) * log_a_over_b_sing(mdl_mw**2,0d0)+
      .          bigL_a_over_b_sing(mdl_mw**2,0d0)-
      .          bigL_a_over_b_sing(m2k,0d0)
-c       print*, "bigLem=", bigLem
+
         return
       else
         print*,"sud_mod=",sud_mod,". It is not defined."
@@ -801,7 +788,12 @@ c 2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
       double complex sdk_charge
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
       sdk_chargesq = sdk_charge(pdg, hel, ifsign)**2
+
+      if(.not.FAV4.and.abs(pdg).eq.251) sdk_chargesq = sdk_chargesq *(-1d0) 
 
       return
       end
@@ -840,7 +832,11 @@ C charged goldstones / W boson
       if (s_pdg.eq.-251.or.s_pdg.eq.-24) sdk_charge = -1d0
 
 
-      if (.not.FAV4) sdk_charge = -1 * sdk_charge
+      if (.not.FAV4) then
+          sdk_charge = -1 * sdk_charge
+          if (abs(s_pdg).eq.251)  sdk_charge = sdk_charge * CMPLX(0d0,1d0)
+      endif
+
 
       return
       end
@@ -910,6 +906,19 @@ c goldstones, they behave like left handed leptons (charged) or neutrinos (neutr
       if (abs(s_pdg).eq.251.and.pdgp.eq.25) sdk_tpm = sign(1d0,dble(s_pdg))
       if (abs(s_pdg).eq.251.and.pdgp.eq.250) sdk_tpm = CMPLX(0d0,-1d0)
 
+      if (sdk_tpm.ne.0d0) then
+         sdk_tpm = sdk_tpm / ( 2d0 * dsqrt(sw2))
+
+
+         if (.not.FAV4) sdk_tpm=  sdk_tpm *1d0*CMPLX(0d0,1d0)
+           if (pdgp.eq.25 .and. pdg*ifsign.eq.251) sdk_tpm =sdk_tpm * (-1d0)
+           if (pdgp.eq.250 .and. pdg*ifsign.eq.-251) sdk_tpm =sdk_tpm * (-1d0)
+
+         return
+      endif
+
+
+
 
 
 c following last .and. conditions are not strictly necessary
@@ -917,11 +926,12 @@ c following last .and. conditions are not strictly necessary
       if (abs(s_pdg).eq.25.and.abs(pdgp*ifsign).eq.251) sdk_tpm = sign(1d0,dble((pdgp*ifsign)))
 
       if (sdk_tpm.ne.0d0) then
-         sdk_tpm = sdk_tpm / (2d0 * dsqrt(sw2))
+         sdk_tpm = sdk_tpm / ( 2d0 *dsqrt(sw2))
 
-
-         if (.not.FAV4) sdk_tpm=  sdk_tpm *-1d0
-
+! opposite of what I see in HuaSheng modifications
+         if (.not.FAV4) sdk_tpm=  sdk_tpm *1d0*CMPLX(0d0,1d0)
+           if (abs(s_pdg).eq.25 .and. pdgp*ifsign.eq.-251) sdk_tpm =sdk_tpm * (-1d0)
+           if (abs(s_pdg).eq.250 .and. pdgp*ifsign.eq.251) sdk_tpm =sdk_tpm * (-1d0)
 
          return
       endif
@@ -989,7 +999,12 @@ C transverse W boson
       if (abs(s_pdg).eq.24) sdk_t3_diag = sign(1d0,dble(ifsign*pdg))
 
 
-      if (.not.FAV4)  sdk_t3_diag =  sdk_t3_diag * -1
+      if (.not.FAV4) then
+         sdk_t3_diag =  sdk_t3_diag * -1
+         if  (abs(s_pdg).eq.251) sdk_t3_diag =  sdk_t3_diag * CMPLX(0d0,1d0)
+      endif
+
+
 
       return
       end
@@ -1044,8 +1059,13 @@ C mix
       if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
 
 !      mio
-        if (.not.FAV4) sdk_yo2_diag=sdk_yo2_diag*-1
-
+      if (.not.FAV4) then
+          print*,"it has never been checked"
+          stop
+         
+          sdk_yo2_diag=sdk_yo2_diag*-1
+          if  (abs(s_pdg).eq.251) sdk_yo2_diag =  sdk_yo2_diag * CMPLX(0d0,1d0)
+      endif
 
       return
       end
@@ -1068,7 +1088,12 @@ C mix
       sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
 
 
-      if (.not.FAV4) sdk_iz_diag= sdk_iz_diag * (-1d0)
+      if (.not.FAV4) then
+          sdk_iz_diag= sdk_iz_diag / (-1d0)
+          
+          if (abs(pdg).eq.251) sdk_iz_diag= sdk_iz_diag / CMPLX(0d0,1d0)
+
+      endif
 
       return
       end
@@ -1095,7 +1120,11 @@ C mix
         sdk_iz_nondiag = sdk_iz_nondiag / sqrt(sw2*cw2)
       endif
 
-      if (.not.FAV4)  sdk_iz_nondiag = sdk_iz_nondiag * -1
+      if (.not.FAV4) then
+          sdk_iz_nondiag = sdk_iz_nondiag * -1
+      endif
+            
+
 
       return
       end

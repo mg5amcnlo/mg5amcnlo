@@ -466,7 +466,7 @@ c----------
          else
 
 
-c           error_inv=0d0
+
 
            if (abs(invarianti(k)/s-invariantifirst(k)/invariantifirst(1)).gt.tolerance_next_point) then
               write(*,*), "A good similar PS point was not found, try to increase tolerance_next_point
@@ -496,8 +496,8 @@ c           error_inv=0d0
 
          endif        
        
-c         error_inv=dsqrt(error_inv)
-c         print*, "error_inv=", error_inv
+
+
 
        enddo
       enddo   
@@ -533,7 +533,7 @@ c         print*, "error_inv=", error_inv
       CLOSE(90)
 
 
-c      first_time_momenta=.False.
+
 
       endif
 
@@ -550,7 +550,8 @@ c----------
      .            "sud/born     ", "(loop-sud)/born     ", "born     "
 
          OPEN(75, FILE='Deltas_Sud_Approx.dat', ACTION='WRITE')
-         if(.not.first_time_momenta) write(75,*), "energy    ", "helicity     ", "loop-sud     ",
+         if(.not.first_time_momenta) write(75,*), "energy    ", "helicity     "
+     .    , "loop-sud     ",
      .             "(loop-sud)/born     "
 
 
@@ -568,7 +569,7 @@ c----------
            endif
 
            mu_r = ren_scale
-c          qes2 =100d0! ren_scale**2
+
 
 
 
@@ -672,9 +673,7 @@ c     .        AMP_SPLIT_BORN(iamp)),dble(AMP_SPLIT_BORN(iamp))
      .          *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
 
                 do i=1,nexternal-1
-c                  print*, i, "becco un gluone"
                   if(abs(pdg_type(i)).eq.21) then
-c                    print*, i, "becco un gluone"
                     logfromLOip1=
      .              logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .            * dlog(qes2/mdl_mt**2)
@@ -721,7 +720,7 @@ c     .                    dble(logfromLOip1/AMP_SPLIT_BORN(iamp))/4d0*4d0, virt
           do chosen_hel=1,total_hel
              if(debug) write(*,*) 'HELICITY CONFIGURATION NUMBER ', chosen_hel
              EWSUD_HELSELECT=chosen_hel
-c             call sudakov_wrapper(p_born)
+
 
 
 
@@ -764,9 +763,7 @@ c             call sudakov_wrapper(p_born)
      .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
 
                    do i=1,nexternal-1
-c                  print*, i, "becco un gluone"
                      if(abs(pdg_type(i)).eq.21) then
-c                    print*, i, "becco un gluone"
                        logfromLOip1=
      .                 logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .               * dlog(qes2/mdl_mt**2)
@@ -898,7 +895,6 @@ ccc             111    ---> all non_diagonal
 
               printinewsdkf=.False.
               EWSUD_HELSELECT=chosen_hel
-c              call sudakov_wrapper(p_born)
               call sdk_get_hels(chosen_hel, hels)
               CALL SBORN_ONEHEL(P_born,hels(1),chosen_hel,born_hel)
               born_from_sborn_onehel(:)=amp_split_ewsud(:)
@@ -933,43 +929,16 @@ c              call sudakov_wrapper(p_born)
 
 
 
-                    if(debug) write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
+                    if(debug.and.nexternal.eq.5) 
+     .              write(*,*),'t= ', t, "u =", u, "(t/u)=" , (t/u)
 
                     if(deb_settozero.eq.1.or.deb_settozero.eq.111.and.debug) then
-
-
-
-                      write(*,*) 'log(|t|/s)ls SSC Non diag-->',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s))
-                      write(*,*) 'log(|u|/s)ls SSC Non diag-->',
-     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(u)/s))
-c                      write(*,*) '(1-t/u)log(|t|/s)ls SSC Non diag-->',
-c     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s)* dlog(dabs(t)/s)*(1-t/u))
-c                       write(*,*),'s= ',s ,'t= ', t, "u =", u, "(t/u)=" , (t/u)
-
-c                    F2t=(u/s*dlog(dabs(t)/s)+t/s*dlog(dabs(u)/s))
-c                    F1t=(t/s*dlog(dabs(t)/s)+u/s*dlog(dabs(u)/s))
-c                      Write(*,*),"F1t= ",F1t, "F2t=",F2t
-c                    
-c                      write(*,*) 'F1t F2 test AZ',
-c     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(17.0*F1t-8.09*F2t))
-
-
-
-c                      write(*,*) 'F1t F2 test ZZ',
-c     .            dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(25.1*F1t-45.4*F2t))
-
-
-
-
-c                      write(*,*) 'F1t test AA',
-c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))/(F1t))
+                      write(*,*) 'ls SSC Non diag-->',
+     .                (amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(smallL(s))
 
                     endif
 
                     
-
-
                     if(deb_settozero.eq.10.or.deb_settozero.eq.111.and.debug) then
                       write(*,*) 'LSC Non diag-->',
      .                (amp_split_ewsud_lsc(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/(bigL(s))
@@ -1038,9 +1007,7 @@ c     .                dble((amp_split_ewsud_ssc(iamp))/AMP_SPLIT_BORN_ONEHEL(ia
      .             *dble(orders(1)-2) * dlog(qes2/mdl_mt**2)
 
                    do i=1,nexternal-1
-c                  print*, i, "becco un gluone"
                      if(abs(pdg_type(i)).eq.21) then
-c                       print*, i, "becco un gluone"
                        logfromLOip1=
      .                 logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .               * dlog(qes2/mdl_mt**2)
@@ -1096,9 +1063,7 @@ c     .            AMP_SPLIT_BORN_ONEHEL(iamp)),dble(AMP_SPLIT_BORN_ONEHEL(iamp)
      .              *dble(orders(1)-2)  * dlog(qes2/mdl_mt**2)
 
                     do i=1,nexternal-1
-c                  print*, i, "becco un gluone"
                       if(abs(pdg_type(i)).eq.21) then
-c                    print*, i, "becco un gluone"
                         logfromLOip1=
      .                  logfromLOip1-2d0*1d0/3d0 * virthel(0,iampvirt(iamp))/4d0* (G**2/4d0/pi)/(2d0*pi)
      .                * dlog(qes2/mdl_mt**2)
