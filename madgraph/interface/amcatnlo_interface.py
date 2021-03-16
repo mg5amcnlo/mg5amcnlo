@@ -516,7 +516,9 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                       'Please specify them from the command line.')
 
             # this is a very rough attempt, and works only to guess QED/QCD
-            qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+            qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), 
+                                                                   self._curr_model.get('order_hierarchy'), 
+                                                                   weighted['WEIGHTED'])
 
             if qed < 0 or qcd < 0:
                 raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \

@@ -2327,6 +2327,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         else:
             QED, QCD = fks_common.get_qed_qcd_orders_from_weighted(\
                     len(process_list[0].get('legs')),
+                    process_list[0].get('model').get('order_hierarchy'),
                     orders['WEIGHTED'])
 
         replace_dict = {}
