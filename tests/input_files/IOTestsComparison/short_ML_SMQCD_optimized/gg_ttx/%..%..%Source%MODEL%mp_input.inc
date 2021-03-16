@@ -10,7 +10,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ ,MP__MDL_G_UVT_FIN_,MP__MDL_GWCFT_UV_B_FIN_
      $ ,MP__MDL_GWCFT_UV_T_FIN_,MP__MDL_BWCFT_UV_FIN_
      $ ,MP__MDL_TWCFT_UV_FIN_,MP__MDL_CONJG__CKM22,MP__MDL_CKM3X3
-     $ ,MP__MDL_LHV,MP__MDL_CONJG__CKM3X3,MP__MDL_CKM33,MP__MDL_CKM22
+     $ ,MP__MDL_CKM33,MP__MDL_LHV,MP__MDL_CONJG__CKM3X3,MP__MDL_CKM22
      $ ,MP__MDL_NCOL,MP__MDL_CA,MP__MDL_TF,MP__MDL_CF
      $ ,MP__MDL_MZ__EXP__2,MP__MDL_MZ__EXP__4,MP__MDL_SQRT__2
      $ ,MP__MDL_MH__EXP__2,MP__MDL_NCOL__EXP__2,MP__MDL_MB__EXP__2
@@ -34,7 +34,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ ,MP__MDL_G_UVT_FIN_,MP__MDL_GWCFT_UV_B_FIN_
      $ ,MP__MDL_GWCFT_UV_T_FIN_,MP__MDL_BWCFT_UV_FIN_
      $ ,MP__MDL_TWCFT_UV_FIN_,MP__MDL_CONJG__CKM22,MP__MDL_CKM3X3
-     $ ,MP__MDL_LHV,MP__MDL_CONJG__CKM3X3,MP__MDL_CKM33,MP__MDL_CKM22
+     $ ,MP__MDL_CKM33,MP__MDL_LHV,MP__MDL_CONJG__CKM3X3,MP__MDL_CKM22
      $ ,MP__MDL_NCOL,MP__MDL_CA,MP__MDL_TF,MP__MDL_CF
      $ ,MP__MDL_MZ__EXP__2,MP__MDL_MZ__EXP__4,MP__MDL_SQRT__2
      $ ,MP__MDL_MH__EXP__2,MP__MDL_NCOL__EXP__2,MP__MDL_MB__EXP__2

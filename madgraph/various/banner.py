@@ -974,7 +974,7 @@ class ConfigFile(dict):
         a file, a path to a file, or simply Nothing"""                
         
         if isinstance(finput, self.__class__):
-            dict.__init__(self, finput)
+            dict.__init__(self)
             for key in finput.__dict__:
                 setattr(self, key, copy.copy(getattr(finput, key)) )
             for key,value in finput.items():
@@ -1765,10 +1765,7 @@ class PY8Card(ConfigFile):
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
 
-    def __copy__(self):
-        newone = type(self)(dict(self))
-        newone.__dict__.update(self.__dict__)
-        return newone
+
 
     def add_param(self, name, value, hidden=False, always_write_to_card=True, 
                                                                   comment=None):
@@ -2484,7 +2481,7 @@ class RunCard(ConfigFile):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
-                nline = nline.split('=')
+                nline = nline.rsplit('=',1)
                 if python_template and nline[0].startswith('$'):
                     block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
@@ -3309,9 +3306,7 @@ class RunCardLO(RunCard):
             self['hel_recycling'] = False
             logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
             In general this optimization speed up the computation be a factor of two.""")
-        elif self['hel_recycling']:
-            if self['gridpack']:
-                self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
+
                 
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:

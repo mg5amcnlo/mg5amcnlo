@@ -201,6 +201,15 @@ class LoopExporterFortran(object):
         """
         if not hasattr(self, 'aloha_model'):
             self.aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
+        
+        missing_lor = []
+        for lor in model.get('lorentz'):
+            if not hasattr(self.aloha_model.model.lorentz, lor.name):
+                missing_lor.append(lor)
+        if missing_lor:
+            logger.debug("adding in aloha model %s lorentz struct" % len(missing_lor))
+            self.aloha_model.add_Lorentz_object(missing_lor)
+        
         return self.aloha_model
 
     #===========================================================================

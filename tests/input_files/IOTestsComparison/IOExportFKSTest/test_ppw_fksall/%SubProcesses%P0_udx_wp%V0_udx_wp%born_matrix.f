@@ -282,6 +282,7 @@ C
       REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
@@ -307,7 +308,7 @@ C     ----------
 C     Amplitude(s) for diagram number 1
       CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_11,AMP(1))
 C     JAMPs contributing to orders QCD=0
-      JAMP(1,1) = (1)*AMP(1)
+      JAMP(1,1) = AMP(1)
 
       RES = 0.D0
       DO M = 1, NAMPSO

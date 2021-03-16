@@ -59,6 +59,7 @@ import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
+from models import UFOError
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -944,7 +945,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             try:
                 with misc.MuteLogger(['madgraph.models'], [60]):
                     aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
-            except ImportError:
+            except (ImportError, UFOError):
                 aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
@@ -1496,6 +1497,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         #misc.sprint(len(all_element))  
         
         self.myjamp_count = 0
+        for key in all_element:
+            all_element[key] = complex(all_element[key])
         new_mat, defs = self.optimise_jamp(all_element)
         if start_time:
             logger.info("Color-Flow passed to %s term in %ss. Introduce %i contraction", len(new_mat), int(time.time()-start_time), len(defs))
@@ -1525,9 +1528,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 amp2 = AMP_format % amp2
             else:
                 amp2 = "TMP_JAMP(%d)" % -amp2
-                
-            res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
-                 
+            
+            if frac not in  [1., -1]:
+                res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
+            elif frac == 1.:
+                res_list.append(' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb))  
+            else:
+                res_list.append(' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb))  
+
 
 #        misc.sprint(new_mat)
         jamp_res = collections.defaultdict(list)
@@ -1537,7 +1545,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 name = AMP_format % var
             else:
                 name = "TMP_JAMP(%d)" % -var
-            jamp_res[jamp].append("(%s)*%s" % (format(factor), name))
+            if factor not in [1.]:
+                jamp_res[jamp].append("(%s)*%s" % (format(factor), name))
+            elif factor ==1:
+                jamp_res[jamp].append("%s" % (name))
             max_jamp = max(max_jamp, jamp)
         
         

@@ -144,10 +144,10 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP1(1) = (1D0/6D0)*AMP(1)
-      JAMP1(2) = (-1D0/2D0)*AMP(1)
-      JAMP2(1) = (1D0/36D0)*AMP(1)
-      JAMP2(2) = (7D0/12D0)*AMP(1)
+      JAMP1(1) = (0.16666666666666666)*AMP(1)
+      JAMP1(2) = (-0.5)*AMP(1)
+      JAMP2(1) = (0.027777777777777776)*AMP(1)
+      JAMP2(2) = (0.5833333333333334)*AMP(1)
       B_SF_005 = 0.D0
       DO I = 1, NCOLOR1
         ZTEMP = (0.D0,0.D0)
