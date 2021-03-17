@@ -1509,7 +1509,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('perturbation_order', [], typelist=str)        
         self.add_param('limitations', [], typelist=str)        
         self.add_param('hel_recycling', False)  
-        self.add_param('single_color', True)    
+        self.add_param('single_color', True)
+        self.add_param('nlo_mixed_expansion', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
