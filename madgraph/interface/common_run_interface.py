@@ -3298,7 +3298,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
                 else:
-                    raise self.InvalidCmd("%s is not recognized as a supported cluster format." % cluster_name)              
+                    raise self.InvalidCmd("%s is not recognized as a supported cluster format." % cluster_name)     
+                         
     def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
@@ -6517,6 +6518,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except InvalidCmd as error:
             logger.error("Invalid command: %s " % error)
         else:
+            self.reload_card(path)
             if hasattr(self, 'run_card'):
                 for pid, info in out.items():
                     total = 0
@@ -6870,6 +6872,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('AsPerGe creates the file succesfully')
         files.mv(card, '%s.beforeasperge' % card)
         files.mv('%s.new' % card, card)
+        self.reload_card(card)
 
 
 
