@@ -3987,7 +3987,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if __debug__ and 'global_flag' not in run_card.user_set:
                 self.make_opts_var['GLOBAL_FLAG'] = "-O -fbounds-check"
             else:
-                self.make_opts_var['ALOHA_FLAG'] = run_card['global_flag']     
+                self.make_opts_var['GLOBAL_FLAG'] = run_card['global_flag']     
             self.make_opts_var['ALOHA_FLAG'] = run_card['aloha_flag']     
             self.make_opts_var['MATRIX_FLAG'] = run_card['matrix_flag']
 

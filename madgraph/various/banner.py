@@ -2947,7 +2947,10 @@ class RunCardLO(RunCard):
    %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
    %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
    %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
-   %(global_flag)s = global_flag ! fortran optimization flag use for the all code
+#*********************************************************************
+# Compilation flag. No automatic re-compilation (need manual "make clean" in Source)
+#*********************************************************************   
+   %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
 """,
