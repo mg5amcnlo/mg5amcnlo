@@ -1196,9 +1196,9 @@ c
      $          itype.eq.3 .or. itype.eq.7) then
                cluster_scale=sqrt(dj_clus(pi,pj))
             elseif (itype.eq.4) then
-               cluster_scale=sqrt(2d0*abs(dot(pj,(pi+pj))))
+               cluster_scale=sqrt(abs(dot(pj,(pi+pj))))/2d0
             elseif (itype.eq.5) then
-               cluster_scale=sqrt(2d0*abs(dot(pi,(pi+pj))))
+               cluster_scale=sqrt(abs(dot(pi,(pi+pj))))/2d0
             endif
 c
 c Common scale geometrical average:
@@ -1570,7 +1570,7 @@ c        flavour
       !
       implicit none
       integer next,nbr,cluster_pdg(0:2,0:2*nbr),cluster_ij(nbr),iord(0:nbr)
-     $     ,need_matching(next),ipdg(next),i,j,k,cij,imo,id1,id2,ii
+     $     ,need_matching(next),ipdg(next),i,j,k,cij,imo,id1,id2,ii,l
      $     ,get_color,matching_sum
       logical s_chan,IR_cluster
       double precision get_mass_from_id
@@ -1607,8 +1607,8 @@ c Stop if a particle passed all the previous statements
       enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
       matching_sum=0
-      do i = 3,next
-         matching_sum=matching_sum+need_matching(i)
+      do l = 3,next
+         matching_sum=matching_sum+need_matching(l)
       enddo
       if (matching_sum.gt.-80) then
          return
@@ -1640,13 +1640,12 @@ c Second loop to assign the matching condition
                enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
                matching_sum=0
-               do i = 3,next
-                  matching_sum=matching_sum+need_matching(i)
+               do l = 3,next
+                  matching_sum=matching_sum+need_matching(l)
                enddo
                if (matching_sum.gt.-80) then
                   return
                endif
-               exit
             enddo
             if (imo.eq.21 .and. IR_cluster(imo,id1,id2,.true.)) then
                ! massless g->qqbar splitting. Hence, set all that have
@@ -1657,8 +1656,8 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
                matching_sum=0
-               do i = 3,next
-                  matching_sum=matching_sum+need_matching(i)
+               do l = 3,next
+                  matching_sum=matching_sum+need_matching(l)
                enddo
                if (matching_sum.gt.-80) then
                   return
@@ -1681,13 +1680,12 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                   enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
                   matching_sum=0
-                  do i = 3,next
-                     matching_sum=matching_sum+need_matching(i)
+                  do l = 3,next
+                     matching_sum=matching_sum+need_matching(l)
                   enddo
                   if (matching_sum.gt.-80) then
                      return
                   endif
-                  exit
                enddo
                ! if particles were not set, there was no particle that
                ! did not require matching. Hence, all non-set particles
@@ -1698,8 +1696,8 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
                matching_sum=0
-               do i = 3,next
-                  matching_sum=matching_sum+need_matching(i)
+               do l = 3,next
+                  matching_sum=matching_sum+need_matching(l)
                enddo
                if (matching_sum.gt.-80) then
                   return
@@ -1714,8 +1712,8 @@ c Check and return if everything is already assigned a need_matching -1,0,1
                enddo
 c Check and return if everything is already assigned a need_matching -1,0,1
                matching_sum=0
-               do i = 3,next
-                  matching_sum=matching_sum+need_matching(i)
+               do l = 3,next
+                  matching_sum=matching_sum+need_matching(l)
                enddo
                if (matching_sum.gt.-80) then
                   return

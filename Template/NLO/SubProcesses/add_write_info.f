@@ -594,7 +594,7 @@ c
             integfour=''
             float=''
             if (need_matching(i).eq.1) then
-               ptclus=1d0
+               ptclus=shower_scale
             else
                if (nincoming.ne.2) then
                   write (*,*) 'need two incoming particles '/
