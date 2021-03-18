@@ -172,15 +172,10 @@ c      return
       rij = invariants(ileg1,ileg2)
 
       imlog= CMPLX(0d0,0d0)
-      if(rij.lt.0d0) then
-      imlog= CMPLX(0d0,1d0*pi)
-      else
-         if(.not.(ileg1.eq.1.and.ileg2.eq.2)) then
-               imlog= CMPLX(0d0,-1d0*pi)
-         else
-               imlog= CMPLX(0d0, 1d0*pi)
-         endif
+      if(rij.gt.0d0) then
+        imlog= CMPLX(0d0,-1d0*pi)
       endif
+
 
 c      print*, "pdgp1 and 2=", pdgp1, pdgp2
 
@@ -240,11 +235,15 @@ c exit and do nothing
       s = invariants(1,2)
 
       do i = 1, nexternal-1
-        do j = 1, i-1
+         do j = 1, i-1
+          if(i.eq.j) cycle
           rij = invariants(i,j)
           ! photon, Lambda = MW
           imlog= CMPLX(0d0,0d0)
-          if(rij.lt.0d0) imlog= CMPLX(0d0,pi)
+          if(rij.gt.0d0) then
+            imlog= CMPLX(0d0,-1d0*pi)
+          endif
+
 
 c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
@@ -289,6 +288,10 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      double complex imlog
+
       ! this function corresponds to the case when *one* out of the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
       ! by the Z).
@@ -303,6 +306,17 @@ c exit and do nothing
         do i = 1, nexternal-1
           if (i.eq.ileg) cycle
 
+c not work for H or Chi0 in initial state
+          if (iflist(ileg).eq.-1) then
+            print*,"Error: sign imaginary part with longitudinally polarised 
+     .          Z or H not implemented for the initial state"
+            stop
+          endif
+          imlog= CMPLX(0d0,0d0)
+          if(invariants(i,ileg).gt.0d0) then
+            imlog= CMPLX(0d0,-1d0*pi)
+          endif
+
 ! Multiplied by 1-1000*I only when printed in NonDiag_structure.dat
 
           if (printinewsdkf) WRITE (72,*) , hels, ileg, i, pdg_new,pdglist(i),
@@ -312,7 +326,7 @@ c exit and do nothing
           get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 +
      $              sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
      $              sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
-     $              * 2d0 * smallL(s) * dlog(abs(invariants(i,ileg))/s)
+     $              * 2d0 * smallL(s) * (dlog(abs(invariants(i,ileg))/s)+imlog)
         enddo
       endif
 
@@ -339,6 +353,10 @@ c exit and do nothing
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+      double complex imlog
+
       ! this function corresponds to the case when both the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
       ! by the Z).
@@ -348,6 +366,20 @@ c      return
 c exit and do nothing
 
       s = invariants(1,2)
+
+c not work for H or Chi0 in initial state
+      imlog= CMPLX(0d0,0d0)
+      if (iflist(ileg1).eq.-1.or.iflist(ileg2).eq.-1) then
+         print*,"Error: sign imaginary part with longitudinally polarised 
+     .        Z or H not implemented for the initial state"
+         stop
+      endif
+
+      imlog= CMPLX(0d0,0d0)
+      if(invariants(ileg1,ileg2).gt.0d0) then
+        imlog= CMPLX(0d0,-1d0*pi)
+      endif
+
 
       if (((pdg_old1.eq.25.and.pdg_new1.eq.250).or.
      $     (pdg_old1.eq.250.and.pdg_new1.eq.25)).and.
@@ -364,7 +396,7 @@ c exit and do nothing
         get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 +
      $              sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
      $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
-     $              * 2d0 * smallL(s) * dlog(abs(invariants(ileg1,ileg2))/s)
+     $              * 2d0 * smallL(s) * (dlog(abs(invariants(ileg1,ileg2))/s)+imlog)
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_2 = 0d0
@@ -1379,7 +1411,7 @@ C returns the gamma/z mixing of sdk_cew
       double precision sumdot
 
       do i = 1, nexternal-1
-        do j = i+1, nexternal-1
+        do j = i, nexternal-1
           invariants(i,j) = sumdot(p(0,i),p(0,j),dble(iflist(i)*iflist(j)))
           invariants(j,i) = invariants(i,j)
         enddo
