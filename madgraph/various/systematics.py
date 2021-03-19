@@ -116,15 +116,15 @@ class Systematics(object):
             self.b1 = beam1//2212
             self.b2 = beam2//2212
 
-            # update in case of e/mu beams with eva
+        # update in case of e/mu beams with eva
         isEVA=False
         isNoPDF=False
         if self.banner.run_card['pdlabel']=='eva':      
-            if abs(beam1) == 11 or abs(beam1) == 4:
+            if abs(beam1) == 11 or abs(beam1) == 13:
                 self.b1 = beam1
             else:
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b1)
-            if abs(beam2) == 11 or abs(beam2) == 4:
+            if abs(beam2) == 11 or abs(beam2) == 13:
                 self.b2 = beam2
             else:
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
@@ -957,15 +957,18 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 vPol = event[0].helicity
                 vPID = event[0].pid
-                wgt *= self.call_eva_get_vx_scaleRatio(Dmuf*muf1,vPID,self.b1,vPol)
+                xx = 0.5
+                ievo = self.banner.run_card['ievo_eva']
+                wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
             if self.banner.run_card['pdlabel']=='eva':
                 vPol = event[1].helicity
                 vPID = event[1].pid
-#                print(2,call_eva_get_vx_scaleRatio(muf1,Dmuf*muf1,vPID,self.b1,vPol))
-                wgt *= self.call_eva_get_vx_scaleRatio(Dmuf*muf2,vPID,self.b2,vPol)
+                xx = 0.5
+                ievo = self.banner.run_card['ievo_eva']
+                wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
@@ -1059,25 +1062,27 @@ class Systematics(object):
         return wgt
 
 
-    def call_eva_get_vx_scaleRatio(self, muf1, vPID, fPID, vPol):
+    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
         if abs(vPol) == 1:
-            return self.call_eva_get_vT_scaleRatio(muf1,vPID,fPID)
+            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
         elif vPol == 0:
-            return self.call_eva_get_v0_scaleRatio(muf1,vPID,fPID)
+            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
         else:
             raise SystematicsError("unknow EVA vPol %s " % vPol)
 
-    def call_eva_get_v0_scaleRatio(self, muf1, vPID, fPID):
+    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
         return 1e0
 
-    def call_eva_get_vT_scaleRatio(self,  muf1, vPID, fPID):
+    def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
         mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        if ievo != 0:
+            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
         if(mufMin<0):
             raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-        if(muf1 < mufMin*1.001):
+        elif(muf < mufMin*1.001):
             return 0e0
         else:
-            return math.log(muf1/mufMin) 
+            return math.log(muf/mufMin) 
 
     def call_eva_get_mufMin_byPID(self, vPID, fPID):
         return {

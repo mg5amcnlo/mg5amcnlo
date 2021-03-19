@@ -152,6 +152,10 @@ C       Fill common block for Les Houches init info
           idbmup(i)=11
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
+        elseif(lpp(i).eq.4) then
+            idbmup(i)=13
+        elseif(lpp(i).eq.-4) then
+            idbmup(i)=-13
         elseif(lpp(i).eq.0) then
           idbmup(i)=idup(i,1,1)
         else

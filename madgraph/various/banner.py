@@ -1330,9 +1330,9 @@ class ConfigFile(dict):
         else:
             out += "## Unknown for this class\n"
         if name.lower() in self.user_set:
-            out += "## This value is considered as been set by the user\n" 
+            out += "## This value is considered as being set by the user\n" 
         else:
-            out += "## This value is considered as been set by the system\n"
+            out += "## This value is considered as being set by the system\n"
         if name.lower() in self.allowed_value:
             if '*' not in self.allowed_value[name.lower()]:
                 out += "Allowed value are: %s\n" % ','.join([str(p) for p in self.allowed_value[name.lower()]])
@@ -2766,6 +2766,8 @@ class RunCard(ConfigFile):
             return math.copysign(2212, lpp)
         elif lpp in (3,-3):
             return math.copysign(11, lpp)
+        elif lpp in (4,-4):
+            return math.copysign(13, lpp)
         elif lpp == 0:
             #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
             return 0
@@ -2998,6 +3000,8 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
                                                 allowed=[-1,0,1,2,3,4])
+        self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
+                        comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -3280,7 +3284,7 @@ class RunCardLO(RunCard):
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
             
-        # if heavy ion mode use for one beam, forbis lpp!=1
+        # if heavy ion mode use for one beam, forbid lpp!=1
         if self['lpp1'] not in [1,2]:
             if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp1=1/2")

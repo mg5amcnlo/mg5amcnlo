@@ -6,10 +6,10 @@ c     Scales
 c
       real*8          scale,scalefact,alpsfact
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
-      integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
+      integer         ickkw,nhmult,asrwgtflavor,dynamical_scale_choice,ievo_eva
       common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
      $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor,
-     $                dynamical_scale_choice
+     $                dynamical_scale_choice,ievo_eva
 c
 c     Collider
 c

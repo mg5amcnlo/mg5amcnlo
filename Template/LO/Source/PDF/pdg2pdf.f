@@ -33,17 +33,20 @@ C
       data pdlabellast/2*'abcdefg'/
       data ihlast/2*-99/
 
-c     effective w/z/a approximation (leading log, not resummed)
+c     effective w/z/a approximation (leading log fixed order, not resummed)
       double precision eva_get_pdf_by_PID
       external eva_get_pdf_by_PID
-      integer hel,helMulti,ppid
+      integer ppid
+      integer ievo,ievo_eva
+      common/to_scale/ievo_eva
+      integer hel,helMulti,hel_picked
       double precision hel_jacobian
-      integer hel_picked
       common/hel_picked/hel_picked,hel_jacobian
       integer get_nhel
       external get_nhel
       real*8 pol(2),fLPol
       common/to_polarization/pol
+
 
 c     collider configuration
       integer lpp(2)
@@ -186,7 +189,11 @@ c         write(*,*) 'running eva'
             q2max=xmu*xmu
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max)
+            write(*,*)'ievo_eva = ',ievo_eva,ebeam
+            ievo=min0(1,iabs(ievo_eva))
+            write(*,*)'ievo_eva update = ',ievo
+c      stop
+            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo)
 c            write(*,*)'ih,ppid,ipart,pdg2pdf = ',ih,ppid,ipart,pdg2pdf
             return
          endif

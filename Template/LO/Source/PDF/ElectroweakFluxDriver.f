@@ -22,18 +22,17 @@ c     - assign right couplings of fermion by vPID and fPID
 c     subroutine eva_get_gL2_by_PID
 c     - assign left couplings of fermion by vPID and fPID
 c     /* ********************************************************* *
-      double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2)
+      double precision function eva_get_pdf_by_PID(vPID,fPID,vpol,fLpol,x,mu2,ievo)
       implicit none
+      integer ievo ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       integer vPID,fPID,vpol
       double precision fLpol,x,mu2
       double precision eva_get_pdf_by_PID_evo
       double precision eva_get_pdf_photon_evo
       include 'ElectroweakFlux.inc'
-      
-      integer ievo
+   
       double precision tiny,mu2min
       double precision QW,Qf
-      ievo  = 0 ! =0 for evolution by q^2 (!=0 for evolution by pT^2)
       tiny  = 1d-8
       mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID  
 
@@ -58,7 +57,7 @@ c     2. check fermion polarization fraction
          return
       endif
 c     3. check vector boson polarization by PID
-c     also set by PID lower bound no mu2 scale evolution
+c     also set lower bound on muf2 scale evolution by PID
       select case (iabs(vPID))
       case (23) ! z
          mu2min = eva_mz2
@@ -77,11 +76,7 @@ c     also set by PID lower bound no mu2 scale evolution
             return
          endif
       case (7,22) ! photon (special treatment for mu2min)
-c         if(iabs(fPID).lt.5) then ! catch light quarks
-c            mu2min = (2d0)**2   ! set evolution boundary; 2 GeV is arbitrary
-c         else ! all others
-            call eva_get_mf2_by_PID(mu2min,fPID) ! set scale to mass of parent fermion
-c         endif
+         call eva_get_mf2_by_PID(mu2min,fPID) ! set scale to mass of parent fermion
          if(iabs(vPol).ne.1) then
             write(*,*) 'vPol out of range',vPol
             stop 25
@@ -103,6 +98,9 @@ c         endif
          return
       end select
 c     4. check evolution scale
+      if(ievo.ne.0) then
+         mu2min = (1.d0-x)*mu2min
+      endif
       if(mu2.lt.mu2min) then
          write(*,*) 'muf2 too small. setting muf2 to muf2min:',mu2,mu2min
          mu2 = mu2min
@@ -254,8 +252,9 @@ c     /* ********************************************************* *
       case (15)
          mf2 = eva_ml2  
       case default
-         write(*,*) 'eva: setting m_f to m_e. unknown fPID:', fPID
-         mf2 = eva_me2
+         write(*,*) 'eva: asking for mass of unknown fPID: ', fPID
+         stop 25
+         mf2 = eva_zero
       end select
       return
       end

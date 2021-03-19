@@ -42,6 +42,7 @@ $frame
 # pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
 #          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
 #          eva=Effective W/Z/A Approx.       [21yy.zzzzz]            *
+#          none=No PDF, same as lhapdf with lppx=0                   *
 #*********************************************************************
      %(pdlabel)s    = pdlabel     ! PDF set                                     
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
