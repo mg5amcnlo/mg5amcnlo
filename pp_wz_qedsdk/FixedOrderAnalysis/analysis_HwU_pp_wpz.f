@@ -8,10 +8,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer nwgt
       character*(*) weights_info(*)
       integer i,kk,l
-      character*9 cc(4)
-      data cc/'|T@LO ','|T@NLOQED','|T@SDK','|T@NLOQJV'/
+      character*9 cc(6)
+      data cc/'|T@LO ','|T@NLOQED','|T@SDK','|T@NLOQJV','|T@NLOQ2J',
+     $           '|T@NLOQ2J'/
       call HwU_inithist(nwgt,weights_info)
-      do i=1,4
+      do i=1,6
          l=(i-1)*8
          call HwU_book(l+ 1,'total rate    '//cc(i),  5,0.5d0,5.5d0)
          call HwU_book(l+ 2,'w rap         '//cc(i), 50,-5d0,5d0)
@@ -50,13 +51,18 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgts(*)
       integer ibody
       double precision wgt,var
-      integer i,kk,l
+      integer i,kk,j,l
       double precision pttx(0:3),www,mtt,pt_t,pt_tx,pt_ttx,yt,ytx,yttx
       double precision getrapidity,dot
       external getrapidity,dot
 
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+      ! jet stuff
+      double precision pQCD(0:3,nexternal),palg,rfj,sycut
+     $     ,pjet(0:3,nexternal)
+      integer nQCD,jet(nexternal),njet
+
       do i=0,3
         pttx(i)=p(i,3)+p(i,4)
       enddo
@@ -77,6 +83,54 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          if (i.eq.2.and.ibody.eq.3.and.orders_tag_plot.ne.400) cycle !do not fill NLO with sudakov
          if (i.eq.4.and.ibody.eq.3.and.orders_tag_plot.ne.400) cycle !do not fill NLO jv with sudakov
          if (i.eq.4.and.pt_ttx.gt.80d0) cycle ! jet veto
+         !write(*,*) 'ANA', i, ibody, orders_tag_plot
+         !data cc/'|T@LO ','|T@NLO','|T@SDK'/
+         call HwU_fill(l+1,var,wgts)
+         call HwU_fill(l+2,yt,wgts)
+         call HwU_fill(l+3,ytx,wgts)
+         call HwU_fill(l+4,yttx,wgts)
+         call HwU_fill(l+5,dlog10(mtt),wgts)
+         call HwU_fill(l+6,dlog10(pt_t),wgts)
+         call HwU_fill(l+7,dlog10(pt_tx),wgts)
+         call HwU_fill(l+8,dlog10(pt_ttx),wgts)
+      enddo
+
+      ! now cluster all particles into jets
+      nQCD=0
+      do j=nincoming+1,nexternal
+          nQCD=nQCD+1
+          do i=0,3
+             pQCD(i,nQCD)=p(i,j) 
+          enddo
+      enddo
+
+      palg  = -1.d0
+      rfj   = 0.4d0
+      sycut = 80d0
+      call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet
+     $     ,jet)
+
+      ! no etea cut, so at least 2 jets should always be there
+      do i=0,3
+        pttx(i)=pjet(i,1)+pjet(i,2)
+      enddo
+      ! MZ here t->j1 , tx->j2
+      mtt    = dsqrt(dot(pttx, pttx))
+      pt_t   = dsqrt(pjet(1,1)**2 + pjet(2,1)**2)
+      pt_tx  = dsqrt(pjet(1,2)**2 + pjet(2,2)**2)
+      pt_ttx = dsqrt((pjet(1,1)+pjet(1,2))**2 + (pjet(2,1)+pjet(2,2))**2)
+      yt  = getrapidity(pjet(0,1), pjet(3,1))
+      ytx = getrapidity(pjet(0,2), pjet(3,2))
+      yttx= getrapidity(pttx(0), pttx(3))
+      var=1.d0
+      if (njet.ne.2.and.njet.ne.3) then
+        write(*,*) 'ERROR njet', njet
+        stop 1
+      endif
+      do i=5,6
+         l=(i-1)*8
+         if (ibody.eq.3.and.orders_tag_plot.ne.400) cycle !do not fill with sudakov
+         if (i.eq.5.and.njet.ne.2) cycle ! fill 2J only when nj=2
          !write(*,*) 'ANA', i, ibody, orders_tag_plot
          !data cc/'|T@LO ','|T@NLO','|T@SDK'/
          call HwU_fill(l+1,var,wgts)
