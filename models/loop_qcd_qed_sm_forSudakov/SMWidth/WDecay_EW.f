@@ -1,0 +1,2046 @@
+      FUNCTION Width_W2ud_EW(ischeme)
+      USE ParamModule
+      USE mis_warp
+      USE Func_PSI
+      IMPLICIT NONE
+      INTEGER::ischeme
+      REAL(KIND(1d0))::EL,MT,MW,MZ,MH
+      COMPLEX(KIND(1d0))::res,resdiff,C0F
+      COMPLEX(KIND(1d0)),DIMENSION(4)::C0RES
+      REAL(KIND(1d0))::Width_W2ud_EW
+      REAL(KIND(1d0))::prefactor
+      COMPLEX(KIND(1d0)),EXTERNAL::dZe1_Gmu_MZ
+      IF(ischeme.NE.1.AND.ischeme.NE.2)THEN
+         WRITE(*,*)"ERROR:Unkonwn scheme:",ischeme
+         WRITE(*,*)"Please choose 1(alpha(MZ)) or 2(Gmu)"
+         STOP
+      ENDIF
+      EL=Decay_e
+      MT=Decay_MT
+      MW=Decay_MW
+      MH=Decay_MH
+      MZ=Decay_MZ
+      prefactor=1d0/48d0/pi/MW
+      C0RES(1:4)=C0C1(0d0,0d0,MW**2,MW**2,0d0,MZ**2)
+      C0F=C0RES(4)
+      res= (EL**4*
+     -    (1536*MT**2*MW**6*
+     -       Pi**2 - 
+     -      1728*MW**8*Pi**2 + 
+     -      18*MH**4*MW**2*MZ**2*
+     -       Pi**2 - 
+     -      1920*MT**2*MW**4*
+     -       MZ**2*Pi**2 - 
+     -      3440*MW**6*MZ**2*
+     -       Pi**2 + 
+     -      18*MH**4*MZ**4*
+     -       Pi**2 - 
+     -      108*MT**4*MZ**4*
+     -       Pi**2 - 
+     -      108*MH**2*MW**2*MZ**4*
+     -       Pi**2 + 
+     -      276*MT**2*MW**2*MZ**4*
+     -       Pi**2 + 
+     -      7276*MW**4*MZ**4*
+     -       Pi**2 + 
+     -      108*MH**2*MZ**6*
+     -       Pi**2 + 
+     -      108*MT**2*MZ**6*
+     -       Pi**2 - 
+     -      (36*MH**4*MZ**6*
+     -         Pi**2)/MW**2 + 
+     -      (216*MT**4*MZ**6*
+     -         Pi**2)/MW**2 - 
+     -      1688*MW**2*MZ**6*
+     -       Pi**2 - 
+     -      408*MZ**8*Pi**2 - 
+     -      (12*MZ**10*Pi**2)/
+     -       MW**2 - 
+     -      (0,2112)*MW**6*MZ**2*
+     -       Pi**3 + 
+     -      (0,4776)*MW**4*MZ**4*
+     -       Pi**3 - 
+     -      (0,2652)*MW**2*MZ**6*
+     -       Pi**3 - 
+     -      (0,36)*MZ**8*Pi**3 + 
+     -      ((0,24)*MZ**10*Pi**3)/
+     -       MW**2 - 
+     -      (0,864)*MW**4*MZ**2*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**3 + 
+     -      (0,432)*MW**2*MZ**4*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**3 + 
+     -      (0,432)*MZ**6*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**3 + 
+     -      320*MW**6*MZ**2*
+     -       Pi**4 - 
+     -      536*MW**4*MZ**4*
+     -       Pi**4 + 
+     -      260*MW**2*MZ**6*
+     -       Pi**4 - 
+     -      44*MZ**8*Pi**4 - 
+     -      (4*MZ**10*Pi**4)/
+     -       MW**2 + 
+     -      (4*MZ**12*Pi**4)/
+     -       MW**4 + 
+     -      (9*MH*MZ**4*
+     -         (MH**6*
+     -            (MW**2 - 
+     -            2*MZ**2) + 
+     -           MH**4*
+     -            (-5*MW**4 + 
+     -            13*MW**2*MZ**2)
+     -            + 4*MH**2*
+     -            (MW**6 - 
+     -            8*MW**4*MZ**2)
+     -            + 12*
+     -            (MW**8 + 
+     -            3*MW**6*MZ**2))*
+     -         Pi**2*
+     -         Arg(-MH + 
+     -           (0,1)*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) - 
+     -      (9*MH*MZ**4*
+     -         (MH**6*
+     -            (MW**2 - 
+     -            2*MZ**2) + 
+     -           MH**4*
+     -            (-5*MW**4 + 
+     -            13*MW**2*MZ**2)
+     -            + 4*MH**2*
+     -            (MW**6 - 
+     -            8*MW**4*MZ**2)
+     -            + 12*
+     -            (MW**8 + 
+     -            3*MW**6*MZ**2))*
+     -         Pi**2*
+     -         Arg(MH + 
+     -           (0,1)*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) - 
+     -      (45*MH**5*MZ**4*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) + 
+     -      (9*MH**7*MZ**4*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) + 
+     -      (36*MH**3*MW**2*MZ**4*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) + 
+     -      (108*MH*MW**4*MZ**4*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) - 
+     -      (288*MH**3*MZ**6*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) - 
+     -      (18*MH**7*MZ**6*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) + 
+     -      (117*MH**5*MZ**6*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) + 
+     -      (324*MH*MW**2*MZ**6*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) + 
+     -      (45*MH**5*MZ**4*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) - 
+     -      (9*MH**7*MZ**4*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) - 
+     -      (36*MH**3*MW**2*MZ**4*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) - 
+     -      (108*MH*MW**4*MZ**4*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) + 
+     -      (288*MH**3*MZ**6*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) + 
+     -      (18*MH**7*MZ**6*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) - 
+     -      (117*MH**5*MZ**6*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         CSqrt2(-MH**2 + 
+     -           4*MW**2)) - 
+     -      (324*MH*MW**2*MZ**6*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            CSqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       CSqrt2(-MH**2 + 
+     -         4*MW**2) - 
+     -      (768*MT**2*MW**6*
+     -         CSqrt2(4*MT**2 - 
+     -           MZ**2)*Pi**2*
+     -         Arg(2*MT**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MT**2 - 
+     -            MZ**2)))/MZ + 
+     -      960*MT**2*MW**4*MZ*
+     -       CSqrt2(4*MT**2 - 
+     -         MZ**2)*Pi**2*
+     -       Arg(2*MT**2 - 
+     -         MZ**2 + 
+     -         (0,1)*MZ*
+     -          CSqrt2(4*MT**2 - 
+     -            MZ**2)) - 
+     -      384*MW**6*MZ*
+     -       CSqrt2(4*MT**2 - 
+     -         MZ**2)*Pi**2*
+     -       Arg(2*MT**2 - 
+     -         MZ**2 + 
+     -         (0,1)*MZ*
+     -          CSqrt2(4*MT**2 - 
+     -            MZ**2)) - 
+     -      84*MT**2*MW**2*MZ**3*
+     -       CSqrt2(4*MT**2 - 
+     -         MZ**2)*Pi**2*
+     -       Arg(2*MT**2 - 
+     -         MZ**2 + 
+     -         (0,1)*MZ*
+     -          CSqrt2(4*MT**2 - 
+     -            MZ**2)) + 
+     -      480*MW**4*MZ**3*
+     -       CSqrt2(4*MT**2 - 
+     -         MZ**2)*Pi**2*
+     -       Arg(2*MT**2 - 
+     -         MZ**2 + 
+     -         (0,1)*MZ*
+     -          CSqrt2(4*MT**2 - 
+     -            MZ**2)) - 
+     -      204*MW**2*MZ**5*
+     -       CSqrt2(4*MT**2 - 
+     -         MZ**2)*Pi**2*
+     -       Arg(2*MT**2 - 
+     -         MZ**2 + 
+     -         (0,1)*MZ*
+     -          CSqrt2(4*MT**2 - 
+     -            MZ**2)) - 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (1431*MZ**9*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (126*MZ**11*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) - 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) + 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (1431*MZ**9*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (126*MZ**11*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) + 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) + 
+     -      (3456*MW**10*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MZ*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) + 
+     -      (4032*MW**8*MZ*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (216*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (612*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (2646*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (1431*MZ**9*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (126*MZ**11*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) + 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) - 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        + (1431*MZ**9*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       CSqrt2(4*MW**2 - MZ**2)
+     -        - (126*MZ**11*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -           CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) - 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            CSqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         CSqrt2(4*MW**2 - 
+     -           MZ**2)) - 
+     -      9*MH**5*MW**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      36*MH**3*MW**2*MZ**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      108*MH*MW**2*MZ**4*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      9*MH**5*MW**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      36*MH**3*MW**2*MZ**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      108*MH*MW**2*MZ**4*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      9*MH**5*MW**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH**2 - 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      36*MH**3*MW**2*MZ**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH**2 - 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      108*MH*MW**2*MZ**4*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(MH**2 - 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      9*MH**5*MW**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      36*MH**3*MW**2*MZ**2*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) + 
+     -      108*MH*MW**2*MZ**4*
+     -       CSqrt2(-MH**2 + 
+     -         4*MZ**2)*Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          CSqrt2(-MH**2 + 
+     -            4*MZ**2)) - 
+     -      (0,864)*MW**8*MZ**2*
+     -       C0F- 
+     -      (0,864)*MW**6*MZ**4*
+     -       C0F+ 
+     -      (0,1728)*MW**4*MZ**6*
+     -       C0F+ 
+     -      (0,384)*MW**6*MZ**2*
+     -       Pi**3*Log2(2) - 
+     -      (0,768)*MW**4*MZ**4*
+     -       Pi**3*Log2(2) + 
+     -      (0,384)*MW**2*MZ**6*
+     -       Pi**3*Log2(2) - 
+     -      18*MH**6*MW**2*Pi**2*
+     -       Log(MH) + 
+     -      108*MH**4*MW**2*MZ**2*
+     -       Pi**2*Log(MH) + 
+     -      54*MH**4*MZ**4*Pi**2*
+     -       Log(MH) - 
+     -      (18*MH**6*MZ**4*Pi**2*
+     -         Log(MH))/MW**2 - 
+     -      324*MH**2*MW**2*MZ**4*
+     -       Pi**2*Log(MH) + 
+     -      216*MW**4*MZ**4*Pi**2*
+     -       Log(MH) + 
+     -      324*MH**2*MZ**6*Pi**2*
+     -       Log(MH) + 
+     -      (36*MH**6*MZ**6*Pi**2*
+     -         Log(MH))/MW**4 - 
+     -      (162*MH**4*MZ**6*
+     -         Pi**2*Log(MH))/
+     -       MW**2 - 
+     -      216*MW**2*MZ**6*Pi**2*
+     -       Log(MH) + 
+     -      (216*MT**6*MZ**4*
+     -         Pi**2*Log(MT))/
+     -       MW**2 + 
+     -      648*MT**2*MW**2*MZ**4*
+     -       Pi**2*Log(MT) - 
+     -      576*MW**4*MZ**4*Pi**2*
+     -       Log(MT) - 
+     -      (432*MT**6*MZ**6*
+     -         Pi**2*Log(MT))/
+     -       MW**4 + 
+     -      360*MW**2*MZ**6*Pi**2*
+     -       Log(MT) - 
+     -      (108*MT**6*MZ**4*
+     -         Pi**2*Log(MT - MW))
+     -        /MW**2 - 
+     -      324*MT**2*MW**2*MZ**4*
+     -       Pi**2*Log(MT - MW) + 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       Log(MT - MW) + 
+     -      (216*MT**6*MZ**6*
+     -         Pi**2*Log(MT - MW))
+     -        /MW**4 - 
+     -      216*MW**2*MZ**6*Pi**2*
+     -       Log(MT - MW) + 
+     -      1584*MW**6*MZ**2*
+     -       Pi**2*Log(MW) - 
+     -      54*MH**4*MZ**4*Pi**2*
+     -       Log(MW) + 
+     -      (18*MH**6*MZ**4*Pi**2*
+     -         Log(MW))/MW**2 + 
+     -      1776*MW**4*MZ**4*
+     -       Pi**2*Log(MW) - 
+     -      324*MH**2*MZ**6*Pi**2*
+     -       Log(MW) - 
+     -      (36*MH**6*MZ**6*Pi**2*
+     -         Log(MW))/MW**4 + 
+     -      (162*MH**4*MZ**6*
+     -         Pi**2*Log(MW))/
+     -       MW**2 - 
+     -      2700*MW**2*MZ**6*
+     -       Pi**2*Log(MW) + 
+     -      2646*MZ**8*Pi**2*
+     -       Log(MW) - 
+     -      (372*MZ**10*Pi**2*
+     -         Log(MW))/MW**2 - 
+     -      (36*MZ**12*Pi**2*
+     -         Log(MW))/MW**4 - 
+     -      864*MW**4*MZ**2*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MW) + 
+     -      432*MW**2*MZ**4*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MW) + 
+     -      432*MZ**6*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MW) - 
+     -      (0,384)*MW**6*MZ**2*
+     -       Pi**3*Log(MW) + 
+     -      (0,768)*MW**4*MZ**4*
+     -       Pi**3*Log(MW) - 
+     -      (0,384)*MW**2*MZ**6*
+     -       Pi**3*Log(MW) - 
+     -      (108*MT**6*MZ**4*
+     -         Pi**2*Log(MT + MW))
+     -        /MW**2 - 
+     -      324*MT**2*MW**2*MZ**4*
+     -       Pi**2*Log(MT + MW) + 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       Log(MT + MW) + 
+     -      (216*MT**6*MZ**6*
+     -         Pi**2*Log(MT + MW))
+     -        /MW**4 - 
+     -      216*MW**2*MZ**6*Pi**2*
+     -       Log(MT + MW) + 
+     -      18*MH**6*MW**2*Pi**2*
+     -       Log(MZ) - 
+     -      108*MH**4*MW**2*MZ**2*
+     -       Pi**2*Log(MZ) - 
+     -      1584*MW**6*MZ**2*
+     -       Pi**2*Log(MZ) + 
+     -      324*MH**2*MW**2*MZ**4*
+     -       Pi**2*Log(MZ) - 
+     -      2280*MW**4*MZ**4*
+     -       Pi**2*Log(MZ) + 
+     -      2988*MW**2*MZ**6*
+     -       Pi**2*Log(MZ) - 
+     -      2646*MZ**8*Pi**2*
+     -       Log(MZ) + 
+     -      (372*MZ**10*Pi**2*
+     -         Log(MZ))/MW**2 + 
+     -      (36*MZ**12*Pi**2*
+     -         Log(MZ))/MW**4 + 
+     -      864*MW**4*MZ**2*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MZ) - 
+     -      432*MW**2*MZ**4*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MZ) - 
+     -      432*MZ**6*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*Log(MZ) - 
+     -      864*MW**4*MZ**2*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*
+     -       Log(-(MZ**2 + 
+     -            CSqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -         (2.*MW**2)) + 
+     -      432*MW**2*MZ**4*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*
+     -       Log(-(MZ**2 + 
+     -            CSqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -         (2.*MW**2)) + 
+     -      432*MZ**6*
+     -       CSqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       Pi**2*
+     -       Log(-(MZ**2 + 
+     -            CSqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -         (2.*MW**2)) + 
+     -      (0,192)*MW**6*MZ**2*
+     -       Pi**3*Log(Pi) - 
+     -      (0,384)*MW**4*MZ**4*
+     -       Pi**3*Log(Pi) + 
+     -      (0,192)*MW**2*MZ**6*
+     -       Pi**3*Log(Pi) - 
+     -      192*MW**6*MZ**2*Pi**2*
+     -       PolyLog(2,
+     -        1 + MW**2/MZ**2) - 
+     -      240*MW**4*MZ**4*Pi**2*
+     -       PolyLog(2,
+     -        1 + MW**2/MZ**2) + 
+     -      168*MW**2*MZ**6*Pi**2*
+     -       PolyLog(2,
+     -        1 + MW**2/MZ**2) + 
+     -      264*MZ**8*Pi**2*
+     -       PolyLog(2,
+     -        1 + MW**2/MZ**2) + 
+     -      (24*MZ**10*Pi**2*
+     -         PolyLog(2,
+     -          1 + MW**2/MZ**2))/
+     -       MW**2 - 
+     -      (24*MZ**12*Pi**2*
+     -         PolyLog(2,
+     -          1 + MW**2/MZ**2))/
+     -       MW**4))/
+     -  (1152.*(MW - MZ)**3*
+     -    (MW + MZ)**3*Pi**4)
+      ! correct one
+      res=res+17d0*EL**4*MW**2/48d0/Pi**2/Decay_R_SW2
+      Width_W2ud_EW=prefactor*DBLE(res)
+      IF(ischeme.EQ.1)RETURN
+      ! Gmu scheme
+      resdiff=2d0*dZe1_Gmu_MZ(0)*3d0*EL**2*MW**2/(1d0-MW**2/MZ**2)
+      Width_W2ud_EW=Width_W2ud_EW+prefactor*DBLE(resdiff)
+      RETURN
+      END
+
+      FUNCTION Width_W2lv_EW(ischeme)
+      USE ParamModule
+      USE mis_warp
+      USE Func_PSI
+      IMPLICIT NONE
+      INTEGER::ischeme
+      REAL(KIND(1d0))::EL,MT,MW,MZ,MH
+      COMPLEX(KIND(1d0))::res,resdiff,C0F
+      COMPLEX(KIND(1d0)),DIMENSION(4)::C0RES
+      REAL(KIND(1d0))::Width_W2lv_EW
+      REAL(KIND(1d0))::prefactor
+      COMPLEX(KIND(1d0)),EXTERNAL::dZe1_Gmu_MZ
+      IF(ischeme.NE.1.AND.ischeme.NE.2)THEN
+         WRITE(*,*)"ERROR:Unkonwn scheme:",ischeme
+         WRITE(*,*)"Please choose 1(alpha(MZ)) or 2(Gmu)"
+         STOP
+      ENDIF
+      EL=Decay_e
+      MT=Decay_MT
+      MW=Decay_MW
+      MH=Decay_MH
+      MZ=Decay_MZ
+      prefactor=1d0/48d0/pi/MW
+      C0RES(1:4)=C0C1(0d0,0d0,MW**2,MW**2,0d0,MZ**2)
+      C0F=C0RES(4)
+      res=(2.970480976471162e-6*
+     -    EL**4*
+     -    (1536*MT**2*MW**6*
+     -       Pi**2 - 
+     -      1728*MW**8*Pi**2 + 
+     -      18*MH**4*MW**2*MZ**2*
+     -       Pi**2 - 
+     -      1920*MT**2*MW**4*MZ**2*
+     -       Pi**2 - 
+     -      4112*MW**6*MZ**2*
+     -       Pi**2 + 
+     -      18*MH**4*MZ**4*Pi**2 - 
+     -      108*MT**4*MZ**4*
+     -       Pi**2 - 
+     -      108*MH**2*MW**2*MZ**4*
+     -       Pi**2 + 
+     -      276*MT**2*MW**2*MZ**4*
+     -       Pi**2 + 
+     -      8764*MW**4*MZ**4*
+     -       Pi**2 + 
+     -      108*MH**2*MZ**6*
+     -       Pi**2 + 
+     -      108*MT**2*MZ**6*
+     -       Pi**2 - 
+     -      (36*MH**4*MZ**6*Pi**2)/
+     -       MW**2 + 
+     -      (216*MT**4*MZ**6*
+     -         Pi**2)/MW**2 - 
+     -      2456*MW**2*MZ**6*
+     -       Pi**2 - 
+     -      648*MZ**8*Pi**2 + 
+     -      (180*MZ**10*Pi**2)/
+     -       MW**2 - 
+     -      (0,1920)*MW**6*MZ**2*
+     -       Pi**3 + 
+     -      (0,4488)*MW**4*MZ**4*
+     -       Pi**3 - 
+     -      (0,2460)*MW**2*MZ**6*
+     -       Pi**3 - 
+     -      (0,324)*MZ**8*Pi**3 + 
+     -      ((0,216)*MZ**10*Pi**3)/
+     -       MW**2 + 
+     -      288*MW**6*MZ**2*
+     -       Pi**4 - 
+     -      504*MW**4*MZ**4*
+     -       Pi**4 + 
+     -      324*MW**2*MZ**6*
+     -       Pi**4 - 
+     -      108*MZ**8*Pi**4 - 
+     -      (36*MZ**10*Pi**4)/
+     -       MW**2 + 
+     -      (36*MZ**12*Pi**4)/
+     -       MW**4 + 
+     -      (9*MH*MZ**4*
+     -         (MH**6*
+     -            (MW**2 - 2*MZ**2)
+     -             + MH**4*
+     -            (-5*MW**4 + 
+     -            13*MW**2*MZ**2)
+     -            + 4*MH**2*
+     -            (MW**6 - 
+     -            8*MW**4*MZ**2) + 
+     -           12*
+     -            (MW**8 + 
+     -            3*MW**6*MZ**2))*
+     -         Pi**2*
+     -         Arg(-MH + 
+     -           (0,1)*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) - 
+     -      (9*MH*MZ**4*
+     -         (MH**6*
+     -            (MW**2 - 2*MZ**2)
+     -             + MH**4*
+     -            (-5*MW**4 + 
+     -            13*MW**2*MZ**2)
+     -            + 4*MH**2*
+     -            (MW**6 - 
+     -            8*MW**4*MZ**2) + 
+     -           12*
+     -            (MW**8 + 
+     -            3*MW**6*MZ**2))*
+     -         Pi**2*
+     -         Arg(MH + 
+     -           (0,1)*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) - 
+     -      (45*MH**5*MZ**4*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 + 
+     -      (9*MH**7*MZ**4*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) + 
+     -      (36*MH**3*MW**2*MZ**4*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 + 
+     -      (108*MH*MW**4*MZ**4*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 - 
+     -      (288*MH**3*MZ**6*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 - 
+     -      (18*MH**7*MZ**6*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) + 
+     -      (117*MH**5*MZ**6*Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) + 
+     -      (324*MH*MW**2*MZ**6*
+     -         Pi**2*
+     -         Arg(MH**2 - 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 + 
+     -      (45*MH**5*MZ**4*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 - 
+     -      (9*MH**7*MZ**4*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) - 
+     -      (36*MH**3*MW**2*MZ**4*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 - 
+     -      (108*MH*MW**4*MZ**4*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 + 
+     -      (288*MH**3*MZ**6*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 + 
+     -      (18*MH**7*MZ**6*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**4*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) - 
+     -      (117*MH**5*MZ**6*Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (MW**2*
+     -         (-MH**2 + 4*MW**2)**
+     -          0.5) - 
+     -      (324*MH*MW**2*MZ**6*
+     -         Pi**2*
+     -         Arg(-MH**2 + 
+     -           2*MW**2 + 
+     -           (0,1)*MH*
+     -            Csqrt2(-MH**2 + 
+     -            4*MW**2)))/
+     -       (-MH**2 + 4*MW**2)**
+     -        0.5 - 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (1431*MZ**9*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (126*MZ**11*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) - 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(-MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) + 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (1431*MZ**9*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (126*MZ**11*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) + 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(MZ + 
+     -           (0,1)*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) + 
+     -      (3456*MW**10*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MZ*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) + 
+     -      (4032*MW**8*MZ*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (216*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (612*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (2646*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (1431*MZ**9*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (126*MZ**11*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) + 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(2*MW**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) - 
+     -      (2160*MW**6*MZ**3*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (828*MW**4*MZ**5*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (2628*MW**2*MZ**7*
+     -         Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        + (1431*MZ**9*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (4*MW**2 - MZ**2)**0.5
+     -        - (126*MZ**11*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**2*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) - 
+     -      (18*MZ**13*Pi**2*
+     -         Arg(-2*MW**2 + 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MW**2 - 
+     -            MZ**2)))/
+     -       (MW**4*
+     -         (4*MW**2 - MZ**2)**
+     -          0.5) - 
+     -      (0,864)*MW**8*MZ**2*
+     -       C0F- 
+     -      (0,864)*MW**6*MZ**4*
+     -       C0F+ 
+     -      (0,1728)*MW**4*MZ**6*
+     -       C0F- 
+     -      (768*MT**2*MW**6*Pi**2*
+     -         Arg(2*MT**2 - 
+     -           MZ**2 + 
+     -           (0,1)*MZ*
+     -            Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -         Csqrt2(4*MT**2 - 
+     -           MZ**2))/MZ + 
+     -      960*MT**2*MW**4*MZ*
+     -       Pi**2*
+     -       Arg(2*MT**2 - MZ**2 + 
+     -         (0,1)*MZ*
+     -          Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -       Csqrt2(4*MT**2 - 
+     -         MZ**2) - 
+     -      384*MW**6*MZ*Pi**2*
+     -       Arg(2*MT**2 - MZ**2 + 
+     -         (0,1)*MZ*
+     -          Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -       Csqrt2(4*MT**2 - 
+     -         MZ**2) - 
+     -      84*MT**2*MW**2*MZ**3*
+     -       Pi**2*
+     -       Arg(2*MT**2 - MZ**2 + 
+     -         (0,1)*MZ*
+     -          Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -       Csqrt2(4*MT**2 - 
+     -         MZ**2) + 
+     -      480*MW**4*MZ**3*Pi**2*
+     -       Arg(2*MT**2 - MZ**2 + 
+     -         (0,1)*MZ*
+     -          Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -       Csqrt2(4*MT**2 - 
+     -         MZ**2) - 
+     -      204*MW**2*MZ**5*Pi**2*
+     -       Arg(2*MT**2 - MZ**2 + 
+     -         (0,1)*MZ*
+     -          Csqrt2(4*MT**2 - 
+     -            MZ**2))*
+     -       Csqrt2(4*MT**2 - 
+     -         MZ**2) - 
+     -      9*MH**5*MW**2*Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      36*MH**3*MW**2*MZ**2*
+     -       Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      108*MH*MW**2*MZ**4*
+     -       Pi**2*
+     -       Arg(-MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      9*MH**5*MW**2*Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      36*MH**3*MW**2*MZ**2*
+     -       Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      108*MH*MW**2*MZ**4*
+     -       Pi**2*
+     -       Arg(MH + 
+     -         (0,1)*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      9*MH**5*MW**2*Pi**2*
+     -       Arg(MH**2 - 2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      36*MH**3*MW**2*MZ**2*
+     -       Pi**2*
+     -       Arg(MH**2 - 2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      108*MH*MW**2*MZ**4*
+     -       Pi**2*
+     -       Arg(MH**2 - 2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      9*MH**5*MW**2*Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      36*MH**3*MW**2*MZ**2*
+     -       Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) + 
+     -      108*MH*MW**2*MZ**4*
+     -       Pi**2*
+     -       Arg(-MH**2 + 
+     -         2*MZ**2 + 
+     -         (0,1)*MH*
+     -          Csqrt2(-MH**2 + 
+     -            4*MZ**2))*
+     -       Csqrt2(-MH**2 + 
+     -         4*MZ**2) - 
+     -      (0,864)*MW**4*MZ**2*
+     -       Pi**3*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4) + 
+     -      (0,432)*MW**2*MZ**4*
+     -       Pi**3*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4) + 
+     -      (0,432)*MZ**6*Pi**3*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4) - 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       li2(1 + MW**2/MZ**2)
+     -       - 216*MW**2*MZ**6*
+     -       Pi**2*
+     -       li2(1 + MW**2/MZ**2)
+     -       + 648*MZ**8*Pi**2*
+     -       li2(1 + MW**2/MZ**2)
+     -       + (216*MZ**10*Pi**2*
+     -         li2(1 + MW**2/MZ**2)
+     -         )/MW**2 - 
+     -      (216*MZ**12*Pi**2*
+     -         li2(1 + MW**2/MZ**2)
+     -         )/MW**4 - 
+     -      18*MH**6*MW**2*Pi**2*
+     -       log2(MH) + 
+     -      108*MH**4*MW**2*MZ**2*
+     -       Pi**2*log2(MH) + 
+     -      54*MH**4*MZ**4*Pi**2*
+     -       log2(MH) - 
+     -      (18*MH**6*MZ**4*Pi**2*
+     -         log2(MH))/MW**2 - 
+     -      324*MH**2*MW**2*MZ**4*
+     -       Pi**2*log2(MH) + 
+     -      216*MW**4*MZ**4*Pi**2*
+     -       log2(MH) + 
+     -      324*MH**2*MZ**6*Pi**2*
+     -       log2(MH) + 
+     -      (36*MH**6*MZ**6*Pi**2*
+     -         log2(MH))/MW**4 - 
+     -      (162*MH**4*MZ**6*Pi**2*
+     -         log2(MH))/MW**2 - 
+     -      216*MW**2*MZ**6*Pi**2*
+     -       log2(MH) + 
+     -      (216*MT**6*MZ**4*Pi**2*
+     -         log2(MT))/MW**2 + 
+     -      648*MT**2*MW**2*MZ**4*
+     -       Pi**2*log2(MT) - 
+     -      576*MW**4*MZ**4*Pi**2*
+     -       log2(MT) - 
+     -      (432*MT**6*MZ**6*Pi**2*
+     -         log2(MT))/MW**4 + 
+     -      360*MW**2*MZ**6*Pi**2*
+     -       log2(MT) - 
+     -      (108*MT**6*MZ**4*Pi**2*
+     -         log2(MT - MW))/MW**2
+     -        - 324*MT**2*MW**2*
+     -       MZ**4*Pi**2*
+     -       log2(MT - MW) + 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       log2(MT - MW) + 
+     -      (216*MT**6*MZ**6*Pi**2*
+     -         log2(MT - MW))/MW**4
+     -        - 216*MW**2*MZ**6*
+     -       Pi**2*log2(MT - MW) + 
+     -      2160*MW**6*MZ**2*Pi**2*
+     -       log2(MW) - 
+     -      54*MH**4*MZ**4*Pi**2*
+     -       log2(MW) + 
+     -      (18*MH**6*MZ**4*Pi**2*
+     -         log2(MW))/MW**2 + 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       log2(MW) - 
+     -      324*MH**2*MZ**6*Pi**2*
+     -       log2(MW) - 
+     -      (36*MH**6*MZ**6*Pi**2*
+     -         log2(MW))/MW**4 + 
+     -      (162*MH**4*MZ**6*Pi**2*
+     -         log2(MW))/MW**2 - 
+     -      2124*MW**2*MZ**6*Pi**2*
+     -       log2(MW) + 
+     -      3222*MZ**8*Pi**2*
+     -       log2(MW) - 
+     -      (756*MZ**10*Pi**2*
+     -         log2(MW))/MW**2 - 
+     -      (36*MZ**12*Pi**2*
+     -         log2(MW))/MW**4 - 
+     -      864*MW**4*MZ**2*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MW) + 
+     -      432*MW**2*MZ**4*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MW) + 
+     -      432*MZ**6*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MW) - 
+     -      (108*MT**6*MZ**4*Pi**2*
+     -         log2(MT + MW))/MW**2
+     -        - 324*MT**2*MW**2*
+     -       MZ**4*Pi**2*
+     -       log2(MT + MW) + 
+     -      432*MW**4*MZ**4*Pi**2*
+     -       log2(MT + MW) + 
+     -      (216*MT**6*MZ**6*Pi**2*
+     -         log2(MT + MW))/MW**4
+     -        - 216*MW**2*MZ**6*
+     -       Pi**2*log2(MT + MW) + 
+     -      18*MH**6*MW**2*Pi**2*
+     -       log2(MZ) - 
+     -      108*MH**4*MW**2*MZ**2*
+     -       Pi**2*log2(MZ) - 
+     -      2160*MW**6*MZ**2*Pi**2*
+     -       log2(MZ) + 
+     -      324*MH**2*MW**2*MZ**4*
+     -       Pi**2*log2(MZ) - 
+     -      936*MW**4*MZ**4*Pi**2*
+     -       log2(MZ) + 
+     -      2412*MW**2*MZ**6*Pi**2*
+     -       log2(MZ) - 
+     -      3222*MZ**8*Pi**2*
+     -       log2(MZ) + 
+     -      (756*MZ**10*Pi**2*
+     -         log2(MZ))/MW**2 + 
+     -      (36*MZ**12*Pi**2*
+     -         log2(MZ))/MW**4 + 
+     -      864*MW**4*MZ**2*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MZ) - 
+     -      432*MW**2*MZ**4*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MZ) - 
+     -      432*MZ**6*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2(MZ) - 
+     -      864*MW**4*MZ**2*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2((-0.5*
+     -           (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))/
+     -         MW**2) + 
+     -      432*MW**2*MZ**4*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2((-0.5*
+     -           (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))/
+     -         MW**2) + 
+     -      432*MZ**6*Pi**2*
+     -       Csqrt2(-4*MW**2*
+     -          MZ**2 + MZ**4)*
+     -       log2((-0.5*
+     -           (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))/
+     -         MW**2)))/
+     -  ((MW - MZ)**3*(MW + MZ)**3)
+      ! correct one
+      res=res+EL**4*MW**2/16d0/Pi**2/Decay_R_SW2
+      Width_W2lv_EW=prefactor*DBLE(res)
+      IF(ischeme.EQ.1)RETURN
+      !     Gmu scheme
+      resdiff=2d0*dZe1_Gmu_MZ(0)*EL**2*MW**2/(1d0-MW**2/MZ**2)
+      Width_W2lv_EW=Width_W2lv_EW+prefactor*DBLE(resdiff)
+      RETURN
+      END
+
+      FUNCTION Width_W2cs_qmass(MC,MS)
+      USE ParamModule
+      USE Func_PSI
+      IMPLICIT NONE
+      REAL(KIND(1d0))::MC,MS
+      REAL(KIND(1d0))::Width_W2cs_qmass
+      REAL(KIND(1d0))::MT,MW,MH,MZ,EL
+      COMPLEX(KIND(1d0))::res
+      EL=Decay_e
+      MT=Decay_MT
+      MW=Decay_MW
+      MH=Decay_MH
+      MZ=Decay_MZ
+      res=   (0.03125*EL**2*
+     -    (-2*MW**6 - 
+     -      (MC**4 + MS**4 + 
+     -         MS**2*MW**2 - 
+     -         2*MW**4 + 
+     -         MC**2*
+     -          (-2*MS**2 + MW**2))
+     -        *Csqrt2(MC**4 + 
+     -         (MS**2 - MW**2)**
+     -          2 - 
+     -         2*MC**2*
+     -          (MS**2 + MW**2))))/
+     -  (MW**5*
+     -    (Pi - (MW**2*Pi)/MZ**2))
+      Width_W2cs_qmass=DBLE(res)
+      END
+
+      FUNCTION Width_W2lv_lmass(ML)
+      USE ParamModule
+      USE Func_PSI
+      IMPLICIT NONE
+      REAL(KIND(1d0))::ML
+      REAL(KIND(1d0))::Width_W2lv_lmass
+      REAL(KIND(1d0))::MT,MW,MH,MZ,EL
+      COMPLEX(KIND(1d0))::res
+      EL=Decay_e
+      MT=Decay_MT
+      MW=Decay_MW
+      MH=Decay_MH
+      MZ=Decay_MZ
+      res=(0.010416666666666666*
+     -    EL**2*
+     -    (-2*MW**6 - 
+     -      (ML**4 + ML**2*MW**2 - 
+     -         2*MW**4)*
+     -       Csqrt2((ML**2 - 
+     -           MW**2)**2)))/
+     -  (MW**5*
+     -    (Pi - (MW**2*Pi)/MZ**2))
+      Width_W2lv_lmass=DBLE(res)
+      RETURN
+      END
+
+      FUNCTION dZe1_Gmu_MZ(idummy)
+      USE ParamModule
+      USE mis_warp
+      USE Func_PSI
+      IMPLICIT NONE
+      COMPLEX(KIND(1d0))::dZe1_Gmu_MZ
+      INTEGER::idummy
+      REAL(KIND(1d0))::EL,MT,MW,MH,MZ
+      EL=Decay_e
+      MT=Decay_MT
+      MW=Decay_MW
+      MH=Decay_MH
+      MZ=Decay_MZ
+      dZe1_Gmu_MZ=0.5d0*(0.00008795241635619598*
+     -    EL**2*
+     -    ((36*MH**2*(MW - MZ)*
+     -         (MW + MZ)*
+     -         (-12*MW**4*MZ**2 + 
+     -           MH**4*
+     -            (MW**2 - MZ**2)
+     -            - MH**2*
+     -            (MW**4 - 
+     -            4*MW**2*MZ**2))*
+     -         log2(MH))/
+     -       ((MH - MW)*MW**4*
+     -         (MH + MW)) + 
+     -      (24*
+     -         (32*MW**4*MZ**2 - 
+     -           28*MW**2*MZ**4 + 
+     -           14*MZ**6 + 
+     -           MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *log2(MT))/MZ**2
+     -       + (0,648)*MZ**2*
+     -       (-2*MW**2 + MZ**2)*
+     -       (Pi + (0,2)*log2(MW))
+     -        - (36*
+     -         (2*MW**2 - MZ**2)*
+     -         (48*MW**6 + 
+     -           56*MW**4*MZ**2 + 
+     -           4*MW**2*MZ**2*
+     -            (MH**2 - 
+     -            4*MZ**2) - 
+     -           MZ**2*
+     -            (MH**4 + MZ**4))
+     -          *log2(MW))/MW**4
+     -       - (36*
+     -         (MH**4*
+     -            (2*MW**2*
+     -           MZ**4 - MZ**6) + 
+     -           MW**2*
+     -            (48*MW**8 - 
+     -            76*MW**6*
+     -           MZ**2 - 
+     -            8*MW**4*MZ**4 + 
+     -            MW**2*MZ**6 + 
+     -            MZ**8) - 
+     -           MH**2*
+     -            (48*MW**8 - 
+     -            76*MW**6*
+     -           MZ**2 - 
+     -            15*MW**4*
+     -           MZ**4 + 
+     -            9*MW**2*MZ**6 + 
+     -            MZ**8))*log2(MW)
+     -         )/
+     -       (MW**2*(-MH + MW)*
+     -         (MH + MW)*MZ**2) + 
+     -      (108*(MT - MW)**2*
+     -         (MT + MW)**2*
+     -         (MT**2 + 2*MW**2)*
+     -         MZ**2*
+     -         (2*MW**2 - MZ**2)*
+     -         log2(1 - 
+     -           MW**2/MT**2))/
+     -       MW**6 - 
+     -      216*MZ**2*
+     -       (4*MW**2 + 3*MZ**2)*
+     -       (log2(MW) - log2(MZ))
+     -        + (36*MZ**2*
+     -         (-(MH**2*MW**4) + 
+     -           24*MW**6 - 
+     -           74*MW**4*MZ**2 + 
+     -           15*MW**2*MZ**4 + 
+     -           MZ**6)*log2(MZ))/
+     -       MW**4 - 
+     -      (12*
+     -         (-144*MW**6 + 
+     -           3*MH**4*MZ**2 - 
+     -           140*MW**4*
+     -           MZ**2 - 
+     -           12*MH**2*MZ**4 - 
+     -           32*MW**2*MZ**4 + 
+     -           73*MZ**6 + 
+     -           2*MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *log2(MZ))/MZ**2
+     -       + 36*MZ**2*
+     -       (-40*MW**2 + 
+     -         19*MZ**2)*
+     -       ((0,-1)*Pi + 
+     -         2*log2(MZ)) + 
+     -      (108*MT**4*
+     -          (2*MW**2*MZ**4 - 
+     -            MZ**6) + 
+     -         6*MT**2*
+     -          (256*MW**8 - 
+     -            320*MW**6*
+     -           MZ**2 + 
+     -            73*MW**4*
+     -           MZ**4 - 
+     -            9*MW**2*MZ**6)
+     -          - (MW**2 - MZ**2)*
+     -          (1728*MW**8 - 
+     -            3266*MW**4*
+     -            MZ**4 + 
+     -            18*MZ**4*
+     -            (MH**4 + MZ**4)
+     -            - 9*MW**2*
+     -            (2*MH**4*
+     -           MZ**2 + 
+     -            9*MH**2*MZ**4 - 
+     -            29*MZ**6) + 
+     -            32*MW**6*MZ**2*
+     -            (106 + 
+     -            54*log2(2) + 
+     -            27*log2(Pi))))/
+     -       (MW**4*MZ**2) + 
+     -      864*MW**2*(MW - MZ)*
+     -       (MW + MZ)*
+     -       (-2*log2(MW) + 
+     -         log2(4*Pi)) - 
+     -      (9*
+     -         (MH**4 - 
+     -           4*MH**2*MW**2 + 
+     -           12*MW**4)*MZ**2*
+     -         (2*MW**2 - MZ**2)*
+     -         (MH**2 + 
+     -           Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2))*
+     -         log2((MH**2 - 
+     -            2*MW**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2))/
+     -           (MH**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2)))
+     -         )/MW**6 - 
+     -      (9*
+     -         (MH**4 - 
+     -           4*MH**2*MW**2 + 
+     -           12*MW**4)*MZ**2*
+     -         (2*MW**2 - MZ**2)*
+     -         (-MH**2 + 
+     -           Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2))*
+     -         (2*log2(MH) - 
+     -           2*log2(MW) + 
+     -           log2((MH**2 - 
+     -            2*MW**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2))/
+     -            (MH**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MW**2)))
+     -           ))/MW**6 - 
+     -      18*
+     -       (MH**4 - 
+     -         4*MH**2*MZ**2 + 
+     -         12*MZ**4)*
+     -       log2(-1 + 
+     -         (0.5*
+     -            (MH**2 - 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2)))
+     -           /MZ**2) + 
+     -      (9*
+     -         (MH**4 - 
+     -           4*MH**2*MZ**2 + 
+     -           12*MZ**4)*
+     -         (MH**2 + 
+     -           Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2))*
+     -         log2((MH**2 - 
+     -            2*MZ**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2))/
+     -           (MH**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2)))
+     -         )/MZ**2 + 
+     -      (9*
+     -         (MH**4 - 
+     -           4*MH**2*MZ**2 + 
+     -           12*MZ**4)*
+     -         (-MH**2 + 
+     -           Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2))*
+     -         (2*log2(MH) - 
+     -           2*log2(MZ) + 
+     -           log2((MH**2 - 
+     -            2*MZ**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2))/
+     -            (MH**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2)))
+     -           ))/MZ**2 - 
+     -      18*
+     -       (MH**4 - 
+     -         4*MH**2*MZ**2 + 
+     -         12*MZ**4)*
+     -       log2(-1 + 
+     -         (0.5*
+     -            (MH**2 + 
+     -            Csqrt2(MH**4 - 
+     -            4*MH**2*MZ**2)))
+     -           /MZ**2) - 
+     -      (12*
+     -         (32*MW**4*MZ**2 - 
+     -           40*MW**2*MZ**4 + 
+     -           17*MZ**6 + 
+     -           MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *log2((-0.5*
+     -            (MZ**2 + 
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4)))
+     -            /MZ**2))/MZ**2
+     -       + (6*
+     -         (32*MW**4*MZ**2 - 
+     -           40*MW**2*MZ**4 + 
+     -           17*MZ**6 + 
+     -           MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *(MZ**2 - 
+     -           Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((MZ**2 + 
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4))/
+     -           (-MZ**2 + 
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MZ**4 - 
+     -      (6*
+     -         (32*MW**4*MZ**2 - 
+     -           40*MW**2*MZ**4 + 
+     -           17*MZ**6 + 
+     -           MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *(MZ**2 + 
+     -           Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((MZ**2 + 
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4))/
+     -           (-MZ**2 + 
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MZ**4 - 
+     -      (12*
+     -         (32*MW**4*MZ**2 - 
+     -           40*MW**2*MZ**4 + 
+     -           17*MZ**6 + 
+     -           MT**2*
+     -            (64*MW**4 - 
+     -            80*MW**2*
+     -           MZ**2 + 7*MZ**4))
+     -          *log2(-0.5 + 
+     -           (0.5*
+     -            Csqrt2(-4*MT**2*
+     -            MZ**2 + MZ**4))/
+     -            MZ**2))/MZ**2 - 
+     -      (18*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (2*MW**2 - MZ**2)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         log2((0.5*
+     -            (-MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -            /MW**2))/MW**4
+     -       + (9*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (2*MW**2 - MZ**2)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         (2*MW**2 - MZ**2 + 
+     -           Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((-MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -           (2*MW**2 - 
+     -            MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MW**6 - 
+     -      (9*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         (MZ**2 + 
+     -           Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((-MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -           (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MZ**4 - 
+     -      (18*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (2*MW**2 - MZ**2)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         log2((-0.5*
+     -            (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -            /MW**2))/MW**4
+     -       + (18*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         log2((-0.5*
+     -            (MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -            /MZ**2))/MZ**2
+     -       - (9*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         (MZ**2 - 
+     -           Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -           (-MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MZ**4 + 
+     -      (9*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (2*MW**2 - MZ**2)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         (2*MW**2 - MZ**2 - 
+     -           Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))*
+     -         log2((MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -           (-2*MW**2 + 
+     -            MZ**2 + 
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4)))
+     -         )/MW**6 + 
+     -      (18*(2*MW - MZ)*
+     -         (2*MW + MZ)*
+     -         (12*MW**4 + 
+     -           20*MW**2*MZ**2 + 
+     -           MZ**4)*
+     -         log2(-0.5 + 
+     -           (0.5*
+     -            Csqrt2(-4*MW**2*
+     -            MZ**2 + MZ**4))/
+     -            MZ**2))/MZ**2))/
+     -  (3d0*
+     -    (MW - MZ)**2*
+     -    (MW + MZ)**2)
+      RETURN
+      END

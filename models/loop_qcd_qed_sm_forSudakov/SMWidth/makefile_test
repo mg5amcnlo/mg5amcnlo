@@ -1,0 +1,64 @@
+FC=gfortran
+onelooppath=$(PWD)/oneloop
+hdecaypath=$(PWD)/hdecay
+FFLAGS=-O -fPIC -I$(onelooppath)
+PROG = test
+PROCESS = ReadParam.o lha_read.o ParamModule.o use_func.o mis_warp.o Func_PSI.o alfas_functions.o WDecay_EW.o WDecay.o ZDecay_EW.o ZDecay.o tDecay_EW.o tDecay.o H0Decay.o test.o
+$(PROG): make_oneloop make_hdecay $(PROCESS)
+	$(FC) -L$(onelooppath) -L$(hdecaypath) -o $(PROG) $(PROCESS) -lavh_olo -lhdecay
+
+test.o : test.f90 ReadParam.mod Func_PSI.mod WDecay.mod ZDecay.mod tDecay.mod H0Decay.mod
+	$(FC) -c $< $(FFLAGS)
+
+ReadParam.o ReadParam.mod : ReadParam.f90 ParamModule.mod
+	$(FC) -c $< $(FFLAGS)
+
+ParamModule.o ParamModule.mod : ParamModule.f90
+	$(FC) -c $< $(FFLAGS)
+
+Func_PSI.o Func_PSI.mod : Func_PSI.f90 use_func.mod ParamModule.mod
+	$(FC) -c $< $(FFLAGS)
+
+use_func.o use_func.mod : use_func.f90
+	$(FC) -c $< $(FFLAGS)
+
+lha_read.o : lha_read.f ParamModule.mod
+	$(FC) -c $< $(FFLAGS)
+
+WDecay_EW.o : WDecay_EW.f ParamModule.mod Func_PSI.mod mis_warp.mod
+	$(FC) -c $< $(FFLAGS)
+
+ZDecay_EW.o : ZDecay_EW.f ParamModule.mod Func_PSI.mod mis_warp.mod
+	$(FC) -c $< $(FFLAGS)
+
+tDecay_EW.o : tDecay_EW.f ParamModule.mod Func_PSI.mod mis_warp.mod ZDecay.mod WDecay.mod
+	$(FC) -c $< $(FFLAGS)
+
+WDecay.o WDecay.mod : WDecay.f90 ParamModule.mod alfas_functions.mod
+	$(FC) -c $< $(FFLAGS)
+
+ZDecay.o ZDecay.mod : ZDecay.f90 ParamModule.mod alfas_functions.mod
+	$(FC) -c $< $(FFLAGS)
+
+tDecay.o tDecay.mod : tDecay.f90 ParamModule.mod Func_PSI.mod alfas_functions.mod
+	$(FC) -c $< $(FFLAGS)
+
+H0Decay.o H0Decay.mod : H0Decay.f90
+	$(FC) -c $< $(FFLAGS)
+
+alfas_functions.o alfas_functions.mod : alfas_functions.f90 ParamModule.mod
+	$(FC) -c $< $(FFLAGS)
+
+mis_warp.o mis_warp.mod : mis_warp.f90 ParamModule.mod
+	$(FC) -c $< $(FFLAGS)
+
+make_oneloop:
+	(make -f makefile_oneloop)
+
+make_hdecay:
+	(make -f makefile_hdecay)
+
+clean:
+	@rm -rf *.o *~ *.mod $(PROG)
+	@(make clean -f makefile_oneloop)
+	@(make clean -f makefile_hdecay)
