@@ -957,8 +957,10 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 vPol = event[0].helicity
                 vPID = event[0].pid
-                xx = 0.5
                 ievo = self.banner.run_card['ievo_eva']
+                if ievo != 0 and len(loinfo['pdf_x1']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for eva.')
+                xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
                 wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
@@ -966,8 +968,10 @@ class Systematics(object):
             if self.banner.run_card['pdlabel']=='eva':
                 vPol = event[1].helicity
                 vPID = event[1].pid
-                xx = 0.5
                 ievo = self.banner.run_card['ievo_eva']
+                if ievo != 0 and len(loinfo['pdf_x2']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for eva.')
+                xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
                 wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
             else:
                 wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 

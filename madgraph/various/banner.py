@@ -2904,6 +2904,13 @@ class RunCardLO(RunCard):
                                ! [1,2] means the partonic center of mass 
 """, 
     template_off= ''),        
+#    Frame for eva scale evolution
+    runblock(name='eva_scale', fields=('eva_scale'),
+              template_on=\
+"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
+                         ! 0 for evo by q^2; 1 for evo by pT^2
+""", 
+    template_off= ''),        
 #    MERGING BLOCK:  MLM           
         runblock(name='mlm', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
             template_on=\
@@ -3469,7 +3476,51 @@ class RunCardLO(RunCard):
                 self['use_syst'] = False   
                 self.display_block.append('beam_pol')  
                 self.display_block.append('ecut')       
-            
+
+            # check for possibility of eva
+            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24])
+            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24])
+            if eva_in_b1 and eva_in_b2:
+                #reserved for 100 TeV pp collider
+                #self['lpp1'] = 1
+                #self['lpp2'] = 1
+                #self['ebeam1'] = '50k'
+                #self['ebeam1'] = '50k'
+                self['nhel'] = 1
+                self['pdlabel'] = 'eva'
+            elif eva_in_b1:
+                self['pdlabel'] = 'eva'
+                self['nhel']    = 1
+                for i in beam_id_split[1]:
+                    exit
+                    if abs(i) == 11:
+                        self['lpp1']    = -math.copysign(3,i)
+                        self['lpp2']    =  math.copysign(3,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+                    elif abs(i) == 13:
+                        self['lpp1']    = -math.copysign(4,i)
+                        self['lpp2']    =  math.copysign(4,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+            elif eva_in_b2:
+                self['pdlabel'] = 'eva'
+                self['nhel']    = 1
+                for i in beam_id_split[0]:
+                    if abs(i) == 11:
+                        self['lpp1']    =  math.copysign(3,i)
+                        self['lpp2']    = -math.copysign(3,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+                    if abs(i) == 13:
+                        self['lpp1']    =  math.copysign(4,i)
+                        self['lpp2']    = -math.copysign(4,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+
+            if any(i in beam_id for i in [22,23,24,-24]):
+                self.display_block.append('eva_scale')
+
             # automatic polarisation of the beam if neutrino beam  
             if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
                 self.display_block.append('beam_pol')
