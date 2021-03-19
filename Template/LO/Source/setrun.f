@@ -106,6 +106,15 @@ c     if no matching ensure that no pdfreweight are done
      $     sign((abs(pol(1))-1)*100,pol(1)),
      $     sign((abs(pol(2))-1)*100,pol(2))
 
+
+      if(pdlabel.eq.'eva') then
+            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva)
+            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva)
+            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva)
+            pol(1) = (-1d0/200d0)*pb1 + 0.5d0
+            pol(2) = (-1d0/200d0)*pb2 + 0.5d0
+      endif
+
 c !!! Default behavior changed (MH, Aug. 07) !!!
 c If no pdf, read the param_card and use the value from there and
 c order of alfas running = 2

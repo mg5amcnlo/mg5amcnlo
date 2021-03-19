@@ -184,14 +184,13 @@ c         write(*,*) 'running eva'
                write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
                stop 24
             end select
-            ppid = ppid * ih/iabs(ih) ! get sign of parent
-            fLPol = 0.50d0 ! temporary; must align with pol in run_card
-            q2max=xmu*xmu
+            ppid  = ppid * ih/iabs(ih) ! get sign of parent
+            fLPol = pol(beamid)        ! see setrun.f for treatment of polbeam*
+            q2max = xmu*xmu
+            ievo = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
             helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
-            ievo=ievo_eva
             pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,q2max,ievo)
-c            write(*,*)'ih,ppid,ipart,pdg2pdf = ',ih,ppid,ipart,pdg2pdf
             return
          endif
       else ! this ensure backwards compatibility
