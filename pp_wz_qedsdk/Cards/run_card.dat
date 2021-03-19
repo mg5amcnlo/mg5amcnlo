@@ -43,7 +43,7 @@
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 0.0005   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
+ 0.0002   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)
 # These numbers are ignored except if req_acc_FO is equal to -1
  5000   = npoints_FO_grid  ! number of points to setup grids
@@ -175,7 +175,7 @@
 # POSITIVE PDG CODES only. Example of the syntax is {6 : 100} or       *
 # {6:100, 25:200} for multiple particles                               *
 #***********************************************************************
-  {24: 300, 23:300} = pt_min_pdg ! Min pT for a massive particle
+  {24: 600, 23:600} = pt_min_pdg ! Min pT for a massive particle
   {} = pt_max_pdg ! Max pT for a massive particle
   {} = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
