@@ -1,0 +1,132 @@
+#***********************************************************************
+#                        MadGraph5_aMC@NLO                             *
+#                                                                      *
+#                      shower_card.dat aMC@NLO                         *
+#                                                                      *
+#  This file is used to set the parameters for the shower.             *
+#                                                                      *
+#  Some notation/conventions:                                          *
+#                                                                      *
+#   Lines starting with a hash (#) are info or comments                *
+#                                                                      *
+#   mind the format:   variable    = value     # comment               *
+#***********************************************************************
+#
+#***********************************************************************
+# Shower settings                                                      *
+#***********************************************************************
+# Number of events, jobs, errors, and random seeds                     *
+#***********************************************************************
+nevents      = -1     # N evts to shower (< 0 = all)
+nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
+combine_td   = T      # combine the topdrawer/HwU files if nsplit_jobs>1
+maxprint     = 2      # N evts to print in the log
+maxerrs      = 0.1    # max fraction of errors
+rnd_seed     = 0      # 1st random seed (0 = default)
+rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
+#***********************************************************************
+# PDFs and non-perturbative modelling                                  *
+#***********************************************************************
+pdfcode      = 1     # 0 = internal, 1 = same as NLO, other = lhaglue
+ue_enabled   = F      # underlying event
+hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
+lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
+#***********************************************************************
+# Stable or unstable particles                                         *
+#***********************************************************************
+b_stable     = F      # set B hadrons stable
+pi_stable    = T      # set pi0's stable
+wp_stable    = F      # set w+'s stable
+wm_stable    = F      # set w-'s stable
+z_stable     = F      # set z0's stable
+h_stable     = F      # set Higgs' stable
+tap_stable   = F      # set tau+'s stable
+tam_stable   = F      # set tau-'s stable
+mup_stable   = F      # set mu+'s stable
+mum_stable   = F      # set mu-'s stable
+#***********************************************************************
+# Mass of the b quark                                                  *
+#***********************************************************************
+b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
+#***********************************************************************
+# Special settings                                                     *
+#***********************************************************************
+is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
+is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
+#***********************************************************************
+# FxFx merging parameters                             !ONLY FOR PYTHIA8!
+#***********************************************************************
+Qcut       = -1.0     # Merging scale
+njmax      = 0        # Maximal multiplicity in the merging
+#***********************************************************************
+# Decay channels                                                       *
+#***********************************************************************
+# Syntax for HERWIG6                                                   *
+# DM_I = M > D1 D2 @ BR @ ME                                           *
+# corresponding to call to HWMODK(M,BR,ME,D1,D2)                       *
+# I < 100, M is the decaying resonance, D1, D2, ... are the decay      *
+# products (up to five), BR is the branching ratio and ME is the type  *
+# of matrix element to be used in the decay.                           *
+# BR's are correctly understood only if they add up to 1, and only if  *
+# no more than three modes are required for a given resonance.         *
+# WARNING: the order of decay products in > 2-body decays IS RELEVANT. *
+#                                                                      *
+# Syntax for PYTHIA6                                                   *
+# DM_I = M > D1 D2 @ BR @ ME                                           *
+# WARNING: turning hadronisation off disables top decays               *
+# WARNING: 1 -> n decays (with n > 2) are handled through a sequence   *
+# of 1 -> 2 decays.                                                    *
+# WARNING: entries BR and ME are ignored                               *
+#                                                                      *
+# Syntax for HERWIG++                                                  *
+# DM_I = M > D1 D2 @ BR @ ME                                           *
+# WARNING: entries BR and ME are ignored                               *
+#                                                                      *
+# Syntax for PYTHIA8                                                   *
+# DM_I = M:onIfAny = D1 D2                                             *
+# or similar, according to the offical PYTHIA8 decay syntax, see       *
+# the online PYTHIA8 manual                                            *
+# WARNING: 1 -> n decays (with n > 2) are handled through a sequence   *
+# of 1 -> 2 decays.                                                    *
+#                                                                      *
+# Examples                                                             *
+# Z -> e+ e- or mu+ mu- with BR = 0.5 each, HERWIG6                    *
+# DM_1 = 23 > -11 11 @ 0.5d0 @ 100
+# DM_2 = 23 > -13 13 @ 0.5d0 @ 100
+# H -> ta+ ta- with BR = 1, HERWIG6 or HERWIG++                        *
+# DM_3 = 25 > -15 15 @ 1.0d0 @ 0
+# t -> ve e+ b with BR = 1, HERWIG6 or HERWIG++                        *
+# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100
+# t -> ve e+ b with BR = 1, PYTHIA6                                    *
+# DM_5 = 6 > 24 5 @ 1d0 @ 100
+# DM_6 = 24 > 12 -11 @ 1d0 @ 100
+# W+ -> ve e+, W- -> vm~ mu-, PYTHIA8                                  *
+# DM_1 = 24:onMode = off
+# DM_2 = 24:onPosIfAny = 11 12
+# DM_3 = 24:onNegIfAny = 13 14
+# W+ -> ve e+, W- -> ve~ e- and vm~ mu-, PYTHIA8                       *
+# DM_1 = 24:onMode = off
+# DM_2 = 24:onIfAny = 11 12
+# DM_3 = 24:onNegIfAny = 13 14
+#***********************************************************************
+# Extra libraries/analyses                                             *
+#***********************************************************************
+# The following lines need to be changed if the user does not want to  *
+# create a StdHEP/HepMC file, but to directly run an own analysis (to  *
+# be placed in HWAnalyzer or analogous MCatNLO subfolders).            *
+# Please use files in those folders as examples.                       *
+# Remember that if your analysis uses hbook or is in the HwU format,   *
+# you must also add to hbook.o or HwU.o to the ANALYSE list as well.   *
+#***********************************************************************
+EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
+                                 # Default: "stdhep Fmcfio"
+                                 # PYTHIA > 8.200 may require library dl
+EXTRAPATHS   = ../lib            # Path to the extra-libraries
+                                 # Default: "../lib"
+INCLUDEPATHS =                   # Path to header files needed by c++
+                                 # Dir names separated by white spaces
+ANALYSE      =                   # User's analysis and histogramming
+                                 # routines (please use .o as extension
+                                 # and use spaces to separate files)
+
+

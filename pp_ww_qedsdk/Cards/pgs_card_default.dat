@@ -1,0 +1,23 @@
+LHC                 ! parameter set name
+320                 ! eta cells in calorimeter  
+200                 ! phi cells in calorimeter
+0.0314159           ! eta width of calorimeter cells  |eta| < 5
+0.0314159           ! phi width of calorimeter cells
+0.01                ! electromagnetic calorimeter resolution  const
+0.2                 ! electromagnetic calorimeter resolution * sqrt(E)
+0.8                 ! hadronic calolrimeter resolution * sqrt(E)
+0.2                 ! MET resolution
+0.01                ! calorimeter cell edge crack fraction
+cone                ! jet finding algorithm (cone or ktjet)
+5.0                 ! calorimeter trigger cluster finding seed threshold (GeV)
+1.0                 ! calorimeter trigger cluster finding shoulder threshold (GeV)
+0.5                 ! calorimeter kt cluster finder cone size (delta R)
+2.0                 ! outer radius of tracker (m)
+4.0                 ! magnetic field (T)
+0.000013            ! sagitta resolution (m)
+0.98                ! track finding efficiency
+1.00                ! minimum track pt (GeV/c)
+3.0                 ! tracking eta coverage
+3.0                 ! e/gamma eta coverage
+2.4                 ! muon eta coverage
+2.0                 ! tau eta coverage

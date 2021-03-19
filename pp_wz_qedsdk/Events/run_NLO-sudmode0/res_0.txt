@@ -1,25 +1,25 @@
 
 
 Cross section per integration channel:
-          P0_dxu_wpz                1   9.59522239e+00    8.3600e-02       0.8713%  
-          P0_udx_wpz                1   9.57217244e+00    8.1436e-02       0.8508%  
+          P0_udx_wpz                1   1.79034253e-02    1.6849e-04       0.9411%  
+          P0_dxu_wpz                1   1.79311438e-02    1.5723e-04       0.8768%  
 
 
 ABS cross section per integration channel:
-          P0_dxu_wpz                1   9.60674417e+00    8.3559e-02       0.8698%  
-          P0_udx_wpz                1   9.58355158e+00    8.1398e-02       0.8494%  
+          P0_udx_wpz                1   1.83064677e-02    1.6747e-04       0.9148%  
+          P0_dxu_wpz                1   1.82902714e-02    1.5611e-04       0.8535%  
 
 
 ABS cross section per dir
-          P0_dxu_wpz   9.60674417e+00    8.3559e-02 
-          P0_udx_wpz   9.58355158e+00    8.1398e-02 
+          P0_udx_wpz   1.83064677e-02    1.6747e-04 
+          P0_dxu_wpz   1.82902714e-02    1.5611e-04 
 
 
 Cross section per dir
-          P0_dxu_wpz   9.59522239e+00    8.3600e-02 
-          P0_udx_wpz   9.57217244e+00    8.1436e-02 
+          P0_udx_wpz   1.79034253e-02    1.6849e-04 
+          P0_dxu_wpz   1.79311438e-02    1.5723e-04 
 
 Total ABS and 
 Total: 
-                      1.91902957e+01 +- 1.1665e-01  (6.0787e-01%)
-                      1.91673948e+01 +- 1.1671e-01  (6.0889e-01%) 
+                      3.65967391e-02 +- 2.2895e-04  (6.2559e-01%)
+                      3.58345691e-02 +- 2.3045e-04  (6.4310e-01%) 
