@@ -121,7 +121,7 @@ class MathsObject:
     def get_deps(line, graph):
         old_args = get_arguments(line)
         old_name = old_args[-1].replace(' ','')
-        matches = graph.old_names() & set(old_args)
+        matches = graph.old_names() & set([old.replace(' ','') for old in old_args])
         try:
             matches.remove(old_name)
         except KeyError:
@@ -143,6 +143,7 @@ class MathsObject:
                 break
             
         if diag_number and this_comb_good and cls.ext_deps:
+
             helicity = dict([(a.get_id(), a.hel) for a in cls.ext_deps])
             this_hel = [helicity[i] for i in range(1, len(helicity)+1)] 
             hel_number = 1 + all_hel.index(tuple(this_hel))
@@ -687,7 +688,6 @@ class HelicityRecycler():
                 call_type = self.function_call(line)
                 self.get_gwc(line, call_type)
 
-                
                 
                 if call_type in ['external', 'internal', 'amplitude']:
                     self.template_dict['helas_calls'] += self.unfold_helicities(
