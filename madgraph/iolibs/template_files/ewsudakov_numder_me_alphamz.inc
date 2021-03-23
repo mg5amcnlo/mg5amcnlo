@@ -8,9 +8,9 @@ C     compute the contribution due to the parameter renormalisation
       include 'coupl.inc'
       include '../../Source/MODEL/input.inc'
 
-C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
+C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH; 6->tadpole
       integer imaxpara, ipara
-      parameter (imaxpara=5)
+      parameter (imaxpara=6)
 
       include 'orders.inc'
       double complex amp_split_ewsud_der(amp_split_size,imaxpara)
@@ -32,6 +32,11 @@ C     check that mdl_mt and mdl_ymt are equal
          stop 1
       endif
 
+      IF (MDL_NTADPOLE.NE.1d0) THEN
+        WRITE(*,*) 'Set in the paramcard ntadpole to EXACTLY 1 and not', mdl_ntadpole
+        STOP 2
+      ENDIF
+
       do i = 1, imaxpara
         if (i.eq.1) then
           xsave = aewm1
@@ -43,6 +48,8 @@ C     check that mdl_mt and mdl_ymt are equal
           xsave = mdl_mt
         else if (i.eq.5) then
           xsave = mdl_mh
+        ELSE IF (I.EQ.6) THEN
+          XSAVE = MDL_NTADPOLE
         endif
 
         xup = xsave * (1d0 + xdelta)
@@ -63,6 +70,8 @@ C       vary the parameter up
           mdl_ymt = xup
         else if (i.eq.5) then
           mdl_mh = xup
+        ELSE IF (I.EQ.6) THEN
+          MDL_NTADPOLE = XUP
         endif
 
         call coup()
@@ -81,6 +90,8 @@ C       vary the parameter down
           mdl_ymt = xdn
         else if (i.eq.5) then
           mdl_mh = xdn
+        ELSE IF (I.EQ.6) THEN
+          MDL_NTADPOLE = XDN
         endif
 
         call coup()
@@ -101,6 +112,8 @@ C       reset the parameter
           mdl_ymt = xsave
         else if (i.eq.5) then
           mdl_mh = xsave
+        ELSE IF (I.EQ.6) THEN
+          MDL_NTADPOLE = XSAVE
         endif
 
         call coup()

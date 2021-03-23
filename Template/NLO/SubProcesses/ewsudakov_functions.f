@@ -1510,7 +1510,7 @@ c            write(*,*) 'IZ=t3-sw Q / sw cw'
 
       include 'orders.inc'
       integer imaxpara
-      parameter (imaxpara=5)
+      parameter (imaxpara=6)
       double complex amp_split_ewsud_der(amp_split_size,imaxpara)
       common /to_amp_split_ewsud_der/ amp_split_ewsud_der
 C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
@@ -1519,7 +1519,7 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
       double complex ls
-      double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2
+      double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
       external smallL, sdk_betaew_diag, sdk_cew_diag
       double precision pi, cw2, sw2, Qt
@@ -1573,21 +1573,26 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       dmh2 = dmh2 * mdl_mh**2 * ls
 
- 
-
-
-
-
+      dt=1d0/(mdl_ee*dsqrt(sw2)*mdl_mw)*
+     .   (-3d0/2d0 * mdl_mw**2 * ( mdl_mz**2/cw2+2d0* mdl_mw**2)
+     .    -mdl_mh**2/4d0 *( 2d0* mdl_mw**2 + mdl_mz**2 +3d0* mdl_mh**2) + 6d0 * mdl_mt**4)
+   
+      dt = dt * ls 
+      
+      dheff_o_heff = mdl_ee/(2d0*dsqrt(sw2))*dt/(mdl_mw*mdl_mh**2)
 
 
       amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
      $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 +
      $      amp_split_ewsud_der(:,4) * dmt +
-     $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2
+     $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
+     $      amp_split_ewsud_der(:,6) * dheff_o_heff 
+
 
       ! LEAVE EMPTY FOR THE MOMENT
-      
+
+
 
 !    correct by a factor 2 ok?
       amp_split_ewsud(:)=amp_split_ewsud(:)/2d0

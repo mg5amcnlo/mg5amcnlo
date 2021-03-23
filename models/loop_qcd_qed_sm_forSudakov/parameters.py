@@ -11,18 +11,22 @@ from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 #tadpole tracker
 
-ntadpole3 = Parameter(name = 'ntadpole3',
-                      nature = 'internal',
+ntadpole = Parameter(name = 'ntadpole',
+                      nature = 'external',
                       type = 'real',
                       value = '1.0',
-                      texname = 'tadpole3')
+                      texname = 'tadpole',
+                      lhablock = 'TADPOLE',
+                      lhacode = [ 1 ])
 
 
-ntadpole4 = Parameter(name = 'ntadpole4',
-                      nature = 'internal',
-                      type = 'real',
-                      value = '1.0',
-                      texname = 'tadpole4')
+#ntadpole4 = Parameter(name = 'ntadpole4',
+#                      nature = 'external',
+#                      type = 'real',
+#                      value = '1.0',
+#                      texname = 'tadpole4',
+#                      lhablock = 'TADPOLE',
+#                      lhacode = [ 2 ])
 
 
 

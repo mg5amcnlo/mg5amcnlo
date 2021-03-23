@@ -202,15 +202,15 @@ GC_48 = Coupling(name = 'GC_48',
                  order = {'QED':1})
 
 GC_49 = Coupling(name = 'GC_49',
-                 value = '-2*complex(0,1)*lam*ntadpole4',
+                 value = '-2*complex(0,1)*lam*ntadpole',
                  order = {'QED':2})
 
 GC_50 = Coupling(name = 'GC_50',
-                 value = '-4*complex(0,1)*lam*ntadpole4',
+                 value = '-4*complex(0,1)*lam*ntadpole',
                  order = {'QED':2})
 
 GC_51 = Coupling(name = 'GC_51',
-                 value = '-6*complex(0,1)*lam*ntadpole4',
+                 value = '-6*complex(0,1)*lam*ntadpole',
                  order = {'QED':2})
 
 GC_52 = Coupling(name = 'GC_52',
@@ -350,11 +350,11 @@ GC_85 = Coupling(name = 'GC_85',
                  order = {'QED':1})
 
 GC_86 = Coupling(name = 'GC_86',
-                 value = '-2*complex(0,1)*lam*vev*ntadpole3',
+                 value = '-2*complex(0,1)*lam*vev*ntadpole',
                  order = {'QED':1})
 
 GC_87 = Coupling(name = 'GC_87',
-                 value = '-6*complex(0,1)*lam*vev*ntadpole3',
+                 value = '-6*complex(0,1)*lam*vev*ntadpole',
                  order = {'QED':1})
 
 GC_88 = Coupling(name = 'GC_88',
