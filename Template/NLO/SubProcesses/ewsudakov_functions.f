@@ -32,6 +32,12 @@ C at the Born are skipped
        DATA FAV4 / .false. /
        END
 
+       BLOCK DATA shift_s_to_rij
+       implicit none
+       logical s_to_rij
+       COMMON /to_s_to_rij/ s_to_rij
+       DATA s_to_rij / .false. /
+       END
 
 
 
@@ -162,6 +168,14 @@ c      return
       parameter (pi=3.14159265358979323846d0)
       double complex imlog
 
+      logical s_to_rij
+      COMMON /to_s_to_rij/ s_to_rij
+
+      double complex smallL_a_over_b_sing, bigL_a_over_b_sing
+      external smallL_a_over_b_sing, bigL_a_over_b_sing
+
+      double complex smallL_rij_over_s, bigL_rij_over_s     
+
       get_ssc_c = 0d0
 c exit and do nothing
 c      return
@@ -185,6 +199,20 @@ c      print*, "pdgp1 and 2=", pdgp1, pdgp2
 
 c      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s 
 
+
+      if(s_to_rij) then
+
+      smallL_rij_over_s=smallL_a_over_b_sing(dabs(rij),s)
+      bigL_rij_over_s=bigL_a_over_b_sing(dabs(rij),s)
+
+
+      get_ssc_c = get_ssc_c + 
+     $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog) 
+     $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
+     $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
+
+
+      endif
 
 
 
@@ -226,6 +254,15 @@ c      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s
       parameter (pi=3.14159265358979323846d0)
       double complex imlog
 
+      logical s_to_rij
+      COMMON /to_s_to_rij/ s_to_rij
+
+      double complex smallL_a_over_b_sing, bigL_a_over_b_sing
+      external smallL_a_over_b_sing, bigL_a_over_b_sing
+
+      double complex smallL_rij_over_s, bigL_rij_over_s
+
+
       get_ssc_n_diag = 0d0
 c      return
 c exit and do nothing
@@ -258,6 +295,35 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
 
+
+          if(s_to_rij) then
+
+            smallL_rij_over_s=smallL_a_over_b_sing(dabs(rij),s)
+            bigL_rij_over_s=bigL_a_over_b_sing(dabs(rij),s)
+
+        !correct photons
+            get_ssc_n_diag = get_ssc_n_diag +
+     $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog)
+     %      * sdk_ia_diag(pdglist(i),hels(i),iflist(i))
+     %      * sdk_ia_diag(pdglist(j),hels(j),iflist(j))
+        !correct z
+            get_ssc_n_diag = get_ssc_n_diag +
+     $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog)
+     %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
+     %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
+
+            get_ssc_n_diag = get_ssc_n_diag +
+     $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2))
+     %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
+     %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
+
+
+          endif
+
+
+
+
+
         enddo
       enddo
 
@@ -285,12 +351,24 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      include 'coupl.inc'
+
+
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
       double precision pi
       parameter (pi=3.14159265358979323846d0)
       double complex imlog
+
+      logical s_to_rij
+      COMMON /to_s_to_rij/ s_to_rij
+
+      double complex smallL_a_over_b_sing, bigL_a_over_b_sing
+      external smallL_a_over_b_sing, bigL_a_over_b_sing
+
+      double complex smallL_rij_over_s, bigL_rij_over_s
+
 
       ! this function corresponds to the case when *one* out of the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
@@ -327,6 +405,31 @@ c not work for H or Chi0 in initial state
      $              sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
      $              sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
      $              * 2d0 * smallL(s) * (dlog(abs(invariants(i,ileg))/s)+imlog)
+
+          if(s_to_rij) then
+
+            smallL_rij_over_s=smallL_a_over_b_sing(dabs(invariants(i,ileg)),s)
+            bigL_rij_over_s=bigL_a_over_b_sing(dabs(invariants(i,ileg)),s)
+
+        !correct z
+            get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 +
+     $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog) *
+     $      sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
+     $      sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
+
+            get_ssc_n_nondiag_1 = get_ssc_n_nondiag_1 +
+     $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2)) *
+     $      sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
+     $      sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
+
+
+          endif
+
+
+
+
+
+
         enddo
       endif
 
@@ -350,12 +453,22 @@ c not work for H or Chi0 in initial state
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
+      include 'coupl.inc'
+
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
       double precision pi
       parameter (pi=3.14159265358979323846d0)
       double complex imlog
+
+      logical s_to_rij
+      COMMON /to_s_to_rij/ s_to_rij
+
+      double complex smallL_a_over_b_sing, bigL_a_over_b_sing
+      external smallL_a_over_b_sing, bigL_a_over_b_sing
+
+      double complex smallL_rij_over_s, bigL_rij_over_s
 
       ! this function corresponds to the case when both the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
@@ -397,6 +510,32 @@ c not work for H or Chi0 in initial state
      $              sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
      $              sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
      $              * 2d0 * smallL(s) * (dlog(abs(invariants(ileg1,ileg2))/s)+imlog)
+
+        if(s_to_rij) then
+
+            smallL_rij_over_s=smallL_a_over_b_sing(dabs(invariants(ileg1,ileg2)),s)
+            bigL_rij_over_s=bigL_a_over_b_sing(dabs(invariants(ileg1,ileg2)),s)
+
+        !correct z
+            get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 +
+     $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog) *
+     $      sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
+     $      sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
+
+
+
+            get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 +
+     $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2)) *
+     $      sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) *        
+     $      sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
+
+
+
+          endif
+
+
+
+
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_2 = 0d0
