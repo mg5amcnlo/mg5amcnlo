@@ -990,10 +990,10 @@ c Trivial, but prevents loss of accuracy
       endif
 
       ! if j_fks is initial state, then use the mapping without
-      ! event-projection
-      ! CMZ fix this comment
-      use_evpr = .true.!j_fks.gt.nincoming 
-      use_evpr = j_fks.gt.nincoming 
+      ! event-projection if use_evpr is set to false
+      !(note that in e+e- collisions, if tau is generated with a BW
+      ! then use_evpr is set to true)
+      use_evpr = use_evpr.or.j_fks.gt.nincoming 
 
       if (use_evpr) then
         ! standard mapping with event-projection
@@ -2697,6 +2697,11 @@ c local
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
      $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
+
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx1bar2, omx2bar2
+      double precision ltau_born,e2ycm_born,em2ycm_born
 c external
 c
 c parameters
@@ -2737,24 +2742,39 @@ c
          write(*,*)'One_tree: option not checked'
          stop
       endif
+
+      ! this is to overcome numerical instabilities in ee collisions
+      if (1d0-tau_born.gt.stiny) then
+        ltau_born = log(tau_born)
+      else
+        ltau_born = tau_born-1d0
+      endif
+      if (abs(ycm_born).gt.stiny) then
+        e2ycm_born = exp(2*ycm_born)
+        em2ycm_born = exp(-2*ycm_born)
+      else
+        e2ycm_born = 1d0 + 2*ycm_born + 2*ycm_born**2
+        em2ycm_born = 1d0 - 2*ycm_born + 2*ycm_born**2
+      endif
+
 c
 c set-up lower and upper bounds on y_ij_fks
 c
       if( tau_born.le.tau_lower_bound .and.ycm_born.gt.
-     &         (0.5d0*log(tau_born)-log(tau_lower_bound)) )then
+     &         (0.5d0*ltau_born-log(tau_lower_bound)) )then
          yij_upp= (tau_lower_bound+tau_born)*
-     &        ( 1-exp(2*ycm_born)*tau_lower_bound ) /
+     &        ( 1-e2ycm_born*tau_lower_bound ) /
      &                  ( (tau_lower_bound-tau_born)*
-     &                    (1+exp(2*ycm_born)*tau_lower_bound) )
+     &                    (1+e2ycm_born*tau_lower_bound) )
       else
          yij_upp=1.d0
       endif
       if( tau_born.le.tau_lower_bound .and. ycm_born.lt.
-     &        (-0.5d0*log(tau_born)+log(tau_lower_bound)) )then
+     &        (-0.5d0*ltau_born+log(tau_lower_bound)) )then
          yij_low=-(tau_lower_bound+tau_born)*
-     &        ( 1-exp(-2*ycm_born)*tau_lower_bound ) / 
+     &        ( 1-em2ycm_born*tau_lower_bound ) / 
      &                   ( (tau_lower_bound-tau_born)*
-     &                     (1+exp(-2*ycm_born)*tau_lower_bound) )
+     &                     (1+em2ycm_born*tau_lower_bound) )
       else
          yij_low=-1.d0
       endif
@@ -2817,28 +2837,83 @@ c
 c
 c Compute maximal xi_i_fks
 c
-      x1bar2=xbjrk_born(1)**2
-      x2bar2=xbjrk_born(2)**2
-      if(1-tau_born.gt.1.d-5)then
+      ! these are to prevent numerical inaccuracies
+      ! when x->1 (relevant for ee collisions)
+      if (1d0-xbjrk_born(1).lt.ctiny.and.omx1_ee.gt.0d0) then
+        x1bar2 = 1d0 - 2d0*omx1_ee + omx1_ee**2
+        omx1bar2 = 2d0*omx1_ee - omx1_ee**2
+      else
+        x1bar2 = xbjrk_born(1)**2
+        omx1bar2 = 1d0-x1bar2
+      endif
+
+      if (1d0-xbjrk_born(2).lt.ctiny.and.omx2_ee.gt.0d0) then
+        x2bar2 = 1d0 - 2d0*omx2_ee + omx2_ee**2
+        omx2bar2 = 2d0*omx2_ee - omx2_ee**2
+      else
+        x2bar2 = xbjrk_born(2)**2
+        omx2bar2 = 1d0-x2bar2
+      endif
+
+      if(1-tau_born.gt.1.d-5.and.omx1_ee.eq.0d0.and.omx2_ee.eq.0d0)then
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
      &            ( cosh(ycm_born)*(1-tau_born) )
+      else if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+         yij_sol = (omx1_ee - omx2_ee) * ( 1 + xbjrk_born(1)*xbjrk_born(2)) / 
+     $ (xbjrk_born(1)+xbjrk_born(2)) / (omx1_ee+omx2_ee-omx1_ee*omx2_ee)
       else
          yij_sol=-ycmhat
       endif
       if(abs(yij_sol).gt.1.d0)then
-         write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
-         write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         if (abs(yij_sol).lt.1d0+qtiny) then
+           yij_sol = sign(1d0, yij_sol)
+         else
+           write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
+           write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         endif
       endif
-      if(yijdir.ge.yij_sol)then
-         xi1=2*(1+yijdir)*x1bar2/(
+
+      if(yijdir.eq.yij_sol)then
+         ! this may be relevant only for ee collisions
+         if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+           ximaxtmp=omx1_ee+omx2_ee-omx1_ee*omx2_ee
+         else
+           ximaxtmp=1-xbjrk_born(1)*xbjrk_born(2)
+         endif
+      elseif(yijdir.ge.yij_sol)then
+         !this is an expansion when both yij->-1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+           xi1=(4*x1bar2 + yijdir + 11*x1bar2*yijdir - 5*x1bar2**2*yijdir +
+     &          x1bar2**3*yijdir+4*yijdir**2)/(2*(1 + yijdir)**2)
+           ximaxtmp=1-xi1
+         else if (omx1bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx1bar2 / (1+yijdir)
+         else
+           xi1=2*(1+yijdir)*x1bar2/(
      &        sqrt( ((1+x1bar2)*(1-yijdir))**2+16*yijdir*x1bar2 ) +
-     &        (1-yijdir)*(1-x1bar2) )
-         ximaxtmp=1-xi1
+     &        (1-yijdir)*(omx1bar2) )
+           ximaxtmp=1-xi1
+         endif
       elseif(yijdir.lt.yij_sol)then
-         xi2=2*(1-yijdir)*x2bar2/(
+         !this is an expansion when both yij->+1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir-1d0).lt.ctiny.and.omx2bar2.lt.ctiny) then
+           xi2=(4*x2bar2 - yijdir - 11*x2bar2*yijdir + 5*x2bar2**2*yijdir -
+     &          x2bar2**3*yijdir +4*yijdir**2)/(4*(-1 + yijdir)**2)
+           ximaxtmp=1-xi2
+         else if (omx2bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx2bar2 / (1-yijdir)
+         else
+           xi2=2*(1-yijdir)*x2bar2/(
      &        sqrt( ((1+x2bar2)*(1+yijdir))**2-16*yijdir*x2bar2 ) +
-     &        (1+yijdir)*(1-x2bar2) )
-         ximaxtmp=1-xi2
+     &        (1+yijdir)*(omx2bar2) )
+           ximaxtmp=1-xi2
+         endif
       else
          write(*,*)'Fatal error #14 in one_tree: unknown option'
          write(*,*)y_ij_fks,yij_sol,idir
@@ -4186,6 +4261,8 @@ C dressed lepton stuff
       ! as e.g. one may want to plot random numbers, etc.
       double precision r1, r2, x1bk, x2bk
       common /to_random_numbers/r1,r2, x1bk, x2bk
+      logical use_evpr
+      common /to_use_evpr/use_evpr
 
 
       ! copy the random numbers, as they may be rescaled
@@ -4223,6 +4300,10 @@ C dressed lepton stuff
         write(*,*) 'one body with ee collisions not implemented'
         stop 1
       endif
+
+      ! if tau is generated accodring to a BW, then force the momentum
+      ! mapping with event projection
+      use_evpr = generate_with_bw
 
       if(generate_with_bw) then
         ! here we treat the case of resonances
