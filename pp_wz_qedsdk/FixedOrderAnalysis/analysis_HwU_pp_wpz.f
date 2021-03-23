@@ -10,7 +10,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l
       character*9 cc(6)
       data cc/'|T@LO ','|T@NLOQED','|T@SDK','|T@NLOQJV','|T@NLOQ2J',
-     $           '|T@NLOQ2J'/
+     $           '|T@NLOQJJ'/
       call HwU_inithist(nwgt,weights_info)
       do i=1,6
          l=(i-1)*8

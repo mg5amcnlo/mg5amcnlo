@@ -10,7 +10,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l
       character*9 cc(6)
       data cc/'|T@LO ','|T@NLOQED','|T@SDK','|T@NLOQJV','|T@NLOQ2J',
-     $           '|T@NLOQ2J'/
+     $           '|T@NLOQJJ'/
       call HwU_inithist(nwgt,weights_info)
       do i=1,6
          l=(i-1)*8
@@ -80,8 +80,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          l=(i-1)*8
          if (ibody.ne.3 .and.(i.ne.2.and.i.ne.4)) cycle ! fill real+ct only for i=2/4
          if (i.eq.1.and.orders_tag_plot.ne.400) cycle ! fill born only with born
-         if (i.eq.2.and.ibody.eq.3.and.orders_tag_plot.ne.400) cycle !do not fill NLO with sudakov
-         if (i.eq.4.and.ibody.eq.3.and.orders_tag_plot.ne.400) cycle !do not fill NLO jv with sudakov
+         if (i.eq.3.and.ibody.lt.10) cycle ! fill sudakov only with ibody=10/11/12
+         if (i.ne.3.and.ibody.ge.10) cycle ! do not fill sudakov in other places
          if (i.eq.4.and.pt_ttx.gt.80d0) cycle ! jet veto
          !write(*,*) 'ANA', i, ibody, orders_tag_plot
          !data cc/'|T@LO ','|T@NLO','|T@SDK'/
