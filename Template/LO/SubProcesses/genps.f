@@ -1145,30 +1145,37 @@ c         write(*,*) 'tmin, tmax',tmin,tmax
       else
 
 c     test of impact of low t part
-         if (nt_channel.ge.2)then
-            tmin = max(tmin,  -stot)
-         endif
-      if ((tmax-tmin)/stot.gt.0.1)then
-            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $           0d0, 1d0)
+c         if (nt_channel.ge.2)then
+c            tmin = max(tmin,  -stot)
+c         endif
+
+
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        -tmax/stot, -tmin/stot)
          t = stot*(-x(-ibranch))
+         
+
+c         if ((tmax-tmin)/stot.gt.0.1)then
+c            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $           0d0, 1d0)
+c         t = stot*(-x(-ibranch))
 c     if (dabs(tmax - tmin)/stot.gt.0.05d0) then
 c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
 c     $        0d0,  1d0)
 c     set tmax to 0 and tmin to -1 The idea is to avoid dimension correlation
 c     the condition ensure a minimum efficiency in the generation of events
 c         t = stot*(-x(-ibranch))
-      else if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+c      else if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
 c         set tmax to 0. The idea is to be sure to be able to hit zero
 c         and not to be block by numerical inacuracy
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0d0, -tmin/stot)
-         t = stot*(-x(-ibranch))
-      else
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        -tmax/stot, -tmin/stot)
-         t = stot*(-x(-ibranch))
-      endif
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+c      else
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        -tmax/stot, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+c      endif
 
          if (t .lt. tmin .or. t .gt. tmax) then
             jac=-3d0
