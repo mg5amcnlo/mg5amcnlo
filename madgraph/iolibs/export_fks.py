@@ -585,9 +585,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               nconfigs,max_leg_number,nfksconfs,
                               fortran_model)
         
-# THIS IS A TEMPORARY FIX!!!!
+        # For processes with only QCD splittings, write
+        # the file with the mapping of born vs real diagrams
+        # Otherwise, write a dummy file
         filename = 'real_from_born_configs.inc'
-        self.write_real_from_born_configs_dummy(
+        if self.proc_characteristic['splitting_types'] == ['QCD']:
+            self.write_real_from_born_configs(
+                              writers.FortranWriter(filename), 
+                              matrix_element,
+                              fortran_model)
+        else:
+            self.write_real_from_born_configs_dummy(
                               writers.FortranWriter(filename), 
                               matrix_element,
                               fortran_model)

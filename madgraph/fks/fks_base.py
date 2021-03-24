@@ -778,9 +778,14 @@ class FKSProcess(object):
         """create the rb_links in the real matrix element to find 
         which configuration in the real correspond to which in the born
         """
-        # remove and fix in order to take into account mixed expansion
-        logger.log(5, 'link_born_real: skipping')
-        return
+
+        # check that all splitting types are of ['QCD'] type, otherwise return
+        for real in self.real_amps:
+            for info in real.fks_infos:
+                if info['splitting_type'] != ['QCD']:
+                    logger.info('link_born_real: skipping because not all splittings are QCD')
+                    return
+
 
         for real in self.real_amps:
             for info in real.fks_infos:
