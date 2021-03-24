@@ -974,7 +974,7 @@ class ConfigFile(dict):
         a file, a path to a file, or simply Nothing"""                
         
         if isinstance(finput, self.__class__):
-            dict.__init__(self, finput)
+            dict.__init__(self)
             for key in finput.__dict__:
                 setattr(self, key, copy.copy(getattr(finput, key)) )
             for key,value in finput.items():
@@ -1767,10 +1767,7 @@ class PY8Card(ConfigFile):
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
 
-    def __copy__(self):
-        newone = type(self)(dict(self))
-        newone.__dict__.update(self.__dict__)
-        return newone
+
 
     def add_param(self, name, value, hidden=False, always_write_to_card=True, 
                                                                   comment=None):
@@ -2486,7 +2483,7 @@ class RunCard(ConfigFile):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
-                nline = nline.split('=')
+                nline = nline.rsplit('=',1)
                 if python_template and nline[0].startswith('$'):
                     block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
@@ -2952,7 +2949,10 @@ class RunCardLO(RunCard):
    %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
    %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
    %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
-   %(global_flag)s = global_flag ! fortran optimization flag use for the all code
+#*********************************************************************
+# Compilation flag. No automatic re-compilation (need manual "make clean" in Source)
+#*********************************************************************   
+   %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
 """,
@@ -2972,7 +2972,7 @@ class RunCardLO(RunCard):
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3,4,-4],
                         comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,4,-4],
-                       comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
+                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
@@ -3311,9 +3311,7 @@ class RunCardLO(RunCard):
             self['hel_recycling'] = False
             logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
             In general this optimization speed up the computation be a factor of two.""")
-        elif self['hel_recycling']:
-            if self['gridpack']:
-                self.set(self, "hel_zeroamp", True, changeifuserset=False, user=False, raiseerror=False)
+
                 
         # check that ebeam is bigger than the associated mass.
         for i in [1,2]:

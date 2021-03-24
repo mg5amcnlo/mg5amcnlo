@@ -158,7 +158,6 @@ c        pass in massless case
          else
             get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
          endif
-         get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
       else if (pin(0).eq.pin(3)) then
          get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
       else if (pin(0).eq.abs(pin(3))) then
