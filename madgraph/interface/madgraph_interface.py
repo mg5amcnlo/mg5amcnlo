@@ -3605,16 +3605,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                         self._curr_model['couplings'].values()])
             keys = list(self._curr_model['couplings'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['couplings'][key]
                 text += '\ncouplings type: %s\n' % str(key)
@@ -5989,6 +5985,8 @@ This implies that with decay chains:
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
+                else:
+                    add_options.append('--with_fastjet')
            
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
@@ -6378,10 +6376,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         #check outdated install
         substitution={'Delphes2':'Delphes','pythia-pgs':'pythia8'}
         if args[0] in substitution:
-            logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
+            logger.critical("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
                "  You should consider installing and using %s, with:\n"%substitution[args[0]]+
                "   > install %s"%substitution[args[0]])
-
+            ans = self.ask('Do you really want to continue?', 'n', ['y','n'])
+            if ans !='y':
+                return
+            
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
         except Exception:
@@ -7015,14 +7016,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
+                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -8414,7 +8415,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
 
-            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist:
+            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist and \
+                not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude):
                 for (name, flag, out) in wanted_lorentz[:]:
                     if out == 0:
                         newflag = list(flag) + ['P1N']

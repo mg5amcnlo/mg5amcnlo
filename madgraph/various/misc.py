@@ -1603,7 +1603,7 @@ class digest:
         def digest(text):
             """using mg5 for the hash"""
             t = hashlib.md5()
-            t.update(text.encode())
+            t.update(text)
             return t.hexdigest()
         return digest
     
@@ -1735,6 +1735,9 @@ class Applenotification(object):
             self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
         except:
             self.working=False
+            if which('osascript'):
+                self.working = 'osascript'
+            return
         self.working=True
 
     def __call__(self,subtitle, info_text, userInfo={}):
@@ -1743,18 +1746,27 @@ class Applenotification(object):
             self.load_notification()
         if not self.working:
             return
-        try:
-            notification = self.NSUserNotification.alloc().init()
-            notification.setTitle_('MadGraph5_aMC@NLO')
-            notification.setSubtitle_(subtitle)
-            notification.setInformativeText_(info_text)
+        elif self.working is True:
             try:
-                notification.setUserInfo_(userInfo)
+                notification = self.NSUserNotification.alloc().init()
+                notification.setTitle_('MadGraph5_aMC@NLO')
+                notification.setSubtitle_(subtitle)
+                notification.setInformativeText_(info_text)
+                try:
+                    notification.setUserInfo_(userInfo)
+                except:
+                    pass
+                self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
             except:
                 pass
-            self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
-        except:
-            pass        
+
+        elif self.working=='osascript':
+            try:
+                os.system("""
+              osascript -e 'display notification "{}" with title "MadGraph5_aMC@NLO" subtitle "{}"'
+              """.format(info_text, subtitle))
+            except:
+                pass
         
 
 
@@ -2014,11 +2026,16 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
+    if six.PY2:
+        level = -1
+    else:
+        level = 0
+
     try:
-        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+        _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
     except ImportError:
         try:
-            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, -1)
+            _temp = __import__('MG5aMC_PLUGIN.%s' % module, globals(), locals(), fcts, level)
         except ImportError:
             raise MadGraph5Error(error_msg)
     

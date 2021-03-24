@@ -41,7 +41,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 301 #2.4.0
+    reference_number = 295
     nb_test = 0
     
     
@@ -494,8 +494,8 @@ class OLDMG5Comparator(unittest.TestCase):
 
         values = {'number_of_P0': '1', 
          'number_of_P1': '1', 
-         'cross_P0_qq_wpg': '0.25882E+04', 
-         'cross_P1_gg_wpqq': '0.39004E+03'}      
+         'cross_P0_qq_wpg': '2649.7', 
+         'cross_P1_gg_wpqq': '429.154316'}      
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm2.log")

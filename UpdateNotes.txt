@@ -3,7 +3,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                         ** PARRALEL VERSION FOR EW branch **
 
 3.0.4 (21/08/20)
-    ALL: include all changes up to 2.9.1.2 of the official release
+    ALL: include all changes up to 2.9.3 of the 2.x release
     ALL: pass to python3 by default
     MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
         The generation of tau was not taking into account the information.
@@ -60,13 +60,23 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
                              ** Main Branch (version 2.x) Update **
-2.9.2()
+2.9.3()
+      OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
+          was close to the mass of the initial mass. boundary condition on t-channnel were
+	  incorrectly setup leading to strange spectrum in various distribution (very old bug)
+      OM: Fix an issue with a crash for loop computation
+      OM: more python3 fixing bug
+	  
+
+2.9.2(14/02/21)
       MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
         The generation of tau was not taking into account the information.
       OM: fix an issue when running with python3 where the normalization of pythia8 file were wrong
           when pythia8 was run in parralel.
       OM: fixing more issue  related to MSSM (introduced within 2.9.0)
       OM: fixing issue with loop-induced processus (introduced within 2.9.0)
+      OM: Fix some wrong scale variation at NLO+PS (introduced in 2.9.0)
+      OM: Fix an issue with the installation of pythia-pgs
       
 
 2.9.1.2 (02/02/21)

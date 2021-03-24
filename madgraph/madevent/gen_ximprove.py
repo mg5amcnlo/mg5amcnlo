@@ -979,6 +979,12 @@ class gen_ximprove(object):
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
 
+        if hasattr(cls, 'force_class'):
+            if cls.force_class == 'gridpack':
+                return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
+            elif cls.force_class == 'loop_induced':
+                return super(gen_ximprove, cls).__new__(gen_ximprove_share)
+        
         if cmd.proc_characteristics['loop_induced']:
             return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
@@ -1795,8 +1801,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     gen_events_security = 1.00
 
     def __new__(cls, *args, **opts):
-        
-        return super(gen_ximprove, cls).__new__(cls, *args, **opts)
+
+        cls.force_class = 'gridpack'
+        return super(gen_ximprove_gridpack, cls).__new__(cls, *args, **opts)
 
     def __init__(self, *args, **opts):
         
@@ -1825,8 +1832,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 #        logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
-        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
-                                                x.get('luminosity') > 0 else -1) 
+        all_channels.sort(key=lambda x : x.get('luminosity'), reverse=True)
                           
         to_refine = []
         for C in all_channels:

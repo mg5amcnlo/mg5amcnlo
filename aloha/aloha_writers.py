@@ -216,7 +216,7 @@ class WriteALOHA:
             else:
                 couplings = ['COUP']
                 
-        for coup in couplings:       
+        for coup in couplings:   
             call_arg.append(('complex', coup))              
             self.declaration.add(('complex',coup))
             
@@ -793,12 +793,14 @@ class ALOHAWriterForFortran(WriteALOHA):
         
 
         numerator = self.routine.expr
+
         if not 'Coup(1)' in self.routine.infostr:
             coup_name = 'COUP'
         else:
             coup_name = '%s' % self.change_number_format(1)
+
         
-        
+        misc.sprint(self.name, coup_name, cond="VVS11_14P1N" in self.name)
         if not self.offshell:
             if coup_name == 'COUP':
                 formatted = self.write_obj(numerator.get_rep([0]))
@@ -844,7 +846,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 if 'P1N' not in self.tag:
                     self.declaration.add((ptype,'P%s' % self.outgoing))
                 else:
-                    coeff = 'COUP*'  
+                    coeff = '%(COUP)s*' % {'COUP': coup_name}  
             else:
                 if coup_name == 'COUP':
                     coeff = 'COUP*'

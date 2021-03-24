@@ -24,6 +24,7 @@ c
       double precision pmass(nexternal)
       common/to_mass/  pmass
 
+      
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
@@ -69,8 +70,8 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           rscale=rscale/2d0
       elseif(dynamical_scale_choice.eq.4) then
-c         \sqrt(s), partonic energy
-          rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
+c     \sqrt(s), partonic energy
+         rscale = dsqrt(max(0d0,sumdot(p(0,1), p(0,2), 1d0)))
       elseif(dynamical_scale_choice.eq.5) then
 c         \decaying particle mass, for decays
           rscale=dsqrt(max(0d0,dot(P(0,1),P(0,1))))

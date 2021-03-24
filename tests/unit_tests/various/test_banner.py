@@ -574,7 +574,9 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            self.assertEqual(run_card[key], run_card2[key])
+            if key == 'hel_recycling' and six.PY2:
+                continue 
+            self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))
       
         run_card = bannermod.RunCardNLO()
 #        fsock = tempfile.NamedTemporaryFile(mode = 'w')
