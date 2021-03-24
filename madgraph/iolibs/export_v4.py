@@ -7045,7 +7045,8 @@ class UFO_model_to_mg4(object):
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt"]:
+                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "log_trajectory"]:
                     additional_fct.append(fct.name)
         
         fsock = self.open('model_functions.inc', format='fortran')
@@ -7058,6 +7059,9 @@ class UFO_model_to_mg4(object):
           double complex grreglog
           double complex recms
           double complex arg
+          double complex B0F
+          double complex sqrt_trajectory
+          double complex log_trajectory
           %s
           """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
 
@@ -7072,6 +7076,9 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_grreglog
           %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_arg
+          %(complex_mp_format)s mp_B0F
+          %(complex_mp_format)s mp_sqrt_trajectory
+          %(complex_mp_format)s mp_log_trajectory
           %(additional)s
           """ %\
           {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
@@ -7239,6 +7246,346 @@ class UFO_model_to_mg4(object):
                 endif
              endif
           endif
+          end
+
+          module b0f_caching
+
+          type b0f_node
+          double complex p2,m12,m22
+          double complex value
+          type(b0f_node),pointer::parent
+          type(b0f_node),pointer::left
+          type(b0f_node),pointer::right
+          end type b0f_node
+
+          contains
+
+          subroutine b0f_search(item, head, find)
+          implicit none
+          type(b0f_node),pointer,intent(inout)::head,item
+          logical,intent(out)::find
+          type(b0f_node),pointer::item1
+          integer::icomp
+          find=.false.
+          nullify(item%parent)
+          nullify(item%left)
+          nullify(item%right)
+          if(.not.associated(head))then
+             head => item
+             return
+          endif
+          item1 => head
+          do
+             icomp=b0f_node_compare(item,item1)
+             if(icomp.lt.0)then
+                if(.not.associated(item1%left))then
+                   item1%left => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%left
+                endif
+             elseif(icomp.gt.0)then
+                if(.not.associated(item1%right))then
+                   item1%right => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%right
+                endif
+             else
+                find=.true.
+                item%value=item1%value
+                exit
+             endif
+          enddo
+          return
+          end
+
+          integer function b0f_node_compare(item1,item2) result(res)
+          implicit none
+          type(b0f_node),pointer,intent(in)::item1,item2
+          res=complex_compare(item1%p2,item2%p2)
+          if(res.ne.0)return
+          res=complex_compare(item1%m22,item2%m22)
+          if(res.ne.0)return
+          res=complex_compare(item1%m12,item2%m12)
+          return
+          end
+
+          integer function real_compare(r1,r2) result(res)
+          implicit none
+          double precision r1,r2
+          double precision maxr,diff
+          double precision tiny
+          parameter (tiny=-1d-14)
+          maxr=max(abs(r1),abs(r2))
+          diff=r1-r2
+          if(maxr.le.1d-99.or.abs(diff)/max(maxr,1d-99).le.abs(tiny))then
+             res=0
+             return
+          endif
+          if(diff.gt.0d0)then
+             res=1
+             return
+          else
+             res=-1
+             return
+          endif
+          end
+
+          integer function complex_compare(c1,c2) result(res)
+          implicit none
+          double complex c1,c2
+          double precision r1,r2
+          r1=dble(c1)
+          r2=dble(c2)
+          res=real_compare(r1,r2)
+          if(res.ne.0)return
+          r1=dimag(c1)
+          r2=dimag(c2)
+          res=real_compare(r1,r2)
+          return
+          end
+
+          end module b0f_caching
+
+          double complex function B0F(p2,m12,m22)
+          use b0f_caching
+          implicit none
+          double complex p2,m12,m22
+          double complex zero,TWOPII
+          parameter (zero=(0.0d0,0.0d0))
+          parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double precision M,M2,Ga,Ga2
+          double precision tiny
+          parameter (tiny=-1d-14)
+          double complex logterms
+          double complex log_trajectory
+          logical use_caching
+          parameter (use_caching=.true.)
+          type(b0f_node),pointer::item
+          type(b0f_node),pointer,save::b0f_bt
+          integer init
+          save init
+          data init /0/
+          logical find
+          IF(m12.eq.zero)THEN
+c           it is a special case
+c           refer to Eq.(5.48) in arXiv:1804.10017
+            M=DBLE(p2) ! M^2
+            M2=DBLE(m22) ! M2^2
+            IF(M.LT.tiny.OR.M2.LT.tiny)THEN
+            WRITE(*,*)'ERROR:B0F is not well defined when M^2,M2^2<0'
+            STOP
+            ENDIF
+            M=DSQRT(DABS(M))
+            M2=DSQRT(DABS(M2))
+            IF(M.EQ.0d0)THEN
+               Ga=0d0
+            ELSE
+               Ga=-DIMAG(p2)/M
+            ENDIF
+            IF(M2.EQ.0d0)THEN
+               Ga2=0d0
+            ELSE
+               Ga2=-DIMAG(m22)/M2
+            ENDIF
+            IF(p2.ne.m22.and.p2.ne.zero.and.m22.ne.zero)THEN
+               b0f=(m22-p2)/p2*LOG((m22-p2)/m22)
+               IF(M.GT.M2.and.Ga*M2.GT.Ga2*M)THEN
+                  b0f=b0f-TWOPII
+               ENDIF
+               RETURN
+            ELSE
+                WRITE(*,*)'ERROR:B0F is not supported for a simple form'
+                STOP
+            ENDIF
+          ENDIF
+c         the general case
+c         trajectory method as advocated in arXiv:1804.10017 (Eq.(E.47))
+          if(use_caching)then
+             if(init.eq.0)then
+                nullify(b0f_bt)
+                init=1
+             endif
+             allocate(item)
+             item%p2=p2
+             item%m12=m12
+             item%m22=m22
+             find=.false.
+             call b0f_search(item,b0f_bt,find)
+             if(find)then
+                b0f=item%value
+                deallocate(item)
+                return
+             else
+                logterms=log_trajectory(100,p2,m12,m22)
+                b0f=-LOG(p2/m22)+logterms
+                item%value=b0f
+                return
+             endif
+          else
+             logterms=log_trajectory(100,p2,m12,m22)
+             b0f=-LOG(p2/m22)+logterms
+          endif
+          RETURN
+          end
+
+          double complex function sqrt_trajectory(n_seg,p2,m12,m22)
+c         only needed when p2*m12*m22=\=0
+          implicit none
+          integer n_seg ! number of segments
+          double complex p2,m12,m22
+          double complex zero,one
+          parameter (zero=(0.0d0,0.0d0),one=(1.0d0,0.0d0))
+          double complex gamma0,gamma1
+          double precision M,Ga,dGa,Ga_start
+          double precision Gai,intersection
+          double complex argim1,argi,p2i
+          double complex gamma0i,gamma1i
+          double precision tiny
+          parameter (tiny=-1d-24)
+          integer i
+          double precision prefactor
+          IF(ABS(p2*m12*m22).EQ.0d0)THEN
+            WRITE(*,*)'ERROR:sqrt_trajectory works when p2*m12*m22/=0'
+            STOP
+          ENDIF
+          M=DBLE(p2) ! M^2
+          M=DSQRT(DABS(M))
+          IF(M.EQ.0d0)THEN
+             Ga=0d0
+          ELSE
+             Ga=-DIMAG(p2)/M
+          ENDIF
+c         Eq.(5.37) in arXiv:1804.10017
+          gamma0=one+m12/p2-m22/p2
+          gamma1=m12/p2-dcmplx(0d0,1d0)*ABS(tiny)/p2
+          IF(ABS(Ga).EQ.0d0)THEN
+             sqrt_trajectory=SQRT(gamma0**2-4d0*gamma1)
+             RETURN
+          ENDIF
+c         segments from -DABS(tiny*Ga) to Ga
+          Ga_start=-DABS(tiny*Ga)
+          dGa=(Ga-Ga_start)/n_seg
+          prefactor=1d0
+          Gai=Ga_start
+          p2i=dcmplx(M**2,-Gai*M)
+          gamma0i=one+m12/p2i-m22/p2i
+          gamma1i=m12/p2i-dcmplx(0d0,1d0)*ABS(tiny)/p2i
+          argim1=gamma0i**2-4d0*gamma1i
+          DO i=1,n_seg
+             Gai=dGa*i+Ga_start
+             p2i=dcmplx(M**2,-Gai*M)
+             gamma0i=one+m12/p2i-m22/p2i
+             gamma1i=m12/p2i-dcmplx(0d0,1d0)*ABS(tiny)/p2i
+             argi=gamma0i**2-4d0*gamma1i
+             IF(DIMAG(argi)*DIMAG(argim1).LT.0d0)THEN
+                intersection=DIMAG(argim1)*(DBLE(argi)-DBLE(argim1))
+                intersection=intersection/(DIMAG(argi)-DIMAG(argim1))
+                intersection=intersection-DBLE(argim1)
+                IF(intersection.GT.0d0)THEN
+                   prefactor=-prefactor
+                ENDIF
+             ENDIF
+             argim1=argi
+          ENDDO
+          sqrt_trajectory=SQRT(gamma0**2-4d0*gamma1)*prefactor
+          RETURN
+          end
+
+          double complex function log_trajectory(n_seg,p2,m12,m22)
+c         sum of log terms appearing in Eq.(5.35) of arXiv:1804.10017
+c         only needed when p2*m12*m22=\=0
+          implicit none
+c         4 possible logarithms appearing in Eq.(5.35) of arXiv:1804.10017
+c         log(arg(i)) with arg(i) for i=1 to 4
+c         i=1: (ga_{+}-1)
+c         i=2: (ga_{-}-1)
+c         i=3: (ga_{+}-1)/ga_{+}
+c         i=4: (ga_{-}-1)/ga_{-}
+          integer n_seg ! number of segments
+          double complex p2,m12,m22
+          double complex zero,one,half,TWOPII
+          parameter (zero=(0.0d0,0.0d0),one=(1.0d0,0.0d0))
+          parameter (half=(0.5d0,0.0d0))
+          parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex gamma0,gammap,gammam,sqrtterm
+          double precision M,Ga,dGa,Ga_start
+          double precision Gai,intersection
+          double complex argim1(4),argi(4),p2i,sqrttermi
+          double complex gamma0i,gammapi,gammami
+          double precision tiny
+          parameter (tiny=-1d-14)
+          integer i,j
+          double complex addfactor(4)
+          double complex sqrt_trajectory
+          IF(ABS(p2*m12*m22).EQ.0d0)THEN
+            WRITE(*,*)'ERROR:log_trajectory works when p2*m12*m22/=0'
+            STOP
+          ENDIF
+          M=DBLE(p2) ! M^2
+          M=DSQRT(DABS(M))
+          IF(M.EQ.0d0)THEN
+             Ga=0d0
+          ELSE
+             Ga=-DIMAG(p2)/M
+          ENDIF
+c         Eq.(5.36-5.38) in arXiv:1804.10017
+          sqrtterm=sqrt_trajectory(n_seg,p2,m12,m22)
+          gamma0=one+m12/p2-m22/p2
+          gammap=half*(gamma0+sqrtterm)
+          gammam=half*(gamma0-sqrtterm)
+          IF(ABS(Ga).EQ.0d0)THEN
+             log_trajectory=-LOG(gammap-one)-LOG(gammam-one)+gammap*LOG((gammap-one)/gammap)+gammam*LOG((gammam-one)/gammam)
+             RETURN
+          ENDIF
+c         segments from -DABS(tiny*Ga) to Ga
+          Ga_start=-DABS(tiny*Ga)
+          dGa=(Ga-Ga_start)/n_seg
+          addfactor(1:4)=zero
+          Gai=Ga_start
+          p2i=dcmplx(M**2,-Gai*M)
+          sqrttermi=sqrt_trajectory(n_seg,p2i,m12,m22)
+          gamma0i=one+m12/p2i-m22/p2i
+          gammapi=half*(gamma0i+sqrttermi)
+          gammami=half*(gamma0i-sqrttermi)
+          argim1(1)=gammapi-one
+          argim1(2)=gammami-one
+          argim1(3)=(gammapi-one)/gammapi
+          argim1(4)=(gammami-one)/gammami
+          DO i=1,n_seg
+             Gai=dGa*i+Ga_start
+             p2i=dcmplx(M**2,-Gai*M)
+             sqrttermi=sqrt_trajectory(n_seg,p2i,m12,m22)
+             gamma0i=one+m12/p2i-m22/p2i
+             gammapi=half*(gamma0i+sqrttermi)
+             gammami=half*(gamma0i-sqrttermi)
+             argi(1)=gammapi-one
+             argi(2)=gammami-one
+             argi(3)=(gammapi-one)/gammapi
+             argi(4)=(gammami-one)/gammami
+             DO j=1,4
+                IF(DIMAG(argi(j))*DIMAG(argim1(j)).LT.0d0)THEN
+                   intersection=DIMAG(argim1(j))*(DBLE(argi(j))-DBLE(argim1(j)))
+                   intersection=intersection/(DIMAG(argi(j))-DIMAG(argim1(j)))
+                   intersection=intersection-DBLE(argim1(j))
+                   IF(intersection.GT.0d0)THEN
+                      IF(DIMAG(argim1(j)).LT.0)THEN
+                         addfactor(j)=addfactor(j)-TWOPII
+                      ELSE
+                         addfactor(j)=addfactor(j)+TWOPII
+                      ENDIF
+                   ENDIF
+                ENDIF
+                argim1(j)=argi(j)
+              ENDDO
+          ENDDO
+          log_trajectory=-(LOG(gammap-one)+addfactor(1))-(LOG(gammam-one)+addfactor(2))
+          log_trajectory=log_trajectory+gammap*(LOG((gammap-one)/gammap)+addfactor(3))
+          log_trajectory=log_trajectory+gammam*(LOG((gammam-one)/gammam)+addfactor(4))
+          RETURN
           end
           
           double complex function arg(comnum)
@@ -7411,6 +7758,329 @@ class UFO_model_to_mg4(object):
                  endif
               endif
               end
+
+              module mp_b0f_caching
+
+              type mp_b0f_node
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s value
+              type(mp_b0f_node),pointer::parent
+              type(mp_b0f_node),pointer::left
+              type(mp_b0f_node),pointer::right
+              end type mp_b0f_node
+
+              contains
+
+              subroutine mp_b0f_search(item, head, find)
+              implicit none
+              type(mp_b0f_node),pointer,intent(inout)::head,item
+              logical,intent(out)::find
+              type(mp_b0f_node),pointer::item1
+              integer::icomp
+              find=.false.
+              nullify(item%%parent)
+              nullify(item%%left)
+              nullify(item%%right)
+              if(.not.associated(head))then
+                 head => item
+                 return
+              endif
+              item1 => head
+              do
+                 icomp=mp_b0f_node_compare(item,item1)
+                 if(icomp.lt.0)then
+                    if(.not.associated(item1%%left))then
+                       item1%%left => item
+                       item%%parent => item1
+                       exit
+                    else
+                       item1 => item1%%left
+                    endif
+                 elseif(icomp.gt.0)then
+                    if(.not.associated(item1%%right))then
+                       item1%%right => item
+                       item%%parent => item1
+                       exit
+                     else
+                       item1 => item1%%right
+                     endif
+                 else
+                     find=.true.
+                     item%%value=item1%%value
+                     exit
+                 endif
+              enddo
+              return
+              end
+
+              integer function mp_b0f_node_compare(item1,item2) result(res)
+              implicit none
+              type(mp_b0f_node),pointer,intent(in)::item1,item2
+              res=mp_complex_compare(item1%%p2,item2%%p2)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m22,item2%%m22)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m12,item2%%m12)
+              return
+              end
+
+              integer function mp_real_compare(r1,r2) result(res)
+              implicit none
+              %(real_mp_format)s r1,r2
+              %(real_mp_format)s maxr,diff
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              maxr=max(abs(r1),abs(r2))
+              diff=r1-r2
+              if(maxr.le.1.0e-99_16.or.abs(diff)/max(maxr,1.0e-99_16).le.abs(tiny))then
+                 res=0
+                 return
+              endif
+              if(diff.gt.0.0e0_16)then
+                 res=1
+                 return
+              else
+                 res=-1
+                 return
+              endif
+              end
+
+              integer function mp_complex_compare(c1,c2) result(res)
+              implicit none
+              %(complex_mp_format)s c1,c2
+              %(real_mp_format)s r1,r2
+              r1=real(c1,kind=16)
+              r2=real(c2,kind=16)
+              res=mp_real_compare(r1,r2)
+              if(res.ne.0)return
+              r1=imagpart(c1)
+              r2=imagpart(c2)
+              res=mp_real_compare(r1,r2)
+              return
+              end
+
+              end module mp_b0f_caching
+
+              %(complex_mp_format)s function mp_b0f(p2,m12,m22)
+              use mp_b0f_caching
+              implicit none
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,TWOPII
+              parameter (zero=(0.0e0_16,0.0e0_16))
+              parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(real_mp_format)s M,M2,Ga,Ga2
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              %(complex_mp_format)s logterms
+              %(complex_mp_format)s mp_log_trajectory
+              logical use_caching
+              parameter (use_caching=.true.)
+              type(mp_b0f_node),pointer::item
+              type(mp_b0f_node),pointer,save::b0f_bt
+              integer init
+              save init
+              data init /0/
+              logical find
+              IF(m12.eq.zero)THEN
+                 M=real(p2,kind=16)
+                 M2=real(m22,kind=16)
+                 IF(M.LT.tiny.OR.M2.LT.tiny)THEN
+                 WRITE(*,*)'ERROR:MP_B0F is not well defined when M^2,M2^2<0'
+                 STOP
+                 ENDIF
+                 M=sqrt(abs(M))
+                 M2=sqrt(abs(M2))
+                 IF(M.EQ.0.0e0_16)THEN
+                    Ga=0.0e0_16
+                 ELSE
+                    Ga=-imagpart(p2)/M
+                 ENDIF
+                 IF(M2.EQ.0.0e0_16)THEN
+                    Ga2=0.0e0_16
+                 ELSE
+                    Ga2=-imagpart(m22)/M2
+                 ENDIF
+                 IF(p2.NE.m22.AND.p2.NE.zero.AND.m22.NE.zero)THEN
+                    mp_b0f=(m22-p2)/p2*log((m22-p2)/m22)
+                    IF(M.GT.M2.AND.Ga*M2.GT.Ga2*M)THEN
+                       mp_b0f=mp_b0f-TWOPII
+                    ENDIF
+                    RETURN
+                 ELSE
+                    WRITE(*,*)'ERROR:MP_B0F is not supported for a simple form'
+                    STOP
+                 ENDIF
+              ENDIF
+              if(use_caching)then
+                 if(init.eq.0)then
+                    nullify(b0f_bt)
+                    init=1
+                 endif
+                 allocate(item)
+                 item%%p2=p2
+                 item%%m12=m12
+                 item%%m22=m22
+                 find=.false.
+                 call mp_b0f_search(item, b0f_bt, find)
+                 if(find)then
+                    mp_b0f=item%%value
+                    deallocate(item)
+                    return
+                 else
+                    logterms=mp_log_trajectory(100,p2,m12,m22)
+                    mp_b0f=-LOG(p2/m22)+logterms
+                    item%%value=mp_b0f
+                    return
+                 endif
+              else
+                 logterms=mp_log_trajectory(100,p2,m12,m22)
+                 mp_b0f=-LOG(p2/m22)+logterms
+              endif
+              RETURN
+              end
+
+              %(complex_mp_format)s function mp_sqrt_trajectory(n_seg,p2,m12,m22)
+              implicit none
+              integer n_seg
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,one
+              parameter (zero=(0.0e0_16,0.0e0_16),one=(1.0e0_16,0.0e0_16))
+              %(complex_mp_format)s gamma0,gamma1
+              %(real_mp_format)s M,Ga,dGa,Ga_start
+              %(real_mp_format)s Gai,intersection
+              %(complex_mp_format)s argim1,argi,p2i
+              %(complex_mp_format)s gamma0i,gamma1i
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-24_16)
+              integer i
+              %(real_mp_format)s prefactor
+              IF(ABS(p2*m12*m22).EQ.0.0e0_16)THEN
+              WRITE(*,*)'ERROR:mp_sqrt_trajectory works when p2*m12*m22/=0'
+              STOP
+              ENDIF
+              M=real(p2,kind=16)
+              M=sqrt(abs(M))
+              IF(M.EQ.0.0e0_16)THEN
+                 Ga=0.0e0_16
+              ELSE
+                 Ga=-imagpart(p2)/M
+              ENDIF
+              gamma0=one+m12/p2-m22/p2
+              gamma1=m12/p2-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2
+              IF(abs(Ga).EQ.0.0e0_16)THEN
+                mp_sqrt_trajectory=sqrt(gamma0**2-4.0e0_16*gamma1)
+                RETURN
+              ENDIF
+              Ga_start=-abs(tiny*Ga)
+              dGa=(Ga-Ga_start)/n_seg
+              prefactor=1.0e0_16
+              Gai=Ga_start
+              p2i=cmplx(M**2,-Gai*M)
+              gamma0i=one+m12/p2i-m22/p2i
+              gamma1i=m12/p2i-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2i
+              argim1=gamma0i**2-4.0e0_16*gamma1i
+              DO i=1,n_seg
+                 Gai=dGa*i+Ga_start
+                 p2i=cmplx(M**2,-Gai*M)
+                 gamma0i=one+m12/p2i-m22/p2i
+                 gamma1i=m12/p2i-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2i
+                 argi=gamma0i**2-4.0e0_16*gamma1i
+                 IF(imagpart(argi)*imagpart(argim1).LT.0.0e0_16)THEN
+                   intersection=imagpart(argim1)*(real(argi,kind=16)-real(argim1,kind=16))
+                   intersection=intersection/(imagpart(argi)-imagpart(argim1))
+                   intersection=intersection-real(argim1,kind=16)
+                   IF(intersection.GT.0.0e0_16)THEN
+                      prefactor=-prefactor
+                   ENDIF
+                 ENDIF
+                 argim1=argi
+              ENDDO
+              mp_sqrt_trajectory=sqrt(gamma0**2-4.0e0_16*gamma1)*prefactor
+              RETURN
+              end
+
+              %(complex_mp_format)s function mp_log_trajectory(n_seg,p2,m12,m22)
+              implicit none
+              integer n_seg
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,one,half,TWOPII
+              parameter (zero=(0.0e0_16,0.0e0_16),one=(1.0e0_16,0.0e0_16))
+              parameter (half=(0.5e0_16,0.0e0_16))
+              parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s gamma0,gammap,gammam,sqrtterm
+              %(real_mp_format)s M,Ga,dGa,Ga_start
+              %(real_mp_format)s Gai,intersection
+              %(complex_mp_format)s argim1(4),argi(4),p2i,sqrttermi
+              %(complex_mp_format)s gamma0i,gammapi,gammami
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              integer i,j
+              %(complex_mp_format)s addfactor(4)
+              %(complex_mp_format)s mp_sqrt_trajectory
+              IF(abs(p2*m12*m22).eq.0.0e0_16)THEN
+              WRITE(*,*)'ERROR:mp_log_trajectory works when p2*m12*m22/=0'
+              STOP
+              ENDIF
+              M=real(p2,kind=16)
+              M=sqrt(abs(M))
+              IF(M.eq.0.0e0_16)THEN
+                 Ga=0.0e0_16
+              ELSE
+                 Ga=-imagpart(p2)/M
+              ENDIF
+              sqrtterm=mp_sqrt_trajectory(n_seg,p2,m12,m22)
+              gamma0=one+m12/p2-m22/p2
+              gammap=half*(gamma0+sqrtterm)
+              gammam=half*(gamma0-sqrtterm)
+              IF(abs(Ga).EQ.0.0e0_16)THEN
+                 mp_log_trajectory=-LOG(gammap-one)-LOG(gammam-one)+gammap*LOG((gammap-one)/gammap)+gammam*LOG((gammam-one)/gammam)
+                 RETURN
+              ENDIF
+              Ga_start=-abs(tiny*Ga)
+              dGa=(Ga-Ga_start)/n_seg
+              addfactor(1:4)=zero
+              Gai=Ga_start
+              p2i=cmplx(M**2,-Gai*M)
+              sqrttermi=mp_sqrt_trajectory(n_seg,p2i,m12,m22)
+              gamma0i=one+m12/p2i-m22/p2i
+              gammapi=half*(gamma0i+sqrttermi)
+              gammami=half*(gamma0i-sqrttermi)
+              argim1(1)=gammapi-one
+              argim1(2)=gammami-one
+              argim1(3)=(gammapi-one)/gammapi
+              argim1(4)=(gammami-one)/gammami
+              DO i=1,n_seg
+                 Gai=dGa*i+Ga_start
+                 p2i=cmplx(M**2,-Gai*M)
+                 sqrttermi=mp_sqrt_trajectory(n_seg,p2i,m12,m22)
+                 gamma0i=one+m12/p2i-m22/p2i
+                 gammapi=half*(gamma0i+sqrttermi)
+                 gammami=half*(gamma0i-sqrttermi)
+                 argi(1)=gammapi-one
+                 argi(2)=gammami-one
+                 argi(3)=(gammapi-one)/gammapi
+                 argi(4)=(gammami-one)/gammami
+                 DO j=1,4
+                    IF(imagpart(argi(j))*imagpart(argim1(j)).LT.0.0e0_16)THEN
+                       intersection=imagpart(argim1(j))*(real(argi(j),kind=16)-real(argim1(j),kind=16))
+                       intersection=intersection/(imagpart(argi(j))-imagpart(argim1(j)))
+                       intersection=intersection-real(argim1(j),kind=16)
+                       IF(intersection.GT.0.0e0_16)THEN
+                          IF(imagpart(argim1(j)).LT.0.0e0_16)THEN
+                             addfactor(j)=addfactor(j)-TWOPII
+                          ELSE
+                             addfactor(j)=addfactor(j)+TWOPII
+                          ENDIF
+                       ENDIF
+                    ENDIF
+                    argim1(j)=argi(j)
+                 ENDDO
+              ENDDO
+              mp_log_trajectory=-(LOG(gammap-one)+addfactor(1))-(LOG(gammam-one)+addfactor(2))
+              mp_log_trajectory=mp_log_trajectory+gammap*(LOG((gammap-one)/gammap)+addfactor(3))
+              mp_log_trajectory=mp_log_trajectory+gammam*(LOG((gammam-one)/gammam)+addfactor(4))
+              RETURN
+              end
               
               %(complex_mp_format)s function mp_arg(comnum)
               implicit none
@@ -7442,8 +8112,8 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt"] + done:
-                    done.append(str(fct.name.lower()))
+                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -7480,7 +8150,7 @@ class UFO_model_to_mg4(object):
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt"]:
+                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)

@@ -1,5 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
                         ** PARRALEL VERSION FOR EW branch **
 
 3.0.4 (21/08/20)
@@ -7,8 +8,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
     ALL: pass to python3 by default
     MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
         The generation of tau was not taking into account the information.
-    MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
-        The generation of tau was not taking into account the information.
+    DP+HS+MZ: Allow for the computation of NLO EW and complete NLO corrections in the 4FS
     MZ+SC+ERN+CS: The code can be linked to PineAPPL (arXiv:2008.12789), making it possible
 	 to generate PDF-independent fast-interploation grids including EW corrections.
 	 This supersedes the interface to ApplGrid+aMCFast which was not working in v3
@@ -26,7 +26,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 3.0.3 (06/07/20)
      include up to 2.7.3
 
-3.0.2 (25/05/20)
+3.0.2
      include up to 2.7.2
      MZ: better handling of zeros in color-linked borns 
      RF: improved the behaviour for integration channels that give zero cross section
@@ -241,10 +241,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: For Mac only, when running in script mode, MG5aMC will now prevent the computer to go to idle sleep.
           You can prevent this by running with the '-s' option. like ./bin/mg5_aMC -s PATH_TO_CMD
 
-
-2.7.2(17/03/20)
-      OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
-      OM: Speed up standalone_cpp code by changing compilation flag
 
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine

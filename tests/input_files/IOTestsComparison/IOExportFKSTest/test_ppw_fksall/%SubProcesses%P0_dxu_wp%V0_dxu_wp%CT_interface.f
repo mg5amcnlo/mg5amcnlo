@@ -713,17 +713,6 @@ C       Choose the correct loop library
 C         CutTools is used
           CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX
      $     ,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-        ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
-C         Ninja is used
-          IF (.NOT.DOING_QP) THEN
-            CALL NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
-     $       ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-          ELSE
-            WRITE(*,*) 'ERROR: Ninja should not be called in quadruple'
-     $       //' precision since the installed version considered does'
-     $       //' not support it.'
-            STOP 9
-          ENDIF
         ELSE
 C         Tensor Integral Reduction is used 
           CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L

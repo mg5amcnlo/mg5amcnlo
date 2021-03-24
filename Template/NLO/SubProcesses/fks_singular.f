@@ -152,8 +152,10 @@ C      gluon in the initial state
         alphasbpow = orders(qcd_pos)/2
         if (niglu.ne.0 .or. alphasbpow.ne.0) then
           ! this contribution will end up with one extra power
-          ! of alpha_s
+          ! of alpha_s. Check that we are including the corresponding
+          ! order in the computation, otherwise skip the contribution
           orders(qcd_pos) = orders(qcd_pos) + 2
+          if (orders(qcd_pos).gt.nlo_orders(qcd_pos)) cycle
 
           amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
      &     alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
