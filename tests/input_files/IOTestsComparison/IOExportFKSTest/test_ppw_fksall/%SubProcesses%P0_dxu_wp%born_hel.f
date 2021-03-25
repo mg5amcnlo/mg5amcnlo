@@ -182,8 +182,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -198,8 +199,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    3/
+      DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/
 C     1 T(1,2)
 C     ----------
 C     BEGIN CODE
@@ -214,7 +214,7 @@ C     ----------
         ENDDO
       ENDIF
 C     JAMPs contributing to orders QCD=0 QED=1
-      JAMP(1,1)=-AMP(1)
+      JAMP(1,1) = (-1.000000000000000D+00)*AMP(1)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -225,7 +225,7 @@ C     JAMPs contributing to orders QCD=0 QED=1
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
-     $     *DCONJG(JAMP(I,M))/DENOM(I)
+     $     *DCONJG(JAMP(I,M))
         ENDDO
       ENDDO
       END

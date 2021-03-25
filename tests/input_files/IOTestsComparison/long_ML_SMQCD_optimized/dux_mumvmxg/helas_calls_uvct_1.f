@@ -100,13 +100,13 @@ C     Amplitude(s) for UVCT diagram with ID 14
       AMPL(2,25)=AMPL(2,25)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 15
       CALL FFV2_0(W(1,6),W(1,2),W(1,7),GC_11,AMPL(1,26))
-      AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+      AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 C     Amplitude(s) for UVCT diagram with ID 16
       CALL FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(2,27))
       AMPL(2,27)=AMPL(2,27)*(2.0D0*UVWFCT_G_1_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 17
       CALL FFV2_0(W(1,1),W(1,8),W(1,7),GC_11,AMPL(1,28))
-      AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+      AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 
       GOTO 1001
  3000 CONTINUE

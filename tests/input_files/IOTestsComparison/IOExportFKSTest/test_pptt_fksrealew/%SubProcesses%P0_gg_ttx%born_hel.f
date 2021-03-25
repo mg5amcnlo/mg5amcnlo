@@ -66,7 +66,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: g g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: g g > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -153,7 +153,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: g g > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -181,8 +181,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -197,11 +198,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/3/
-      DATA (CF(I,  1),I=  1,  2) /   16,   -2/
+      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
+     $ -6.666666666666666D-01/
 C     1 T(1,2,3,4)
-      DATA DENOM(2)/3/
-      DATA (CF(I,  2),I=  1,  2) /   -2,   16/
+      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+     $ ,5.333333333333333D+00/
 C     1 T(2,1,3,4)
 C     ----------
 C     BEGIN CODE
@@ -216,8 +217,10 @@ C     ----------
         ENDDO
       ENDIF
 C     JAMPs contributing to orders QCD=2 QED=0
-      JAMP(1,1)=+IMAG1*AMP(1)-AMP(2)
-      JAMP(2,1)=-IMAG1*AMP(1)-AMP(3)
+      JAMP(1,1) = ((0.000000000000000D+00,1.000000000000000D+00))
+     $ *AMP(1)+(-1.000000000000000D+00)*AMP(2)
+      JAMP(2,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
+     $ *AMP(1)+(-1.000000000000000D+00)*AMP(3)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -228,7 +231,7 @@ C     JAMPs contributing to orders QCD=2 QED=0
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
-     $     *DCONJG(JAMP(I,M))/DENOM(I)
+     $     *DCONJG(JAMP(I,M))
         ENDDO
       ENDDO
       END

@@ -265,9 +265,10 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     FUNCTION
 C     
@@ -275,8 +276,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    3/
+      DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/
 C     1 T(1,5)
 C     ----------
 C     BEGIN CODE
@@ -300,7 +300,7 @@ C     Amplitude(s) for diagram number 3
 C     Amplitude(s) for diagram number 4
       CALL FFV2_0(W(1,6),W(1,1),W(1,7),GC_124,AMP(4))
 C     JAMPs contributing to orders QCD=0 QED=3
-      JAMP(1,1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)
+      JAMP(1,1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
@@ -313,7 +313,7 @@ C     JAMPs contributing to orders QCD=0 QED=3
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX3(M,N)) = RES(SQSOINDEX3(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
+     $       *DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
       ENDDO

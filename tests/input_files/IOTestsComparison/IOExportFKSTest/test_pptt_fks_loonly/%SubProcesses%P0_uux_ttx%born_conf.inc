@@ -10,10 +10,10 @@
       LOGICAL GFORCEBW(-MAX_BRANCHB_USED : -1, LMAXCONFIGSB_USED)
 
 C     Here are the congifurations
-C     Process: u u~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c c~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d d~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s s~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u u~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c c~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d d~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s s~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
 C     Diagram 1, Amplitude 1
       DATA MAPCONFIG(   1)/   1/
       DATA (IFOREST(IFR, -1,   1),IFR=1,2)/  4,  3/

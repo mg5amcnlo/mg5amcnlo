@@ -9,8 +9,8 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: t > b u d~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
-C     Process: t > b c s~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
+C     Process: t > b u d~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
+C     Process: t > b c s~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
 C     
 C     
 C     CONSTANTS
@@ -109,8 +109,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: t > b u d~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
-C     Process: t > b c s~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
+C     Process: t > b u d~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
+C     Process: t > b c s~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
 C     
       IMPLICIT NONE
 C     
@@ -234,8 +234,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: t > b u d~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
-C     Process: t > b c s~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
+C     Process: t > b u d~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
+C     Process: t > b c s~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
 C     
       IMPLICIT NONE
 C     
@@ -265,9 +265,10 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     FUNCTION
 C     
@@ -275,11 +276,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /   12,    0/
+      DATA (CF(I,  1),I=  1,  2) /1.200000000000000D+01
+     $ ,0.000000000000000D+00/
 C     1 T(2,1) T(5,3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    0,   12/
+      DATA (CF(I,  2),I=  1,  2) /0.000000000000000D+00
+     $ ,1.200000000000000D+01/
 C     1 T(3,4) T(5,2,1)
 C     ----------
 C     BEGIN CODE
@@ -305,8 +306,10 @@ C     Amplitude(s) for diagram number 3
 C     Amplitude(s) for diagram number 4
       CALL FFV2_0(W(1,1),W(1,2),W(1,5),GC_100,AMP(4))
 C     JAMPs contributing to orders QCD=1 QED=2
-      JAMP(1,1)=-AMP(3)-AMP(4)
-      JAMP(2,1)=-AMP(1)-AMP(2)
+      JAMP(1,1) = (-1.000000000000000D+00)*AMP(3)+(-1.000000000000000D
+     $ +00)*AMP(4)
+      JAMP(2,1) = (-1.000000000000000D+00)*AMP(1)+(-1.000000000000000D
+     $ +00)*AMP(2)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
@@ -319,7 +322,7 @@ C     JAMPs contributing to orders QCD=1 QED=2
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX1(M,N)) = RES(SQSOINDEX1(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
+     $       *DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
       ENDDO

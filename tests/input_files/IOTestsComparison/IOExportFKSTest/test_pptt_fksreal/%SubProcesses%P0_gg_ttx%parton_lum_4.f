@@ -7,10 +7,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: g d~ > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g s~ > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g u~ > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g c~ > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g d~ > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s~ > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g u~ > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c~ > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
 C     ****************************************************            
 C         
