@@ -1429,7 +1429,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     
                 if common_factor:
                     res = res + ')'
-    
                 res_list.append(res)
         
         if 'jamp_optim' in self.cmd_options:
@@ -1469,9 +1468,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     return "%id0/%id0" % (frac.numerator, frac.denominator)
             elif frac.real == frac:
                 #misc.sprint(frac.real, frac)
-                return str(float(frac.real)).replace('e','d')
+                return ('%.15e' % frac.real).replace('e','d')
+                #str(float(frac.real)).replace('e','d')
             else:
-                return str(frac).replace('e','d').replace('j','*imag1')
+                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                #str(frac).replace('e','d').replace('j','*imag1')
                 
         
         

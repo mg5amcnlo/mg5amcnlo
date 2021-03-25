@@ -308,7 +308,7 @@ C     ----------
 C     Amplitude(s) for diagram number 1
       CALL FFV2_0(W(1,2),W(1,1),W(1,3),GC_11,AMP(1))
 C     JAMPs contributing to orders QCD=0
-      JAMP(1,1) = (-1.0)*AMP(1)
+      JAMP(1,1) = (-1.000000000000000D+00)*AMP(1)
 
       RES = 0.D0
       DO M = 1, NAMPSO
