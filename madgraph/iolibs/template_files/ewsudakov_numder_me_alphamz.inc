@@ -1,129 +1,149 @@
       subroutine PAR_REN_%(mename)s(P,NHEL,hell,invariants)
 C     compute the contribution due to the parameter renormalisation
-      implicit none
-      include 'nexternal.inc'
-      double precision p(0:3,nexternal-1), ans_summed
-      integer nhel(nexternal-1),hell
-      double precision invariants(nexternal-1, nexternal-1)
-      include 'coupl.inc'
-      include '../../Source/MODEL/input.inc'
+      IMPLICIT NONE
+      INCLUDE 'nexternal.inc'
+      DOUBLE PRECISION P(0:3,NEXTERNAL-1), ANS_SUMMED
+      INTEGER NHEL(NEXTERNAL-1),HELL
+      DOUBLE PRECISION INVARIANTS(NEXTERNAL-1, NEXTERNAL-1)
+      INCLUDE 'coupl.inc'
+      INCLUDE '../../Source/MODEL/input.inc'
 
 C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH; 6->tadpole
-      integer imaxpara, ipara
-      parameter (imaxpara=6)
+      INTEGER IMAXPARA, IPARA
+      PARAMETER (IMAXPARA=6)
 
-      include 'orders.inc'
-      double complex amp_split_ewsud_der(amp_split_size,imaxpara)
-      common /to_amp_split_ewsud_der/ amp_split_ewsud_der
+      INCLUDE 'orders.inc'
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_DER(AMP_SPLIT_SIZE,IMAXPARA)
+      COMMON /TO_AMP_SPLIT_EWSUD_DER/ AMP_SPLIT_EWSUD_DER
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_DER2(AMP_SPLIT_SIZE,IMAXPARA)
+      COMMON /TO_AMP_SPLIT_EWSUD_DER2/ AMP_SPLIT_EWSUD_DER2
 
-      integer i, j
+      INTEGER I, J
 
-      double precision xdelta, xsave, xup, xdn, matxup, matxdn, matxcen
-      double complex amp_split_up(amp_split_size), amp_split_dn(amp_split_size), amp_split_cen(amp_split_size)
+      DOUBLE PRECISION XDELTA, XSAVE, XUP, XDN, MATXUP, MATXDN, MATXCEN
+      DOUBLE COMPLEX AMP_SPLIT_UP(AMP_SPLIT_SIZE),
+     $  AMP_SPLIT_DN(AMP_SPLIT_SIZE), AMP_SPLIT_CEN(AMP_SPLIT_SIZE)
 
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
-      xdelta = 1d-5
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_LO2(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_SPLIT_EWSUD_LO2/ AMP_SPLIT_EWSUD_LO2
+
+      DOUBLE COMPLEX MT_DER_LO2
+      COMMON /TO_MT_DER_LO2/MT_DER_LO2 
+
+
+      DOUBLE COMPLEX AMP_SPLIT_UP2(AMP_SPLIT_SIZE),
+     $  AMP_SPLIT_DN2(AMP_SPLIT_SIZE), AMP_SPLIT_CEN2(AMP_SPLIT_SIZE)
+
+      XDELTA = 1D-5
 
 C     check that mdl_mt and mdl_ymt are equal
-      if (mdl_mt.ne.mdl_ymt) then
+      IF (MDL_MT.NE.MDL_YMT) THEN
          write(*,*) 'ERROR mdl_mt and mdl_ymt should be equal!', mdl_mt, mdl_ymt
          stop 1
-      endif
+      ENDIF
 
-      IF (MDL_NTADPOLE.NE.1d0) THEN
+      IF (MDL_NTADPOLE.NE.1D0) THEN
         WRITE(*,*) 'Set in the paramcard ntadpole to EXACTLY 1 and not', mdl_ntadpole
         STOP 2
       ENDIF
 
-      do i = 1, imaxpara
-        if (i.eq.1) then
-          xsave = aewm1
-        else if (i.eq.2) then
-          xsave = mdl_mz
-        else if (i.eq.3) then
-          xsave = mdl_mw
-        else if (i.eq.4) then
-          xsave = mdl_mt
-        else if (i.eq.5) then
-          xsave = mdl_mh
+      DO I = 1, IMAXPARA
+        IF (I.EQ.1) THEN
+          XSAVE = AEWM1
+        ELSE IF (I.EQ.2) THEN
+          XSAVE = MDL_MZ
+        ELSE IF (I.EQ.3) THEN
+          XSAVE = MDL_MW
+        ELSE IF (I.EQ.4) THEN
+          XSAVE = MDL_MT
+        ELSE IF (I.EQ.5) THEN
+          XSAVE = MDL_MH
         ELSE IF (I.EQ.6) THEN
           XSAVE = MDL_NTADPOLE
-        endif
+        ENDIF
 
-        xup = xsave * (1d0 + xdelta)
-        xdn = xsave * (1d0 - xdelta)
+        XUP = XSAVE * (1D0 + XDELTA)
+        XDN = XSAVE * (1D0 - XDELTA)
 
 C        call %(mename)s(P,NHEL,%(hell)s matxcen)
 C        amp_split_cen(:) = amp_split_ewsud(:)
         
 C       vary the parameter up
-        if (i.eq.1) then
-          aewm1 = xup
-        else if (i.eq.2) then
-          mdl_mz = xup
-        else if (i.eq.3) then
-          mdl_mw = xup
-        else if (i.eq.4) then
-          mdl_mt = xup
-          mdl_ymt = xup
-        else if (i.eq.5) then
-          mdl_mh = xup
+        IF (I.EQ.1) THEN
+          AEWM1 = XUP
+        ELSE IF (I.EQ.2) THEN
+          MDL_MZ = XUP
+        ELSE IF (I.EQ.3) THEN
+          MDL_MW = XUP
+        ELSE IF (I.EQ.4) THEN
+          MDL_MT = XUP
+          MDL_YMT = XUP
+        ELSE IF (I.EQ.5) THEN
+          MDL_MH = XUP
         ELSE IF (I.EQ.6) THEN
           MDL_NTADPOLE = XUP
-        endif
+        ENDIF
 
-        call coup()
+        CALL COUP()
         call %(mename)s(P,NHEL,%(hell)s matxup)
-        amp_split_up(:) = amp_split_ewsud(:)
+        AMP_SPLIT_UP(:) = AMP_SPLIT_EWSUD(:)
+        AMP_SPLIT_UP2(:) = AMP_SPLIT_EWSUD_LO2(:)
 
 C       vary the parameter down
-        if (i.eq.1) then
-          aewm1 = xdn
-        else if (i.eq.2) then
-          mdl_mz = xdn
-        else if (i.eq.3) then
-          mdl_mw = xdn
-        else if (i.eq.4) then
-          mdl_mt = xdn
-          mdl_ymt = xdn
-        else if (i.eq.5) then
-          mdl_mh = xdn
+        IF (I.EQ.1) THEN
+          AEWM1 = XDN
+        ELSE IF (I.EQ.2) THEN
+          MDL_MZ = XDN
+        ELSE IF (I.EQ.3) THEN
+          MDL_MW = XDN
+        ELSE IF (I.EQ.4) THEN
+          MDL_MT = XDN
+          MDL_YMT = XDN
+        ELSE IF (I.EQ.5) THEN
+          MDL_MH = XDN
         ELSE IF (I.EQ.6) THEN
           MDL_NTADPOLE = XDN
-        endif
+        ENDIF
 
-        call coup()
+        CALL COUP()
         call %(mename)s(P,NHEL,%(hell)s matxdn)
-        amp_split_dn(:) = amp_split_ewsud(:)
+        AMP_SPLIT_DN(:) = AMP_SPLIT_EWSUD(:)
+        AMP_SPLIT_DN2(:) = AMP_SPLIT_EWSUD_LO2(:)
 
-        amp_split_ewsud_der(:,i) = (amp_split_up(:)-amp_split_dn(:))/(2*xsave*xdelta)
+        AMP_SPLIT_EWSUD_DER(:,I) = (AMP_SPLIT_UP(:)-AMP_SPLIT_DN(:))
+     $   /(2*XSAVE*XDELTA)
+
+        AMP_SPLIT_EWSUD_DER2(:,I) = (AMP_SPLIT_UP2(:)-AMP_SPLIT_DN2(:))
+     $   /(2*XSAVE*XDELTA)
+
 
 C       reset the parameter 
-        if (i.eq.1) then
-          aewm1 = xsave
-        else if (i.eq.2) then
-          mdl_mz = xsave
-        else if (i.eq.3) then
-          mdl_mw = xsave
-        else if (i.eq.4) then
-          mdl_mt = xsave
-          mdl_ymt = xsave
-        else if (i.eq.5) then
-          mdl_mh = xsave
+        IF (I.EQ.1) THEN
+          AEWM1 = XSAVE
+        ELSE IF (I.EQ.2) THEN
+          MDL_MZ = XSAVE
+        ELSE IF (I.EQ.3) THEN
+          MDL_MW = XSAVE
+        ELSE IF (I.EQ.4) THEN
+          MDL_MT = XSAVE
+          MDL_YMT = XSAVE
+        ELSE IF (I.EQ.5) THEN
+          MDL_MH = XSAVE
         ELSE IF (I.EQ.6) THEN
           MDL_NTADPOLE = XSAVE
-        endif
+        ENDIF
 
-        call coup()
+        CALL COUP()
 
-      enddo
+      ENDDO
 
-      call get_par_ren_alphamz(invariants)
+      CALL GET_PAR_REN_ALPHAMZ(INVARIANTS)
 
-      return
-      end
+      RETURN
+      END
 
 
 

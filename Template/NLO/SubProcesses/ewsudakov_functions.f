@@ -1652,13 +1652,19 @@ c            write(*,*) 'IZ=t3-sw Q / sw cw'
       parameter (imaxpara=6)
       double complex amp_split_ewsud_der(amp_split_size,imaxpara)
       common /to_amp_split_ewsud_der/ amp_split_ewsud_der
+      double complex amp_split_ewsud_der2(amp_split_size,imaxpara)
+      common /to_amp_split_ewsud_der2/ amp_split_ewsud_der2
 C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
+
+
+
       double complex ls
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
+      double complex dmt_QCD
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
       external smallL, sdk_betaew_diag, sdk_cew_diag
       double precision pi, cw2, sw2, Qt
@@ -1666,6 +1672,9 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       include 'coupl.inc'
       INCLUDE '../../Source/MODEL/input.inc'
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
 
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
@@ -1720,6 +1729,11 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       
       dheff_o_heff = mdl_ee/(2d0*dsqrt(sw2))*dt/(mdl_mw*mdl_mh**2)
 
+      dmt_QCD =  - 3d0 * 4d0/3d0 
+
+      dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
+
+
 
       amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
@@ -1727,6 +1741,15 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
      $      amp_split_ewsud_der(:,4) * dmt +
      $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
      $      amp_split_ewsud_der(:,6) * dheff_o_heff 
+
+      if (sud_mod.eq.2) then
+       amp_split_ewsud(:) = amp_split_ewsud(:) +
+     $      amp_split_ewsud_der2(:,4) * dmt_QCD 
+
+c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
+
+      endif       
+ 
 
 
       ! LEAVE EMPTY FOR THE MOMENT
