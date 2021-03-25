@@ -45,13 +45,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     """A multi process class that contains informations on the born processes 
     and the reals.
     """
-    
+
     def default_setup(self):
         """Default values for all properties"""
         super(FKSMultiProcess, self).default_setup()
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
+
         if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
             self['ncores_for_proc_gen'] = 0
@@ -122,6 +123,13 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
         legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
+
+
+        if 'nlo_mixed_expansion' in options:
+            self['nlo_mixed_expansion'] = options['nlo_mixed_expansion']
+            del options['nlo_mixed_expansion']
+
+
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
                        logging.getLogger('madgraph.loop_diagram_generation')]
@@ -241,7 +249,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 for real in born.real_amps:
                     real.find_fks_j_from_i(born_pdg_list)
             if amps:
-                if self['process_definitions'][0].get('NLO_mode') == 'all':
+                if self['process_definitions'][0].get('NLO_mode') in ['all']:
                     self.generate_virtuals()
                 
                 elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real','LOonly']:
@@ -316,15 +324,31 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                      '%s at the output stage only.'%self['OLP'])
             return
 
+        if not self['nlo_mixed_expansion']:
+            # determine the orders to be used to generate the loop
+            loop_orders = {}
+            for  born in self['born_processes']:
+                for coup, val in fks_common.find_orders(born.born_amp).items():
+                    try:
+                        loop_orders[coup] = max([loop_orders[coup], val])
+                    except KeyError:
+                        loop_orders[coup] = val
+
+
         for i, born in enumerate(self['born_processes']):
             myproc = copy.copy(born.born_amp['process'])
+            #misc.sprint(born.born_proc)
+            #misc.sprint(myproc.input_string())
+            #misc.sprint(myproc['orders'])
             # if [orders] are not specified, then
             # include all particles in the loops
             # i.e. allow all orders to be perturbed
             # (this is the case for EW corrections, where only squared oders 
             # are imposed)
-            if not myproc['orders']:
-                myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
+            if not self['nlo_mixed_expansion']:
+                myproc['orders'] = loop_orders
+            elif not myproc['orders']:
+                    myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
             # take the orders that are actually used bu the matrix element
             myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
             logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
@@ -335,6 +359,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 born.virt_amp = myamp
             except InvalidCmd:
+                logger.debug('invalid command for loop')
                 pass
 
 

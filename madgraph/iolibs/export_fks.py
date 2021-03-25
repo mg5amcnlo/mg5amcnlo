@@ -820,6 +820,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
@@ -2336,6 +2337,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         else:
             QED, QCD = fks_common.get_qed_qcd_orders_from_weighted(\
                     len(process_list[0].get('legs')),
+                    process_list[0].get('model').get('order_hierarchy'),
                     orders['WEIGHTED'])
 
         replace_dict = {}

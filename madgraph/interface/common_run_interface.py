@@ -940,9 +940,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
-                no_width = [p for p in ufomodel.all_particles
-                        if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
-                           and p.width != zero]
+                if self.proc_characteristics['nlo_mixed_expansion']:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero]
+                else:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero and p.color!=1]
+
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:

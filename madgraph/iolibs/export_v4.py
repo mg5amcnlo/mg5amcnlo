@@ -1030,8 +1030,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     logger.debug('WEIGHTED^2%s%s encoutered. Please check behavior for' + \
                             'https://bazaar.launchpad.net/~maddevelopers/mg5amcnlo/3.0.1/revision/613', \
                             (process.get_squared_order_type(user_sqso), sqsos[split_orders.index(user_sqso)]))
-
-                if (process.get_squared_order_type(user_sqso) =='==' and \
+                if user_sqso not in split_orders:
+                    is_a_match = False
+                elif (process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \
@@ -3155,6 +3156,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         #proc_charac
+        self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         self.create_proc_charac()
 
         # Write maxparticles.inc based on max of ME's/subprocess groups
@@ -4134,6 +4136,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
 

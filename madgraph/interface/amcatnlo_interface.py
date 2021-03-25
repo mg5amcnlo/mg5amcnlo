@@ -329,6 +329,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                          'real_processes', 'born_processes', 'virt_processes']
 
     _nlo_modes_for_completion = ['all','real']
+    display_expansion = False
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
@@ -458,6 +459,26 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             run_interface.check_compiler(self.options, block=False)
         #validate_model will reset self._generate_info; to avoid
         #this store it
+        
+        if not aMCatNLOInterface.display_expansion:
+            if proc_type[2] != ['QCD'] and proc_type[1] == 'all':
+                aMCatNLOInterface.display_expansion = True
+                if 'QED' in proc_type[2]:
+                    logger.info(
+"""------------------------------------------------------------------------
+This computation involves NLO EW corrections.
+Please also cite ref. 'arXiv:1804.10017' when using results from this code.
+------------------------------------------------------------------------
+""", '$MG:BOLD')
+                else:
+                    logger.info(
+"""------------------------------------------------------------------------
+This computation involve not SM-QCD corrections at NLO.
+Please also cite ref. 'arXiv:1804.10017' when using results from this code.
+------------------------------------------------------------------------
+""", '$MG:BOLD')
+
+
         geninfo = self._generate_info
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
         self._generate_info = geninfo
@@ -478,13 +499,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # set the orders
         # if some orders have been set by the user,
         # check that all the orders of the model have been specified
-        # set to zero those which have not been specified and warn the user
+        # set to default those which have not been specified and warn the user
         if myprocdef['orders'] and not all([o in list(myprocdef['orders'].keys()) for o in myprocdef['model'].get_coupling_orders()]):
             for o in myprocdef['model'].get_coupling_orders():
                 if o not in list(myprocdef['orders'].keys()):
-                    myprocdef['orders'][o] = 0
-                    logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
-                                   'If this is not what you need, please regenerate with the correct orders.') % o)
+                    myprocdef['orders'][o] = self.options['default_unset_couplings']
+                    logger.warning(('%s order is missing in the process definition. It will be set to "default unser couplings": %s\n' + \
+                                   'If this is not what you need, please regenerate with the correct orders.') % (o,myprocdef['orders'][o]))
 
         # this is in case no orders have been passed
         if not myprocdef['squared_orders'] and not myprocdef['orders']:
@@ -496,23 +517,43 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                       'Please specify them from the command line.')
 
             # this is a very rough attempt, and works only to guess QED/QCD
-            qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+            qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), 
+                                                                   self._curr_model.get('order_hierarchy'), 
+                                                                   weighted['WEIGHTED'])
+
             if qed < 0 or qcd < 0:
                 raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.')
-            orders = {'QED': 2*qed, 'QCD': 2*qcd}
-            # set all the other coupling to zero
-            for o in myprocdef['model'].get_coupling_orders():
-                if o not in ['QED', 'QCD']:
-                    orders[o] = 0
+            if self.options['nlo_mixed_expansion']:
+                orders = {'QED': 2*qed, 'QCD': 2*qcd}
+                # set all the other coupling to zero
+                for o in myprocdef['model'].get_coupling_orders():
+                    if o not in ['QED', 'QCD']:
+                        orders[o] = 0
 
-            myprocdef.set('squared_orders', orders)
-            # warn the user of what happened
-            logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
-                            'If this is not what you need, please regenerate with the correct orders.'), 
-                            ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
-                            '$MG:BOLD')
+                myprocdef.set('squared_orders', orders)
+                # warn the user of what happened
+                logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
+                                'If this is not what you need, please regenerate with the correct orders.'), 
+                                ' '.join(['%s^2<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
+                                '$MG:BOLD')
+            else:
+                orders = {'QED': qed, 'QCD': qcd}
+                sqorders = {'QED': 2*qed, 'QCD': 2*qcd}
+                # set all the other coupling to zero
+                for o in myprocdef['model'].get_coupling_orders():
+                    if o not in ['QED', 'QCD']:
+                        orders[o] = 0
+                        sqorders[o] = 0
+
+                myprocdef.set('orders', orders)
+                myprocdef.set('squared_orders', sqorders)
+                # warn the user of what happened
+                logger.info(('Setting the born orders automatically in the process definition to %s.\n' + \
+                                'If this is not what you need, please regenerate with the correct orders.'), 
+                                ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['orders'].items()]), 
+                                '$MG:BOLD')                
 
         # now check that all couplings that are there in orders also appear
         # in squared_orders. If not, set the corresponding one
@@ -531,6 +572,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         myprocdef['born_sq_orders'] = copy.copy(myprocdef['squared_orders'])
         # split all orders in the model, for the moment it's the simplest solution
         # mz02/2014
+        #if proc_type[1] != 'only':
         myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
                 if o not in myprocdef['split_orders']]
 
@@ -542,10 +584,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # then increase the orders which are perturbed
         for pert in myprocdef['perturbation_couplings']:
+
+            if not self.options['nlo_mixed_expansion'] and pert not in proc_type[2]:
+                    continue
+
+
             # if orders have been specified increase them
             if list(myprocdef['orders'].keys()) != ['WEIGHTED']:
                 try:
-                    myprocdef['orders'][pert] += 2
+                    myprocdef['orders'][pert] += 1
                 except KeyError:
                     # if the order is not specified
                     # then MG does not put any bound on it
@@ -573,7 +620,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # This is necessary because when doing EW corrections one only specifies
         # squared-orders constraints. In that case, all kind of splittings/loop-particles
         # must be included
-        if not myprocdef['orders']:
+        if not myprocdef['orders'] and self.options['nlo_mixed_expansion']:
             myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
 
         self._curr_proc_defs.append(myprocdef)
@@ -596,11 +643,36 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         fks_options = {'OLP': self.options['OLP'],
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
-                       'ncores_for_proc_gen': self.ncores_for_proc_gen}
+                       'ncores_for_proc_gen': self.ncores_for_proc_gen,
+                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion']}
+
+        fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
-            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
+            self._fks_multi_proc.add(fksproc)
         except AttributeError: 
-            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,fks_options)
+            self._fks_multi_proc = fksproc
+
+        if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
+            base = {}
+            for amp in self._fks_multi_proc.get_born_amplitudes():
+                nb_part = len(amp['process']['legs'])
+                for diag in amp['diagrams']:   
+                    if nb_part not in  base:
+                        base[nb_part] = diag.get('orders')
+                    elif base[nb_part] != diag.get('orders'):
+                        aMCatNLOInterface.display_expansion = True
+                        logger.info(
+"""------------------------------------------------------------------------
+This computation can involve not only purely SM-QCD corrections at NLO.
+Please also cite ref. 'arXiv:1804.10017' when using results from this code.
+------------------------------------------------------------------------
+""", '$MG:BOLD')
+                        break
+                else:
+                    continue
+                break
+
+
 
 
     def do_output(self, line):

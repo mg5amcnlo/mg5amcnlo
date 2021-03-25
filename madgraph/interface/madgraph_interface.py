@@ -820,7 +820,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
         logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")
         logger.info("auto_convert_model <value>",'$MG:color:GREEN')   
-        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")     
+        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")   
+        logger.info("nlo_mixed_expansion <value>",'$MG:color:GREEN') 
+        logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
+          
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1531,7 +1534,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
-        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -2583,7 +2586,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
                            'include_lepton_initiated_processes',\
-                           'low_mem_multicore_nlo_generation']:
+                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
@@ -2921,8 +2924,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_t_for_channel',
                     'zerowidth_tchannel',
                     'default_unset_couplings',
+                    'nlo_mixed_expansion'
                     ]
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly', 'only']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2989,6 +2993,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'default_unset_couplings': 99, # 99 means infinity
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
+                          'nlo_mixed_expansion':True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -7768,6 +7773,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning("Turning off option 'loop_color_flows'"+\
                     " since it is not available for non-optimized loop output.")
                 self.do_set('loop_color_flows False',log=False)
+        elif args[0] == "nlo_mixed_expansion":
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1],bool,args[0])
         elif args[0] == 'loop_color_flows':
             if log:
                     logger.info('set loop color flows to %s' % args[1])
