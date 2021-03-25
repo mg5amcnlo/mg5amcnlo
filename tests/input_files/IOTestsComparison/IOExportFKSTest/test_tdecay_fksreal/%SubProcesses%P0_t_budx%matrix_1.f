@@ -184,8 +184,10 @@ C     Amplitude(s) for diagram number 3
       CALL FFV2_3(W(1,7),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,5))
 C     Amplitude(s) for diagram number 4
       CALL FFV2_0(W(1,1),W(1,2),W(1,5),GC_100,AMP(4))
-      JAMP(1) = (-1)*AMP(3)+(-1)*AMP(4)
-      JAMP(2) = (-1)*AMP(1)+(-1)*AMP(2)
+      JAMP(1) = (-1.000000000000000D+00)*AMP(3)+(-1.000000000000000D
+     $ +00)*AMP(4)
+      JAMP(2) = (-1.000000000000000D+00)*AMP(1)+(-1.000000000000000D
+     $ +00)*AMP(2)
       MATRIX_1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)

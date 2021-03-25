@@ -1633,7 +1633,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             name = 'fo_lhe_postprocessing'
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
-                        
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################

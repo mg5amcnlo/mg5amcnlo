@@ -888,6 +888,11 @@ class ParamCardMP(ParamCard):
                     value = self[block].get(tuple(lhaid)).value
                 except KeyError:
                     value =defaultcard[block].get(tuple(lhaid)).value
+            elif block == 'loop' and lhaid == [1]:
+                try:
+                    value =defaultcard[block].get(tuple(lhaid)).value
+                except:
+                    value = 9.1188    
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
             #value = str(value).lower()

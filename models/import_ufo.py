@@ -1976,6 +1976,21 @@ class RestrictModel(model_reader.ModelReader):
                 else:
                     raise Exception
 
+        # delete cache for coupling_order if some coupling are not present in the model anymore
+        old_order = self['coupling_orders']
+        self['coupling_orders'] = None
+        if old_order and old_order != self.get('coupling_orders'):
+            removed = set(old_order).difference(set(self.get('coupling_orders')))
+            logger.warning("Some coupling order do not have any coupling associated to them: %s", list(removed))
+            logger.warning("Those coupling order will not be valid anymore for this model")
+
+            self['order_hierarchy'] = {}
+            self['expansion_order'] = None
+            #and re-initialize it to avoid any potential side effect
+            self.get('order_hierarchy')
+            self.get('expansion_order')
+
+
 
         
     def locate_coupling(self):

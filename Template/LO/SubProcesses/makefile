@@ -65,6 +65,8 @@ $(LIBDIR)libpdf.$(libext):
 	cd ../../Source/PDF; make
 
 # Add source so that the compiler finds the DiscreteSampler module.
+$(MATRIX): %.o: %.f
+	$(FC) $(FFLAGS) $(MATRIX_FLAG) -c $< -I../../Source/
 %.o: %.f
 	$(FC) $(FFLAGS) -c $< -I../../Source/
 

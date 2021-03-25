@@ -14,9 +14,9 @@ __author__ = "claude.duhr@durham.ac.uk"
 
 import cmath
 try:
-    from object_library import all_functions, Function
+    from .object_library import all_functions, Function
 except:
-    import object_library
+    from . import object_library
     all_functions, Function = object_library.all_functions , object_library.Function
 #
 # shortcuts for functions from cmath

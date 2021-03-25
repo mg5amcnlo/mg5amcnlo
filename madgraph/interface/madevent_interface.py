@@ -2117,6 +2117,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         self.load_results_db()        
         self.results.def_web_mode(self.web)
+
+        self.Gdirs = None
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
@@ -2457,6 +2459,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         self.banner = None
         self.Gdirs = None
+        
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2797,6 +2800,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.ask_run_configuration('parton')
         self.banner = None
         self.Gdirs = None
+
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -3386,7 +3390,9 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
-                
+            self.get_Gdir()
+            for P in P_zero_result:
+                self.Gdirs[0][pjoin(self.me_dir,'SubProcesses',P)] = []
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
@@ -3605,6 +3611,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
+
     
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -3621,7 +3628,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        
+
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
@@ -3634,15 +3641,20 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+
+                if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                    os.remove(pjoin(Gdir, 'events.lhe'))
+                    continue
+
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
                              result.get('axsec')
                              )
-                sum_xsec += result.get('xsec')
-                sum_xerru.append(result.get('xerru'))
-                sum_axsec += result.get('axsec')
-                
+ 
                 if len(AllEvent) >= 80: #perform a partial unweighting
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
@@ -3672,7 +3684,7 @@ Beware that this can be dangerous for local multicore runs.""")
                    
         self.results.add_detail('nb_event', nb_event)
     
-        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
         
         
@@ -4076,15 +4088,17 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList, force=True)
+            
 
-            for scale in PY8_Card['SysCalc:qCutList']:
-                if scale<(1.5*self.run_card['xqcut']):
-                    logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
-        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
-        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
-        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
-        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+            if PY8_Card['SysCalc:qCutList']!='auto':
+                for scale in PY8_Card['SysCalc:qCutList']:
+                    if scale<(1.5*self.run_card['xqcut']):
+                        logger.error(
+            'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
+            " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+            "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+            ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+            'It would be better/safer to use a larger qCut or a smaller xqcut.')
                 
             # Specific MLM settings
             # PY8 should not implement the MLM veto since the driver should do it
@@ -4453,6 +4467,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 shutil.copy(pythia_main,parallelization_dir)
                 # Add a safe card in parallelization
                 ParallelPY8Card = copy.copy(PY8_Card)
+                assert ParallelPY8Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
+
                 # Normalize the name of the HEPMCouput and lhe input
                 if HepMC_event_output:
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
@@ -5683,7 +5699,7 @@ tar -czf split_$1.tar.gz split_$1
             self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
-            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'), template=pjoin(self.me_dir, 'Cards','run_card.dat'))
             time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
             self.configured = time_mod

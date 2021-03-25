@@ -1,5 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.3(25/03/21)
+      OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
+          was close to the mass of the initial mass. boundary condition on t-channnel were
+	  incorrectly setup leading to strange spectrum in various distribution (very old bug)
+      OM: Fix an issue with a crash for loop computation
+      OM: more python3 fixing bug
+      OM: Fix a bug in the re-writting of the run_card when seed was specify leading to a wrong templating
+      OM: various small fix of crash/better logging/debug information
+     
 2.9.2(14/02/21)
       MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
         The generation of tau was not taking into account the information.

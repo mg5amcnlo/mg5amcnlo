@@ -907,9 +907,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock.close()
                 return
             else:
+                devnull = open(os.devnull, 'w')  
                 subprocess.call(['python', 'write_param_card.py'],
-                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
+                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'), stdout=devnull, stderr=devnull)
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
+                if not os.path.exists(default):
+                    files.cp(pjoin(self.me_dir, 'Cards','param_card_default.dat'), default)
 
 
             if amcatnlo and not keepwidth:
@@ -3298,7 +3301,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
                 else:
-                    raise self.InvalidCmd("%s is not recognized as a supported cluster format." % cluster_name)              
+                    raise self.InvalidCmd("%s is not recognized as a supported cluster format." % cluster_name)     
+                         
     def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
@@ -3986,7 +3990,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if __debug__ and 'global_flag' not in run_card.user_set:
                 self.make_opts_var['GLOBAL_FLAG'] = "-O -fbounds-check"
             else:
-                self.make_opts_var['ALOHA_FLAG'] = run_card['global_flag']     
+                self.make_opts_var['GLOBAL_FLAG'] = run_card['global_flag']     
             self.make_opts_var['ALOHA_FLAG'] = run_card['aloha_flag']     
             self.make_opts_var['MATRIX_FLAG'] = run_card['matrix_flag']
 
@@ -6517,6 +6521,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except InvalidCmd as error:
             logger.error("Invalid command: %s " % error)
         else:
+            self.reload_card(path)
             if hasattr(self, 'run_card'):
                 for pid, info in out.items():
                     total = 0
@@ -6870,6 +6875,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('AsPerGe creates the file succesfully')
         files.mv(card, '%s.beforeasperge' % card)
         files.mv('%s.new' % card, card)
+        self.reload_card(card)
 
 
 

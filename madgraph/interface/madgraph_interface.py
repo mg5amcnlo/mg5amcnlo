@@ -3583,16 +3583,12 @@ This implies that with decay chains:
                     sum([len(part) for part in
                                         self._curr_model['couplings'].values()])
             keys = list(self._curr_model['couplings'].keys())
-            def key_sort(x, y):
+            def key_sort(x):
                 if ('external',) == x:
                     return -1
-                elif ('external',) == y:
-                    return +1
-                elif  len(x) < len(y):
-                    return -1
                 else:
-                    return 1
-            keys.sort(key_sort)
+                    return len(x)
+            keys.sort(key=key_sort)
             for key in keys:
                 item = self._curr_model['couplings'][key]
                 text += '\ncouplings type: %s\n' % str(key)
@@ -5909,6 +5905,8 @@ This implies that with decay chains:
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
+                else:
+                    add_options.append('--with_fastjet')
            
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
@@ -8335,7 +8333,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
 
-            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist:
+            if self._export_format == 'madevent' and not 'no_helrecycling' in flaglist and \
+                not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude):
                 for (name, flag, out) in wanted_lorentz[:]:
                     if out == 0:
                         newflag = list(flag) + ['P1N']
