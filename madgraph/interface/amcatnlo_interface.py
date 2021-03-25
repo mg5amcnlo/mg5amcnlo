@@ -89,6 +89,7 @@ def generate_directories_fks_async(i):
     nexternal = curr_exporter.proc_characteristic['nexternal']
     ninitial = curr_exporter.proc_characteristic['ninitial']
     max_n_matched_jets = curr_exporter.proc_characteristic['max_n_matched_jets']
+    splitting_types = curr_exporter.proc_characteristic['splitting_types']
     #processes = me.born_matrix_element.get('processes')
     processes = me.born_me.get('processes')
     
@@ -97,9 +98,9 @@ def generate_directories_fks_async(i):
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types]
     else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -817,8 +818,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 for charac in ['nexternal', 'ninitial', 'splitting_types']:
                     proc_charac[charac] = self._curr_exporter.proc_characteristic[charac]
                 # ninitial and nexternal
-                proc_charac['nexternal'] = max([diroutput[3]['nexternal'] for diroutput in diroutputmap])
-                ninitial_set = set([diroutput[3]['ninitial'] for diroutput in diroutputmap])
+
+                
+                proc_charac['nexternal'] = max([diroutput[4] for diroutput in diroutputmap])
+                ninitial_set = set([diroutput[3] for diroutput in diroutputmap])
                 if len(ninitial_set) != 1:
                     raise MadGraph5Error("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
@@ -834,7 +837,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 # transform proc_charac['splitting_types'] into a set
                 splitting_types = set(proc_charac['splitting_types'])
                 for diroutput in diroutputmap:
-                    splitting_types = splitting_types.union(set(diroutput[3]['splitting_types']))
+                    splitting_types = splitting_types.union(set(diroutput[7]))
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
