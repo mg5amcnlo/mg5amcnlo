@@ -58,7 +58,7 @@ c    needed for the run_card handling
 c
       logical gridrun
       integer iseed,lhaid
-      character*100 pdlabel
+      character*7 pdlabel,pdsublabel(2)
       double precision sf1,sf2,pb1,pb2,d
 c-----
 c  Begin Code

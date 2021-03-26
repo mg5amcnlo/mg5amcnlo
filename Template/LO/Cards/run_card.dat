@@ -44,7 +44,7 @@ $frame
 #          eva=Effective W/Z/A Approx.       [21yy.zzzzz]            *
 #          none=No PDF, same as lhapdf with lppx=0                   *
 #*********************************************************************
-     %(pdlabel)s    = pdlabel     ! PDF set                                     
+$pdlabel
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 $ion_pdf
 #*********************************************************************

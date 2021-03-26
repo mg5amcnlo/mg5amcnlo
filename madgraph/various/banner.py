@@ -2270,8 +2270,77 @@ class PY8SubRun(PY8Card):
         self.add_param("Beams:LHEF", "events.lhe.gz")
 
 
+class RunBlock(object):
 
-runblock = collections.namedtuple('block', ('name', 'fields', 'template_on', 'template_off'))
+    def __init__(self, name, template_on, template_off, on_fields=False, off_fields=False):
+
+        self.name = name
+        self.template_on = template_on
+        self.template_off = template_off
+        if on_fields:
+            self.on_fields = on_fields
+        else:
+            self.on_fields = self.find_fields_from_template(self.template_on)
+        if off_fields:
+            self.off_fields = off_fields
+        else:
+            self.off_fields = self.find_fields_from_template(self.template_off)
+
+    @staticmethod
+    def find_fields_from_template(template):
+        """ return the list of fields from a template. checking line like
+        %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  """
+        
+        return re.findall(r"^\s*%\((.*)\)s\s*=\s*\1", template, re.M)
+
+    def get_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_on
+        else:
+            return self.template_off
+
+    def get_unused_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_off
+        else:
+            return self.template_on        
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used"""
+
+        if self.name in card.display_block:
+            return True
+
+        if any(f in card.user_set for f in self.off_fields):
+            return False
+
+        if any(f in card.user_set for f in self.on_fields):
+            return True
+
+        return False
+
+
+    def manage_parameters(self, card, written, to_write):
+        """manage written/to_write according to the template written"""
+
+        if status(card):
+            used = self.on_fields
+        else:
+            used = self.off_fields
+
+        for name in used:
+            written.add(name)
+            if name in to_write:
+                to_write.remove(name)
+    
+    def check_validity(self, runcard):
+        return
+
+    def create_default_for_process(self, run_card, proc_characteristic, history, proc_def):
+        return 
+
 class RunCard(ConfigFile):
 
     filename = 'run_card'
@@ -2433,17 +2502,6 @@ class RunCard(ConfigFile):
             raise Exception
         if not template_options:
             template_options = collections.defaultdict(str)
-
-        # check which optional block to write:
-        write_block= []
-        for b in self.blocks:
-            name = b.name
-            # check if the block has to be written
-            if name not in self.display_block and \
-               not any(f in self.user_set for f in b.fields):
-                continue
-            write_block.append(b.name)
-            
             
         if python_template:
             text = open(template,'r').read()
@@ -2459,10 +2517,7 @@ class RunCard(ConfigFile):
                 text = string.Template(text)
                 mapping = {}
                 for b in self.blocks:
-                    if b.name in write_block:
-                        mapping[b.name] = b.template_on
-                    else:
-                        mapping[b.name] = b.template_off
+                    mapping[b.name] =  b.get_template(self)
                 text = text.substitute(mapping)
 
             if not self.list_parameter:
@@ -2490,14 +2545,8 @@ class RunCard(ConfigFile):
                         continue
                     else:
                         this_group = this_group[0]
-                    if block_name in write_block:
-                        text += this_group.template_on % self
-                        for name in this_group.fields:
-                            written.add(name)
-                            if name in to_write:
-                                to_write.remove(name)
-                    else:
-                        text += this_group.template_off % self
+                    text += this_group.get_template(self) % self
+                    this_group.managed_parameters(written, to_write)
                     
                 elif len(nline) != 2:
                     text += line
@@ -2530,14 +2579,17 @@ class RunCard(ConfigFile):
                     text += line 
 
             for b in self.blocks:
-                if b.name not in write_block:
-                    continue
+                if b.status(self):
+                    to_check = b.on_fields
+                else:
+                    to_check = b.off_fields
+
                 # check if all attribute of the block have been written already
-                if all(f in written for f in b.fields):
+                if all(f in written for f in to_check):
                     continue
 
                 to_add = ['']
-                for line in b.template_on.split('\n'):                  
+                for line in b.get_template(self).split('\n'):               
                     nline = line.split('#')[0]
                     nline = nline.split('!')[0]
                     nline = nline.split('=')
@@ -2558,9 +2610,23 @@ class RunCard(ConfigFile):
                             to_write.remove(name)
                     else:
                         raise Exception
-                
-                if b.template_off and b.template_off in text:
-                    text = text.replace(b.template_off, '\n'.join(to_add))
+                template_off = b.get_unused_template(self)
+                if '%(' in template_off:
+                    template_off = template_off % self
+                    if template_off and template_off in text:
+                        text = text.replace(template_off, '\n'.join(to_add))
+                    else:
+                        template_off = template_off.replace(' ', '\s*')
+                        misc.sprint(template_off)
+                        misc.sprint([l for l in text.split('\n') if 'pdlabel' in line])
+                        text, n = re.subn(template_off, '\n'.join(to_add), text)
+                        if not n:
+                            misc.sprint(to_add)
+                            text += '\n'.join(to_add)
+                        else:
+                            misc.sprint(text)
+                elif template_off and template_off in text:
+                    text = text.replace(template_off, '\n'.join(to_add))
                 else:
                     text += '\n'.join(to_add)
 
@@ -2691,6 +2757,9 @@ class RunCard(ConfigFile):
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
                 logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
+
+        for block in self.blocks:
+            block.check_validity(self)
                
     default_include_file = 'run_card.inc'
 
@@ -2821,15 +2890,14 @@ class RunCard(ConfigFile):
             elif 'eta' in name:
                 self[name] = -1
             else:
-                self[name] = 0       
+                self[name] = 0      
 
-class RunCardLO(RunCard):
-    """an object to handle in a nice way the run_card information"""
-    
-    blocks = [
-#    HEAVY ION OPTIONAL BLOCK            
-        runblock(name='ion_pdf', fields=('nb_neutron1', 'nb_neutron2','nb_proton1','nb_proton2','mass_ion1', 'mass_ion2'),
-            template_on=\
+################################################################################################
+###  Define various template subpart for the LO Run_card
+################################################################################################
+
+# HEAVY ION ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Heavy ion PDF / rescaling of PDF                                   *
 #*********************************************************************
@@ -2841,28 +2909,29 @@ class RunCardLO(RunCard):
   %(nb_proton2)s    = nb_proton2 # number of proton for the second beam
   %(nb_neutron2)s    = nb_neutron2 # number of neutron for the second beam
   %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  
-""",
-            template_off='# To see heavy ion options: type "update ion_pdf"'),
-              
-              
-#    BEAM POLARIZATION OPTIONAL BLOCK
-        runblock(name='beam_pol', fields=('polbeam1','polbeam2'),
-            template_on=\
+"""
+template_off = "# To see heavy ion options: type \"update ion_pdf\""
+
+heavy_ion_block = RunBlock('ion_pdf', template_on=template_on, template_off=template_off)
+
+# Beam Polarization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Beam polarization from -100 (left-handed) to 100 (right-handed)    *
 #*********************************************************************
      %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
      %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
-""",                                               
-            template_off='# To see polarised beam options: type "update beam_pol"'),
+"""
+template_off = "# To see polarised beam options: type \"update beam_pol\""
 
-#    SYSCALC OPTIONAL BLOCK              
-        runblock(name='syscalc', fields=('sys_scalefact', 'sys_alpsfact','sys_matchscale','sys_pdf'),
-              template_on=\
-"""#**************************************
-# Parameter below of the systematics study
-#  will be used by SysCalc (if installed)
-#**************************************
+beam_pol_block = RunBlock('beam_pol', template_on=template_on, template_off=template_off)
+
+
+# SYSCALC ------------------------------------------------------------------------------------
+template_on = \
+"""#********************************************************
+# Parameter used by SysCalc  --code not supported anymore --
+#***********************************************************
 #
 %(sys_scalefact)s = sys_scalefact  # factorization/renormalization scale factor
 %(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
@@ -2871,12 +2940,14 @@ class RunCardLO(RunCard):
 %(sys_pdf)s = sys_pdf # list of pdf sets. (errorset not valid for syscalc)
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf
 #
-""", 
-    template_off= '# Syscalc is deprecated but to see the associate options type\'update syscalc\''),
+"""
+template_off = ""
 
-#    ECUT block (hidden it by default but for e+ e- collider)             
-        runblock(name='ecut', fields=('ej','eb','ea','el','ejmax','ebmax','eamax','elmax','e_min_pdg','e_max_pdg'),
-              template_on=\
+syscalc_block = RunBlock('syscalc', template_on=template_on, template_off=template_off)
+
+
+# ECUT ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Minimum and maximum E's (in the center of mass frame)              *
 #*********************************************************************
@@ -2890,30 +2961,39 @@ class RunCardLO(RunCard):
  %(elmax)s   = elmax ! maximum E for the charged leptons
  %(e_min_pdg)s = e_min_pdg ! E cut for other particles (use pdg code). Applied on particle and anti-particle
  %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50})
-""", 
-    template_off= '#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#'),
+"""
 
-#    Frame for polarization
-    runblock(name='frame', fields=('me_frame'),
-              template_on=\
+template_off = "#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#"
+
+ecut_block = RunBlock('ecut', template_on=template_on, template_off=template_off)
+
+
+# Frame for polarization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Frame where to evaluate the matrix-element (not the cut!) for polarization   
 #*********************************************************************
   %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
                                ! in which to evaluate the matrix-element
                                ! [1,2] means the partonic center of mass 
-""", 
-    template_off= ''),        
-#    Frame for eva scale evolution
-    runblock(name='eva_scale', fields=('eva_scale'),
-              template_on=\
+"""
+template_off = ""
+frame_block = RunBlock('frame', template_on=template_on, template_off=template_off)
+
+
+
+# EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
+template_on = \
 """  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
                          ! 0 for evo by q^2; 1 for evo by pT^2
-""", 
-    template_off= ''),        
-#    MERGING BLOCK:  MLM           
-        runblock(name='mlm', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
-            template_on=\
+"""
+template_off = ""
+eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
+
+
+
+# MLM Merging ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Matching parameter (MLM only)
 #*********************************************************************
@@ -2924,12 +3004,12 @@ class RunCardLO(RunCard):
  %(auto_ptj_mjj)s  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0
                                    ! (turn off for VBF and single top processes)
  %(xqcut)s   = xqcut   ! minimum kt jet measure between partons
-""",
-            template_off='# To see MLM/CKKW  merging options: type "update MLM" or "update CKKW"'),
+"""
+template_off = "# To see MLM/CKKW  merging options: type \"update MLM\" or \"update CKKW\""
+mlm_block = RunBlock('mlm', template_on=template_on, template_off=template_off)
 
-#    MERGING BLOCK:  CKKW         
-        runblock(name='ckkw', fields=('ktdurhham','dparameter','ptlund','pdgs_for_merging_cut'),
-            template_on=\
+# CKKW Merging ------------------------------------------------------------------------------------
+template_on = \
 """#***********************************************************************
 # Turn on either the ktdurham or ptlund cut to activate                *
 # CKKW(L) merging with Pythia8 [arXiv:1410.3012, arXiv:1109.4829]      *
@@ -2938,15 +3018,14 @@ class RunCardLO(RunCard):
  %(dparameter)s   =  dparameter
  %(ptlund)s  =  ptlund
  %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
-""",
-            template_off=''),
-    #    PS-OPTIM BLOCK:  PSOPTIM           
-        runblock(name='psoptim', fields=('job_strategy', 'hard_survey', 
-                                         'tmin_for_channel', 'survey_splitting',
-                                         'survey_nchannel_per_job', 'refine_evt_by_job'
-                                         'global_flag','aloha_flag', 'matrix_flag'
-                                         ),
-            template_on=\
+"""
+template_off = ""
+
+ckkw_block = RunBlock('ckkw', template_on=template_on, template_off=template_off)
+
+
+# Phase-Space Optimization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Phase-Space Optim (advanced)
 #*********************************************************************
@@ -2962,10 +3041,41 @@ class RunCardLO(RunCard):
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
-""",
-    template_off='# To see advanced option for Phase-Space optimization: type "update psoptim"'),
-    ]    
+"""
+template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
+
+psoptim_block = RunBlock('psoptim', template_on=template_on, template_off=template_off)
+
+# PDLABEL ------------------------------------------------------------------------------------
+class PDLabelBlock(RunBlock):
+
+    def check_validity(self, card):
+        """check which template is active and fill the parameter in the inactive one """
+        if self.status(card):
+            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2']:
+                card['pdlabel'] = 'lhapdf'
+            else:
+                card['pdlabel'] = 'none'
+        else:
+            card['pdlabel1'] = card['pdlabel']
+            card['pdlabel2'] = card['pdlabel']
+
+template_on = \
+"""     %(pdlabel1)s    = pdlabel1     ! PDF type for beam #1
+     %(pdlabel2)s    = pdlabel2     ! PDF type for beam #2 
+"""
+template_off = \
+"""     %(pdlabel)s    = pdlabel     ! PDF set """
+
+pdlabel_block = PDLabelBlock('pdlabel', template_on=template_on, template_off=template_off)
+
+
+class RunCardLO(RunCard):
+    """an object to handle in a nice way the run_card information"""
     
+    blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
+             frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
+             pdlabel_block]
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -3001,7 +3111,9 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdlabel"), 
+        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdlabel")
+        self.add_param("pdlabel1", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel (1)")
+        self.add_param("pdlabel2", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
@@ -3423,6 +3535,8 @@ class RunCardLO(RunCard):
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """
 
+        for block in self.blocks:
+            block.create_default_for_process(self, proc_characteristic, history, proc_def)
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
@@ -4485,6 +4599,9 @@ class RunCardNLO(RunCard):
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
         """
+
+        for block in self.blocks:
+            block.create_default_for_process(self, proc_characteristic, history, proc_def)
 
         # check for beam_id
         beam_id = set()
