@@ -1761,3 +1761,126 @@ c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
 
       return
       end
+
+
+
+      subroutine get_par_ren_gmu(invariants)
+      implicit none
+      include 'nexternal.inc'
+      double precision invariants(nexternal-1, nexternal-1)
+
+      include 'orders.inc'
+      integer imaxpara
+      parameter (imaxpara=6)
+      double complex amp_split_ewsud_der(amp_split_size,imaxpara)
+      common /to_amp_split_ewsud_der/ amp_split_ewsud_der
+      double complex amp_split_ewsud_der2(amp_split_size,imaxpara)
+      common /to_amp_split_ewsud_der2/ amp_split_ewsud_der2
+C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
+
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
+
+
+
+
+      double complex ls
+      double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
+      double complex dmt_QCD
+      double complex smallL, sdk_betaew_diag, sdk_cew_diag
+      external smallL, sdk_betaew_diag, sdk_cew_diag
+      double precision pi, cw2, sw2, Qt
+      parameter (pi=3.14159265358979323846d0)
+
+      include 'coupl.inc'
+      INCLUDE '../../Source/MODEL/input.inc'
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+      ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
+      ! the various parameters, amp_split_ewsud are filled with
+      ! the parameter-renormalisation contribution
+
+      cw2 = mdl_mw**2 / mdl_mz**2
+      sw2 = 1d0 - cw2
+
+      Qt=2d0/3d0
+
+      amp_split_ewsud(:) = (0d0,0d0)
+
+      ls = smallL(invariants(1,2))
+
+CC DAVIDE CHANGE HERE      
+CC      ! the parameter renormalisation in Denner-Pozzorini reads:
+CC      !  dM/de de + dM/dcw dcw + dM/dht dht + dM/dhh dhh
+CC
+CC      ! 1) dM/de de = dM/dalpha dalpha, with dalpha=2 Z_e / 4Pi
+CC      !    remember, we derive wrt alpha^-1
+CC      dalpha = -sdk_betaew_diag(22) / aewm1 
+CC      dalpha = dalpha * ls
+CC      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
+CC     $       dAlpha 
+
+      ! 2) dM/dcw = dM/dmw dmw + dM/dmz dmz
+      dmw2 = - (sdk_betaew_diag(24) - 4d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2/2d0/mdl_mw**2/sw2
+      dmw2 =  dmw2 * mdl_mw**2 * ls
+
+      dmz2 = - (sdk_betaew_diag(23) - 4d0 * sdk_cew_diag(250,0,1))
+     $      - 3d0*mdl_mt**2/2d0/mdl_mw**2/sw2
+      dmz2 =  dmz2 * mdl_mz**2 * ls
+
+      dmt = 1d0/4d0/sw2 + 1d0/8d0/sw2/cw2 + 3d0/2d0/cw2*Qt - 3d0/cw2*Qt**2  
+     $     + 3d0/8d0/sw2 * mdl_mt**2/mdl_mw**2
+
+      dmt =  dmt * mdl_mt * ls
+
+      dmh2 = 1d0/2d0/sw2 
+     $ * (
+     $ 9d0*mdl_mw**2/mdl_mh**2 * (1d0 + 1d0/2d0/cw2**2) 
+     $ - 3d0/2d0 * (1d0 + 1d0/2d0/cw2) + 15d0/4d0 * mdl_mh**2/mdl_mw**2
+     $) + 3d0/2d0/sw2 * mdl_mt**2/mdl_mw**2 * (1d0-6d0*mdl_mt**2/mdl_mh**2 )
+
+      dmh2 = dmh2 * mdl_mh**2 * ls
+
+      dt=1d0/(mdl_ee*dsqrt(sw2)*mdl_mw)*
+     .   (-3d0/2d0 * mdl_mw**2 * ( mdl_mz**2/cw2+2d0* mdl_mw**2)
+     .    -mdl_mh**2/4d0 *( 2d0* mdl_mw**2 + mdl_mz**2 +3d0* mdl_mh**2) + 6d0 * mdl_mt**4)
+   
+      dt = dt * ls 
+      
+      dheff_o_heff = mdl_ee/(2d0*dsqrt(sw2))*dt/(mdl_mw*mdl_mh**2)
+
+      dmt_QCD =  - 3d0 * 4d0/3d0 
+
+      dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
+
+
+
+      amp_split_ewsud(:) = amp_split_ewsud(:) + 
+     $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
+     $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 +
+     $      amp_split_ewsud_der(:,4) * dmt +
+     $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
+     $      amp_split_ewsud_der(:,6) * dheff_o_heff 
+
+      if (sud_mod.eq.2) then
+       amp_split_ewsud(:) = amp_split_ewsud(:) +
+     $      amp_split_ewsud_der2(:,4) * dmt_QCD 
+
+c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
+
+      endif       
+ 
+
+
+      ! LEAVE EMPTY FOR THE MOMENT
+
+
+
+!    correct by a factor 2 ok?
+      amp_split_ewsud(:)=amp_split_ewsud(:)/2d0
+
+      return
+      end

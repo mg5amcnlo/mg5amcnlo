@@ -2777,9 +2777,15 @@ Parameters              %(params)s\n\
             replace_dict['mename'] = 'SBORN_ONEHEL'
             replace_dict['hell'] = 'hell,'
 
-        logger.warning('Warning, the parameter renormalisation should be done in the alpha(MZ) scheme')
-        file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/ewsudakov_numder_me_alphamz.inc')).read()
+        if not 'Gmu' in  self.model.get('name'):
+            logger.warning('Warning, the parameter renormalisation should be done in the alpha(MZ) scheme')
+            file = open(os.path.join(_file_path, \
+                              'iolibs/template_files/ewsudakov_numder_me_alphamz.inc')).read()
+        else:
+            logger.warning('Warning, the parameter renormalisation should be done in the Gmu scheme')
+            file = open(os.path.join(_file_path, \
+                              'iolibs/template_files/ewsudakov_numder_me_gmu.inc')).read()
+
         file = file % replace_dict
         
         # Write the file
