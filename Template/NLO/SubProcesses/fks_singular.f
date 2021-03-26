@@ -205,12 +205,20 @@ c   approximation
       common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
       double complex amp_split_ewsud_par(amp_split_size)
       common /to_amp_ewsud_par/amp_split_ewsud_par
+      ! sudakov mode
+      integer sud_mod
+      common /to_sud_mod/ sud_mod
 
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
-      call sudakov_wrapper(p_born)
-      do iamp=1, amp_split_size
+
+      ! sud_mod = 0
+      do sud_mod = 0,1
+
+       call sborn(p_born,wgt_c)
+       call sudakov_wrapper(p_born)
+       do iamp=1, amp_split_size
         if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
      $      amp_split_ewsud_ssc(iamp).eq.0d0.and.
      $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
@@ -230,7 +238,9 @@ c   approximation
      $        amp_split_ewsud_par(iamp))
      $       *f_b/g**(qcd_power)
         wgt1=wgt1*2d0 ! missing factor in the sudakov correction
-        call add_wgt(2,orders,wgt1,0d0,0d0)
+        ! the type will be 20+the value of the sudakov mode
+        call add_wgt(20+sud_mod,orders,wgt1,0d0,0d0)
+       enddo
       enddo
       call cpu_time(tAfter)
       t_ewsud=t_ewsud+(tAfter-tBefore)
@@ -1454,6 +1464,7 @@ c     type=12: MC subtraction with n-body kin.
 c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
 c     type=15: virt-trick: average born contribution
+c     type=20+x: EW sudakov, x=sud_mod
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -1673,7 +1684,8 @@ c subtr term
          enddo
          H_event(icontr)=.true.
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
-     $        .or. type.eq.14 .or. type.eq.15)then
+     $        .or. type.eq.14 .or. type.eq.15
+     $        .or. (type.ge.20 .and. type.le.22)) then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
@@ -2440,6 +2452,9 @@ c     soft-collinear counter
             appl_QES2(4,pos)=scales2(1,i)
             appl_muR2(4,pos)=scales2(2,i)
             appl_muF2(4,pos)=scales2(3,i)
+         else
+            write(*,*) 'ERROR in fill_applgrid_weights', itype(i)
+            stop 1
          endif
       enddo
       return
@@ -2598,6 +2613,8 @@ c the momenta are identical.
             plot_id(i)=20 ! Born
          elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
+         elseif(itype(i).ge.20.and.itype(i).le.22) then
+             plot_id(i)=100+itype(i)-20    ! EW sudakov (100-102)
          else
             plot_id(i)=12 ! soft-virtual and counter terms
          endif
