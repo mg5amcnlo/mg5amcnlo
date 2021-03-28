@@ -1,0 +1,4 @@
+  complex(kindr2) &   !|RCTYPE=intrinsic
+!#  type(dd_complex) &  !|RCTYPE=ddtype
+!#  type(qd_complex) &  !|RCTYPE=qdtype
+!#  type(mp_complex) &  !|RCTYPE=mptype

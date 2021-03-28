@@ -1786,7 +1786,7 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       double complex ls
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
-      double complex dmt_QCD
+      double complex dmt_QCD, dGmu, dGmudalpha, dGmudmz2, dGmudmw2
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
       external smallL, sdk_betaew_diag, sdk_cew_diag
       double precision pi, cw2, sw2, Qt
@@ -1812,15 +1812,15 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       ls = smallL(invariants(1,2))
 
 CC DAVIDE CHANGE HERE      
-CC      ! the parameter renormalisation in Denner-Pozzorini reads:
-CC      !  dM/de de + dM/dcw dcw + dM/dht dht + dM/dhh dhh
-CC
-CC      ! 1) dM/de de = dM/dalpha dalpha, with dalpha=2 Z_e / 4Pi
-CC      !    remember, we derive wrt alpha^-1
-CC      dalpha = -sdk_betaew_diag(22) / aewm1 
-CC      dalpha = dalpha * ls
-CC      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
-CC     $       dAlpha 
+      ! the parameter renormalisation in Denner-Pozzorini reads:
+      !  dM/de de + dM/dcw dcw + dM/dht dht + dM/dhh dhh
+
+      ! 1) dM/de de = dM/dalpha dalpha, with dalpha=2 Z_e / 4Pi
+      !    remember, we derive wrt alpha^-1
+      dalpha = -sdk_betaew_diag(22) / aewm1 
+      dalpha = dalpha * ls
+c      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
+c     $       dAlpha 
 
       ! 2) dM/dcw = dM/dmw dmw + dM/dmz dmz
       dmw2 = - (sdk_betaew_diag(24) - 4d0 * sdk_cew_diag(250,0,1))
@@ -1830,6 +1830,15 @@ CC     $       dAlpha
       dmz2 = - (sdk_betaew_diag(23) - 4d0 * sdk_cew_diag(250,0,1))
      $      - 3d0*mdl_mt**2/2d0/mdl_mw**2/sw2
       dmz2 =  dmz2 * mdl_mz**2 * ls
+
+      dGmudalpha=  MDL_GF*aewm1 
+  
+      dGmudmz2= MDL_GF*(-mdl_mw**2/mdl_mz**4/(1d0-mdl_mw**2/mdl_mz**2))
+
+      dGmudmw2=MDL_GF*(-1d0/mdl_mw**2+1d0/mdl_mz**2/(1d0-mdl_mw**2/mdl_mz**2))
+
+      dGmu=dGmudalpha*dalpha+dGmudmz2*dmz2+dGmudmw2*dmw2
+
 
       dmt = 1d0/4d0/sw2 + 1d0/8d0/sw2/cw2 + 3d0/2d0/cw2*Qt - 3d0/cw2*Qt**2  
      $     + 3d0/8d0/sw2 * mdl_mt**2/mdl_mw**2
@@ -1856,7 +1865,7 @@ CC     $       dAlpha
 
       dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
 
-
+      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) *dGmu
 
       amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
