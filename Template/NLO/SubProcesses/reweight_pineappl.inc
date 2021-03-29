@@ -1,5 +1,5 @@
 c Common blocks for NLO or aMC@NLO reweighting
-c USed only for interfacing with applgrid
+c Used only for interfacing with APPLgrid/PineAPPL
 c Conventions for array relevant to NLO computations:
 c   i=1,2,3,4  -> event, soft, collinear, soft-collinear
 c   ==>  i = icountevts+2 for counterevents

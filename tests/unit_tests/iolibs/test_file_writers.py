@@ -15,13 +15,15 @@
 
 """Unit test library for the writer classes"""
 
-import StringIO
+from __future__ import absolute_import
+from io import StringIO
 import re
 import os
 
 import tests.unit_tests as unittest
 
 import madgraph.iolibs.file_writers as writers
+from six.moves import zip
 
 #===============================================================================
 # FortranWriterTest
@@ -148,7 +150,7 @@ C       Test
     def test_write_fortran_error(self):
         """Test that a non-string gives an error"""
 
-        fsock = StringIO.StringIO()
+        fsock = StringIO()
 
         non_strings = [1.2, ["hej"]]
 
@@ -174,7 +176,7 @@ class CPPWriterTest(unittest.TestCase, CheckFileCreate):
     def test_write_cplusplus_line(self):
         """Test writing a cplusplus line"""
 
-        fsock = StringIO.StringIO()
+        fsock = StringIO()
 
         lines = """#ifndef Pythia8_SigmaEW_H
 #define Pythia8_SigmaEW_H
@@ -373,7 +375,7 @@ void Sigma2ff2fftgmZ::setIdColAcol()
     def test_write_cplusplus_error(self):
         """Test that a non-string gives an error"""
 
-        fsock = StringIO.StringIO()
+        fsock = StringIO()
 
         non_strings = [1.2, ["hej"]]
 

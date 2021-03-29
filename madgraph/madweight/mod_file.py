@@ -137,12 +137,15 @@
 ####################################################################################################
 
 # Module
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import re
 import shutil
 import string
 from time import time
+from six.moves import range
 
 # 1 ###############################################################
 def mod_file(mod_file,rule_file='',write='',opt={}):
@@ -316,7 +319,7 @@ class Mod_file:
             
 
         ## treat end file:
-        if self.dico.has_key("S-END"):
+        if "S-END" in self.dico:
             if not end_file.search(text_to_write):
                 text_to_write+=self.dico["S-END"]
 
@@ -409,7 +412,7 @@ class Mod_file:
                 except:
                     tag=special_begin.search(line).group('tag')                
                 if rec_mode:
-                    print 'error in ',rule_file,' wrong termination for ',tag,' rule'
+                    print('error in ',rule_file,' wrong termination for ',tag,' rule')
                     sys.exit()
                 rec_mode=1
                 continue        
@@ -419,7 +422,7 @@ class Mod_file:
                 except:
                     tag=special_end.search(line).group('tag')             
                 if rec_mode==0:
-                    print 'error in ',rule_file,'no initial tag:', tag
+                    print('error in ',rule_file,'no initial tag:', tag)
                     sys.exit()
                 #detect one-line replacment => supress blank and '\n'
                 if replace_text.count('\n')==1:
@@ -436,7 +439,7 @@ class Mod_file:
                 replace_text+=line
 
         if rec_mode:
-            print 'error in ',rule_file,' wrong end-file termination '
+            print('error in ',rule_file,' wrong end-file termination ')
             sys.exit()
         return self.dico
 
@@ -458,8 +461,8 @@ class Mod_file:
                     return self.dico[tag]
                 except:
                     if tag not in self.nowarning and self.nowarning != 'all':
-                        print 'WARNING: tag:',tag,' not defined in file ',self.file
-                        print 'no modification done for this tag'
+                        print('WARNING: tag:',tag,' not defined in file ',self.file)
+                        print('no modification done for this tag')
                     if text:
                         output = '$B$ '+tag+' $B$'+ self.mod_one_text(text)+' $E$ '+tag+' $E$'
                     else:
@@ -537,8 +540,8 @@ class Mod_file:
             if line[:6]==comment_tag+'|    ':
                 line=line[6:]
             else:
-                print [line[:6]]
-                print 'failed decomment'
+                print([line[:6]])
+                print('failed decomment')
 
             if line[-1]=='|':
                 line=line[:-1]
@@ -610,7 +613,7 @@ if '__main__' == __name__:
 
     import sys
     sys.path.append('./Source/MadWeight/Python')
-    import create_run
+    from . import create_run
     import unittest
     import os, shutil
     

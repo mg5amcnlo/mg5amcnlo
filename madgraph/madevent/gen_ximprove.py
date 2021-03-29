@@ -18,6 +18,7 @@
 """
 from __future__ import division
 
+from __future__ import absolute_import
 import collections
 import os
 import glob
@@ -28,6 +29,9 @@ import subprocess
 import shutil
 import stat
 import sys
+import six
+from six.moves import range
+from six.moves import zip
 
 try:
     import madgraph
@@ -41,6 +45,8 @@ except ImportError:
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
+    if six.PY3:
+        import internal.hel_recycle as hel_recycle
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -51,6 +57,8 @@ else:
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
+    if six.PY3:
+        import madgraph.madevent.hel_recycle as hel_recycle
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
@@ -106,11 +114,10 @@ class gensym(object):
         #if the user defines it in the run_card:
         if self.run_card['survey_splitting'] != -1:
             self.splitted_grid = self.run_card['survey_splitting']
-        if self.run_card['survey_nchannel_per_job'] != -1:
+        if self.run_card['survey_nchannel_per_job'] != 1 and 'survey_nchannel_per_job' in self.run_card.user_set:
             self.combining_job = self.run_card['survey_nchannel_per_job']        
         elif self.run_card['hard_survey'] > 1:
             self.combining_job = 1
-            
             
         
         self.splitted_Pdir = {}
@@ -118,10 +125,182 @@ class gensym(object):
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.lastoffset = {}
     
+    done_warning_zero_coupling = False
+    def get_helicity(self, to_submit=True, clean=True):
+        """launch a single call to madevent to get the list of non zero helicity"""
+    
+        self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
+        subproc = self.subproc
+        P_zero_result = []
+        nb_tot_proc = len(subproc)
+        job_list = {}      
+        
+          
+        for nb_proc,subdir in enumerate(subproc):
+            self.cmd.update_status('Compiling for process %s/%s.' % \
+                               (nb_proc+1,nb_tot_proc), level=None)
+
+            subdir = subdir.strip()
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
+            logger.info('    %s ' % subdir)
+            
+            self.cmd.compile(['madevent_forhel'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
+                raise Exception('Error make madevent_forhel not successful')  
+            
+            if not os.path.exists(pjoin(Pdir, 'Hel')):
+                os.mkdir(pjoin(Pdir, 'Hel'))
+                ff = open(pjoin(Pdir, 'Hel', 'input_app.txt'),'w')
+                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n 1\n')
+                ff.close()
+            else:
+                try:
+                    os.remove(pjoin(Pdir, 'Hel','results.dat'))
+                except Exception:
+                    pass         
+            # Launch gensym
+            p = misc.Popen(['../madevent_forhel < input_app.txt'], stdout=subprocess.PIPE, 
+                                 stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
+            #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
+            (stdout, _) = p.communicate(" ".encode())
+            stdout = stdout.decode('ascii')
+            if os.path.exists(pjoin(self.me_dir,'error')):
+                raise Exception(pjoin(self.me_dir,'error')) 
+                # note a continue is not enough here, we have in top to link
+                # the matrixX_optim.f to matrixX_orig.f to let the code to work
+                # after this error.
+
+            if 'no events passed cuts' in stdout:
+                raise Exception
+
+            all_zamp = set()
+            all_hel = set()
+            zero_gc = list()
+            all_zampperhel = set()
+            all_bad_amps_perhel = set()
+            
+            for line in stdout.splitlines():
+                if 'GC_' in line:
+                    lsplit = line.split()
+                    if float(lsplit[2]) ==0 == float(lsplit[3]):
+                        zero_gc.append(lsplit[0])
+                if 'Matrix Element/Good Helicity:' in line:
+                    all_hel.add(tuple(line.split()[3:5]))
+                if 'Amplitude/ZEROAMP:' in line:
+                    all_zamp.add(tuple(line.split()[1:3]))
+                if 'HEL/ZEROAMP:' in line:
+                    nb_mat, nb_hel, nb_amp = line.split()[1:4]
+                    if (nb_mat, nb_hel) not in all_hel:
+                        continue
+                    if (nb_mat,nb_amp) in all_zamp:
+                        continue
+                    all_zampperhel.add(tuple(line.split()[1:4]))
+
+            if zero_gc and not gensym.done_warning_zero_coupling:
+                gensym.done_warning_zero_coupling = True
+                logger.warning("The optimizer detects that you have coupling evaluated to zero: \n"+\
+                                "%s\n" % (' '.join(zero_gc)) +\
+                               "This will slow down the computation. Please consider using restricted model:\n" +\
+                               "https://answers.launchpad.net/mg5amcnlo/+faq/2312")
+            
+                
+            all_good_hels = collections.defaultdict(list)
+            for me_index, hel in all_hel:
+                all_good_hels[me_index].append(int(hel))                           
+                               
+            #print(all_hel)
+            if self.run_card['hel_zeroamp']:
+                all_bad_amps = collections.defaultdict(list)
+                for me_index, amp in all_zamp:
+                    all_bad_amps[me_index].append(int(amp))
+                    
+                all_bad_amps_perhel = collections.defaultdict(list)
+                for me_index, hel, amp in all_zampperhel:
+                    all_bad_amps_perhel[me_index].append((int(hel),int(amp)))    
+                    
+            elif all_zamp:
+                nb_zero = sum(int(a[1]) for a in all_zamp)
+                if zero_gc:
+                    logger.warning("Those zero couplings lead to %s Feynman diagram evaluated to zero (on 10 PS point),\n" % nb_zero +\
+                                   "This part can optimize if you set the flag  hel_zeroamp to True in the run_card."+\
+                                   "Note that restricted model will be more optimal.")
+                else:
+                    logger.warning("The optimization detected that you have %i zero matrix-element for this SubProcess: %s.\n" % nb_zero +\
+                                   "This part can optimize if you set the flag  hel_zeroamp to True in the run_card.")
+            
+            #check if we need to do something and write associate information"
+            data = [all_hel, all_zamp, all_bad_amps_perhel]
+            if not self.run_card['hel_zeroamp']:
+                data[1] = ''
+            if not self.run_card['hel_filtering']:
+                data[0] = ''
+            data = str(data)
+            if os.path.exists(pjoin(Pdir,'Hel','selection')):
+                old_data = open(pjoin(Pdir,'Hel','selection')).read()
+                if old_data == data:
+                    continue
+                
+            
+            with open(pjoin(Pdir,'Hel','selection'),'w') as fsock:
+                fsock.write(data)        
+                
+        
+            for matrix_file in misc.glob('matrix*orig.f', Pdir):
+    
+                split_file = matrix_file.split('/')
+                me_index = split_file[-1][len('matrix'):-len('_orig.f')]
+
+                basename = split_file[-1].replace('orig', 'optim')
+                split_out = split_file[:-1] + [basename]
+                out_file = pjoin('/', '/'.join(split_out))
+
+                basename = 'template_%s' % split_file[-1].replace("_orig", "")
+                split_templ = split_file[:-1] + [basename]
+                templ_file = pjoin('/', '/'.join(split_templ))
+
+                # Convert to sorted list for reproducibility
+                #good_hels = sorted(list(good_hels))
+                good_hels = [str(x) for x in sorted(all_good_hels[me_index])]
+                if self.run_card['hel_zeroamp']:
+                    
+                    bad_amps = [str(x) for x in sorted(all_bad_amps[me_index])]
+                    bad_amps_perhel = [x for x in sorted(all_bad_amps_perhel[me_index])]
+                else:
+                    bad_amps = [] 
+                    bad_amps_perhel = []
+                if __debug__:
+                    mtext = open(matrix_file).read()
+                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
+                if len(good_hels) == 1:
+                    files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                    continue # avoid optimization if onlye one helicity
+                recycler = hel_recycle.HelicityRecycler(good_hels, bad_amps, bad_amps_perhel)
+                # In case of bugs you can play around with these:
+                recycler.hel_filt = self.run_card['hel_filtering']
+                recycler.amp_splt = self.run_card['hel_splitamp']
+                recycler.amp_filt = self.run_card['hel_zeroamp']
+
+                recycler.set_input(matrix_file)
+                recycler.set_output(out_file)
+                recycler.set_template(templ_file)              
+                recycler.generate_output_file()
+                del recycler
+
+            # with misc.chdir():
+            #     pass
+
+            #files.ln(pjoin(Pdir, 'madevent_forhel'), Pdir, name='madevent') ##to be removed
+
+        return {}, P_zero_result
+
+    
     def launch(self, to_submit=True, clean=True):
         """ """
-        
-        self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+
+        if not hasattr(self, 'subproc'):
+            self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
         subproc = self.subproc
         
@@ -151,14 +330,14 @@ class gensym(object):
             #compile gensym
             self.cmd.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
-                raise Exception, 'Error make gensym not successful'  
+                raise Exception('Error make gensym not successful')  
             
             # Launch gensym
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, _) = p.communicate('')
-            
+            (stdout, _) = p.communicate(''.encode())
+            stdout = stdout.decode('ascii')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)
@@ -181,11 +360,11 @@ class gensym(object):
                         continue
                     else:
                         if done:
-                            raise Exception, 'Parsing error in gensym: %s' % stdout 
+                            raise Exception('Parsing error in gensym: %s' % stdout) 
                         job_list[Pdir] = l.split()        
                         done = True
                 if not done:
-                    raise Exception, 'Parsing error in gensym: %s' % stdout
+                    raise Exception('Parsing error in gensym: %s' % stdout)
                      
             self.cmd.compile(['madevent'], cwd=Pdir)
             if to_submit:
@@ -222,7 +401,7 @@ class gensym(object):
                 for G in to_resub:
                     try:
                         shutil.rmtree(pjoin(P, 'G%s' % G))
-                    except Exception, error:
+                    except Exception as error:
                         misc.sprint(error)
                         pass
             misc.sprint(to_resub) 
@@ -246,7 +425,7 @@ class gensym(object):
                 for path, dirs in job_list.items():
                     self.submit_to_cluster({path:dirs})
                 return
-            path, value = job_list.items()[0]
+            path, value = list(job_list.items())[0]
             nexternal = self.cmd.proc_characteristics['nexternal']
             current = open(pjoin(path, "nexternal.inc")).read()
             ext = re.search(r"PARAMETER \(NEXTERNAL=(\d+)\)", current).group(1)
@@ -288,7 +467,7 @@ class gensym(object):
            This is the old mode which is still usefull in single core"""
      
         # write the template file for the parameter file   
-        self.write_parameter(parralelization=False, Pdirs=job_list.keys())
+        self.write_parameter(parralelization=False, Pdirs=list(job_list.keys()))
         
         
         # launch the job with the appropriate grouping
@@ -347,7 +526,7 @@ class gensym(object):
             self.lastoffset[(Pdir, G)] = 0 
         
         # resubmit the new jobs            
-        for i in xrange(int(nb_job)):
+        for i in range(int(nb_job)):
             name = "G%s_%s" % (G,i+1)
             self.lastoffset[(Pdir, G)] += 1
             offset = self.lastoffset[(Pdir, G)]            
@@ -415,7 +594,7 @@ class gensym(object):
             need_submit = False
         elif self.cmd.opts['accuracy'] < 0:
             #check for luminosity
-            raise Exception, "Not Implemented"
+            raise Exception("Not Implemented")
         elif self.abscross[(Pdir,G)] == 0:
             need_submit = False 
         else:   
@@ -621,7 +800,7 @@ For offline investigation, the problematic discarded events are stored in:
             path = pjoin(Pdir, "G%s_%s" % (G, i+1))
             try: 
                 os.remove(pjoin(path, 'grid_information'))
-            except OSError, oneerror:
+            except OSError as oneerror:
                 if oneerror.errno != 2:
                     raise
         return grid_calculator, cross, error
@@ -643,7 +822,7 @@ For offline investigation, the problematic discarded events are stored in:
              logger.warning(msg%(G,EPS_fraction))
         elif EPS_fraction > 0.01:
              logger.critical((msg%(G,EPS_fraction)).replace('might', 'can'))
-             raise Exception, (msg%(G,EPS_fraction)).replace('might', 'can')
+             raise Exception((msg%(G,EPS_fraction)).replace('might', 'can'))
     
     def get_current_axsec(self):
         
@@ -800,14 +979,20 @@ class gen_ximprove(object):
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
 
+        if hasattr(cls, 'force_class'):
+            if cls.force_class == 'gridpack':
+                return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
+            elif cls.force_class == 'loop_induced':
+                return super(gen_ximprove, cls).__new__(gen_ximprove_share)
+        
         if cmd.proc_characteristics['loop_induced']:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
         elif cmd.run_card["job_strategy"] == 2:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
         else:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
+            return super(gen_ximprove, cls).__new__(gen_ximprove_v4)
             
             
     def __init__(self, cmd, opt=None):
@@ -878,7 +1063,7 @@ class gen_ximprove(object):
                 targettype = type(getattr(self, key))
                 setattr(self, key, self.format_variable(value, targettype, key))
             else:
-                raise Exception, '%s not define' % key
+                raise Exception('%s not define' % key)
                         
             
         # special treatment always do outside the loop to avoid side effect
@@ -906,15 +1091,14 @@ class gen_ximprove(object):
         logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
-        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
-                                                x.get('luminosity') > 0 else -1) 
+        all_channels.sort(key= lambda x:x.get('luminosity'), reverse=True) 
                           
         to_refine = []
         for C in all_channels:
             if C.get('axsec') == 0:
                 continue
             if goal_lum/(C.get('luminosity')+1e-99) >= 1 + (self.gen_events_security-1)/2:
-                logger.debug("channel %s is at lum=%s (need to improve by %s) (xsec=%s pb)", C.name,  C.get('luminosity'), goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'))
+                logger.debug("channel %s need to improve by %.2f (xsec=%s pb, iter=%s)", C.name, goal_lum/(C.get('luminosity')+1e-99), C.get('xsec'), int(C.get('maxit')))
                 to_refine.append(C)
             elif C.get('xerr') > max(C.get('axsec'),
               (1/(100*math.sqrt(self.err_goal)))*all_channels[-1].get('axsec')):
@@ -991,7 +1175,7 @@ class gen_ximprove_v4(gen_ximprove):
         f.close()
     
     def increase_precision(self, rate=3):
-        misc.sprint(rate)
+        #misc.sprint(rate)
         if rate < 3:
             self.max_event_in_iter = 20000
             self.min_events = 7500
@@ -1613,12 +1797,13 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
     max_event_in_iter = 4000
     min_event_in_iter = 500
-    combining_job = sys.maxint
+    combining_job = sys.maxsize
     gen_events_security = 1.00
 
     def __new__(cls, *args, **opts):
-        
-        return super(gen_ximprove, cls).__new__(cls, *args, **opts)
+
+        cls.force_class = 'gridpack'
+        return super(gen_ximprove_gridpack, cls).__new__(cls, *args, **opts)
 
     def __init__(self, *args, **opts):
         
@@ -1647,8 +1832,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 #        logger.info('Effective Luminosity %s pb^-1', goal_lum)
         
         all_channels = sum([list(P) for P in self.results],[])
-        all_channels.sort(cmp= lambda x,y: 1 if y.get('luminosity') - \
-                                                x.get('luminosity') > 0 else -1) 
+        all_channels.sort(key=lambda x : x.get('luminosity'), reverse=True)
                           
         to_refine = []
         for C in all_channels:

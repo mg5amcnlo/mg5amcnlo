@@ -47,6 +47,7 @@ c
 c     DATA
 c
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
@@ -155,7 +156,7 @@ c
 c     Arguments
 c
       integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs)
-      double precision prwidth(-max_branch:-1,lmaxconfigs)  !Propagotor width
+      double precision prwidth(-max_branch:-1,lmaxconfigs) !Propagotor width
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer jcomp
@@ -200,7 +201,8 @@ c     ncode is number of digits needed for the code
                enddo
                do j=1,nexternal-3
 c                  write(*,*) 'Width',prwidth(-j,i),j,ic                 
-                  if (prwidth(-j,i) .gt. 0d0 .and. iforest(1,-j,i).ne.1) then
+            if (.not.(iforest(1,-j,i) .eq. 1 .or. prwidth(-j,i).le.0.or.
+     &                       (nincoming.eq.2.and.iforest(1,-j,i) .eq. 2))) then
                      nbw=nbw+1
 c                     write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
@@ -354,7 +356,8 @@ c     Now determine which propagators are part of the same
 c     chain and could potentially conflict
 c
       i=1
-      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
+      do while (i .lt. nexternal-2 .and. .not. (
+     &    itree(1,-i) .eq. 1.or.(nincoming.eq.2.and.itree(1,-i).eq.2)))
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          mtot=mtot-xmass(-i)
          if (prwidth(-i,iconfig) .gt. 0d0) then

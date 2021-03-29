@@ -12,11 +12,13 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
+from __future__ import absolute_import
 import os
 import sys
 import tests.unit_tests as unittest
 
 import madgraph.various.FO_analyse_card as FO_analyse_card
+from six.moves import zip
 
 
 class TestFOAnalyseCard(unittest.TestCase):

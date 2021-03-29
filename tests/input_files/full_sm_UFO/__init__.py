@@ -1,10 +1,11 @@
 
-import particles
-import couplings
-import lorentz
-import parameters
-import vertices
-import write_param_card
+from __future__ import absolute_import
+from . import particles
+from . import couplings
+from . import lorentz
+from . import parameters
+from . import vertices
+from . import write_param_card
 
 
 all_particles = particles.all_particles

@@ -29,8 +29,8 @@ c
       integer nevents
       character*7 event_norm
       common /event_normalisation/event_norm
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer idum
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
@@ -114,7 +114,7 @@ c Set alphaS(mZ)
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
-      if (nlo_ps) then
+      if (nlo_ps.or.pineappl) then
 C Fill common block for Les Houches init info
          do i=1,2
             if(lpp(i).eq.1.or.lpp(i).eq.2) then

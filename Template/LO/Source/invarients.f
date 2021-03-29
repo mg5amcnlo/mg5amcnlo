@@ -185,10 +185,10 @@ c     &         real(-dot(ptemp,ptemp)/s)
       end
 
 
-      subroutine map_invarients(Minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+      subroutine map_invarients(Minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
 c****************************************************************************
 c     Determines mappings for each structure of invarients onto integration
-c     variables.  Input: Ninvar, iforest.  Output: Minvar, ninvar
+c     variables.  Input: Ninvar, iforest.  Output: Minvar, ninvar, nb_tchannel
 c****************************************************************************
       implicit none
 c
@@ -201,11 +201,13 @@ c     Arguments
 c
       integer Minvar(maxdim,lmaxconfigs),nconfigs,ninvar,nexternal,nincoming
       integer mincfig,maxcfig
+      integer nb_tchannel
 c
 c     Local
 c
       integer iconfig, jgrid,j, nbranch
       logical found,tchannel
+      integer ns_channel
 c
 c     Global
 c
@@ -224,20 +226,30 @@ c
 c     
 c     Try simple mapping if nconfigs = 1
 c
-
+      nb_tchannel = 0
       if (nconfigs .eq. 1) then
 c         do j=1,3*nbranch-4+2
          do j=1,maxdim
             minvar(j,mincfig)=j
          enddo
          jgrid=j-1
+
+         write(*,*) 'Determine nb_t'
+         ns_channel=1
+         do while((iforest(1,-ns_channel,mincfig) .ne. 1.and.iforest(1,-ns_channel,mincfig) .ne. 2).and.ns_channel.lt.nbranch)
+            ns_channel=ns_channel+1
+         enddo
+         ns_channel=ns_channel - 1
+         nb_tchannel=nbranch-ns_channel-1
+         write(*,*) 'T-channel found: ',nb_tchannel 
+         
       else
 c      if (ep) jgrid=1
 c      if (pp) jgrid=2
       do iconfig=mincfig,maxcfig
          tchannel = .false.         
          do j=1,nbranch-1
-            if (iforest(1,-j,iconfig) .eq. 1) then
+            if (iforest(1,-j,iconfig) .eq. 1.or.(nincoming.eq.2.and.iforest(1,-j,iconfig) .eq. 2)) then
                tchannel=.true.
             endif
             jgrid=jgrid+1

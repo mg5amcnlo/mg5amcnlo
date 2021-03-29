@@ -24,7 +24,7 @@ C
       integer mode,Irt,i,j
       double precision xlast(2),xmulast(2),pdflast(-7:7,2),q2max
       character*7 pdlabellast(2)
-      double precision epa_electron,epa_proton
+      double precision epa_lepton,epa_proton
       integer ipart,ireuse,iporg,ihlast(2)
       save xlast,xmulast,pdflast,pdlabellast,ihlast
       data xlast/2*-99d9/
@@ -131,8 +131,8 @@ c     saved. 'pdflast' is filled below.
 
       if(iabs(ipart).eq.7.and.ih.gt.1) then
          q2max=xmu*xmu
-         if(ih.eq.3) then       !from the electron
-            pdg2pdf=epa_electron(x,q2max)
+         if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron or muonn
+            pdg2pdf=epa_lepton(x,q2max, ih)
          elseif(ih .eq. 2) then !from a proton without breaking
             pdg2pdf=epa_proton(x,q2max,beamid)
          endif 

@@ -15,7 +15,9 @@
 
 """Unit test library for the export Python format routines"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os
@@ -317,11 +319,11 @@ class IOExportPythonTest(unittest.TestCase):
         #
         # Model parameters
         #
-        WZ = model.get('parameter_dict')["WZ"]
         MZ = model.get('parameter_dict')["MZ"]
-        GC_47 = model.get('coupling_dict')["GC_47"]
-        GC_35 = model.get('coupling_dict')["GC_35"]
+        WZ = model.get('parameter_dict')["WZ"]
         GC_10 = model.get('coupling_dict')["GC_10"]
+        GC_35 = model.get('coupling_dict')["GC_35"]
+        GC_47 = model.get('coupling_dict')["GC_47"]
         # ----------
         # Begin code
         # ----------

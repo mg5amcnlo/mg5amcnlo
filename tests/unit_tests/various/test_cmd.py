@@ -13,10 +13,13 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 from madgraph import MG5DIR
 import tests.unit_tests as unittest
+import madgraph.various.misc as misc
 
 pjoin = os.path.join
 
@@ -26,8 +29,8 @@ class TestInstall(unittest.TestCase):
     def test_install_update(self):
         """Check that the install update command point to the official link
         and not to the test one."""
-        check1 = "            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')\n"
-        check2 = "                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))\n" 
+        check1 = "            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')\n"
+        check2 = "                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))\n" 
         
         has1, has2 = False, False
         for line in  open(os.path.join(MG5DIR,'madgraph','interface',
@@ -49,10 +52,10 @@ class TestInstall(unittest.TestCase):
         if not os.path.exists(pjoin(MG5DIR, 'input','mg5_configuration.txt')):
             return        
         
-        text1 = file(pjoin(MG5DIR,'input','.mg5_configuration_default.txt')).read()
-        text2 = file(pjoin(MG5DIR,'input','mg5_configuration.txt')).read()
+        text1 = open(pjoin(MG5DIR,'input','.mg5_configuration_default.txt')).read()
+        text2 = open(pjoin(MG5DIR,'input','mg5_configuration.txt')).read()
         warning = """WARNING: Your file mg5_configuration.txt and .mg5_configuration_default.txt
         are different. This probably fine but please check it before any release."""
         if text1 != text2:
-            print warning
+            print(warning)
         

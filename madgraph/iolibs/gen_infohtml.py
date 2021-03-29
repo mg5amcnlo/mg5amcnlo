@@ -14,12 +14,14 @@
 #
 ################################################################################
 
+from __future__ import absolute_import
 import string
 import os
 import re
 import sys
 
 import madgraph.various.misc as misc
+from six.moves import range
 
 template_text= string.Template("""
 <HTML> 
@@ -241,7 +243,8 @@ class make_info_html:
         nb_diag = 0
                 
         pat = re.compile(r'''Amplitude\(s\) for diagram number (\d+)''' )
-       
+        if not os.path.exists(path):
+            path = os.path.join(self.dir, 'SubProcesses', proc, 'matrix%s_orig.f' % id)
         text = open(path).read()
         for match in re.finditer(pat, text):
             pass

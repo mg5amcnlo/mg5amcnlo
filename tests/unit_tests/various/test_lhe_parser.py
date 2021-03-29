@@ -14,12 +14,14 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph .various.misc as misc
 import tempfile
 import os
 import shutil
+from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
 
@@ -255,7 +257,7 @@ DATA
         open(pjoin(self.path,'event.lhe'),'w').write(input)
         
         input = lhe_parser.EventFile(pjoin(self.path,'event.lhe'))
-        self.assertEqual(input.banner, """<LesHouchesEvents version="1.0">
+        self.assertEqual(input.banner.lower(), """<LesHouchesEvents version="1.0">
 <header>
 DATA
 </header>
@@ -263,7 +265,7 @@ DATA
      2212     2212  0.70000000000E+04  0.70000000000E+04 0 0 10042 10042 3  1
   0.16531958660E+02  0.18860728290E+00  0.17208000000E+00   0
 </init>
-""")
+""".lower())
         
         nb_event = 0
         txt = ""
@@ -367,14 +369,17 @@ DATA
         
         open(pjoin(self.path, 'event.lhe'),'w').write(input)
         input_lhe = lhe_parser.EventFile(pjoin(self.path, 'event.lhe.gz'))
-        output_lhe = lhe_parser.EventFile(pjoin(self.path, 'event2.lhe.gz'),'w')
+        output_lhe = lhe_parser.EventFile(pjoin(self.path, 'event2.lhe.gz'),'wb')
         output_lhe.write(input_lhe.banner)
         for event in input_lhe:
             output_lhe.write(str(event))
         output_lhe.close()
         self.assertTrue(pjoin(self.path,'event2.lhe.gz'))
-        text = open(pjoin(self.path, 'event2.lhe.gz')).read()
-        self.assertFalse(text.startswith('<LesHouchesEvents version="1.0">'))
+        try:
+            text = open(pjoin(self.path, 'event2.lhe.gz'), 'r').read()
+            self.assertFalse(text.startswith('<LesHouchesEvents version="1.0">'))
+        except UnicodeDecodeError:
+            pass
         misc.gunzip(pjoin(self.path,'event2.lhe.gz'))
         self.assertTrue(pjoin(self.path,'event2.lhe'))
         input_lhe = lhe_parser.EventFile(pjoin(self.path, 'event.lhe'))

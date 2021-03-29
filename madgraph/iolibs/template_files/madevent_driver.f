@@ -27,6 +27,7 @@ C
       external NextUnopen
       double precision t_before
       logical fopened
+      integer nb_tchannel
 c
 c     Global
 c
@@ -159,7 +160,7 @@ c
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
-      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+      call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
       write(*,*) "Completed mapping",nexternal
       ndim = 3*(nexternal-nincoming)-4
       if (nincoming.gt.1.and.abs(lpp(1)) .ge. 1) ndim=ndim+1
@@ -173,6 +174,12 @@ c
             minvar(ndim,j) = ninvar
          endif
       enddo
+c      ncall =  ncall * max(1., min(3., (nb_tchannel+1.)/2.))
+      if (nb_tchannel.gt.1) then
+c         itmin = itmin + 1
+         itmax = itmax + 2
+      endif
+
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
       call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 
@@ -233,6 +240,9 @@ c
       common /to_accuracy/accur
       integer           use_cut
       common /to_weight/use_cut
+      logical init_mode
+      common /to_determine_zero_hel/init_mode
+
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
@@ -270,11 +280,17 @@ c-----
          write(*,*) 'Using full amplitude.'
       endif
 
+      init_mode = .false.
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
          isum_hel = 0
          write(*,*) 'Explicitly summing over helicities'
+      else if (i.eq.-1) then
+         isum_hel = 0
+         multi_channel = .false.
+         init_mode = .true.
+         write(*,*) 'Determining zero helicities'
       else
          isum_hel= i
          write(*,*) 'Monte-Carlo over helicities'

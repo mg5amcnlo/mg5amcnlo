@@ -12,12 +12,37 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
+from six.moves import range
 
 class ParamCardWriterError(Exception):
     """ a error class for this file """
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+    return K
+
 
 class ParamCardWriter(object):
     """ A class for writting an update param_card for a given model """
@@ -41,7 +66,7 @@ class ParamCardWriter(object):
         4 %(antipart)d  # Particle/Antiparticle distinction (0=own anti)\n"""
 
 
-    def __init__(self, model, filepath=None):
+    def __init__(self, model, filepath=None, write_special=True):
         """ model is a valid MG5 model, filepath is the path were to write the
         param_card.dat """
 
@@ -62,7 +87,7 @@ class ParamCardWriter(object):
     
         if filepath:
             self.define_output_file(filepath)
-            self.write_card()
+            self.write_card(write_special=write_special)
     
     
     def create_param_dict(self):
@@ -73,7 +98,7 @@ class ParamCardWriter(object):
             for param in params:
                 out[param.name] = param
                 
-        if 'ZERO' not in out.keys():
+        if 'ZERO' not in list(out.keys()):
             zero = base_objects.ModelVariable('ZERO', '0', 'real')
             out['ZERO'] = zero
         return out
@@ -168,18 +193,21 @@ class ParamCardWriter(object):
         
         self.fsock.write(self.header)
 
-    def write_card(self, path=None):
+    def write_card(self, path=None, write_special=True):
         """schedular for writing a card"""
-  
+    
         if path:
             self.define_input_file(path)
+
   
         # order the parameter in a smart way
-        self.external.sort(self.order_param)
+        self.external.sort(key=cmp_to_key(self.order_param))
         todo_block= ['MASS', 'DECAY'] # ensure that those two block are always written
         
         cur_lhablock = ''
         for param in self.external:
+            if not write_special and param.lhablock.lower() == 'loop':
+                continue
             #check if we change of lhablock
             if cur_lhablock != param.lhablock.upper(): 
                 # check if some dependent param should be written
@@ -218,9 +246,8 @@ class ParamCardWriter(object):
         if info.startswith('mdl_'):
             info = info[4:]
     
-        if param.value.imag != 0:
-            raise ParamCardWriterError, 'All External Parameter should be real (not the case for %s)'%param.name
-    
+        if param.value != 'auto' and param.value.imag != 0:
+            raise ParamCardWriterError('All External Parameter should be real (not the case for %s)'%param.name)
 
         # avoid to keep special value used to avoid restriction
         if param.value == 9.999999e-1:
@@ -228,10 +255,18 @@ class ParamCardWriter(object):
         elif param.value == 0.000001e-99:
             param.value = 0
     
+        # If write_special is on False, activate special handling of special parameter
+        # like aS/MUR (fixed via run_card / lhapdf)
+        if param.lhablock.lower() == 'sminputs' and tuple(param.lhacode) == (3,):
+            info = "%s (Note that Parameter not used if you use a PDF set)" % info
+         
+    
     
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
             text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
+        elif param.value == 'auto':
+            text = '''DECAY %s auto # %s \n''' % (lhacode, info)
         else:
             text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
         self.fsock.write(text)             
@@ -250,22 +285,14 @@ class ParamCardWriter(object):
         else:
             return
         
-        text = ""
-        def sort(el1, el2):
-            (p1,n) =el1
-            (p2,n) = el2
-            if (p1["pdg_code"] -p2["pdg_code"]) > 0:
-                return 1
-            else:
-                return -1 
-        
-        data.sort(sort)
+        text = ""        
+        data.sort(key= lambda el: el[0]["pdg_code"])
         for part, param in data:
             # don't write the width of ghosts particles
             if part["type"] == "ghost":
                 continue
             if self.model['parameter_dict'][param.name].imag:
-                raise ParamCardWriterError, 'All Mass/Width Parameter should be real (not the case for %s)'%param.name
+                raise ParamCardWriterError('All Mass/Width Parameter should be real (not the case for %s)'%param.name)
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], param.expr.replace('mdl_',''))  
@@ -280,7 +307,7 @@ class ParamCardWriter(object):
     
         for part, param in data:
             if self.model['parameter_dict'][param.name].imag:
-                raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+                raise ParamCardWriterError('All Mass/Width Parameter should be real')
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %e # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], part[name].replace('mdl_',''))
@@ -336,5 +363,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat', generic=True)
-    print 'write ./param_card.dat'
+    print('write ./param_card.dat')
     

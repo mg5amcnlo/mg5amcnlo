@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: d g > t t~ d [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: s g > t t~ s [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: d a > t t~ d [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: s a > t t~ s [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
 C     ****************************************************            
 C         
@@ -32,7 +32,7 @@ C
 C     
       INTEGER I, ICROSS,LP
       DOUBLE PRECISION D1,S1
-      DOUBLE PRECISION G2
+      DOUBLE PRECISION A2
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
@@ -54,7 +54,7 @@ C     DATA
 C         
 C     
       DATA D1,S1/2*1D0/
-      DATA G2/1*1D0/
+      DATA A2/1*1D0/
       DATA ICROSS/1/
 C     ----------                                                      
 C         
@@ -70,14 +70,14 @@ C
       ENDIF
       IF (ABS(LPP(2)) .GE. 1) THEN
         LP=SIGN(1,LPP(2))
-        G2=PDG2PDF(ABS(LPP(2)),0*LP,XBK(2),DSQRT(Q2FACT(2)))
+        A2=PDG2PDF(ABS(LPP(2)),7*LP,XBK(2),DSQRT(Q2FACT(2)))
       ENDIF
       PD(0) = 0D0
       IPROC = 0
-      IPROC=IPROC+1  ! d g > t t~ d
-      PD(IPROC) = D1*G2
-      IPROC=IPROC+1  ! s g > t t~ s
-      PD(IPROC) = S1*G2
+      IPROC=IPROC+1  ! d a > t t~ d
+      PD(IPROC) = D1*A2
+      IPROC=IPROC+1  ! s a > t t~ s
+      PD(IPROC) = S1*A2
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

@@ -11,8 +11,8 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
 C     
 C     
 C     CONSTANTS
@@ -199,8 +199,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
 C     
       IMPLICIT NONE
 C     
@@ -367,8 +367,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2=0 QED^2=6
+C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
 C     
       IMPLICIT NONE
 C     
@@ -400,9 +400,10 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS), JAMPH(2, NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -430,8 +431,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    3/
+      DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/
 C     1 T(1,2)
 C     ----------
 C     BEGIN CODE
@@ -471,10 +471,10 @@ C     ----------
             CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
             CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
             CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-            CALL FFV2P0_3(W(1,2),W(1,1),GC_67,DCMPLX(CMASS_MDL_MW),W(1
-     $       ,5))
+            CALL FFV2P0_3(W(1,2),W(1,1),GC_124,DCMPLX(CMASS_MDL_MW)
+     $       ,W(1,5))
 C           Amplitude(s) for diagram number 1
-            CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_67,AMP(1))
+            CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_124,AMP(1))
             DO I=1,NGRAPHS
               IF(IHEL.EQ.BACK_HEL)THEN
                 SAVEAMP(I,HELL)=AMP(I)
@@ -498,7 +498,7 @@ C           Amplitude(s) for diagram number 1
             ENDDO
           ENDIF
 C         JAMPs contributing to orders QCD=0 QED=2
-          JAMP(1,1)=+AMP(1)
+          JAMP(1,1) = AMP(1)
           DO M = 1, NAMPSO
             DO I = 1, NCOLOR
               ZTEMP = (0.D0,0.D0)
@@ -508,7 +508,7 @@ C         JAMPs contributing to orders QCD=0 QED=2
               DO N = 1, NAMPSO
                 BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2
      $           -(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))+ZTEMP
-     $           *DCONJG(JAMP(I,N))/DENOM(I)
+     $           *DCONJG(JAMP(I,N))
               ENDDO
             ENDDO
           ENDDO
@@ -536,7 +536,7 @@ C         JAMPs contributing to orders QCD=0 QED=2
           ENDDO
           DO N = 1, NAMPSO
             ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP
-     $       *DCONJG(JAMPH(1,I,N))/DENOM(I)
+     $       *DCONJG(JAMPH(1,I,N))
           ENDDO
         ENDDO
       ENDDO

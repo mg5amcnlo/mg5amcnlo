@@ -156,3 +156,9 @@ C
 %(read_write_good_hel)s
 
 ## }
+
+
+     SUBROUTINE PRINT_ZERO_AMP%(proc_id)s()
+
+     return
+     end

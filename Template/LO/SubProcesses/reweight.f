@@ -590,6 +590,8 @@ c     q2bck holds the central q2fact scales
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
+      logical init_mode
+      common/to_determine_zero_hel/init_mode
 
 C   local variables
       integer i, j, idi, idj, k,m
@@ -597,6 +599,7 @@ C   local variables
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy
       double precision asref, pt2prev(n_max_cl),pt2min
       integer n, ibeam(2), iqcd(0:2)
       integer idfl, idmap(-nexternal:nexternal)
@@ -650,11 +653,12 @@ c      are flagged as jets)
       endif
  100  clustered = cluster(p(0,1))
       if(.not.clustered) then
+         if(init_mode) goto 999
          open(unit=26,file='../../../error',status='unknown',err=999)
          write(26,*) 'Error: Clustering failed in cluster.f.'
          write(*,*) 'Error: Clustering failed in cluster.f.'
          stop
- 999     write(*,*) 'error'
+ 999     write(*,*) 'error for clustering'
          setclscales=.false.
          clustered = .false.
          return
@@ -1349,6 +1353,7 @@ C   local variables
       logical setclscales
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       include 'configs.inc'
@@ -1738,9 +1743,9 @@ c           fs sudakov weight
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))
-      else if (abs(lpp(1)).eq.2.or.abs(lpp(1)).eq.3) then
+      else if (abs(lpp(1)).ge.2.and.abs(lpp(1)).le.4) then
          q2fact(1)=q2bck(1)
-      else if (abs(lpp(2)).eq.2.or.abs(lpp(2)).eq.3) then
+      else if (abs(lpp(2)).ge.2.or.abs(lpp(2)).le.4) then
          q2fact(2)=q2bck(2)
       endif
 

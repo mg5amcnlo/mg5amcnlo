@@ -174,3 +174,8 @@ C
 
 
 
+
+      SUBROUTINE PRINT_ZERO_AMP1()
+
+      RETURN
+      END
