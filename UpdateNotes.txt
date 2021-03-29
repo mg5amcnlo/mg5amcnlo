@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-3.1.0 (25/03/21)
+3.1.0 (30/03/21)
     ALL: include all changes up to 2.9.3 of the 2.x release
     ALL: pass to python3 by default
     MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
