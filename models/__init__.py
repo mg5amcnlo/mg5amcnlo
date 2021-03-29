@@ -47,6 +47,8 @@ def load_model(name, decay=False):
             pass
         if 'PYTHONPATH' in os.environ:
             for p in os.environ['PYTHONPATH'].split(':'):
+                if not p:
+                    continue
                 new_name = os.path.join(p, name)
                 try:
                     return load_model(new_name, decay)
