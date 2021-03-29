@@ -335,7 +335,7 @@ C energies (sum of z components of FS momenta)
 C--------mass shell conditions
         if (i.ne.iresh) then
           if (dabs(dot(q(0,i),q(0,i))-dot(p(0,i),p(0,i)))
-     $     .gt. 1d-3 * max(dot(p(0,i),p(0,i)), 1d0)) then
+     $     .gt. 1d-3 * max(dot(p(0,i),p(0,i)), p(0,i)**2)) then
             write(*,*) 'ERROR IN CHECK_RESHUFFLED_MOMENTA: NOT ON SHELL', i
             write(*,*) 'MSQ before', dot(p(0,i),p(0,i))
             write(*,*) 'MSQ after ', dot(q(0,i),q(0,i))
@@ -343,7 +343,7 @@ C--------mass shell conditions
           endif
         else
           if (dabs(dot(q(0,i),q(0,i))-mass_new**2)
-     $     .gt. 1d-3 * max(dot(q(0,i),q(0,i)), 1d0)) then
+     $     .gt. 1d-3 * max(dot(q(0,i),q(0,i)), q(0,i)**2)) then
             write(*,*) 'ERROR IN CHECK_RESHUFFLED_MOMENTA: NOT ON SHELL', i
             write(*,*) 'MSQ (iresh)', mass_new**2
             write(*,*) 'MSQ after ', dot(q(0,i),q(0,i))
