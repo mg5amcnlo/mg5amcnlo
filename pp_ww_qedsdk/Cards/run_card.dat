@@ -43,7 +43,7 @@
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 0.0002   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
+ 0.001   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)
 # These numbers are ignored except if req_acc_FO is equal to -1
  5000   = npoints_FO_grid  ! number of points to setup grids

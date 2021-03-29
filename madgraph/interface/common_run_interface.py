@@ -937,9 +937,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
+
                 no_width = [p for p in ufomodel.all_particles
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
                            and p.width != zero]
+
+                if self.proc_characteristics['ew_sudakov']:
+                    # if the sudakov approximation is used, force all particle widths to zero
+                    # unless the complex mass scheme is used
+                    if not self.proc_characteristics['complex_mass_scheme']:
+                        no_width = [p for p in ufomodel.all_particles if p.width != zero]
+                        logger.info('''Setting all particle widhts to zero (needed for EW Sudakov approximation).''','$MG:BOLD')
+                    # also, check that the model features the 'ntadpole' parameter, and set it to 1
+                    try:
+                        param_card['tadpole'].get(1).value = 1.
+                        logger.info('''Setting the value of ntadpole to 1 (needed for EW Sudakov approximation).''','$MG:BOLD')
+                    except KeyError:
+                        logger.warning('''The model has no 'ntadpole' parameter. The Sudakov approximation for EW corrections may give wrong results.''')
+
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
