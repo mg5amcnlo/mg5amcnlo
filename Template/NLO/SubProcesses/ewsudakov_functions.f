@@ -758,6 +758,18 @@ c exit and do nothing
       return
       end
 
+
+      double complex function get_qcd_lo2(pdglist, hels, iflist, invariants)
+      implicit none
+      include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
+      double precision invariants(nexternal-1, nexternal-1)
+
+      !MZ to be written
+      get_qcd_lo2 =  CMPLX(0d0,0d0)
+      return
+      end
+
  
 
 

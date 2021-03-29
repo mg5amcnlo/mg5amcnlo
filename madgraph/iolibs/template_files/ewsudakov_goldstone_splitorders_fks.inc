@@ -38,6 +38,8 @@ C
       double precision max_val
       double complex amp_split_ewsud(amp_split_size)
       common /to_amp_split_ewsud/ amp_split_ewsud
+      double complex amp_split_ewsud_LO2(amp_split_size)
+      common /to_amp_split_ewsud_LO2/ amp_split_ewsud_LO2
       integer iden
       parameter (iden = %(den_factor)d)
 C
@@ -82,7 +84,7 @@ do i = 1, nsqampso
  max_val = max(max_val, abs(ans(I)))
 enddo
 
-      do i = 1, nsqampso
+do i = 1, nsqampso
         if (keep_order(i)) then
          ANS_SUMMED = ans_summed + ANS(I)
          do j = 1, nsplitorders
@@ -91,7 +93,23 @@ enddo
          !amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(I)
          if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
         endif
-      enddo
+
+C the following is for the LO2
+    if (keep_order_cnt(qcd_pos,i)) then
+     do j = 1, nsplitorders
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+     enddo
+C here we need to trick the code, putting the result into the LO1 position
+C even if it belongs to LO2. This may fail, so it is better to check
+      amp_orders(qcd_pos) = amp_orders(qcd_pos) + 2
+      amp_orders(qed_pos) = amp_orders(qed_pos) - 2
+      if (amp_orders(qed_pos).lt.0) then
+        write(*,*) 'failed to determine LO2', amp_orders, i
+        stop 1 
+      endif
+      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+    endif
+enddo
 
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0

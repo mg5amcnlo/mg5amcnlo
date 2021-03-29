@@ -15,6 +15,8 @@ double complex ans_summed
 include 'orders.inc'
 DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
 COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
+DOUBLE COMPLEX AMP_SPLIT_EWSUD_LO2(AMP_SPLIT_SIZE)
+COMMON /TO_AMP_SPLIT_EWSUD_LO2/ AMP_SPLIT_EWSUD_LO2
 
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_LSC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_lsc/amp_split_ewsud_lsc
@@ -24,6 +26,8 @@ DOUBLE COMPLEX AMP_SPLIT_EWSUD_XXC(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_PAR(AMP_SPLIT_SIZE)
 common /to_amp_ewsud_PAR/amp_split_ewsud_PAR
+DOUBLE COMPLEX AMP_SPLIT_EWSUD_QCD(AMP_SPLIT_SIZE)
+common /to_amp_ewsud_QCD/amp_split_ewsud_QCD
 DOUBLE COMPLEX AMP_SPLIT_BORN_ONEHEL(AMP_SPLIT_SIZE)
 common /to_amp_born_onehel/amp_split_born_onehel
 
@@ -37,6 +41,8 @@ double complex get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc
 external get_ssc_n_diag, get_ssc_n_nondiag_1, get_ssc_n_nondiag_2, get_ssc_c
 double complex get_xxc_diag, get_xxc_nondiag
 external get_xxc_diag, get_xxc_nondiag
+double complex GET_QCD_LO2
+external GET_QCD_LO2
 
 LOGICAL CALCULATEDBORN
 COMMON/CCALCULATEDBORN/CALCULATEDBORN
@@ -68,6 +74,7 @@ AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_XXC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_PAR(:) = dcmplx(0d0,0d0)
+AMP_SPLIT_EWSUD_QCD(:) = dcmplx(0d0,0d0)
 
 %(iflist)s
 

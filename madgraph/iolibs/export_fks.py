@@ -2626,6 +2626,11 @@ Parameters              %(params)s\n\
         born_me = matrix_element.born_me
         sudakov_list = matrix_element.sudakov_matrix_elements
 
+        # need to know the number of splitorders at the born
+        squared_orders, amp_orders = born_me.get_split_orders_mapping()
+        amp_split_size_born =  len(squared_orders)
+        need_lo2 = amp_split_size_born > 1
+
         # classify the different kind of matrix-elements
         goldstone_mes = [sud for sud in sudakov_list if sud['type'] == 'goldstone']
         non_goldstone_mes = [sud for sud in sudakov_list if sud['type'] != 'goldstone']
@@ -2696,6 +2701,9 @@ Parameters              %(params)s\n\
             calls_to_me += "C the parameter renormalisation\n"
             calls_to_me += "call %s(P,nhel(1,ihel),ihel,invariants)\n" % par_ren
             calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)*comp_idfac\n"
+            if need_lo2:
+                calls_to_me += "C the terms stemming from QCD corrections on top of the LO2\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)+AMP_SPLIT_EWSUD_LO2(:)*get_qcd_lo2(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
 
             # now the call to the LSC and C non-diagonal
             mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]
