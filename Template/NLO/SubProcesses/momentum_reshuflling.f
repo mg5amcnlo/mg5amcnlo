@@ -122,7 +122,7 @@ C---------------
                 pass = .false.
                 return
             endif
-            qinboost(3,i) = dsqrt(qinboost(0,i)**2 - m2_other)
+            qinboost(3,i) = sign(dsqrt(qinboost(0,i)**2 - m2_other), p(3,i))
         endif
       enddo
 
