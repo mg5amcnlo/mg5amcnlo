@@ -126,8 +126,7 @@ CC     $   '|T@NLOQ2J','|T@NLOQJJ'/
       yttx= getrapidity(pttx(0), pttx(3))
       var=1.d0
       if (njet.ne.2.and.njet.ne.3) then
-        write(*,*) 'ERROR njet', njet
-        stop 1
+              return
       endif
       do i=6,7
          l=(i-1)*8

@@ -34,7 +34,6 @@ FO_INCLUDEPATHS =
 # directory). Please use .o as extension and white spaces to separate
 # files.
 FO_ANALYSE = analysis_HwU_pp_wpz.o
-FO_ANALYSE = analysis_HwU_general.o
 #
 #
 ## When linking with root, the following settings are a working
