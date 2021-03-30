@@ -132,6 +132,7 @@ CC     $   '|T@NLOQ2J','|T@NLOQJJ'/
       do i=6,7
          l=(i-1)*8
          if (ibody.ge.10) cycle !do not fill with sudakov
+         if (ibody.eq.3) cycle !do not fill with born
          if (i.eq.6.and.njet.ne.2) cycle ! fill 2J only when nj=2
          !write(*,*) 'ANA', i, ibody, orders_tag_plot
          !data cc/'|T@LO ','|T@NLO','|T@SDK'/
