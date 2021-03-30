@@ -779,6 +779,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             makejpg = True
         output_dependencies = mg5options['output_dependencies']
         
+        self.proc_characteristic['ew_sudakov'] = 'ewsudakov' in matrix_elements.keys() and \
+                                                 matrix_elements['ewsudakov']
         
         self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
@@ -1995,7 +1997,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # finally the matrix elements needed for the sudakov approximation
         # of ew corrections. 
         # First, the squared amplitudes involving the goldstones
-        self.proc_characteristic['ew_sudakov'] = bool(matrix_element.ewsudakov)
 
         filename = 'has_ewsudakov.inc'
         self.write_has_ewsudakov(writers.FortranWriter(filename), matrix_element.ewsudakov)

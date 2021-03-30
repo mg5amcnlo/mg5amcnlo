@@ -53,6 +53,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
+        self['ewsudakov'] = False
         if not 'OLP' in list(self.keys()):
             self['OLP'] = 'MadLoop'
             self['ncores_for_proc_gen'] = 0
@@ -61,7 +62,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcess, self).get_sorted_keys()
         keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 
-                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen']
+                 'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 'ewsudakov']
         return keys
 
     def filter(self, name, value):
@@ -140,8 +141,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             del options['OLP']
 
         # EW sudakov
+        ewsudakov = False
         if 'ewsudakov' in list(options.keys()):
-            self['ewsudakov'] = options['ewsudakov']
+            ewsudakov = options['ewsudakov']
             del options['ewsudakov']
 
         # leptons in initial state
@@ -173,6 +175,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                " For this, use the 'virt=' mode, without multiparticle labels.")
 
         self['OLP'] = olp
+        self['ewsudakov'] = ewsudakov 
         self['ncores_for_proc_gen'] = ncores_for_proc_gen
 
         #check process definition(s):
@@ -292,6 +295,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
         self['OLP'] = other['OLP']
         self['ncores_for_proc_gen'] = other['ncores_for_proc_gen']
+        self['ewsudakov'] = self['ewsudakov'] or other['ewsudakov']
 
 
     def get_born_amplitudes(self):
