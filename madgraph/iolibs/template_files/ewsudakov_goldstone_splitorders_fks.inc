@@ -30,6 +30,8 @@ C
       REAL*8 ANS(NSQAMPSO)
       LOGICAL KEEP_ORDER(NSQAMPSO)
       common /c_keep_order_sdkg%(ime)d/ keep_order
+      LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
+      common /c_keep_order_cnt/ keep_order_cnt 
       integer amp_orders(nsplitorders)
       logical firsttime
       data firsttime / .TRUE. /
@@ -97,7 +99,7 @@ do i = 1, nsqampso
 C the following is for the LO2
     if (keep_order_cnt(qcd_pos,i)) then
      do j = 1, nsplitorders
-      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+      amp_orders(j) = GETORDPOWFROMINDEX_SDKG%(ime)d(j, i)
      enddo
 C here we need to trick the code, putting the result into the LO1 position
 C even if it belongs to LO2. This may fail, so it is better to check
@@ -107,7 +109,7 @@ C even if it belongs to LO2. This may fail, so it is better to check
         write(*,*) 'failed to determine LO2', amp_orders, i
         stop 1 
       endif
-      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+      if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
     endif
 enddo
 
