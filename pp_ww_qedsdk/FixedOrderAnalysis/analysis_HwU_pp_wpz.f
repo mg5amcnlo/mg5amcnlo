@@ -18,10 +18,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call HwU_book(l+ 2,'w rap         '//cc(i), 50,-5d0,5d0)
          call HwU_book(l+ 3,'z rap        '//cc(i), 50,-5d0,5d0)
          call HwU_book(l+ 4,'w-z pair rap '//cc(i), 60,-3d0,3d0)
-         call HwU_book(l+ 5,'log10 m w-z        '//cc(i),40,1d0,4d0)
-         call HwU_book(l+ 6,'log10 pt w          '//cc(i),40,1d0,4d0)
-         call HwU_book(l+ 7,'log10 pt z         '//cc(i),40,1d0,4d0)
-         call HwU_book(l+ 8,'log10 pt w z       '//cc(i),40,1d0,4d0)
+         call HwU_book(l+ 5,'log10 m w-z        '//cc(i),50,1d0,5d0)
+         call HwU_book(l+ 6,'log10 pt w          '//cc(i),50,1d0,5d0)
+         call HwU_book(l+ 7,'log10 pt z         '//cc(i),50,1d0,5d0)
+         call HwU_book(l+ 8,'log10 pt w z       '//cc(i),50,1d0,5d0)
       enddo
       return
       end

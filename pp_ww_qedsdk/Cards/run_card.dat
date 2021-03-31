@@ -59,10 +59,10 @@
 #***********************************************************************
  1   = lpp1    ! beam 1 type (0 = no PDF)
  1   = lpp2    ! beam 2 type (0 = no PDF)
-## 50000.0   = ebeam1  ! beam 1 energy in GeV
-## 50000.0   = ebeam2  ! beam 2 energy in GeV
- 6500.0   = ebeam1  ! beam 1 energy in GeV
- 6500.0   = ebeam2  ! beam 2 energy in GeV
+ 50000.0   = ebeam1  ! beam 1 energy in GeV
+ 50000.0   = ebeam2  ! beam 2 energy in GeV
+# 6500.0   = ebeam1  ! beam 1 energy in GeV
+# 6500.0   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
@@ -177,7 +177,7 @@
 # POSITIVE PDG CODES only. Example of the syntax is {6 : 100} or       *
 # {6:100, 25:200} for multiple particles                               *
 #***********************************************************************
-#  {24: 6000, 23:6000} = pt_min_pdg ! Min pT for a massive particle
+  {24: 7500, 23:7500} = pt_min_pdg ! Min pT for a massive particle
   {} = pt_min_pdg ! Min pT for a massive particle
   {} = pt_max_pdg ! Max pT for a massive particle
   {} = mxx_min_pdg ! inv. mass for any pair of (anti)particles
