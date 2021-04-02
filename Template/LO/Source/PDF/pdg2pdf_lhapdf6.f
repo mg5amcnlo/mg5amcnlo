@@ -48,10 +48,6 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
-c      pdsublabel(1) = 'eva'
-c      pdsublabel(2) = 'lhapdf'
-
-
       nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -102,12 +98,6 @@ c     This will be called for any PDG code, but we only support up to 7
          stop 1
       endif
       
-      write(*,*) 'pdg2pdf_lhapdf6:'
-      write(*,*) 'beamid = ',beamid
-      write(*,*) 'pdsublabel(beamid) = ',pdsublabel(beamid)
-      write(*,*) 'pdsublabel(1) = ',pdsublabel(1)
-      write(*,*) 'pdsublabel(2) = ',pdsublabel(2)
-
       if(pdsublabel(beamid).eq.'eva') then
          if(iabs(ipart).ne.7.and.
      &      iabs(ipart).ne.23.and.

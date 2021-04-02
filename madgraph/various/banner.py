@@ -3429,7 +3429,7 @@ class RunCardLO(RunCard):
         #Some parameter need to be fixed when using syscalc
         if self['use_syst']:
             if self['scalefact'] != 1.0:
-                logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
+                logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
                 self['scalefact'] = 1.0
      
         # CKKW Treatment
@@ -3443,7 +3443,7 @@ class RunCardLO(RunCard):
             if self['use_syst']:
                 # some additional parameter need to be fixed for Syscalc + matching
                 if self['alpsfact'] != 1.0:
-                    logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
+                    logger.warning('Since use_syst=T, changing the value of \'alpsfact\' to 1')
                     self['alpsfact'] =1.0
             if self['maxjetflavor'] == 6:
                 raise InvalidRunCard('maxjetflavor at 6 is NOT supported for matching!')
@@ -3453,15 +3453,15 @@ class RunCardLO(RunCard):
                 self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
         if self['xqcut'] > 0:
             if self['ickkw'] == 0:
-                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
+                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be careful')
                 time.sleep(5)
             if self['drjj'] != 0:
                 if 'drjj' in self.user_set:
-                    logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+                    logger.warning('Since icckw>0, changing the value of \'drjj\' to 0')
                 self['drjj'] = 0
             if self['drjl'] != 0:
                 if 'drjl' in self.user_set:
-                    logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+                    logger.warning('Since icckw>0, changing the value of \'drjl\' to 0')
                 self['drjl'] = 0    
             if not self['auto_ptj_mjj']:         
                 if self['mmjj'] > self['xqcut']:
@@ -3498,7 +3498,7 @@ class RunCardLO(RunCard):
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
             logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
-            In general this optimization speed up the computation be a factor of two.""")
+            In general this optimization speeds up the computation by a factor of two.""")
 
                 
         # check that ebeam is bigger than the associated mass.
@@ -3508,7 +3508,7 @@ class RunCardLO(RunCard):
             if self['mass_ion%i' % i] == -1:
                 if self['ebeam%i' % i] < 0.938:
                     if self['ebeam%i' %i] == 0:
-                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        logger.warning("At-rest proton mode set: energy beam set to 0.938")
                         self.set('ebeam%i' %i, 0.938)
                     else:
                         raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
@@ -4452,7 +4452,7 @@ class RunCardNLO(RunCard):
             if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+                logger.info('''Lepton-lepton collisions: ignoring PDF-related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
@@ -4588,7 +4588,7 @@ class RunCardNLO(RunCard):
 
             if self['ebeam%i' % i] < 0.938:
                 if self['ebeam%i' %i] == 0:
-                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
                     self.set('ebeam%i' %i, 0.938)
                 else:
                     raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    

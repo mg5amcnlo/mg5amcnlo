@@ -113,6 +113,13 @@ c     if no matching ensure that no pdfreweight are done
             ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva)
             pol(1) = (-1d0/200d0)*pb1 + 0.5d0
             pol(2) = (-1d0/200d0)*pb2 + 0.5d0
+      else
+            if(pdsublabel(1).eq.'eva') then
+                  pol(1) = (-1d0/200d0)*pb1 + 0.5d0
+            endif
+            if(pdsublabel(2).eq.'eva') then
+                  pol(2) = (-1d0/200d0)*pb2 + 0.5d0
+            endif
       endif
 
 c !!! Default behavior changed (MH, Aug. 07) !!!

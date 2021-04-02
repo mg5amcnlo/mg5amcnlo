@@ -80,7 +80,7 @@ c     instead of stopping the code, as this might accidentally happen.
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
-      if(pdlabel.eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
          ipart=ipdg
       else 
          ipart=ipdg*ih/iabs(ih)
@@ -163,14 +163,7 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
 
-      write(*,*) 'pdg2pdf:'
-      write(*,*) 'beamid = ',beamid
-      write(*,*) 'pdsublabel(beamid) = ',pdsublabel(beamid)
-      write(*,*) 'pdsublabel(1) = ',pdsublabel(1)
-      write(*,*) 'pdsublabel(2) = ',pdsublabel(2)
-
-
-      if(pdlabel.eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
          if(iabs(ipart).ne.7.and.
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
