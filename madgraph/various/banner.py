@@ -2286,6 +2286,10 @@ class RunBlock(object):
         else:
             self.off_fields = self.find_fields_from_template(self.template_off)
 
+    @property
+    def fields(self):
+        return self.on_fields + self.off_fields
+
     @staticmethod
     def find_fields_from_template(template):
         """ return the list of fields from a template. checking line like
@@ -2336,18 +2340,50 @@ class RunBlock(object):
                 to_write.remove(name)
     
     def check_validity(self, runcard):
+        """run self consistency check here --avoid to use runcard[''] = xxx here since it can trigger post_set function"""
         return
 
     def create_default_for_process(self, run_card, proc_characteristic, history, proc_def):
         return 
 
+#    @staticmethod
+#    def post_set(card, value, change_userdefine, raiseerror, **opt):
+#        """default action to run when a parameter of the block is defined.
+#           Here we do not know which parameter is modified. if this is needed.
+#           then one need to define post_set_XXXXX(card, value, change_userdefine, raiseerror)
+#           and then only that function is used        
+#        """
+#
+#        if 'pdlabel' in card.user_set:
+#            card.user_set.remove('pdlabel')
+
+
 class RunCard(ConfigFile):
 
     filename = 'run_card'
     LO = True
-    blocks = [] 
-                                   
+    blocks = []
+    parameter_in_block = {}
+
+
+    @classmethod
+    def fill_post_set_from_blocks(cls):
+        """set the post_set function for any parameter defined in a run_block"""
+
+        if not cls.parameter_in_block and cls.blocks:
+            for block in cls.blocks:
+                for parameter in block.fields:
+                    if hasattr(block, 'post_set_%s' % parameter):
+                        setattr(cls, 'post_set_%s' % parameter, getattr(block, 'post_set_%s' % parameter))
+                    elif hasattr(block, 'post_set'):
+                        setattr(cls, 'post_set_%s' % parameter, block.post_set)
+                    cls.parameter_in_block[parameter] = block
+                    
+                    
     def __new__(cls, finput=None, **opt):
+
+        cls.fill_post_set_from_blocks()
+
         if cls is RunCard:
             if not finput:
                 target_class = RunCardLO
@@ -2362,6 +2398,9 @@ class RunCard(ConfigFile):
                     target_class = RunCardLO
             else:
                 return None
+
+            target_class.fill_post_set_from_blocks()
+
             return super(RunCard, cls).__new__(target_class, finput, **opt)
         else:
             return super(RunCard, cls).__new__(cls, finput, **opt)
@@ -2388,6 +2427,8 @@ class RunCard(ConfigFile):
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
+
+
         self.cut_class = {} 
         self.warned=False
 
@@ -2617,14 +2658,10 @@ class RunCard(ConfigFile):
                         text = text.replace(template_off, '\n'.join(to_add))
                     else:
                         template_off = template_off.replace(' ', '\s*')
-                        misc.sprint(template_off)
-                        misc.sprint([l for l in text.split('\n') if 'pdlabel' in line])
                         text, n = re.subn(template_off, '\n'.join(to_add), text)
                         if not n:
-                            misc.sprint(to_add)
                             text += '\n'.join(to_add)
-                        else:
-                            misc.sprint(text)
+
                 elif template_off and template_off in text:
                     text = text.replace(template_off, '\n'.join(to_add))
                 else:
@@ -3050,21 +3087,43 @@ psoptim_block = RunBlock('psoptim', template_on=template_on, template_off=templa
 class PDLabelBlock(RunBlock):
 
     def check_validity(self, card):
-        """check which template is active and fill the parameter in the inactive one """
+        """check which template is active and fill the parameter in the inactive one. """
+
         if self.status(card):
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
-                card['pdlabel'] = 'lhapdf'
+                dict.__setitem__(card, 'pdlabel','lhapdf')
             else:
-                card['pdlabel'] = 'none'
+                dict.__setitem__(card, 'pdlabel', 'none')
         else:
-            card['pdlabel1'] = card['pdlabel']
-            card['pdlabel2'] = card['pdlabel']
+            dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
+            dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
 
-#                if  self.run_card['pdlabel1'] == 'lhapdf' or \
-#                    self.run_card['pdlabel2'] == 'lhapdf':
-#                    if self.run_card['pdlabel'] != 'lhapdf':
-#                        logger.warning("Running EVA with lhapdf requires setting pdlabel=lhapdf. Updating run_card.")
-#                        self.do_set('run_card pdlabel lhapdf')
+
+
+    @staticmethod
+    def post_set_pdlabel(card, value, change_userdefine, raiseerror, **opt):
+
+        if 'pdlabel1' in card.user_set:
+            card.user_set.remove('pdlabel1')
+        if 'pdlabel2' in card.user_set:
+            card.user_set.remove('pdlabel2')
+
+        #card['pdlabel1'] = value
+        #card['pdlabel2'] = value
+
+    @staticmethod
+    def post_set(card, value, change_userdefine, raiseerror, **opt):
+        """call when change to pdlabel1 or pdlabel2 --do not know which one """
+
+        if 'pdlabel' in card.user_set:
+            card.user_set.remove('pdlabel')
+
+    #@staticmethod
+    #def post_set_pdlabel2(card, value, change_userdefine, raiseerror, **opt):
+    #    """call when change to pdlabel1 or pdlabel2 --do not know which one """
+
+        #if 'pdlabel' in card.user_set:
+        #    card.user_set.remove('pdlabel')
 
 
 
