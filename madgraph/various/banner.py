@@ -3052,13 +3052,21 @@ class PDLabelBlock(RunBlock):
     def check_validity(self, card):
         """check which template is active and fill the parameter in the inactive one """
         if self.status(card):
-            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2']:
+            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 card['pdlabel'] = 'lhapdf'
             else:
                 card['pdlabel'] = 'none'
         else:
             card['pdlabel1'] = card['pdlabel']
             card['pdlabel2'] = card['pdlabel']
+
+#                if  self.run_card['pdlabel1'] == 'lhapdf' or \
+#                    self.run_card['pdlabel2'] == 'lhapdf':
+#                    if self.run_card['pdlabel'] != 'lhapdf':
+#                        logger.warning("Running EVA with lhapdf requires setting pdlabel=lhapdf. Updating run_card.")
+#                        self.do_set('run_card pdlabel lhapdf')
+
+
 
 template_on = \
 """     %(pdlabel1)s    = pdlabel1     ! PDF type for beam #1
@@ -3112,7 +3120,7 @@ class RunCardLO(RunCard):
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdlabel")
-        self.add_param("pdlabel1", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel (1)")
+        self.add_param("pdlabel1", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(1)")
         self.add_param("pdlabel2", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
@@ -3606,7 +3614,7 @@ class RunCardLO(RunCard):
                 self['nhel'] = 1
                 self['pdlabel'] = 'eva'
             elif eva_in_b1:
-                self['pdlabel'] = 'eva'
+                self['pdlabel1'] = 'eva'
                 self['nhel']    = 1
                 for i in beam_id_split[1]:
                     exit
@@ -3621,7 +3629,7 @@ class RunCardLO(RunCard):
                         self['ebeam1']  = '15k'
                         self['ebeam2']  = '15k'
             elif eva_in_b2:
-                self['pdlabel'] = 'eva'
+                self['pdlabel2'] = 'eva'
                 self['nhel']    = 1
                 for i in beam_id_split[0]:
                     if abs(i) == 11:

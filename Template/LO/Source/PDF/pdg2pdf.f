@@ -163,13 +163,19 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
 
+      write(*,*) 'pdg2pdf:'
+      write(*,*) 'beamid = ',beamid
+      write(*,*) 'pdsublabel(beamid) = ',pdsublabel(beamid)
+      write(*,*) 'pdsublabel(1) = ',pdsublabel(1)
+      write(*,*) 'pdsublabel(2) = ',pdsublabel(2)
+
 
       if(pdlabel.eq.'eva') then
          if(iabs(ipart).ne.7.and.
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
             write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
-            stop 24
+            stop 72324
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))

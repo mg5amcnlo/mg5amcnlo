@@ -34,6 +34,24 @@ C
       data imemlast/20*-99/
       data i_replace/20/
 
+c     effective w/z/a approximation (leading log fixed order, not resummed)
+      double precision eva_get_pdf_by_PID
+      external eva_get_pdf_by_PID
+      integer ppid
+      integer ievo,ievo_eva
+      common/to_eva/ievo_eva
+      integer hel,helMulti,hel_picked
+      double precision hel_jacobian
+      common/hel_picked/hel_picked,hel_jacobian
+      integer get_nhel
+      external get_nhel
+      real*8 pol(2),fLPol
+      common/to_polarization/pol
+
+c      pdsublabel(1) = 'eva'
+c      pdsublabel(2) = 'lhapdf'
+
+
       nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -53,12 +71,26 @@ c     instead of stopping the code, as this might accidentally happen.
          endif
       endif
 
-      ipart=ipdg
-      if(iabs(ipart).eq.21) then
+c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
+c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
+c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
+      if(pdsublabel(beamid).eq.'eva') then
+         ipart=ipdg
+      else 
+         ipart=ipdg*ih/iabs(ih)
+      endif    
+
+      if(iabs(ipart).eq.21) then ! g
          ipart=0
-      else if(iabs(ipart).eq.22) then 
+      else if(ipart.eq.24) then  ! w+
+         ipart=24
+      else if(ipart.eq.-24) then ! w-
+         ipart=-24
+      else if(iabs(ipart).eq.23) then ! z
+         ipart=23
+      else if(iabs(ipart).eq.22) then ! a
          ipart=7
-      else if (iabs(ipart).eq.7) then
+      else if(iabs(ipart).eq.7) then  ! a
          ipart=7
 c     This will be called for any PDG code, but we only support up to 7
       else if(iabs(ipart).gt.7)then
@@ -68,6 +100,52 @@ c     This will be called for any PDG code, but we only support up to 7
          open(unit=26,file='../../../error',status='unknown')
          write(26,*) 'Error: PDF not supported for pdg ',ipdg
          stop 1
+      endif
+      
+      write(*,*) 'pdg2pdf_lhapdf6:'
+      write(*,*) 'beamid = ',beamid
+      write(*,*) 'pdsublabel(beamid) = ',pdsublabel(beamid)
+      write(*,*) 'pdsublabel(1) = ',pdsublabel(1)
+      write(*,*) 'pdsublabel(2) = ',pdsublabel(2)
+
+      if(pdsublabel(beamid).eq.'eva') then
+         if(iabs(ipart).ne.7.and.
+     &      iabs(ipart).ne.23.and.
+     &      iabs(ipart).ne.24 ) then
+            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
+            stop 24
+         else
+c         write(*,*) 'running eva'
+            select case (iabs(ih))
+            case (0:2)
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
+               stop 24
+            case (3) ! e+/-
+               ppid = 11
+            case (4) ! mu+/-
+               ppid = 13
+            case default
+               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
+               stop 24
+            end select
+            ppid  = ppid * ih/iabs(ih) ! get sign of parent
+            fLPol = pol(beamid)        ! see setrun.f for treatment of polbeam*
+c              q2max = xmu*xmu
+            ievo = ievo_eva
+            hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
+            helMulti = GET_NHEL(0, beamid)          ! helicity multiplicity of v to undo spin averaging
+            pdg2pdf  = helMulti*eva_get_pdf_by_PID(ipart,ppid,hel,fLpol,x,xmu*xmu,ievo)
+            return
+         endif
+      else
+         if(iabs(ipart).eq.24.or.iabs(ipart).eq.23) then  ! w/z
+            write(*,*) 'LHAPDF not supported for pdg ',ipdg
+            write(*,*) 'For EVA, check if pdlabel and pdsublabel* '//
+     $    'are set correctly in the run_card'  
+            open(unit=26,file='../../../error',status='unknown')
+            write(26,*) 'Error: PDF not supported for pdg ',ipdg
+            stop 1
+         endif
       endif
 
       iporg=ipart
