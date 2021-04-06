@@ -1384,6 +1384,7 @@ inline void JetMatchingMadgraph::sortIncomingProcess(const Event &event) {
    */
 
   // Step-FxFx-2: : set the same eventProcess for both MLM and FxFx. This was only for MLM
+  // Add the type 2 selection also for FxFx
 
   // For MLM matching, simply take hard process state from workEvent,
   // without any preclustering.
@@ -1415,10 +1416,18 @@ inline void JetMatchingMadgraph::sortIncomingProcess(const Event &event) {
     if (eventProcess[i].isGluon()
       || (eventProcess[i].idAbs() <= nQmatch) ) {
       orig_idx = 0;
+      if (doFxFx) {
+          // Crucial point FxFx: MG5 puts the scale of a not-to-be-matched quark 1 MeV lower than scalup. For
+          // such particles, we should keep the default "2"
+          idx = ( trunc(1000. * eventProcess[i].scale()) == trunc(1000. * infoPtr->scalup()) ) ? 0 : 2;
+
+      }
+      else {
       // Crucial point: MG puts the scale of a non-QCD particle to eCM. For
       // such particles, we should keep the default "2"
       idx = ( eventProcess[i].scale() < 1.999 * sqrt(infoPtr->eA()
         * infoPtr->eB()) ) ? 0 : 2;
+      }
     }
 
     // Heavy jets:  all quarks with id greater than nQmatch

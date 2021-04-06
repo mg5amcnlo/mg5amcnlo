@@ -593,7 +593,7 @@ c
          do i=nincoming+1,nexpart
             integfour=''
             float=''
-            if (need_matching(i).eq.1) then
+            if (need_matching(i).ne.-1) then
                ptclus=shower_scale
             else
                if (nincoming.ne.2) then
@@ -601,7 +601,7 @@ c
      $                 /'in add_write_info.f'
                   stop 1
                endif
-               ptclus=sqrt(4d0*ebeam(1)*ebeam(2))
+               ptclus=shower_scale-0.001d0
             endif
             Write(float,'(f16.5)') ptclus
             write(integfour,'(i4)') ito(i)
