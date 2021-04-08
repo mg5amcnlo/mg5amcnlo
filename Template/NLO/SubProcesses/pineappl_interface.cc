@@ -210,8 +210,12 @@ extern "C" void appl_init_()
 
         for (int iproc = 0; iproc != nproc; ++iproc)
         {
-            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
-            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
+            int32_t a = appl_common_lumi_.lumimap[ilumi][iproc][0];
+            int32_t b = appl_common_lumi_.lumimap[ilumi][iproc][1];
+
+            // give the gluon a proper PDG id
+            pdg_ids.push_back(a == 0 ? 21 : a);
+            pdg_ids.push_back(b == 0 ? 21 : b);
         }
 
         pineappl_lumi_add(lumi, nproc, pdg_ids.data(), nullptr);
