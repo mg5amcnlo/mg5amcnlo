@@ -29,12 +29,15 @@ c     /* ********************************************************* *
       double precision fLpol,x,mu2
       double precision eva_get_pdf_by_PID_evo
       double precision eva_get_pdf_photon_evo
-      include 'ElectroweakFlux.inc'
    
       double precision tiny,mu2min
       double precision QW,Qf
+
+      include 'ElectroweakFlux.inc'
+      
       tiny  = 1d-8
       mu2min = 1d2 ! (10 GeV)^2 reset mu2min by vPID  
+
 
 c     do the following checks before calling PDF:
 c     1. momentum fraction, x

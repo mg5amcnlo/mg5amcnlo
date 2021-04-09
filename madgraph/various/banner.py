@@ -3093,7 +3093,12 @@ class PDLabelBlock(RunBlock):
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
             else:
-                dict.__setitem__(card, 'pdlabel', 'none')
+                if card['pdlabel1'] == card['pdlabel2']:
+                    if card['pdlabel'] != card['pdlabel1']:
+                        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+
+                elif card['pdlabel'] == 'lhapdf':
+                    dict.__setitem__(card, 'pdlabel', 'none')
         else:
             dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
             dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
@@ -3117,13 +3122,6 @@ class PDLabelBlock(RunBlock):
 
         if 'pdlabel' in card.user_set:
             card.user_set.remove('pdlabel')
-
-    #@staticmethod
-    #def post_set_pdlabel2(card, value, change_userdefine, raiseerror, **opt):
-    #    """call when change to pdlabel1 or pdlabel2 --do not know which one """
-
-        #if 'pdlabel' in card.user_set:
-        #    card.user_set.remove('pdlabel')
 
 
 
@@ -3468,11 +3466,40 @@ class RunCardLO(RunCard):
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
     
-        # check validity of the pdf set
+        # check validity of the pdf set 
+        # note that pdlabel is automatically set to lhapdf if pdlabel1 or pdlabel2 is set to lhapdf
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
-            
+
+        mod = False
+        for i in [1,2]:
+            lpp = 'lpp%i' %i 
+            pdlabel = 'pdlabel%i' % i
+            if self[lpp] == 0: # nopdf
+                if self[pdlabel] != 'none':
+                    self.set(pdlabel, 'none')
+                    mod = True
+            elif self[lpp] == 1: # PDF from PDF library
+                if self[pdlabel] in ['eva', 'iww', 'none']:
+                    raise Exception("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabel, self[pdlabel]))
+            elif abs(self[lpp]) in [3,4]: # PDF from PDF library
+                if self[pdlabel] not in ['eva', 'iww']:
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabel, self[pdlabel], pdlabel))
+                    self.set(pdlabel, 'eva')
+                    mod = True
+            elif self[lpp] == 2:
+                logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to none" % (lpp, self[lpp], pdlabel, self[pdlabel], pdlabel))
+                self.set(pdlabel, 'none')
+                mod = True
+
+        if mod:
+            if 'pdlabel' in self.user_set:
+                self.user_set.remove('pdlabel')
+            self.user_set.add('pdlabel1')
+            #force rerun of consistency of lhapdf block
+            super(RunCardLO, self).check_validity()
+
         # if heavy ion mode use for one beam, forbid lpp!=1
         if self['lpp1'] not in [1,2]:
             if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:

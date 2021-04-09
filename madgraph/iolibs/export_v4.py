@@ -6412,6 +6412,7 @@ class UFO_model_to_mg4(object):
         self.create_intparam_def(dp=True,mp=False)
         if self.opt['mp']:
             self.create_intparam_def(dp=False,mp=True)
+        self.create_ewa()
         
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
@@ -6755,6 +6756,29 @@ class UFO_model_to_mg4(object):
         self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
         self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
         
+
+    def create_ewa(self):
+        """create electroweakFlux.inc 
+           this file only need the correct name for the mass for the W and Z
+        """
+
+        
+
+        fsock = self.open('../PDF/ElectroweakFlux.inc', format='fortran')
+
+        masses = {}
+        for particle in self.model['particles']:
+            if particle.get('pdg_code') == 24:
+                masses['MW'] = particle.get('mass')
+            elif particle.get('pdg_code') == 23:
+                masses['MZ'] =  particle.get('mass')
+            if len(masses) == 2:
+                break
+
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock.write(template % masses)                 
+        fsock.close()
+
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters
