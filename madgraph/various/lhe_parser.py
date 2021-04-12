@@ -367,7 +367,7 @@ class EventFile(object):
                 events=[]
                 text = ''
             elif '<event' in line:
-                text = []
+                text = ''
                 mode=1
             elif '</event>' in line:
                 if self.parsing:
