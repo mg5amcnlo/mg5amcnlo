@@ -36,7 +36,7 @@ C at the Born are skipped
        implicit none
        logical s_to_rij
        COMMON /to_s_to_rij/ s_to_rij
-       DATA s_to_rij / .false. /
+       DATA s_to_rij / .true. /
        END
 
 
@@ -1688,9 +1688,18 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
+      logical was_sud_mod_1
+
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
       ! the parameter-renormalisation contribution
+
+      was_sud_mod_1=.false.
+
+      if(sud_mod.eq.1) was_sud_mod_1=.true.
+
+      sud_mod=0
+
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1754,6 +1763,8 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
      $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
      $      amp_split_ewsud_der(:,6) * dheff_o_heff 
 
+      if(was_sud_mod_1) sud_mod=1
+
       if (sud_mod.eq.2) then
        amp_split_ewsud(:) = amp_split_ewsud(:) +
      $      amp_split_ewsud_der2(:,4) * dmt_QCD 
@@ -1810,9 +1821,17 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
+      logical was_sud_mod_1
+
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
       ! the parameter-renormalisation contribution
+
+      was_sud_mod_1=.false.
+
+      if(sud_mod.eq.1) was_sud_mod_1=.true.
+
+      sud_mod=0
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1885,6 +1904,8 @@ c     $       dAlpha
      $      amp_split_ewsud_der(:,4) * dmt +
      $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
      $      amp_split_ewsud_der(:,6) * dheff_o_heff 
+
+      if(was_sud_mod_1) sud_mod=1
 
       if (sud_mod.eq.2) then
        amp_split_ewsud(:) = amp_split_ewsud(:) +
