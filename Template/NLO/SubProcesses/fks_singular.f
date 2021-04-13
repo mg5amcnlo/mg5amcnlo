@@ -428,13 +428,13 @@ c to the list of weights using the add_wgt subroutine
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
-      ! amp_split for the DIS scheme
-      double precision amp_split_wgtdis_p(amp_split_size),
-     $                 amp_split_wgtdis_l(amp_split_size),
-     $                 amp_split_wgtdis_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtdis_p,
-     $                         amp_split_wgtdis_l,
-     $                         amp_split_wgtdis_d
+      ! amp_split for the PDF scheme
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtpsch_p,
+     $                         amp_split_wgtpsch_l,
+     $                         amp_split_wgtpsch_d
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
      &     ,wgt3,g22,replace_MC_subt
       external fks_Sij
@@ -475,9 +475,9 @@ c to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_p(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_l(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
+     $      amp_split_wgtpsch_p(iamp).eq.0d0.and.
+     $      amp_split_wgtpsch_l(iamp).eq.0d0.and.
+     $      amp_split_wgtpsch_d(iamp).eq.0d0) cycle
 
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
@@ -496,8 +496,8 @@ c to the list of weights using the add_wgt subroutine
         if (y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1-amp_split(iamp)*s_c*f_c/g22
           wgt1=wgt1+
-     $         (amp_split_wgtdegrem_xi(iamp)+amp_split_wgtdis_p(iamp)+
-     $         (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtdis_l(iamp))
+     $         (amp_split_wgtdegrem_xi(iamp)+amp_split_wgtpsch_p(iamp)+
+     $         (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtpsch_l(iamp))
      $           *log(xi_i_fks_cnt(1)))*f_dc/g22
           wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc/g22
         else
@@ -529,13 +529,13 @@ c value to the list of weights using the add_wgt subroutine
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
-      ! amp_split for the DIS scheme
-      double precision amp_split_wgtdis_p(amp_split_size),
-     $                 amp_split_wgtdis_l(amp_split_size),
-     $                 amp_split_wgtdis_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtdis_p,
-     $                         amp_split_wgtdis_l,
-     $                         amp_split_wgtdis_d
+      ! amp_split for the PDF scheme
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtpsch_p,
+     $                         amp_split_wgtpsch_l,
+     $                         amp_split_wgtpsch_d
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
      $     ,deg_lxi_sc,g22,replace_MC_subt
       external fks_Sij
@@ -562,9 +562,9 @@ c value to the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      ! DIS scheme prefactors
-      double precision f_dis_d,f_dis_p,f_dis_l
-      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      ! PDF scheme prefactors
+      double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
+      common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       double precision pmass(nexternal)
       integer get_orders_tag
       include 'pmass.inc'
@@ -586,9 +586,9 @@ c value to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_p(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_l(iamp).eq.0d0.and.
-     $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
+     $      amp_split_wgtpsch_p(iamp).eq.0d0.and.
+     $      amp_split_wgtpsch_l(iamp).eq.0d0.and.
+     $      amp_split_wgtpsch_d(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         wgtcpower=0d0
@@ -607,14 +607,14 @@ c value to the list of weights using the add_wgt subroutine
      $      y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1+amp_split(iamp)*s_sc*f_sc/g22
           wgt1=wgt1+
-     $         (-(amp_split_wgtdegrem_xi(iamp)+amp_split_wgtdis_p(iamp)+
-     $           (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtdis_l(iamp))
+     $         (-(amp_split_wgtdegrem_xi(iamp)+amp_split_wgtpsch_p(iamp)+
+     $           (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtpsch_l(iamp))
      $              *log(xi_i_fks_cnt(1)))*f_dsc(1)-
      $           (amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
      $            amp_split_wgtdegrem_lxi(iamp)*f_dsc(3))+
-     $            amp_split_wgtdis_d(iamp)*f_dis_d+
-     $            amp_split_wgtdis_p(iamp)*f_dis_p+
-     $            amp_split_wgtdis_l(iamp)*f_dis_l)/g22
+     $            amp_split_wgtpsch_d(iamp)*f_pdfsch_d+
+     $            amp_split_wgtpsch_p(iamp)*f_pdfsch_p+
+     $            amp_split_wgtpsch_l(iamp)*f_pdfsch_l)/g22
           wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4)/g22
         else
           wgt3=0d0
@@ -1094,8 +1094,8 @@ c f_* multiplication factors for Born and nbody
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      double precision f_dis_d,f_dis_p,f_dis_l
-      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
+      common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       integer igranny,iaunt
       logical granny_chain(-nexternal:nexternal),granny_is_res
      &     ,granny_chain_real_final(-nexternal:nexternal)
@@ -1219,9 +1219,9 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
          f_dsc(2)= f_dsc(2) *enhance
          f_dsc(3)= f_dsc(3) *enhance
          f_dsc(4)= f_dsc(4) *enhance
-         f_dis_d=  f_dis_d  *enhance
-         f_dis_p=  f_dis_p  *enhance
-         f_dis_l=  f_dis_l  *enhance
+         f_pdfsch_d=  f_pdfsch_d  *enhance
+         f_pdfsch_p=  f_pdfsch_p  *enhance
+         f_pdfsch_l=  f_pdfsch_l  *enhance
       endif
       call cpu_time(tAfter)
       tf_nb=tf_nb+(tAfter-tBefore)
@@ -1284,10 +1284,10 @@ c terms.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-      ! prefactors for the DIS scheme
-      double precision prefact_dis_d,prefact_dis_p,prefact_dis_l
-      double precision f_dis_d,f_dis_p,f_dis_l
-      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      ! prefactors for the PDF scheme
+      double precision prefact_pdfsch_d,prefact_pdfsch_p,prefact_pdfsch_l
+      double precision f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
+      common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       double precision pmass(nexternal)
       include 'pmass.inc'
       call cpu_time(tBefore)
@@ -1353,15 +1353,15 @@ c equal to ione, so no need to define separate factors.
             f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat
      &           /(32*pi**2))*fkssymmetryfactorDeg
      &           *vegas_wgt
-            ! prefactor for the DIS scheme
-            prefact_dis_d=xinorm_cnt(1)/xiScut_used/deltaS
-            f_dis_d=prefact_dis_d*jac_cnt(2)/(shat/(32*pi**2))
+            ! prefactor for the PDF scheme
+            prefact_pdfsch_d=xinorm_cnt(1)/xiScut_used/deltaS
+            f_pdfsch_d=prefact_pdfsch_d*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
-            prefact_dis_p=xinorm_cnt(1)*dlog(xiScut_used)/xiScut_used/deltaS
-            f_dis_p=prefact_dis_p*jac_cnt(2)/(shat/(32*pi**2))
+            prefact_pdfsch_p=xinorm_cnt(1)*dlog(xiScut_used)/xiScut_used/deltaS
+            f_pdfsch_p=prefact_pdfsch_p*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
-            prefact_dis_l=xinorm_cnt(1)*dlog(xiScut_used)**2/2d0/xiScut_used/deltaS
-            f_dis_l=prefact_dis_l*jac_cnt(2)/(shat/(32*pi**2))
+            prefact_pdfsch_l=xinorm_cnt(1)*dlog(xiScut_used)**2/2d0/xiScut_used/deltaS
+            f_pdfsch_l=prefact_pdfsch_l*jac_cnt(2)/(shat/(32*pi**2))
      &           *fkssymmetryfactorDeg*vegas_wgt
          else
             f_c=0d0
@@ -4146,13 +4146,14 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       end
 
 
-      subroutine xkplus(col1, col2, ch1, ch2, x, xkk)
+      subroutine xkplus(PDFscheme, col1, col2, ch1, ch2, x, xkk)
 c This function returns the quantity K^{(+)}_{ab}(x), relevant for
-c the MS --> DIS change in the factorization scheme. Notice that
-c there's NO multiplicative (1-x) factor like in the previous functions.
+c the MS --> DIS (or any other) scheme change in the factorization scheme.
+C It also includes regular terms, multiplied by (1-x).
+c There's NO multiplicative (1-x) factor like in the previous functions.
 C the first entry in xkk is for QCD splittings, the second QED
       implicit none
-      integer col1, col2
+      integer PDFscheme, col1, col2
       double precision ch1, ch2
       double precision x, xkk(2)
 
@@ -4165,23 +4166,56 @@ C the first entry in xkk is for QCD splittings, the second QED
 
       include "coupl.inc"
 c
-      if(col1.eq.8.and.col2.eq.8)then ! gg
-        xkk(1)=-2*nf*vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
-        xkk(2)=0d0
-      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
-        xkk(1)=vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
-        xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
-      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
-        xkk(1)=-vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
-        xkk(2)=-ch2**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
-      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
-        xkk(1)=vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
-        xkk(2)=ch1**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+      if (PDFscheme.eq.0) then
+        ! MSbar, all terms are zero
+        xkk(:) = 0d0
+      else if (PDFscheme.eq.1) then
+        ! DIS scheme
+        if(col1.eq.8.and.col2.eq.8)then ! gg
+          xkk(1)=-2*nf*vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+          xkk(2)=0d0
+        elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+          xkk(1)=vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+          xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+        elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+          xkk(1)=-vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+          xkk(2)=-ch2**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+        elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+          xkk(1)=vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+          xkk(2)=ch1**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+        else
+          write(6,*)'Error in xkplus: wrong values', col1, col2, ch1, ch2
+          stop
+        endif
+      else if (PDFscheme.eq.2) then
+        ! ETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*(1-x)*(1+x)
+          xkk(2)=-ch1**2*(1-x)*(1+x)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.3) then
+        ! BETA scheme (lepton)
+        xkk(:) = 0d0
+      else if (PDFscheme.eq.4) then
+        ! MIXED scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*(1-x)*(1+x)
+          xkk(2)=-ch1**2*(1-x)*(1+x)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.5) then
+        ! DELTA scheme (lepton)
+        write(*,*) 'DELTA NOT IMPLEMENTED'
       else
-        write(6,*)'Error in xkplus: wrong values', col1, col2, ch1, ch2
+        write(6,*)'Error in xkplus: wrong PDF scheme', PDFscheme
         stop
       endif
       xkk(1) = xkk(1)*g**2
@@ -4190,13 +4224,13 @@ c
       end
 
 
-      subroutine xklog(col1, col2, ch1, ch2, x, xkk)
+      subroutine xklog(PDFscheme, col1, col2, ch1, ch2, x, xkk)
 c This function returns the quantity K^{(l)}_{ab}(x), relevant for
-c the MS --> DIS change in the factorization scheme. Notice that
-c there's NO multiplicative (1-x) factor like in the previous functions.
+c the MS --> DIS (or any other) scheme change in the factorization scheme.
+c There's NO multiplicative (1-x) factor like in the previous functions.
 C the first entry in xkk is for QCD splittings, the second QED
       implicit none
-      integer col1, col2
+      integer PDFscheme, col1, col2
       double precision ch1, ch2
       double precision x, xkk(2)
 
@@ -4209,23 +4243,63 @@ C the first entry in xkk is for QCD splittings, the second QED
 
       include "coupl.inc"
 c
-      if(col1.eq.8.and.col2.eq.8)then ! gg
-        xkk(1)=-2*nf*vtf*(1-x)*(x**2+(1-x)**2)
-        xkk(2)=0d0
-      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
-        xkk(1)=vtf*(1-x)*(x**2+(1-x)**2)
-        xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(x**2+(1-x)**2)
-      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
-        xkk(1)=-vcf*(1+x**2)
-        xkk(2)=-ch2**2*(1+x**2)
-      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
-        xkk(1)=vcf*(1+x**2)
-        xkk(2)=ch1**2*(1+x**2)
+      if (PDFscheme.eq.0) then
+        ! MSbar, all terms are zero
+        xkk(:) = 0d0
+      else if (PDFscheme.eq.1) then
+        ! DIS scheme
+        if(col1.eq.8.and.col2.eq.8)then ! gg
+          xkk(1)=-2*nf*vtf*(1-x)*(x**2+(1-x)**2)
+          xkk(2)=0d0
+        elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+          xkk(1)=vtf*(1-x)*(x**2+(1-x)**2)
+          xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(x**2+(1-x)**2)
+        elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+          xkk(1)=-vcf*(1+x**2)
+          xkk(2)=-ch2**2*(1+x**2)
+        elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+          xkk(1)=vcf*(1+x**2)
+          xkk(2)=ch1**2*(1+x**2)
+        else
+          write(6,*)'Error in xklog: wrong values', col1, col2, ch1, ch2
+          stop
+        endif
+      else if (PDFscheme.eq.2) then
+        ! ETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*2*(1+x**2)
+          xkk(2)=ch1**2*2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.3) then
+        ! BETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*2*(1+x**2)
+          xkk(2)=ch1**2*2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.4) then
+        ! MIXED scheme (lepton)
+        ! BETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*2*(1+x**2)
+          xkk(2)=ch1**2*2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.5) then
+        ! DELTA scheme (lepton)
+        write(*,*) 'DELTA NOT IMPLEMENTED'
       else
-        write(6,*)'Error in xklog: wrong values', col1, col2, ch1, ch2
+        write(6,*)'Error in xklog: wrong PDF scheme', PDFscheme
         stop
       endif
       xkk(1) = xkk(1)*g**2
@@ -4234,12 +4308,12 @@ c
       end
 
 
-      subroutine xkdelta(col1, col2, ch1, ch2, xkk)
+      subroutine xkdelta(PDFscheme, col1, col2, ch1, ch2, xkk)
 c This function returns the quantity K^{(d)}_{ab}, relevant for
-c the MS --> DIS change in the factorization scheme. 
-C the first entry in xkk is for QCD splittings, the second QED
+c the MS --> DIS (or any other) scheme change in the factorization scheme.
+C The first entry in xkk is for QCD splittings, the second QED
       implicit none
-      integer col1, col2
+      integer PDFscheme, col1, col2
       double precision ch1, ch2
       double precision xkk(2)
 
@@ -4252,23 +4326,62 @@ C the first entry in xkk is for QCD splittings, the second QED
 
       include "coupl.inc"
 c
-      if(col1.eq.8.and.col2.eq.8)then ! gg
-        xkk(1)=0.d0
-        xkk(2)=0.d0
-      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
-        xkk(1)=0.d0
-        xkk(2)=0.d0
-      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
-     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
-        xkk(1)=vcf*(9.d0/2.d0+pi**2/3.d0)
-        xkk(2)=ch2**2*(9.d0/2.d0+pi**2/3.d0)
-      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
-     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
-        xkk(1)=-vcf*(9.d0/2.d0+pi**2/3.d0)
-        xkk(2)=-ch1**2*(9.d0/2.d0+pi**2/3.d0)
+      if (PDFscheme.eq.0) then
+        ! MSbar, all terms are zero
+        xkk(:) = 0d0
+      else if (PDFscheme.eq.1) then
+        ! DIS scheme
+        if(col1.eq.8.and.col2.eq.8)then ! gg
+          xkk(1)=0.d0
+          xkk(2)=0.d0
+        elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+          xkk(1)=0.d0
+          xkk(2)=0.d0
+        elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+          xkk(1)=vcf*(9.d0/2.d0+pi**2/3.d0)
+          xkk(2)=ch2**2*(9.d0/2.d0+pi**2/3.d0)
+        elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+          xkk(1)=-vcf*(9.d0/2.d0+pi**2/3.d0)
+          xkk(2)=-ch1**2*(9.d0/2.d0+pi**2/3.d0)
+        else
+          write(6,*)'Error in xkdelta: wrong values', col1, col2, ch1, ch2
+          stop
+        endif
+      else if (PDFscheme.eq.2) then
+        ! ETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*7d0/2d0
+          xkk(2)=-ch1**2*7d0/2d0
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.3) then
+        ! BETA scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*7d0/2d0
+          xkk(2)=-ch1**2*7d0/2d0
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.4) then
+        ! MIXED scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*2d0
+          xkk(2)=-ch1**2*2d0
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.5) then
+        ! DELTA scheme (lepton)
+        write(*,*) 'DELTA NOT IMPLEMENTED'
       else
-        write(6,*)'Error in xkdelta: wrong values', col1, col2, ch1, ch2
+        write(6,*)'Error in xkdelta: wrong PDF scheme', PDFscheme
         stop
       endif
       xkk(1) = xkk(1)*g**2
@@ -4808,30 +4921,37 @@ C keep track of each split orders
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
-      ! amp_split for the DIS scheme
-      double precision amp_split_wgtdis_p(amp_split_size),
-     $                 amp_split_wgtdis_l(amp_split_size),
-     $                 amp_split_wgtdis_d(amp_split_size)
-      common /to_amp_split_dis/amp_split_wgtdis_p,
-     $                         amp_split_wgtdis_l,
-     $                         amp_split_wgtdis_d
+      ! amp_split for the PDF scheme
+      double precision amp_split_wgtpsch_p(amp_split_size),
+     $                 amp_split_wgtpsch_l(amp_split_size),
+     $                 amp_split_wgtpsch_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtpsch_p,
+     $                         amp_split_wgtpsch_l,
+     $                         amp_split_wgtpsch_d
       double precision prefact_xi
 
       logical use_evpr
       common /to_use_evpr/use_evpr
 
-      ! PDF scheme (DIS or MSbar)
-      character*2 PDFscheme
-      data PDFscheme /'MS'/ ! DI-> dis, MS-> msbar
+      ! PDF scheme, for hadronic as well as leptonic densities 
+      ! (MSbar, DIS, eta, beta, mixed, Delta)
+      integer PDFscheme
+      ! 0 -> MSbar
+      ! 1 -> DIS (hadronic)
+      ! 2 -> eta (leptonic)
+      ! 3 -> beta (leptonic)
+      ! 4 -> mixed (leptonic)
+      ! 5 -> Delta (leptonic)
+      data PDFscheme /4/ 
 
       amp_split_collrem_xi(1:amp_split_size) = 0d0
       amp_split_collrem_lxi(1:amp_split_size) = 0d0
       amp_split_wgtdegrem_xi(1:amp_split_size) = 0d0
       amp_split_wgtdegrem_lxi(1:amp_split_size) = 0d0
       amp_split_wgtdegrem_muF(1:amp_split_size) = 0d0
-      amp_split_wgtdis_p(1:amp_split_size) = 0d0
-      amp_split_wgtdis_l(1:amp_split_size) = 0d0
-      amp_split_wgtdis_d(1:amp_split_size) = 0d0
+      amp_split_wgtpsch_p(1:amp_split_size) = 0d0
+      amp_split_wgtpsch_l(1:amp_split_size) = 0d0
+      amp_split_wgtpsch_d(1:amp_split_size) = 0d0
 
 C in the case of the collinear CT, use p_born_coll
 C  (when not doing event projection). 
@@ -4888,13 +5008,13 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
       call AP_reduced_prime(m_type,i_type,ch_m,ch_i,t,z,apprime)
 
-      ! call the DIS kernels here 
+      ! call the PDF-scheme kernels here 
       !   p-> [1/(1-z)]_+  
       !   l-> [log(1-z)/(1-z)]_+  
       !   d-> delta(1-z)
-      call xkplus(m_type,i_type,ch_m,ch_i,z,xkkernp)
-      call xkdelta(m_type,i_type,ch_m,ch_i,xkkernd)
-      call xklog(m_type,i_type,ch_m,ch_i,z,xkkernl)
+      call xkplus(PDFscheme,m_type,i_type,ch_m,ch_i,z,xkkernp)
+      call xkdelta(PDFscheme,m_type,i_type,ch_m,ch_i,xkkernd)
+      call xklog(PDFscheme,m_type,i_type,ch_m,ch_i,z,xkkernl)
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
@@ -4952,13 +5072,13 @@ c has to be inserted here
         amp_split_wgtdegrem_lxi(1:amp_split_size) = amp_split_collrem_lxi(1:amp_split_size)
         amp_split_wgtdegrem_muF(1:amp_split_size) = amp_split_wgtdegrem_muF(1:amp_split_size)-
      &   oo2pi*dble(amp_split_cnt(1:amp_split_size,1,iord))*ap(iap)*xnorm
-        ! amp split for the DIS scheme
-        if (PDFscheme.eq.'DI') then
-          amp_split_wgtdis_p(1:amp_split_size) = amp_split_wgtdis_p(1:amp_split_size) - 
+        ! amp split for the PDF scheme
+        if (PDFscheme.ne.0) then
+          amp_split_wgtpsch_p(1:amp_split_size) = amp_split_wgtpsch_p(1:amp_split_size) - 
      $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernp(iap)*oo2pi*xnorm
-          amp_split_wgtdis_l(1:amp_split_size) = amp_split_wgtdis_l(1:amp_split_size) - 
+          amp_split_wgtpsch_l(1:amp_split_size) = amp_split_wgtpsch_l(1:amp_split_size) - 
      $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernl(iap)*oo2pi*xnorm
-          amp_split_wgtdis_d(1:amp_split_size) = amp_split_wgtdis_d(1:amp_split_size) - 
+          amp_split_wgtpsch_d(1:amp_split_size) = amp_split_wgtpsch_d(1:amp_split_size) - 
      $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernd(iap)*oo2pi*xnorm
         endif
 
