@@ -205,6 +205,8 @@ c   approximation
       common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
       double complex amp_split_ewsud_par(amp_split_size)
       common /to_amp_ewsud_par/amp_split_ewsud_par
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_QCD(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_EWSUD_QCD/AMP_SPLIT_EWSUD_QCD
       ! sudakov mode
       integer sud_mod
       common /to_sud_mod/ sud_mod
@@ -222,7 +224,8 @@ c   approximation
         if (amp_split_ewsud_lsc(iamp).eq.0d0.and.
      $      amp_split_ewsud_ssc(iamp).eq.0d0.and.
      $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
-     $      amp_split_ewsud_par(iamp).eq.0d0) cycle
+     $      amp_split_ewsud_par(iamp).eq.0d0.and.
+     $      AMP_SPLIT_EWSUD_QCD(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         ! increase the EW-coupling of 2, since until here
         ! the EW sudakov amp_split has the same positions of 
@@ -235,7 +238,8 @@ c   approximation
         wgt1=(amp_split_ewsud_lsc(iamp)+
      $        amp_split_ewsud_ssc(iamp)+
      $        amp_split_ewsud_xxc(iamp)+
-     $        amp_split_ewsud_par(iamp))
+     $        amp_split_ewsud_par(iamp)+
+     $        AMP_SPLIT_EWSUD_QCD(iamp))
      $       *f_b/g**(qcd_power)
         wgt1=wgt1*2d0 ! missing factor in the sudakov correction
         ! the type will be 20+the value of the sudakov mode

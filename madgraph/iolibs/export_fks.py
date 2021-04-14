@@ -2705,7 +2705,10 @@ Parameters              %(params)s\n\
             calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)*comp_idfac\n"
             if need_lo2:
                 calls_to_me += "C the terms stemming from QCD corrections on top of the LO2\n" 
-                calls_to_me += "AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)+AMP_SPLIT_EWSUD_LO2(:)*get_qcd_lo2(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+#                calls_to_me += "AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)+AMP_SPLIT_EWSUD_LO2(:)*get_qcd_lo2(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "DO IAMP = 1, AMP_SPLIT_SIZE\n"
+                calls_to_me += "  AMP_SPLIT_EWSUD_QCD(IAMP) = AMP_SPLIT_EWSUD_QCD(IAMP)+AMP_SPLIT_EWSUD_LO2(IAMP)*GET_QCD_LO2(PDGLIST,NHEL(1,IHEL),IFLIST,INVARIANTS,IAMP)*COMP_IDFAC\n"
+                calls_to_me += "ENDDO\n"
 
             # now the call to the LSC and C non-diagonal
             mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]

@@ -759,16 +759,16 @@ c exit and do nothing
       end
 
 
-      double complex function get_qcd_lo2(pdglist, hels, iflist, invariants)
-      implicit none
-      include 'nexternal.inc'
-      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
-      double precision invariants(nexternal-1, nexternal-1)
-
-      !MZ to be written
-      get_qcd_lo2 =  CMPLX(0d0,0d0)
-      return
-      end
+c      double complex function get_qcd_lo2(pdglist, hels, iflist, invariants)
+c      implicit none
+c      include 'nexternal.inc'
+c      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
+c      double precision invariants(nexternal-1, nexternal-1)
+c
+c      !MZ to be written
+c      get_qcd_lo2 =  CMPLX(0d0,0d0)
+c      return
+c      end
 
  
 
@@ -1926,3 +1926,109 @@ c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
 
       return
       end
+
+      double complex function GET_QCD_LO2(pdglist, hels, iflist, invariants,iamp)
+      implicit none
+      include 'nexternal.inc'
+      integer pdglist(nexternal-1), hels(nexternal-1), iflist(nexternal-1)
+      double precision invariants(nexternal-1, nexternal-1)
+      include 'coupl.inc'
+
+c      double complex bigL, smallL, smallLem
+c      external smallLem
+
+      integer i,j,iamp
+      double precision s, rij
+
+c      logical   printinewsdkf
+c      common /to_printinewsdkf/printinewsdkf
+
+c      integer   deb_settozero
+c      common /to_deb_settozero/deb_settozero
+
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+c      double complex imlog
+
+c      logical s_to_rij
+c      COMMON /to_s_to_rij/ s_to_rij
+
+c      double complex smallL_a_over_b_sing, bigL_a_over_b_sing
+c      external smallL_a_over_b_sing, bigL_a_over_b_sing
+
+c      double complex smallL_rij_over_s, bigL_rij_over_s
+
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      double precision QCDlogs,logfromLOip1
+
+      include "q_es.inc"
+
+      Integer sud_mod
+      COMMON /to_sud_mod/ sud_mod
+
+      get_qcd_lo2 =  CMPLX(0d0,0d0)
+
+      logfromLOip1=0d0
+
+      if (sud_mod.eq.2) then
+
+        QCDlogs=4d0/3d0 * (G**2/4d0/pi)/(2d0*pi) * (1d0) *
+     .   ( (dlog(qes2/mdl_mt**2))**2 +  1d0 * dlog(qes2/mdl_mt**2)      )
+
+        do i=1,nexternal-1
+          if(abs(pdglist(i)).eq.6) logfromLOip1=
+     .    logfromLOip1+QCDlogs/4d0
+        enddo
+
+
+
+        call amp_split_pos_to_orders(iamp, orders)
+
+
+        logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
+     .  *dble(orders(1)-2)  * dlog(qes2/mdl_mt**2)
+
+
+
+
+        do i=1,nexternal-1
+          if(abs(pdglist(i)).eq.21) then
+            logfromLOip1=
+     .      logfromLOip1-2d0*1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
+     .      * dlog(qes2/mdl_mt**2)
+           endif
+        enddo
+
+
+
+
+        get_qcd_lo2 = CMPLX(logfromLOip1,0d0)
+
+      elseif (sud_mod.eq.1) then
+
+c      TOBE modified     
+        get_qcd_lo2 =0d0
+
+      elseif (sud_mod.eq.0) then  
+c      TOBE modified 
+
+        print*,"sud_mod=0 and QCD not implemented.
+     .  Switch to sud_mod=1 or turn this error off."
+        stop
+      
+      else 
+
+       print*,"sud_mod=",sud_mod,"is not possible"
+       stop
+
+      endif
+
+         
+
+c      get_qcd_lo2 =0d0
+
+      return
+      end
+
+
