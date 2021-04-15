@@ -125,7 +125,7 @@ C     Now we can call the matrix element!
 C     
       CALL SMATRIX_SPLITORDERS(P,MATELEMS)
       MATELEM=MATELEMS(0)
-      WRITE(*,*) '1) Matrix element for (QCD=0) = ',MATELEMS(1)
+      WRITE(*,*) '1) Matrix element for (QCD=0 QED=2) = ',MATELEMS(1)
 C     
       IF (NCHOSEN.NE.NSPLITORDERS) THEN
         WRITE (*,*) 'Selected squared coupling orders combination for'

@@ -11,9 +11,9 @@ c Wrapper routines for the fixed order analyses
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
       nwgt=1
       if (.not.allocated(weights_info)) allocate(weights_info(1))
       weights_info(nwgt)="central value               "
@@ -109,7 +109,7 @@ c set the weights_info string for PDF variation
 c start with central member of the first set
          call InitPDFm(1,0)
       endif
-      if(iappl.ne.0)then
+      if(pineappl)then
 c Initialize grid parameters to negative values.
          appl_Q2min   = -1d0
          appl_Q2max   = -1d0
@@ -148,34 +148,25 @@ c To keep track of the accumulated results:
 
       subroutine topout
       use extra_weights
+      use mint_module
       implicit none
       include "nexternal.inc"
       include 'run.inc'
       integer ii,jj,n,kk,nn
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
-      integer itmax,ncall
-      common/citmax/itmax,ncall
       logical useitmax
       common/cuseitmax/useitmax
       real*8 xnorm
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
 c
-      if(usexinteg.and..not.mint) then
-         xnorm=1.d0/float(itmax)
-      elseif(mint) then
-         xnorm=1.d0/float(ncall)
-      else
-         xnorm=1d0
-      endif
+      xnorm=1.d0/float(ncalls0)
       if(useitmax)xnorm=xnorm/float(itmax)
-c Normalization factor for the APPLgrid grids
-      if(iappl.ne.0) appl_norm_histo = 1d0 / dble(ncall*itmax)
+c Normalization factor for the PineAPPL grids
+      if(pineappl) appl_norm_histo = 1d0 / dble(ncalls0*itmax)
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
@@ -251,13 +242,17 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
-      integer iappl
-      common /for_applgrid/ iappl
-      include "appl_common.inc"
-c Born, n-body or (n+1)-body contribution:
+      integer amp_pos_plot
+      common /campposplot/ amp_pos_plot
+      logical pineappl
+      common /for_pineappl/ pineappl
+      include "pineappl_common.inc"
+c Born, n-body or (n+1)-body contribution. For more information
+C  about itype, see the comments about plot_id inside
+C  the fill_plot subroutine of fks_singular.f
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
-      elseif(itype.eq.12)then
+      elseif(itype.ge.12 .and. itype.le.14)then
          ibody=2 ! n-body
       elseif(itype.eq.20)then
          ibody=3 ! Born
@@ -284,11 +279,31 @@ c Fill the arrays (momenta, status and PDG):
          enddo
          p(4,i)=pmass(i)
       enddo
-      if(iappl.ne.0)then
-         appl_itype     = ibody
+      if(pineappl)then
+         appl_itype = ibody
+         if(ibody.eq.2)then
+c      special treatment for collinear
+c      and soft collinear counterterms
+c      (see comments inside the fill_plots subroutine)
+           if(itype.eq.13)then
+            !collinear counterterm
+             appl_itype = 4
+           elseif(itype.eq.14)then
+            !solf-collinear counterterm
+             appl_itype = 5
+           endif
+         endif
+         appl_amp_pos   = amp_pos_plot
          appl_www_histo = www(1)
       endif
       call analysis_fill(p,istatus,ipdg,www,ibody)
+      if(pineappl)then
+        ! this call is necessary since PineAPPL
+        ! already combine the different contributions
+        ! with the same kinematics, while histograms
+        ! are filled contribution by contribution.
+        call APPL_delete_itype
+      endif
 c Fill the accumulated results
       i_wgt=1
       if (do_rwgt_scale) then

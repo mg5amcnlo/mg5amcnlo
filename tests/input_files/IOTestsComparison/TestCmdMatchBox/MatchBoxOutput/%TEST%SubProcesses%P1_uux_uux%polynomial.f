@@ -133,24 +133,6 @@ C
 
       END
 
-      SUBROUTINE MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
-C     Just a handy subroutine to modify the coefficients for the
-C     tranformation q_loop -> -q_loop
-C     It is only used for the NINJA interface
-      USE MG5_1_POLYNOMIAL_CONSTANTS
-      IMPLICIT NONE
-
-      INTEGER I, NCOEFS
-
-      COMPLEX*16 POLYNOMIAL(0:NCOEFS-1)
-
-      DO I=0,NCOEFS-1
-        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
-          POLYNOMIAL(I)=-POLYNOMIAL(I)
-        ENDIF
-      ENDDO
-
-      END
 
 C     Now the routines to update the wavefunctions
 
@@ -253,25 +235,6 @@ C
 
       END
 
-      SUBROUTINE MP_MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS
-     $ ,POLYNOMIAL)
-C     Just a handy subroutine to modify the coefficients for the
-C     tranformation q_loop -> -q_loop
-C     It is only used for the NINJA interface
-      USE MG5_1_POLYNOMIAL_CONSTANTS
-      IMPLICIT NONE
-
-      INTEGER I, NCOEFS
-
-      COMPLEX*32 POLYNOMIAL(0:NCOEFS-1)
-
-      DO I=0,NCOEFS-1
-        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
-          POLYNOMIAL(I)=-POLYNOMIAL(I)
-        ENDIF
-      ENDDO
-
-      END
 
 C     Now the routines to update the wavefunctions
 

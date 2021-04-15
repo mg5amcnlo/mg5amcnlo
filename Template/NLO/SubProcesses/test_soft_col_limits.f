@@ -3,6 +3,7 @@ c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
+      use mint_module
       implicit none
       include 'genps.inc'      
       include 'nexternal.inc'
@@ -10,29 +11,25 @@ c*****************************************************************************
       include 'fks_info.inc'
       include 'run.inc'
       include 'cuts.inc'
-      include 'mint.inc'
       include 'coupl.inc'
-      integer mapconfig(0:lmaxconfigs),iforest(2,-max_branch:-1
-     $     ,lmaxconfigs),sprop(-max_branch:-1,lmaxconfigs),tprid(
-     $     -max_branch:-1,lmaxconfigs)
       include 'born_conf.inc' ! needed for mapconfig
       double precision ZERO,    one
       parameter       (ZERO=0d0,one=1d0)
       double precision max_fail
       parameter       (max_fail=0.3d0)
       integer i,j,k,n,l,jj,bs_min,bs_max,iconfig_in,nsofttests
-     $     ,ncolltests,nerr,imax,iflag,iret,ntry,fks_conf_number
+     $     ,ncolltests,imax,iflag,iret,ntry,fks_conf_number
      $     ,fks_loop_min,fks_loop_max,fks_loop,ilim
-      double precision fxl,limit(15),wlimit(15),lxp(0:3,nexternal+1)
-     $     ,xp(15,0:3,nexternal+1),p(0:3,nexternal),wgt,x(99),fx,totmass
-     $     ,xi_i_fks_fix_save,y_ij_fks_fix_save,fail_frac
+      double precision fxl(15),wfxl(15),limit(15),wlimit(15),lxp(0:3
+     $     ,nexternal+1),xp(15,0:3,nexternal+1),p(0:3,nexternal),wgt
+     $     ,x(99),fx,totmass,xi_i_fks_fix_save,y_ij_fks_fix_save
      $     ,pmass(nexternal)
       double complex wgt1(2)
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
       logical                calculatedBorn
@@ -58,8 +55,6 @@ c*****************************************************************************
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      logical             new_point
-      common /c_new_point/new_point
       double precision alsf,besf
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
@@ -73,6 +68,18 @@ c*****************************************************************************
      $     ,pt_hardness
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
+C split orders stuff
+      include 'orders.inc'
+      integer iamp
+      integer orders(nsplitorders)
+      integer nerr(0:amp_split_size)
+      double precision fail_frac(0:amp_split_size)
+      double precision fxl_split(15,amp_split_size),wfxl_split(15
+     $     ,amp_split_size)
+      double precision limit_split(15,amp_split_size), wlimit_split(15
+     $     ,amp_split_size)
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
       double precision ran2
       external         ran2
 c-----
@@ -182,7 +189,7 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
-      
+      nndim=ndim
       write(*,*)'  '
       write(*,*)'  '
       write(*,*)"Enter graph number (iconfig), "
@@ -247,9 +254,17 @@ c
          Hevents=.true.
          softtest=.true.
          colltest=.false.
-         nerr=0
+         nerr(:)=0
          imax=10
          do j=1,nsofttests
+            do iamp=1,amp_split_size
+               do i = 1,imax
+                  fxl_split(i,iamp) = 0d0
+                  wfxl_split(i,iamp) = 0d0
+                  limit_split(i,iamp) = 0d0
+                  wlimit_split(i,iamp) = 0d0
+               enddo
+            enddo
             if(nsofttests.le.10)then
                write (*,*) ' '
                write (*,*) ' '
@@ -276,7 +291,7 @@ c
             if (ilim.eq.2) then
                calculatedBorn=.false.
                call set_cms_stuff(0)
-               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
+               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
             else
 c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
 c configurations close to the soft-collinear limit
@@ -289,12 +304,21 @@ c configurations close to the soft-collinear limit
 c Initialise shower_S_scale to a large value, not to get spurious dead zones
                shower_S_scale=1d10*ebeam(1)
                if(ilim.eq.0)then
-                  call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl)
+                  call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
                else
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
+                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
                endif
             endif
-            fxl=fxl*jac_cnt(0)
+            fxl(1)=fx*wgt
+            wfxl(1)=jac_cnt(0)
+            do iamp=1,amp_split_size
+               if(ilim.eq.0)then
+                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0)
+               else
+                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
+               endif
+               wfxl_split(1,iamp)=jac_cnt(0)
+            enddo
             if (ilim.eq.2) then
                call set_cms_stuff(-100)
                call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
@@ -310,6 +334,14 @@ c because otherwise fresh random will be used...
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
+            do iamp=1,amp_split_size
+               if (ilim.eq.2) then
+                 limit_split(1,iamp) = amp_split(iamp)*wgt
+               else
+                 limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+               endif
+               wlimit_split(1,iamp) = wgt
+            enddo
 
             do k=1,nexternal
                do l=0,3
@@ -326,15 +358,40 @@ c because otherwise fresh random will be used...
                xi_i_fks_fix=xi_i_fks_fix/10d0
                wgt=1d0
                call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
-               call set_cms_stuff(-100)
                if (ilim.eq.2) then
+                  calculatedBorn=.false.
+                  call set_cms_stuff(0)
+                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+                  fxl(i)=fx*wgt
+                  wfxl(i)=jac_cnt(0)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0)
+                     wfxl_split(i,iamp)=jac_cnt(0)
+                  enddo
+                  calculatedBorn=.false.
+                  call set_cms_stuff(-100)
                   call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-               else
+              else
+                  calculatedBorn=.false.
+                  call set_cms_stuff(-100)
                   call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  fxl(i)=fx*wgt
+                  wfxl(i)=jac_cnt(0)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(0)
+                     wfxl_split(i,iamp)=jac_cnt(0)
+                  enddo
                endif
                limit(i)=fx*wgt
                wlimit(i)=wgt
+               do iamp=1,amp_split_size
+                  if (ilim.eq.2) then
+                    limit_split(i,iamp) = amp_split(iamp)*wgt
+                  else
+                    limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+                  endif
+                  wlimit_split(i,iamp) = wgt
+               enddo
                do k=1,nexternal
                   do l=0,3
                      xp(i,l,k)=p(l,k)
@@ -348,7 +405,27 @@ c because otherwise fresh random will be used...
             if(nsofttests.le.10)then
                write (*,*) 'Soft limit:'
                do i=1,imax
-                  call xprintout(6,limit(i),fxl)
+                  call xprintout(6,limit(i),fxl(i))
+               enddo
+               do iamp=1, amp_split_size
+                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
+     $                 ,iamp).ne.0d0) then
+                     write(*,*) '   Split-order', iamp
+                     call amp_split_pos_to_orders(iamp,orders)
+                     do i = 1, nsplitorders
+                        write(*,*) '      ',ordernames(i), ':',orders(i)
+                     enddo
+                     do i=1,imax
+                        call xprintout(6,limit_split(i,iamp),fxl_split(i
+     $                       ,iamp))
+                     enddo
+                     iflag=0
+                     call checkres2(limit_split(1,iamp),fxl_split(1
+     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
+     $                    ,iret)
+                     write(*,*) 'RETURN CODE', iret
+                  endif
                enddo
 c
                write(80,*)'  '
@@ -366,20 +443,44 @@ c
                enddo
             else
                iflag=0
-               call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
-     &              iflag,imax,j,nexternal,i_fks,j_fks,iret)
-               nerr=nerr+iret
+               call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
+     &              iflag,imax,j,i_fks,j_fks,iret)
+               nerr(0)=nerr(0)+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+               do iamp=1, amp_split_size
+                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
+     $                 ,iamp).ne.0d0) then
+                     call checkres2(limit_split(1,iamp),fxl_split(1
+     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
+     $                    ,iret)
+                     nerr(iamp)=nerr(iamp)+iret
+                  endif
+               enddo
             endif
          enddo
          if(nsofttests.gt.10)then
             write(*,*)'Soft tests done for (Born) config',iconfig
             write(*,*)'Failures:',nerr
-            fail_frac= nerr/dble(nsofttests)
-            if (fail_frac.lt.max_fail) then
-               write(*,401) nFKSprocess, fail_frac
-            else
-               write(*,402) nFKSprocess, fail_frac
-            endif
+            do iamp = 0, amp_split_size
+                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
+                if (iamp.ne.0) then
+                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+                   call amp_split_pos_to_orders(iamp,orders)
+                   do i = 1, nsplitorders
+                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
+                   enddo
+                else
+                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
+                endif
+                if (fail_frac(iamp).lt.max_fail) then
+                   write(*,401) nFKSprocess, fail_frac(iamp)
+                else
+                   write(*,402) nFKSprocess, fail_frac(iamp)
+                endif
+            enddo
          endif
 
          write (*,*) ''
@@ -394,9 +495,17 @@ c
          softtest=.false.
          colltest=.true.
 
-         nerr=0
+         nerr(:)=0
          imax=10
          do j=1,ncolltests
+            do iamp=1,amp_split_size
+               do i = 1,imax
+                  fxl_split(i,iamp) = 0d0
+                  wfxl_split(i,iamp) = 0d0
+                  limit_split(i,iamp) = 0d0
+                  wlimit_split(i,iamp) = 0d0
+               enddo
+            enddo
             if(ncolltests.le.10)then
                write (*,*) ' '
                write (*,*) ' '
@@ -424,11 +533,20 @@ c
             calculatedBorn=.false.
             call set_cms_stuff(1)
             if(ilim.eq.0)then
-               call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl)
+               call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
             else
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
+               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
             endif
-            fxl=fxl*jac_cnt(1)
+            fxl(1)=fx*jac_cnt(1)
+            wfxl(1)=jac_cnt(1)
+            do iamp=1,amp_split_size
+              if(ilim.eq.0)then
+                fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1)
+              else
+                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
+              endif
+               wfxl_split(1,iamp) = jac_cnt(1)
+            enddo
 
             call set_cms_stuff(-100)
             if (ilim.eq.2) then
@@ -438,6 +556,14 @@ c
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
+            do iamp=1,amp_split_size
+              if (ilim.eq.2) then
+                limit_split(1,iamp) = amp_split(iamp)*wgt
+              else
+                limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+              endif
+              wlimit_split(1,iamp) = wgt
+            enddo
 
             do k=1,nexternal
                do l=0,3
@@ -454,15 +580,40 @@ c
                y_ij_fks_fix=1-0.1d0**i
                wgt=1d0
                call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
-               call set_cms_stuff(-100)
                if (ilim.eq.2) then
+                  calculatedBorn=.false.
+                  call set_cms_stuff(1)
+                  call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
+                  fxl(i)=fx*jac_cnt(1)
+                  wfxl(i)=jac_cnt(1)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1)
+                     wfxl_split(i,iamp) = jac_cnt(1)
+                  enddo
+                  calculatedBorn=.false.
+                  call set_cms_stuff(-100)
                   call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
                else
+                  calculatedBorn=.false.
+                  call set_cms_stuff(-100)
                   call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  fxl(i)=fx*wgt
+                  wfxl(i)=jac_cnt(0)
+                  do iamp=1,amp_split_size
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(1)
+                     wfxl_split(i,iamp) = jac_cnt(1)
+                  enddo
                endif
                limit(i)=fx*wgt
                wlimit(i)=wgt
+               do iamp=1,amp_split_size
+                 if (ilim.eq.2) then
+                   limit_split(i,iamp) = amp_split(iamp)*wgt
+                 else
+                   limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+                 endif
+                 wlimit_split(i,iamp) = wgt
+               enddo
                do k=1,nexternal
                   do l=0,3
                      xp(i,l,k)=p(l,k)
@@ -475,7 +626,27 @@ c
             if(ncolltests.le.10)then
                write (*,*) 'Collinear limit:'
                do i=1,imax
-                  call xprintout(6,limit(i),fxl)
+                  call xprintout(6,limit(i),fxl(i))
+               enddo
+               do iamp=1, amp_split_size
+                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
+     $                 ,iamp).ne.0d0) then
+                     write(*,*) '   Split-order', iamp
+                     call amp_split_pos_to_orders(iamp,orders)
+                     do i = 1, nsplitorders
+                        write(*,*) '      ',ordernames(i), ':',orders(i)
+                     enddo
+                     do i=1,imax
+                        call xprintout(6,limit_split(i,iamp),fxl_split(i
+     $                       ,iamp))
+                     enddo
+                     iflag=1
+                     call checkres2(limit_split(1,iamp),fxl_split(1
+     $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
+     $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
+     $                    ,iret)
+                     write(*,*) 'RETURN CODE', iret
+                  endif
                enddo
 c     
                write(80,*)'  '
@@ -493,20 +664,43 @@ c
                enddo
             else
                iflag=1
-               call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
-     &              iflag,imax,j,nexternal,i_fks,j_fks,iret)
-               nerr=nerr+iret
+               call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
+     &              iflag,imax,j,i_fks,j_fks,iret)
+               nerr(0)=nerr(0)+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+               do iamp=1, amp_split_size
+                  if (limit_split(1,iamp).ne.0d0.or.fxl_split(1
+     $                 ,iamp).ne.0d0) then
+                     call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
+     &                    wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
+     &                    iflag,imax,j,i_fks,j_fks,iret)
+                     nerr(iamp)=nerr(iamp)+iret
+                  endif
+               enddo
             endif
          enddo
          if(ncolltests.gt.10)then
             write(*,*)'Collinear tests done for (Born) config', iconfig
             write(*,*)'Failures:',nerr
-            fail_frac= nerr/dble(ncolltests)
-            if (fail_frac.lt.max_fail) then
-               write(*,501) nFKSprocess, fail_frac
-            else
-               write(*,502) nFKSprocess, fail_frac
-            endif
+            do iamp = 0, amp_split_size
+                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
+                if (iamp.ne.0) then
+                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+                   call amp_split_pos_to_orders(iamp,orders)
+                   do i = 1, nsplitorders
+                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
+                   enddo
+                else
+                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
+                endif
+                if (fail_frac(iamp).lt.max_fail) then
+                   write(*,501) nFKSprocess, fail_frac(iamp)
+                else
+                   write(*,502) nFKSprocess, fail_frac(iamp)
+                endif
+            enddo
          endif
          
  123     continue
@@ -526,17 +720,3 @@ c
      & f4.2) 
       end
 
-c
-c
-c Dummy routines
-c
-c
-      subroutine initplot
-      end
-      subroutine outfun(pp,www)
-      implicit none
-      include 'nexternal.inc'
-      real*8 pp(0:3,nexternal),www
-      write(*,*)'This routine should not be called here'
-      stop
-      end

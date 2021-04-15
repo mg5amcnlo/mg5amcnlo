@@ -3,18 +3,15 @@ c*****************************************************************************
 c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
 c
       include 'genps.inc'      
       include 'nexternal.inc'
-      include 'mint.inc'
       include 'run.inc'
       include 'nFKSconfigs.inc'
-      integer mapconfig(0:lmaxconfigs),iforest(2,-max_branch:-1
-     $     ,lmaxconfigs),sprop(-max_branch:-1,lmaxconfigs),tprid(
-     $     -max_branch:-1,lmaxconfigs)
       include 'born_conf.inc' ! needed for mapconfig
       logical mtc,even
       integer i,j,k,nmatch,ibase,ntry,icb(nexternal-1),jc(nexternal)
@@ -25,8 +22,8 @@ c
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision p_born(0:3,nexternal-1)
@@ -42,21 +39,63 @@ c
       common/to_matrix/isum_hel, multi_channel
       logical       nbody
       common/cnbody/nbody
-      logical             new_point
-      common /c_new_point/new_point
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
       logical passcuts,check_swap
       double precision ran2
       external passcuts,check_swap,ran2
+      logical force_one_job
+      integer narg
+      character*20 run_mode
 c-----
 c  Begin Code
 c-----
+
+      narg=command_argument_count()
+      if (narg.le.0) then
+         write (*,*) 'Please, give the run_mode'
+         read (*,*) run_mode
+      elseif (narg.eq.1) then
+         call get_command_argument(1,run_mode)
+      else
+         write (*,*) 'This code requires zero or one arguments'
+         stop 1
+      endif
+
+      write (*,*) 'run_mode given is: ',run_mode
+
+      if (run_mode(1:3).eq.'NLO' .or. run_mode(1:2).eq.'LO') then
+         force_one_job=.false.
+      elseif (run_mode(1:7 ).eq.'aMC@NLO' .or.
+     $        run_mode(1:6 ).eq.'aMC@LO' .or.
+     $        run_mode(1:8 ).eq.'noshower' .or.
+     $        run_mode(1:10).eq.'noshowerLO') then
+c when doing event generation, cannot split the integration channels
+c according to initial and final-state FKS configurations, respectively:
+c since for such running the Born is split in two (contributing half to
+c initial state FKS configurations and half to final state FKS
+c configurations), the relative contributions with j_fks <= nincoming
+c and j_fks > nincoming are not correct, resulting --probably among
+c other things-- in a wrong shower starting scale.
+         force_one_job=.true.
+      else
+         write (*,*) 'unknown run_mode is gensym'
+         stop 1
+      endif
+      
       multi_channel=.true.
       nbody=.true.
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
-         if (particle_type(i_fks).eq.8) exit
+         if (is_aorg(i_fks)) exit
       enddo
+c If there is no fks configuration that has a gluon or photon as i_fks
+c (this might happen in case of initial state leptons with
+c include_lepton_initiated_processes=False) the Born and virtuals do not
+c need to be included, but we still need to set the symmetry
+c factors. Hence, simply use the first fks_configuration.
+      if (nFKSprocess.gt.fks_configs) nFKSprocess=1
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -71,6 +110,7 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
+      nndim=ndim
       use_config(0)=0
       do i=1,mapconfig(0)
          use_config(i)=1
@@ -167,7 +207,7 @@ c        Look for matches
       enddo
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
-      call write_bash(mapconfig,use_config)
+      call write_bash(use_config,force_one_job)
       return
       end
 
@@ -179,6 +219,7 @@ c**************************************************************************
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'fks_info.inc'
       integer ic(nexternal-1),i
       integer get_color
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
@@ -192,11 +233,11 @@ c**************************************************************************
             check_swap=.false.
             return
          endif
-         if (abs(get_color(idup(i,1))).gt.1) then
-            ! permuted particles are identical, but not colour neutral
-            ! (Since we use symmetry when setting up the FKS
+         if ( any(i.eq.fks_i_d) .or. any(ic(i).eq.fks_i_d) .or.
+     &        any(i.eq.fks_j_d) .or. any(ic(i).eq.fks_j_d)) then
+            ! Since we use symmetry when setting up the FKS
             ! configurations, we cannot use symmetry here as well to
-            ! reduce the number of integration channels).
+            ! reduce the number of integration channels.
             check_swap=.false.
             return
          endif
@@ -257,7 +298,7 @@ c*******************************************************************************
       end
 
 
-      subroutine write_bash(mapconfig,use_config)
+      subroutine write_bash(use_config,force_one_job)
 c***************************************************************************
 c     Writes out bash commands to run integration over all of the various
 c     configurations, but only for "non-identical" configurations.
@@ -265,26 +306,52 @@ c     Also labels multiplication factor for each used configuration
 c***************************************************************************
       implicit none
       include 'genps.inc'
-      integer mapconfig(0:lmaxconfigs),use_config(0:lmaxconfigs),i,lname
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'born_conf.inc' ! needed for mapconfig
+      integer use_config(0:lmaxconfigs),i,lname
       character*30 fname,mname
+      character*2 postfix
+      logical j_fks_ini,j_fks_fin,two_jobs,force_one_job
+      
+      j_fks_ini=.false.
+      j_fks_fin=.false.
+      do i=1,fks_configs
+         if (fks_j_d(i).le.nincoming) j_fks_ini=.true.
+         if (fks_j_d(i).gt.nincoming) j_fks_fin=.true.
+      enddo
+      if ((.not.force_one_job) .and. j_fks_ini .and. j_fks_fin) then
+         two_jobs=.true.
+      else
+         two_jobs=.false.
+      endif
       fname='ajob'
       lname=4
-      mname='mg'
-      call open_bash_file(26,fname,lname,mname)
+      call open_bash_file(26,fname,lname)
       call close_bash_file(26)
       open(unit=26,file='channels.txt',status='unknown')
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-            if (mapconfig(i) .lt. 10) then
-               write(26,'(i1$)') mapconfig(i)
-            elseif (mapconfig(i) .lt. 100) then
-               write(26,'(i2$)') mapconfig(i)
-            elseif (mapconfig(i) .lt. 1000) then
-               write(26,'(i3$)') mapconfig(i)
-            elseif (mapconfig(i) .lt. 10000) then
-               write(26,'(i4$)') mapconfig(i)
+            if (two_jobs) then
+               postfix='.1'
+            else
+               postfix='.0'
             endif
-            write(26,'(a$)') ' '
+ 100        continue
+            if (mapconfig(i) .lt. 10) then
+               write(26,'(x,i1,a2$)') mapconfig(i),postfix
+            elseif (mapconfig(i) .lt. 100) then
+               write(26,'(x,i2,a2$)') mapconfig(i),postfix
+            elseif (mapconfig(i) .lt. 1000) then
+               write(26,'(x,i3,a2$)') mapconfig(i),postfix
+            elseif (mapconfig(i) .lt. 10000) then
+               write(26,'(x,i4,a2$)') mapconfig(i),postfix
+            endif
+            if (postfix.eq.'.1') then
+               postfix='.2'
+               goto 100
+            endif
          endif
       enddo
       close(26)
@@ -292,45 +359,28 @@ c***************************************************************************
          write(*,*) 'ERROR: only writing first 9999 jobs',mapconfig(0)
          stop 1
       endif
+c
+c     Now write out the symmetry factors for each channel
+c
       open (unit=26, file = 'symfact.dat', status='unknown')
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
-            write(26,'(2i6)') mapconfig(i),use_config(i)
+            if (two_jobs) then
+               write(26,'(i6,a2,i6)') mapconfig(i),'.1',use_config(i)
+               write(26,'(i6,a2,i6)') mapconfig(i),'.2',use_config(i)
+            else
+               write(26,'(i6,a2,i6)') mapconfig(i),'.0',use_config(i)
+            endif
          else
-            write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
+            if (two_jobs) then
+               write(26,'(i6,a2,i6)') mapconfig(i),'.1',-mapconfig(
+     $              -use_config(i))
+               write(26,'(i6,a2,i6)') mapconfig(i),'.2',-mapconfig(
+     $              -use_config(i))
+            else
+               write(26,'(i6,a2,i6)') mapconfig(i),'.0',-mapconfig(
+     $              -use_config(i))
+            endif
          endif
       enddo
       end
-
-
-
-      
-c
-c
-c Dummy routines
-c
-c
-      subroutine initplot
-      end
-      subroutine outfun(pp,www,iplot)
-      end
-
-      LOGICAL FUNCTION PASSCUTS(P,rwgt)
-      real*8 rwgt
-      include 'nexternal.inc'
-      real*8 p(0:3,nexternal)
-      rwgt=1d0
-      passcuts=.true.
-      RETURN
-      END
-
-      subroutine bias_weight_function(p,ipdg,bias_wgt)
-c Dummy function. Should always retrun 1.
-      implicit none
-      include 'nexternal.inc'
-      integer ipdg(nexternal)
-      double precision bias_wgt,p(0:3,nexternal)
-      bias_wgt=1d0
-      return
-      end
-

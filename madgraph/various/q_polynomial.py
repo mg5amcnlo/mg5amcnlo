@@ -15,6 +15,7 @@ class PolynomialError(Exception): pass
 def get_number_of_coefs_for_rank(r):
     """ Returns the number of independent coefficients there is in a
     fully symmetric tensor of rank r """
+    import madgraph.various.misc as misc 
     return sum([((3+ri)*(2+ri)*(1+ri))//6 for ri in range(0,r+1)])
 
 class Polynomial(object):
@@ -607,7 +608,9 @@ C        ARGUMENTS
                     coef_expressions[new_position].append(new_term)
                 except KeyError:
                     coef_expressions[new_position]=[new_term,]
-        for coef, value in coef_expressions.items():
+        keys = sorted(list(coef_expressions.keys()))
+        for coef in keys:
+            value = coef_expressions[coef]
             split=0
             while split<len(value):
                 lines.append("OUT(J,%d,I)=OUT(J,%d,I)+"%(coef,coef)+\

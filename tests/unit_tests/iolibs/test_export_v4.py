@@ -425,6 +425,7 @@ class IOExportV4IOTest(IOTests.IOTestManager,
         amp2_lines = \
                  exporter.get_amp2_lines(matrix_elements[0],
                                           subprocess_group.get('diagram_maps')[0])
+
         
         open(pjoin(self.IOpath,'amp2lines.txt'),'w').write('\n'.join(amp2_lines))
 

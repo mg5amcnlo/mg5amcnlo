@@ -940,19 +940,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
-                no_width = [p for p in ufomodel.all_particles
-                        if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
-                           and p.color != 1 and p.width != zero]
+                if self.proc_characteristics['nlo_mixed_expansion']:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero]
+                else:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero and p.color!=1]
+
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
                         continue
                     done.append(abs(part.pdg_code))
-                    param = param_card['decay'].get((part.pdg_code,))
+                    try:
+                        param = param_card['decay'].get((part.pdg_code,))
+                    except KeyError:
+                        continue
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
-                                    % part.name,'$MG:BOLD')
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.''',
+                                     part.name,'$MG:BOLD')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
@@ -3055,7 +3064,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
         nb_init = self.ninitial
-        pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        pat = re.compile(r'''DATA \(IDUP\(ILH|I,\d+\),ILH|I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
             text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
             group = pat.findall(text)
@@ -4043,6 +4052,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             with open(make_opts, 'w') as fsock: 
                 fsock.write(content_variables + '\n'.join(content))
         return       
+
 
 
 # lhapdf-related functions

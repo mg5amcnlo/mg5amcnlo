@@ -43,10 +43,10 @@ LUTIFILES=$(OBJDIR)/mcatnlo_date.o $(OBJDIR)/mcatnlo_int.o $(OBJDIR)/mcatnlo_uxd
 PDFFILES=$(OBJDIR)/mcatnlo_pdftomlm.o $(OBJDIR)/mcatnlo_libofpdf.o $(OBJDIR)/dummies.o
 CPDFFILES=$(OBJDIR)/mcatnlo_mlmtopdf.o $(OBJDIR)/dummies.o
 LPDFFILES=$(OBJDIR)/mcatnlo_mlmtolha.o $(OBJDIR)/dummies.o
-HWFILES=$(OBJDIR)/$(HERWIGVER) $(OBJDIR)/madfks_hwdriver.o $(OBJDIR)/madfks_hwlhin.o \
-        $(OBJDIR)/mcatnlo_str.o $(HWUTI)
-PYFILES=$(OBJDIR)/$(PYTHIAVER) $(OBJDIR)/madfks_pydriver.o $(OBJDIR)/madfks_pylhin.o \
-        $(OBJDIR)/mcatnlo_str.o $(PYUTI)
+HWFILES=$(HWUTI) $(OBJDIR)/$(HERWIGVER) $(OBJDIR)/madfks_hwdriver.o $(OBJDIR)/madfks_hwlhin.o \
+        $(OBJDIR)/mcatnlo_str.o 
+PYFILES=$(PYUTI) $(OBJDIR)/$(PYTHIAVER) $(OBJDIR)/madfks_pydriver.o $(OBJDIR)/madfks_pylhin.o \
+        $(OBJDIR)/mcatnlo_str.o
 
 
 HW_EXE_DEFAULT : $(HWFILES) $(PDFFILES)

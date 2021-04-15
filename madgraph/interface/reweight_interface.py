@@ -737,12 +737,12 @@ class ReweightInterface(extended_cmd.Cmd):
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
+            import madgraph.interface.extended_cmd as extended_cmd
             try:
                 import internal.extended_cmd as extended_internal
                 Shell_internal = extended_internal.CmdShell
             except:
                 Shell_internal = None
-            import madgraph.interface.extended_cmd as extended_cmd
             if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
                 raise Exception("scan are not allowed on the Web")
             # at least one scan parameter found. create an iterator to go trough the cards

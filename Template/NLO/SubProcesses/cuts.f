@@ -38,6 +38,9 @@ C     external functions that can be used. Some are defined in this
 C     file, others are in ./Source/kin_functions.f
       REAL*8 R2_04,invm2_04,pt_04,eta_04,pt,eta
       external R2_04,invm2_04,pt_04,eta_04,pt,eta
+C     recombination of photons
+      double precision p_reco(0:4,nexternal), R_reco
+      integer iPDG_reco(nexternal)
 c local integers
       integer i,j
 c temporary variable for caching locally computation
@@ -81,19 +84,23 @@ C***************************************************************
 C Cuts from the run_card.dat
 C***************************************************************
 C***************************************************************
+      !first recombine the photons and fermions
+      call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
+     $                       p, iPDG, p_reco, iPDG_reco)
+
 c
 c CHARGED LEPTON CUTS
 c
 c find the charged leptons (also used in the photon isolation cuts below)
       do i=1,nexternal
          if(istatus(i).eq.1 .and.
-     &    (ipdg(i).eq.11 .or. ipdg(i).eq.13 .or. ipdg(i).eq.15)) then
+     &    (ipdg_reco(i).eq.11 .or. ipdg_reco(i).eq.13 .or. ipdg_reco(i).eq.15)) then
             is_a_lm(i)=.true.
          else
             is_a_lm(i)=.false.
          endif
          if(istatus(i).eq.1 .and.
-     &    (ipdg(i).eq.-11 .or. ipdg(i).eq.-13 .or. ipdg(i).eq.-15)) then
+     &    (ipdg_reco(i).eq.-11 .or. ipdg_reco(i).eq.-13 .or. ipdg_reco(i).eq.-15)) then
             is_a_lp(i)=.true.
          else
             is_a_lp(i)=.false.
@@ -104,14 +111,14 @@ c apply the charged lepton cuts
          if (is_a_lp(i).or.is_a_lm(i)) then
 c transverse momentum
             if (ptl.gt.0d0) then
-               if (pt_04(p(0,i)).lt.ptl) then
+               if (pt_04(p_reco(0,i)).lt.ptl) then
                   passcuts_user=.false.
                   return
                endif
             endif
 c pseudo-rapidity
             if (etal.gt.0d0) then
-               if (abs(eta_04(p(0,i))).gt.etal) then
+               if (abs(eta_04(p_reco(0,i))).gt.etal) then
                   passcuts_user=.false.
                   return
                endif
@@ -121,26 +128,26 @@ c DeltaR and invariant mass cuts
                do j=nincoming+1,nexternal
                   if (is_a_lm(j)) then
                      if (drll.gt.0d0) then
-                        if (R2_04(p(0,i),p(0,j)).lt.drll**2) then
+                        if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll**2) then
                            passcuts_user=.false.
                            return
                         endif
                      endif
                      if (mll.gt.0d0) then
-                        if (invm2_04(p(0,i),p(0,j),1d0).lt.mll**2) then
+                        if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll**2) then
                            passcuts_user=.false.
                            return
                         endif
                      endif
-                     if (ipdg(i).eq.-ipdg(j)) then
+                     if (ipdg_reco(i).eq.-ipdg_reco(j)) then
                         if (drll_sf.gt.0d0) then
-                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                           if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll_sf**2) then
                               passcuts_user=.false.
                               return
                            endif
                         endif
                         if (mll_sf.gt.0d0) then
-                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+                           if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll_sf**2)
      $                          then
                               passcuts_user=.false.
                               return
@@ -158,7 +165,8 @@ c
 c find the jets
       do i=1,nexternal
          if (istatus(i).eq.1 .and.
-     &        (abs(ipdg(i)).le.maxjetflavor .or. ipdg(i).eq.21)) then
+     &        (abs(ipdg_reco(i)).le.maxjetflavor .or. ipdg_reco(i).eq.21
+     &         .or.(ipdg_reco(i).eq.22.and.gamma_is_j))) then
             is_a_j(i)=.true.
          else
             is_a_j(i)=.false.
@@ -167,7 +175,7 @@ c find the jets
 
 c If we do not require a mimimum jet energy, there's no need to apply
 c jet clustering and all that.
-      if (ptj.ne.0d0.or.ptgmin.ne.0d0) then
+      if (ptj.gt.0d0.or.ptgmin.gt.0d0) then
 c Put all (light) QCD partons in momentum array for jet clustering.
 c From the run_card.dat, maxjetflavor defines if b quark should be
 c considered here (via the logical variable 'is_a_jet').  nQCD becomes
@@ -178,7 +186,7 @@ c more than the Born).
             if (is_a_j(j)) then
                nQCD=nQCD+1
                do i=0,3
-                  pQCD(i,nQCD)=p(i,j)
+                  pQCD(i,nQCD)=p_reco(i,j)
                enddo
             endif
          enddo
@@ -189,7 +197,7 @@ c THE UNLOPS CUT:
 c Use special pythia pt cut for minimal pT
          do i=1,nexternal
             do j=0,3
-               p_unlops(j,i)=p(j,i)
+               p_unlops(j,i)=p_reco(j,i)
             enddo
          enddo
          call pythia_UNLOPS(p_unlops,passUNLOPScuts)
@@ -270,13 +278,13 @@ c PHOTON (ISOLATION) CUTS
 c
 c find the photons
       do i=1,nexternal
-         if (istatus(i).eq.1 .and. ipdg(i).eq.22) then
+         if (istatus(i).eq.1 .and. ipdg(i).eq.22 .and. .not.gamma_is_j) then
             is_a_ph(i)=.true.
          else
             is_a_ph(i)=.false.
          endif
       enddo
-      if (ptgmin.ne.0d0) then
+      if (ptgmin.gt.0d0) then
          nph=0
          do j=nincoming+1,nexternal
             if (is_a_ph(j)) then
@@ -287,6 +295,9 @@ c find the photons
             endif
          enddo
          if(nph.eq.0)goto 444
+         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
+     $           // ' for mixed QED-QCD corrections'
+         stop 1
          
          if(isoEM)then
             nem=nph
@@ -427,9 +438,6 @@ c$$$      enddo
 c
       return
       end
-
-
-
 
 
 
@@ -974,5 +982,6 @@ c      enddo
 c      bias_wgt=H_T**2
       return
       end
+
 
 

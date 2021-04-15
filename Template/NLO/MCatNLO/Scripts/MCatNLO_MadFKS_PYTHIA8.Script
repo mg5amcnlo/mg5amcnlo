@@ -476,7 +476,6 @@ TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
 TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-
 TimeShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
@@ -496,12 +495,10 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-
 SpaceShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 SpaceShower:QEDshowerByL = on     ! Prevent leptons from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-
 SpaceShower:MEcorrections = off    ! No Matrix-element corrections
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR

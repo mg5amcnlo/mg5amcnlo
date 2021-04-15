@@ -664,6 +664,14 @@ C      helicity is asked
  101    CONTINUE
         CLOSE(1)
 
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
+
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
           DO J=1,NCOMB
@@ -2118,6 +2126,49 @@ C
 
       END
 
+      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['WEIGHTED', 'QCD', 'QED']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=3, NSQSO=3)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  3) /    8,    4,    2/
+      DATA (SQPLITORDERS(  2,I),I=  1,  3) /   10,    2,    4/
+      DATA (SQPLITORDERS(  3,I),I=  1,  3) /   12,    0,    6/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
+
+      END
+
       INTEGER FUNCTION ML5_0_ML5SOINDEX_FOR_BORN_AMP(AMPID)
 C     
 C     For a given born amplitude number, it returns the ID of the
@@ -2801,14 +2852,11 @@ C
       PARAMETER (NEXTERNAL=4)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=3)
-      INCLUDE 'nsqso_born.inc'
 C     
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER ANS_DIMENSION
-      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
-      REAL*8 ANS(0:3,0:ANS_DIMENSION)
+      REAL*8 ANS(0:3,0:NSQUAREDSO)
       INTEGER HEL, USERHEL
       COMMON/ML5_0_USERCHOICE/USERHEL
 C     ----------
@@ -2832,10 +2880,7 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      INCLUDE 'nsqso_born.inc'
-      INTEGER ANS_DIMENSION
-      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
-      REAL*8 ANS(0:3,0:ANS_DIMENSION)
+      REAL*8 ANS(0:3,0:NSQUAREDSO)
       INTEGER HEL, RET_CODE
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C     
@@ -2952,10 +2997,7 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      INCLUDE 'nsqso_born.inc'
-      INTEGER ANS_DIMENSION
-      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
-      REAL*8 ANS(0:3,0:ANS_DIMENSION)
+      REAL*8 ANS(0:3,0:NSQUAREDSO)
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
       INTEGER RET_CODE
 C     

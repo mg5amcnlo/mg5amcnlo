@@ -6,7 +6,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "coloramps.inc"
+      include "born_coloramps.inc"
       include "nFKSconfigs.inc"
       include "leshouche_decl.inc"
       include "run.inc"
@@ -119,6 +119,11 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
 c Set the leshouche info and fks info
 c
@@ -346,6 +351,10 @@ c Use the MadGraph masses in the event file
          call write_masses_lhe_MG()
       endif
 
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
 c
 c Derive the n-body from the (n+1)-body if we are doing S-events
 c
@@ -358,13 +367,15 @@ c
             elseif(i.eq.min(i_fks,j_fks)) then
                if(jpart(1,i_fks).eq.-jpart(1,j_fks)
      &              .and.j_fks.gt.nincoming) then
-                  jpart(1,i) = 21
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
                elseif(jpart(1,i_fks).eq.jpart(1,j_fks)
      &                 .and.j_fks.le.nincoming) then
-                  jpart(1,i)=21
-               elseif(abs(jpart(1,i_fks)).eq.21) then
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
+               elseif(abs(jpart(1,i_fks)).eq.21.or.jpart(1,i_fks).eq.22) then
                   jpart(1,i)=jpart(1,j_fks)
-               elseif(jpart(1,j_fks).eq.21.and.j_fks.le.nincoming) then
+               elseif((jpart(1,j_fks).eq.21.or.jpart(1,i_fks).eq.22).and.j_fks.le.nincoming) then
                   jpart(1,i)=-jpart(1,i_fks)
                else
                   write (*,*) 'ERROR #5 in add_write_info()',
@@ -591,9 +602,6 @@ c
       parameter (ZERO=0d0)
       integer itree(2,-max_branch:-1)
       integer sprop_tree(-max_branch:-1)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs),mapconfig(0:lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
       include "born_conf.inc"
       integer i,j,jj
       double precision pmass(-nexternal:0,lmaxconfigs)
@@ -705,6 +713,7 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
+      include 'nFKSconfigs.inc'
 c
 c     Arguments
 c
@@ -726,6 +735,17 @@ c
 c     External
 c
       double precision dot
+
+c Special for the phase-space mapping in which the grandmother mass is
+c kept fixed between events and counter events:
+      integer igranny
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+
+
 c-----
 c  Begin Code
 c-----      
@@ -749,6 +769,9 @@ c-----
             endif
          enddo
       enddo
+
+      igranny=which_is_granny(nFKSprocess)
+      if (Hevents .and. igranny.ne.0 )igranny=igranny-1
 c
       do i=-1,-iloop,-1                      !Loop over propagators
          onbw(i) = .false.
@@ -759,11 +782,22 @@ c Skip the t-channels
             xp(j,i) = xp(j,itree(1,i))+xp(j,itree(2,i))
          enddo
          if (pwidth(i) .gt. 0d0) then !This is B.W.
-c
+c If s-channel is the grandmother, check if we need to write this
+c resonance. In that case, ignore the bwcutoff parameter. In this case,
+c also ignore the special case where both mother and daughter could be
+c resonant.
+            if (i.eq.igranny .and. .not. write_granny(nFKSprocess))then
+               cycle
+            elseif(i.eq.igranny .and. write_granny(nFKSprocess))then
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell=.true.
+            else
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
+            endif
+c     
 c     If the invariant mass is close to pole mass, set OnBW to true
 c
-            xmass = sqrt(dot(xp(0,i),xp(0,i)))
-            onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
             if(onshell)then
                OnBW(i) = .true.
 c     If mother and daughter have the same ID, remove one of them
@@ -797,6 +831,7 @@ c                  whichever is closer to mass shell
       enddo
       end
 
+
       subroutine fill_icolor_H(iflow,jpart)
       implicit none
       include "nexternal.inc"
@@ -811,6 +846,9 @@ c      include 'fks.inc'
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
       integer i_part,j_part,imother,lc
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
       call fill_icolor_S(iflow,jpart,lc)
 c
@@ -824,31 +862,66 @@ c
          endif
       enddo
 c
+
+      ! the case of all-colorless particles
+      if (lc.eq.0) lc=500
+
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+        write(*,*) "Error in fill_icolor_H, NOT IMPLEMENTED"
+        stop 1
+      endif
+
       imother=min(i_fks,j_fks)
+      if (imother.lt.1.or.imother.gt.nexternal) then
+        write(*,*) "Error in fill_icolor_H, invalid imother", imother
+        stop 1
+      endif
 c The following works only if i_fks is always greater than j_fks.      
       if (j_fks.gt.nincoming) then
-         if (j_part.eq.3.and.i_part.eq.-3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+         if (j_part.eq.3.and.i_part.eq.-3) then ! g/a > q qb
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #3 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=0
-            jpart(5,i_fks)=jpart(5,imother)
-            jpart(4,j_fks)=jpart(4,imother)
-            jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=jpart(5,imother)
+              jpart(4,j_fks)=jpart(4,imother)
+              jpart(5,j_fks)=0
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=lc+1
+              jpart(4,j_fks)=lc+1
+              jpart(5,j_fks)=0
+            endif
+         elseif (j_part.eq.-3.and.i_part.eq.3) then ! g/a > qb q
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #4 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=jpart(4,imother)
-            jpart(5,i_fks)=0
-            jpart(4,j_fks)=0
-            jpart(5,j_fks)=jpart(5,imother) 
-         elseif (j_part.eq.3.and.i_part.eq.8) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=jpart(4,imother)
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=jpart(5,imother) 
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=lc+1
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=lc+1 
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.8) then ! q > q g
+            if (jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0) then
                write (*,*) 'Error #5 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
@@ -857,8 +930,8 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.8) then
-            if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
+         elseif (j_part.eq.-3.and.i_part.eq.8) then ! qb > qb g
+            if (jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0) then
                write (*,*) 'Error #6 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
@@ -867,7 +940,17 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=jpart(5,imother)
             jpart(4,j_fks)=0
             jpart(5,j_fks)=lc+1
-         elseif (j_part.eq.8.and.i_part.eq.8) then
+         elseif (j_part.eq.3.and.i_part.eq.1) then ! q > q a 
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=jpart(4,imother)
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.-3.and.i_part.eq.1) then ! qb > q a
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=jpart(5,imother)
+         elseif (j_part.eq.8.and.i_part.eq.8) then ! g > g g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #7 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -884,32 +967,59 @@ c The following works only if i_fks is always greater than j_fks.
                jpart(4,j_fks)=lc+1
                jpart(5,j_fks)=jpart(5,imother)
             endif
+         elseif (j_part.eq.1.and.i_part.eq.1) then ! e.g. e+ > e+ gamma
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          else
             write (*,*) 'Error #1 in fill_icolor_H',i_part,j_part
             stop
          endif
       else
-         if (j_part.eq.-3.and.i_part.eq.-3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+         if (j_part.eq.-3.and.i_part.eq.-3) then ! g/a > q qb
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #8 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=0
-            jpart(5,i_fks)=jpart(4,imother)
-            jpart(4,j_fks)=0
-            jpart(5,j_fks)=jpart(5,imother)
-         elseif (j_part.eq.3.and.i_part.eq.3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=jpart(4,imother)
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=jpart(5,imother)
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=lc+1
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=lc+1
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.3) then ! g/a > qb q
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #9 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother),'HERE'
                stop
             endif
-            jpart(4,i_fks)=jpart(5,imother)
-            jpart(5,i_fks)=0
-            jpart(4,j_fks)=jpart(4,imother)
-            jpart(5,j_fks)=0
-         elseif (j_part.eq.3.and.i_part.eq.8) then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=jpart(5,imother)
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=jpart(4,imother)
+              jpart(5,j_fks)=0
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=lc+1
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=lc+1
+              jpart(5,j_fks)=0
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.8) then ! q > q g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
                write (*,*) 'Error #10 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -919,7 +1029,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=jpart(4,imother)
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.8) then
+         elseif (j_part.eq.-3.and.i_part.eq.8) then ! qb > qb g
             if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #11 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -929,7 +1039,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=0
             jpart(5,j_fks)=lc+1
-         elseif (j_part.eq.8.and.i_part.eq.3) then
+         elseif (j_part.eq.8.and.i_part.eq.3) then ! q > g q
             if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #12 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -939,7 +1049,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=0
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=jpart(5,imother)
-         elseif (j_part.eq.8.and.i_part.eq.-3) then
+         elseif (j_part.eq.8.and.i_part.eq.-3) then ! qb > g qb
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
                write (*,*) 'Error #13 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -949,6 +1059,26 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=jpart(4,imother)
             jpart(5,j_fks)=lc+1
+         elseif (j_part.eq.3.and.i_part.eq.1) then ! q > q a 
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=jpart(4,imother)
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.-3.and.i_part.eq.1) then ! qb > qb a
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=jpart(5,imother)
+         elseif (j_part.eq.1.and.i_part.eq.3) then ! q > a q 
+            jpart(4,i_fks)=jpart(5,imother)
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.1.and.i_part.eq.-3) then ! qb > a qb
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=jpart(4,imother)
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          elseif (j_part.eq.8.and.i_part.eq.8) then
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #14 in fill_icolor_H',
@@ -1037,6 +1167,11 @@ c cuts.inc contains maxjetflavor
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 
 c Masses of the real process, as set by MadGraph
       include 'coupl.inc'
@@ -1054,6 +1189,10 @@ c
       xm2=-1.d0
 c WARNING: what follows will need to be reconsidered the case of 
 c QED corrections, for what is relevant to i_fks and j_fks
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
       do i=1,nexternal
         if(i.eq.i_fks)then
           if(pmass(i).ne.0.d0)then
@@ -1068,12 +1207,14 @@ c QED corrections, for what is relevant to i_fks and j_fks
 c S events
             xmi=0.d0
             if(idparti.eq.-idpartj.and.j_fks.gt.nincoming) then
-               idpart=21
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
             elseif(idparti.eq.idpartj.and.j_fks.le.nincoming) then
-               idpart=21
-            elseif(abs(idparti).eq.21) then
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
+            elseif(is_aorg(i_fks)) then
                idpart=idpartj
-            elseif(idpartj.eq.21.and.j_fks.le.nincoming) then
+            elseif(is_aorg(j_fks).and.j_fks.le.nincoming) then
                idpart=-idparti
             else
                write(*,*)'Error #2 in put_on_MC_mshell',
@@ -1087,7 +1228,7 @@ c S events
               xmj=mcmass(idpart)
             else
 c j_fks is an heavy particle
-              if(abs(idparti).ne.21)then
+              if(.not.is_aorg(i_fks))then
                 write(*,*)'Error #3 in put_on_MC_mshell',
      &            i_fks,j_fks,i,pmass(j_fks)
                 stop
@@ -1116,9 +1257,11 @@ c H events
      #          ( (abs(idpartj).eq.4.or.abs(idpartj).eq.5) .and.
      #            pmass(j_fks).eq.0.d0 ) )then
               xmj=mcmass(idpartj)
+            elseif(idpartj.eq.22) then
+              xmj=0d0
             else
 c j_fks is an heavy particle
-              if(idparti.ne.21)then
+              if(.not.is_aorg(i_fks))then
                 write(*,*)'Error #3 in put_on_MC_mshell',
      &            i_fks,j_fks,i,pmass(j_fks),(jpart(1,j),j=1,nexternal)
                 stop

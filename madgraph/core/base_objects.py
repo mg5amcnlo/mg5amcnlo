@@ -895,6 +895,26 @@ class Interaction(PhysicsObject):
 
         return mystr
 
+    def canonical_repr(self):
+        """ Returns a string representation that allows to order CT vertices in 
+        a diagram so that identical HelasMatrix element (i.e. typically different
+        flavors with identical masses and couplings) can be matched even though
+        the order of the couplings specified in the UFO is different. """
+
+        return '%s|%s'%(self['type'],
+           '&'.join( sorted('%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],v)
+                                          for k,v in self['couplings'].items() ) ) )
+
+    def get_canonical_couplings_keys_order(self):
+        """ Returns a list of the keys to the 'couplings' dictionary, canonically 
+        ordered so so that identical HelasMatrix element (i.e. typically different
+        flavors with identical masses and couplings) can be matched even though
+        the order of the couplings specified in the UFO is different. """
+
+        return sorted(list(self['couplings'].keys()), key=lambda k:
+        '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
+
+
 #===============================================================================
 # InteractionList
 #===============================================================================
@@ -1306,6 +1326,42 @@ class Model(PhysicsObject):
                 if p['spin'] == 2 and p['is_part'] and \
                 p ['color'] != 1 and p['mass'].lower() == 'zero'])
 
+
+    def get_quark_pdgs(self):
+        """returns the PDG codes of the light quarks and antiquarks"""
+        pdg_list = [p['pdg_code'] for p in self.get('particles') \
+                       if p['spin'] == 2 and \
+                       p['color'] == 3 and \
+                       p['charge'] != 0. and p['mass'].lower() == 'zero']
+
+        for p in pdg_list[:]:
+            if not self.get('particle_dict')[p]['self_antipart']:
+                pdg_list.append(self.get('particle_dict')[p].get_anti_pdg_code())
+                
+        return sorted(pdg_list)
+
+
+    def get_nleps(self):
+        """returns the number of light lepton flavours in the model."""
+        return len([p for p in self.get('particles') \
+                if p['spin'] == 2 and p['is_part'] and \
+                p['color'] == 1 and \
+                p['charge'] != 0. and p['mass'].lower() == 'zero'])
+
+
+    def get_lepton_pdgs(self):
+        """returns the PDG codes of the light leptons and antileptons"""
+        pdg_list = [p['pdg_code'] for p in self.get('particles') \
+                       if p['spin'] == 2 and \
+                       p['color'] == 1 and \
+                       p['charge'] != 0. and p['mass'].lower() == 'zero']
+
+        for p in pdg_list[:]:
+            if not self.get('particle_dict')[p]['self_antipart']:
+                pdg_list.append(self.get('particle_dict')[p].get_anti_pdg_code())
+                
+        return sorted(pdg_list)
+
     
     def get_particles_hierarchy(self):
         """Returns the order hierarchies of the model and the
@@ -1513,6 +1569,7 @@ class Model(PhysicsObject):
         if hasattr(self,'map_CTcoup_CTparam'):
             # If the map for the dependence of couplings to CTParameters has
             # been defined, we must apply the renaming there as well. 
+
             self.map_CTcoup_CTparam = dict( (coup_name, 
             [change[name] if (name in change) else name for name in params]) 
                   for coup_name, params in self.map_CTcoup_CTparam.items() )
@@ -2781,6 +2838,11 @@ class Process(PhysicsObject):
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
         self['NLO_mode'] = 'tree'
+        # in the context of QED or QED+QCD perturbation, it is useful to
+        # keep track of the orders that have been explicitly asked by the 
+        # user, because other borns will appear used for the subtraction
+        # of singularities
+        self['born_sq_orders'] = {}
         # The user might want to have the individual matrix element evaluations
         # for specific values of the coupling orders. The list below specifies
         # what are the coupling names which need be individually treated.
@@ -2799,7 +2861,7 @@ class Process(PhysicsObject):
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError("%s is not a valid LegList object" % str(value))
 
-        if name in ['orders', 'overall_orders','squared_orders']:
+        if name in ['orders', 'overall_orders','squared_orders', 'born_sq_orders']:
             Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'constrained_orders':
@@ -2941,9 +3003,9 @@ class Process(PhysicsObject):
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
-                'NLO_mode','split_orders']
+                'NLO_mode', 'split_orders', 'born_sq_orders']
 
-    def nice_string(self, indent=0, print_weighted = True, prefix=True):
+    def nice_string(self, indent=0, print_weighted=True, prefix=True, print_perturbated=True):
         """Returns a nicely formated string about current process
         content. Since the WEIGHTED order is automatically set and added to 
         the user-defined list of orders, it can be ommitted for some info
@@ -3017,7 +3079,7 @@ class Process(PhysicsObject):
                     for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
-        if self['perturbation_couplings']:
+        if print_perturbated and self['perturbation_couplings']:
             mystr = mystr + '[ '
             if self['NLO_mode']!='tree':
                 if self['NLO_mode']=='virt' and not self['has_born']:
@@ -3917,6 +3979,7 @@ class ProcessDefinition(Process):
             'is_decay_chain': self.get('is_decay_chain'),
             'overall_orders': self.get('overall_orders'),
             'split_orders': self.get('split_orders'),
+            'born_sq_orders': self.get('born_sq_orders'),
             'NLO_mode': self.get('NLO_mode')
             })
             

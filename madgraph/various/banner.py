@@ -1505,9 +1505,12 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('limitations', [], typelist=str)  
+        self.add_param('splitting_types',[], typelist=str)
+        self.add_param('perturbation_order', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)        
         self.add_param('hel_recycling', False)  
-        self.add_param('single_color', True)    
+        self.add_param('single_color', True)
+        self.add_param('nlo_mixed_expansion', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -3277,7 +3280,7 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-    
+
         # check validity of the pdf set
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
@@ -4128,7 +4131,7 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo'] + self.allowed_lep_densities)                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] + self.allowed_lep_densities )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -4170,12 +4173,17 @@ class RunCardNLO(RunCard):
         self.add_param('jetradius', 0.7)         
         self.add_param('ptj', 10.0 , cut=True)
         self.add_param('etaj', -1.0, cut=True)        
+        self.add_param('gamma_is_j', True)        
         self.add_param('ptl', 0.0, cut=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
         self.add_param('drll_sf', 0.0, cut=True)        
         self.add_param('mll', 0.0, cut=True)
         self.add_param('mll_sf', 30.0, cut=True) 
+        self.add_param('rphreco', 0.1) 
+        self.add_param('etaphreco', -1.0) 
+        self.add_param('lepphreco', True) 
+        self.add_param('quarkphreco', True) 
         self.add_param('ptgmin', 20.0, cut=True)
         self.add_param('etagamma', -1.0)        
         self.add_param('r0gamma', 0.4)
@@ -4183,7 +4191,7 @@ class RunCardNLO(RunCard):
         self.add_param('epsgamma', 1.0)
         self.add_param('isoem', True)        
         self.add_param('maxjetflavor', 4, hidden=True)
-        self.add_param('iappl', 0)   
+        self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
         #internal variable related to FO_analyse_card
@@ -4254,11 +4262,11 @@ class RunCardNLO(RunCard):
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:BOLD')            
                                 
-        # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
-        if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
-            raise InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
-        if self['iappl'] != 0 and not self['reweight_scale']:
-            raise InvalidRunCard('APPLgrid generation only possible with including' +\
+        # For interface to PINEAPPL, need to use LHAPDF and reweighting to get scale uncertainties
+        if self['pineappl'] and self['pdlabel'].lower() != 'lhapdf':
+            raise InvalidRunCard('PineAPPL generation only possible with the use of LHAPDF')
+        if self['pineappl'] and not self['reweight_scale']:
+            raise InvalidRunCard('PineAPPL generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         # Hidden values check

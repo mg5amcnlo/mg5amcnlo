@@ -23,7 +23,6 @@ from __future__ import absolute_import
 from six.moves import filter
 #force filter to be a generator # like in py3
 
-
 import array
 import copy
 import itertools
@@ -34,6 +33,7 @@ import madgraph.various.misc as misc
 from madgraph import InvalidCmd, MadGraph5Error
 from six.moves import range
 from six.moves import zip
+from six.moves import filter
 
 logger = logging.getLogger('madgraph.diagram_generation')
 
@@ -1675,10 +1675,12 @@ class MultiProcess(base_objects.PhysicsObject):
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
 
-        # Set automatic coupling orders
-        process_definition.set('orders', MultiProcess.\
+        # Set automatic coupling orders if born_sq_orders are not specified
+        # otherwise skip
+        if not process_definition['born_sq_orders']:
+            process_definition.set('orders', MultiProcess.\
                                find_optimal_process_orders(process_definition,
-                               diagram_filter))
+                                                           diagram_filter))
         # Check for maximum orders from the model
         process_definition.check_expansion_orders()
 

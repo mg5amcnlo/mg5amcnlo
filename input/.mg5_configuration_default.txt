@@ -218,8 +218,8 @@
 #! relative path start from main directory
 # syscalc_path = ./SysCalc
 
-#! Absolute paths to config scripts in the bin directories for APPLgrid and aMCFast.
-# applgrid = applgrid-config
-# amcfast = amcfast-config
+#! Absolute paths to the config script in the bin directory of PineAPPL
+#! (to generate PDF-independent fast-interpolation grids).
+# pineappl = pineappl
 
 

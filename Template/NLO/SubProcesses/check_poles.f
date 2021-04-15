@@ -2,6 +2,8 @@
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
+      use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -9,12 +11,11 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked
+      integer npointsChecked
       integer i, j, k
       integer return_code
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
-      double precision accuracy2
       double precision ren_scale, energy
       include 'genps.inc'
       include 'nexternal.inc'
@@ -26,7 +27,7 @@ C
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
-      double complex born(2)
+      double precision born, virt_wgt
       double precision totmass
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
@@ -35,10 +36,10 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
+     &     fkssymmetryfactorDeg,symfactvirt
+      integer ngluons,nquarks(-6:6),nphotons
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
+     &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -48,21 +49,33 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       include 'q_es.inc'
-      integer nsqso      
+      integer nsqso,MLResArrayDim
       double precision pmass(nexternal), pmass_rambo(100)
       integer nfail
       logical first_time
       data first_time/.TRUE./
-      include 'FKSParams.inc'
-      include 'mint.inc'
+      double precision tiny
+      parameter (tiny = 1d-12)
+      integer getordpowfromindex_ml5
+      logical, allocatable, save :: keep_order(:)
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical force_polecheck, polecheck_passed
+      common /to_polecheck/force_polecheck, polecheck_passed
+      integer ret_code_ml
+      common /to_ret_code/ret_code_ml
       
 C-----
 C  BEGIN CODE
 C-----  
+      force_polecheck = .true.
       if (first_time) then
           call get_nsqso_loop(nsqso)          
-          allocate(virt_wgts(0:3,0:nsqso))
+          call get_answer_dimension(MLResArrayDim)
+          allocate(virt_wgts(0:3,0:MLResArrayDim))
           allocate(accuracies(0:nsqso))
+          allocate(keep_order(nsqso))
           first_time = .false.
       endif
 
@@ -75,7 +88,9 @@ C-----
      
       call FKSParamReader('FKS_params.dat',.TRUE.,.FALSE.)
       tolerance_default = IRPoleCheckThreshold
-
+      iconfig=1
+      ichan=1
+      iconfigs(1)=iconfig
 c     Set the energy to be characteristic of the run
       totmass = 0.0d0
       do i=1,nexternal
@@ -92,7 +107,11 @@ c     not equal to it so as to be sensitive to all logs in the check.
       write(*,*)' A negative number will mean use the default one: ',
      1 tolerance_default 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = tolerance_default
+      if (tolerance .le. zero) then
+          tolerance = tolerance_default
+      else
+          IRPoleCheckThreshold = tolerance
+      endif
 
       mu_r = ren_scale
       qes2 = ren_scale**2
@@ -108,11 +127,19 @@ c Find the nFKSprocess for which we compute the Born-like contributions,
 c ie. which is a Born+g real-emission process
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
-         if (particle_type(i_fks).eq.8) exit
+         if (is_aorg(i_fks)) exit
       enddo
+      if (nFKSprocess.gt.fks_configs) then
+c If there is no fks_configuration that has a gluon or photon as i_fks
+c (this might happen in case of initial state leptons with
+c include_lepton_initiated_processes=False) the Born and virtuals do not
+c need to be included, and we can simply quit the process.
+         return
+      endif
       call fks_inc_chooser()
       call leshouche_inc_chooser()
-      call setfksfactor(1,.false.)
+      call setfksfactor(.false.)
+      symfactvirt = 1d0
 
       nfail = 0
       npointsChecked = 0
@@ -124,6 +151,9 @@ c initialization
       CALL COLLIER_COMPUTE_IR_POLES(.TRUE.)
 
 200   continue
+          finite=0d0
+          single=0d0
+          double=0d0
           calculatedborn = .false.
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
@@ -185,17 +215,23 @@ c initialization
 
           CALL UPDATE_AS_PARAM()
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,
-     1 accuracies,return_code)
-          accuracy2=accuracies(0)
-
-          finite = virt_wgts(1,0)
-          single = virt_wgts(2,0)
-          double = virt_wgts(3,0)
-
-C         If MadLoop was still in initialization mode, then skip this
-C         point for the checks
-          if (accuracy2.lt.0.0d0) goto 200
+          ! extra initialisation calls: skip the first point
+          ! as well as any other points which is used for initialization
+          ! (according to the return code)
+          call BinothLHA(p_born, born, virt_wgt)
+          if (npointsChecked.eq.0) then
+             if (mod(ret_code_ml,100)/10.eq.3 .or.
+     &            mod(ret_code_ml,100)/10.eq.4) then
+              ! this is to skip initialisation points
+                write(*,*) 'INITIALIZATION POINT.'
+                write(*,*)
+     $               'RESULTS FROM INITIALIZATION POINTS WILL NOT '/
+     $               /'BE USED FOR STATISTICS'
+                goto 200
+             endif
+          endif
+          write(*,*) 'MU_R    = ', ren_scale
+          write(*,*) 'ALPHA_S = ', G**2/4d0/pi
 C         Otherwise, perform the check
           npointsChecked = npointsChecked +1
 
@@ -206,59 +242,25 @@ C         Otherwise, perform the check
             p(j, nexternal) = 0d0
           enddo
 
-          call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
-
           if ( tolerance.lt.0.0d0 ) then
-                write(*,*) 'PASSED', tolerance
+               write(*,*) 'PASSED', tolerance
           else
-          if ( double.ne.0d0 ) then
-             if ((dabs((double-fks_double)/double).gt.tolerance).or. 
-     1            (dabs((single-fks_single)/single).gt.tolerance)) then
-                nfail = nfail + 1
-                write(*,*) 'FAILED', tolerance
-             else
+              if (polecheck_passed) then
                 write(*,*) 'PASSED', tolerance
-             endif
-          elseif ( fks_double.ne.0d0 ) then
-             if ((dabs((double-fks_double)/fks_double).gt.tolerance).or. 
-     1            (dabs((single-fks_single)/single).gt.tolerance)) then
-                nfail = nfail + 1
+              else
                 write(*,*) 'FAILED', tolerance
-             else
-                write(*,*) 'PASSED', tolerance
-             endif
-          else
-             if (dabs((single-fks_single)/single).gt.tolerance) then
-                nfail = nfail + 1
-                write(*,*) 'FAILED', tolerance
-             else
-                write(*,*) 'PASSED', tolerance
-             endif
+                nfail=nfail+1
+              endif
           endif
-          endif
-          write(*,*) 'MU_R    = ', ren_scale
-          write(*,*) 'ALPHA_S = ', G**2/4d0/pi
-          write(*,*) 'BORN                 ', real(born(1))
-          write(*,*) 'SINGLE POLE (MadFKS) ', fks_single 
-          write(*,*) 'DOUBLE POLE (MadFKS) ', fks_double 
-          write(*,*) 'SINGLE POLE (MadLoop)', single 
-          write(*,*) 'DOUBLE POLE (MadLoop)', double 
-          write(*,*) 'FINITE PART (MadLoop)', finite 
-          do j = 1, nexternal - 1
-            write(*,*) p(0,j), p(1,j), p(2,j), p(3,j), pmass(j)
-          enddo
           write(*,*)
 
       if (npointsChecked.lt.npoints) goto 200 
-
 
           write(*,*) 'NUMBER OF POINTS PASSING THE CHECK', 
      1     npoints - nfail
           write(*,*) 'NUMBER OF POINTS FAILING THE CHECK', 
      1     nfail
           write(*,*) 'TOLERANCE ', tolerance
-
-
 
       return
       end
@@ -460,16 +462,3 @@ c     Just a wrapper to ran2
       return 
       end
 
-      subroutine outfun(p, a, b, i)
-c     just a dummy subroutine
-      implicit none
-      include 'nexternal.inc'
-      double precision p(0:3, nexternal), a, b
-      integer i
-      write(*,*) 'THIS FUNCTION SHOULD NEVER BE CALLED'
-      return
-      end
-
-      
-      subroutine initplot
-      end

@@ -8,7 +8,7 @@ c Compile with makefile_rwgt
       use extra_weights
       implicit none
       include "run.inc"
-      integer i,ii,jj,kk,isave,lef,ifile,maxevt,iSorH_lhe,ifks_lhe
+      integer i,oo,ii,jj,kk,isave,lef,ifile,maxevt,iSorH_lhe,ifks_lhe
      $     ,jfks_lhe,fksfather_lhe,ipartner_lhe,kwgtinfo,kexternal
      $     ,jwgtnumpartn,ofile,kf,kr,n,nn
       double precision scale1_lhe,scale2_lhe,wgtcentral,wgtmumin
@@ -28,6 +28,10 @@ c Common blocks
       character*7         pdlabel,epa_label
       integer       lhaid
       common/to_pdf/lhaid,pdlabel,epa_label
+c Common blocks for the orders tags
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c Les Houches Event File info:
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -154,6 +158,8 @@ c start with central member of the first set
 
       rewind(34)
 
+      call get_orderstags_glob_infos()
+
       ofile=35
       open(unit=ofile,file=fname1,status='unknown')
 
@@ -217,17 +223,19 @@ c Do the actual reweighting.
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
          if(do_rwgt_scale)then
-            do kk=1,dyn_scale(0)
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        wgtxsecmu(jj,ii,kk)=
-     &                       wgtxsecmu(jj,ii,kk)/wgtref*XWGTUP
+            do oo=0,n_orderstags
+               do kk=1,dyn_scale(0)
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           wgtxsecmu(oo,jj,ii,kk)=
+     &                          wgtxsecmu(oo,jj,ii,kk)/wgtref*XWGTUP
+                        enddo
                      enddo
-                  enddo
-               else
-                  wgtxsecmu(1,1,kk)=wgtxsecmu(1,1,kk)/wgtref*XWGTUP
-               endif
+                  else
+                     wgtxsecmu(oo,1,1,kk)=wgtxsecmu(oo,1,1,kk)/wgtref*XWGTUP
+                  endif
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then
@@ -243,19 +251,21 @@ c as XWGTUP
          endif
 
 c Keep track of the accumulated results:
+C  put in xsecScale_acc only the 0th entry of wgtxsecmu, ie
+C  the entry inclusive on the various orderstag
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                if (lscalevar(kk)) then
                   do ii=1,nint(scalevarF(0))
                      do jj=1,nint(scalevarR(0))
                         xsecScale_acc(jj,ii,kk)=xsecScale_acc(jj,ii,kk)
-     $                       +wgtxsecmu(jj,ii,kk)
+     $                       +wgtxsecmu(0,jj,ii,kk)
                         
                      enddo
                   enddo
                else
                   xsecScale_acc(1,1,kk)=xsecScale_acc(1,1,kk)
-     $                 +wgtxsecmu(1,1,kk)
+     $                 +wgtxsecmu(0,1,1,kk)
                endif
             enddo
          endif
@@ -391,8 +401,9 @@ c do the same as above for the counterevents
       n_proc=1
       call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
+         write(*,*)n_ctr_str(i)
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
-     &        ,idum,(pdg(j,i),j=1,nexternal),QCDpower(i),(bjx(j,i),j=1
+     &        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i),(bjx(j,i),j=1
      &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
      &        ,2),itype(i),nFKS(i),idum,idum,idum,wgts(1,i),bias_wgt(i)
          do ii=1,2
@@ -417,53 +428,68 @@ c do the same as above for the counterevents
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
+      include 'orders.inc'
       integer i,pd,lp,iwgt_save,kr,kf,dd
       double precision mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales)
      $     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
      $     ,c_mu2_r,c_mu2_f
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
+      integer orderstag_this, iamp
+      integer get_orders_tag_from_amp_pos
+      external get_orders_tag_from_amp_pos
+
       iwgt_save=iwgt
       do i=1,icontr
          iwgt=iwgt_save
          mu2_q=scales2(1,i)
-         do dd=1,dyn_scale(0)
-            call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
-            do kr=1,nint(scalevarR(0))
-               if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
-               mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
-c Update the strong coupling
-               g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
-            enddo
-            do kf=1,nint(scalevarF(0))
-               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
-               mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
-c call the PDFs
-               xlum(kf)=1d0
-               LP=SIGN(1,LPP(1))
-               pd=pdg(1,i)
-               if (pd.eq.21) pd=0
-               xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
-     &              ,DSQRT(mu2_f(kf)))
-               LP=SIGN(1,LPP(2))
-               pd=pdg(2,i)
-               if (pd.eq.21) pd=0
-               xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
-     &              ,DSQRT(mu2_f(kf)))
-            enddo
-            do kf=1,nint(scalevarF(0))
-               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
+
+         do iamp=0, amp_split_size
+            ! loop over the various coupling combinations.
+            ! iamp=0 just keeps everything
+            if (iamp.ne.0) orderstag_this = get_orders_tag_from_amp_pos(iamp)
+            ! filter the weights with the correct order
+            if (iamp.ne.0.and.orderstag_this.ne.orderstag(i)) cycle
+
+            do dd=1,dyn_scale(0)
+               call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
                do kr=1,nint(scalevarR(0))
                   if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
-                  iwgt=iwgt+1   ! increment the iwgt for the wgts() array
-                  call weight_lines_allocated(nexternal,max_contr,iwgt
-     $                 ,max_iproc)
+                  mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
+c Update the strong coupling
+                  g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
+               enddo
+               do kf=1,nint(scalevarF(0))
+                  if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
+                  mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
+c call the PDFs
+                  xlum(kf)=1d0
+                  LP=SIGN(1,LPP(1))
+                  pd=pdg(1,i)
+                  if (pd.eq.21) pd=0
+                  xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
+     &                 ,DSQRT(mu2_f(kf)))
+                  LP=SIGN(1,LPP(2))
+                  pd=pdg(2,i)
+                  if (pd.eq.21) pd=0
+                  xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
+     &                 ,DSQRT(mu2_f(kf)))
+               enddo
+
+               do kf=1,nint(scalevarF(0))
+                  if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
+                  do kr=1,nint(scalevarR(0))
+                     if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
+                     iwgt=iwgt+1   ! increment the iwgt for the wgts() array
+                     call weight_lines_allocated(nexternal,max_contr,iwgt
+     $                   ,max_iproc)
 c add the weights to the array
-                  wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
-     $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
-     $                 /mu2_q))*g(kr)**QCDpower(i)
-                  wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
+                     wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
+     $                   *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
+     $                   /mu2_q))*g(kr)**QCDpower(i)
+                     wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
      &                          sqrt(mu2_r(kr)),sqrt(scales2(2,i)))
+                  enddo
                enddo
             enddo
          enddo
@@ -529,17 +555,24 @@ c reset to the 0th member of the 1st set
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      integer ii,jj,kk,nn,n,iw,i
-      do kk=1,dyn_scale(0)
-         if (lscalevar(kk)) then
-            do ii=1,nint(scalevarF(0))
-               do jj=1,nint(scalevarR(0))
-                  wgtxsecmu(jj,ii,kk)=0d0
+      integer ii,jj,kk,oo,nn,n,iw,i
+      integer orderstag_this
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
+
+      do oo=0,n_orderstags
+         do kk=1,dyn_scale(0)
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     wgtxsecmu(oo,jj,ii,kk)=0d0
+                  enddo
                enddo
-            enddo
-         else
-            wgtxsecmu(1,1,kk)=0d0
-         endif
+            else
+               wgtxsecmu(oo,1,1,kk)=0d0
+            endif
+        enddo
       enddo
       do nn=1,lhaPDFid(0)
          if (lpdfvar(nn)) then
@@ -553,18 +586,23 @@ c reset to the 0th member of the 1st set
       do i=1,icontr
          iw=2
          if (do_rwgt_scale) then
-            do kk=1,dyn_scale(0)
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        wgtxsecmu(jj,ii,kk)=wgtxsecmu(jj,ii,kk)+wgts(iw,i)
-                        iw=iw+1
+            do oo=0,n_orderstags
+               if (oo.ne.0) orderstag_this = orderstags_glob(oo)
+               ! filter the weights with the correct order
+               if (oo.ne.0.and.orderstag_this.ne.orderstag(i)) cycle
+               do kk=1,dyn_scale(0)
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           wgtxsecmu(oo,jj,ii,kk)=wgtxsecmu(oo,jj,ii,kk)+wgts(iw,i)
+                           iw=iw+1
+                        enddo
                      enddo
-                  enddo
-               else
-                  wgtxsecmu(1,1,kk)=wgtxsecmu(1,1,kk)+wgts(iw,i)
-                  iw=iw+1
-               endif
+                  else
+                     wgtxsecmu(oo,1,1,kk)=wgtxsecmu(oo,1,1,kk)+wgts(iw,i)
+                     iw=iw+1
+                  endif
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then

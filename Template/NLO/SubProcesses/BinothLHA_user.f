@@ -29,12 +29,23 @@ c
       integer nbad, nbadmax
       parameter (nbadmax = 5)
       data nbad / 0 /
+      include 'orders.inc'
+      integer iamp
+      double precision amp_split_finite(amp_split_size)
+      common /to_amp_split_finite/amp_split_finite
+
       if (isum_hel.ne.0) then
          write (*,*) 'Can only do explicit helicity sum'//
      &        ' for Virtual corrections',
      &        isum_hel
       endif
       virt_wgt=0d0
+C the OLP should be able to store the different amplitudes
+C corresponding to different coupling combinations
+      do iamp=1,amp_split_size
+        amp_split(iamp)=0d0
+        amp_split_finite(iamp)=0d0
+      enddo
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
@@ -147,7 +158,8 @@ c      include "fks.inc"
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
-      common/cparticle_types/i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
+      common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
