@@ -83,8 +83,8 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSOP1
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai
-C     , Ninja and COLLIER
+C     At present, there are only
+C      CutTools,PJFry++,IREGI,Golem95,Samurai, Ninja and COLLIER
       INTEGER NLOOPLIB
       PARAMETER (NLOOPLIB=7)
 C     Only CutTools or possibly Ninja (if installed with qp support)
@@ -411,14 +411,15 @@ C     using the MadLoop subroutine, we don't overwrite his choice when
 C      reading the parameters
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
       DATA  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION
      $ ,FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION/.FALSE.,.FALSE./
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
 C     This variable controls the general initialization which is
 C      *common* between all MadLoop SubProcesses.
@@ -888,8 +889,8 @@ C      to the computation of the next helicity.
      $ +P(2,2))**2-(P(3,1)+P(3,2))**2))
 
       CTCALL_REQ_SO_DONE=.FALSE.
-      FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARG
-     $ET.NE.-1)
+      FILTER_SO = (.NOT.CHECKPHASE)
+     $ .AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.NE.-1)
 
       DO I=1,NLOOPGROUPS
         DO J=0,LOOPMAXCOEFS-1
@@ -928,13 +929,14 @@ C       computed in quadruple precision.
       ENDIF
 
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
-     $   .NE.0)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H)
+     $   .GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
 
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
 
@@ -975,8 +977,9 @@ C         FeynRules, there are none of these type of counterterms.
             DO I=1,NCTAMPS
               CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0D0)
               IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-              ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(
-     $I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+              ITEMP =
+     $          ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(I)
+     $         ,ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
                   TEMP2 = DBLE(CFTOT*AMPL(K,I)*CTEMP)
@@ -1103,8 +1106,8 @@ C     Make sure that no NaN is present in the result
         IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
 C         Make sure that that no polarization constraint filters out
 C          this helicity
-          IF (POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_HEL_SELECTED(HELPICK
-     $ED)) THEN
+          IF (POLARIZATIONS(0,0).EQ.
+     $     -1.OR.ML5_0_IS_HEL_SELECTED(HELPICKED)) THEN
 C           TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
 C            CHECK PHASE
             DO I=0,NSQUAREDSO
@@ -1195,8 +1198,8 @@ C              others to this new one
 C             Of course if it is one, then we do not need to do
 C              anything (because with HELINITSTARTOVER=.FALSE. we only
 C              support exactly identical Hels.)
-              IF(GOODHEL(HELPICKED).GT.-HELOFFSET.AND.GOODHEL(HELPICKED)
-     $         .NE.1) THEN
+              IF(GOODHEL(HELPICKED).GT.
+     $         -HELOFFSET.AND.GOODHEL(HELPICKED).NE.1) THEN
                 NEWHELREF=-1
                 DO H=1,NCOMB
                   IF (GOODHEL(H).EQ.(-HELOFFSET-HELPICKED)) THEN
@@ -1390,16 +1393,18 @@ C            answer from mode 1 and carry on.
 
         CTMODE=BASIC_CT_MODE
 
-        IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
+        IF(.NOT.EVAL_DONE(3).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.1)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
           EVAL_DONE(3)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,1)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,1)
           GOTO 200
         ENDIF
 
-        IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
+        IF(.NOT.EVAL_DONE(4).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.2)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
           EVAL_DONE(4)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,2)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,2)
@@ -1958,8 +1963,8 @@ C       The following is used instead
 C       When using COLLIER with the internal stability test, the first
 C        evaluation is typically more reliable so we do not want to
 C        use the average but rather the first evaluation.
-        IF (MLREDUCTIONLIB(I_LIB).EQ.7.AND.COLLIERUSEINTERNALSTABILITYT
-     $EST) THEN
+        IF (MLREDUCTIONLIB(I_LIB)
+     $   .EQ.7.AND.COLLIERUSEINTERNALSTABILITYTEST) THEN
           DO I=1,3
             ESTIMATE(I,K) = FULLLIST(I,K,1)
           ENDDO
@@ -2106,8 +2111,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5SOINDEX_FOR_SQUARE'
-     $ //'D_ORDERS'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 
@@ -2130,8 +2135,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER BORNAMPORDERS(NBORNAMPS)
-      DATA (BORNAMPORDERS(I),I=  1,  5) /    4,    1,    1,    1,    1/
-      DATA (BORNAMPORDERS(I),I=  6,  7) /    1,    1/
+      DATA (BORNAMPORDERS(I),I=  1,  5) /    3,    2,    2,    2,    2/
+      DATA (BORNAMPORDERS(I),I=  6,  7) /    2,    2/
 C     -----------
 C     BEGIN CODE
 C     -----------
@@ -2160,202 +2165,202 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER LOOPAMPORDERS(NLOOPAMPS)
-      DATA (LOOPAMPORDERS(I),I=  1,  5) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=  6, 10) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 11, 15) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 16, 20) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 21, 25) /    3,    3,    3,    3,    2/
-      DATA (LOOPAMPORDERS(I),I= 26, 30) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 31, 35) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 36, 40) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 41, 45) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 46, 50) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 51, 55) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 56, 60) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 61, 65) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 66, 70) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 71, 75) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 76, 80) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 81, 85) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 86, 90) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 91, 95) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I= 96,100) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=101,105) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=106,110) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=111,115) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=116,120) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=121,125) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=126,130) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=131,135) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=136,140) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=141,145) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=146,150) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=151,155) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=156,160) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=161,165) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=166,170) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=171,175) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=176,180) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=181,185) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=186,190) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=191,195) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=196,200) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=201,205) /    2,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=206,210) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=211,215) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=216,220) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=221,225) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=226,230) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=231,235) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=236,240) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=241,245) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=246,250) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=251,255) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=256,260) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=261,265) /    3,    3,    3,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=266,270) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=271,275) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=276,280) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=281,285) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=286,290) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=291,295) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=296,300) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=301,305) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=306,310) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=311,315) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=316,320) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=321,325) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=326,330) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=331,335) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=336,340) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=341,345) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=346,350) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=351,355) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=356,360) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=361,365) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=366,370) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=371,375) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=376,380) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=381,385) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=386,390) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=391,395) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=396,400) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=401,405) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=406,410) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=411,415) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=416,420) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=421,425) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=426,430) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=431,435) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=436,440) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=441,445) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=446,450) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=451,455) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=456,460) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=461,465) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=466,470) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=471,475) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=476,480) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=481,485) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=486,490) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=491,495) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=496,500) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=501,505) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=506,510) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=511,515) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=516,520) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=521,525) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=526,530) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=531,535) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=536,540) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=541,545) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=546,550) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=551,555) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=556,560) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=561,565) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=566,570) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=571,575) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=576,580) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=581,585) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=586,590) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=591,595) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=596,600) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=601,605) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=606,610) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=611,615) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=616,620) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=621,625) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=626,630) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=631,635) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=636,640) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=641,645) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=646,650) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=651,655) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=656,660) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=661,665) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=666,670) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=671,675) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=676,680) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=681,685) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=686,690) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=691,695) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=696,700) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=701,705) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=706,710) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=711,715) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=716,720) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=721,725) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=726,730) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=731,735) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=736,740) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=741,745) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=746,750) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=751,755) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=756,760) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=761,765) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=766,770) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=771,775) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=776,780) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=781,785) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=786,790) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=791,795) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=796,800) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=801,805) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=806,810) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=811,815) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=816,820) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=821,825) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=826,830) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=831,835) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=836,840) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=841,845) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=846,850) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=851,855) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=856,860) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=861,865) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=866,870) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=871,875) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=876,880) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=881,885) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=886,890) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=891,895) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=896,900) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=901,905) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=906,910) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=911,915) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=916,920) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=921,925) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=926,930) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=931,935) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=936,940) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=941,945) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=946,950) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=951,955) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=956,960) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=961,965) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=966,970) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=971,975) /    2,    2,    2,    2,    2/
-      DATA (LOOPAMPORDERS(I),I=976,980) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=  1,  5) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=  6, 10) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I= 11, 15) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I= 16, 20) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I= 21, 25) /    1,    1,    1,    1,    4/
+      DATA (LOOPAMPORDERS(I),I= 26, 30) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 31, 35) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 36, 40) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 41, 45) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 46, 50) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 51, 55) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 56, 60) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 61, 65) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 66, 70) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 71, 75) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 76, 80) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 81, 85) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 86, 90) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 91, 95) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I= 96,100) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=101,105) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=106,110) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=111,115) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=116,120) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=121,125) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=126,130) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=131,135) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=136,140) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=141,145) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=146,150) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=151,155) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=156,160) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=161,165) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=166,170) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=171,175) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=176,180) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=181,185) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=186,190) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=191,195) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=196,200) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=201,205) /    4,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=206,210) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=211,215) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=216,220) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=221,225) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=226,230) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=231,235) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=236,240) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=241,245) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=246,250) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=251,255) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=256,260) /    1,    1,    1,    1,    1/
+      DATA (LOOPAMPORDERS(I),I=261,265) /    1,    1,    1,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=266,270) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=271,275) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=276,280) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=281,285) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=286,290) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=291,295) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=296,300) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=301,305) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=306,310) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=311,315) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=316,320) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=321,325) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=326,330) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=331,335) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=336,340) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=341,345) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=346,350) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=351,355) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=356,360) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=361,365) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=366,370) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=371,375) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=376,380) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=381,385) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=386,390) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=391,395) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=396,400) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=401,405) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=406,410) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=411,415) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=416,420) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=421,425) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=426,430) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=431,435) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=436,440) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=441,445) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=446,450) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=451,455) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=456,460) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=461,465) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=466,470) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=471,475) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=476,480) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=481,485) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=486,490) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=491,495) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=496,500) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=501,505) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=506,510) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=511,515) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=516,520) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=521,525) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=526,530) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=531,535) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=536,540) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=541,545) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=546,550) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=551,555) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=556,560) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=561,565) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=566,570) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=571,575) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=576,580) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=581,585) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=586,590) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=591,595) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=596,600) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=601,605) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=606,610) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=611,615) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=616,620) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=621,625) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=626,630) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=631,635) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=636,640) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=641,645) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=646,650) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=651,655) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=656,660) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=661,665) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=666,670) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=671,675) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=676,680) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=681,685) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=686,690) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=691,695) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=696,700) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=701,705) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=706,710) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=711,715) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=716,720) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=721,725) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=726,730) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=731,735) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=736,740) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=741,745) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=746,750) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=751,755) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=756,760) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=761,765) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=766,770) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=771,775) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=776,780) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=781,785) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=786,790) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=791,795) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=796,800) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=801,805) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=806,810) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=811,815) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=816,820) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=821,825) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=826,830) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=831,835) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=836,840) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=841,845) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=846,850) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=851,855) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=856,860) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=861,865) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=866,870) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=871,875) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=876,880) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=881,885) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=886,890) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=891,895) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=896,900) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=901,905) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=906,910) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=911,915) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=916,920) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=921,925) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=926,930) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=931,935) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=936,940) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=941,945) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=946,950) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=951,955) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=956,960) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=961,965) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=966,970) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=971,975) /    4,    4,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=976,980) /    4,    4,    4,    4,    4/
 C     -----------
 C     BEGIN CODE
 C     -----------
@@ -2391,10 +2396,10 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  3) /    4,    0,    2/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  3) /    8,    0,    4/
-      DATA (AMPSPLITORDERS(  3,I),I=  1,  3) /    6,    2,    2/
-      DATA (AMPSPLITORDERS(  4,I),I=  1,  3) /    2,    2,    0/
+      DATA (AMPSPLITORDERS(  1,I),I=  1,  3) /    6,    2,    2/
+      DATA (AMPSPLITORDERS(  2,I),I=  1,  3) /    4,    0,    2/
+      DATA (AMPSPLITORDERS(  3,I),I=  1,  3) /    2,    2,    0/
+      DATA (AMPSPLITORDERS(  4,I),I=  1,  3) /    8,    0,    4/
       COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS
 C     
 C     FUNCTION
@@ -2404,8 +2409,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       ML5_0_ML5SQSOINDEX=ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -2444,8 +2449,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_SQUARED_ORDERS'
-     $ //'_FOR_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -2484,8 +2489,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_ORDERS_FOR_AMP'
-     $ //'SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5GET_ORDERS_FOR_AMPSOINDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
@@ -2528,8 +2533,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5SOINDEX_FOR_AMPORD'
-     $ //'ERS'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5SOINDEX_FOR_AMPORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 
@@ -2551,12 +2556,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEUVPOLES                        = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2578,12 +2584,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEIRPOLES         = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2794,11 +2801,14 @@ C
       PARAMETER (NEXTERNAL=4)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=3)
+      INCLUDE 'nsqso_born.inc'
 C     
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, USERHEL
       COMMON/ML5_0_USERCHOICE/USERHEL
 C     ----------
@@ -2822,7 +2832,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, RET_CODE
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C     
@@ -2939,7 +2952,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
       INTEGER RET_CODE
 C     

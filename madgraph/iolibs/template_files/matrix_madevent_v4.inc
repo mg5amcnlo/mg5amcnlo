@@ -199,7 +199,7 @@ REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
 C  
 %(info_lines)s
 C
-C Returns amplitude squared summed/avg over colors
+C Returns amplitude squared -- no average over initial state/symmetry factor
 c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
@@ -233,8 +233,8 @@ C
 C LOCAL VARIABLES 
 C  
     INTEGER I,J,M,N
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+    COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
+    REAL*8 CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(18,NWAVEFUNCS)
 C   Needed for v4 models
@@ -282,7 +282,7 @@ endif
         ENDDO
 		DO N = 1, NAMPSO
           IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
 		  ENDIF
 		ENDDO
       ENDDO

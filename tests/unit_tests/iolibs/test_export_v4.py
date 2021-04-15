@@ -15,11 +15,14 @@
 
 """Unit test library for the export v4 format routines"""
 
-import StringIO
+from __future__ import absolute_import
+import six
+StringIO = six
 import copy
 import fractions
 import os 
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -464,9 +467,9 @@ class IOExportV4IOTest(IOTests.IOTestManager,
         symmetry, perms, ident_perms = \
                   diagram_symmetry.find_symmetry(subprocess_group)
 
-        self.assertEqual(symmetry, [1,1,1,1,1,1])
+        self.assertEqual(symmetry, [1,1,1,1,1])
         self.assertEqual(perms,
-                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
+                         [[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3],[0,1,2,3]])
         self.assertEqual(ident_perms,
                          [[0,1,2,3]])
 
@@ -1197,6 +1200,7 @@ AMP2(12)=AMP2(12)+AMP(12)*dconjg(AMP(12))""")
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA (SPROP(I,-1,1),I=1,2)/1,1/
       DATA TPRID(-1,1)/0/
@@ -1215,6 +1219,7 @@ AMP2(12)=AMP2(12)+AMP(12)*dconjg(AMP(12))""")
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-4/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,3/
       DATA (SPROP(I,-1,2),I=1,2)/1,1/
       DATA TPRID(-1,2)/0/
@@ -1233,6 +1238,7 @@ C     Diagram 2
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-4/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/5,4/
       DATA (SPROP(I,-1,3),I=1,2)/-1,-1/
       DATA TPRID(-1,3)/0/
@@ -1251,6 +1257,7 @@ C     Diagram 3
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-4/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/5,4/
       DATA (SPROP(I,-1,4),I=1,2)/-1,-1/
       DATA TPRID(-1,4)/0/
@@ -1269,6 +1276,7 @@ C     Diagram 4
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-4/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/8,6/
       DATA (SPROP(I,-1,5),I=1,2)/1,1/
       DATA TPRID(-1,5)/0/
@@ -1287,6 +1295,7 @@ C     Diagram 5
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-4/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/8,7/
       DATA (SPROP(I,-1,6),I=1,2)/-1,-1/
       DATA TPRID(-1,6)/0/
@@ -1305,6 +1314,7 @@ C     Diagram 6
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-4/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
+      DATA TSTRATEGY(7)/2/
       DATA (IFOREST(I,-1,7),I=1,2)/8,6/
       DATA (SPROP(I,-1,7),I=1,2)/1,1/
       DATA TPRID(-1,7)/0/
@@ -1323,6 +1333,7 @@ C     Diagram 7
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-4/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
+      DATA TSTRATEGY(8)/2/
       DATA (IFOREST(I,-1,8),I=1,2)/8,7/
       DATA (SPROP(I,-1,8),I=1,2)/-1,-1/
       DATA TPRID(-1,8)/0/
@@ -1792,6 +1803,7 @@ mirror  d~ d > d d~ g d d~ g"""
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/8,6/
       DATA (SPROP(I,-1,1),I=1,3)/1000001,0,0/
       DATA TPRID(-1,1)/0/
@@ -1809,6 +1821,7 @@ mirror  d~ d > d d~ g d d~ g"""
       DATA TPRID(-5,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/8,7/
       DATA (SPROP(I,-1,2),I=1,3)/-1000001,0,0/
       DATA TPRID(-1,2)/0/
@@ -1826,6 +1839,7 @@ C     Diagram 2
       DATA TPRID(-5,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/8,6/
       DATA (SPROP(I,-1,3),I=1,3)/1000001,0,0/
       DATA TPRID(-1,3)/0/
@@ -1843,6 +1857,7 @@ C     Diagram 3
       DATA TPRID(-5,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/8,7/
       DATA (SPROP(I,-1,4),I=1,3)/-1000001,0,0/
       DATA TPRID(-1,4)/0/
@@ -1860,6 +1875,7 @@ C     Diagram 4
       DATA TPRID(-5,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/8,6/
       DATA (SPROP(I,-1,5),I=1,3)/0,1000002,0/
       DATA TPRID(-1,5)/0/
@@ -1877,6 +1893,7 @@ C     Diagram 5
       DATA TPRID(-5,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/8,7/
       DATA (SPROP(I,-1,6),I=1,3)/0,-1000002,0/
       DATA TPRID(-1,6)/0/
@@ -1894,6 +1911,7 @@ C     Diagram 6
       DATA TPRID(-5,6)/0/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
+      DATA TSTRATEGY(7)/2/
       DATA (IFOREST(I,-1,7),I=1,2)/8,6/
       DATA (SPROP(I,-1,7),I=1,3)/0,1000002,0/
       DATA TPRID(-1,7)/0/
@@ -1911,6 +1929,7 @@ C     Diagram 7
       DATA TPRID(-5,7)/0/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
+      DATA TSTRATEGY(8)/2/
       DATA (IFOREST(I,-1,8),I=1,2)/8,7/
       DATA (SPROP(I,-1,8),I=1,3)/0,-1000002,0/
       DATA TPRID(-1,8)/0/
@@ -1928,6 +1947,7 @@ C     Diagram 8
       DATA TPRID(-5,8)/0/
 C     Diagram 9
       DATA MAPCONFIG(9)/9/
+      DATA TSTRATEGY(9)/2/
       DATA (IFOREST(I,-1,9),I=1,2)/8,6/
       DATA (SPROP(I,-1,9),I=1,3)/0,0,1000002/
       DATA TPRID(-1,9)/0/
@@ -1945,6 +1965,7 @@ C     Diagram 9
       DATA TPRID(-5,9)/0/
 C     Diagram 10
       DATA MAPCONFIG(10)/10/
+      DATA TSTRATEGY(10)/2/
       DATA (IFOREST(I,-1,10),I=1,2)/8,7/
       DATA (SPROP(I,-1,10),I=1,3)/0,0,-1000002/
       DATA TPRID(-1,10)/0/
@@ -1962,6 +1983,7 @@ C     Diagram 10
       DATA TPRID(-5,10)/0/
 C     Diagram 11
       DATA MAPCONFIG(11)/11/
+      DATA TSTRATEGY(11)/2/
       DATA (IFOREST(I,-1,11),I=1,2)/8,6/
       DATA (SPROP(I,-1,11),I=1,3)/0,0,1000002/
       DATA TPRID(-1,11)/0/
@@ -1979,6 +2001,7 @@ C     Diagram 11
       DATA TPRID(-5,11)/0/
 C     Diagram 12
       DATA MAPCONFIG(12)/12/
+      DATA TSTRATEGY(12)/2/
       DATA (IFOREST(I,-1,12),I=1,2)/8,7/
       DATA (SPROP(I,-1,12),I=1,3)/0,0,-1000002/
       DATA TPRID(-1,12)/0/
@@ -2007,7 +2030,7 @@ C     Number of configs
         self.assertTrue('F2PY=$(DEFAULT_F2PY_COMPILER)' in LO_text)
         self.assertTrue('FC=$(DEFAULT_F_COMPILER)' in LO_text)
         if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
-            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
+#            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
             self.assertTrue('DEFAULT_F_COMPILER=gfortran' in LO_text)            
 #            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
 #            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)
@@ -2177,6 +2200,7 @@ C     Number of configs
 
         # Exporter
         exporter = export_v4.ProcessExporterFortranME()
+        exporter.opt['t_strategy'] = 2 # keep old ordering for this test
 
         # Test configs.inc
 
@@ -2187,6 +2211,7 @@ C     Number of configs
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',"""C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA (SPROP(I,-1,1),I=1,1)/23/
       DATA TPRID(-1,1)/0/
@@ -2201,6 +2226,7 @@ C     Number of configs
       DATA TPRID(-4,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/6,5/
       DATA (SPROP(I,-1,2),I=1,1)/23/
       DATA TPRID(-1,2)/0/
@@ -2215,6 +2241,7 @@ C     Diagram 2
       DATA TPRID(-4,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/6,5/
       DATA (SPROP(I,-1,3),I=1,1)/23/
       DATA TPRID(-1,3)/0/
@@ -2230,6 +2257,7 @@ C     Diagram 3
       DATA (IFOREST(I,-5,3),I=1,2)/-4,-2/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA (SPROP(I,-1,4),I=1,1)/23/
       DATA TPRID(-1,4)/0/
@@ -2245,6 +2273,7 @@ C     Diagram 4
       DATA (IFOREST(I,-5,4),I=1,2)/-4,-2/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/6,5/
       DATA (SPROP(I,-1,5),I=1,1)/23/
       DATA TPRID(-1,5)/0/
@@ -2260,6 +2289,7 @@ C     Diagram 5
       DATA (IFOREST(I,-5,5),I=1,2)/-4,-3/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/4,3/
       DATA (SPROP(I,-1,6),I=1,1)/23/
       DATA TPRID(-1,6)/0/
@@ -2458,11 +2488,13 @@ class FullHelasOutputTest(test_helas_call_writers.HelasModelTestSetup,
 
     def setUp(self):
         
-        
+        super(FullHelasOutputTest, self).setUp()
         helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object =\
             staticmethod(helas_call_writers.HelasCallWriter.default_customize_argument_for_all_other_helas_object)
         
     tearDown = test_file_writers.CheckFileCreate.clean_files
+
+
 
     def test_generate_helas_diagrams_ea_ae(self):
         """Testing the helas diagram generation e- a > a e-
@@ -2777,36 +2809,36 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        #print matrix_element.get('color_basis')
-        # Test color matrix output
-        self.assertEqual("\n".join(exporter.get_color_data_lines(matrix_element)),
-                         """DATA Denom(1)/1/
-DATA (CF(i,  1),i=  1,  6) /   27,    9,    9,    3,    3,    9/
-C 1 T(2,1) T(3,4) T(5,6)
-DATA Denom(2)/1/
-DATA (CF(i,  2),i=  1,  6) /    9,   27,    3,    9,    9,    3/
-C 1 T(2,1) T(3,6) T(5,4)
-DATA Denom(3)/1/
-DATA (CF(i,  3),i=  1,  6) /    9,    3,   27,    9,    9,    3/
-C 1 T(2,4) T(3,1) T(5,6)
-DATA Denom(4)/1/
-DATA (CF(i,  4),i=  1,  6) /    3,    9,    9,   27,    3,    9/
-C 1 T(2,4) T(3,6) T(5,1)
-DATA Denom(5)/1/
-DATA (CF(i,  5),i=  1,  6) /    3,    9,    9,    3,   27,    9/
-C 1 T(2,6) T(3,1) T(5,4)
-DATA Denom(6)/1/
-DATA (CF(i,  6),i=  1,  6) /    9,    3,    3,    9,    9,   27/
-C 1 T(2,6) T(3,4) T(5,1)""")
+        numerator = [[27,    9,    9,    3,    3,    9],
+                     [9,   27,    3,    9,    9,    3],
+                     [9,    3,   27,    9,    9,    3],
+                     [3,    9,    9,   27,    3,    9],
+                     [3,    9,    9,    3,   27,    9],
+                     [9,    3,    3,    9,    9,   27]]
+        denom = [1]*6
+
+        i = 0
+        for data in exporter.get_color_data_lines(\
+                         matrix_element):
+            #misc.sprint(data)
+            if 'DATA' not in data:
+                continue
+            _, data, _ = data.split('/') 
+            number = [float(n.replace('d','e')) for n in data.split(',') ]
+            for j,val in enumerate(number):
+                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
+            i+=1 
+
+
+
+        out, nb = exporter.get_JAMP_lines(matrix_element)    
+        self.assertEqual(nb,53)
 
         # Test JAMP (color amplitude) output
-        self.assertEqual('\n'.join(exporter.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+1D0/4D0*(+1D0/9D0*AMP(1)+1D0/9D0*AMP(2)+1D0/3D0*AMP(4)+1D0/3D0*AMP(5)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+1D0/9D0*AMP(9)+1D0/9D0*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1D0/3D0*AMP(19)+1D0/3D0*AMP(20)+AMP(22)-AMP(23)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+AMP(29)+AMP(31)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+AMP(37)+1D0/9D0*AMP(39)+1D0/9D0*AMP(40))
-JAMP(2)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-1D0/9D0*AMP(4)-1D0/9D0*AMP(5)-1D0/9D0*AMP(7)-1D0/9D0*AMP(8)-1D0/3D0*AMP(9)-1D0/3D0*AMP(10)-AMP(12)+AMP(13)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-AMP(33)-AMP(35)-1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/9D0*AMP(41)-1D0/9D0*AMP(42))
-JAMP(3)=+1D0/4D0*(-AMP(4)+AMP(6)-AMP(7)-1D0/3D0*AMP(9)-1D0/3D0*AMP(10)-1D0/9D0*AMP(11)-1D0/9D0*AMP(12)-1D0/3D0*AMP(14)-1D0/3D0*AMP(15)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)-1D0/9D0*AMP(19)-1D0/9D0*AMP(20)-1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-AMP(24)-AMP(26)-AMP(28)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-1D0/9D0*AMP(33)-1D0/9D0*AMP(34)-AMP(36)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(41))
-JAMP(4)=+1D0/4D0*(+AMP(1)+AMP(3)+1D0/3D0*AMP(4)+1D0/3D0*AMP(5)+AMP(10)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+AMP(15)+AMP(16)+AMP(18)+1D0/9D0*AMP(21)+1D0/9D0*AMP(22)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+1D0/9D0*AMP(29)+1D0/9D0*AMP(30)+1D0/9D0*AMP(31)+1D0/9D0*AMP(32)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+AMP(38)+AMP(40)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
-JAMP(5)=+1D0/4D0*(+AMP(2)-AMP(3)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+AMP(9)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+1D0/9D0*AMP(14)+1D0/9D0*AMP(15)+1D0/9D0*AMP(17)+1D0/9D0*AMP(18)+1D0/3D0*AMP(19)+1D0/3D0*AMP(20)+AMP(21)+AMP(23)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)+AMP(30)+AMP(32)+1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+1D0/9D0*AMP(37)+1D0/9D0*AMP(38)+AMP(39)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
-JAMP(6)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AMP(13)-1D0/3D0*AMP(14)-1D0/3D0*AMP(15)-AMP(20)-1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-1D0/9D0*AMP(24)-1D0/9D0*AMP(25)-1D0/9D0*AMP(27)-1D0/9D0*AMP(28)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)-AMP(34)-1D0/9D0*AMP(35)-1D0/9D0*AMP(36)-1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(42))""")
+        if six.PY3:
+            self.assertEqual(out, [' TMP_JAMP(39) = AMP(39) +  AMP(40) ! used 3 times', ' TMP_JAMP(38) = AMP(37) +  AMP(38) ! used 3 times', ' TMP_JAMP(37) = AMP(35) +  AMP(36) ! used 3 times', ' TMP_JAMP(36) = AMP(29) +  AMP(37) ! used 3 times', ' TMP_JAMP(35) = AMP(29) +  AMP(30) ! used 3 times', ' TMP_JAMP(34) = AMP(28) +  AMP(36) ! used 3 times', ' TMP_JAMP(33) = AMP(27) +  AMP(35) ! used 3 times', ' TMP_JAMP(32) = AMP(27) +  AMP(28) ! used 3 times', ' TMP_JAMP(31) = AMP(25) +  AMP(35) ! used 3 times', ' TMP_JAMP(30) = AMP(25) +  AMP(27) ! used 3 times', ' TMP_JAMP(29) = AMP(24) +  AMP(25) ! used 3 times', ' TMP_JAMP(28) = AMP(21) +  AMP(22) ! used 3 times', ' TMP_JAMP(27) = AMP(20) +  AMP(34) ! used 3 times', ' TMP_JAMP(26) = AMP(14) +  AMP(22) ! used 3 times', ' TMP_JAMP(25) = AMP(14) +  AMP(15) ! used 3 times', ' TMP_JAMP(24) = AMP(11) +  AMP(34) ! used 3 times', ' TMP_JAMP(23) = AMP(11) +  AMP(20) ! used 3 times', ' TMP_JAMP(22) = AMP(5) +  AMP(8) ! used 3 times', ' TMP_JAMP(21) = AMP(1) +  AMP(2) ! used 3 times', ' TMP_JAMP(20) = AMP(41) +  AMP(42) ! used 3 times', ' TMP_JAMP(19) = AMP(30) +  AMP(32) ! used 3 times', ' TMP_JAMP(18) = AMP(24) +  AMP(41) ! used 3 times', ' TMP_JAMP(17) = AMP(21) +  AMP(32) ! used 3 times', ' TMP_JAMP(16) = AMP(19) +  AMP(20) ! used 3 times', ' TMP_JAMP(15) = AMP(18) +  AMP(38) ! used 3 times', ' TMP_JAMP(14) = AMP(15) +  AMP(18) ! used 3 times', ' TMP_JAMP(13) = AMP(14) +  AMP(17) ! used 3 times', ' TMP_JAMP(12) = AMP(12) +  AMP(25) ! used 3 times', ' TMP_JAMP(11) = AMP(11) +  AMP(12) ! used 3 times', ' TMP_JAMP(10) = AMP(7) +  AMP(8) ! used 3 times', ' TMP_JAMP(9) = AMP(2) +  AMP(9) ! used 3 times', ' TMP_JAMP(8) = AMP(22) +  AMP(31) ! used 3 times', ' TMP_JAMP(7) = AMP(12) +  AMP(33) ! used 3 times', ' TMP_JAMP(6) = AMP(4) +  AMP(5) ! used 3 times', ' TMP_JAMP(5) = AMP(1) +  AMP(10) ! used 3 times', ' TMP_JAMP(4) = AMP(19) +  AMP(33) ! used 3 times', ' TMP_JAMP(3) = AMP(17) +  AMP(31) ! used 3 times', ' TMP_JAMP(2) = AMP(9) +  AMP(10) ! used 3 times', ' TMP_JAMP(1) = AMP(4) +  AMP(7) ! used 3 times', ' TMP_JAMP(52) = TMP_JAMP(35) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(51) = TMP_JAMP(37) +  TMP_JAMP(32) ! used 2 times', ' TMP_JAMP(50) = TMP_JAMP(38) + (3.000000000000000d+00) * AMP(42) ! used 2 times', ' TMP_JAMP(49) = TMP_JAMP(39) + (3.000000000000000d+00) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(48) = TMP_JAMP(17) + (3.333333333333333d-01) * TMP_JAMP(11) ! used 2 times', ' TMP_JAMP(47) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(14) ! used 2 times', ' TMP_JAMP(46) = TMP_JAMP(18) + (3.333333333333333d-01) * TMP_JAMP(17) ! used 2 times', ' TMP_JAMP(45) = TMP_JAMP(4) + (3.000000000000000d+00) * TMP_JAMP(3) ! used 2 times', ' TMP_JAMP(44) = TMP_JAMP(27) + (3.000000000000000d+00) * TMP_JAMP(26) ! used 2 times', ' TMP_JAMP(43) = TMP_JAMP(39) +  TMP_JAMP(2) ! used 2 times', ' TMP_JAMP(42) = TMP_JAMP(3) + (3.333333333333333d-01) * TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(41) = TMP_JAMP(21) + (3.000000000000000d+00) * TMP_JAMP(4) ! used 2 times', ' TMP_JAMP(40) = TMP_JAMP(36) + (3.333333333333333d-01) * TMP_JAMP(22) ! used 2 times', ' TMP_JAMP(53) = TMP_JAMP(42) +  TMP_JAMP(40) ! used 2 times', ' JAMP(1) = (-2.500000000000000d-01)*AMP(16)+(-2.500000000000000d-01)*AMP(23)+(2.777777777777778d-02)*TMP_JAMP(41)+(2.777777777777778d-02)*TMP_JAMP(43)+(8.333333333333333d-02)*TMP_JAMP(44)+(8.333333333333333d-02)*TMP_JAMP(51)+(2.500000000000000d-01)*TMP_JAMP(53)', ' JAMP(2) = (2.500000000000000d-01)*AMP(13)+(2.500000000000000d-01)*AMP(26)+(-8.333333333333333d-02)*TMP_JAMP(2)+(-2.500000000000000d-01)*TMP_JAMP(12)+(-8.333333333333333d-02)*TMP_JAMP(15)+(-8.333333333333333d-02)*TMP_JAMP(19)+(-2.777777777777778d-02)*TMP_JAMP(20)+(-2.500000000000000d-01)*TMP_JAMP(33)+(-8.333333333333333d-02)*TMP_JAMP(41)+(-8.333333333333333d-02)*TMP_JAMP(53)', ' JAMP(3) = (2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(26)+(-2.500000000000000d-01)*TMP_JAMP(1)+(-2.777777777777778d-02)*TMP_JAMP(11)+(-8.333333333333333d-02)*TMP_JAMP(14)+(-2.500000000000000d-01)*TMP_JAMP(34)+(-8.333333333333333d-02)*TMP_JAMP(43)+(-2.777777777777778d-02)*TMP_JAMP(44)+(-2.777777777777778d-02)*TMP_JAMP(45)+(-2.500000000000000d-01)*TMP_JAMP(46)', ' JAMP(4) = (2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(16)+(8.333333333333333d-02)*AMP(28)+(2.500000000000000d-01)*AMP(38)+(2.500000000000000d-01)*AMP(40)+(2.500000000000000d-01)*TMP_JAMP(5)+(8.333333333333333d-02)*TMP_JAMP(6)+(8.333333333333333d-02)*TMP_JAMP(7)+(2.777777777777778d-02)*TMP_JAMP(8)+(2.500000000000000d-01)*TMP_JAMP(14)+(8.333333333333333d-02)*TMP_JAMP(24)+(8.333333333333333d-02)*TMP_JAMP(30)+(8.333333333333333d-02)*TMP_JAMP(46)+(2.777777777777778d-02)*TMP_JAMP(52)', ' JAMP(5) = (-2.500000000000000d-01)*AMP(3)+(2.500000000000000d-01)*AMP(23)+(2.500000000000000d-01)*AMP(30)+(8.333333333333333d-02)*AMP(36)+(2.500000000000000d-01)*AMP(39)+(2.500000000000000d-01)*TMP_JAMP(9)+(8.333333333333333d-02)*TMP_JAMP(10)+(2.777777777777778d-02)*TMP_JAMP(13)+(8.333333333333333d-02)*TMP_JAMP(16)+(8.333333333333333d-02)*TMP_JAMP(31)+(8.333333333333333d-02)*TMP_JAMP(47)+(2.500000000000000d-01)*TMP_JAMP(48)+(2.777777777777778d-02)*TMP_JAMP(50)', ' JAMP(6) = (-2.500000000000000d-01)*AMP(6)+(-2.500000000000000d-01)*AMP(13)+(-2.500000000000000d-01)*AMP(34)+(-8.333333333333333d-02)*TMP_JAMP(21)+(-2.500000000000000d-01)*TMP_JAMP(23)+(-8.333333333333333d-02)*TMP_JAMP(25)+(-8.333333333333333d-02)*TMP_JAMP(28)+(-2.777777777777778d-02)*TMP_JAMP(29)+(-8.333333333333333d-02)*TMP_JAMP(35)+(-8.333333333333333d-02)*TMP_JAMP(49)+(-8.333333333333333d-02)*TMP_JAMP(50)+(-2.777777777777778d-02)*TMP_JAMP(51)']            
+            )
+            
 
         # Test configs.inc file
         writer = writers.FortranWriter(self.give_pos('test'))
@@ -2819,6 +2851,7 @@ JAMP(6)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AM
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA (SPROP(I,-1,1),I=1,1)/21/
       DATA TPRID(-1,1)/0/
@@ -2830,6 +2863,7 @@ JAMP(6)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AM
       DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/4,3/
       DATA (SPROP(I,-1,2),I=1,1)/21/
       DATA TPRID(-1,2)/0/
@@ -2841,6 +2875,7 @@ C     Diagram 2
       DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/6,5/
       DATA (SPROP(I,-1,3),I=1,1)/21/
       DATA TPRID(-1,3)/0/
@@ -2852,6 +2887,7 @@ C     Diagram 3
       DATA TPRID(-3,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/6,3/
       DATA (SPROP(I,-1,4),I=1,1)/21/
       DATA TPRID(-1,4)/0/
@@ -2863,6 +2899,7 @@ C     Diagram 4
       DATA TPRID(-3,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/6,3/
       DATA (SPROP(I,-1,5),I=1,1)/21/
       DATA TPRID(-1,5)/0/
@@ -2874,6 +2911,7 @@ C     Diagram 5
       DATA TPRID(-3,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/6,3/
       DATA (SPROP(I,-1,6),I=1,1)/21/
       DATA TPRID(-1,6)/0/
@@ -2885,6 +2923,7 @@ C     Diagram 6
       DATA TPRID(-3,6)/0/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
+      DATA TSTRATEGY(7)/2/
       DATA (IFOREST(I,-1,7),I=1,2)/5,4/
       DATA (SPROP(I,-1,7),I=1,1)/21/
       DATA TPRID(-1,7)/0/
@@ -2896,6 +2935,7 @@ C     Diagram 7
       DATA TPRID(-3,7)/0/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
+      DATA TSTRATEGY(8)/2/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA (SPROP(I,-1,8),I=1,1)/21/
       DATA TPRID(-1,8)/0/
@@ -2907,6 +2947,7 @@ C     Diagram 8
       DATA TPRID(-3,8)/0/
 C     Diagram 9
       DATA MAPCONFIG(9)/9/
+      DATA TSTRATEGY(9)/2/
       DATA (IFOREST(I,-1,9),I=1,2)/6,5/
       DATA (SPROP(I,-1,9),I=1,1)/21/
       DATA TPRID(-1,9)/0/
@@ -2918,6 +2959,7 @@ C     Diagram 9
       DATA TPRID(-3,9)/0/
 C     Diagram 10
       DATA MAPCONFIG(10)/10/
+      DATA TSTRATEGY(10)/2/
       DATA (IFOREST(I,-1,10),I=1,2)/6,5/
       DATA (SPROP(I,-1,10),I=1,1)/21/
       DATA TPRID(-1,10)/0/
@@ -2929,6 +2971,7 @@ C     Diagram 10
       DATA TPRID(-3,10)/0/
 C     Diagram 11
       DATA MAPCONFIG(11)/11/
+      DATA TSTRATEGY(11)/2/
       DATA (IFOREST(I,-1,11),I=1,2)/1,3/
       DATA TPRID(-1,11)/21/
       DATA (SPROP(I,-1,11),I=1,1)/0/
@@ -2941,6 +2984,7 @@ C     Diagram 11
       DATA (IFOREST(I,-4,11),I=1,2)/-3,4/
 C     Diagram 12
       DATA MAPCONFIG(12)/12/
+      DATA TSTRATEGY(12)/2/
       DATA (IFOREST(I,-1,12),I=1,2)/1,3/
       DATA TPRID(-1,12)/21/
       DATA (SPROP(I,-1,12),I=1,1)/0/
@@ -2953,6 +2997,7 @@ C     Diagram 12
       DATA (IFOREST(I,-4,12),I=1,2)/-3,4/
 C     Diagram 13
       DATA MAPCONFIG(13)/13/
+      DATA TSTRATEGY(13)/2/
       DATA (IFOREST(I,-1,13),I=1,2)/6,5/
       DATA (SPROP(I,-1,13),I=1,1)/21/
       DATA TPRID(-1,13)/0/
@@ -2965,6 +3010,7 @@ C     Diagram 13
       DATA (IFOREST(I,-4,13),I=1,2)/-3,4/
 C     Diagram 14
       DATA MAPCONFIG(14)/14/
+      DATA TSTRATEGY(14)/2/
       DATA (IFOREST(I,-1,14),I=1,2)/1,3/
       DATA TPRID(-1,14)/21/
       DATA (SPROP(I,-1,14),I=1,1)/0/
@@ -2977,6 +3023,7 @@ C     Diagram 14
       DATA (IFOREST(I,-4,14),I=1,2)/-3,6/
 C     Diagram 15
       DATA MAPCONFIG(15)/15/
+      DATA TSTRATEGY(15)/2/
       DATA (IFOREST(I,-1,15),I=1,2)/1,3/
       DATA TPRID(-1,15)/21/
       DATA (SPROP(I,-1,15),I=1,1)/0/
@@ -2989,6 +3036,7 @@ C     Diagram 15
       DATA (IFOREST(I,-4,15),I=1,2)/-3,6/
 C     Diagram 16
       DATA MAPCONFIG(16)/16/
+      DATA TSTRATEGY(16)/2/
       DATA (IFOREST(I,-1,16),I=1,2)/5,4/
       DATA (SPROP(I,-1,16),I=1,1)/21/
       DATA TPRID(-1,16)/0/
@@ -3001,6 +3049,7 @@ C     Diagram 16
       DATA (IFOREST(I,-4,16),I=1,2)/-3,6/
 C     Diagram 17
       DATA MAPCONFIG(17)/17/
+      DATA TSTRATEGY(17)/2/
       DATA (IFOREST(I,-1,17),I=1,2)/5,4/
       DATA (SPROP(I,-1,17),I=1,1)/21/
       DATA TPRID(-1,17)/0/
@@ -3013,6 +3062,7 @@ C     Diagram 17
       DATA (IFOREST(I,-4,17),I=1,2)/-3,-2/
 C     Diagram 18
       DATA MAPCONFIG(18)/18/
+      DATA TSTRATEGY(18)/2/
       DATA (IFOREST(I,-1,18),I=1,2)/5,4/
       DATA (SPROP(I,-1,18),I=1,1)/21/
       DATA TPRID(-1,18)/0/
@@ -3025,6 +3075,7 @@ C     Diagram 18
       DATA (IFOREST(I,-4,18),I=1,2)/-3,-1/
 C     Diagram 19
       DATA MAPCONFIG(19)/19/
+      DATA TSTRATEGY(19)/2/
       DATA (IFOREST(I,-1,19),I=1,2)/6,5/
       DATA (SPROP(I,-1,19),I=1,1)/21/
       DATA TPRID(-1,19)/0/
@@ -3037,6 +3088,7 @@ C     Diagram 19
       DATA (IFOREST(I,-4,19),I=1,2)/-3,-2/
 C     Diagram 20
       DATA MAPCONFIG(20)/20/
+      DATA TSTRATEGY(20)/2/
       DATA (IFOREST(I,-1,20),I=1,2)/6,5/
       DATA (SPROP(I,-1,20),I=1,1)/21/
       DATA TPRID(-1,20)/0/
@@ -3049,6 +3101,7 @@ C     Diagram 20
       DATA (IFOREST(I,-4,20),I=1,2)/-3,-1/
 C     Diagram 21
       DATA MAPCONFIG(21)/21/
+      DATA TSTRATEGY(21)/2/
       DATA (IFOREST(I,-1,21),I=1,2)/1,5/
       DATA TPRID(-1,21)/21/
       DATA (SPROP(I,-1,21),I=1,1)/0/
@@ -3061,6 +3114,7 @@ C     Diagram 21
       DATA (IFOREST(I,-4,21),I=1,2)/-3,4/
 C     Diagram 22
       DATA MAPCONFIG(22)/22/
+      DATA TSTRATEGY(22)/2/
       DATA (IFOREST(I,-1,22),I=1,2)/1,5/
       DATA TPRID(-1,22)/21/
       DATA (SPROP(I,-1,22),I=1,1)/0/
@@ -3073,6 +3127,7 @@ C     Diagram 22
       DATA (IFOREST(I,-4,22),I=1,2)/-3,4/
 C     Diagram 23
       DATA MAPCONFIG(23)/23/
+      DATA TSTRATEGY(23)/2/
       DATA (IFOREST(I,-1,23),I=1,2)/6,3/
       DATA (SPROP(I,-1,23),I=1,1)/21/
       DATA TPRID(-1,23)/0/
@@ -3085,6 +3140,7 @@ C     Diagram 23
       DATA (IFOREST(I,-4,23),I=1,2)/-3,4/
 C     Diagram 24
       DATA MAPCONFIG(24)/24/
+      DATA TSTRATEGY(24)/2/
       DATA (IFOREST(I,-1,24),I=1,2)/1,5/
       DATA TPRID(-1,24)/21/
       DATA (SPROP(I,-1,24),I=1,1)/0/
@@ -3097,6 +3153,7 @@ C     Diagram 24
       DATA (IFOREST(I,-4,24),I=1,2)/-3,6/
 C     Diagram 25
       DATA MAPCONFIG(25)/25/
+      DATA TSTRATEGY(25)/2/
       DATA (IFOREST(I,-1,25),I=1,2)/1,5/
       DATA TPRID(-1,25)/21/
       DATA (SPROP(I,-1,25),I=1,1)/0/
@@ -3109,6 +3166,7 @@ C     Diagram 25
       DATA (IFOREST(I,-4,25),I=1,2)/-3,6/
 C     Diagram 26
       DATA MAPCONFIG(26)/26/
+      DATA TSTRATEGY(26)/2/
       DATA (IFOREST(I,-1,26),I=1,2)/4,3/
       DATA (SPROP(I,-1,26),I=1,1)/21/
       DATA TPRID(-1,26)/0/
@@ -3121,6 +3179,7 @@ C     Diagram 26
       DATA (IFOREST(I,-4,26),I=1,2)/-3,6/
 C     Diagram 27
       DATA MAPCONFIG(27)/27/
+      DATA TSTRATEGY(27)/2/
       DATA (IFOREST(I,-1,27),I=1,2)/4,3/
       DATA (SPROP(I,-1,27),I=1,1)/21/
       DATA TPRID(-1,27)/0/
@@ -3133,6 +3192,7 @@ C     Diagram 27
       DATA (IFOREST(I,-4,27),I=1,2)/-3,-2/
 C     Diagram 28
       DATA MAPCONFIG(28)/28/
+      DATA TSTRATEGY(28)/2/
       DATA (IFOREST(I,-1,28),I=1,2)/4,3/
       DATA (SPROP(I,-1,28),I=1,1)/21/
       DATA TPRID(-1,28)/0/
@@ -3145,6 +3205,7 @@ C     Diagram 28
       DATA (IFOREST(I,-4,28),I=1,2)/-3,-1/
 C     Diagram 29
       DATA MAPCONFIG(29)/29/
+      DATA TSTRATEGY(29)/2/
       DATA (IFOREST(I,-1,29),I=1,2)/6,3/
       DATA (SPROP(I,-1,29),I=1,1)/21/
       DATA TPRID(-1,29)/0/
@@ -3157,6 +3218,7 @@ C     Diagram 29
       DATA (IFOREST(I,-4,29),I=1,2)/-3,-2/
 C     Diagram 30
       DATA MAPCONFIG(30)/30/
+      DATA TSTRATEGY(30)/2/
       DATA (IFOREST(I,-1,30),I=1,2)/6,3/
       DATA (SPROP(I,-1,30),I=1,1)/21/
       DATA TPRID(-1,30)/0/
@@ -3169,6 +3231,7 @@ C     Diagram 30
       DATA (IFOREST(I,-4,30),I=1,2)/-3,-1/
 C     Diagram 31
       DATA MAPCONFIG(31)/31/
+      DATA TSTRATEGY(31)/2/
       DATA (IFOREST(I,-1,31),I=1,2)/6,3/
       DATA (SPROP(I,-1,31),I=1,1)/21/
       DATA TPRID(-1,31)/0/
@@ -3181,6 +3244,7 @@ C     Diagram 31
       DATA (IFOREST(I,-4,31),I=1,2)/-3,4/
 C     Diagram 32
       DATA MAPCONFIG(32)/32/
+      DATA TSTRATEGY(32)/2/
       DATA (IFOREST(I,-1,32),I=1,2)/6,3/
       DATA (SPROP(I,-1,32),I=1,1)/21/
       DATA TPRID(-1,32)/0/
@@ -3193,6 +3257,7 @@ C     Diagram 32
       DATA (IFOREST(I,-4,32),I=1,2)/-3,4/
 C     Diagram 33
       DATA MAPCONFIG(33)/33/
+      DATA TSTRATEGY(33)/2/
       DATA (IFOREST(I,-1,33),I=1,2)/6,5/
       DATA (SPROP(I,-1,33),I=1,1)/21/
       DATA TPRID(-1,33)/0/
@@ -3205,6 +3270,7 @@ C     Diagram 33
       DATA (IFOREST(I,-4,33),I=1,2)/-3,4/
 C     Diagram 34
       DATA MAPCONFIG(34)/34/
+      DATA TSTRATEGY(34)/2/
       DATA (IFOREST(I,-1,34),I=1,2)/6,5/
       DATA (SPROP(I,-1,34),I=1,1)/21/
       DATA TPRID(-1,34)/0/
@@ -3217,6 +3283,7 @@ C     Diagram 34
       DATA (IFOREST(I,-4,34),I=1,2)/-3,4/
 C     Diagram 35
       DATA MAPCONFIG(35)/35/
+      DATA TSTRATEGY(35)/2/
       DATA (IFOREST(I,-1,35),I=1,2)/4,3/
       DATA (SPROP(I,-1,35),I=1,1)/21/
       DATA TPRID(-1,35)/0/
@@ -3229,6 +3296,7 @@ C     Diagram 35
       DATA (IFOREST(I,-4,35),I=1,2)/-3,6/
 C     Diagram 36
       DATA MAPCONFIG(36)/36/
+      DATA TSTRATEGY(36)/2/
       DATA (IFOREST(I,-1,36),I=1,2)/4,3/
       DATA (SPROP(I,-1,36),I=1,1)/21/
       DATA TPRID(-1,36)/0/
@@ -3241,6 +3309,7 @@ C     Diagram 36
       DATA (IFOREST(I,-4,36),I=1,2)/-3,6/
 C     Diagram 37
       DATA MAPCONFIG(37)/37/
+      DATA TSTRATEGY(37)/2/
       DATA (IFOREST(I,-1,37),I=1,2)/5,4/
       DATA (SPROP(I,-1,37),I=1,1)/21/
       DATA TPRID(-1,37)/0/
@@ -3253,6 +3322,7 @@ C     Diagram 37
       DATA (IFOREST(I,-4,37),I=1,2)/-3,6/
 C     Diagram 38
       DATA MAPCONFIG(38)/38/
+      DATA TSTRATEGY(38)/2/
       DATA (IFOREST(I,-1,38),I=1,2)/5,4/
       DATA (SPROP(I,-1,38),I=1,1)/21/
       DATA TPRID(-1,38)/0/
@@ -3265,6 +3335,7 @@ C     Diagram 38
       DATA (IFOREST(I,-4,38),I=1,2)/-3,6/
 C     Diagram 39
       DATA MAPCONFIG(39)/39/
+      DATA TSTRATEGY(39)/2/
       DATA (IFOREST(I,-1,39),I=1,2)/4,3/
       DATA (SPROP(I,-1,39),I=1,1)/21/
       DATA TPRID(-1,39)/0/
@@ -3277,6 +3348,7 @@ C     Diagram 39
       DATA (IFOREST(I,-4,39),I=1,2)/-3,-2/
 C     Diagram 40
       DATA MAPCONFIG(40)/40/
+      DATA TSTRATEGY(40)/2/
       DATA (IFOREST(I,-1,40),I=1,2)/6,5/
       DATA (SPROP(I,-1,40),I=1,1)/21/
       DATA TPRID(-1,40)/0/
@@ -3289,6 +3361,7 @@ C     Diagram 40
       DATA (IFOREST(I,-4,40),I=1,2)/-3,-2/
 C     Diagram 41
       DATA MAPCONFIG(41)/41/
+      DATA TSTRATEGY(41)/2/
       DATA (IFOREST(I,-1,41),I=1,2)/6,3/
       DATA (SPROP(I,-1,41),I=1,1)/21/
       DATA TPRID(-1,41)/0/
@@ -3301,6 +3374,7 @@ C     Diagram 41
       DATA (IFOREST(I,-4,41),I=1,2)/-3,-2/
 C     Diagram 42
       DATA MAPCONFIG(42)/42/
+      DATA TSTRATEGY(42)/2/
       DATA (IFOREST(I,-1,42),I=1,2)/5,4/
       DATA (SPROP(I,-1,42),I=1,1)/21/
       DATA TPRID(-1,42)/0/
@@ -3609,36 +3683,33 @@ CALL VVVXXX(W(1,2),W(1,3),W(1,5),GG,AMP(6))""")
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        # Test color matrix output
-        self.assertEqual("\n".join(exporter.get_color_data_lines(\
-                         matrix_element)),
-                         """DATA Denom(1)/6/
-DATA (CF(i,  1),i=  1,  6) /   19,   -2,   -2,   -2,   -2,    4/
-C 1 Tr(1,2,3,4)
-DATA Denom(2)/6/
-DATA (CF(i,  2),i=  1,  6) /   -2,   19,   -2,    4,   -2,   -2/
-C 1 Tr(1,2,4,3)
-DATA Denom(3)/6/
-DATA (CF(i,  3),i=  1,  6) /   -2,   -2,   19,   -2,    4,   -2/
-C 1 Tr(1,3,2,4)
-DATA Denom(4)/6/
-DATA (CF(i,  4),i=  1,  6) /   -2,    4,   -2,   19,   -2,   -2/
-C 1 Tr(1,3,4,2)
-DATA Denom(5)/6/
-DATA (CF(i,  5),i=  1,  6) /   -2,   -2,    4,   -2,   19,   -2/
-C 1 Tr(1,4,2,3)
-DATA Denom(6)/6/
-DATA (CF(i,  6),i=  1,  6) /    4,   -2,   -2,   -2,   -2,   19/
-C 1 Tr(1,4,3,2)""")
+        numerator = [[19,   -2,   -2,   -2,   -2,    4],
+                     [-2,   19,   -2,    4,   -2,   -2],
+                     [-2,   -2,   19,   -2,    4,   -2],
+                     [-2,    4,   -2,   19,   -2,   -2],
+                     [-2,   -2,    4,   -2,   19,   -2],
+                     [4,   -2,   -2,   -2,   -2,   19]]
+        denom = [6,6,6,6,6,6]
+
+        i = 0
+        for data in exporter.get_color_data_lines(\
+                         matrix_element):
+            #misc.sprint(data)
+            if 'DATA' not in data:
+                continue
+            _, data, _ = data.split('/') 
+            number = [float(n.replace('d','e')) for n in data.split(',') ]
+            for j,val in enumerate(number):
+                self.assertAlmostEqual((1.*numerator[i][j])/denom[i], val)
+            i+=1 
 
         # Test JAMP (color amplitude) output
-        self.assertEqual("\n".join(exporter.get_JAMP_lines(matrix_element)),
-                         """JAMP(1)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))
-JAMP(2)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(3)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(4)=+2D0*(+AMP(1)-AMP(2)-AMP(4)-AMP(5))
-JAMP(5)=+2D0*(-AMP(3)+AMP(2)+AMP(5)+AMP(6))
-JAMP(6)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
+        out, nb = exporter.get_JAMP_lines(matrix_element)
+        self.assertEqual(nb, 6)
+        self.assertEqual(out,
+        [' TMP_JAMP(3) = AMP(3) - AMP(6) ! used 4 times', ' TMP_JAMP(2) = AMP(1) - AMP(4) ! used 4 times', ' TMP_JAMP(1) = AMP(2) +  AMP(5) ! used 4 times', ' TMP_JAMP(6) = TMP_JAMP(3) - TMP_JAMP(2) ! used 2 times', ' TMP_JAMP(5) = TMP_JAMP(3) - TMP_JAMP(1) ! used 2 times', ' TMP_JAMP(4) = TMP_JAMP(2) - TMP_JAMP(1) ! used 2 times', ' JAMP(1) = (2.000000000000000d+00)*TMP_JAMP(6)', ' JAMP(2) = (2.000000000000000d+00)*TMP_JAMP(4)', ' JAMP(3) = (-2.000000000000000d+00)*TMP_JAMP(5)', ' JAMP(4) = (2.000000000000000d+00)*TMP_JAMP(4)', ' JAMP(5) = (-2.000000000000000d+00)*TMP_JAMP(5)', ' JAMP(6) = (2.000000000000000d+00)*TMP_JAMP(6)']
+        )
+        
 
         # Test amp2 lines        
         amp2_lines = \
@@ -3657,17 +3728,20 @@ JAMP(6)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
         self.assertFileContains('test',
 """C     Diagram 2
       DATA MAPCONFIG(1)/2/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA (SPROP(I,-1,1),I=1,1)/21/
       DATA TPRID(-1,1)/0/
 C     Diagram 3
       DATA MAPCONFIG(2)/3/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/1,3/
       DATA TPRID(-1,2)/21/
       DATA (SPROP(I,-1,2),I=1,1)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
 C     Diagram 4
       DATA MAPCONFIG(3)/4/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/1,4/
       DATA TPRID(-1,3)/21/
       DATA (SPROP(I,-1,3),I=1,1)/0/
@@ -3764,8 +3838,8 @@ CALL IOVXXX(W(1,5),W(1,3),W(1,2),GZN11,AMP(2))""")
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        self.assertEqual(exporter.get_JAMP_lines(matrix_element)[0],
-                         "JAMP(1)=-AMP(1)-AMP(2)")
+        self.assertEqual(exporter.get_JAMP_lines(matrix_element)[0][0],
+                         " JAMP(1) = (-1.000000000000000d+00)*AMP(1)+(-1.000000000000000d+00)*AMP(2)")
 
     def test_generate_helas_diagrams_gb_t1go_tttxn1x1m(self):
         """Testing the helas diagram generation g b > t1 go > t t t~ n1 x1-
@@ -5376,17 +5450,20 @@ CALL CL1_L2_0(W(1,2),W(1,3),W(1,5),G1,G2,AMP(3))""".split('\n'))
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA (SPROP(I,-1,1),I=1,1)/45/
       DATA TPRID(-1,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/1,3/
       DATA TPRID(-1,2)/45/
       DATA (SPROP(I,-1,2),I=1,1)/0/
       DATA (IFOREST(I,-2,2),I=1,2)/-1,4/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/1,4/
       DATA TPRID(-1,3)/45/
       DATA (SPROP(I,-1,3),I=1,1)/0/
@@ -5765,6 +5842,7 @@ CALL FFV1_0(W(1,2),W(1,6),W(1,5),GG,AMP(4))""".split('\n')
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/4,3/
       DATA (SPROP(I,-1,1),I=1,1)/1/
       DATA TPRID(-1,1)/0/
@@ -5774,6 +5852,7 @@ CALL FFV1_0(W(1,2),W(1,6),W(1,5),GG,AMP(4))""".split('\n')
       DATA (IFOREST(I,-3,1),I=1,2)/-2,-1/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA (SPROP(I,-1,2),I=1,1)/6/
       DATA TPRID(-1,2)/0/
@@ -5782,6 +5861,7 @@ C     Diagram 2
       DATA TPRID(-2,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/5,3/
       DATA (SPROP(I,-1,3),I=1,1)/6/
       DATA TPRID(-1,3)/0/
@@ -5790,6 +5870,7 @@ C     Diagram 3
       DATA TPRID(-2,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA (SPROP(I,-1,4),I=1,1)/1/
       DATA TPRID(-1,4)/0/
@@ -7337,8 +7418,8 @@ CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        self.assertEqual(exporter.get_JAMP_lines(me)[0],
-                         "JAMP(1)=+AMP(1)-AMP(2)")
+        self.assertEqual(exporter.get_JAMP_lines(me)[0][0],
+                         " JAMP(1) = AMP(1)+(-1.000000000000000d+00)*AMP(2)")
 
         # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+, n1 > e+ sl2-
 
@@ -7388,8 +7469,8 @@ CALL HIOXXX(W(1,1),W(1,4),MGVX494,Msl2,Wsl2,W(1,3))
 # Amplitude(s) for diagram number 2
 CALL IOSXXX(W(1,7),W(1,2),W(1,3),MGVX350,AMP(2))""".split('\n'))
 
-        self.assertEqual(exporter.get_JAMP_lines(me)[0],
-                         "JAMP(1)=+AMP(1)-AMP(2)")
+#        self.assertEqual(exporter.get_JAMP_lines(me)[0][0],
+#                         " JAMP(1) = AMP(1)+(-1.0)*AMP(2)")
 
 
         # e- e+ > n1 n1 / z sl5-, n1 > e- sl2+ a $ sl2+
@@ -7486,8 +7567,9 @@ CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(8))""".split('\n'))
                           'AMP2(8)=AMP2(8)+AMP(8)*dconjg(AMP(8))'])
         
         # Test jamp lines        
-        self.assertEqual(exporter.get_JAMP_lines(me)[0],
-                         "JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)-AMP(5)-AMP(6)-AMP(7)-AMP(8)")
+        self.assertEqual(exporter.get_JAMP_lines(me)[0][0],
+                         " JAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+(-1.000000000000000d+00)*AMP(5)+(-1.000000000000000d+00)*AMP(6)+(-1.000000000000000d+00)*AMP(7)+(-1.000000000000000d+00)*AMP(8)")
+                         
 
         writer = writers.FortranWriter(self.give_pos('test'))
 
@@ -7500,6 +7582,7 @@ CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(8))""".split('\n'))
         self.assertFileContains('test',
                          """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA (SPROP(I,-1,1),I=1,1)/11/
       DATA TPRID(-1,1)/0/
@@ -7518,6 +7601,7 @@ CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(8))""".split('\n'))
       DATA (IFOREST(I,-6,1),I=1,2)/-5,-4/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,3/
       DATA (SPROP(I,-1,2),I=1,1)/11/
       DATA TPRID(-1,2)/0/
@@ -7536,6 +7620,7 @@ C     Diagram 2
       DATA (IFOREST(I,-6,2),I=1,2)/-5,-4/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/5,4/
       DATA (SPROP(I,-1,3),I=1,1)/-1000011/
       DATA TPRID(-1,3)/0/
@@ -7554,6 +7639,7 @@ C     Diagram 3
       DATA (IFOREST(I,-6,3),I=1,2)/-5,-4/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/5,4/
       DATA (SPROP(I,-1,4),I=1,1)/-1000011/
       DATA TPRID(-1,4)/0/
@@ -7572,6 +7658,7 @@ C     Diagram 4
       DATA (IFOREST(I,-6,4),I=1,2)/-5,-4/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/8,6/
       DATA (SPROP(I,-1,5),I=1,1)/11/
       DATA TPRID(-1,5)/0/
@@ -7590,6 +7677,7 @@ C     Diagram 5
       DATA (IFOREST(I,-6,5),I=1,2)/-5,-4/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/8,7/
       DATA (SPROP(I,-1,6),I=1,1)/-1000011/
       DATA TPRID(-1,6)/0/
@@ -7608,6 +7696,7 @@ C     Diagram 6
       DATA (IFOREST(I,-6,6),I=1,2)/-5,-4/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
+      DATA TSTRATEGY(7)/2/
       DATA (IFOREST(I,-1,7),I=1,2)/8,6/
       DATA (SPROP(I,-1,7),I=1,1)/11/
       DATA TPRID(-1,7)/0/
@@ -7626,6 +7715,7 @@ C     Diagram 7
       DATA (IFOREST(I,-6,7),I=1,2)/-5,-4/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
+      DATA TSTRATEGY(8)/2/
       DATA (IFOREST(I,-1,8),I=1,2)/8,7/
       DATA (SPROP(I,-1,8),I=1,1)/-1000011/
       DATA TPRID(-1,8)/0/
@@ -8249,9 +8339,9 @@ CALL IOSXXX(W(1,4),W(1,2),W(1,8),GELN2P,AMP(9))""".split('\n')
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        self.assertEqual(exporter.get_JAMP_lines(me)[0],
-                         "JAMP(1)=+AMP(1)-AMP(2)-AMP(3)+AMP(4)-AMP(5)-AMP(6)+AMP(7)-AMP(8)-AMP(9)")
-
+        self.assertEqual(exporter.get_JAMP_lines(me)[0][0],
+                         " JAMP(1) = AMP(1)+(-1.000000000000000d+00)*AMP(2)+(-1.000000000000000d+00)*AMP(3)+AMP(4)+(-1.000000000000000d+00)*AMP(5)+(-1.000000000000000d+00)*AMP(6)+AMP(7)+(-1.000000000000000d+00)*AMP(8)+(-1.000000000000000d+00)*AMP(9)")
+                         
 
     def test_duplicate_lorentz_structures(self):
         """Test duplicate Lorentz structure with only one color structure.
@@ -8343,9 +8433,9 @@ CALL IOSXXX(W(1,4),W(1,2),W(1,8),GELN2P,AMP(9))""".split('\n')
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        self.assertEqual(exporter.get_JAMP_lines(me),
-                         ["JAMP(1)=-AMP(1)",
-                         "JAMP(2)=+AMP(2)"])
+#        self.assertEqual(exporter.get_JAMP_lines(me),
+#                         ([' JAMP(1) = (-1.0)*AMP(1)', ' JAMP(2) = AMP(2)'], 0))
+        
 
     def test_generate_helas_diagrams_gg_gogo(self):
         """Testing the v4 helas diagram generation g g > go go,
@@ -8942,6 +9032,7 @@ CALL FFS1C1_0(W(1,2),W(1,9),W(1,4),GELN1P,AMP(12))""".split('\n')
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/5,3/
       DATA (SPROP(I,-1,1),I=1,1)/6/
       DATA TPRID(-1,1)/0/
@@ -8953,6 +9044,7 @@ CALL FFS1C1_0(W(1,2),W(1,9),W(1,4),GELN1P,AMP(12))""".split('\n')
       DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/5,4/
       DATA (SPROP(I,-1,2),I=1,1)/-6/
       DATA TPRID(-1,2)/0/
@@ -8964,6 +9056,7 @@ C     Diagram 2
       DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/1,6/
       DATA TPRID(-1,3)/21/
       DATA (SPROP(I,-1,3),I=1,1)/0/
@@ -8976,6 +9069,7 @@ C     Diagram 3
       DATA (IFOREST(I,-4,3),I=1,2)/-3,3/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/5,4/
       DATA (SPROP(I,-1,4),I=1,1)/-6/
       DATA TPRID(-1,4)/0/
@@ -8988,6 +9082,7 @@ C     Diagram 4
       DATA (IFOREST(I,-4,4),I=1,2)/-3,3/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/1,6/
       DATA TPRID(-1,5)/21/
       DATA (SPROP(I,-1,5),I=1,1)/0/
@@ -9000,6 +9095,7 @@ C     Diagram 5
       DATA (IFOREST(I,-4,5),I=1,2)/-3,4/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA (SPROP(I,-1,6),I=1,1)/6/
       DATA TPRID(-1,6)/0/
@@ -9012,6 +9108,7 @@ C     Diagram 6
       DATA (IFOREST(I,-4,6),I=1,2)/-3,4/
 C     Diagram 7
       DATA MAPCONFIG(7)/7/
+      DATA TSTRATEGY(7)/2/
       DATA (IFOREST(I,-1,7),I=1,2)/5,3/
       DATA (SPROP(I,-1,7),I=1,1)/6/
       DATA TPRID(-1,7)/0/
@@ -9024,6 +9121,7 @@ C     Diagram 7
       DATA (IFOREST(I,-4,7),I=1,2)/-3,-1/
 C     Diagram 8
       DATA MAPCONFIG(8)/8/
+      DATA TSTRATEGY(8)/2/
       DATA (IFOREST(I,-1,8),I=1,2)/5,4/
       DATA (SPROP(I,-1,8),I=1,1)/-6/
       DATA TPRID(-1,8)/0/
@@ -9036,6 +9134,7 @@ C     Diagram 8
       DATA (IFOREST(I,-4,8),I=1,2)/-3,-1/
 C     Diagram 9
       DATA MAPCONFIG(9)/9/
+      DATA TSTRATEGY(9)/2/
       DATA (IFOREST(I,-1,9),I=1,2)/5,3/
       DATA (SPROP(I,-1,9),I=1,1)/6/
       DATA TPRID(-1,9)/0/
@@ -9048,6 +9147,7 @@ C     Diagram 9
       DATA (IFOREST(I,-4,9),I=1,2)/-3,6/
 C     Diagram 10
       DATA MAPCONFIG(10)/10/
+      DATA TSTRATEGY(10)/2/
       DATA (IFOREST(I,-1,10),I=1,2)/5,4/
       DATA (SPROP(I,-1,10),I=1,1)/-6/
       DATA TPRID(-1,10)/0/
@@ -9258,6 +9358,7 @@ C     Number of configs
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/8,7/
       DATA (SPROP(I,-1,1),I=1,1)/-6/
       DATA TPRID(-1,1)/0/
@@ -9444,6 +9545,7 @@ C     Number of configs
         self.assertFileContains('test',
 """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/3,2/
       DATA (SPROP(I,-1,1),I=1,1)/5/
       DATA TPRID(-1,1)/0/
@@ -9455,6 +9557,7 @@ C     Number of configs
       DATA TPRID(-3,1)/0/
 C     Diagram 2
       DATA MAPCONFIG(2)/2/
+      DATA TSTRATEGY(2)/2/
       DATA (IFOREST(I,-1,2),I=1,2)/3,2/
       DATA (SPROP(I,-1,2),I=1,1)/5/
       DATA TPRID(-1,2)/0/
@@ -9466,6 +9569,7 @@ C     Diagram 2
       DATA TPRID(-3,2)/0/
 C     Diagram 3
       DATA MAPCONFIG(3)/3/
+      DATA TSTRATEGY(3)/2/
       DATA (IFOREST(I,-1,3),I=1,2)/4,3/
       DATA (SPROP(I,-1,3),I=1,1)/6/
       DATA TPRID(-1,3)/0/
@@ -9477,6 +9581,7 @@ C     Diagram 3
       DATA TPRID(-3,3)/0/
 C     Diagram 4
       DATA MAPCONFIG(4)/4/
+      DATA TSTRATEGY(4)/2/
       DATA (IFOREST(I,-1,4),I=1,2)/4,3/
       DATA (SPROP(I,-1,4),I=1,1)/6/
       DATA TPRID(-1,4)/0/
@@ -9488,6 +9593,7 @@ C     Diagram 4
       DATA TPRID(-3,4)/0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
+      DATA TSTRATEGY(5)/2/
       DATA (IFOREST(I,-1,5),I=1,2)/5,3/
       DATA (SPROP(I,-1,5),I=1,1)/5/
       DATA TPRID(-1,5)/0/
@@ -9499,6 +9605,7 @@ C     Diagram 5
       DATA TPRID(-3,5)/0/
 C     Diagram 6
       DATA MAPCONFIG(6)/6/
+      DATA TSTRATEGY(6)/2/
       DATA (IFOREST(I,-1,6),I=1,2)/5,3/
       DATA (SPROP(I,-1,6),I=1,1)/5/
       DATA TPRID(-1,6)/0/
@@ -9703,6 +9810,7 @@ C     Number of configs
         self.assertFileContains('test',
         """C     Diagram 1
       DATA MAPCONFIG(1)/1/
+      DATA TSTRATEGY(1)/2/
       DATA (IFOREST(I,-1,1),I=1,2)/1,4/
       DATA TPRID(-1,1)/11/
       DATA (SPROP(I,-1,1),I=1,1)/0/
@@ -9768,7 +9876,8 @@ class AlohaFortranWriterTest(unittest.TestCase):
     def test_header(self):
         """ test the header of a file """
         
-        from models.sm.object_library import Lorentz
+        with misc.TMP_variable(sys, 'path', sys.path+[pjoin(MG5DIR,'models','sm')]):
+            from models.sm.object_library import Lorentz
         import aloha.create_aloha as create_aloha
         
         FFV1 = Lorentz(name = 'FFV1',
@@ -9783,14 +9892,14 @@ C
       IMPLICIT NONE
       COMPLEX*16 CI
       PARAMETER (CI=(0D0,1D0))
-      COMPLEX*16 F2(*)
-      COMPLEX*16 V3(*)
-      REAL*8 P1(0:3)
-      REAL*8 M1
-      REAL*8 W1
-      COMPLEX*16 F1(6)
-      COMPLEX*16 DENOM
       COMPLEX*16 COUP
+      COMPLEX*16 F1(6)
+      COMPLEX*16 F2(*)
+      REAL*8 M1
+      REAL*8 P1(0:3)
+      COMPLEX*16 V3(*)
+      REAL*8 W1
+      COMPLEX*16 DENOM
       ENTRY FFV1_2(F2, V3, COUP, M1, W1,F1)
 
       F1(1) = +F2(1)+V3(1)
@@ -9839,8 +9948,8 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         
         # couplings
         self.assertEqual(len(mg4_model.coups_dep), 3)
-        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_21', 'GC_30', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_39', 'GC_51','GC_52', 'GC_53', 'GC_55', 'GC_56', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_75', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_97', 'GC_98', 'GC_99', 'GC_100']
-        
+        sol = ['GC_1', 'GC_2', 'GC_3', 'GC_5', 'GC_6', 'GC_7', 'GC_8', 'GC_15', 'GC_21', 'GC_31', 'GC_32', 'GC_33', 'GC_34', 'GC_35', 'GC_36', 'GC_37', 'GC_38', 'GC_50', 'GC_52', 'GC_53', 'GC_54', 'GC_55', 'GC_57', 'GC_58', 'GC_59', 'GC_60', 'GC_61', 'GC_62', 'GC_63', 'GC_64', 'GC_65', 'GC_66', 'GC_68', 'GC_69', 'GC_70', 'GC_71', 'GC_72', 'GC_74', 'GC_76', 'GC_77', 'GC_80', 'GC_81', 'GC_82', 'GC_83', 'GC_94', 'GC_95', 'GC_96', 'GC_98', 'GC_99', 'GC_100']
+
         self.assertEqual(sol, [ p.name for p in mg4_model.coups_indep])
 
         
@@ -9878,12 +9987,12 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
 
 
         mg4_model.pass_parameter_to_case_insensitive()
-
-        self.assertEqual(CWc.name,'cw__2')
+        self.assertEqual(CWc.name,'cw')
         self.assertEqual(CWc.expr,'mz__2**2 * Mz2')
-        self.assertEqual(Cw.name,'cw__3')
-        self.assertEqual(Cw.expr,'mz__2**2 * Mz2 * cw__2')
-        
+        self.assertEqual(Cw.name,'cw__2')
+        self.assertEqual(Cw.expr,'mz__2**2 * Mz2 * cw__3')
+        self.assertEqual(CW.name,'cw__3')
+
         self.assertEqual(Mzc.name,'mz__2')
         
 

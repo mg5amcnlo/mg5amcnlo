@@ -14,16 +14,18 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import StringIO
+import six
+StringIO = six
 from madgraph import MG5DIR
 
-import StringIO
+
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -56,7 +58,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue(mybanner.has_key('slha'))
+        self.assertTrue('slha' in mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -572,7 +574,9 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            self.assertEqual(run_card[key], run_card2[key])
+            if key == 'hel_recycling' and six.PY2:
+                continue 
+            self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))
       
         run_card = bannermod.RunCardNLO()
 #        fsock = tempfile.NamedTemporaryFile(mode = 'w')

@@ -13,10 +13,14 @@
 #                                                                               
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import math
 import os 
 import sys
 import subprocess
+from six.moves import map
+from six.moves import range
 
 class RunningMW(object):
 
@@ -43,7 +47,7 @@ class RunningMW(object):
         
         restrict_path = evt_file.replace('verif','restrict%i' % self.card_nb).replace('.lhco','.dat')
         if os.path.exists(restrict_path):
-            allow = map(int, open(restrict_path).read().split())
+            allow = list(map(int, open(restrict_path).read().split()))
             self.allow_event = lambda x: int(x) in allow
         else:
             self.allow_event = lambda x: True
@@ -76,7 +80,7 @@ class RunningMW(object):
                 if not self.debug:
                     subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
                 else:
-                    print 'submit in debug mode'
+                    print('submit in debug mode')
                 
                     os.system('echo "./comp_madweight" > log.txt')
                     os.system('bash log.txt')
@@ -188,7 +192,7 @@ class TFsets(dict):
         
         if log_level in ['permutation','channel', 'iterations', 'full']:
             fsock.write('\n')
-            perm_ids = self.keys()
+            perm_ids = list(self.keys())
             perm_ids.sort()
             for perm_id in perm_ids:
                 obj = self[perm_id]
@@ -203,7 +207,7 @@ class TFsets(dict):
             return self.value, self.error 
         total = 0
         total_error = 0
-        if '0' in self.keys():
+        if '0' in list(self.keys()):
             self.value, self.error =  self['0'].calculate_total()
             return self.value, self.error
         else:
@@ -274,7 +278,7 @@ class Weight(dict):
         
         fsock.write('<event id=\'%s\' value=\'%s\' error=\'%s\'>\n' % \
                     (self.lhco_number, self.value, self.error))
-        tfsets = self.keys()
+        tfsets = list(self.keys())
         tfsets.sort()
         for tf_id in tfsets:
             self[tf_id].write(fsock, self.log_level)
@@ -318,7 +322,7 @@ class Permutation(dict):
         
         if log_level in ['channel', 'iterations', 'full']:
             fsock.write('\n')
-            ids = self.keys()
+            ids = list(self.keys())
             ids.sort()
             for pid in ids:
                 channel = self[pid]

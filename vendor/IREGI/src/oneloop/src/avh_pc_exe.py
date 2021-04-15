@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import avh_pc
 
@@ -12,7 +14,7 @@ elif sys.argv[1] == 'incl': avh_pc.incl(sys.argv[2],lines)
 elif sys.argv[1] == 'subs': avh_pc.subs(sys.argv[2],sys.argv[3],lines)
 elif sys.argv[1] == 'clean': avh_pc.clean(lines)
 else:
-    print 'ERROR in avh_pc_exe.py: option '+sys.argv[1]+' not defined.'
+    print('ERROR in avh_pc_exe.py: option '+sys.argv[1]+' not defined.')
     sys.exit
 
 iofile = open(sys.argv[ninput],'w')

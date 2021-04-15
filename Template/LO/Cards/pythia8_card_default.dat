@@ -12,6 +12,8 @@ Main:numberOfEvents      = -1
 ! -------------------------------------------------------------------
 ! Specify the HEPMC output of the Pythia8 shower. You can set it to:
 !   auto      : MG5aMC will automatically place it the run_<i> directory
+!   autoremove: MG5aMC will automatically remove the file at the end of the run.
+!                (usefull when running with Delphes)
 !   /dev/null : to turn off the HEPMC output.
 !   <path>    : to select where the HEPMC file must written. It will 
 !               therefore not be placed in the run_<i> directory. The

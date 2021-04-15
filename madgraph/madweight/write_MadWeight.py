@@ -2,7 +2,12 @@
 ##### -*- coding: cp1252 -*-
 
 #Extension
+from __future__ import absolute_import
+from __future__ import print_function
 import os
+import six
+from six.moves import map
+from six.moves import range
 
 try:
     from madgraph.madweight.MW_fct import *
@@ -25,7 +30,7 @@ def create_all_fortran_code(MW_info, i=1):
     template = mod_file.Mod_file(rule_file='./Source/MadWeight/mod_file/mod_main_code')
     # load MadWeight option
     for MW_dir in MW_info.MW_listdir:
-        print 'treating', MW_dir, 'directory'
+        print('treating', MW_dir, 'directory')
         diag = MG_diagram('./SubProcesses/' + MW_dir, 'param_card_1.dat', './Source/MadWeight/transfer_function/ordering_file.inc', i, MW_info)
         diag.create_all_fortran_code()
         diag.write_code(template)
@@ -61,7 +66,7 @@ class MG_diagram(diagram_class.MG_diagram):
             self.clear_solution()
             self.define_Constraint_sector()
             self.solve_blob_sector()
-            print self
+            print(self)
             num_sol = self.load_fortran_code(num_sol)
             
         for unaligned in all_pos:
@@ -70,7 +75,7 @@ class MG_diagram(diagram_class.MG_diagram):
 
             self.define_Constraint_sector()
             self.solve_blob_sector()
-            print self
+            print(self)
             num_sol = self.load_fortran_code(num_sol)
             
         self.create_permutation_weight_functions_caller()
@@ -227,7 +232,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 continue
             i+=1        
             text+=' double precision local_%s \n' % (i)
-            if isinstance(unaligned, basestring):
+            if isinstance(unaligned, six.string_types):
                 name = 'tf_E_for_part\n'
             elif unaligned.external:
                 name= 'tf_E_for_%s \n'% (unaligned.MG)
@@ -252,7 +257,7 @@ class MG_diagram(diagram_class.MG_diagram):
         def write_call_for_peak(obj,peak):
             """ return the text on how to return the weight associted to this peak """
             
-            if isinstance(peak, basestring):
+            if isinstance(peak, six.string_types):
                 text = 'tf_E_for_part(%s)' % ( peak )
             elif peak.external:
                 text = 'tf_E_for_%s() '% (peak.MG)
@@ -270,7 +275,7 @@ class MG_diagram(diagram_class.MG_diagram):
             for unaligned,nb in all_peak.items():
                 if nb == 0: 
                     continue
-                if unaligned not in unaligned_peak.keys():                
+                if unaligned not in list(unaligned_peak.keys()):                
                     text+=' * local_%s' %(peak_to_prov[unaligned])
             return text 
         
@@ -294,12 +299,12 @@ class MG_diagram(diagram_class.MG_diagram):
             if isinstance(self.MWparam['mw_gen']['restrict_channel'], list):
                 allowed_channel = [int(i)-1 for i in self.MWparam['mw_gen']['restrict_channel']]
             elif self.MWparam['mw_gen']['restrict_channel'] in ['','0','F']:
-                allowed_channel = range(0,len(peak_by_channel))
+                allowed_channel = list(range(0,len(peak_by_channel)))
             else:
                 allowed_channel = [int(self.MWparam['mw_gen']['restrict_channel'])-1]
         else:
-            allowed_channel = range(0,len(peak_by_channel))
-        for j in xrange(0,len(peak_by_channel)):
+            allowed_channel = list(range(0,len(peak_by_channel)))
+        for j in range(0,len(peak_by_channel)):
             if j in allowed_channel:
                 den_text += ' + '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
                 if j == label:
@@ -407,8 +412,8 @@ class MG_diagram(diagram_class.MG_diagram):
                         break
                     if type(particle.MG) == int:
                         line += str(particle.MG) + ','
-                    elif isinstance(particle.MG, basestring):
-                        if self.fuse_dict.has_key(particle.MG):
+                    elif isinstance(particle.MG, six.string_types):
+                        if particle.MG in self.fuse_dict:
                             line += str(self.fuse_dict[particle.MG]) + ','
                             del self.fuse_dict[particle.MG]
                         else:
@@ -439,12 +444,13 @@ class MG_diagram(diagram_class.MG_diagram):
             else:
                 line=' call class_' + ECS.chgt_var.lower() + '(x,'
             for particle in block.order_content:
-                if particle.MG < 0:
-                    self.use_propa.add(particle.MG)
+
                 if type(particle.MG) == int:
+                    if particle.MG < 0:
+                        self.use_propa.add(particle.MG)                    
                     line += str(particle.MG) + ','
-                elif isinstance(particle.MG, basestring):
-                    if self.fuse_dict.has_key(particle.MG):
+                elif isinstance(particle.MG, six.string_types):
+                    if particle.MG in self.fuse_dict:
                         line += str(self.fuse_dict[particle.MG]) + ','
                         del self.fuse_dict[particle.MG]
                     else:
@@ -699,13 +705,13 @@ class MG_diagram(diagram_class.MG_diagram):
             if isinstance(self.MWparam['mw_gen']['restrict_channel'], list):
                 allowed_channel = [int(i) for i in self.MWparam['mw_gen']['restrict_channel']]
             elif self.MWparam['mw_gen']['restrict_channel'] in ['','0','F']:
-                allowed_channel = range(1,len(self.allowed_channel)+1)
+                allowed_channel = list(range(1,len(self.allowed_channel)+1))
             else:
                 allowed_channel = [int(self.MWparam['mw_gen']['restrict_channel'])]
             full = allowed_channel + [0] * (len(self.code) - len(allowed_channel))
             dico['values'] = ','.join(map(str, full))
         else:
-            dico['values'] = ','.join(map(str, range(1, len(self.code)+1)))
+            dico['values'] = ','.join(map(str, list(range(1, len(self.code)+1))))
             
         write_data += put_in_fortran_format("""
 C+-----------------------------------------------------------------------+
@@ -1086,7 +1092,7 @@ c       choose the permutation (point by point in the ps)
                     add_peaks(unaligned, one_peak)
                 return
             
-            if unaligned.has_key(peak):
+            if peak in unaligned:
                 unaligned[peak] += 1
             else:
                 if isinstance(peak, str) or peak.external:
@@ -1260,7 +1266,7 @@ c       choose the permutation (point by point in the ps)
         for one_sol in list_local:
             local_mg={}
             for peak, value in one_sol.items():
-                if isinstance(peak,basestring):
+                if isinstance(peak,six.string_types):
                     value2=peak.split('_')[-2:]
                     list_d.append(value2)
                 else:
@@ -1273,12 +1279,12 @@ c       choose the permutation (point by point in the ps)
         nb_sol = len(list_local)
         for peak, value in dict_all.items():
             if value == nb_sol:
-                if isinstance(peak,basestring):
-                    print 'WARNING a peak associated to a visible particle is never '+ \
-                          'aligned. This will slow down the integration'
+                if isinstance(peak,six.string_types):
+                    print('WARNING a peak associated to a visible particle is never '+ \
+                          'aligned. This will slow down the integration')
                 elif peak.MG<0 and peak.external == 0 and peak.channel.startswith('S'):
-                    print 'WARNING a peak associated to '+str(peak.MG)+' is never '+ \
-                           'aligned. This will slow down the integration '
+                    print('WARNING a peak associated to '+str(peak.MG)+' is never '+ \
+                           'aligned. This will slow down the integration ')
                 dict_all[peak] = 0
                 for list_peak in list_local:
                     del list_peak[peak]
@@ -1289,7 +1295,7 @@ c       choose the permutation (point by point in the ps)
             except:
                 continue
             for one_sol in list_local:
-                if one_sol.has_key(peak1) and one_sol.has_key(peak2):
+                if peak1 in one_sol and peak2 in one_sol:
                     del one_sol[peak1]
                     del one_sol[peak2]
                     name1, name2= 'first_d_%s_%s' % (peak1_MG,peak2_MG),'second_d_%s_%s' % (peak1_MG,peak2_MG)
@@ -1298,7 +1304,7 @@ c       choose the permutation (point by point in the ps)
                     dict_all[peak1] -=1
                     dict_all[peak2] -=1
                     dict_all[name1] +=1
-                    if dict_all.has_key(name2):
+                    if name2 in dict_all:
                         dict_all[name2] +=1
                     else:
                         dict_all[name2] =1

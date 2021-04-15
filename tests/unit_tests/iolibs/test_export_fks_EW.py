@@ -15,11 +15,15 @@
 
 """Unit test library for the export_FKS format routines"""
 
-import StringIO
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+StringIO = six
 import copy
 import fractions
 import os 
 import sys
+from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -56,7 +60,7 @@ from functools import wraps
 def PostponeToEW(f):
    @wraps(f)
    def postpone(*args,**opts):
-     print "\n Test '%s' ignored as it should be fixed with mixed couplings expansion."%f.__name__
+     print("\n Test '%s' ignored as it should be fixed with mixed couplings expansion."%f.__name__)
      return
    return postpone
 
@@ -1451,8 +1455,8 @@ C     Number of configs
         The first color link is used.
         """
         
-        goal = ["DATA DENOM(1)/1/",
-                "DATA (CF(I,  1),I=  1,  1) /    3/"
+        goal = [
+                "DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/"
                 ]
         process_exporter = export_fks.ProcessExporterFortranFKS()
 

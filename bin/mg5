@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -17,6 +17,8 @@
 """This is the main executable, a simple frontend to set up the PYTHONPATH
 and call immediately the command line interface scripts"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 

@@ -30,9 +30,11 @@
 ##
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import aloha.aloha_lib as aloha_lib
 import aloha
 import cmath
+from six.moves import range
 
 #===============================================================================
 # P (Momenta)
@@ -1018,7 +1020,8 @@ class Metric(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(cls,l1,l2):
-        if l1<l2:
+
+        if str(l1)<str(l2):
             return '_ETA_%s_%s' % (l1,l2)
         else:
             return '_ETA_%s_%s' % (l2,l1)

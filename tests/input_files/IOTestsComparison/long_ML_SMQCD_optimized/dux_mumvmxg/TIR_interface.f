@@ -53,8 +53,8 @@ C      used so as to force the reset of the TIR filter.
       INTEGER LAST_LIB_USED
       DATA LAST_LIB_USED/-1/
 
-      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXC
-     $OEFS-1,3)
+      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+     $ ,TIRCOEFSERRORS(0:LOOPMAXCOEFS-1,3)
       COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C     
 C     EXTERNAL FUNCTIONS
@@ -384,8 +384,9 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'MadLoopParams.inc'
       INCLUDE 'process_info.inc'
-C     Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.
-C     inc to change the list of QPTools availables
+C     Change the list 'LOOPLIBS_QPAVAILABLE' in
+C      loop_matrix_standalone.inc to change the list of QPTools
+C      availables
       LOGICAL QP_TOOLS_AVAILABLE
       INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
       COMMON/ML5_0_LOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS

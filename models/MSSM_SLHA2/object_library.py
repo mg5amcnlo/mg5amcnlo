@@ -127,7 +127,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in self.__dict__.iteritems():
+        for k,v in self.__dict__.items():
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:

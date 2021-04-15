@@ -13,6 +13,8 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 import subprocess
 import unittest
 import os
@@ -23,7 +25,7 @@ import logging
 import tempfile
 import time
 import math
-from cStringIO import StringIO
+from io import StringIO
 from madgraph.various import lhe_parser
 
 logger = logging.getLogger('test_cmd')
@@ -88,7 +90,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         try:
             shutil.rmtree(self.path)
-        except Exception, error:
+        except Exception as error:
             pass
 
         interface = MGCmd.MasterCmd()
@@ -645,7 +647,7 @@ class MECmdShell(IOTests.IOTestManager):
         cwd = os.getcwd()
         try:
             os.remove('%s/test.log' % self.tmpdir)
-        except Exception, error:
+        except Exception as error:
             pass
         import subprocess
         
@@ -665,7 +667,7 @@ class MECmdShell(IOTests.IOTestManager):
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
         if logging.getLogger('madgraph').level <= 20:
-            print text
+            print(text)
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
