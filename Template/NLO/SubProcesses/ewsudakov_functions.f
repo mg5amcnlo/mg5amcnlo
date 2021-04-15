@@ -22,13 +22,14 @@ C at the Born are skipped
        implicit none
        logical sud_mc_hel
        COMMON /to_mc_hel/ sud_mc_hel
-       DATA sud_mc_hel / .false. / 
+       DATA sud_mc_hel / .true. / 
        END    
 
        BLOCK DATA Model_usual_or_FAV4
        implicit none
        logical FAV4
        COMMON /to_FAV4/ FAV4
+c it does not work if set to true, besides particular cases
        DATA FAV4 / .false. /
        END
 
@@ -37,6 +38,13 @@ C at the Born are skipped
        logical s_to_rij
        COMMON /to_s_to_rij/ s_to_rij
        DATA s_to_rij / .true. /
+       END
+
+       BLOCK DATA are_we_using_check_sudakov
+       implicit none
+       logical cs_run
+       COMMON /to_cs_run/ cs_run
+       DATA cs_run / .false. /
        END
 
 

@@ -72,11 +72,18 @@ c statistics for MadLoop
       common /to_ret_code/ret_code_common
       double precision born_hel_from_virt
 
+      logical cs_run
+      COMMON /to_cs_run/ cs_run
+
       logical updateloop
       common /to_updateloop/updateloop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
+
+
+
+
 
       IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
@@ -246,9 +253,11 @@ c Average over initial state helicities
             stop
          endif
       endif
-     
-      print*,"SALTO checkpoles"
-      return
+
+      if(cs_run) then     
+        print*,"I am skipping checkpoles"
+        return
+      endif
 
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them

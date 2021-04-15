@@ -108,6 +108,8 @@ c from MAdLoop
        integer USERHEL
        COMMON/USERCHOICE/USERHEL       
 
+       integer cs_run
+       COMMON/to_cs_run/cs_run
 
        double complex smallL,bigL
        external smallL,bigL
@@ -157,9 +159,15 @@ c, logfromLOip1
 
       double precision error_inv, sprevious
 
+      logical sud_mc_hel
+      COMMON /to_mc_hel/ sud_mc_hel
+
 C-----
 C  BEGIN CODE
 C-----  
+
+      cs_run=.true.
+      sud_mc_hel=.false.
 
       if (nexternal-1.gt.8) then
         print*, "redefine range of previous_print_loopminussud_over_born_hel,
