@@ -1696,10 +1696,10 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       was_sud_mod_1=.false.
 
-      if(sud_mod.eq.1) was_sud_mod_1=.true.
-
-      sud_mod=0
-
+      if(sud_mod.eq.1) then
+       was_sud_mod_1=.true.
+       sud_mod=0
+      endif
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1829,9 +1829,10 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       was_sud_mod_1=.false.
 
-      if(sud_mod.eq.1) was_sud_mod_1=.true.
-
-      sud_mod=0
+      if(sud_mod.eq.1) then
+       was_sud_mod_1=.true.
+       sud_mod=0
+      endif
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1987,7 +1988,7 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
 
         logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
-     .  *dble(orders(1)-2)  * dlog(qes2/mdl_mt**2)
+     .  *dble(orders(QCD_POS)-2)  * dlog(qes2/mdl_mt**2)
 
 
 
