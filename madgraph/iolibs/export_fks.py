@@ -3593,14 +3593,14 @@ Parameters              %(params)s\n\
                         if subproc_group:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("if (abs(lpp(ib(%d))).eq.4) call store_ibeam_ee(%d)\n" + \
+                                    ("if (abs(lpp(ib(%d))).eq.4.or.abs(lpp(ib(%d))).eq.3.and.pdlabel.ne.'none') call store_ibeam_ee(%d)\n" + \
                                      "%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n" + \
-                                     "IF (ABS(LPP(%d)).EQ.4) %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
-                                         (ibeam, ibeam, pdf_codes[initial_state],
+                                     "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (ibeam, ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam,
-                                          ibeam, pdf_codes[initial_state], ibeam)
+                                          ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3610,14 +3610,14 @@ Parameters              %(params)s\n\
                         else:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("if (abs(lpp(%d)).eq.4) call store_ibeam_ee(%d)\n" + \
+                                    ("if ((abs(lpp(%d)).eq.4.or.abs(lpp(%d)).eq.3).and.pdlabel.ne.'none') call store_ibeam_ee(%d)\n" + \
                                      "%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n" + \
-                                     "IF (ABS(LPP(%d)).EQ.4) %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
-                                         (ibeam, ibeam, pdf_codes[initial_state],
+                                     "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (ibeam, ibeam, ibeam, pdf_codes[initial_state],
                                           i + 1, ibeam, pdgtopdf[initial_state],
                                           ibeam, ibeam,
-                                          ibeam, pdf_codes[initial_state], ibeam)
+                                          ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3649,7 +3649,7 @@ Parameters              %(params)s\n\
 
                 # this is for the lepton collisions with electron luminosity 
                 # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
-                pdf_lines += "if (ABS(LPP(1)).EQ.4.and.ABS(LPP(2)).EQ.4) " + \
+                pdf_lines += "if (ABS(LPP(1)).EQ.ABS(LPP(2)).and. (ABS(LPP(1)).EQ.3.or.ABS(LPP(1)).EQ.4).and.pdlabel.ne.'none')" + \
                              "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
                              tuple(comp_list)
 

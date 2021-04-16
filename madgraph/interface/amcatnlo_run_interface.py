@@ -3149,7 +3149,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'elastic photon from e', 4:'l'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'e', 4:'mu'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:
@@ -5190,8 +5190,8 @@ RESTART = %(mint_mode)s
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') not in [0, 4] or \
-                 self.banner.get_detail('run_card', 'lpp2') not in [0, 4]):
+                (abs(self.banner.get_detail('run_card', 'lpp1')) not in [0, 3, 4] or \
+                 abs(self.banner.get_detail('run_card', 'lpp2')) not in [0, 3, 4]):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -5199,14 +5199,15 @@ RESTART = %(mint_mode)s
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         # this is the case of collision with dressed leptons
-        elif self.banner.get_detail('run_card', 'lpp1') == \
-             self.banner.get_detail('run_card', 'lpp2') == 4:
+        elif abs(self.banner.get_detail('run_card', 'lpp1')) == \
+             abs(self.banner.get_detail('run_card', 'lpp2')) in [3,4]:
 
             # force not to use LHAPDF in this case
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
             # copy the files for the chosen density
-            self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
+            if self.run_card['pdlabel'] not in  ['none', 'iww', 'eva']:
+                self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
 
         # bare leptons, or anything else
         else:

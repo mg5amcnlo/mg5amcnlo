@@ -818,29 +818,29 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
-         if (abs(lpp(1)).ne.4) then ! this is for pp collisions
+         if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collisions
 c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
-           if (one_body) then
+            if (one_body) then
 c tau is fixed by the mass of the final state particle
-            call compute_tau_one_body(totmass,stot,tau_born,xjac0)
-           else
-            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+               call compute_tau_one_body(totmass,stot,tau_born,xjac0)
+            else
+               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
      $           cBW(-ns_channel-1).ne.2)then
 c Generate tau according to a Breit-Wiger function
-               call generate_tau_BW(stot,ndim-4,x(ndim-4),qmass(
+                  call generate_tau_BW(stot,ndim-4,x(ndim-4),qmass(
      $              -ns_channel-1),qwidth(-ns_channel-1),cBW(-ns_channel
      $              -1),cBW_mass(-1, -ns_channel-1),cBW_width(-1,
      $              -ns_channel-1),tau_born,xjac0)
-            else
+               else 
 c     not a Breit Wigner
-               call generate_tau(stot,ndim-4,x(ndim-4),tau_born,xjac0)
+                  call generate_tau(stot,ndim-4,x(ndim-4),tau_born,xjac0)
+               endif
             endif
-           endif
          
 c Generate the rapditity of the Born system
            call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
 
-         else  ! this is for dressed ee collisions
+        else                    ! this is for dressed ee collisions
            call generate_ee_tau_y(x(ndim-4), x(ndim-3), one_body,
      $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
      $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
