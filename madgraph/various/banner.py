@@ -2280,8 +2280,13 @@ class RunCard(ConfigFile):
     filename = 'run_card'
     LO = True
     blocks = [] 
+
+    allowed_lep_densities = {}    
                                    
     def __new__(cls, finput=None, **opt):
+
+        RunCard.get_lepton_densities()
+
         if cls is RunCard:
             if not finput:
                 target_class = RunCardLO
@@ -2327,6 +2332,31 @@ class RunCard(ConfigFile):
 
 
         super(RunCard, self).__init__(*args, **opts)
+
+    @classmethod
+    def get_lepton_densities(cls):
+        """ """
+
+        if cls.allowed_lep_densities:
+            return
+
+        if MADEVENT:
+            check_dir = pjoin(MEDIR, 'Source', 'PDF', 'lep_densities')
+        else:
+            check_dir = pjoin( MG5DIR, 'Template', 'Common', 'Source', 'PDF', 'lep_densities')
+
+        for name in os.listdir(check_dir):
+            if os.path.isdir(pjoin(check_dir, name)):
+                identity = (-11,11)
+                if os.path.exists(pjoin(check_dir, name, 'info')):
+                    for line in open(pjoin(check_dir, name, 'info')):
+                        if 'identity:' in line:
+                            identity = tuple([int(x) for x in line.split(':',1)[1].split(',')])
+
+            if identity not in cls.allowed_lep_densities:
+                cls.allowed_lep_densities[identity] = [name]
+            else:
+                cls.allowed_lep_densities[identity].append(name)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
                   hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
@@ -2827,7 +2857,7 @@ class RunCard(ConfigFile):
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
-    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll', 'fcce240ll', 'fcce365ll']
+    
 
     blocks = [
 #    HEAVY ION OPTIONAL BLOCK            
@@ -2997,7 +3027,7 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo'] + self.allowed_lep_densities), 
+        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo'] + sum(self.allowed_lep_densities.values(),[])), 
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
@@ -4108,8 +4138,7 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll', 'fcce240ll', 'fcce365ll'] 
-    
+     
     LO = False
     
     def default_setup(self):
@@ -4132,7 +4161,8 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] + self.allowed_lep_densities )                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+             sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -4222,17 +4252,13 @@ class RunCardNLO(RunCard):
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
-            
-            if self['lpp1'] == self['lpp2'] == 4:
-                # for dressed lepton collisions, check that the lhaid is a valid one
-                if self['pdlabel'] not in self.allowed_lep_densities:
-                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
-
-            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
-                self['pdlabel']='nn23nlo'
-                self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
+            if self['lpp1'] == 0  == self['lpp2']:
+                if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                    self['pdlabel']='nn23nlo'
+                    self['reweight_pdf']=[False]
+                    logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
             # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed       
