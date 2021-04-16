@@ -2827,6 +2827,8 @@ class RunCard(ConfigFile):
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
+    allowed_lep_densities = ['ilc500ll', 'cepc240ll', 'isronlyll', 'fcce240ll', 'fcce365ll']
+
     blocks = [
 #    HEAVY ION OPTIONAL BLOCK            
         runblock(name='ion_pdf', fields=('nb_neutron1', 'nb_neutron2','nb_proton1','nb_proton2','mass_ion1', 'mass_ion2'),
@@ -2995,7 +2997,7 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo']), 
+        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo'] + self.allowed_lep_densities), 
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False)
@@ -3225,6 +3227,7 @@ class RunCardLO(RunCard):
         if len(self['pdgs_for_merging_cut']) > 1000:
             raise InvalidRunCard("The number of elements in "+\
                                "'pdgs_for_merging_cut' should not exceed 1000.")
+
   
         # some cut need to be deactivated in presence of isolation
         if self['ptgmin'] > 0:
@@ -3337,9 +3340,7 @@ class RunCardLO(RunCard):
         elif self['tmin_for_channel'] > 0:
             logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
             self.set('tmin_for_channel',  -self['tmin_for_channel'])
-            
 
-            
             
     def update_system_parameter_for_include(self):
         

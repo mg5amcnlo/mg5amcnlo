@@ -170,3 +170,113 @@ C        Be carefull u and d are flipped inside cteq6
       return
       end
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      double precision expo
+      parameter (expo=0.96d0)
+      get_ee_expo = expo
+      return
+      end
+
+      double precision function compute_eepdf(x, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu
+      integer n_ee, id, idbeam
+
+      double precision xmu2
+      double precision k_exp
+
+      double precision eps
+      parameter (eps=1e-20)
+
+      double precision eepdf_tilde, eepdf_tilde_power
+      double precision get_ee_expo
+      double precision ps_expo
+
+      double precision omx_ee
+      common /to_ee_omx/omx_ee
+
+
+      if (id.eq.7) then
+        compute_eepdf = 0d0
+        return
+      endif
+
+      xmu2=xmu**2
+
+      compute_eepdf = eepdf_tilde(x,xmu2,n_ee,id,idbeam) 
+      ! this does not include a factor (1-x)^(-kappa)
+      ! where k is given by
+      k_exp = eepdf_tilde_power(xmu2,n_ee,id,idbeam)
+      ps_expo = get_ee_expo()
+
+      if (k_exp.gt.ps_expo) then
+          write(*,*) 'WARNING, e+e- exponent exceeding limit', k_exp, ps_expo
+      endif
+
+      compute_eepdf = compute_eepdf * (omx_ee)**(-k_exp+ps_expo)
+
+      return
+      end
+
+
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      include 'eepdf.inc'
+      double precision comp1(n_ee), comp2(n_ee)
+      integer i
+
+      ee_comp_prod = 0d0
+      do i = 1, n_ee
+        ee_comp_prod = ee_comp_prod + comp1(i) * comp2(i)
+      enddo
+      return
+      end
+
+
+
+      subroutine store_ibeam_ee(ibeam)
+      implicit none
+      ! just store the identity of beam ibeam 
+      ! in the common to_ee_ibeam using the information
+      ! from initial_states_map
+      integer ibeam
+
+      integer beams(2), idum
+      logical firsttime
+      data firsttime /.true./
+
+      integer ee_ibeam
+      common /to_ee_ibeam/ee_ibeam
+
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+
+      double precision omx_ee
+      common /to_ee_omx/omx_ee
+
+      save beams
+
+      if (firsttime) then
+        open (unit=71,status='old',file='initial_states_map.dat')
+        read (71,*)idum,idum,beams(1),beams(2)
+        close (71)
+        firsttime = .false.
+      endif
+
+      ee_ibeam = beams(ibeam)
+
+      if (ibeam.eq.1) omx_ee = omx1_ee
+      if (ibeam.eq.2) omx_ee = omx2_ee
+
+      return
+      end
+
+
+     
