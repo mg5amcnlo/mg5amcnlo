@@ -5692,6 +5692,13 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
             self.make_opts_var['lhapdf'] = ""
+
+            # this is the case of collision with dressed leptons
+            if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) in [3,4]:
+                # copy the files for the chosen density
+                if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                    self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
+
             
         # set random number
         if self.run_card['iseed'] != 0:

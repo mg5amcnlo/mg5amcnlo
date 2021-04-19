@@ -2391,6 +2391,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         daughters if need be."""
         pass
 
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+
     ############################################################################
     # Start of MadAnalysis5 related function
     ############################################################################

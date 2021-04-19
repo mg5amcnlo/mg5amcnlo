@@ -13,7 +13,16 @@ C
 C     Include
 C
       include 'pdf.inc'
+C dressed lepton stuff
+      include '../eepdf.inc'
+      integer i_ee
+      integer ee_ibeam
+      common /to_ee_ibeam/ee_ibeam
+      double precision compute_eepdf
+      double precision tolerance
+      parameter (tolerance=1.d-2)
 c
+      
       double precision tmp1, tmp2
       integer nb_proton(2), nb_neutron(2) 
       common/to_heavyion_pdg/ nb_proton, nb_neutron
@@ -57,6 +66,29 @@ c     instead of stopping the code, as this might accidentally happen.
          endif
       endif
 
+C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
+C      and check that it is not a photon initial state --elastic photon is handle below --
+      if ((abs(ih).eq.3.or.abs(ih).eq.4).and.abs(ipdg).gt.7.and.abs(ipdg).lt.20) then
+        ! change e/mu/tau = 8/9/10 to 11/13/15
+        if (abs(ipdg).eq.8) then
+          ipart = sign(1,ipdg) * 11
+        else if (abs(ipdg).eq.9) then
+          ipart = sign(1,ipdg) * 13
+        else if (abs(ipdg).eq.10) then
+          ipart = sign(1,ipdg) * 15
+        else
+          ipart = ipdg
+        endif
+	pdg2pdf = 0d0
+        do i_ee = 1, n_ee
+          ee_components(i_ee) = compute_eepdf(x,xmu,i_ee,ipart,ee_ibeam)
+	enddo
+        pdg2pdf =  ee_components(1) ! temporary to test pdf load
+        return
+      endif
+      
+
+      
       ipart=ipdg
       if(iabs(ipart).eq.21) then
          ipart=0

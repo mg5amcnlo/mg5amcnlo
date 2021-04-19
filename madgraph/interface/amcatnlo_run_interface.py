@@ -5111,22 +5111,6 @@ RESTART = %(mint_mode)s
         return input_files, output_files, required_output,  args
 
 
-    def copy_lep_densities(self, name, sourcedir):
-        """copies the leptonic densities so that they are correctly compiled
-        """
-        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
-        pdf_path = os.path.join(sourcedir, 'PDF')
-        # check that the name is correct, ie that the path exists
-        if not os.path.isdir(lep_d_path):
-            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
-                    'The corresponding directory cannot be found in \n' + \
-                    'Source/PDF/lep_densities')
-
-        # now copy the files
-        for filename in ['eepdf.f', 'gridpdfaux.f']:
-            files.cp(os.path.join(lep_d_path, filename), pdf_path)
-
-
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
@@ -5206,7 +5190,7 @@ RESTART = %(mint_mode)s
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
             # copy the files for the chosen density
-            if self.run_card['pdlabel'] not in  ['none', 'iww', 'eva']:
+            if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
                 self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
 
         # bare leptons, or anything else

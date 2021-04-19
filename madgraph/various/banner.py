@@ -3328,18 +3328,19 @@ class RunCardLO(RunCard):
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")   
 
         # check if lpp = 
-        for i in [1,2]:
-            if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
-                time.sleep(5)
-        
-            if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
-                time.sleep(5)
-                
-        # if both lpp1/2 are on PA mode -> force fixed factorization scale
-        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
-            raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]")
+        if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
+            for i in [1,2]:
+                if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
+                    time.sleep(5)
+            
+                if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+                    time.sleep(5)
+                    
+            # if both lpp1/2 are on PA mode -> force fixed factorization scale
+            if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
+                raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
