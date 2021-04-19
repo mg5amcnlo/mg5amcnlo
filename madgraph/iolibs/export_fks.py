@@ -3581,24 +3581,23 @@ Parameters              %(params)s\n\
                     ibeam = 2 - i
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
-                                 % (ibeam, ibeam)
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n" \
+                                 % (ibeam)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
-                                 % (ibeam, ibeam)
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n" \
+                                 % (ibeam)
 
                 for initial_state in init_states:
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("if (abs(lpp(ib(%d))).eq.4.or.abs(lpp(ib(%d))).eq.3.and.pdlabel.ne.'none') call store_ibeam_ee(%d)\n" + \
-                                     "%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
+                                     ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n" + \
                                      "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
-                                         (ibeam, ibeam, ibeam, pdf_codes[initial_state],
-                                          i + 1, ibeam, pdgtopdf[initial_state],
+                                         (
+                                           pdf_codes[initial_state], i + 1, ibeam, pdgtopdf[initial_state], ibeam,
                                           ibeam, ibeam,
                                           ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:
@@ -3610,12 +3609,11 @@ Parameters              %(params)s\n\
                         else:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("if ((abs(lpp(%d)).eq.4.or.abs(lpp(%d)).eq.3).and.pdlabel.ne.'none') call store_ibeam_ee(%d)\n" + \
-                                     "%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
+                                     ("%s%d=PDG2PDF(LPP(%d),%d,%d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n" + \
                                      "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
-                                         (ibeam, ibeam, ibeam, pdf_codes[initial_state],
-                                          i + 1, ibeam, pdgtopdf[initial_state],
+                                         (
+                                           pdf_codes[initial_state], i + 1, ibeam, pdgtopdf[initial_state], ibeam,
                                           ibeam, ibeam,
                                           ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:

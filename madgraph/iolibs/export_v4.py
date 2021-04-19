@@ -1665,10 +1665,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
+                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, IB(%d)," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
-                                          i + 1, i + 1, pdgtopdf[initial_state],
+                                          i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
                         else:
                             pdf_lines = pdf_lines + \

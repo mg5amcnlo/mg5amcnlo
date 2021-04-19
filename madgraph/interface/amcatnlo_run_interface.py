@@ -3149,7 +3149,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'e', 4:'mu'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'e-', 4:'mu-', -3:'e+', -4:'mu+'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:
