@@ -1,6 +1,13 @@
       double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
+c     ih is now signed <0 for antiparticles
+c     if ih<0 does not have a dedicated pdf, then the one for ih>0 will be called
+c     and the sign of ipdg flipped accordingly.
+c
+c     ibeam is the beam identity 1/2
+c      if set to -1/-2 it meand that ipdg should not be flipped even if ih<0
+c      usefull for re-weighting
 c***************************************************************************
       implicit none
 c
@@ -8,16 +15,19 @@ c     Arguments
 c
       DOUBLE  PRECISION x,xmu
       INTEGER IH,ipdg
-      integer beamid ! 1 or 2 (for left or right beam)
+      integer beamid            ! 1 or 2 (for left or right beam)
+C                                -1/-2  same as 1/2 but no change on ipdg needed
 C
 C     Include
 C
       include 'pdf.inc'
 C dressed lepton stuff
       include '../eepdf.inc'
-      integer i_ee
-      integer ee_ibeam
-      common /to_ee_ibeam/ee_ibeam
+      integer i_ee, ih_local
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+
       double precision compute_eepdf
       double precision tolerance
       parameter (tolerance=1.d-2)
@@ -69,27 +79,43 @@ c     instead of stopping the code, as this might accidentally happen.
 C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
 C      and check that it is not a photon initial state --elastic photon is handle below --
       if ((abs(ih).eq.3.or.abs(ih).eq.4).and.abs(ipdg).gt.7.and.abs(ipdg).lt.20) then
-        ! change e/mu/tau = 8/9/10 to 11/13/15
-        if (abs(ipdg).eq.8) then
-          ipart = sign(1,ipdg) * 11
-        else if (abs(ipdg).eq.9) then
-          ipart = sign(1,ipdg) * 13
-        else if (abs(ipdg).eq.10) then
-          ipart = sign(1,ipdg) * 15
-        else
-          ipart = ipdg
+c       change e/mu/tau = 8/9/10 to 11/13/15
+        ipart = ipdg
+        if (abs(ipart).eq.8) then
+          ipart = sign(1,ipart) * 11
+        else if (abs(ipart).eq.9) then
+          ipart = sign(1,ipart) * 13
+        else if (abs(ipart).eq.10) then
+          ipart = sign(1,ipart) * 15
         endif
 	pdg2pdf = 0d0
-        do i_ee = 1, n_ee
-          ee_components(i_ee) = compute_eepdf(x,xmu,i_ee,ipart,ee_ibeam)
+
+        if (beamid.lt.0) then
+           ih_local = ipart
+        elseif (abs(ih) .eq.3) then
+           ih_local = sign(1,ih) * 11
+        else if (abs(ih) .eq.4) then
+           ih_local = sign(1,ih) * 13
+        else
+           write(*,*) "not supported beam type"
+           stop 1
+        endif
+        omx_ee(1)=1e-4          ! temporary to test
+        omx_ee(2)=1e-1          ! temporary to test
+       do i_ee = 1, n_ee
+          ee_components(i_ee) = compute_eepdf(x,omx_ee(beamid),xmu,i_ee,ipart,ih_local)
 	enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
         return
       endif
       
 
-      
-      ipart=ipdg
+      if (beamid.gt.0) then
+         ipart=sign(1,ih)*ipdg
+      else
+         ipart = ipdg
+      endif
+
       if(iabs(ipart).eq.21) then
          ipart=0
       else if(iabs(ipart).eq.22) then
@@ -213,7 +239,7 @@ C        Be carefull u and d are flipped inside cteq6
       return
       end
 
-      double precision function compute_eepdf(x, xmu, n_ee, id, idbeam)
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
       implicit none
       double precision x, xmu
       integer n_ee, id, idbeam
@@ -229,7 +255,6 @@ C        Be carefull u and d are flipped inside cteq6
       double precision ps_expo
 
       double precision omx_ee
-      common /to_ee_omx/omx_ee
 
 
       if (id.eq.7) then
@@ -271,44 +296,6 @@ C        Be carefull u and d are flipped inside cteq6
       return
       end
 
-
-
-      subroutine store_ibeam_ee(ibeam)
-      implicit none
-      ! just store the identity of beam ibeam 
-      ! in the common to_ee_ibeam using the information
-      ! from initial_states_map
-      integer ibeam
-
-      integer beams(2), idum
-      logical firsttime
-      data firsttime /.true./
-
-      integer ee_ibeam
-      common /to_ee_ibeam/ee_ibeam
-
-      double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
-
-      double precision omx_ee
-      common /to_ee_omx/omx_ee
-
-      save beams
-
-      if (firsttime) then
-        open (unit=71,status='old',file='initial_states_map.dat')
-        read (71,*)idum,idum,beams(1),beams(2)
-        close (71)
-        firsttime = .false.
-      endif
-
-      ee_ibeam = beams(ibeam)
-
-      if (ibeam.eq.1) omx_ee = omx1_ee
-      if (ibeam.eq.2) omx_ee = omx2_ee
-
-      return
-      end
 
 
      

@@ -3352,8 +3352,8 @@ c     S=A/(B-x) transformation:
 C dressed lepton stuff
       double precision x1_ee, x2_ee, jac_ee
       
-      double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      $     ,tau_lower_bound
@@ -3427,14 +3427,14 @@ C dressed lepton stuff
         !    because the compute_eepdf function assumes that
         !    this is the case in general
         if (rnd2.lt.0.5d0) then
-          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx1_ee, jac_ee)
+          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx_ee(1), jac_ee)
           x2_ee = tau_born / x1_ee
-          omx2_ee = 1d0 - x2_ee
+          omx_ee(2) = 1d0 - x2_ee
           xjac0 = xjac0 / x1_ee * 2d0 * jac_ee / (1d0-x2_ee)**get_ee_expo()
         else
-          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx2_ee, jac_ee)
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx_ee(2), jac_ee)
           x1_ee = tau_born / x2_ee
-          omx1_ee = 1d0 - x1_ee
+          omx_ee(1) = 1d0 - x1_ee
           xjac0 = xjac0 / x2_ee * 2d0  * jac_ee / (1d0-x1_ee)**get_ee_expo()
         endif
       else
@@ -3444,10 +3444,10 @@ C dressed lepton stuff
         ! while in the ee case x1 and x2 are generated first.
 
         call generate_x_ee(rnd1, tau_born_lower_bound,
-     $      x1_ee, omx1_ee, jac_ee)
+     $      x1_ee, omx_ee(1), jac_ee)
         xjac0 = xjac0 * jac_ee
         call generate_x_ee(rnd2, tau_born_lower_bound/x1_ee,
-     $      x2_ee, omx2_ee, jac_ee)
+     $      x2_ee, omx_ee(2), jac_ee)
         xjac0 = xjac0 * jac_ee
 
         tau_born = x1_ee * x2_ee
@@ -3470,7 +3470,7 @@ C dressed lepton stuff
       ! in order to (re-)generate tau and ycm
       ! from x1 and x2. It also (re-)checks that tau_born 
       ! is pysical, and otherwise sets xjac0=-1000
-      call get_tau_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+      call get_tau_y_from_x12(x1_ee, x2_ee, omx_ee(1), omx_ee(2), tau_born, ycm_born, ycmhat, xjac0) 
 
       x1bk=x1_ee
       x2bk=x2_ee

@@ -56,11 +56,9 @@ C
       data i_replace/20/
 C dressed lepton stuff
       include '../eepdf.inc'
-      double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 
-      double precision omx_ee
-      common /to_ee_omx/omx_ee
 
       integer i_ee, ih_local
       double precision compute_eepdf
@@ -118,12 +116,9 @@ c          ! change e/mu/tau = 8/9/10 to 11/13/15
            stop 1
         endif
 
-      if (ibeam.eq.1) omx_ee = omx1_ee
-      if (ibeam.eq.2) omx_ee = omx2_ee
-        
         pdg2pdf = 0d0
         do i_ee = 1, n_ee 
-           ee_components(i_ee) = compute_eepdf(x,xmu,i_ee,ipart,ih_local)
+           ee_components(i_ee) = compute_eepdf(x, omx_ee(ibeam), xmu,i_ee,ipart,ih_local)
            write(*,*) i_ee, ipart, ih_local,  ee_components(i_ee)
         enddo
         return
@@ -223,7 +218,7 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
 
 
 
-      double precision function compute_eepdf(x, xmu, n_ee, id, idbeam)
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
       implicit none
       double precision x, xmu
       integer n_ee, id, idbeam
@@ -239,8 +234,6 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       double precision ps_expo
 
       double precision omx_ee
-      common /to_ee_omx/omx_ee
-
 
       if (id.eq.7) then
         compute_eepdf = 0d0

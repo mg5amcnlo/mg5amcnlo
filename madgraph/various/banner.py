@@ -2828,10 +2828,13 @@ class RunCard(ConfigFile):
             else:
                 return lhaid
         else: 
-            return {'none': 0, 
+            try:
+                return {'none': 0, 
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
-                    }[pdf]    
+                    }[pdf] 
+            except:
+                return 0   
     
     def get_lhapdf_id(self):
         return self.get_pdf_id(self['pdlabel'])
