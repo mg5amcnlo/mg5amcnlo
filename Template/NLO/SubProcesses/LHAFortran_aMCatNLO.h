@@ -63,7 +63,7 @@ extern "C" {
     double xwgtup_out, scalup_out, aqedup_out, aqcdup_out;
     int idup_out[500], istup_out[500], mothup_out[500][2], icolup_out[500][2];
     double pup_out[500][5], vtimup_out[500],spinup_out[500],
-           scales_out[500][2], scales_out_a[500][500];
+           scales_out[500][2];
     int ifks_out, jfks_out;
   } hepeup_out_;
 
