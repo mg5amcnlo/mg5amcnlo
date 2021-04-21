@@ -172,3 +172,17 @@ C Also, print on screen a summary of the orders in amp_split
       end
 
       
+      logical function orders_equal(orders1, orders2)
+      implicit none
+      include 'orders.inc'
+      integer orders1(nsplitorders), orders2(nsplitorders)
+      integer i
+
+      orders_equal = .true.
+      do i = 1, nsplitorders
+         orders_equal = orders_equal.and.orders1(i).eq.orders2(i)
+      enddo
+
+      return
+      end
+

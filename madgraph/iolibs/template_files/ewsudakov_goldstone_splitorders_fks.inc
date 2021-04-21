@@ -50,6 +50,10 @@ C
       integer GETORDPOWFROMINDEX_SDKG%(ime)d
       integer orders_to_amp_split_pos
 C
+C     stuff for the LO2
+      integer lo2_orders(nsplitorders)
+      logical has_lo2, orders_equal
+C
 C BEGIN CODE
 C
 
@@ -86,6 +90,8 @@ do i = 1, nsqampso
  max_val = max(max_val, abs(ans(I)))
 enddo
 
+call get_lo2_orders(lo2_orders)
+
 do i = 1, nsqampso
         if (keep_order(i)) then
          ANS_SUMMED = ans_summed + ANS(I)
@@ -97,19 +103,13 @@ do i = 1, nsqampso
         endif
 
 C the following is for the LO2
-    if (keep_order_cnt(qcd_pos,i)) then
+    if (has_lo2) then
      do j = 1, nsplitorders
-      amp_orders(j) = GETORDPOWFROMINDEX_SDKG%(ime)d(j, i)
+      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
      enddo
-C here we need to trick the code, putting the result into the LO1 position
-C even if it belongs to LO2. This may fail, so it is better to check
-      amp_orders(qcd_pos) = amp_orders(qcd_pos) + 2
-      amp_orders(qed_pos) = amp_orders(qed_pos) - 2
-      if (amp_orders(qed_pos).lt.0) then
-        write(*,*) 'failed to determine LO2', amp_orders, i
-        stop 1 
-      endif
+     if (orders_equal(amp_orders, lo2_orders)) then
       if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
+     endif
     endif
 enddo
 

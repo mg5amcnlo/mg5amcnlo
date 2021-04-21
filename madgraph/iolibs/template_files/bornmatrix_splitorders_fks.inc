@@ -27,6 +27,8 @@ C
 C VARIABLES
 C
       INTEGER I,J,K
+      include 'has_ewsudakov.inc'
+      integer nord_integrated_born
       include 'orders.inc'
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
@@ -90,12 +92,21 @@ C this is for the orders of the counterterms
     endif
    enddo
   enddo
+
+  nord_integrated_born = 0
   if (keep_order(i)) then
+   nord_integrated_born = nord_integrated_born + 1
    write(*,*) 'BORN: keeping split order ', i
   else
    write(*,*) 'BORN: not keeping split order ', i
   endif
  enddo
+
+C check that, if one include the sudakov corrections, there is at most one contribution to be integrated at LO
+if (has_ewsudakov.and.nord_integrated_born.gt.1) then
+ write(*,*) 'ERROR in born.f, cannot compute Sudakov EW corrections with more than one Born coupling combination to be integrated.Found', nord_integrated_born
+ stop 1
+endif
 
  do j = 1, nsplitorders
   write(*,*) 'counterterm S.O', j, ordernames(j)
@@ -244,6 +255,10 @@ C
       integer GETORDPOWFROMINDEX_B
       integer orders_to_amp_split_pos
 C
+C     stuff for the LO2
+      integer lo2_orders(nsplitorders)
+      logical has_lo2, orders_equal
+C
 C BEGIN CODE
 C
 C look for orders which match the born order constraint 
@@ -263,6 +278,8 @@ do i = 1, nsqampso
  max_val = max(max_val, abs(ans(1,I)))
 enddo
 
+call get_lo2_orders(lo2_orders)
+
 do i = 1, nsqampso
     if (keep_order(i)) then
      ANS_SUMMED = ans_summed + ANS(1,I) / iden
@@ -273,19 +290,13 @@ do i = 1, nsqampso
      if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
     endif
 C the following is for the LO2
-    if (keep_order_cnt(qcd_pos,i)) then
+    if (has_lo2) then
      do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
      enddo
-C here we need to trick the code, putting the result into the LO1 position
-C even if it belongs to LO2. This may fail, so it is better to check
-      amp_orders(qcd_pos) = amp_orders(qcd_pos) + 2
-      amp_orders(qed_pos) = amp_orders(qed_pos) - 2
-      if (amp_orders(qed_pos).lt.0) then
-        write(*,*) 'failed to determine LO2', amp_orders, i
-        stop 1 
-      endif
+     if (orders_equal(amp_orders, lo2_orders)) then
       if(abs(ans(1,i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(1,i) / iden
+     endif
     endif
 enddo
 

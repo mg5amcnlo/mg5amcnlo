@@ -48,6 +48,60 @@ c it does not work if set to true, besides particular cases
        END
 
 
+       logical function has_lo2()
+       implicit none
+       include 'orders.inc'
+       integer lo2_orders(nsplitorders)
+       integer orders_check(nsplitorders)
+       integer i, j
+       logical firsttime
+       data firsttime/.true./
+       logical has_lo2_save
+       data has_lo2_save/.true./
+
+       if (.not.firsttime) then
+           has_lo2 = has_lo2_save
+           return
+       endif
+
+       ! What follows is done only once
+       firsttime = .false.
+
+       ! and check if it exists
+       call get_lo2_orders(lo2_orders)
+
+       do i = 1, amp_split_size_born
+         has_lo2_save = .true.
+         call amp_split_pos_to_orders(i, orders_check)
+         do j = 1, nsplitorders
+           has_lo2_save = has_lo2_save.and.orders_check(j).eq.lo2_orders(j)
+         enddo
+         ! if it is true, then we have found it
+         if (has_lo2_save) exit
+       enddo
+
+       has_lo2 = has_lo2_save
+
+       return
+       end
+
+
+       subroutine get_lo2_orders(lo2_orders)
+       implicit none
+       include 'orders.inc'
+       integer lo2_orders(nsplitorders)
+
+       ! copy the born orders into the lo2 orders
+       ! This assumes that there is only one contribution
+       ! at the born that is integrated (checked in born.f)
+       lo2_orders(:) = born_orders(:)
+
+       ! now get the orders for LO2
+       lo2_orders(qcd_pos) = lo2_orders(qcd_pos) - 2
+       lo2_orders(qed_pos) = lo2_orders(qed_pos) + 2
+       return
+       end
+
 
 
       !! MZ declare all functions as double complex, since some (few)
@@ -1975,6 +2029,7 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
+
 
       get_qcd_lo2 =  CMPLX(0d0,0d0)
 
