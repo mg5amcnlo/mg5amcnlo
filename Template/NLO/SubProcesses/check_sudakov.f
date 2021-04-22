@@ -81,6 +81,8 @@ cc
       COMMON /TO_AMP_EWSUD_PAR/AMP_SPLIT_EWSUD_PAR
       DOUBLE COMPLEX AMP_SPLIT_EWSUD_QCD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_EWSUD_QCD/AMP_SPLIT_EWSUD_QCD
+      DOUBLE COMPLEX AMP_SPLIT_EWSUD_PARQCD(AMP_SPLIT_SIZE)
+      COMMON /TO_AMP_EWSUD_PARQCD/AMP_SPLIT_EWSUD_PARQCD
       integer iamp
       integer chosen_hel, total_hel
        double complex amp_split_born_onehel(amp_split_size)
@@ -649,7 +651,7 @@ c----------
                 write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/amp_split_born(iamp)
                 write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/amp_split_born(iamp)
                 write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN(iamp)
-                write(*,*) 'SUDAKOV/BORN: QCD', AMP_SPLIT_EWSUD_QCD(iamp)/AMP_SPLIT_BORN(iamp)
+                write(*,*) 'SUDAKOV/BORN: QCD', (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))/AMP_SPLIT_BORN(iamp)
 
               endif
 
@@ -658,11 +660,11 @@ c----------
 
               print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .        +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)
-     .        +AMP_SPLIT_EWSUD_QCD(iamp))/AMP_SPLIT_BORN(iamp))
+     .        +(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))/AMP_SPLIT_BORN(iamp))
 
               print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0*4d0
      .        -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .        +AMP_SPLIT_EWSUD_PAR(iamp)+AMP_SPLIT_EWSUD_QCD(iamp)))/
+     .        +AMP_SPLIT_EWSUD_PAR(iamp)+(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))))/
      .        AMP_SPLIT_BORN(iamp))
 
               print_born = dble(AMP_SPLIT_BORN(iamp))
@@ -725,17 +727,17 @@ c----------
      .                            amp_split_ewsud_ssc(iamp)+
      .                            amp_split_ewsud_xxc(iamp)+
      .                            AMP_SPLIT_EWSUD_PAR(iamp)+
-     .                            AMP_SPLIT_EWSUD_QCD(iamp))
+     .                            (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))
 
                  print_loop_over_born = dble(virthel(1,iampvirt(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp)/2d0 /4d0)
 
                  print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .            +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)
-     .            +AMP_SPLIT_EWSUD_QCD(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp))
+     .            +(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))/AMP_SPLIT_BORN_ONEHEL(iamp))
 
                  print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .           -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .            +AMP_SPLIT_EWSUD_PAR(iamp)+AMP_SPLIT_EWSUD_QCD(iamp)))/
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)+(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp))
 
                  print_born = dble(AMP_SPLIT_BORN_ONEHEL(iamp))
@@ -771,7 +773,8 @@ c----------
                    write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                    write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                    write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                   write(*,*) 'SUDAKOV/BORN: QCD', AMP_SPLIT_EWSUD_QCD(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
+                   write(*,*) 'SUDAKOV/BORN: QCD', (AMP_SPLIT_EWSUD_QCD(iamp+1)+
+     .             AMP_SPLIT_EWSUD_PARQCD(iamp+1))/AMP_SPLIT_BORN_ONEHEL(iamp)
 
                    write(*,*) ' '
 
@@ -905,7 +908,7 @@ ccc             111    ---> all non_diagonal
                    write(*,*) 'SUDAKOV/BORN: SSC', amp_split_ewsud_ssc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                    write(*,*) 'SUDAKOV/BORN: XXC', amp_split_ewsud_xxc(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
                    write(*,*) 'SUDAKOV/BORN: PAR', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)
-                   write(*,*) 'SUDAKOV/BORN: QCD', AMP_SPLIT_EWSUD_QCD(iamp)/AMP_SPLIT_BORN(iamp)
+                   write(*,*) 'SUDAKOV/BORN: QCD', (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))/AMP_SPLIT_BORN(iamp)
 
                    write(*,*) 'PAR/ls', AMP_SPLIT_EWSUD_PAR(iamp)/AMP_SPLIT_BORN_ONEHEL(iamp)/smallL(s)
 
@@ -916,7 +919,7 @@ ccc             111    ---> all non_diagonal
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
      .                  AMP_SPLIT_EWSUD_PAR(iamp)+
-     .                  AMP_SPLIT_EWSUD_QCD(iamp))
+     .                  (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))
                  endif
 
 
@@ -927,7 +930,7 @@ ccc             111    ---> all non_diagonal
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
      .                  AMP_SPLIT_EWSUD_PAR(iamp)+
-     .                  AMP_SPLIT_EWSUD_QCD(iamp)))/
+     .                  (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))))/
      .            dble(AMP_SPLIT_BORN_ONEHEL(iamp))
 
 
@@ -941,7 +944,7 @@ ccc             111    ---> all non_diagonal
      .                  amp_split_ewsud_ssc(iamp)+
      .                  amp_split_ewsud_xxc(iamp)+
      .                  AMP_SPLIT_EWSUD_PAR(iamp)+
-     .                  AMP_SPLIT_EWSUD_QCD(iamp))
+     .                  (AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))
 
                  if(debug) print*, 
      .            'virthel/born/2  and / 4  for HEL LEADCONF ',
@@ -959,11 +962,11 @@ ccc             111    ---> all non_diagonal
 
                   print_sud_over_born  = dble((amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)
      .            +amp_split_ewsud_xxc(iamp)+AMP_SPLIT_EWSUD_PAR(iamp)
-     .            +AMP_SPLIT_EWSUD_QCD(iamp))/AMP_SPLIT_BORN_ONEHEL(iamp))
+     .            +(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1)))/AMP_SPLIT_BORN_ONEHEL(iamp))
 
                   print_loopminussud_over_born = dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .            +AMP_SPLIT_EWSUD_PAR(iamp)+AMP_SPLIT_EWSUD_QCD(iamp)))/
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)+(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))))/
      .            AMP_SPLIT_BORN_ONEHEL(iamp))
 
                   print_born = dble(AMP_SPLIT_BORN_ONEHEL(iamp))
@@ -976,7 +979,7 @@ ccc             111    ---> all non_diagonal
      .             "(loop-sud/born2)", 
      .            dble((virthel(1,iampvirt(iamp))/2d0 /4d0
      .            -(amp_split_ewsud_lsc(iamp)+amp_split_ewsud_ssc(iamp)+amp_split_ewsud_xxc(iamp)
-     .            +AMP_SPLIT_EWSUD_PAR(iamp)+AMP_SPLIT_EWSUD_QCD(iamp)))/
+     .            +AMP_SPLIT_EWSUD_PAR(iamp)+(AMP_SPLIT_EWSUD_QCD(iamp+1)+AMP_SPLIT_EWSUD_PARQCD(iamp+1))))/
      .            virthel(0,iampvirt(iamp))),
      .             dble(virthel(0,iampvirt(iamp)))
 

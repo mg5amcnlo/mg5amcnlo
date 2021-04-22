@@ -2051,7 +2051,7 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
 
         logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
-     .  *dble(orders(QCD_POS)-2)  * dlog(qes2/mdl_mt**2)
+     .  *dble(orders(QCD_POS))  * dlog(qes2/mdl_mt**2)
 
 
 

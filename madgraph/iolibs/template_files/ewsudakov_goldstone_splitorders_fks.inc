@@ -47,6 +47,7 @@ C
 C
 C     FUNCTIONS
 C
+      INTEGER GETORDPOWFROMINDEX_B
       integer GETORDPOWFROMINDEX_SDKG%(ime)d
       integer orders_to_amp_split_pos
 C
