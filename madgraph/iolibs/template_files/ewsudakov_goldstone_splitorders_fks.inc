@@ -53,6 +53,7 @@ C
 C     stuff for the LO2
       integer lo2_orders(nsplitorders)
       logical has_lo2, orders_equal
+      external has_lo2, orders_equal
 C
 C BEGIN CODE
 C
@@ -103,7 +104,7 @@ do i = 1, nsqampso
         endif
 
 C the following is for the LO2
-    if (has_lo2) then
+    if (has_lo2()) then
      do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
      enddo

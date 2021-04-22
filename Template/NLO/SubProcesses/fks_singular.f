@@ -179,7 +179,8 @@ c   approximation
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
-      integer orders(nsplitorders)
+      include 'has_ewsudakov.inc'
+      integer orders_qcd(nsplitorders), orders_ew(nsplitorders)
       integer iamp
 
       double precision wgt_c
@@ -211,9 +212,16 @@ c   approximation
       integer sud_mod
       common /to_sud_mod/ sud_mod
 
+      if (.not.has_ewsudakov) return
+
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+
+      if (cpower_pos.gt.0) then
+          write(*,*)'Error, cannot compute EW sudakov with Cpower >0'
+          stop 1
+      endif
 
       ! sud_mod = 0
       do sud_mod = 0,1
@@ -226,24 +234,44 @@ c   approximation
      $      amp_split_ewsud_xxc(iamp).eq.0d0.and.
      $      amp_split_ewsud_par(iamp).eq.0d0.and.
      $      AMP_SPLIT_EWSUD_QCD(iamp).eq.0d0) cycle
-        call amp_split_pos_to_orders(iamp, orders)
+        call amp_split_pos_to_orders(iamp, orders_ew)
+        orders_qcd(:) = orders_ew(:)
+        ! we have two arrays of orders, one for the contributions
+        ! of EW origin (from LO1) and one for those of QCD origin
+        ! (from LO2)
+
+        !!!! first the contribution of EW origin
         ! increase the EW-coupling of 2, since until here
         ! the EW sudakov amp_split has the same positions of 
         ! those for the Born
-        orders(qed_pos)=orders(qed_pos)+2
-        QCD_power=orders(qcd_pos)
+        orders_ew(qed_pos)=orders_ew(qed_pos)+2
+        QCD_power=orders_ew(qcd_pos)
         wgtcpower=0d0
-        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-        orders_tag=get_orders_tag(orders)
+        !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders_ew)
         wgt1=(amp_split_ewsud_lsc(iamp)+
      $        amp_split_ewsud_ssc(iamp)+
      $        amp_split_ewsud_xxc(iamp)+
-     $        amp_split_ewsud_par(iamp)+
-     $        AMP_SPLIT_EWSUD_QCD(iamp))
+     $        amp_split_ewsud_par(iamp))
      $       *f_b/g**(qcd_power)
         wgt1=wgt1*2d0 ! missing factor in the sudakov correction
         ! the type will be 20+the value of the sudakov mode
-        call add_wgt(20+sud_mod,orders,wgt1,0d0,0d0)
+        call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+
+        !!!! then the contribution of QCD origin
+        ! increase the QCD-coupling of 2, since until here
+        ! the EW sudakov amp_split has the same positions of 
+        ! those for the Born, and for QCD this is LO2
+        orders_qcd(qcd_pos)=orders_qcd(qcd_pos)+2
+        QCD_power=orders_qcd(qcd_pos)
+        !!wgtcpower=0d0
+        !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders_qcd)
+        wgt1=amp_split_ewsud_qcd(iamp)
+     $       *f_b/g**(qcd_power)
+        wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+        ! the type will be 20+the value of the sudakov mode
+        call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
        enddo
       enddo
       call cpu_time(tAfter)
