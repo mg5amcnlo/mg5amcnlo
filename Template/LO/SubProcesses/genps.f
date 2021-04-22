@@ -159,6 +159,11 @@ c
       double precision   psect(maxconfigs),alpha(maxconfigs)
       common/to_mconfig2/psect            ,alpha
 
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+      
       include 'run.inc'
 
 
@@ -175,6 +180,9 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+      
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
@@ -183,6 +191,9 @@ c
       logical set_cm_rap
       common/to_cm_rap/set_cm_rap,cm_rap      
 
+
+      double precision x1_ee, x2_ee
+      
 c     External function
       double precision SumDot
       external SumDot
@@ -231,12 +242,47 @@ c
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
                set_cm_rap=.true.
             endif
+c        lpp1=+-3 or +-4 and lpp2 as well
+c        For ISR/beamstrhalung case         
+         else if(abs(lpp(1)).eq.abs(lpp(2)).and.abs(lpp(1)).eq.3.and.
+     $       ABS(IDUP(1,1,1)).eq.11.and.ABS(IDUP(2,1,1)).eq.11)then
+
+c     force no resonances for the moment
+            if(.false.) then
+               stop 1
+            else   
+c        ! for dressed ee collisions the generation is different
+c        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+c        ! while in the ee case x1 and x2 are generated first.
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,smin/stot,1d0)
+               call generate_x_ee(x(ndim-1), smin/stot,x1_ee, omx_ee(1), sjac)
+               call generate_x_ee(x(ndim), smin/stot/x1_ee,x2_ee, omx_ee(2), sjac)
+               s(-nbranch) =  x1_ee * x2_ee * stot
+               xbk(1)   = x1_ee
+               xbk(2)   = x2_ee
+c        ! now we are done. We must call the following function 
+c        ! in order to (re-)generate tau and ycm
+c        ! from x1 and x2. It also (re-)checks that tau_born 
+c        ! is pysical, and otherwise sets xjac0=-1000
+         call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
+         set_cm_rap=.true.
+
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+c        if (.false.) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
+c     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+
+         endif
+
+call get_tau_y_from_x12(x1_ee, x2_ee, omx_ee(1), omx_ee(2), tau_born, ycm_born, ycmhat, xjac0)
+            
          else
-            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
-            xtau = x(ndim-1)
+           xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
                sjac=1 / stot    !for delta function in d_tau
@@ -1777,9 +1823,9 @@ c      write(*,*) 'final for config', config, get_channel_cut
       end
 
 
-      subroutine get_tau_y_from_x12(x1, x2, omx1, omx2, tau, ycm, ycmhat, jac) 
+      subroutine get_y_from_x12(x1, x2, omx, ycm) 
       implicit none
-      double precision x1, x2, omx1, omx2, tau, ycm, ycmhat, jac
+      double precision x1, x2, omx(2), tau, ycm
       double precision ylim
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      $     ,tau_lower_bound
@@ -1792,13 +1838,12 @@ c      write(*,*) 'final for config', config, get_channel_cut
       double precision lx1, lx2
       double precision ylim0, ycm0
 
-      tau = x1*x2
 
       ! ycm=-log(tau)/2 ;  ylim = log(x1/x2)/2
       if (1d0-x1.gt.tolerance) then
         lx1 = dlog(x1)
       else
-        lx1 = -omx1-omx1**2/2d0-omx1**3/3d0-omx1**4/4d0-omx1**5/5d0
+        lx1 = -omx(1)-omx(1)**2/2d0-omx(1)**3/3d0-omx(1)**4/4d0-omx(1)**5/5d0
       endif
       ylim = -0.5d0*lx1
       ycm = 0.5d0*lx1
@@ -1806,34 +1851,18 @@ c      write(*,*) 'final for config', config, get_channel_cut
       if (1d0-x2.gt.tolerance) then
         lx2 = dlog(x2)
       else
-        lx2 = -omx2-omx2**2/2d0-omx2**3/3d0-omx2**4/4d0-omx2**5/5d0
+        lx2 = -omx(2)-omx(2)**2/2d0-omx(2)**3/3d0-omx(2)**4/4d0-omx(2)**5/5d0
       endif
       ylim = ylim-0.5d0*lx2
       ycm = ycm-0.5d0*lx2
 
-      ycmhat = ycm / ylim
+c      ycmhat = ycm / ylim
 
       ! this is to prevent numerical inaccuracies
       ! when botn x->1
       if (ylim.lt.y_settozero) then
         ylim = 0d0
         ycm = 0d0
-        ycmhat = 1d0
-      endif
-
-      if (abs(ycmhat).gt.1d0) then
-        if (abs(ycmhat).gt.1d0 + tolerance) then
-          write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
-          stop 1 
-        else
-          ycmhat = sign(1d0, ycmhat)
-        endif
-      endif
-
-      if (tau.lt.tau_born_lower_bound) then
-        write(*,*) 'get_tau_y_from_x12: Warning, unphysical tau',
-     $  tau, tau_born_lower_bound
-        jac = -1000d0
       endif
 
       return 
@@ -1866,7 +1895,7 @@ c      write(*,*) 'final for config', config, get_channel_cut
           stop 1
         endif
       endif
-      jac = 1d0/(1d0-expo) 
+      jac = jac/(1d0-expo) 
       ! then rescale it between xmin and 1
       x = x * (1d0 - xmin) + xmin
       omx = omx * (1d0 - xmin)
@@ -1958,9 +1987,26 @@ c      r2=rnd2
 
       if(generate_with_bw) then
         ! here we treat the case of resonances
+c            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+c-----
+c tjs 5/24/2010 for 2->1 process
+c-------
+c           xtau = x(ndim-1)
+c            if(nexternal .eq. 3) then
+c               x(ndim-1) = pmass(3)*pmass(3)/stot
+c               sjac=1 / stot    !for delta function in d_tau
+c            endif
 
+c            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+c            CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+c            x(ndim-1) = xtau    !Fix for 2->1 process
+c           Set CM rapidity for use in the rap() function
+c            cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+c            set_cm_rap=.true.
+c           Set shat
+c            s(-nbranch) = xbk(1)*xbk(2)*stot
         ! first generate tau with the dedicated function
-        idim_dum = 1000 ! this is never used in practice
+         idim_dum = 1000        ! this is never used in practice
         call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
      $       cBW_width,tau_born,xjac0)
         ! multiply the jacobian by a multichannel factor
@@ -2020,7 +2066,7 @@ c      r2=rnd2
       ! in order to (re-)generate tau and ycm
       ! from x1 and x2. It also (re-)checks that tau_born 
       ! is pysical, and otherwise sets xjac0=-1000
-      call get_tau_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+      call get_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
 
 c      x1bk=x1_ee
 c      x2bk=x2_ee

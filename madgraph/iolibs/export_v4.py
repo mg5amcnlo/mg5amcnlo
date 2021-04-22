@@ -1654,25 +1654,25 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n!LP=SIGN(1,LPP(IB(%d)))\n" \
                                  % (i + 1, i + 1)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
 
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, IB(%d)," + \
+                                        ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
                         else:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP, %d," + \
+                                        ("%s%d=PDG2PDF(LPP(%d)),%d, %d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],

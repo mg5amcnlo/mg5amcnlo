@@ -100,12 +100,11 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
            write(*,*) "not supported beam type"
            stop 1
         endif
-        omx_ee(1)=1e-4          ! temporary to test
-        omx_ee(2)=1e-1          ! temporary to test
-       do i_ee = 1, n_ee
+        do i_ee = 1, n_ee
           ee_components(i_ee) = compute_eepdf(x,omx_ee(beamid),xmu,i_ee,ipart,ih_local)
 	enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
+c        write(*,*), x, beamid ,omx_ee(beamid),xmu,1,ipart,ih_local,pdg2pdf
         return
       endif
       
