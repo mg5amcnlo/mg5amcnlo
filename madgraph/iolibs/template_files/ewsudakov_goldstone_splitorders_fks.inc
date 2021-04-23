@@ -48,7 +48,6 @@ C
 C
 C     FUNCTIONS
 C
-      INTEGER GETORDPOWFROMINDEX_B
       integer GETORDPOWFROMINDEX_SDKG%(ime)d
       integer orders_to_amp_split_pos
 C
@@ -108,7 +107,7 @@ do i = 1, nsqampso
 C the following is for the LO2
     if (has_lo2) then
      do j = 1, nsplitorders
-      amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
+      amp_orders(j) = GETORDPOWFROMINDEX_SDKG%(ime)d(j, i)
      enddo
      if (orders_equal(amp_orders, lo2_orders)) then
       if(abs(ans(i)).gt.max_val*tiny) amp_split_ewsud_lo2(orders_to_amp_split_pos(amp_orders)) = ans(i) / iden
