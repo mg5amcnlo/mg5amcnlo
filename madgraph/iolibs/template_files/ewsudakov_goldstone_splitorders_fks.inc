@@ -38,6 +38,7 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
+      include 'ewsudakov_haslo.inc'
       double complex amp_split_ewsud(amp_split_size)
       common /to_amp_split_ewsud/ amp_split_ewsud
       double complex amp_split_ewsud_LO2(amp_split_size)
@@ -53,8 +54,8 @@ C
 C
 C     stuff for the LO2
       integer lo2_orders(nsplitorders)
-      logical has_lo2, orders_equal
-      external has_lo2, orders_equal
+      logical orders_equal
+      external orders_equal
 C
 C BEGIN CODE
 C
@@ -105,7 +106,7 @@ do i = 1, nsqampso
         endif
 
 C the following is for the LO2
-    if (has_lo2()) then
+    if (has_lo2) then
      do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
      enddo

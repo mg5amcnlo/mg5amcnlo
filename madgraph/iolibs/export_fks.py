@@ -2001,6 +2001,9 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         filename = 'has_ewsudakov.inc'
         self.write_has_ewsudakov(writers.FortranWriter(filename), matrix_element.ewsudakov)
 
+        filename = 'ewsudakov_haslo.inc'
+        has_lo = self.write_ewsud_has_lo(writers.FortranWriter(filename), matrix_element)
+
         for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] == 'goldstone']):
             filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
             self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
@@ -2033,7 +2036,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # for the Sudakov approximation
         filename = "ewsudakov_wrapper.f"
         self.write_sudakov_wrapper(writers.FortranWriter(filename),
-                                   matrix_element,fortran_model)
+                                   matrix_element,has_lo,fortran_model)
 
 
 
@@ -2621,8 +2624,9 @@ Parameters              %(params)s\n\
         return charge_list[n - 1] * charge_list[m - 1]
 
 
-    def write_sudakov_wrapper(self, writer, matrix_element, fortran_model):
-        """Write the wrapper for the sudakov matrix elements
+    def write_sudakov_wrapper(self, writer, matrix_element, has_lo, fortran_model):
+        """Write the wrapper for the sudakov matrix elements.
+        has_lo is a dictionary with keys i=1,2, which tells if LO_i exists
         """
 
         born_me = matrix_element.born_me
@@ -2631,7 +2635,6 @@ Parameters              %(params)s\n\
         # need to know the number of splitorders at the born
         squared_orders, amp_orders = born_me.get_split_orders_mapping()
         amp_split_size_born =  len(squared_orders)
-        need_lo2 = amp_split_size_born > 1
 
         # classify the different kind of matrix-elements
         goldstone_mes = [sud for sud in sudakov_list if sud['type'] == 'goldstone']
@@ -2693,24 +2696,34 @@ Parameters              %(params)s\n\
                 par_ren = "par_ren_EWSDK_GOLD_ME_%d" % (i + 1)
 
             # here the calls to all contributions where the particles of base_amp are not changed
-            calls_to_me += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
-            calls_to_me += "C the LSC term (diagonal)\n" 
-            calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
-            calls_to_me += "C the SSC term (neutral/diagonal)\n" 
-            calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
-            calls_to_me += "C the C term (diagonal)\n" 
-            calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
-            calls_to_me += "C the parameter renormalisation\n"
-            calls_to_me += "call %s(P,nhel(1,ihel),ihel,invariants)\n" % par_ren
-            calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)*comp_idfac\n"
-            if need_lo2:
+            # these are corrections on top of the LO1
+            if has_lo[1]:
+                calls_to_me += "pdglist = (/%s/)\n" % ','.join([str(leg['id']) for leg in me['matrix_element']['processes'][0]['legs']])
+                calls_to_me += "C the LSC term (diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_LSC(:) = AMP_SPLIT_EWSUD_LSC(:)+AMP_SPLIT_EWSUD(:)*get_lsc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "C the SSC term (neutral/diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_SSC(:) = AMP_SPLIT_EWSUD_SSC(:)+AMP_SPLIT_EWSUD(:)*get_ssc_n_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+                calls_to_me += "C the C term (diagonal)\n" 
+                calls_to_me += "AMP_SPLIT_EWSUD_XXC(:) = AMP_SPLIT_EWSUD_XXC(:)+AMP_SPLIT_EWSUD(:)*get_xxc_diag(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
+
+            # terms of QCD origin on top of LO2, if it exists
+            if has_lo[2]:
                 calls_to_me += "C the terms stemming from QCD corrections on top of the LO2\n" 
 #                calls_to_me += "AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)+AMP_SPLIT_EWSUD_LO2(:)*get_qcd_lo2(pdglist,nhel(1,ihel),iflist,invariants)*comp_idfac\n"
                 calls_to_me += "DO IAMP = 1, AMP_SPLIT_SIZE\n"
                 calls_to_me += "  AMP_SPLIT_EWSUD_QCD(IAMP) = AMP_SPLIT_EWSUD_QCD(IAMP)+AMP_SPLIT_EWSUD_LO2(IAMP)*GET_QCD_LO2(PDGLIST,NHEL(1,IHEL),IFLIST,INVARIANTS,IAMP)*COMP_IDFAC\n"
                 calls_to_me += "ENDDO\n"
 
-            # now the call to the LSC and C non-diagonal
+            # the parameter renormalisation needs to be written in any case, and it will check internally
+            # what parameters to take into account base on ewsudakov_haslo.inc
+            calls_to_me += "C the parameter renormalisation\n"
+            calls_to_me += "call %s(P,nhel(1,ihel),ihel,invariants)\n" % par_ren
+            calls_to_me += "AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)+AMP_SPLIT_EWSUD(:)*comp_idfac\n"
+
+            # now the call to the LSC and C non-diagonal, if LO1 exists
+            if not has_lo[1]: 
+                continue
+
             mes_same_charge_lsc = [me for me in non_goldstone_mes_lsc if me['base_amp'] == i+1]
             if mes_same_charge_lsc:
                 calls_to_me += "C LSC and C non diag\n"
@@ -2821,6 +2834,56 @@ Parameters              %(params)s\n\
         writer.writelines(text)
     
         return 
+
+
+    def write_ewsud_has_lo(self, writer, matrix_element):
+        """write an include file with the information whether the matrix element
+        has contributions from LO1 and has a LO2
+        """
+        # get the coupling combination of the born
+        squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+        split_orders = \
+                matrix_element.born_me['processes'][0]['split_orders']
+
+        # compute the born orders
+        born_orders = []
+        split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+        for ordd in split_orders:
+            # factor 2 to pass to squared orders
+            born_orders.append( 2 * matrix_element.born_me['processes'][0]['born_orders'][ordd])
+
+        # check that there is at most one coupling combination
+        # that satisfies the born_orders constraints 
+        # (this is a limitation of the current implementation of the EW sudakov
+        nborn = 0
+        for orders in squared_orders_born:
+            if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
+                nborn += 1
+
+        if nborn > 1:
+            raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
+                    " the Born has more than one coupling combination, found %d)" % nborn)
+
+        # now we can see if the process has a LO1
+        has_lo1 = bool(nborn)
+        # now determine the LO2 orders
+        lo2_orders = born_orders
+        lo2_orders[split_orders.index('QCD')] += -2
+        lo2_orders[split_orders.index('QED')] += 2
+
+        has_lo2 = tuple(lo2_orders) in squared_orders_born
+
+        bool_dict = {True: '.true.', False: '.false.'}
+
+        text = "      logical has_lo1, has_lo2\n      parameter (has_lo1=%s)\n      parameter (has_lo2=%s)" % \
+                        (bool_dict[has_lo1], bool_dict[has_lo2])
+        
+        # Write the file
+        writer.writelines(text)
+
+        return {1: has_lo1, 2: has_lo2}
+
+
 
 
     #===============================================================================

@@ -211,6 +211,7 @@ c   approximation
       ! sudakov mode
       integer sud_mod
       common /to_sud_mod/ sud_mod
+      include 'ewsudakov_haslo.inc' 
 
       if (.not.has_ewsudakov) return
 
@@ -244,34 +245,38 @@ c   approximation
         ! increase the EW-coupling of 2, since until here
         ! the EW sudakov amp_split has the same positions of 
         ! those for the Born
-        orders_ew(qed_pos)=orders_ew(qed_pos)+2
-        QCD_power=orders_ew(qcd_pos)
-        wgtcpower=0d0
-        !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-        orders_tag=get_orders_tag(orders_ew)
-        wgt1=(amp_split_ewsud_lsc(iamp)+
+        if (has_lo1) then
+          orders_ew(qed_pos)=orders_ew(qed_pos)+2
+          QCD_power=orders_ew(qcd_pos)
+          wgtcpower=0d0
+          !!!!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_ew)
+          wgt1=(amp_split_ewsud_lsc(iamp)+
      $        amp_split_ewsud_ssc(iamp)+
      $        amp_split_ewsud_xxc(iamp)+
      $        amp_split_ewsud_par(iamp))
-     $       *f_b/g**(qcd_power)
-        wgt1=wgt1*2d0 ! missing factor in the sudakov correction
-        ! the type will be 20+the value of the sudakov mode
-        call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_ew,wgt1,0d0,0d0)
+        endif
 
         !!!! then the contribution of QCD origin
         ! increase the QCD-coupling of 2, since until here
         ! the EW sudakov amp_split has the same positions of 
         ! those for the Born, and for QCD this is LO2
-        orders_qcd(qcd_pos)=orders_qcd(qcd_pos)+2
-        QCD_power=orders_qcd(qcd_pos)
-        !!wgtcpower=0d0
-        !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-        orders_tag=get_orders_tag(orders_qcd)
-        wgt1=amp_split_ewsud_qcd(iamp)
-     $       *f_b/g**(qcd_power)
-        wgt1=wgt1*2d0 ! missing factor in the sudakov correction
-        ! the type will be 20+the value of the sudakov mode
-        call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
+        if (has_lo2) then
+          orders_qcd(qcd_pos)=orders_qcd(qcd_pos)+2
+          QCD_power=orders_qcd(qcd_pos)
+          !!wgtcpower=0d0
+          !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+          orders_tag=get_orders_tag(orders_qcd)
+          wgt1=amp_split_ewsud_qcd(iamp)
+     $         *f_b/g**(qcd_power)
+          wgt1=wgt1*2d0 ! missing factor in the sudakov correction
+          ! the type will be 20+the value of the sudakov mode
+          call add_wgt(20+sud_mod,orders_qcd,wgt1,0d0,0d0)
+        endif
        enddo
       enddo
       call cpu_time(tAfter)
