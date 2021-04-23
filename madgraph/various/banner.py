@@ -2656,7 +2656,12 @@ class RunCard(ConfigFile):
         else:
             return self[name]   
 
-    
+    def mod_inc_pdlabel(self, value):
+        """flag pdlabel has 'dressed' if one of the special lepton PDF with beamstralung.
+        This modifies ONLY the value within the fortran code"""
+        if value in sum(self.allowed_lep_densities.values(),[]):
+            return 'dressed'
+
     @staticmethod
     def f77_formatting(value, formatv=None):
         """format the variable into fortran. The type is detected by default"""
@@ -2761,6 +2766,8 @@ class RunCard(ConfigFile):
                     
                 #get the value with warning if the user didn't set it
                 value = self.get_default(key)
+                if hasattr(self, 'mod_inc_%s' % key):
+                    value = getattr(self, 'mod_inc_%s' % key)(value)
                 # Special treatment for strings containing a list of
                 # strings. Convert it to a list of strings
                 if isinstance(value, list):

@@ -43,6 +43,13 @@ C
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
+C
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      include '../../Source/PdF/eepdf.inc'
+      double precision ee_comp_prod
+%(ee_comp_vars)s
+      integer i_ee
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -65,6 +72,10 @@ C     Keep track of whether cuts already calculated for this event
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 c
 c     local
 c
