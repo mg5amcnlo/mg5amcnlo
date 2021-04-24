@@ -89,8 +89,9 @@ c     For each t-channel invarient x(ndim-1), x(ndim-3), .... are used
 c     in place of the cos(theta) variable used in s-channel.
 c     x(ndim), x(ndim-2),.... are the phi angles.
 c**************************************************************************
+      use DiscreteSampler
       implicit none
-c
+c     
 c     Constants
 c
       include 'genps.inc'
@@ -130,8 +131,10 @@ c
       double precision maxwgt
       integer imatch
       save maxwgt
-
+      double precision R        !random value
       integer ninvar
+      double precision tau_m, tau_w, t1, t2
+      double precision get_ee_expo
       
 c
 c     External
@@ -141,6 +144,12 @@ c
 c
 c     Global
 c
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
+      
       integer          lwgt(0:maxconfigs,maxinvar)
       common/to_lwgt/lwgt
 
@@ -220,6 +229,7 @@ c      write(*,*) 'using iconfig',iconfig
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -244,12 +254,41 @@ c
             endif
 c        lpp1=+-3 or +-4 and lpp2 as well
 c        For ISR/beamstrhalung case         
-         else if(abs(lpp(1)).eq.abs(lpp(2)).and.abs(lpp(1)).eq.3.and.
-     $       ABS(IDUP(1,1,1)).eq.11.and.ABS(IDUP(2,1,1)).eq.11)then
+         else if (pdlabel.eq.'dressed') then
+            if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               call ntuple(R,0.0d0,1.0d0,0,iconfig)
+               ee_jacobian = 1d0
+               call DS_get_point('ee_mc', R , ee_picked, ee_jacobian)
+               sjac = sjac * ee_jacobian
+            else
+               ee_picked = 1
+            endif
 
-c     force no resonances for the moment
-            if(.false.) then
-               stop 1
+            if(ee_picked.eq.2) then
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+               xtau = x(ndim-1)
+               if(nexternal .eq. 3) then
+                  x(ndim-1) = pmass(3)*pmass(3)/stot
+                  sjac=1 / stot !for delta function in d_tau
+               endif
+
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+               x(ndim-1) = xtau !Fix for 2->1 process
+c     Set CM rapidity for use in the rap() function
+               cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+               set_cm_rap=.true.
+c           Set shat
+               s(-nbranch) = xbk(1)*xbk(2)*stot
+               omx_ee(1) = 1 - Xbk(1)
+               omx_ee(2) = 1 - Xbk(2)
+
+               tau_m = spole(ndim-1)
+               tau_w = swidth(ndim-1)
+               t1 = (1d0-xtau)**(1d0-2*get_ee_expo())
+               t2 =  (1d0/((xtau-tau_m)**2 + tau_m*tau_w))
+               sjac = sjac * t2 / (t1+t2)
+               
             else   
 c        ! for dressed ee collisions the generation is different
 c        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
@@ -265,23 +304,25 @@ c        ! now we are done. We must call the following function
 c        ! in order to (re-)generate tau and ycm
 c        ! from x1 and x2. It also (re-)checks that tau_born 
 c        ! is pysical, and otherwise sets xjac0=-1000
-         call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
-         set_cm_rap=.true.
+               call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
+               set_cm_rap=.true.
 
         ! multiply the jacobian by a multichannel factor if the 
         ! generation with resonances is also possible
-c        if (.false.) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
-c     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+            if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               tau_m = spole(ndim-1)
+               tau_w = swidth(ndim-1)
+               t1 = (1d0-x1_ee * x2_ee)**(1d0-2*get_ee_expo())
+               t2 =  (1d0/(( x1_ee * x2_ee-tau_m)**2 + tau_m*tau_w))
+               sjac = sjac * t1 / (t1+t2)
+            endif
 
-         endif
-
-call get_tau_y_from_x12(x1_ee, x2_ee, omx_ee(1), omx_ee(2), tau_born, ycm_born, ycmhat, xjac0)
-            
+            endif
          else
-
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
            xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
@@ -1841,7 +1882,9 @@ c      write(*,*) 'final for config', config, get_channel_cut
 
       ! ycm=-log(tau)/2 ;  ylim = log(x1/x2)/2
       if (1d0-x1.gt.tolerance) then
-        lx1 = dlog(x1)
+         lx1 = dlog(x1)
+      else if (omx(1).lt.tolerance**5)then
+         lx1=0d0
       else
         lx1 = -omx(1)-omx(1)**2/2d0-omx(1)**3/3d0-omx(1)**4/4d0-omx(1)**5/5d0
       endif
@@ -1849,7 +1892,9 @@ c      write(*,*) 'final for config', config, get_channel_cut
       ycm = 0.5d0*lx1
 
       if (1d0-x2.gt.tolerance) then
-        lx2 = dlog(x2)
+         lx2 = dlog(x2)
+      else if (omx(2).lt.tolerance**5)then
+         lx2=0d0         
       else
         lx2 = -omx(2)-omx(2)**2/2d0-omx(2)**3/3d0-omx(2)**4/4d0-omx(2)**5/5d0
       endif
