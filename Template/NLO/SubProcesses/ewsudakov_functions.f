@@ -1752,6 +1752,8 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       logical was_sud_mod_1
 
+      include 'ewsudakov_haslo.inc'
+
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
       ! the parameter-renormalisation contribution
@@ -1779,8 +1781,8 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       !    remember, we derive wrt alpha^-1
       dalpha = -sdk_betaew_diag(22) / aewm1 
       dalpha = dalpha * ls
-      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
-     $       dAlpha 
+c      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) * 
+c     $       dAlpha 
 
       ! 2) dM/dcw = dM/dmw dmw + dM/dmz dmz
       dmw2 = - (sdk_betaew_diag(24) - 4d0 * sdk_cew_diag(250,0,1))
@@ -1816,23 +1818,29 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
 
+      if(has_lo1) then
 
+        amp_split_ewsud(:) = amp_split_ewsud_der(:,1) * ( - aewm1**2) *
+     $       dAlpha
 
-      amp_split_ewsud(:) = amp_split_ewsud(:) + 
+        amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
      $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 +
      $      amp_split_ewsud_der(:,4) * dmt +
      $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
      $      amp_split_ewsud_der(:,6) * dheff_o_heff 
 
+      endif
+    
       if(was_sud_mod_1) sud_mod=1
 
-      if (sud_mod.eq.2) then
-       amp_split_ewsud(:) = amp_split_ewsud(:) +
+      if (has_lo2) then
+        if (sud_mod.eq.2) then
+         amp_split_ewsud(:) = amp_split_ewsud(:) +
      $      amp_split_ewsud_der2(:,4) * dmt_QCD 
 
 c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
-
+        endif
       endif       
  
 
@@ -1884,6 +1892,8 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       COMMON /to_sud_mod/ sud_mod
 
       logical was_sud_mod_1
+
+      include 'ewsudakov_haslo.inc'
 
       ! given the to_amp_split_ewsud_der (derivatives of the ME's wrt
       ! the various parameters, amp_split_ewsud are filled with
@@ -1959,25 +1969,30 @@ c     $       dAlpha
 
       dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
 
-      amp_split_ewsud(:) = amp_split_ewsud_der(:,1) *dGmu
+      if(has_lo1) then
+  
+        amp_split_ewsud(:) = amp_split_ewsud_der(:,1) *dGmu
 
-      amp_split_ewsud(:) = amp_split_ewsud(:) + 
+        amp_split_ewsud(:) = amp_split_ewsud(:) + 
      $      amp_split_ewsud_der(:,2)/(2d0*mdl_mz) * dmz2 + 
      $      amp_split_ewsud_der(:,3)/(2d0*mdl_mw) * dmw2 +
      $      amp_split_ewsud_der(:,4) * dmt +
      $      amp_split_ewsud_der(:,5)/(2d0*mdl_mh) * dmh2 +
      $      amp_split_ewsud_der(:,6) * dheff_o_heff 
 
+      endif
+
       if(was_sud_mod_1) sud_mod=1
 
-      if (sud_mod.eq.2) then
-       amp_split_ewsud(:) = amp_split_ewsud(:) +
+      if (has_lo2) then
+        if (sud_mod.eq.2) then
+         amp_split_ewsud(:) = amp_split_ewsud(:) +
      $      amp_split_ewsud_der2(:,4) * dmt_QCD 
 
 c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
 
-      endif       
- 
+        endif       
+      endif
 
 
       ! LEAVE EMPTY FOR THE MOMENT
@@ -2030,8 +2045,12 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
+      include 'ewsudakov_haslo.inc'
+
 
       get_qcd_lo2 =  CMPLX(0d0,0d0)
+
+      if(.not.has_lo2) return
 
       logfromLOip1=0d0
 

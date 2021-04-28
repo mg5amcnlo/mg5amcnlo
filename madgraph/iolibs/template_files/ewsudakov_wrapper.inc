@@ -72,6 +72,9 @@ data firsttime /.true./
 integer hel_min, hel_max, hel_pick
 double precision volh
 
+include 'ewsudakov_haslo.inc'
+
+
 AMP_SPLIT_EWSUD_LSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_SSC(:) = dcmplx(0d0,0d0)
 AMP_SPLIT_EWSUD_XXC(:) = dcmplx(0d0,0d0)
@@ -136,6 +139,23 @@ AMP_SPLIT_EWSUD_PAR(:) = AMP_SPLIT_EWSUD_PAR(:)/volh
 
 AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)/VOLH
 AMP_SPLIT_EWSUD_PARQCD(:) = AMP_SPLIT_EWSUD_PAR(:)
+
+DO IAMP = 1, AMP_SPLIT_SIZE
+
+  IF (HAS_LO1) THEN
+    IF(IAMP.ne.LO1_POS) AMP_SPLIT_EWSUD_PAR(IAMP)=(0d0,0d0)
+  ELSE
+    AMP_SPLIT_EWSUD_PAR(IAMP)=(0d0,0d0)
+  ENDIF
+
+  IF (HAS_LO2) THEN
+    IF(IAMP.ne.LO2_POS) AMP_SPLIT_EWSUD_PARQCD(IAMP)=(0d0,0d0)
+  ELSE
+    AMP_SPLIT_EWSUD_PARQCD(IAMP)=(0d0,0d0)
+  ENDIF
+
+ENDDO
+
 
 
 CALCULATEDBORN=.FALSE.
