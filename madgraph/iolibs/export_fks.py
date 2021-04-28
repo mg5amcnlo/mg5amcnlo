@@ -2838,7 +2838,8 @@ Parameters              %(params)s\n\
 
     def write_ewsud_has_lo(self, writer, matrix_element):
         """write an include file with the information whether the matrix element
-        has contributions from LO1 and has a LO2
+        has contributions from LO1 and has a LO2, and the corresponding 
+        position (iamp)
         """
         # get the coupling combination of the born
         squared_orders_born, amp_orders = matrix_element.born_me.get_split_orders_mapping()
@@ -2866,6 +2867,11 @@ Parameters              %(params)s\n\
 
         # now we can see if the process has a LO1
         has_lo1 = bool(nborn)
+        if has_lo1:
+            lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
+        else:
+            lo1_pos = -100
+
         # now determine the LO2 orders
         lo2_orders = born_orders
         lo2_orders[split_orders.index('QCD')] += -2
@@ -2873,10 +2879,17 @@ Parameters              %(params)s\n\
 
         has_lo2 = tuple(lo2_orders) in squared_orders_born
 
+        if has_lo2:
+            lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
+        else:
+            lo2_pos = -100
+
         bool_dict = {True: '.true.', False: '.false.'}
 
-        text = "      logical has_lo1, has_lo2\n      parameter (has_lo1=%s)\n      parameter (has_lo2=%s)" % \
+        text = "      logical has_lo1, has_lo2\n      parameter (has_lo1=%s)\n      parameter (has_lo2=%s)\n" % \
                         (bool_dict[has_lo1], bool_dict[has_lo2])
+        text+= "      integer lo1_pos, lo2_pos\n      parameter (lo1_pos=%d)\n      parameter (lo2_pos=%d)\n" % \
+                        (lo1_pos, lo2_pos)
         
         # Write the file
         writer.writelines(text)
