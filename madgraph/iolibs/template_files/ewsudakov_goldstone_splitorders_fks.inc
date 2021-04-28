@@ -86,6 +86,7 @@ endif
 
 C reset the amp_split_ewsud array
 amp_split_ewsud(1:amp_split_size) = dcmplx(0d0,0d0)
+amp_split_ewsud_lo2(1:amp_split_size) = dcmplx(0d0,0d0)
 
 
 do i = 1, nsqampso
