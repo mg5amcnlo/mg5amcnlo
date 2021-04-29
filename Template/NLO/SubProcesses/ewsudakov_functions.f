@@ -2047,6 +2047,7 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
       include 'ewsudakov_haslo.inc'
 
+      include 'run.inc'
 
       get_qcd_lo2 =  CMPLX(0d0,0d0)
 
@@ -2088,18 +2089,41 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
         get_qcd_lo2 = CMPLX(logfromLOip1,0d0)
 
-      elseif (sud_mod.eq.1) then
+      elseif (sud_mod.eq.1.or.sud_mod.eq.0) then
 
-c      TOBE modified     
-        get_qcd_lo2 =0d0
+        s=invariants(1,2)
 
-      elseif (sud_mod.eq.0) then  
+        call amp_split_pos_to_orders(iamp, orders)
+
+
+        logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
+     .  *dble(orders(QCD_POS))  * dlog(scale**2/mdl_mt**2)
+
+        
+
+
+        do i=1,nexternal-1
+          if(abs(pdglist(i)).eq.21) then
+            logfromLOip1=
+     .      logfromLOip1-2d0*1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
+     .      * dlog(s/mdl_mt**2)
+           endif
+        enddo
+
+
+
+
+        get_qcd_lo2 = CMPLX(logfromLOip1,0d0)
+
+
+c      elseif (sud_mod.eq.0) then  
 c      TOBE modified 
+c
+c        print*,"sud_mod=0 and QCD not implemented.
+c     .  Switch to sud_mod=1 or turn this error off."
+c        stop
+c      
 
-        print*,"sud_mod=0 and QCD not implemented.
-     .  Switch to sud_mod=1 or turn this error off."
-        stop
-      
       else 
 
        print*,"sud_mod=",sud_mod,"is not possible"
