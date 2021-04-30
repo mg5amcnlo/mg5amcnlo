@@ -68,6 +68,10 @@
  %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
               ! numbers for central PDF sets are allowed. Can be a list; 
               ! PDF sets beyond the first are included via reweighting.
+  0	= pdfscheme ! the scheme of the input PDFs. 0->MSbar; 1->DIS
+	            ! 2->eta (leptonic); 3->beta (leptonic) 
+		    ! 4->mixed (leptonic); 6->delta (leptonic)
+		
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *

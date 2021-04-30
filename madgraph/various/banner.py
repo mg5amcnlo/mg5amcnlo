@@ -4028,6 +4028,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'epdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] + self.allowed_lep_densities)                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
+        self.add_param('pdfscheme', 0)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        

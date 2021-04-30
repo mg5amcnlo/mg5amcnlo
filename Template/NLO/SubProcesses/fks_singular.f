@@ -4933,16 +4933,15 @@ C keep track of each split orders
       logical use_evpr
       common /to_use_evpr/use_evpr
 
-      ! PDF scheme, for hadronic as well as leptonic densities 
-      ! (MSbar, DIS, eta, beta, mixed, Delta)
-      integer PDFscheme
-      ! 0 -> MSbar
-      ! 1 -> DIS (hadronic)
+      ! This is needed for the PDFscheme variable 
+      include "../../Source/PDF/pdf.inc"
+      ! PDFscheme = : 
+      ! 0 -> msbar
+      ! 1 -> dis (hadronic)
       ! 2 -> eta (leptonic)
       ! 3 -> beta (leptonic)
       ! 4 -> mixed (leptonic)
-      ! 5 -> Delta (leptonic)
-      data PDFscheme /4/ 
+      ! 5 -> delta (leptonic)
 
       amp_split_collrem_xi(1:amp_split_size) = 0d0
       amp_split_collrem_lxi(1:amp_split_size) = 0d0
