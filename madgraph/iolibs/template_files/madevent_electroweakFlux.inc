@@ -79,8 +79,8 @@ c	fermion mass inputs 2020 PDG
 	eva_mm2 = eva_mm**2
 	eva_ml2 = eva_ml**2	
 c	coupling inputs
-	eva_aEM = gal(1)*gal(1)/3.5449077018110318d0		! aEM,MW,MZ scheme
-	eva_ee2 = 4.d0*eva_pi*eva_aEM	! aEM,MW,MZ scheme
+	eva_aEM = gal(1)*gal(1)*0.07957747154594767 ! 1/4/pi
+        eva_ee2 = gal(1)*gal(1)
 	eva_cw2 = eva_mw2/eva_mz2
 	eva_sw2 = 1.d0 - eva_cw2
 	eva_gw2 = eva_ee2/eva_sw2 		! aEM,MW,MZ scheme
