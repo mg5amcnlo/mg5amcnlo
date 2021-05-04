@@ -5311,7 +5311,8 @@ RESTART = %(mint_mode)s
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-                tests.append('check_sudakov')
+                if self.proc_characteristics['ew_sudakov']:
+                    tests.append('check_sudakov')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

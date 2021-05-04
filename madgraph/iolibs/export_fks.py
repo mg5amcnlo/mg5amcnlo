@@ -2014,11 +2014,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             self.write_numder_me(writers.FortranWriter(filename),
                          j, fortran_model)
 
-        # the file where the numeric derivative for the parameter renormalisation
-        #   is computed for the born 
-        filename = "numder_born.f" 
-        self.write_numder_me(writers.FortranWriter(filename),
-                         None, fortran_model)
+        if matrix_element.ewsudakov:
+            # the file where the numeric derivative for the parameter renormalisation
+            #   is computed for the born 
+            filename = "numder_born.f" 
+            self.write_numder_me(writers.FortranWriter(filename),
+                             None, fortran_model)
 
         # Then, the interferences with the goldstones or with the born amplitudes
         for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] != 'goldstone']):
@@ -2673,6 +2674,11 @@ Parameters              %(params)s\n\
 
         # the calls to the goldstone matrix elements (for longitudinal polarisations and the born
         for i, me in enumerate(goldstone_mes+[{'matrix_element': born_me}]):
+            # skip everything if there are no sudakovs
+            if not matrix_element.ewsudakov:
+                continue
+
+
             if i==len(goldstone_mes):
                 # the last one (or only one if no MEs with goldstones exists), will use the born
                 if goldstone_mes:

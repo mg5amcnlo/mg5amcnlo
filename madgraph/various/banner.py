@@ -1504,6 +1504,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('splitting_types',[], typelist=str)
         self.add_param('perturbation_order', [], typelist=str)        
         self.add_param('limitations', [], typelist=str)        
+        self.add_param('ew_sudakov', False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

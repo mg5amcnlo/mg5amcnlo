@@ -116,7 +116,7 @@ amp_split_born_onehel(:) = amp_split_ewsud(:)
 if (firsttime_hel(ihel)) then
     good_hel(ihel) = .false.
     do iamp = 1, amp_split_size
-      good_hel(ihel) = good_hel(ihel).or.amp_split_born_onehel(iamp).ne.0d0
+      good_hel(ihel) = good_hel(ihel).or.amp_split_born_onehel(iamp).ne.0d0.or.amp_split_ewsud_lo2(iamp).ne.0d0
     enddo
 
     if (good_hel(ihel)) then
