@@ -2678,6 +2678,7 @@ class RunCard(ConfigFile):
             else:
                 logger.debug("unknow format for f77_formatting: %s" , str(value))
                 formatv = 'str'
+                value = str(value).lower()
         else:
             assert formatv
             
