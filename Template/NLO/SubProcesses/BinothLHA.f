@@ -438,7 +438,9 @@ c or more non-zero (independent) helicities
                endif
             endif
          enddo
-         firsttime = .false.
+         !This is to prevent the code from hanging if one does MC over
+         ! helicities and the pole-check fails at the first PS point
+         firsttime = .false..or.cpol
       endif
 c Update the statistics using the MadLoop return code (ret_code)
       ntot = ntot+1             ! total number of PS
