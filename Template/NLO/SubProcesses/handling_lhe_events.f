@@ -467,7 +467,7 @@ c
      &       index(string,'mcatnlo_delta').ne.0) then
            ii=iistr(string)
            if (string(ii:ii).eq.'t' .or. string(ii:ii).eq.'T' .or.
-     $          string(ii:ii+1).eq.'.t' .or. string(ii:ii+1).eq.'T')
+     $          string(ii:ii+1).eq.'.t' .or. string(ii:ii+1).eq.'.T')
      $          then
               mcatnlo_delta=.true.
            else
