@@ -463,6 +463,17 @@ c
            ii=iistr(string)
            event_norm=string(ii:ii+2)
         endif
+        if(index(string,'MCatNLO_DELTA').ne.0 .or.
+     &       index(string,'mcatnlo_delta').ne.0) then
+           ii=iistr(string)
+           if (string(ii:ii).eq.'t' .or. string(ii:ii).eq.'T' .or.
+     $          string(ii:ii+1).eq.'.t' .or. string(ii:ii+1).eq.'T')
+     $          then
+              mcatnlo_delta=.true.
+           else
+              mcatnlo_delta=.false.
+           endif
+        endif
         if( index(string,'<montecarlomasses>').ne.0 .or.
      #      index(string,'<MonteCarloMasses>').ne.0 )then
           read(ifile,'(a)')string
@@ -1010,6 +1021,7 @@ c Read the <scales> block
       if(index(string,'</event').eq.0) then
          write (*,*) 'ERROR #3: Cannot find end of event in'/
      $        /' handling_lhe_event.f'
+         write (*,*) string
          stop 1
       endif
  401  format(2(1x,e14.8))
@@ -1194,7 +1206,7 @@ c Read the <scales> block
       endif
       read(ifile,'(a)')string
       if(index(string,'</event').eq.0) then
-         write (*,*) 'ERROR #3: Cannot find end of event in'/
+         write (*,*) 'ERROR #4: Cannot find end of event in'/
      $        /' handling_lhe_event.f'
          stop 1
       endif

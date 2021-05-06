@@ -372,6 +372,9 @@ c
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
          if(dampMCsubt) then
+            if (.not.mcatnlo_delta) then
+               factor=emscwgt(npartner)
+            else
 c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
 c define 'factor'.  This damping 'factor' is used only here, and not in
 c the following.  A subsequent call to assign_emsca_array, in
@@ -380,10 +383,10 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-            call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+               call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
 c min(i_fks,j_fks) is the mother of the FKS pair
-            if(dampMCsubt)factor=emscwgt_a(min(i_fks,j_fks)
-     $           ,ipartners(npartner))
+               factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
+            endif
          else
             factor=1d0
          endif
@@ -4305,9 +4308,10 @@ c
          do j=i+1,nexternal-1
             ref_sc_a(i,j)=sqrt( max(0d0,(p(0,i)+p(0,j))**2-(p(1,i)+p(1,j))**2
      &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
+            ref_sc_a(i,j)=ref_sc_a(i,j)/2d0
 c$$$            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
 c$$$            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
-            ref_sc_a(j,i)=ref_sc_a(i,j)/2d0
+            ref_sc_a(j,i)=ref_sc_a(i,j)
          enddo
       enddo
 c
