@@ -58,6 +58,7 @@ c statistics for MadLoop
       integer getordpowfromindex_ml5
       integer orders_to_amp_split_pos
       logical, allocatable, save :: keep_order(:)
+      include 'a0Gmuconv.inc'
       include 'orders.inc'
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
@@ -259,42 +260,39 @@ c======================================================================
 c======================================================================
 c If there are tagged photon and other particles in the process, 
 C one must use a mixed Gmu-alpha0 renormalisation.
-C Uncomment the lines below that apply to the case at hand
       ntagph = get_n_tagged_photons() 
-      do i = 1, AMP_SPLIT_SIZE_BORN 
-        call amp_split_pos_to_orders(i, amp_orders)
-        born_wgt = amp_split(i)
-        ! this is the number of powers of 'e' in the born
-        qed_pow_b = amp_orders(qed_pos)
-        amp_orders(qed_pos) = amp_orders(qed_pos) + 2
-        if (amp_orders(qed_pos).gt.NLO_ORDERS(qed_pos)) cycle
-C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-C$$$        ! the following lines need to be uncommented when
-C$$$        ! one starts with a Gmu-scheme model
-C$$$        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-C$$$        ! this is the contribution for the single pole
-C$$$        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
-C$$$     $      amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) -
-C$$$     $      ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
-C$$$        ! and this to the finite part
-C$$$        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
-C$$$     $      amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) -
-C$$$     $      ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+      if (ntagph.ne.0) then
+        do i = 1, AMP_SPLIT_SIZE_BORN 
+          call amp_split_pos_to_orders(i, amp_orders)
+          born_wgt = amp_split(i)
+          ! this is the number of powers of 'e' in the born
+          qed_pow_b = amp_orders(qed_pos)
+          amp_orders(qed_pos) = amp_orders(qed_pos) + 2
+          if (amp_orders(qed_pos).gt.NLO_ORDERS(qed_pos)) cycle
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! the following lines need to be uncommented when
-        ! one starts with a alpha0-scheme model
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! this is the contribution for the single pole
-        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
-     $      amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) +
-     $      (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
-        ! and this to the finite part
-        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
-     $      amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) +
-     $      (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
-
-      enddo
+          if (startfroma0) then
+          ! This is when one starts with a alpha0-scheme model
+            !  the contribution for the single pole
+            amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
+     $        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) +
+     $        (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
+            ! and to the finite part
+            amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
+     $        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) +
+     $        (qed_pow_b - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+          else
+          ! This is when one starts with a Gmu/alpha(mz)-scheme model
+            !  the contribution for the single pole
+            amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
+     $        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) -
+     $        ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt
+           ! and to the finite part
+           amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
+     $        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) -
+     $        ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt
+          endif
+        enddo
+      endif
 c======================================================================
 
 c

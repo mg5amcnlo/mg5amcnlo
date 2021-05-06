@@ -593,6 +593,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
 
+        filename = 'a0Gmuconv.inc'
+        self.write_a0gmuconv_file(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+
         filename = 'amp_split_orders.inc'
         self.write_amp_split_orders_file(
                             writers.FortranWriter(filename),
@@ -1039,6 +1044,23 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text+= "data (amp_split_orders(%d, iaso), iaso=1,nsplitorders) / %s /\n" % \
                 (i + 1, ', '.join(['%d' % o for o in amp_orders]))
 
+        writer.writelines(text)
+
+
+    def write_a0gmuconv_file(self, writer, matrix_element):
+        """writes an include file with the informations about the 
+        alpha0 < > gmu conversion, to be used when the process has
+        tagged photons
+        """
+
+        bool_dict = {True: '.true.', False: '.false.'}
+        bornproc = matrix_element.born_me['processes'][0]
+        startfromalpha0 = False
+        if any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+            if 'loop_qcd_qed_sm_a0' in bornproc['model'].get('modelpath'):
+                startfromalpha0 = True
+
+        text = 'logical  startfroma0\nparameter (startfroma0=%s)\n' % bool_dict[startfromalpha0]
         writer.writelines(text)
 
 
