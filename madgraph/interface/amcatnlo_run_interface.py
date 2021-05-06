@@ -4455,6 +4455,10 @@ RESTART = %(mint_mode)s
             content += 'PDFCODE=0\n'
 
         content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        if self.banner.get_detail('run_card', 'mcatnlo_delta') :
+            content += 'DELTA=ON\n'
+        else:
+            content += 'DELTA=OFF\n'
         content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:

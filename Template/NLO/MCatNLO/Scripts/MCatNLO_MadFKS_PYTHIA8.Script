@@ -369,6 +369,13 @@ Beams:LHEF = events.lhe            ! Input LHE file
 
 ! 4) Switch on/off the key event-generation steps.
 EOF
+
+if [ $DELTA = "ON" ]
+then
+cat<<EOF >>$ifile
+Beams:setProductionScalesFromLHEF = on ! use separate scalup for each dipole
+EOF
+fi
 if [ $UsedPdfLib = "LHAPDF" ]
 then
  if [ $PY8VER == "8.1" ]
