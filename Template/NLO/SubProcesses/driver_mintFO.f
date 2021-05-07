@@ -434,12 +434,10 @@ c The nbody contributions
          call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
             call compute_born
+            if(has_ewsudakov) call compute_ewsudakov
          endif
          if (abrv.ne.'born') then
             call compute_nbody_noborn
-         endif
-         if (abrv.ne.'born'.and.abrv(1:2).ne.'vi'.and.has_ewsudakov) then
-            call compute_ewsudakov
          endif
       endif
 

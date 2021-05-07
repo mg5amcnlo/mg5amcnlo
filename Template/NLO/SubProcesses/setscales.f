@@ -568,10 +568,14 @@ cc      to use this code you must set                                           
 cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         write(*,*) "User-defined scale not set"
-         stop 1
+c         write(*,*) "User-defined scale not set"
+c         stop 1
+
+!!!! with Sudakov s partonic is the natural scale !!!!
+
          temp_scale_id='User-defined dynamical scale' ! use a meaningful string
          tmp = 0d0
+         tmp=dsqrt((pp(0,1)+pp(0,2))**2-(pp(1,1)+pp(1,2))**2-(pp(2,1)+pp(2,2))**2-(pp(3,1)+pp(3,2))**2)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
