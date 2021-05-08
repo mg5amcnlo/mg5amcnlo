@@ -14,7 +14,10 @@ c     dsig       Function to be integrated
 c**************************************************************************
       implicit none
       include 'genps.inc'
-c
+c      include 'vectorization.inc'
+      integer nb_page
+      parameter (nb_page=20)
+c     
 c Arguments
 c
       integer ndim,ncall,itmax,itmin,ninvar,nconfigs
@@ -24,10 +27,14 @@ c
 c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
+      double precision all_p(4*maxdim/3+14,nb_page), all_wgt(nb_page), all_x(maxinvar,nb_page)
+      double precision bckp(nb_page)
       double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
       integer jmax,i,j,ipole
       integer itmax_adjust
+
+      integer ivec !position of the event in the vectorization # max is nb_page 
 c
 c     External
 c
@@ -39,8 +46,8 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      double precision fx
-      common /to_fx/   fx
+      double precision fx, all_fx(nb_page)
+      common /to_fx/   fx, all_fx
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -79,7 +86,15 @@ c
       integer th_nunwgt
       double precision th_maxwgt
       common/theoretical_unwgt_max/th_maxwgt, th_nunwgt
+      
+      logical force_reset
+      common/dsample_reset/ force_reset
+      
+      integer                                      lpp(2)
+      double precision    ebeam(2), xbk(2),q2fact(2)
+      common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 
+      double precision all_xbk(2, nb_page), all_q2fact(2, nb_page)
 c
 c     External
 c
@@ -124,26 +139,69 @@ c      maxcfig=nconfigs
 c
 c     Main Integration Loop
 c
+      ievent = 0
       iter = 1
+      ivec = 0
       do while(iter .le. itmax)
 c
 c     Get integration point
 c
          call sample_get_config(wgt,iter,ipole)
          if (iter .le. itmax) then
+c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             if (pass_point(p)) then
-               fx = dsig(p,wgt,0) !Evaluate function
-               wgt = wgt*fx
-               if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
+               ivec=ivec+1
+c              write(*,*) 'pass_point ivec is ', ivec
+               all_p(:,ivec) = p(:)
+               all_wgt(ivec) = wgt
+               all_x(:,ivec) = x(:)
+               all_xbk(:, ivec) = xbk(:)
+               all_q2fact(:, ivec) = q2fact(:)
+c               i = ivec
+c               fx = dsig(all_p(1,i),all_wgt(i),0)
+c               bckp(i) = fx
+c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
+c               all_wgt(i) = all_wgt(i)*fx
+               if (ivec.lt.nb_page)then
+                  cycle
+               endif
+               ivec=0
+c               call dsig(all_p,all_fx, all_wgt,0) !Evaluate function
+               do i=1, nb_page
+c                 need to restore common block                  
+                  xbk(:) = all_xbk(:, i)
+                  q2fact(:) = all_q2fact(:,i)
+                  fx = dsig(all_p(1,i),all_wgt(i),0)
+c                  if (fx.ne.bckp(i))then
+c                     write(*,*) fx, "!=", bckp(i)
+c                     stop 1
+c                  endif
+c                  write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
+                  all_wgt(i) = all_wgt(i)*fx
+               enddo
+               do i =1, nb_page
+c     if last paremeter is true -> allow grid update so only for a full page
+                  if (all_wgt(i) .ne. 0d0) kevent=kevent+1
+c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.nb_page                   
+                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.nb_page) !Store result
+               enddo
+               if (nb_page.ne.1.and.force_reset)then
+                  call reset_cumulative_variable()
+                  force_reset=.false.
+               endif
+
+
+c     if (wgt .ne. 0d0) call graph_point(p,wgt) !Update graphs
             else
                fx =0d0
                wgt=0d0
+               call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
             endif
-            call sample_put_point(wgt,x(1),iter,ipole) !Store result
+
          endif
-         if (wgt .ne. 0d0) kevent=kevent+1    
+c         if (wgt .ne. 0d0) kevent=kevent+1    
 c
 c     Write out progress/histograms
 c
@@ -259,6 +317,7 @@ c     remove the grid, so we are clean
 c
       goto 200
       write(*,*) "Trying w/ fresh grid"
+      stop 1 
       open(unit=25,file='ftn25',status='unknown',err=102)
       write(25,*) ' '
  102  close(25)
@@ -319,7 +378,7 @@ c
             endif
             
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -1511,7 +1570,7 @@ C       Security in case of all helicity vanishing (G1 of gg > qq )
 
       end subroutine update_discrete_dimensions
 
-      subroutine sample_put_point(wgt, point, iteration,ipole)
+      subroutine sample_put_point(wgt, point, iteration,ipole, allow_update)
 c**************************************************************************
 c     Given point(maxinvar),wgt and iteration, updates the grid.
 c     If at the end of an iteration, reforms the grid as necessary
@@ -1529,6 +1588,7 @@ c     Arguments
 c
       integer iteration,ipole
       double precision wgt, point(maxinvar)
+      logical allow_update
 c
 c     Local
 c
@@ -1600,8 +1660,8 @@ c
       real*8             wmax                 !This is redundant
       common/to_unweight/wmax
 
-      double precision fx
-      common /to_fx/   fx
+c      double precision fx
+c      common /to_fx/   fx
       double precision   prb(maxconfigs,maxpoints,maxplace)
       double precision   fprb(maxinvar,maxpoints,maxplace)
       integer                      jpnt,jplace
@@ -1759,7 +1819,9 @@ c
 c
 c     Now if done with an iteration, print out stats, rebin, reset
 c         
-c         if (kn .eq. events) then
+c     if (kn .eq. events) then
+c         write(*,*) 'allow_update', allow_update, 'nb_pass_cuts', nb_pass_cuts, 'non_zero', non_zero
+         if (allow_update)then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
@@ -1767,9 +1829,10 @@ c         if (kn .eq. events) then
            if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
               call none_pass(1000)
            endif
-         endif
-         if (non_zero .ge. events .or. (kn .gt. 200*events .and.
-     $        non_zero .gt. 5)) then
+        endif
+        endif
+         if (allow_update.and.(non_zero .ge. events .or. (kn .gt. 200*events .and.
+     $        non_zero .gt. 5))) then
 
 c          # special mode where we store information to combine them
            if(use_cut.eq.-2)then
@@ -2565,11 +2628,15 @@ C       Due to the initialization of the helicity sum.
       common /sample_common/
      .     tmean, trmean, tsigma, dim, events, itm, kn, cur_it, invar, configs
 
+      logical force_reset
+      common/dsample_reset/force_reset
+      data force_reset /.false./
 
 C     LOCAL
       integer i,j
 
       write(*,*) "RESET CUMULATIVE VARIABLE"
+      force_reset=.true.
       non_zero = 0
       nb_pass_cuts = 0
       do j=1,maxinvar
