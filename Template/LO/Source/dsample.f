@@ -95,10 +95,14 @@ c
       common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 
       double precision all_xbk(2, nb_page), all_q2fact(2, nb_page)
+
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      
 c
 c     External
 c
-      logical pass_point
+      logical pass_point, passcuts
       integer NEXTUNOPEN
 c
 c     Data
@@ -151,7 +155,9 @@ c
 c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
-            if (pass_point(p)) then
+            CUTSDONE=.FALSE.
+            CUTSPASSED=.FALSE.
+            if (passcuts(p)) then
                ivec=ivec+1
 c              write(*,*) 'pass_point ivec is ', ivec
                all_p(:,ivec) = p(:)
@@ -173,6 +179,8 @@ c               call dsig(all_p,all_fx, all_wgt,0) !Evaluate function
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   q2fact(:) = all_q2fact(:,i)
+                  CUTSDONE=.TRUE.
+                  CUTSPASSED=.TRUE.
                   fx = dsig(all_p(1,i),all_wgt(i),0)
 c                  if (fx.ne.bckp(i))then
 c                     write(*,*) fx, "!=", bckp(i)
