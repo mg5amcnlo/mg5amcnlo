@@ -88,10 +88,10 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertRaises(MGerror,check_message, "p p > t t~ QCD=1 [QED QCD]")
 
         # check case where the code write a warning (critical level)
-        self.assertTrue(check_message("p p > t t~ QED=1 [QCD]"))
-        self.assertTrue(check_message("p p > t t~ QCD=1 QED=0 [QCD]"))
-        self.assertTrue(check_message("p p > t t~ QED=98 [QCD]"))
-        self.assertTrue(check_message("p p > t t~ QED=99 QCD=1 [QCD]"))
+        self.assertRaises(MGerror, check_message, "p p > t t~ QED=1 [QCD]")
+        self.assertRaises(MGerror, check_message, "p p > t t~ QCD=1 QED=0 [QCD]")
+        self.assertRaises(MGerror, check_message, "p p > t t~ QED=98 [QCD]")
+        self.assertRaises(MGerror, check_message, "p p > t t~ QED=99 QCD=1 [QCD]")
         # check case where the code does not complain
         self.assertFalse(check_message("p p > t t~ QED=0 [QCD]"))
         self.assertFalse(check_message("p p > t t~ / z QCD=0 [QCD]"))

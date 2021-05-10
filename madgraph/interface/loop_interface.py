@@ -287,12 +287,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 message = "Potentially ambigious syntax detected. Note that the syntax of paper 1804.10017 (used in 3.0.x) is not used anymore (since version 3.1.0).\n" +\
                     'If you want to follow the syntax of that paper, you can just replace "QED" by "aEW" and "QCD" by "aS".\n' +\
                     'More information here: http://amcatnlo.cern.ch/co.htm\n'
-                if 'QED' in proc['perturbation_couplings']:
-                    if not self.options['acknowledged_v3.1_syntax']:
-                        raise Exception(message+ 'If you know the current meaning of the syntax you can bypass this crash by running (once per machine) this command:\n set acknowledged_v3.1_syntax True --global')
-                else:
-                    if not self.options['acknowledged_v3.1_syntax']:
-                        logger.critical(message)
+                if not self.options['acknowledged_v3.1_syntax']:
+                    raise Exception(message+ 'If you know the current meaning of the syntax you can bypass this crash by running (once per machine) this command:\n set acknowledged_v3.1_syntax True --global')
+
 
 
 
