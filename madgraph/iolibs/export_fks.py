@@ -1163,6 +1163,24 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         except AttributeError:
             pass
 
+        # special treatment needed for the case when the sudakov
+        # matrix elements are generated. This can be either the case
+        # of LOonly=SDK (no virtual/reals, only sudakov)
+        # or of [QCD SDK] virtual and reals, but of QCD origin.
+        # In both case a coupling combination corresponding to 
+        # born_orders + 2*QED must be added
+        if  matrix_element.ewsudakov:
+            # compute the born orders
+            born_orders = []
+            split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
+            for ordd in split_orders:
+                # factor 2 to pass to squared orders
+                born_orders.append( 2 * matrix_element.born_me['processes'][0]['born_orders'][ordd])
+            # increase the QED order
+            born_orders[split_orders.index('QED')] += 2
+            if born_orders not in amp_split_orders:
+                amp_split_orders.append(tuple(born_orders))
+
         amp_split_size=len(amp_split_orders)
 
         text = '! The orders to be integrated for the Born and at NLO\n'
