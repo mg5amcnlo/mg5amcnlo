@@ -16,7 +16,7 @@ c**************************************************************************
       include 'genps.inc'
 c      include 'vectorization.inc'
       integer nb_page
-      parameter (nb_page=20)
+      parameter (nb_page=2)
 c     
 c Arguments
 c
@@ -34,6 +34,7 @@ c
       integer jmax,i,j,ipole
       integer itmax_adjust
 
+      integer imirror, iproc, iconf
       integer ivec !position of the event in the vectorization # max is nb_page 
 c
 c     External
@@ -46,8 +47,8 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      double precision fx, all_fx(nb_page)
-      common /to_fx/   fx, all_fx
+      double precision fx
+c      common /to_fx/   fx
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -94,8 +95,15 @@ c
       double precision    ebeam(2), xbk(2),q2fact(2)
       common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 
-      double precision all_xbk(2, nb_page), all_q2fact(2, nb_page)
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 
+C     data for vectorization      
+      double precision all_xbk(2, nb_page), all_q2fact(2, nb_page), all_cm_rap(nb_page)
+      double precision all_fx(nb_page)
+      
+      
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
       
@@ -165,6 +173,7 @@ c              write(*,*) 'pass_point ivec is ', ivec
                all_x(:,ivec) = x(:)
                all_xbk(:, ivec) = xbk(:)
                all_q2fact(:, ivec) = q2fact(:)
+               all_cm_rap(ivec) = cm_rap
 c               i = ivec
 c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
@@ -178,17 +187,32 @@ c               call dsig(all_p,all_fx, all_wgt,0) !Evaluate function
                do i=1, nb_page
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
+                  cm_rap = all_cm_rap(i)
                   q2fact(:) = all_q2fact(:,i)
                   CUTSDONE=.TRUE.
                   CUTSPASSED=.TRUE.
-                  fx = dsig(all_p(1,i),all_wgt(i),0)
+                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
+               enddo
+               call select_grouping(imirror, iproc, iconf, all_wgt, nb_page)
+               write(*,*) 'selected ', imirror, iproc, iconf
+               call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
+     &                          iconf, iproc, imirror, all_fx,nb_page)
+
+                do i=1, nb_page
+c                 need to restore common block                  
+                  xbk(:) = all_xbk(:, i)
+                  cm_rap = all_cm_rap(i)
+                  q2fact(:) = all_q2fact(:,i)
+c                  all_fx(i) = dsig(all_p(1,i),all_wgt(i),0)
 c                  if (fx.ne.bckp(i))then
 c                     write(*,*) fx, "!=", bckp(i)
 c                     stop 1
 c                  endif
-c                  write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
-                  all_wgt(i) = all_wgt(i)*fx
+c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                enddo
+               do I=1, nb_page
+                  all_wgt(i) = all_wgt(i)*all_fx(i)
+              enddo
                do i =1, nb_page
 c     if last paremeter is true -> allow grid update so only for a full page
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
