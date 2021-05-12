@@ -462,6 +462,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self.ewsudakov = True
             logger.warning('LINE' + line)
 
+        # this warning is to remind us that for the moment adding EW sudakov
+        # corrections lacks the LO2 contributions unless EW corrections are
+        # also computed
+        if self.ewsudakov and not 'QED' in proc_type[2]:
+            logger.warning('The EW Sudakov corrections might be incomplete.' + \
+                           'They will not include contributions of QCD origin ' + \
+                           'stemming from the LO2, if it exists.')
+
         self.validate_model(proc_type[1], coupling_type=proc_type[2])
         self._generate_info = geninfo
 
