@@ -594,9 +594,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             matrix_element)
 
         filename = 'a0Gmuconv.inc'
-        self.write_a0gmuconv_file(
+        startfroma0 = self.write_a0gmuconv_file(
                             writers.FortranWriter(filename),
                             matrix_element)
+
+        filename = 'rescale_alpha_tagged.f'
+        self.write_rescale_a0gmu_file(
+                            writers.FortranWriter(filename),
+                            startfroma0, matrix_element)
 
         filename = 'amp_split_orders.inc'
         self.write_amp_split_orders_file(
@@ -1062,6 +1067,47 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         text = 'logical  startfroma0\nparameter (startfroma0=%s)\n' % bool_dict[startfromalpha0]
         writer.writelines(text)
+        return startfromalpha0
+
+
+    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element):
+        """writes the function that computes the rescaling factor needed in
+        the case of external photons
+        """
+
+        # get the model parameters
+        params = sum([v for v in self.model.get('parameters').values()], [])
+        parnames = [p.name.lower() for p in params]
+
+        bornproc = matrix_element.born_me['processes'][0]
+        # this is to ensure compatibility with standard processes
+        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+            to_check = []
+            expr = '1d0'
+        
+        elif startfroma0:
+            to_check = ['mdl_aewgmu', 'mdl_aew']
+            base = 'mdl_aewgmu/mdl_aew'
+            exp = 'qed_pow/2d0-ntag'
+            expr = '(%s)**(%s)' % (base, exp)
+        else:
+            to_check = ['mdl_aew', 'mdl_aew0']
+            base = 'mdl_aew0/mdl_aew'
+            exp = 'ntag'
+            expr = '(%s)**(%s)' % (base, exp)
+
+        replace_dict = {'rescale_fact': expr}
+
+        if not all(p in parnames for p in to_check):
+            raise fks_common.FKSProcessError('')
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/rescale_alpha_tagged.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+
 
 
     def write_orders_file(self, writer, matrix_element):

@@ -100,6 +100,22 @@ CMSParam = Parameter(name = 'CMSParam',
                      texname = 'CMSParam')
 
 # User-defined parameters.
+aEW0M1 = Parameter(name = 'aEW0M1',
+                  nature = 'external',
+                  type = 'real',
+                  value = 0.0,
+                  texname = '\\text{aEW0M1}',
+                  lhablock = 'SMINPUTS',
+                  lhacode = [ 1 ])
+
+aEW0 = Parameter(name = 'aEW0',
+                  nature = 'internal',
+                  type = 'real',
+                  value = '0.0 if aEW0M1==0. else 1./aEW0M1',
+                  texname = '\\text{aEW0}',
+                  lhablock = 'SMINPUTS',
+                  lhacode = [ 1 ])
+
 Gf = Parameter(name = 'Gf',
                nature = 'external',
                type = 'real',

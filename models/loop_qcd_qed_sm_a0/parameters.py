@@ -1260,3 +1260,26 @@ CKMctsb = Parameter(name = 'CKMctsb',
                     type = 'complex',
                     value = 'CKM22*CKM33*complexconjugate(CKM23)*complexconjugate(CKM32)+CKM32*CKM23*complexconjugate(CKM22)*complexconjugate(CKM33)',
                     texname = '\\text{CKMctsb}')
+
+
+Gmu= Parameter(name = 'Gmu',
+               nature = 'external',
+               type = 'real',
+               value = 0.0000116637,
+               texname = 'G_f',
+               lhablock = 'SMINPUTS',
+               lhacode = [ 2 ])
+
+
+aEWGmu = Parameter(name = 'aEWGmu',
+                nature = 'internal',
+                type = 'real',
+                value = 'cmath.sqrt(2.)*Gmu*MW**2*(1-MW**2/MZ**2)/cmath.pi',
+                texname = '\\alpha _{\\text{EW}}')
+
+
+aEWGmuM1 = Parameter(name = 'aEWGmuM1',
+                  nature = 'internal',
+                  type = 'real',
+                  value = '0.0 if aEWGmu==0. else 1./aEWGmu',
+                  texname = '\\text{aEWM1}')
