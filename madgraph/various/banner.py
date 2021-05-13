@@ -3691,14 +3691,16 @@ class RunCardLO(RunCard):
             # check for possibility of eva
             eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24])
             eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24])
+            misc.sprint(eva_in_b1, eva_in_b2)
             if eva_in_b1 and eva_in_b2:
                 #reserved for 100 TeV pp collider
-                #self['lpp1'] = 1
-                #self['lpp2'] = 1
-                #self['ebeam1'] = '50k'
-                #self['ebeam1'] = '50k'
+                self['lpp1'] = -3
+                self['lpp2'] = 3
+                self['ebeam1'] = '15k'
+                self['ebeam2'] = '15k'
                 self['nhel'] = 1
                 self['pdlabel'] = 'eva'
+
             elif eva_in_b1:
                 self['pdlabel1'] = 'eva'
                 self['nhel']    = 1
