@@ -1099,7 +1099,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         replace_dict = {'rescale_fact': expr}
 
         if not all(p in parnames for p in to_check):
-            raise fks_common.FKSProcessError('')
+            raise fks_common.FKSProcessError(
+                    'Some parameters needed when there are tagged '+\
+                    'photons cannot be found in the model.\n' +\
+                    'Please load the correct model and restriction ' +\
+                    '(e.g loop_qcd_qed_sm_Gmu-a0 or loop_qcd_qed_sm_a0-Gmu)')
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/rescale_alpha_tagged.inc')).read()
