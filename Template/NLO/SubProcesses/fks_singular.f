@@ -1488,6 +1488,12 @@ c        contribution
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 
+      integer ntagph
+      double precision resc
+      integer get_n_tagged_photons
+      double precision get_rescale_alpha_factor
+      external get_n_tagged_photons get_rescale_alpha_factor
+
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -1551,9 +1557,21 @@ C Secondly, the more advanced filter
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
-      wgt(1,icontr)=wgt1
-      wgt(2,icontr)=wgt2
-      wgt(3,icontr)=wgt3
+
+C here we rescale the contributions by the ratio of alpha's in different
+C schemes; it is needed when there are tagged photons around
+      ntagph = get_n_tagged_photons()
+      if (ntagph.eq.0) then
+        wgt(1,icontr)=wgt1
+        wgt(2,icontr)=wgt2
+        wgt(3,icontr)=wgt3
+      else if (ntagph.gt.0) then
+          resc = get_rescale_alpha_factor(ntagph, orders(qed_pos)) 
+          wgt(1,icontr) = wgt1 * resc
+          wgt(2,icontr) = wgt2 * resc
+          wgt(3,icontr) = wgt3 * resc
+      endif
+
       bjx(1,icontr)=xbk(1)
       bjx(2,icontr)=xbk(2)
       scales2(1,icontr)=QES2
