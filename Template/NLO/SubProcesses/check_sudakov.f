@@ -164,6 +164,9 @@ c, logfromLOip1
       logical sud_mc_hel
       COMMON /to_mc_hel/ sud_mc_hel
 
+      external alphas
+      double precision alphas
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -316,6 +319,9 @@ c initialization
 
 
 200   continue
+
+
+       
           finite=0d0
           single=0d0
           double=0d0
@@ -582,6 +588,13 @@ c----------
            endif
 
            mu_r = ren_scale
+
+
+          g=sqrt(4d0*pi*alphas(sqrt(QES2)))
+          call update_as_param()
+
+
+          print*,"now g=",g,"and alphas=", g**2/4d0/pi,"at scale=",sqrt(QES2)
 
 
 
