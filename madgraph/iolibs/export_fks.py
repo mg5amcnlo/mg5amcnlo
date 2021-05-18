@@ -1178,7 +1178,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 born_orders.append( 2 * matrix_element.born_me['processes'][0]['born_orders'][ordd])
             # increase the QED order
             born_orders[split_orders.index('QED')] += 2
-            if born_orders not in amp_split_orders:
+            if tuple(born_orders) not in amp_split_orders:
                 amp_split_orders.append(tuple(born_orders))
 
         amp_split_size=len(amp_split_orders)
