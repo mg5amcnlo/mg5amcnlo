@@ -2211,7 +2211,8 @@ class decay_all_events(object):
         #self.width_estimator = bkp3
         for me in self.all_ME:
             for d in self.all_ME[me]['decays']:
-                d['decay_struct'] = eval(d['decay_struct'])
+                if d['decay_struct'] and isinstance(d['decay_struct'] , str):
+                    d['decay_struct'] = eval(d['decay_struct'])
         self.switch_all_model_instance(model)
 
 
@@ -2276,7 +2277,8 @@ class decay_all_events(object):
                         except KeyError:
                             continue
 
-        self.width_estimator.model = None
+        if self.width_estimator:
+            self.width_estimator.model = None
         
     def decaying_events(self,inverted_decay_mapping):
         """perform the decay of each events"""
