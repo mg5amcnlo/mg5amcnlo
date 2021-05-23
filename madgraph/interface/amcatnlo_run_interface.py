@@ -3083,7 +3083,7 @@ RESTART = %(mint_mode)s
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
-                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                                            info = 'cluster handling will be done with PLUGIN: %(plug)s' )
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
         

@@ -4950,6 +4950,7 @@ c           This is dummy particle used in multiparticle vertices
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         #ProcessExporterFortranME.ordering +=1
+
         if len(tchannels) < 3 or tstrat == 2 or not model:
             return tchannels, 2
         elif tstrat == 1:
@@ -5088,7 +5089,7 @@ c           This is dummy particle used in multiparticle vertices
             old_vert = tchannels.pop()
                 
             #copy the vertex /leglist to avoid side effects
-            new_vert = base_objects.Vertex(old_vert)
+            new_vert = copy.copy(old_vert)
             new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
             # vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 
