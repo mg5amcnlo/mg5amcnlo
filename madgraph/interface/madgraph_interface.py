@@ -823,6 +823,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")   
         logger.info("nlo_mixed_expansion <value>",'$MG:color:GREEN') 
         logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
+        logger.info("acknowledged_v3.1_syntax <value>",'$MG:color:GREEN') 
+        logger.info("if set to True allows to use syntax which have change meaning between 3.0 and 3.1 version")
+
           
 #===============================================================================
 # CheckValidForCmd
@@ -2978,6 +2981,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'output_dependencies':'external',
                        'crash_on_error':False,
                        'auto_convert_model': False,
+                       'acknowledged_v3.1_syntax': False
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -7898,7 +7902,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
         # True/False formatting
-        elif args[0] in ['crash_on_error', 'auto_convert_model']:
+        elif args[0] in ['crash_on_error', 'auto_convert_model', 'acknowledged_v3.1_syntax']:
             try:
                 tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
