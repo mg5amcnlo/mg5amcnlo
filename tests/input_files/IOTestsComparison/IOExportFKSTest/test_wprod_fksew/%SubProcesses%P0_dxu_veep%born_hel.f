@@ -66,8 +66,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: d~ u > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
+C     Process: s~ c > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
 C     
       IMPLICIT NONE
 C     
@@ -153,8 +153,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: d~ u > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: s~ c > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: d~ u > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
+C     Process: s~ c > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
 C     
       IMPLICIT NONE
 C     
