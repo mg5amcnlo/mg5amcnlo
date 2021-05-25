@@ -972,8 +972,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-    parser.add_option("-F", "--force", action="store_true", default=False,
-        help="Force the update, bypassing its monitoring by the user")
+    parser.add_option("-F", "--force", type=int, default=0,
+        help="Force the update, bypassing its monitoring by the user: [2 display full diff, 10 hard-core pass]")
     parser.add_option("-f", "--semiForce", action="store_true", default=False,
         help="Bypass monitoring of ref. file only if another ref. file with "+\
                                     "the same name has already been monitored.")
@@ -1099,8 +1099,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
             print('\n'.join("> %s/%s"%(colored%(34,test[0]),colored%(32,test[1]))
             for test in listIOTests(args) if IOTestManager.need(test[0],test[1])))
             exit()
-        if options.force:
-            force = 10
+        if options.force!=0:
+            if options.force not in [0,1,2,10]:
+                force = 10
+            else:
+                force = options.force
         elif options.semiForce:
             force = 1
         else:
