@@ -7,6 +7,7 @@ from madgraph.interface import reweight_interface
 from six.moves import map
 from six.moves import range
 from six.moves import zip
+import pickle
 
 ################################################################################
 #
@@ -893,7 +894,7 @@ class AllMatrixElement(dict):
         self.has_particles_ambiguity = False
         self.model = model
 
-        
+
     def add(self, topologies, keys):
         """Adding one element to the list of production_topo"""
         
@@ -2046,12 +2047,13 @@ class decay_all_events(object):
         # generate BR and all the square matrix element based on the banner.
         pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
         if not options["use_old_dir"] or not os.path.exists(pickle_info):
+           
             self.generate_all_matrix_element()
-            self.save_to_file(pickle_info,
-                                          (self.all_ME,self.all_decay,self.width_estimator))
+            self.save_status_to_pickle(pickle_info)
         else:
             try:
-                self.all_ME, self.all_decay,self.width_estimator = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
+                data = save_load_object.load_from_file(pjoin(self.path_me,"production_me", "all_ME.pkl"))
+                self.all_ME, self.all_decay,self.width_estimator = data.all_ME, data.all_decay, data.width_estimator
             except Exception as error:
                 logger.debug(str(error))
                 self.generate_all_matrix_element()
@@ -2068,6 +2070,7 @@ class decay_all_events(object):
     def save_to_file(self, *args):
         return save_load_object.save_to_file(*args)
     
+
     def get_MC_masses(self):
         
         MC_masses={}
@@ -2161,7 +2164,7 @@ class decay_all_events(object):
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
-    def save_status_to_pickle(self):
+    def save_status_to_pickle(self, path=None):
         import madgraph.iolibs.save_load_object as save_load_object
         #don't store the event file in the pkl
         evt_file, self.evtfile = self.evtfile, None
@@ -2170,12 +2173,30 @@ class decay_all_events(object):
         mscmd, self.mscmd = self.mscmd , None
         pid2mass, self.pid2mass = self.pid2mass, None
         pid2width, self.pid2width = self.pid2width, None
-        #banner, self.banner = self.banner, None
-        #self.all_ME.banner = None
-        
-        name = pjoin(self.options['ms_dir'], 'madspin.pkl')
+        model=  self.model
+
+
+        self.switch_all_model_instance(None)
+
+        self.all_decay, bkp = str(self.all_decay), self.all_decay
+        #self.all_ME, bkp2 = None , self.all_ME    
+        #self.width_estimator, bkp3 = self.width_estimator, self.width_estimator  
+        modelpath = model.get('modelpath')
+        for me in self.all_ME:
+            for d in self.all_ME[me]['decays']:
+                d['decay_struct'] = str(d['decay_struct'])
+        self.modelpath = modelpath
+
+                
+
+        if not path:
+            name = pjoin(self.options['ms_dir'], 'madspin.pkl')
+        else:
+            name = path
+
         save_load_object.save_to_file(name, self)
-        
+
+
         #restore the event file
         self.evtfile = evt_file
         self.curr_event = curr_event
@@ -2183,8 +2204,81 @@ class decay_all_events(object):
         self.mscmd = mscmd 
         self.pid2mass = pid2mass
         self.pid2width = pid2width
-        #self.banner = banner
-        #self.all_ME.banner = banner
+        
+
+        self.all_decay = bkp 
+        #self.all_ME = bkp2 
+        #self.width_estimator = bkp3
+        for me in self.all_ME:
+            for d in self.all_ME[me]['decays']:
+                if d['decay_struct'] and isinstance(d['decay_struct'] , str):
+                    d['decay_struct'] = eval(d['decay_struct'])
+        self.switch_all_model_instance(model)
+
+
+
+
+
+    def switch_all_model_instance(self, model=None):
+        """ For pickling/un-pickling, one need to remove/restore all model instance 
+            also remove all 'matrix-element' info since those are not needed
+        """
+        
+        self.model = model
+        self.all_ME.model = model
+        for proc in self.all_ME:
+            if  'decays' in self.all_ME[proc]:
+                for me in self.all_ME[proc]['decays']:
+                    if 'matrix_element' not in me or not me['matrix_element']:
+                        continue
+                    me['matrix_element']['model'] = model
+                    
+                    to_clean = list(me['matrix_element']['decay_chains'])
+                    while to_clean:
+                        p = to_clean.pop()
+                        p['model'] = model
+                        try:
+                            to_clean += p['decay_chains']
+                        except KeyError:
+                            continue
+                    me['matrix_element'] = None
+                #self.all_ME[proc]['decays'] = None
+
+            if 'processes' in self.all_ME[proc]:
+                for me in self.all_ME[proc]['processes'] or not me['matrix_element']:
+                    if 'matrix_element' not in me:
+                        continue
+                    me['matrix_element']['model'] = model
+                    to_clean = list(me['decay_chains'])
+                    while to_clean:
+                        p = to_clean.pop()
+                        p['model'] = model
+                        try:
+                            to_clean += p['decay_chains']
+                        except KeyError:
+                            continue
+                me['matrix_element'] = None
+
+        for proc in self.all_ME:
+            for me in self.all_ME[proc]['decays']:
+                for d in me['decay_struct']:
+                    me['decay_struct'][d]['model'] = model
+
+        for proc in self.all_decay:
+            for me in self.all_decay[proc]['processes']:
+                #misc.sprint(type(me), me)
+                me['model'] = model
+                to_clean = list(me['decay_chains'])
+                while to_clean:
+                        p = to_clean.pop()
+                        p['model'] = model
+                        try:
+                            to_clean += p['decay_chains']
+                        except KeyError:
+                            continue
+
+        if self.width_estimator:
+            self.width_estimator.model = None
         
     def decaying_events(self,inverted_decay_mapping):
         """perform the decay of each events"""

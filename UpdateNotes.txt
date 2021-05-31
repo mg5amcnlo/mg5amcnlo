@@ -1,5 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.4(30/05/21)
+      OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
+      OM: Fix an issue for non positive definite matrix-element when using the
+          "set group_subprocesses False"  mode of MG5aMc
+      OM: Fix a speed issue for gridpack in readonly mode where the grid were recomputed 
+
 2.9.3(25/03/21)
       OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
           was close to the mass of the initial mass. boundary condition on t-channnel were
