@@ -29,6 +29,7 @@ c     /* ********************************************************* *
       double precision fLpol,x,mu2
       double precision eva_get_pdf_by_PID_evo
       double precision eva_get_pdf_photon_evo
+      double precision eva_get_pdf_neutrino_evo
    
       double precision tiny,mu2min
       double precision QW,Qf
@@ -127,11 +128,20 @@ c            eva_get_pdf_by_PID = 0d0
 c         return
 c      endif
 c     celebrate by calling the PDF
-      if(vPID.eq.22.or.vPID.eq.7) then
+c      if(vPID.eq.22.or.vPID.eq.7) then
+c         eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+c      else
+c         eva_get_pdf_by_PID = eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+c      endif
+
+      select case (abs(vPID))
+      case (7,22)
          eva_get_pdf_by_PID = eva_get_pdf_photon_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
-      else
+      case (12,14)
+         eva_get_pdf_by_PID = eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+      case default
          eva_get_pdf_by_PID = eva_get_pdf_by_PID_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
-      endif
+      end select
       return
       end      
 c     /* ********************************************************* *
@@ -199,7 +209,40 @@ c     /* ********************************************************* *
       eva_get_pdf_photon_evo = tmpPDF
       return
       end      
-c     /* ********************************************************* *      
+c     /* ********************************************************* *   
+c     /* ********************************************************* *
+      double precision function eva_get_pdf_neutrino_evo(vPID,fPID,vpol,fLpol,x,mu2,ievo)
+      implicit none
+      integer vPID,fPID,vpol,ievo
+      double precision fLpol,x,mu2
+      double precision eva_fR_to_fR,eva_fL_to_fL
+
+      double precision gg2,gL2,gR2,mf2,tmpPDF
+      call eva_get_mf2_by_PID(mf2,fPID)
+      call eva_get_gg2_by_PID(gg2,vPID,fPID)
+      if( fPID/iabs(fPID).gt.0 ) then ! particle
+         call eva_get_gR2_by_PID(gR2,vPID,fPID)
+         call eva_get_gL2_by_PID(gL2,vPID,fPID)
+      else  ! antiparticle (invert parity)
+         call eva_get_gR2_by_PID(gL2,vPID,fPID)
+         call eva_get_gL2_by_PID(gR2,vPID,fPID)
+      endif
+      select case (vpol)
+      case (-1)
+         tmpPDF = eva_fL_to_fL(gg2,gL2,gR2,fLpol,mf2,x,mu2,ievo)
+      case (+1)
+         write(*,*) 'vPol out of range; should not be here',vPol
+         stop
+         tmpPDF = 0d0         
+      case default
+         write(*,*) 'vPol out of range; should not be here',vPol
+         stop
+         tmpPDF = 0d0         
+      end select
+      eva_get_pdf_neutrino_evo = tmpPDF
+      return
+      end      
+c     /* ********************************************************* *         
 c     /* ********************************************************* *
 c     /* ********************************************************* *
 c     /* ********************************************************* *
