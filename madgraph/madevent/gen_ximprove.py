@@ -1903,6 +1903,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'packet': None, 
                     }
 
+            if self.readonly:
+                basedir = pjoin(os.path.dirname(__file__), '..','..','SubProcesses', info['P_dir'], info['directory'])
+                info['base_directory'] = basedir
 
             jobs.append(info)
           
