@@ -908,7 +908,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return
             else:
                 devnull = open(os.devnull, 'w')  
-                subprocess.call(['python', 'write_param_card.py'],
+                subprocess.call([sys.executable, 'write_param_card.py'],
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'), stdout=devnull, stderr=devnull)
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
                 if not os.path.exists(default):

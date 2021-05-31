@@ -133,6 +133,24 @@ C
 
       END
 
+      SUBROUTINE MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      USE MG5_1_POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+
+      INTEGER I, NCOEFS
+
+      COMPLEX*16 POLYNOMIAL(0:NCOEFS-1)
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
+        ENDIF
+      ENDDO
+
+      END
 
 C     Now the routines to update the wavefunctions
 
@@ -235,6 +253,25 @@ C
 
       END
 
+      SUBROUTINE MP_MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS
+     $ ,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      USE MG5_1_POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+
+      INTEGER I, NCOEFS
+
+      COMPLEX*32 POLYNOMIAL(0:NCOEFS-1)
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
+        ENDIF
+      ENDDO
+
+      END
 
 C     Now the routines to update the wavefunctions
 
@@ -442,12 +479,12 @@ C     Now the routines to update the wavefunctions
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
             OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO
@@ -477,12 +514,12 @@ C     Now the routines to update the wavefunctions
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
             OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO

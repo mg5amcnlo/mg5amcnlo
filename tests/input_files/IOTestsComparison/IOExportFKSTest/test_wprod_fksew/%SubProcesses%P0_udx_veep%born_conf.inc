@@ -10,8 +10,8 @@
       LOGICAL GFORCEBW(-MAX_BRANCHB_USED : -1, LMAXCONFIGSB_USED)
 
 C     Here are the congifurations
-C     Process: u d~ > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: c s~ > ve e+ [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: u d~ > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
+C     Process: c s~ > ve e+ [ all = QCD QED ] QCD^2<=0 QED^2<=6
 C     Diagram 1, Amplitude 1
       DATA MAPCONFIG(   1)/   1/
       DATA (IFOREST(IFR, -1,   1),IFR=1,2)/  4,  3/
