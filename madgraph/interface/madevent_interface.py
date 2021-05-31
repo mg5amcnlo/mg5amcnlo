@@ -4407,9 +4407,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                 # Start a parallelization instance (stored in self.cluster)
                 self.configure_run_mode(self.options['run_mode'])
                 if self.options['run_mode']==1:
-                    n_cores = max(self.options['cluster_size'],1)
+                    n_cores = max(int(self.options['cluster_size']),1)
                 elif self.options['run_mode']==2:
-                    n_cores = max(self.cluster.nb_core,1)
+                    n_cores = max(int(self.cluster.nb_core),1)
                 
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
