@@ -6572,7 +6572,8 @@ class GridPackCmd(MadEventCmd):
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        elif self.run_card['use_syst']:
+        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+            self.options['nb_core']  = 1
             self.exec_cmd('systematics %s --from_card' % 
                           pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
                                                postcmd=False,printcmd=False)
