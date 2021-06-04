@@ -121,8 +121,8 @@ def plot_sud_approx(pdir):
 
     ax.set_ylim(ymin, ymax)
     ax.legend()
+    fig.savefig("%s.pdf" % os.path.split(pdir)[1])
 
-    plt.show()
 
 # let us use a parser to parse arguments
 parser = argparse.ArgumentParser('Generate processes and plot Sudakov-Loop for dominant helicities')
@@ -130,10 +130,9 @@ parser.add_argument('--process', type=str, help="the process, with the same synt
 parser.add_argument('--existing_dir', type=str, help="the process directory, if it has been already generated") 
 parser.add_argument('--recompile', action='store_true', help="recompile the directory")
 args = parser.parse_args()
-import pdb; pdb.set_trace()
+
 
 if args.process:
-
     # name for the output dir
     idir = 0
     outdir_name = 'outdir_sdk_%d' 
