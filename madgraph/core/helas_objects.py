@@ -1572,6 +1572,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
             else:
                 output['coup%d'%i] = coup
+
+            output['vec%d'%i] = "(ivec)"
               
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
@@ -3180,6 +3182,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
+            output['vec%d'%i] = "(ivec)"
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''

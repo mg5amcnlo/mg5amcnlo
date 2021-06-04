@@ -324,6 +324,9 @@ class ProcessExporterFortran(VirtualExporter):
         # add the makefile in Source directory 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename))
+
+
+        self.write_vector_size(writers.FortranWriter('vector.inc'))
         
         # add the DiscreteSampler information
         files.cp(pjoin(MG5DIR,'vendor', 'DiscreteSampler', 'DiscreteSampler.f'), 
@@ -1593,7 +1596,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             
             
 
-    def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
+    def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False, vector=False):
         """Generate the PDF lines for the auto_dsig.f file"""
 
         processes = matrix_element.get('processes')
@@ -1602,6 +1605,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
+
+        if vector:
+            pdf_definition_lines_vec = ""
+            pdf_data_lines_vec = ""
+            pdf_lines = " DO iVEC=1,NB_PAGE\n"
+
 
         if ninitial == 1:
             pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
@@ -1641,6 +1650,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
+                if vector:
+                    pdf_definition_lines_vec += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d(nb_page)" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
 
             # Get PDF data lines for all initial states
             for i in [0,1]:
@@ -1649,6 +1664,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  for pdg in initial_states[i]]) + \
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
+                if vector:
+                    pdf_data_lines += "DATA " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in initial_states[i]]) + \
+                                                 "/(%d*nb_page)*1D0/" % len(initial_states[i]) + \
+                                                 "\n"
+
 
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
@@ -1663,39 +1685,70 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
-                        if subproc_group:
-                            pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
-                                          i + 1, i + 1, pdgtopdf[initial_state],
-                                          i + 1, i + 1)
+                        data = {'part':pdf_codes[initial_state],
+                                'beam' : i+1,
+                                'pdg': pdgtopdf[initial_state]
+                            }
+
+                        if vector and subproc_group:
+                            template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
+                                         "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(%(beam)d, IVEC)))\n"
+                        elif subproc_group:
+                            template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
+                                         "XBK(IB(%(beam)d)),DSQRT(Q2FACT(%(beam)d)))\n"
+                        elif vector:
+                            template = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
+                                         "ALL_XBK(%(beam)d,IVEC),DSQRT(ALL_Q2FACT(%(beam)d,IVEC)))\n"
                         else:
-                            pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP, %d," + \
-                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
-                                          i + 1, i + 1, pdgtopdf[initial_state],
-                                          i + 1,
-                                          i + 1, i + 1)
+                            template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
+                                         "XBK(%(beam)d),DSQRT(Q2FACT(%(beam)d)))\n"
+
+                        pdf_lines = pdf_lines + template % data
+
                 pdf_lines = pdf_lines + "ENDIF\n"
 
-            # Add up PDFs for the different initial state particles
-            pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
-            for proc in processes:
-                process_line = proc.base_string()
-                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                pdf_lines = pdf_lines + "\nPD(IPROC)="
-                for ibeam in [1, 2]:
-                    initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in list(pdf_codes.keys()):
-                        pdf_lines = pdf_lines + "%s%d*" % \
-                                    (pdf_codes[initial_state], ibeam)
-                    else:
-                        pdf_lines = pdf_lines + "1d0*"
-                # Remove last "*" from pdf_lines
-                pdf_lines = pdf_lines[:-1] + "\n"
-                pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
+            if not vector:
+                # Add up PDFs for the different initial state particles
+
+                pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
+                for proc in processes:
+                    process_line = proc.base_string()
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines = pdf_lines + "\nPD(IPROC)="
+                    for ibeam in [1, 2]:
+                        initial_state = proc.get_initial_pdg(ibeam)
+                        if initial_state in list(pdf_codes.keys()):
+                            pdf_lines = pdf_lines + "%s%d*" % \
+                                        (pdf_codes[initial_state], ibeam)
+                        else:
+                            pdf_lines = pdf_lines + "1d0*"
+                    # Remove last "*" from pdf_lines
+                    pdf_lines = pdf_lines[:-1] + "\n"
+                    pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
+            else:
+
+                # Add up PDFs for the different initial state particles
+                pdf_lines += "ENDDO\n"
+                pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
+                for proc in processes:
+                    process_line = proc.base_string()
+                    pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                    pdf_lines += '\n   DO IVEC=1, NB_PAGE'
+                    pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
+                    for ibeam in [1, 2]:
+                        initial_state = proc.get_initial_pdg(ibeam)
+                        if initial_state in list(pdf_codes.keys()):
+                            pdf_lines = pdf_lines + "%s%d(IVEC)*" % \
+                                        (pdf_codes[initial_state], ibeam)
+                        else:
+                            pdf_lines = pdf_lines + "1d0*"
+                    # Remove last "*" from pdf_lines
+                    pdf_lines = pdf_lines[:-1] + "\n"
+                    pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
+                    pdf_lines += '\n    ENDDO\n'
+        
+        if vector:
+            return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1]
 
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
@@ -2139,10 +2192,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                         
         # Add file in Source
         shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
-                    pjoin(self.dir_path, 'Source'))        
+                    pjoin(self.dir_path, 'Source'))   
+
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))          
+        self.write_source_makefile(writers.FileWriter(filename))    
+
+
         
     #===========================================================================
     # export model files
@@ -3515,6 +3571,8 @@ c     channel position
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
+
+
         # Lines that differ between subprocess group and regular
         if proc_id:
             replace_dict['numproc'] = int(proc_id)
@@ -3755,6 +3813,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             arg['mass'] = '%(M)s, fk_%(W)s,'
         elif '%(W)s' in arg['mass']:
             raise Exception
+
+        misc.sprint('before', call, arg)
+        arg['coup'] = re.sub('coup(\d+)\)s','coup\g<1>)s%(vec\g<1>)s', arg['coup'])
+
+        misc.sprint('after',call, arg)
         return call, arg
     
     def copy_template(self, model):
@@ -3777,6 +3840,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
+
+        self.write_vector_size(writers.FortranWriter(pjoin(self.dir_path,'Source','vector.inc')))
         
         
 
@@ -4532,6 +4597,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
+        # Extract pdf lines vectorised code
+        pdf_vars, pdf_data, pdf_lines = \
+                  self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=True)
+        replace_dict['pdf_vars_vec'] = pdf_vars
+        replace_dict['pdf_data_vec'] = pdf_data
+        replace_dict['pdf_lines_vec'] = pdf_lines
+
         # Lines that differ between subprocess group and regular
         if proc_id:
             replace_dict['numproc'] = int(proc_id)
@@ -4582,6 +4654,24 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         writer.writelines(lines)
 
         return True
+
+    #===========================================================================
+    # write_vector_size
+    #===========================================================================
+    def write_vector_size(self, fsock):
+        """Write the vector.inc which indicates how many event are handle in parralel."""
+
+    
+        try:
+            vector_size = self.opt['output_options']['vector_size']
+        except KeyError:
+            vector_size = 1
+        vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
+        
+        text = [" integer nb_page\n"," parameter (nb_page=%i)\n" % vector_size]
+
+        fsock.writelines(text)
+        return vector_size
 
     #===========================================================================
     # write_colors_file
@@ -5629,6 +5719,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         matrix_elements = subproc_group.get('matrix_elements')
 
+
+
         # Add the driver.f, all grouped ME's must share the same number of 
         # helicity configuration
         ncomb = matrix_elements[0].get_helicity_combinations()
@@ -5896,12 +5988,19 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         # Generate dsig process lines
         call_dsig_proc_lines = []
+        call_dsig_proc_lines_vec = []
         for iproc in range(len(matrix_elements)):
+            data = {"num": iproc + 1,
+                 "proc": matrix_elements[iproc].get('processes')[0].base_string()}
             call_dsig_proc_lines.append(\
-                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % \
-                {"num": iproc + 1,
-                 "proc": matrix_elements[iproc].get('processes')[0].base_string()})
+                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
+                )
+            call_dsig_proc_lines_vec.append(\
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT) ! %(proc)s" % data
+                )
+
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
+        replace_dict['call_dsig_proc_lines_vec'] = "\n".join(call_dsig_proc_lines_vec)
 
         ncomb=matrix_elements[0].get_helicity_combinations()
         replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
@@ -6117,6 +6216,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                                 nexternal, ninitial,
                                                      model)
 
+
+
+
     #===========================================================================
     # write_run_configs_file
     #===========================================================================
@@ -6197,6 +6299,11 @@ class UFO_model_to_mg4(object):
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
         self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)   
+        try:
+            vector_size = self.opt['output_options']['vector_size']
+        except KeyError:
+            vector_size = 1
+        self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
        
     
     def pass_parameter_to_case_insensitive(self):
@@ -6462,16 +6569,16 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """double precision G
-                common/strong/ G
+        header = """double precision G, all_G(%(vec_size)i)
+                common/strong/ G, all_G
                  
                 double complex gal(2)
                 common/weak/ gal
                 
-                double precision MU_R
-                common/rscale/ MU_R
+                double precision MU_R, all_mu_r(%(vec_size)i)
+                common/rscale/ MU_R, all_mu_r
 
-                """        
+                """   % {'vec_size': self.vector_size+1}     
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
                 parameter(Nf=%dd0)
@@ -6551,8 +6658,18 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+w for w in widths])+'\n\n')
         
         # Write the Couplings
+        if self.coups_indep:
+            c_list = [coupl.name for coupl in self.coups_indep]  
+            fsock.writelines('double complex '+', '.join(c_list)+'\n') 
+
+        if self.vector_size >1:
+            c_list = ['%s(%s)' %(coupl.name, self.vector_size+1) for coupl in self.coups_dep]
+        else:
+            c_list = [coupl.name for coupl in self.coups_dep] 
+        
+        fsock.writelines('double complex '+', '.join(c_list)+'\n')   
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
-        fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
+
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
         if self.opt['mp']:
             mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
@@ -6871,10 +6988,10 @@ class UFO_model_to_mg4(object):
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                                               dp=True,mp=False)
+                                        dp=True, mp=False, vec=self.vector_size>1)
             if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                                              dp=False,mp=True)
+                                           dp=False, mp=True, vec=self.vector_size>1)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
@@ -6915,7 +7032,8 @@ class UFO_model_to_mg4(object):
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                    ['call coup%(i)s(%(args)s)' %  {'i': nb_coup_indep + i + 1,
+                                                    'args':'1' if self.vector_size >1 else ''} \
                       for i in range(nb_coup_dep)]))
         if self.opt['mp']:
             fsock.writelines('\n'.join(\
@@ -6923,16 +7041,21 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        fsock.writelines("""subroutine update_as_param()
+        fsock.writelines("""subroutine update_as_param(%(args)s)
 
                             implicit none
+                            %(args_dep)s
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
                             logical updateloop
                             common /to_updateloop/updateloop
-                            include \'model_functions.inc\'""")
+                            include \'model_functions.inc\'""" %
+                            {'args': 'vecid' if self.vector_size >1 else '',
+                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            }
+                            )
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
@@ -6946,17 +7069,22 @@ class UFO_model_to_mg4(object):
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
-                    ['call coup%s()' %  (nb_coup_indep + i + 1) \
+                    ['call coup%(i)s(%(args)s)' %  {"i": nb_coup_indep + i + 1, "args": 'vecid' if self.vector_size >1 else ''} \
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        fsock.writelines("""subroutine update_as_param2(mu_r2,as2)
+        fsock.writelines("""subroutine update_as_param2(mu_r2,as2, %(args)s)
 
                             implicit none
+                            
                             double precision PI
                             parameter  (PI=3.141592653589793d0)
                             double precision mu_r2, as2
-                            include \'model_functions.inc\'""")
+                            %(args_dep)s
+                            include \'model_functions.inc\'"""%
+                            {'args': 'vecid' if self.vector_size >1 else '',
+                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            })
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
         fsock.writelines("""
@@ -6964,8 +7092,14 @@ class UFO_model_to_mg4(object):
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
-                            CALL UPDATE_AS_PARAM()
-                         """)
+                            CALL UPDATE_AS_PARAM(%(args)s)
+                         """%
+                            {'args': 'vecid' if self.vector_size >1 else '',
+                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            }
+                            )
+                         
+                         
         fsock.writelines('''\n return \n end\n''')
 
         if self.opt['mp']:
@@ -6997,7 +7131,7 @@ class UFO_model_to_mg4(object):
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
 
-    def create_couplings_part(self, nb_file, data, dp=True, mp=False):
+    def create_couplings_part(self, nb_file, data, dp=True, mp=False, vec=False):
         """ create couplings[nb_file].f containing information coming from data.
         Outputs the computation of the double precision and/or the multiple
         precision couplings depending on the parameters dp and mp.
@@ -7007,10 +7141,15 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('%scouplings%s.f' %('mp_' if mp and not dp else '',
                                                      nb_file), format='fortran')
-        fsock.writelines("""subroutine %scoup%s()
+        fsock.writelines("""subroutine %(mp)scoup%(nb_file)s( %(args)s)
           
           implicit none
-          include \'model_functions.inc\'"""%('mp_' if mp and not dp else '',nb_file))
+          %(def_args)s
+          include \'model_functions.inc\'"""% {'mp': 'mp_' if mp and not dp else '',
+                                               'nb_file': nb_file,
+                                               'args': 'vecid' if vec else '',
+                                               'def_args': '  integer vecid' if vec else ''})
+
         if dp:
             fsock.writelines("""
               double precision PI, ZERO
@@ -7027,12 +7166,16 @@ class UFO_model_to_mg4(object):
                         """%self.mp_real_format) 
 
         for coupling in data:
-            if dp:            
-                fsock.writelines('%s = %s' % (coupling.name,
-                                          self.p_to_f.parse(coupling.expr)))
+            if dp:  
+
+                fsock.writelines('%(name)s%(index)s = %(expr)s' % {'name': coupling.name,
+                                          'index': '(vecid)' if vec else '',
+                                          'expr': self.p_to_f.parse(coupling.expr)})
             if mp:
-                fsock.writelines('%s%s = %s' % (self.mp_prefix,coupling.name,
-                                          self.mp_p_to_f.parse(coupling.expr)))
+                fsock.writelines('%(mp)s%(name)s%(index)s = %(expr)s' % {'mp': self.mp_prefix,
+                                          'name': coupling.name,
+                                          'index': '(vecid)' if vec else '',
+                                          'expr': self.mp_p_to_f.parse(coupling.expr)})
         fsock.writelines('end')
 
     def create_model_functions_inc(self):

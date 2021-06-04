@@ -425,7 +425,8 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
          ipart(2,imo)=ipart(2,ida1)
       else
          write(*,*) idmo,'>', idda1, idda2, 'color', get_color(idmo),'>', get_color(idda1), get_color(idda2)
-         write(*,*) "failed for ipartupdate. Please retry without MLM/default dynamical scale"
+         write(*,*) "failed for ipartupdate."
+         write(*,*) "Please retry without MLM/default dynamical scale"
          stop 3
       endif
       
@@ -1778,3 +1779,48 @@ c            s_rwfact=0d0
       return
       end
       
+      subroutine update_scale_coupling(all_p, all_wgt, nb_page)
+      implicit none
+
+      include 'genps.inc'
+      include 'run.inc'
+      include 'nexternal.inc'
+#      include 'maxparticles.inc'
+      
+      double precision all_p(4*maxdim/3+14,*), all_wgt(*)
+      integer i,j,k, nb_page
+
+      logical setclscales
+      external setclscales
+      
+      
+c     integer firsttime
+c      data firsttime/.true./
+c      save firsttime
+      
+      do i =1, nb_page
+         if(.not.setclscales(all_p(1,i) , .false.))then
+            all_wgt(i) = 0d0
+           return
+        endif
+c      endif
+
+c     Set couplings in model files
+        if(.not.fixed_ren_scale.or..not.fixed_couplings) then
+           if (.not.fixed_couplings)then
+              write(*,*) 'form factor with fixed_couplings not supported anymore'
+              write(*,*) ' please update model to use lorentz structure        '
+              stop 5
+c              pp(:)=all_p(:,i)
+           endif
+           call update_as_param(i)
+        endif
+
+c      IF (FIRSTTIME) THEN
+c        FIRSTTIME=.FALSE.
+c        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
+c      ENDIF
+
+      enddo
+      return
+      end

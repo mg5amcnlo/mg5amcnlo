@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P,ANS, IVEC)
 C 
 %(info_lines)s
 C 
@@ -31,6 +31,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    INTEGER IVEC
 c
 c global (due to reading writting) 
 c
@@ -137,7 +138,7 @@ C ----------
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,IVEC)
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
@@ -192,7 +193,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,IVEC)
 
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -255,7 +256,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,IVEC)
 C  
 %(info_lines)s
 C
@@ -291,7 +292,7 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-    INTEGER IHEL
+    INTEGER IHEL, IVEC
 C  
 C LOCAL VARIABLES 
 C  

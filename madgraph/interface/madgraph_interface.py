@@ -2485,7 +2485,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4']):
         "Complete the output command"
 
         possible_format = self._export_formats

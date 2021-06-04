@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P,ANS, IVEC)
 C 
 %(info_lines)s
 C 
@@ -30,6 +30,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    INTEGER IVEC 
 C  
 C LOCAL VARIABLES 
 C  
@@ -101,7 +102,7 @@ c   Kiran please check if you need this:
        TS(I)=0d0
     ENDDO
 
-    call MATRIX%(proc_id)s(P ,JC(1), TS)
+    call MATRIX%(proc_id)s(P ,JC(1), TS, iVEC)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -154,7 +155,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,IC, TS)
+Subroutine  MATRIX%(proc_id)s(P,IC, TS, IVEC)
 C  
 %(info_lines)s
 C
@@ -191,6 +192,7 @@ C
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
     REAL*8 TS(NCOMB)
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  

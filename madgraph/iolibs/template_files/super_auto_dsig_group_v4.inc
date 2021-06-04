@@ -293,21 +293,20 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
        IPROC_GLOBAL = IPROC
        ICONFIG = ICONF
 
-      DO I=1,nb_page 
-C     Redo clustering to ensure consistent with final IPROC
-      CUTSDONE=.FALSE.
+c     set the running scale (MLM not working)
+c     and update the couplings accordingly
+      call update_scale_coupling(all_p, nb_page)
 
-      	  IF(grouped_MC_grid_status.eq.0) then
+
+      IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
       	  ALLOW_HELICITY_GRID_ENTRIES = .False.
-      	  endif
-C     Call DSIGPROC to calculate sigma for process
-          xbk(:) = all_xbk(:, i)   
-          cm_rap = all_cm_rap(i)   
-          q2fact(:) = all_q2fact(:,i)
+      endif
 
+      call DSIGPROC_vec(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF, IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
 
-      ALL_OUT(I) = DSIGPROC(ALL_P(1, I),ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT(i),0)
+      
+      Do i =1,nb_page
 c     Reset ALLOW_HELICITY_GRID_ENTRIES
 	  ALLOW_HELICITY_GRID_ENTRIES = .True. 
 
@@ -801,6 +800,145 @@ C       Flip back local momenta P1 if cached
       RETURN
 
       END
+      
+C     ccccccccccccccccccccccccc      
+C      vectorize version
+C     ccccccccccccccccccccccccc
+
+      subroutine DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out)
+C     ****************************************************
+C     RETURNS DIFFERENTIAL CROSS SECTION 
+C     FOR A PROCESS
+C     Input:
+C     pp    4 momentum of external particles
+C     wgt   weight from Monte Carlo
+C     imode 0 run, 1 init, 2 reweight, 3 finalize
+C     Output:
+C     Amplitude squared and summed
+C     ****************************************************
+
+      IMPLICIT NONE
+      
+      INCLUDE 'genps.inc'
+      include 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INCLUDE 'coupl.inc'
+      INCLUDE 'run.inc'
+      include '../../Source/vector.inc'
+C     
+C     ARGUMENTS 
+C
+      double precision all_p(4*maxdim/3+14,nb_page)
+      double precision all_xbk(2, nb_page)
+      double precision all_q2fact(2, nb_page)
+      double precision all_cm_rap(nb_page)
+      double precision all_wgt(nb_page)
+      double precision all_out(nb_page)
+      DOUBLE PRECISION DSIGPROC
+      INTEGER ICONF,IPROC,IMIRROR,IMODE
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+C     
+C     GLOBAL VARIABLES
+C     
+C     SUBDIAG is vector of diagram numbers for this config
+C     IB gives which beam is which (for mirror processes)
+      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      COMMON/TO_SUB_DIAG/SUBDIAG,IB
+C     ICONFIG has this config number
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     CM_RAP has parton-parton system rapidity
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+c     To limit the number of calls to switchmom, use in DSIGPROC the cached variable last_iconfig. When set to -1, it ignores caching (to prevent undesired effect if this subroutine is called from elsewhere) and when set to 0, it resets the cache.
+	  INTEGER LAST_ICONF
+	  DATA LAST_ICONF/-1/
+	  COMMON/TO_LAST_ICONF/LAST_ICONF
+	  integer ivec
+C  
+C EXTERNAL FUNCTIONS
+C  
+%(dsig_def_line)s
+      LOGICAL PASSCUTS
+C     
+C     LOCAL VARIABLES 
+C     
+      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,NB_PAGE),xdum
+      INTEGER I,J,K,JC(NEXTERNAL)
+      INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
+      INCLUDE 'symperms.inc'
+	  SAVE ALL_P1,JC
+
+      if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
+        ICONFIG=SYMCONF(ICONF)
+        DO I=1,MAXSPROC
+          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+        ENDDO
+
+C       Set momenta according to this permutation
+	do IVEC=1, NB_PAGE
+	   CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+
+	    if (LAST_ICONF.ne.-1) then
+		  LAST_ICONF = ICONF
+		endif
+	enddo
+	endif	
+
+
+      IB(1)=1
+      IB(2)=2
+
+
+      IF(IMIRROR.EQ.2)THEN
+             DO IVEC=1,nb_page
+C       Flip momenta (rotate around x axis)
+        DO I=1,NEXTERNAL
+          ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
+          ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
+        ENDDO
+C       Flip beam identity
+        IB(1)=2
+        IB(2)=1
+	
+C       Flip x values (to get boost right)
+c        XDUM=XBK(1)
+c        XBK(1)=XBK(2)
+c        XBK(2)=XDUM
+C       Flip CM_RAP (to get rapidity right)
+c        CM_RAP=-all_cm_rap(ivec)
+      ENDDO
+      ENDIF
+
+      ALL_OUT(:)=0D0
+
+c      IF (PASSCUTS(P1)) THEN
+       DO IVEC=1,nb_page
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
+        nb_pass_cuts = nb_pass_cuts + 1
+      endif
+      ENDDO
+      
+%(call_dsig_proc_lines_vec)s
+c      ENDIF
+
+	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
+C       Flip back local momenta P1 if cached
+	DO IVEC=1,nb_page
+        DO I=1,NEXTERNAL	
+          ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
+          ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
+        ENDDO
+	ENDDO
+	  endif
+
+      RETURN
+
+      END
+      
 
 C     -----------------------------------------
 C     Subroutine to map three positive integers

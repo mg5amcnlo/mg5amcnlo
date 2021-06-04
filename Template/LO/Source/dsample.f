@@ -14,9 +14,7 @@ c     dsig       Function to be integrated
 c**************************************************************************
       implicit none
       include 'genps.inc'
-c      include 'vectorization.inc'
-      integer nb_page
-      parameter (nb_page=2)
+      include 'vector.inc'
 c     
 c Arguments
 c
