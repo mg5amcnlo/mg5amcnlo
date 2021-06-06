@@ -192,7 +192,6 @@ c                 need to restore common block
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
                enddo
                call select_grouping(imirror, iproc, iconf, all_wgt, nb_page)
-               write(*,*) 'selected ', imirror, iproc, iconf
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
      &                          iconf, iproc, imirror, all_fx,nb_page)
 

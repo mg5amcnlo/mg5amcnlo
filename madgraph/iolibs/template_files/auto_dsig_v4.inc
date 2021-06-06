@@ -138,7 +138,7 @@ C        Apply the bias weight specified in the run card (default is 1.0)
 
          IF (DSIGUU.LT.1D199) THEN
 c           Set sign of dsig based on sign of PDF and matrix element
-            DSIG%(proc_id)s=DSIGN(%(dsig_line)s,DSIGUU*PD(IPSEL))
+            DSIG%(proc_id)s=DSIGN(%(conv)spd(0)*DSIGUU,DSIGUU*PD(IPSEL))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0
@@ -304,7 +304,7 @@ C        Apply the bias weight specified in the run card (default is 1.0)
 
          IF (DSIGUU.LT.1D199) THEN
 c           Set sign of dsig based on sign of PDF and matrix element
-            ALL_OUT(IVEC)=DSIGN(%(dsig_line)s,DSIGUU*ALL_PD(IPSEL,IVEC))
+            ALL_OUT(IVEC)=DSIGN(%(conv)sall_pd(0,IVEC)*dsiguu,DSIGUU*ALL_PD(IPSEL,IVEC))
          ELSE
              write(*,*) "Error in matrix element"
              DSIGUU=0D0

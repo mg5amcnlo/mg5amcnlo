@@ -4584,12 +4584,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if ninitial == 1:
             # No conversion, since result of decay should be given in GeV
             dsig_line = "pd(0)*dsiguu"
+            conv_factor=""
         else:
             # Convert result (in GeV) to pb
             dsig_line = "pd(0)*conv*dsiguu"
+            conv_factor="conv*"
 
         replace_dict['dsig_line'] = dsig_line
-
+        replace_dict['conv'] = conv_factor
         # Extract pdf lines
         pdf_vars, pdf_data, pdf_lines = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
