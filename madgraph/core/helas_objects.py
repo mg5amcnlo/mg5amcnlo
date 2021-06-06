@@ -596,6 +596,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = [] # check which type of dependencies for running for each coupling
         # The color index used in this wavefunction
         self['color_key'] = 0
         # Properties relating to the leg/vertex
@@ -888,6 +889,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                isinstance(value, int) and \
                isinstance(arguments[2], base_objects.Model):
             model = arguments[2]
+            self.model = model
             if name == 'interaction_id':
                 self.set('interaction_id', value)
                 if value > 0:
@@ -904,6 +906,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        #self.set('coup_deps', [model.get('coupling_dep')[c[1:]] if c.startswith('-') else model.get('coupling_dep')[c] for c in self.get('coupling')])
+                        #misc.sprint(self.get('coupling'), self.get('coup_deps'))
+                        
+
                 return True
             elif name == 'particle':
                 self.set('particle', model.get('particle_dict')[value])
@@ -1572,8 +1578,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 output['coup%d'%i] = coup[1:] if coup.startswith('-') else coup  
             else:
                 output['coup%d'%i] = coup
-
-            output['vec%d'%i] = "(ivec)"
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+            if 'aS' in self.model.get('coupling_dep')[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
               
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
@@ -2536,6 +2547,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         self['inter_color'] = None
         self['lorentz'] = []
         self['coupling'] = ['none']
+        self['coup_deps'] = []
         # The Lorentz and color index used in this amplitude
         self['color_key'] = 0
         # Properties relating to the vertex
@@ -2757,6 +2769,9 @@ class HelasAmplitude(base_objects.PhysicsObject):
                         self.set('lorentz', [inter.get('lorentz')[0]])
                     if inter.get('couplings'):
                         self.set('coupling', [list(inter.get('couplings').values())[0]])
+                        self.model = arguments[2]
+                        
+                        
                 return True
             else:
                 six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
@@ -3182,7 +3197,15 @@ class HelasAmplitude(base_objects.PhysicsObject):
         #fixed argument
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
-            output['vec%d'%i] = "(ivec)"
+            c = output['coup%d'%i]
+            if c.startswith('-'):
+                c = c[1:]
+
+            if 'aS' in self.model.get('coupling_dep')[c]:
+                output['vec%d'%i] = "(ivec)"
+            else:
+                output['vec%d'%i] = ""
+
 
         output['out'] = self.get('number') - flip
         output['propa'] = ''

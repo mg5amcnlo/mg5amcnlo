@@ -1782,9 +1782,16 @@ c            s_rwfact=0d0
       subroutine update_scale_coupling(all_p, all_wgt, nb_page)
       implicit none
 
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
+      
       include 'genps.inc'
       include 'run.inc'
       include 'nexternal.inc'
+      include 'coupl.inc'
 #      include 'maxparticles.inc'
       
       double precision all_p(4*maxdim/3+14,*), all_wgt(*)
@@ -1792,13 +1799,26 @@ c            s_rwfact=0d0
 
       logical setclscales
       external setclscales
-      
+
+      double precision alphas
+      external alphas
       
 c     integer firsttime
 c      data firsttime/.true./
 c      save firsttime
-      
+
       do i =1, nb_page
+
+         if(.not.fixed_ren_scale) then
+            call set_ren_scale(all_p(1,i),scale)
+            if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
+         endif
+
+         if(.not.fixed_fac_scale) then
+            call set_fac_scale(all_p(1,i),q2fact)
+         endif
+
+      
          if(.not.setclscales(all_p(1,i) , .false.))then
             all_wgt(i) = 0d0
            return

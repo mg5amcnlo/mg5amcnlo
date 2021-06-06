@@ -4667,7 +4667,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         except KeyError:
             vector_size = 1
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
-        
+        vector_size = max(1, vector_size)
+
         text = [" integer nb_page\n"," parameter (nb_page=%i)\n" % vector_size]
 
         fsock.writelines(text)
@@ -6302,7 +6303,7 @@ class UFO_model_to_mg4(object):
         try:
             vector_size = self.opt['output_options']['vector_size']
         except KeyError:
-            vector_size = 1
+            vector_size = 0
         self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
        
     
@@ -6662,7 +6663,7 @@ class UFO_model_to_mg4(object):
             c_list = [coupl.name for coupl in self.coups_indep]  
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
-        if self.vector_size >1:
+        if self.vector_size:
             c_list = ['%s(%s)' %(coupl.name, self.vector_size+1) for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
@@ -6988,10 +6989,10 @@ class UFO_model_to_mg4(object):
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                        dp=True, mp=False, vec=self.vector_size>1)
+                                        dp=True, mp=False, vec=self.vector_size)
             if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                           dp=False, mp=True, vec=self.vector_size>1)
+                                           dp=False, mp=True, vec=self.vector_size)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
@@ -7033,7 +7034,7 @@ class UFO_model_to_mg4(object):
 
         fsock.writelines('\n'.join(\
                     ['call coup%(i)s(%(args)s)' %  {'i': nb_coup_indep + i + 1,
-                                                    'args':'1' if self.vector_size >1 else ''} \
+                                                    'args':'1' if self.vector_size  else ''} \
                       for i in range(nb_coup_dep)]))
         if self.opt['mp']:
             fsock.writelines('\n'.join(\
@@ -7052,8 +7053,8 @@ class UFO_model_to_mg4(object):
                             logical updateloop
                             common /to_updateloop/updateloop
                             include \'model_functions.inc\'""" %
-                            {'args': 'vecid' if self.vector_size >1 else '',
-                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            {'args': 'vecid' if self.vector_size  else '',
+                            'args_dep': ' integer vecid' if self.vector_size  else ''
                             }
                             )
         fsock.writelines("""include \'input.inc\'
@@ -7069,11 +7070,11 @@ class UFO_model_to_mg4(object):
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
 
         fsock.writelines('\n'.join(\
-                    ['call coup%(i)s(%(args)s)' %  {"i": nb_coup_indep + i + 1, "args": 'vecid' if self.vector_size >1 else ''} \
+                    ['call coup%(i)s(%(args)s)' %  {"i": nb_coup_indep + i + 1, "args": 'vecid' if self.vector_size  else ''} \
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
-        fsock.writelines("""subroutine update_as_param2(mu_r2,as2, %(args)s)
+        fsock.writelines("""subroutine update_as_param2(mu_r2,as2 %(args)s)
 
                             implicit none
                             
@@ -7082,8 +7083,8 @@ class UFO_model_to_mg4(object):
                             double precision mu_r2, as2
                             %(args_dep)s
                             include \'model_functions.inc\'"""%
-                            {'args': 'vecid' if self.vector_size >1 else '',
-                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            {'args': ',vecid' if self.vector_size else '',
+                            'args_dep': ' integer vecid' if self.vector_size else ''
                             })
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
@@ -7094,8 +7095,8 @@ class UFO_model_to_mg4(object):
 
                             CALL UPDATE_AS_PARAM(%(args)s)
                          """%
-                            {'args': 'vecid' if self.vector_size >1 else '',
-                            'args_dep': ' integer vecid' if self.vector_size >1 else ''
+                            {'args': 'vecid' if self.vector_size  else '',
+                            'args_dep': ' integer vecid' if self.vector_size else ''
                             }
                             )
                          
