@@ -385,10 +385,12 @@ class DiagramTagChainLink(object):
                 try:
                     return self.vertex_id[0] < other.vertex_id[0]
                 except TypeError as error:
-                    if error.args == "'<' not supported between instances of 'tuple' and 'str'":
+                    if error.args == ("'<' not supported between instances of 'tuple' and 'str'",):
                         return False
-                    else:
+                    elif error.args == ("'<' not supported between instances of 'str' and 'tuple'",):
                         return True
+                    else:
+                        raise Exception
                     
 
         for i, link in enumerate(self.links):
