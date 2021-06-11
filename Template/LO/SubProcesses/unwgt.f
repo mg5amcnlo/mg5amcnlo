@@ -183,7 +183,7 @@ c     apply the boost
       end
 
 
-      SUBROUTINE unwgt(px,wgt,numproc)
+      SUBROUTINE unwgt(px,wgt,numproc, ivec)
 C**************************************************************************
 C     Determines if event should be written based on its weight
 C**************************************************************************
@@ -198,6 +198,7 @@ c     Arguments
 c
       double precision px(0:3,nexternal),wgt
       integer numproc
+      integer ivec
 c
 c     Local
 c
@@ -248,9 +249,9 @@ c           Set sign of uwgt to sign of wgt
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt,numproc,.True.)
+            call write_leshouche(p,uwgt,numproc,.True., ivec)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.)
+            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.,ivec)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -450,7 +451,7 @@ c      endif
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events)
+      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events, ivec)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -476,6 +477,7 @@ c
       double precision p(0:3,nexternal),wgt
       integer numproc
       logical do_write_events
+      integer ivec
 c
 c     Local
 c
@@ -670,7 +672,7 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc,flip)
+     $                npart,numproc,flip, ivec)
 
       if (nincoming.eq.1)then
         do i=-nexternal+3,2*nexternal-3

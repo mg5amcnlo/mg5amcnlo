@@ -70,8 +70,9 @@ C GLOBAL VARIABLES
 C  
     logical init_mode
     common /to_determine_zero_hel/init_mode
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
+    include '../../Source/vector.inc'
+    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW, nb_page)
+    COMMON/TO_JAMPS/JAMP2
    
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
@@ -122,9 +123,9 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=%(ncolor)d
-        DO I=1,INT(JAMP2(0))
-            JAMP2(I)=0D0
+        JAMP2(0,ivec)=%(ncolor)d
+        DO I=1,INT(JAMP2(0,ivec))
+            JAMP2(I,ivec)=0D0
         ENDDO
     ENDIF
     ANS = 0D0
@@ -138,7 +139,7 @@ C ----------
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2,IVEC)
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
@@ -193,7 +194,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2,IVEC)
 
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -256,7 +257,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,IVEC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2,IVEC)
 C  
 %(info_lines)s
 C
@@ -315,9 +316,10 @@ C
       INTEGER SQSOINDEX%(proc_id)s
 C  
 C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
+C
+   include '../../Source/vector.inc'
+    Double Precision amp2(maxamps), jamp2(0:maxflow, nb_page)
+    common/to_jamps/ jamp2
     include 'coupl.inc'
 
 	double precision small_width_treatment
@@ -385,7 +387,7 @@ endif
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
 		  %(select_configs_if)s
-            Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
+            Jamp2(i,ivec)=Jamp2(i,ivec)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
 		  %(select_configs_endif)s
 		enddo
 	  enddo

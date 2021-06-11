@@ -112,7 +112,7 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
-         CALL SMATRIX%(proc_id)s(P1,DSIGUU)
+         CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      DSIG%(proc_id)s = DSIGUU*CONV
@@ -132,7 +132,7 @@ C     Select a flavor combination (need to do here for right sign)
          DSIGUU=DSIGUU*REWGT(PP)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
-         DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d)
+         DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d,1)
 
          DSIGUU=DSIGUU*NFACT
 
@@ -147,7 +147,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d)
+           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d,1)
         ENDIF
 %(passcuts_end)s
       END
@@ -278,8 +278,12 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-         CALL SMATRIX%(proc_id)s(P1,DSIGUU, IVEC)
-		 IF (IMODE.EQ.5) THEN
+         CALL SMATRIX%(proc_id)s(P1,ALL_OUT(IVEC), IVEC)
+	 ENDDO
+
+	 DO IVEC=1,NB_PAGE
+	 DSIGUU = ALL_OUT(IVEC)
+	 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      ALL_OUT(IVEC) = DSIGUU*CONV
 			else
@@ -295,10 +299,20 @@ C     Select a flavor combination (need to do here for right sign)
             R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
          ENDDO
 
+	 XBK(:) = ALL_XBK(:,IVEC)
+c	 CM_RAP = ALL_CM_RAP(IVEC)
+	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+
+	 if(frame_id.ne.6)then
+           call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, P1)
+         else
+           P1 = ALL_PP(:,:,IVEC)
+         endif
+
          DSIGUU=DSIGUU*REWGT(P1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
-         DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,%(numproc)d)
+         DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,%(numproc)d, IVEC)
 
          DSIGUU=DSIGUU*NFACT
 
@@ -313,7 +327,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d)
+           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, IVEC)
         ENDIF
 	ENDDO
 %(passcuts_end)s

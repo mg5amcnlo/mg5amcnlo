@@ -49,9 +49,10 @@ C
 
 C  
 C GLOBAL VARIABLES
-C  
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
-    COMMON/TO_AMPS/  AMP2,       JAMP2
+C
+    include '../../Source/vector.inc'
+    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW, NB_PAGE)
+    COMMON/TO_AMPS/JAMP2
 
 
 C
@@ -90,9 +91,9 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=%(ncolor)d
-        DO I=1,INT(JAMP2(0))
-            JAMP2(I)=0D0
+        JAMP2(0,IVEC)=%(ncolor)d
+        DO I=1,INT(JAMP2(0,ivec))
+            JAMP2(I,ivec)=0D0
         ENDDO
     ENDIF
     ANS = 0D0
@@ -102,7 +103,7 @@ c   Kiran please check if you need this:
        TS(I)=0d0
     ENDDO
 
-    call MATRIX%(proc_id)s(P ,JC(1), TS, iVEC)
+    call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2,iVEC)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -155,7 +156,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,IC, TS, IVEC)
+Subroutine  MATRIX%(proc_id)s(P,IC, TS, AMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -217,9 +218,10 @@ C
 
 C  
 C GLOBAL VARIABLES
-C  
-    Double Precision amp2(maxamps), jamp2(0:maxflow)
-    common/to_amps/  amp2,       jamp2
+C
+    include '../../Source/vector.inc'
+    Double Precision amp2(maxamps), jamp2(0:maxflow, nb_page)
+    common/to_jamps/        jamp2
     include 'coupl.inc'
 
        double precision tmin_for_channel
@@ -265,7 +267,7 @@ ${jamp_lines}
     	  DO M = 1, NAMPSO
     		DO N = 1, NAMPSO
 			%(select_configs_if)s
-                Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
+                Jamp2(i,ivec)=Jamp2(i,ivec)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
 			%(select_configs_endif)s
     		enddo
     	  enddo

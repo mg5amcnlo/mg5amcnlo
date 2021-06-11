@@ -1,5 +1,5 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
-     $                      npart,numproc,flip)
+     $                      npart,numproc,flip, ivec)
 
       implicit none
       include 'genps.inc'
@@ -11,6 +11,7 @@
       include 'message.inc'
       include 'run.inc'
 
+      integer ivec
       integer jpart(7,-nexternal+3:2*nexternal-3),npart,ip,numproc
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision rscale,aqcd,aqed,targetamp(maxflow)
@@ -45,8 +46,9 @@ c     Variables for combination of color indices (including multipart. vert)
       save prmass,prwidth,pow
       data first_time /.true./
 
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
+      include '../../Source/vector.inc'
+      Double Precision jamp2(0:maxflow, nb_page)
+      common/to_jamps/       jamp2
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -120,19 +122,19 @@ c    Choose a color flow which is certain to work with the propagator
 c    structure of the chosen diagram and use that as an alternative
 c   
 
-      nc = int(jamp2(0))
+      nc = int(jamp2(0, ivec))
       is_LC = .true.
       maxcolor=0
       if(nc.gt.0)then
       if(icolamp(1,%(iconfig)s,iproc)) then
-        targetamp(1)=jamp2(1)
+        targetamp(1)=jamp2(1,ivec)
 c        print *,'Color flow 1 allowed for config ',lconfig
       else
         targetamp(1)=0d0
       endif
       do ic =2,nc
         if(icolamp(ic,%(iconfig)s,iproc))then
-          targetamp(ic) = jamp2(ic)+targetamp(ic-1)
+          targetamp(ic) = jamp2(ic,ivec)+targetamp(ic-1)
 c          print *,'Color flow ',ic,' allowed for config ',lconfig,targetamp(ic)
         else
           targetamp(ic)=targetamp(ic-1)
@@ -142,9 +144,9 @@ c     ensure that at least one leading color is different of zero if not allow
 c     all subleading color. 
       if (targetamp(nc).eq.0)then
        is_LC = .false.
-       targetamp(1)=jamp2(1)
+       targetamp(1)=jamp2(1,ivec)
        do ic =2,nc
-           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
+           targetamp(ic) = jamp2(ic,ivec)+targetamp(ic-1)
        enddo
       endif
 

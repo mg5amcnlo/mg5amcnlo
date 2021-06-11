@@ -1254,7 +1254,7 @@ c
       return
       end
 
-      double precision function custom_bias(p, original_weight, numproc)
+      double precision function custom_bias(p, original_weight, numproc, ivec)
 c***********************************************************
 c     Returns a bias weight as instructed by the bias module
 c***********************************************************
@@ -1268,7 +1268,7 @@ c***********************************************************
 
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       integer numproc
-
+      integer ivec
       double precision original_weight
 
       double precision bias_weight
@@ -1282,7 +1282,7 @@ C     The weight specified at this stage is irrelevant since we
 C     use do_write_events set to .False.
       AlreadySetInBiasModule = .False.      
       if (requires_full_event_info) then
-        call write_leshouche(p,-1.0d0,numproc,.False.)
+        call write_leshouche(p,-1.0d0,numproc,.False., ivec)
 C     Write the event in the string evt_record, part of the
 C     lhe_event_info common block
         event_record(:) = ''
