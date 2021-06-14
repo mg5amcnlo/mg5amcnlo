@@ -32,7 +32,14 @@ C GLOBAL VARIABLES
 C                                                                     
       INTEGER              IPROC                                      
       DOUBLE PRECISION PD(0:MAXPROC)                                  
-      COMMON /SubProc/ PD, IPROC                                      
+      COMMON /SubProc/ PD, IPROC
+
+
+      INTEGER             IPROS, IPROSS                           
+      DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
+      COMMON /PDFvalues/ PD1, PD2, IPROS, IPROSS 
+
+                                      
       include "coupl.inc"                                             
       include "run.inc"                                               
       integer imirror
