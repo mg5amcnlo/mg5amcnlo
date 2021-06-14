@@ -94,7 +94,7 @@ c
 c
 c     RpA-choice
 c
-      integer    RPA_choice                                    
+      logical    RPA_choice                                    
       common/RPA/ RPA_choice 
 
 
