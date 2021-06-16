@@ -616,6 +616,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         linkfiles = ['BinothLHADummy.f',
                      'check_poles.f',
                      'check_sudakov.f',
+                     'check_sudakov_angle2.f',
                      'ewsudakov_functions.f',
                      'momentum_reshuflling.f',
                      'MCmasses_HERWIG6.inc',
