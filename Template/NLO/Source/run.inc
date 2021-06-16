@@ -92,7 +92,4 @@ c
 c     RpA-choice
 c
       logical    rpa_choice                                    
-      common/RPA/ rpa_choice 
-
-
-
+      common/RPA/ rpa_choice
