@@ -57,6 +57,9 @@ POLES= $(RUN) check_poles.o BinothLHA.o
 # Files for check_sudakov
 EWSUD= $(RUN) check_sudakov.o BinothLHA.o
 
+# Files for check_sudakov_angle2
+EWSUD2= $(RUN) check_sudakov_angle2.o BinothLHA.o
+
 # Files for tests
 TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o
 
@@ -104,6 +107,10 @@ test_soft_col_limits: $(TEST)
 check_sudakov: $(EWSUD) $(libmadloop)
 	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_sudakov
+
+check_sudakov_angle2: $(EWSUD2) $(libmadloop)
+	$(FC) -o check_sudakov_angle2 $(EWSUD2) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	strip check_sudakov_angle2
 
 check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
