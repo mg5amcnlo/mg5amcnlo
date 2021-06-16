@@ -2294,10 +2294,10 @@ c add the weights to the array
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
 
-      if (rpa_choice=.True.)
-      open(3,file = "/projet/pth/safronov/MG5/t3.txt", status = "unknown")
-      write (3,*) 'eta rabotaet epta'
-      close(3)
+      if (rpa_choice.eq..false.) then
+      	open(3,file = "/projet/pth/safronov/MG5/t3.txt", status = "unknown")
+      	write (3,*) 'eta rabotaet epta'
+      	close(3)
       endif
       return
       end
