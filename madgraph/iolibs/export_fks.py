@@ -3564,14 +3564,6 @@ Parameters              %(params)s\n\
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
-            # Get PDF data lines for all initial states
-            for i in [0,1]:
-                pdf_data_lines += "DATA " + \
-                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
-                                                 for pdg in initial_states[i]]) + \
-                                                 "/%d*1D0/" % len(initial_states[i]) + \
-                                                 "\n"
-
             # Get PDF values for the different initial states
             for i, init_states in enumerate(initial_states):
                 if not mirror:
@@ -3588,9 +3580,9 @@ Parameters              %(params)s\n\
                                  % (ibeam, ibeam)
 
                 for initial_state in init_states:
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
                                     ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
@@ -3604,7 +3596,7 @@ Parameters              %(params)s\n\
                                      "%s%d=0d0\n") % \
                                          (pdf_codes[initial_state],i + 1)                                
                         else:
-                            if abs(pdgtopdf[initial_state]) <= 7:  
+                            if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
                                     ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
@@ -3624,11 +3616,11 @@ Parameters              %(params)s\n\
             pdf_lines = pdf_lines + "PD(0) = 0d0\nIPROC = 0\n"
             for proc in processes:
                 process_line = proc.base_string()
-                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line + "b"
+                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC) = "
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in pdf_codes.keys():
+                    if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
                     else:
@@ -3636,36 +3628,6 @@ Parameters              %(params)s\n\
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
 
-	    pdf_lines = pdf_lines + "\nPD2(0) = 0d0\nIPROS = 0\n"
-            for proc in processes:
-                process_line = proc.base_string()
-                pdf_lines = pdf_lines + "\nIPROS=IPROS+1 ! " + process_line + "b"
-                pdf_lines = pdf_lines + "\nPD2(IPROS) = "
-                for ibeam in [2]:
-                    initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in pdf_codes.keys():
-                        pdf_lines = pdf_lines + "%s%d" % \
-                                    (pdf_codes[initial_state], ibeam) + "\n"
-			#pdf_lines = pdf_lines[:-1] + "\n"
-                    else:
-                        pdf_lines = pdf_lines + "1d0*"
-
-	    pdf_lines = pdf_lines + "\nPD1(0) = 0d0\nIPROSS = 0\n"
-            for proc in processes:
-                process_line = proc.base_string()
-                pdf_lines = pdf_lines + "\nIPROSS=IPROSS+1 ! " + process_line + "b"
-                pdf_lines = pdf_lines + "\nPD1(IPROSS) = "
-                for ibeam in [1]:
-                    initial_state = proc.get_initial_pdg(ibeam)
-                    if initial_state in pdf_codes.keys():
-                        pdf_lines = pdf_lines + "%s%d" % \
-                                    (pdf_codes[initial_state], ibeam) + "\n"
-			#pdf_lines = pdf_lines[:-1] + "\n"
-                    else:
-                        pdf_lines = pdf_lines + "1d0*"
-
-
-                
         # Remove last line break from pdf_lines
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
 

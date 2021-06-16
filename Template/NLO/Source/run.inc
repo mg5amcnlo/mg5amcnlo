@@ -88,14 +88,11 @@ c
       double precision mxxmin4pdg(0:25) 
       logical mxxpart_antipart(1:25) 
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart
-
-
-
 c
 c     RpA-choice
 c
-      logical    RPA_choice                                    
-      common/RPA/ RPA_choice 
+      logical    rpa_choice                                    
+      common/RPA/ rpa_choice 
 
 
 

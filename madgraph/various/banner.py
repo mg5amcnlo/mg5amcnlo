@@ -4132,7 +4132,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')
 
 ##############Anton
-        self.add_param('RPA_choice', False, fortran_name='RPA_choice')#,allowed=['False', 'True'])
+        #self.add_param('rpa_choice', False, fortran_name='rpa_choice')
 ##############Anton
 
         self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'])                
