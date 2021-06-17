@@ -1587,6 +1587,9 @@ C returns the gamma/z mixing of sdk_cew
       elseif (pdg.eq.22) then
         sdk_betaew_diag = -11d0/3d0
 
+        if (sud_mod.eq.1) sdk_betaew_diag = sdk_betaew_diag +  80d0/9d0
+
+
       endif
 
       return
