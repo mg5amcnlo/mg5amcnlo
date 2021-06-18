@@ -4,9 +4,9 @@ c Wrapper routines for the fixed order analyses
       implicit none
       include 'run.inc'
       include "nexternal.inc"
-      integer nwgt
-      character(len=50),allocatable :: weights_info(:),ctemp(:)
-      character*13 temp
+      integer nwgt,j,jmax
+      character(len=3000),allocatable :: weights_info(:),ctemp(:)
+      character*100 temp
       integer i,npdfs,ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
@@ -87,24 +87,61 @@ c     to "setrun")
             endif
 c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
+                if (nn.eq.1) then    
+           	jmax=1
+       		else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+           	jmax=3
+       		else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+	   	jmax=1
+       		endif
+           !write (3,*) 'first '
+
+           do j=1,jmax
+
                do n=0,nmemPDF(nn)
+                  
+                
                   nwgt=nwgt+1
                   allocate(ctemp(nwgt))
                   ctemp(1:nwgt-1)=weights_info
                   call move_alloc(ctemp,weights_info)
+
+               if (j==1) then !pp
+
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
-     $                 /' '//trim(adjustl(lhaPDFsetname(nn)))
-               enddo
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))
+                  !enddo
+
+               else if (j==2) then !pA
+
+                  write(temp,'(a4,i8)') "PDS=",lhaPDFid(nn)+n
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' multip by '/
+     $                 /trim(adjustl(lhaPDFsetname(2)))
+
+              else if (j==3) then !Ap
+
+                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(2)))//' m by '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))
+
+              endif
+	      enddo
+	      enddo
+              
+
             else
                nwgt=nwgt+1
                allocate(ctemp(nwgt))
                ctemp(1:nwgt-1)=weights_info
                call move_alloc(ctemp,weights_info)
-               write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+               write(temp,'(a4,i8)') "PDF=",nwgt!lhaPDFid(nn)
                write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $              /' '//trim(adjustl(lhaPDFsetname(nn)))
-            endif
+            
+             endif
          enddo
 c start with central member of the first set
          call InitPDFm(1,0)

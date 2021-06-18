@@ -2250,14 +2250,40 @@ c wgts() array to include the weights.
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
-      parameter (conv=389379660d0) ! conversion to picobarns
+
+      DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
+      COMMON /PDFvalues/ PD1, PD2
+
+      DOUBLE PRECISION f1_p(0:100,0:MAXPROC),f2_p(0:100,0:MAXPROC),f3_p(0:100,0:MAXPROC)
+      COMMON /PDFvalues/ f1_p,f2_p,f3_p
+
+      DOUBLE PRECISION f3(0:MAXPROC)
+      COMMON /PDFvalues/ f3
+
+      DOUBLE PRECISION xlum_mod(1:3)
+      parameter (conv=389379660d0)
+      integer jmax,j,ii,bb,k
+      
+
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+
       do nn=1,lhaPDFid(0)
 c Use as external loop the one over the PDF sets and as internal the one
 c over the icontr. This reduces the number of calls to InitPDF and
 c allows for better caching of the PDFs
+       if (nn.eq.1) then    
+           jmax=1
+       else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+           jmax=3
+       else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+	   jmax=1
+       endif
+
+      do j=1,jmax                   !---> nuclear PDFs need 2 additional passes on i to fill pA and Ap weights
+
          do n=0,nmemPDF(nn)
+ 
             iwgt=iwgt+1
             call weight_lines_allocated(nexternal,max_contr,iwgt
      $           ,max_iproc)
@@ -2280,24 +2306,86 @@ c Compute the luminosity
                      xlum=pd(ipr(i))
                   endif
                endif
+
+               xlum_mod(1)=0D0
+               xlum_mod(2)=0D0
+               xlum_mod(3)=0D0
+cc dlum() being called, the common "PDFvalues" is updated              
+
+               if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored; j=1 condition is redundant
+                      do ii=1,IPROC
+		        f1_p(i,ii)=PD1(ii)
+                        f2_p(i,ii)=PD2(ii)
+                      enddo
+	       endif
+               
 c Recompute the strong coupling: alpha_s in the PDF might change
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c add the weights to the array
-               wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
-     &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+
+              if (j==1) then! pp or AA case
+        
+		 f3(0)=0
+                 do ii=1,IPROC
+                 f3(ii)=PD1(ii)*PD2(ii)
+                 
+		 enddo
+
+		 do bb=1,IPROC
+		 xlum_mod(1)=xlum_mod(1)+f3(bb)*conv
+		 
+        	 enddo
+
+               wgts(iwgt,i)=xlum_mod(1) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+
+
                wgts(iwgt,i)=wgts(iwgt,i)*
-     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
-            enddo
-         enddo
-      enddo
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+
+              else if (j==2) then! pA case
+           
+                 f3(0)=0
+                 do ii=1,IPROC
+                 f3(ii)=f1_p(i,ii)*PD2(ii)!f3(ii)=PD1(ii)*PD2(ii)!f3(ii)=f1_p(i,ii)*PD2(ii)
+                 enddo
+		
+		 do bb=1,IPROC
+        	 xlum_mod(2)=xlum_mod(2) + f3(bb)*conv
+                 enddo
+			
+	       wgts(iwgt,i)=xlum_mod(2) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+
+               wgts(iwgt,i)=wgts(iwgt,i)*
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+  
+              else if (j==3) then! Ap case
+         
+                 f3(0)=0
+                 do ii=1,IPROC
+                 f3(ii)=PD1(ii)*f2_p(i,ii)
+                 enddo
+
+                 do bb=1,IPROC
+        	 xlum_mod(3) = xlum_mod(3) + f3(bb)*conv
+        	 enddo	
+
+               wgts(iwgt,i)=xlum_mod(3) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+
+
+               wgts(iwgt,i)=wgts(iwgt,i)*
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r)) 
+
+              endif
+              enddo ! i loop
+              enddo ! n loop
+              enddo ! j loop 
+              enddo ! nn loop
       call InitPDFm(1,0)
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
-      if (rpa_choice.eqv..false.) then
-      	open(3,file = "/projet/pth/safronov/MG5/t3.txt", status = "unknown")
-      	write (3,*) 'eta rabotaet epta'
-      	close(3)
-      endif
       return
       end
 
