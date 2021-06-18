@@ -10,6 +10,7 @@ import shutil
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+allcolors = list(mcolors.TABLEAU_COLORS.values()) + list(mcolors.BASE_COLORS.values())
 import matplotlib.font_manager as font_manager
 
 font_legend = font_manager.FontProperties(size=6)
@@ -22,22 +23,45 @@ def parse_sud_approx(infile):
     for l in lines:
         values = l.split()
 
-        # check if the line is not a text line, oterwise skip it
-        try:
-            energy = float(values[0])
-            helicity = values[1]
-            loop = float(values[2])
-            sud = float(values[3])
-            diff = float(values[4])
-            born = float(values[5])
-        except ValueError:
-            continue
+        if len(values) == 6: # these are the files without the angle information
 
-        point = {'energy': energy,
-                 'loop' : loop,
-                 'sud' : sud,
-                 'diff' : diff,
-                 'born' : born}
+            # check if the line is not a text line, oterwise skip it
+            try:
+                energy = float(values[0])
+                helicity = values[1]
+                loop = float(values[2])
+                sud = float(values[3])
+                diff = float(values[4])
+                born = float(values[5])
+            except ValueError:
+                continue
+
+            point = {'energy': energy,
+                     'loop' : loop,
+                     'sud' : sud,
+                     'diff' : diff,
+                     'born' : born}
+
+        elif len(values) == 7:
+
+            # check if the line is not a text line, oterwise skip it
+            try:
+                energy = float(values[0])
+                angle = float(values[1])
+                helicity = values[2]
+                loop = float(values[3])
+                sud = float(values[4])
+                diff = float(values[5])
+                born = float(values[6])
+            except ValueError:
+                continue
+
+            point = {'energy': energy,
+                     'angle' : angle,
+                     'loop' : loop,
+                     'sud' : sud,
+                     'diff' : diff,
+                     'born' : born}
 
         # add the point to the corresponding helicity
         try:
@@ -101,7 +125,156 @@ def get_helicity_label(pdir, h):
         return "%s: %s" % (h, helicities)
 
 
+def plot_sud_approx_angle(pdir):
+    print ('ANGLE', pdir)
+    sud_approx_r = os.path.join(pdir, 'Sud_Approx_angle2_Rij.dat')
+    helicities_r, points_r = parse_sud_approx(sud_approx_r)
+
+    sud_approx_s = os.path.join(pdir, 'Sud_Approx_angle2_noRij.dat')
+    helicities_s, points_s = parse_sud_approx(sud_approx_s)
+
+    fig, axes = plt.subplots(nrows = 4, ncols= 1, sharex = True, gridspec_kw = {'height_ratios' : [1,1,1,1]})
+    #fig = plt.figure()
+    fig.suptitle(get_pdir_title(pdir) + '\n $\sqrt{s}$=%d TeV' % (points_s[0][0]['energy']/1000))
+    fig.set_size_inches(5,7)
+    for ax in axes:
+        pos = ax.get_position()
+        ax.set_position([pos.x0 + 0.05, pos.y0, pos.width, pos.height])
+
+    ############ inset, plot born
+    ax = axes[0]
+    for h, plist_r, plist_s in zip(helicities_r, points_r, points_s):
+        # discard helicities with just one points
+        if len(plist_r) < 2:
+            continue
+        # plot individual helicities with thin lines, and
+        # summed helicities with thick ones
+        if h == 'summed':
+            thickness = 1.5
+            linecolor = 'black'
+        elif h == "lead-hel-summed":
+            thickness = 1.5
+            linecolor = 'red'
+        else:
+            thickness = 0.8
+            linecolor = allcolors[helicities_r.index(h)]
+
+        linestyle = 'solid'
+        ax.plot([p['angle'] for p in plist_r], [p['born'] for p in plist_r], label = "%s" % get_helicity_label(pdir,h),
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+
+        ax.set_ylabel('Born [GeV]$^{%d}$' % get_me_dimension(pdir))
+        ax.legend(prop = font_legend)
+
+
+    ############ inset, plot loop and the two sudakov approximations
+    ax = axes[1]
+    for h, plist_r, plist_s in zip(helicities_r, points_r, points_s):
+        # discard helicities with just one points
+        if len(plist_r) < 2:
+            continue
+        # plot individual helicities with thin lines, and
+        # summed helicities with thick ones
+        if h == 'summed':
+            thickness = 1.5
+            linecolor = 'black'
+            use_label = True
+        elif h == "lead-hel-summed":
+            thickness = 1.5
+            linecolor = 'red'
+            use_label = False
+        else:
+            thickness = 0.8
+            linecolor = allcolors[helicities_r.index(h)]
+            use_label = False
+
+        linestyle = 'solid'
+        ax.plot([p['angle'] for p in plist_r], [p['sud'] for p in plist_r], label = "SDK, $r_{ij}$" if use_label else None,
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+        linestyle = 'dashed'
+        ax.plot([p['angle'] for p in plist_s], [p['sud'] for p in plist_s], label = "SDK, $s$" if use_label else None,
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+
+        linestyle="None"
+        ax.plot([p['angle'] for p in plist_s], [p['loop'] for p in plist_s], '.', label = "V" if use_label else None,
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+    ax.legend(prop = font_legend)
+
+
+    ############ inset with rij
+    ax = axes[2]
+    ax.set_title(r"$r_{ij}$ in logs", loc="right", pad=3)
+    ax.set_ylabel(r"$\frac{V-SDK}{B}$, $r_{ij}$")
+
+    helicities = helicities_r
+    points = points_r
+    linestyle = 'solid'
+
+    for h, plist in zip(helicities, points):
+        # discard helicities with just one points
+        if len(plist) < 2:
+            continue
+        # plot individual helicities with thin lines, and
+        # summed helicities with thick ones
+        if h == 'summed':
+            thickness = 1.5
+            linecolor = 'black'
+        elif h == "lead-hel-summed":
+            thickness = 1.5
+            linecolor = 'red'
+        else:
+            thickness = 0.8
+            linecolor = allcolors[helicities.index(h)]
+
+        ax.plot([p['angle'] for p in plist], [p['diff'] for p in plist], label = get_helicity_label(pdir,h),
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+
+    # set the y range according to the last(angle!) point
+    ymin, ymax = get_ymargin([p[-1]['diff'] for p in points if len(p) > 1])
+
+    ax.set_ylim(ymin, ymax)
+
+    ############ inset with s
+    ax = axes[3]
+    ax.set_title(r"$s$ in logs", loc="right", pad=3)
+    ax.set_ylabel(r"$\frac{V-SDK}{B}$, $s$")
+
+    helicities = helicities_s
+    points = points_s
+    linestyle = 'dashed'
+
+    for h, plist in zip(helicities, points):
+        # discard helicities with just one points
+        if len(plist) < 2:
+            continue
+        # plot individual helicities with thin lines, and
+        # summed helicities with thick ones
+        if h == 'summed':
+            thickness = 1.5
+            linecolor = 'black'
+        elif h == "lead-hel-summed":
+            thickness = 1.5
+            linecolor = 'red'
+        else:
+            thickness = 0.8
+            linecolor = allcolors[helicities.index(h)]
+
+        ax.plot([p['angle'] for p in plist], [p['diff'] for p in plist], label = get_helicity_label(pdir,h),
+                linestyle=linestyle, color=linecolor, linewidth=thickness)
+
+    # set the y range according to the last (angle!) point
+    ymin, ymax = get_ymargin([p[-1]['diff'] for p in points if len(p) > 1])
+    ax.set_ylim(ymin, ymax)
+
+    ########################
+
+    ax.set_xscale('log')
+    ax.set_xlabel(r"$\theta$")
+    fig.savefig("%s_angle.pdf" % os.path.split(pdir)[1])
+
+
 def plot_sud_approx(pdir):
+    print ('NORMAL', pdir)
     sud_approx_r = os.path.join(pdir, 'Sud_Approx_Rij.dat')
     helicities_r, points_r = parse_sud_approx(sud_approx_r)
 
@@ -132,7 +305,7 @@ def plot_sud_approx(pdir):
             linecolor = 'red'
         else:
             thickness = 0.8
-            linecolor = list(mcolors.TABLEAU_COLORS.values())[helicities_r.index(h)]
+            linecolor = allcolors[helicities_r.index(h)]
 
         linestyle = 'solid'
         ax.plot([p['energy'] for p in plist_r], [p['born'] for p in plist_r], label = "%s" % get_helicity_label(pdir,h),
@@ -160,7 +333,7 @@ def plot_sud_approx(pdir):
             use_label = False
         else:
             thickness = 0.8
-            linecolor = list(mcolors.TABLEAU_COLORS.values())[helicities_r.index(h)]
+            linecolor = allcolors[helicities_r.index(h)]
             use_label = False
 
         linestyle = 'solid'
@@ -199,7 +372,7 @@ def plot_sud_approx(pdir):
             linecolor = 'red'
         else:
             thickness = 0.8
-            linecolor = list(mcolors.TABLEAU_COLORS.values())[helicities.index(h)]
+            linecolor = allcolors[helicities.index(h)]
 
         ax.plot([p['energy'] for p in plist], [p['diff'] for p in plist], label = get_helicity_label(pdir,h),
                 linestyle=linestyle, color=linecolor, linewidth=thickness)
@@ -232,7 +405,7 @@ def plot_sud_approx(pdir):
             linecolor = 'red'
         else:
             thickness = 0.8
-            linecolor = list(mcolors.TABLEAU_COLORS.values())[helicities.index(h)]
+            linecolor = allcolors[helicities.index(h)]
 
         ax.plot([p['energy'] for p in plist], [p['diff'] for p in plist], label = get_helicity_label(pdir,h),
                 linestyle=linestyle, color=linecolor, linewidth=thickness)
@@ -273,7 +446,7 @@ def plot_sud_approx0(pdir):
         else:
             thickness = 0.8
             linestyle = 'solid'
-            linecolor = list(mcolors.TABLEAU_COLORS.values())[helicities.index(h)]
+            linecolor = allcolors[helicities.index(h)]
 
         ax.plot([p['energy'] for p in plist], [p['diff'] for p in plist], label = get_helicity_label(pdir,h),
                 linestyle=linestyle, color=linecolor, linewidth=thickness)
@@ -323,9 +496,14 @@ def get_me_dimension(pdir):
     return 4 - 2**(get_nparticles(pdir)-2)
 
 
-def run_check_sudakov(pdir, log_suffix=''):
-    p = subprocess.run(['make check_sudakov'], cwd = pdir, shell=True)
-    p = subprocess.run(['./check_sudakov < ../../check_sudakov_input.txt > check_sudakov%s.log' % log_suffix], cwd = pdir, shell=True)
+def run_check_sudakov(pdir, log_suffix='', angle=False):
+    if angle:
+        exe = 'check_sudakov_angle2'
+    else:
+        exe = 'check_sudakov'
+
+    p = subprocess.run(['make %s' % exe], cwd = pdir, shell=True)
+    p = subprocess.run(['./%s < ../../check_sudakov_input.txt > %s%s.log' % (exe,exe,log_suffix)], cwd = pdir, shell=True)
 
 
 
@@ -390,11 +568,18 @@ if not args.onlyplot:
         run_check_sudakov(pdir, '_Rij')
         shutil.copyfile(os.path.join(pdir, 'Sud_Approx.dat'), os.path.join(pdir, 'Sud_Approx_Rij.dat'))
 
+        run_check_sudakov(pdir, '_Rij', angle=True)
+        shutil.copyfile(os.path.join(pdir, 'Sud_Approx_angle2.dat'), os.path.join(pdir, 'Sud_Approx_angle2_Rij.dat'))
+
     set_rij(outdir, False)
     # copy the Sud_Approx.dat files, these are without Rij activated
     for pdir in pdirs:
         run_check_sudakov(pdir, '_noRij')
         shutil.copyfile(os.path.join(pdir, 'Sud_Approx.dat'), os.path.join(pdir, 'Sud_Approx_noRij.dat'))
 
+        run_check_sudakov(pdir, '_noRij', angle=True)
+        shutil.copyfile(os.path.join(pdir, 'Sud_Approx_angle2.dat'), os.path.join(pdir, 'Sud_Approx_angle2_noRij.dat'))
+
 for pdir in pdirs:
     plot_sud_approx(pdir)
+    plot_sud_approx_angle(pdir)
