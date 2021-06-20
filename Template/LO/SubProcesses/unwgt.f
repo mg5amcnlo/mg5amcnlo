@@ -518,9 +518,6 @@ C
       integer          IPSEL
       COMMON /SubProc/ IPSEL
 
-      Double Precision amp2(maxamps), jamp2(0:maxflow)
-      common/to_amps/  amp2,       jamp2
-
       character*101       hel_buf
       common/to_helicity/hel_buf
 

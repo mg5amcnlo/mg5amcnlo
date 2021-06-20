@@ -6670,7 +6670,8 @@ class UFO_model_to_mg4(object):
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         
-        fsock.writelines('double complex '+', '.join(c_list)+'\n')   
+        if c_list:
+            fsock.writelines('double complex '+', '.join(c_list)+'\n')   
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
 
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')

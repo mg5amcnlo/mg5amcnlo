@@ -295,7 +295,7 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
 
 c     set the running scale (MLM not working)
 c     and update the couplings accordingly
-      call update_scale_coupling(all_p, nb_page)
+      call update_scale_coupling(all_p, all_wgt, nb_page)
 
 
       IF(grouped_MC_grid_status.eq.0) then
