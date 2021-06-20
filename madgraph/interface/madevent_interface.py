@@ -2992,8 +2992,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            misc.gunzip('%s/%s/unweighted_events.lhe.gz' % 
-                                  (pjoin(self.me_dir,'Events'), self.run_name))
+            path = '%s/%s/unweighted_events.lhe.gz' % (pjoin(self.me_dir,'Events'), self.run_name)
+
+            if os.path.exists(path):
+                misc.gunzip(path)
 
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
