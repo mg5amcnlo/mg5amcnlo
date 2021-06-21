@@ -26,6 +26,7 @@ c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
       double precision all_p(4*maxdim/3+14,nb_page), all_wgt(nb_page), all_x(maxinvar,nb_page)
+      integer all_lastbin(maxdim, nb_page)
       double precision bckp(nb_page)
       double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
@@ -42,6 +43,8 @@ c
 c
 c Global
 c
+      integer            lastbin(maxdim)
+      common /to_lastbin/lastbin
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
@@ -172,6 +175,7 @@ c              write(*,*) 'pass_point ivec is ', ivec
                all_xbk(:, ivec) = xbk(:)
                all_q2fact(:, ivec) = q2fact(:)
                all_cm_rap(ivec) = cm_rap
+               all_lastbin(:, ivec) = lastbin(:)
 c               i = ivec
 c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
@@ -212,6 +216,7 @@ c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
               enddo
                do i =1, nb_page
 c     if last paremeter is true -> allow grid update so only for a full page
+                  lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
 c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.nb_page                   
                   call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.nb_page) !Store result
