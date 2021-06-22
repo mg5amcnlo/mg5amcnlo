@@ -122,14 +122,11 @@ c it does not work if set to true, besides particular cases
       double precision get_mass_from_id,mass
       external get_mass_from_id
 
-
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
 
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
-
-
 
       double precision lzfordebug
 
@@ -148,8 +145,6 @@ c      return
      %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2))+
      %    sdk_chargesq(pdglist(i),hels(i),iflist(i))*bigLem(invariants(1,2),mass**2)
      %)
-        
-
         lzfordebug = lzfordebug - 0.5d0 * (
      %    - 2d0*lzow*sdk_iz2_diag(pdglist(i),hels(i),iflist(i))*smallL(invariants(1,2)))
       enddo
@@ -157,12 +152,9 @@ c      return
       if(printinewsdkf) print*, "L-->  ",(get_lsc_diag -lzfordebug )/bigL(invariants(1,2))
       if(printinewsdkf) print*, "lz--> ",(lzfordebug )/smallL(invariants(1,2))
 
-
-      
       if(deb_settozero.ne.0) get_lsc_diag=0d0
 
       return
-
       end
 
 
@@ -202,7 +194,6 @@ c      return
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.10.and.deb_settozero.ne.111) get_lsc_nondiag=0d0
-
 
       return
       end
@@ -252,42 +243,25 @@ c      return
         imlog= CMPLX(0d0,-1d0*pi)
       endif
 
-
-c      print*, "pdgp1 and 2=", pdgp1, pdgp2
-
       get_ssc_c = get_ssc_c + 2d0*smallL(s) * (dlog(dabs(rij)/s) + imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
 
-c      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s 
-
-
       if(s_to_rij) then
+        smallL_rij_over_s=smallL_a_over_b_sing(dabs(rij),s)
+        bigL_rij_over_s=bigL_a_over_b_sing(dabs(rij),s)
 
-      smallL_rij_over_s=smallL_a_over_b_sing(dabs(rij),s)
-      bigL_rij_over_s=bigL_a_over_b_sing(dabs(rij),s)
-
-
-      get_ssc_c = get_ssc_c + 
+        get_ssc_c = get_ssc_c + 
      $      (bigL_rij_over_s + 2d0 * smallL_rij_over_s * imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
      $    * sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)
-
-
       endif
-
-
 
       if (printinewsdkf) WRITE (72,*) , hels, ileg1, ileg2, pdgp1, pdgp2,
      $ dble(sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)*CMPLX(1d0,-1000d0)),
      $ dble(sdk_tpm(pdglist(ileg2), hels(ileg2), iflist(ileg2), pdgp2)*CMPLX(1d0,-1000d0)) 
 
-
-
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_c = 0d0
-
-
-
 
       return
       end
@@ -324,11 +298,9 @@ c      print*, "newlog=", (dlog(dabs(rij)/s) + imlog), "rij/s=", rij/s
 
       double complex smallL_rij_over_s, bigL_rij_over_s
 
-
       get_ssc_n_diag = 0d0
 c      return
 c exit and do nothing
-
 
       lzow = dlog(mdl_mz**2/mdl_mw**2)
       s = invariants(1,2)
@@ -343,7 +315,6 @@ c exit and do nothing
             imlog= CMPLX(0d0,-1d0*pi)
           endif
 
-
 c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
           get_ssc_n_diag = get_ssc_n_diag + 2d0*(smallL(s)+2d0/3d0*smallLem(0d0)) 
@@ -357,9 +328,7 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
 
-
           if(s_to_rij) then
-
             smallL_rij_over_s=smallL_a_over_b_sing(dabs(rij),s)
             bigL_rij_over_s=bigL_a_over_b_sing(dabs(rij),s)
 
@@ -378,14 +347,7 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
      $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2))
      %      * sdk_iz_diag(pdglist(i),hels(i),iflist(i))
      %      * sdk_iz_diag(pdglist(j),hels(j),iflist(j))
-
-
           endif
-
-
-
-
-
         enddo
       enddo
 
@@ -393,8 +355,6 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
      .       get_ssc_n_diag/(smallL(s)*dlog(dabs(invariants(1,3)/invariants(1,4))))
 
       if(deb_settozero.ne.0) get_ssc_n_diag = 0d0
-
-
 
       return
       end
@@ -415,7 +375,6 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
       include 'coupl.inc'
 
-
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
 
@@ -430,7 +389,6 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
       external smallL_a_over_b_sing, bigL_a_over_b_sing
 
       double complex smallL_rij_over_s, bigL_rij_over_s
-
 
       ! this function corresponds to the case when *one* out of the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
@@ -469,7 +427,6 @@ c not work for H or Chi0 in initial state
      $              * 2d0 * smallL(s) * (dlog(abs(invariants(i,ileg))/s)+imlog)
 
           if(s_to_rij) then
-
             smallL_rij_over_s=smallL_a_over_b_sing(dabs(invariants(i,ileg)),s)
             bigL_rij_over_s=bigL_a_over_b_sing(dabs(invariants(i,ileg)),s)
 
@@ -483,20 +440,11 @@ c not work for H or Chi0 in initial state
      $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2)) *
      $      sdk_iz_diag(pdglist(i),hels(i),iflist(i)) *
      $      sdk_iz_nondiag(pdg_new,hels(ileg),iflist(ileg))
-
-
           endif
-
-
-
-
-
-
         enddo
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_1 = 0d0
-
 
       return
       end
@@ -555,12 +503,10 @@ c not work for H or Chi0 in initial state
         imlog= CMPLX(0d0,-1d0*pi)
       endif
 
-
       if (((pdg_old1.eq.25.and.pdg_new1.eq.250).or.
      $     (pdg_old1.eq.250.and.pdg_new1.eq.25)).and.
      $    ((pdg_old2.eq.25.and.pdg_new2.eq.250).or.
      $     (pdg_old2.eq.250.and.pdg_new2.eq.25))) then
-
 
 ! Multiplied by 1-1000*I only when printed in NonDiag_structure.dat
 
@@ -574,7 +520,6 @@ c not work for H or Chi0 in initial state
      $              * 2d0 * smallL(s) * (dlog(abs(invariants(ileg1,ileg2))/s)+imlog)
 
         if(s_to_rij) then
-
             smallL_rij_over_s=smallL_a_over_b_sing(dabs(invariants(ileg1,ileg2)),s)
             bigL_rij_over_s=bigL_a_over_b_sing(dabs(invariants(ileg1,ileg2)),s)
 
@@ -584,31 +529,19 @@ c not work for H or Chi0 in initial state
      $      sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) * 
      $      sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
 
-
-
             get_ssc_n_nondiag_2 = get_ssc_n_nondiag_2 +
      $      (2d0 * smallL_rij_over_s * dlog(mdl_mw**2/mdl_mz**2)) *
      $      sdk_iz_nondiag(pdg_new1,hels(ileg1),iflist(ileg1)) *        
      $      sdk_iz_nondiag(pdg_new2,hels(ileg2),iflist(ileg2))
-
-
-
           endif
-
-
-
-
       endif
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.1.and.deb_settozero.ne.111) get_ssc_n_nondiag_2 = 0d0
-
 
       return
       end
 
 
-
-      
       double complex function get_xxc_diag(pdglist, hels, iflist, invariants)
       implicit none
       include 'nexternal.inc'
@@ -625,11 +558,8 @@ c not work for H or Chi0 in initial state
       double precision get_mass_from_id, get_isopart_mass_from_id
       external get_mass_from_id, get_isopart_mass_from_id
 
-
       double complex sdk_chargesq, smallLem,dZemAA_logs
       external sdk_chargesq, smallLem,dZemAA_logs
-
-
 
       logical   printinewsdkf
       common /to_printinewsdkf/printinewsdkf
@@ -662,24 +592,20 @@ c exit and do nothing
           if (pdglist(i)*hels(i).lt.0) then
 
             ! left-handed fermion
-
             get_xxc_diag = get_xxc_diag - 
      %         1d0/8d0/sw2 * isopart_mass**2/mdl_mw**2 * smallL(invariants(1,2))
           else
 
             ! right-handed fermion
-
             get_xxc_diag = get_xxc_diag - 
      %         1d0/8d0/sw2 * mass**2/mdl_mw**2 * smallL(invariants(1,2))
           endif
 
           get_xxc_diag = get_xxc_diag + sdk_chargesq(pdglist(i),hels(i),iflist(i))*smallLem(mass**2)
 
-
         elseif (abs(pdglist(i)).ge.22.and.abs(pdglist(i)).le.24.and.hels(i).ne.0) then
 
           ! transverse W/Z/photons bosons
-
           get_xxc_diag = get_xxc_diag + 
      %     sdk_betaew_diag(pdglist(i))/2d0 * smallL(invariants(1,2))
 
@@ -690,7 +616,6 @@ c exit and do nothing
         elseif (abs(pdglist(i)).eq.250.or.abs(pdglist(i)).eq.251.or.pdglist(i).eq.25) then
 
           ! goldstones or Higgs
-
           get_xxc_diag = get_xxc_diag + 
      %     (2d0*sdk_cew_diag(pdglist(i),hels(i),iflist(i)) - 
      %      3d0/4d0/sw2*mdl_mt**2/mdl_mw**2) * smallL(invariants(1,2))
@@ -700,13 +625,9 @@ c exit and do nothing
 
 c uncomment if uncomment the full block down
 c        tmp= get_xxc_diag
-
       enddo
 
-
-
       if(printinewsdkf) print*, "lC diag --> ",(get_xxc_diag)/smallL(invariants(1,2))
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! BEGIN: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -761,16 +682,10 @@ c
 cc    PR LOG are then removed by get_xxc_diag
 c      get_xxc_diag = tmp
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!! END: to be at some point removed by  the code !!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
- 
       if(deb_settozero.ne.0) get_xxc_diag = 0d0
-
 
       return
       end
@@ -811,11 +726,10 @@ c exit and do nothing
         endif
       endif
 
-          if (printinewsdkf) WRITE (72,*) , hels, ileg, -666d0 , pdg_new, pdg_old,
+      if (printinewsdkf) WRITE (72,*) , hels, ileg, -666d0 , pdg_new, pdg_old,
      $    dble(get_xxc_nondiag), -666d0
 
       if(deb_settozero.ne.0.and.deb_settozero.ne.100.and.deb_settozero.ne.111) get_xxc_nondiag = 0d0
-
 
       return
       end
@@ -833,9 +747,6 @@ c      return
 c      end
 
  
-
-
- 
       double complex function bigL(s)
       implicit none
       double precision s
@@ -847,6 +758,7 @@ c      end
 
       return
       end
+
 
       double complex function smallL(s)
       implicit none
@@ -861,13 +773,11 @@ c      end
       end
 
       
-      
       double complex function log_a_over_b_sing(a,b)
       implicit none
       double precision a,b,aok,bok
       include "q_es.inc"
       double precision pi
-
 
       if ((dabs(a).lt.1d0.and.dabs(a).ne.0d0).or.
      .     (dabs(b).lt.1d0.and.dabs(b).ne.0d0)) then
@@ -922,6 +832,7 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
       return
       end
 
+
       double complex function bigLem(s,m2k)
       implicit none
       double precision m2k,s
@@ -932,7 +843,6 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
 
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
-
 
       double precision pi
       parameter (pi=3.14159265358979323846d0)
@@ -951,7 +861,9 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
         stop
       endif
 
+      return
       end
+
 
       double complex function smallLem(m2k)
       implicit none
@@ -963,7 +875,6 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
 
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
-
 
       double precision pi
       parameter (pi=3.14159265358979323846d0)
@@ -994,7 +905,6 @@ c      print*, "in bigL a over b", " a=", a, " b=", b
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
-
       double precision pi
       parameter (pi=3.14159265358979323846d0)
 
@@ -1012,21 +922,18 @@ c 2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
        dZemAA_logs=dZemAA_logs*(-4d0/3d0)*2d0/3d0*smallLem(0d0)
 
-      return
+       return
+
       else
         print*,"sud_mod=",sud_mod,". It is not defined."
         stop
       endif
 
+      return
       end
 
 
 
-
-
-
-      
-      
       double complex function sdk_chargesq(pdg, hel, ifsign)
       implicit none
       integer pdg, hel, ifsign
@@ -1076,12 +983,10 @@ C charged goldstones / W boson
       if (s_pdg.eq.251.or.s_pdg.eq.24) sdk_charge = 1d0
       if (s_pdg.eq.-251.or.s_pdg.eq.-24) sdk_charge = -1d0
 
-
       if (.not.FAV4) then
           sdk_charge = -1 * sdk_charge
           if (abs(s_pdg).eq.251)  sdk_charge = sdk_charge * CMPLX(0d0,1d0)
       endif
-
 
       return
       end
@@ -1154,17 +1059,12 @@ c goldstones, they behave like left handed leptons (charged) or neutrinos (neutr
       if (sdk_tpm.ne.0d0) then
          sdk_tpm = sdk_tpm / ( 2d0 * dsqrt(sw2))
 
-
          if (.not.FAV4) sdk_tpm=  sdk_tpm *1d0*CMPLX(0d0,1d0)
            if (pdgp.eq.25 .and. pdg*ifsign.eq.251) sdk_tpm =sdk_tpm * (-1d0)
            if (pdgp.eq.250 .and. pdg*ifsign.eq.-251) sdk_tpm =sdk_tpm * (-1d0)
 
          return
       endif
-
-
-
-
 
 c following last .and. conditions are not strictly necessary
       if (abs(s_pdg).eq.250.and.abs(pdgp*ifsign).eq.251) sdk_tpm =  CMPLX(0d0,1d0)
@@ -1187,13 +1087,7 @@ c vector bosons
       if (abs(pdg*ifsign).eq.24.and.pdgp.eq.23) sdk_tpm = -sign(1d0,dble(pdg*ifsign)) * dsqrt(cw2/sw2)
       if (pdg.eq.23.and.abs(pdgp*ifsign).eq.24) sdk_tpm = -sign(1d0,dble(pdgp*ifsign)) * dsqrt(cw2/sw2)
 
-
-
-
-
       if ((.not.FAV4).and.(pdg.eq.23.or.pdgp.eq.23))    sdk_tpm=  sdk_tpm * (-1d0)
-
-
 
       return
       end
@@ -1243,13 +1137,10 @@ C mix
 C transverse W boson
       if (abs(s_pdg).eq.24) sdk_t3_diag = sign(1d0,dble(ifsign*pdg))
 
-
       if (.not.FAV4) then
          sdk_t3_diag =  sdk_t3_diag * -1
          if  (abs(s_pdg).eq.251) sdk_t3_diag =  sdk_t3_diag * CMPLX(0d0,1d0)
       endif
-
-
 
       return
       end
@@ -1298,8 +1189,7 @@ C right handed down quark / left handed antidown quark
 C left handed down quark / right handed antidown quark
       if (s_pdg.eq.-1.or.s_pdg.eq.-3.or.s_pdg.eq.-5) sdk_yo2_diag = sign(1d0/6d0,dble(ifsign*pdg))
 
-C goldstones, they behave like left handed leptons (charged); neutrals
-C mix
+C goldstones, they behave like left handed leptons (charged); neutrals mix
 
       if (abs(s_pdg).eq.251) sdk_yo2_diag = sign(0.5d0,dble(s_pdg))
 
@@ -1331,7 +1221,6 @@ C mix
 
       sdk_iz_diag = sdk_t3_diag(pdg,hel,ifsign) - sw2*sdk_charge(pdg,hel,ifsign)
       sdk_iz_diag = sdk_iz_diag / sqrt(sw2*cw2)
-
 
       if (.not.FAV4) then
           sdk_iz_diag= sdk_iz_diag / (-1d0)
@@ -1369,8 +1258,6 @@ C mix
           sdk_iz_nondiag = sdk_iz_nondiag * -1
       endif
             
-
-
       return
       end
 
@@ -1383,7 +1270,6 @@ C mix
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
-
       if (sud_mod.eq.0.or.sud_mod.eq.2) then
         sdk_ia_diag = -sdk_charge(pdg,hel,ifsign)
         return
@@ -1395,8 +1281,7 @@ C mix
         stop
       endif
 
-
-
+      return
       end
 
 
@@ -1473,9 +1358,6 @@ C the product of pdg code * helicity
 C Hel=+1/-1 -> R/L. Note that for transverse polarisations it does not depend 
 C on "ifsign", since switching from final to initial changes both the pdg and the helicity
 
-
-    
-
       if (hel.ne.0) then
         s_pdg = pdg*hel
       else
@@ -1529,6 +1411,7 @@ C (transverse) photon
         stop 
       endif
 
+      return
       end
 
 
@@ -1562,7 +1445,6 @@ C returns the gamma/z mixing of sdk_cew
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
-
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
 
@@ -1589,7 +1471,6 @@ C returns the gamma/z mixing of sdk_cew
 
         if (sud_mod.eq.1) sdk_betaew_diag = sdk_betaew_diag +  80d0/9d0
 
-
       endif
 
       return
@@ -1604,7 +1485,6 @@ C returns the gamma/z mixing of sdk_cew
 
       logical FAV4
       COMMON /to_FAV4/ FAV4
-
 
       cw2 = mdl_mw**2 / mdl_mz**2
       sw2 = 1d0 - cw2
@@ -1736,9 +1616,6 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
-
-
-
       double complex ls
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
       double complex dmt_QCD
@@ -1846,12 +1723,7 @@ c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
         endif
       endif       
  
-
-
       ! LEAVE EMPTY FOR THE MOMENT
-
-
-
 !    correct by a factor 2 ok?
       amp_split_ewsud(:)=amp_split_ewsud(:)/2d0
 
@@ -1876,9 +1748,6 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
 
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
-
-
-
 
       double complex ls
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
@@ -1946,7 +1815,6 @@ c     $       dAlpha
 
       dGmu=dGmudalpha*dalpha+dGmudmz2*dmz2+dGmudmw2*dmw2
 
-
       dmt = 1d0/4d0/sw2 + 1d0/8d0/sw2/cw2 + 3d0/2d0/cw2*Qt - 3d0/cw2*Qt**2  
      $     + 3d0/8d0/sw2 * mdl_mt**2/mdl_mw**2
 
@@ -1996,17 +1864,13 @@ c      print*,"from dmt_QCD", amp_split_ewsud_der2(:,4) * dmt_QCD
 
         endif       
       endif
-
-
       ! LEAVE EMPTY FOR THE MOMENT
-
-
-
 !    correct by a factor 2 ok?
       amp_split_ewsud(:)=amp_split_ewsud(:)/2d0
 
       return
       end
+
 
       double complex function GET_QCD_LO2(pdglist, hels, iflist, invariants,iamp)
       implicit none
@@ -2068,16 +1932,10 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
      .    logfromLOip1+QCDlogs/4d0
         enddo
 
-
-
         call amp_split_pos_to_orders(iamp, orders)
-
 
         logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
      .  *dble(orders(QCD_POS))  * dlog(qes2/mdl_mt**2)
-
-
-
 
         do i=1,nexternal-1
           if(abs(pdglist(i)).eq.21) then
@@ -2087,9 +1945,6 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
            endif
         enddo
 
-
-
-
         get_qcd_lo2 = CMPLX(logfromLOip1,0d0)
 
       elseif (sud_mod.eq.1.or.sud_mod.eq.0) then
@@ -2098,12 +1953,8 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
 
         call amp_split_pos_to_orders(iamp, orders)
 
-
         logfromLOip1=logfromLOip1+1d0/3d0 /4d0* (G**2/4d0/pi)/(2d0*pi)
      .  *dble(orders(QCD_POS))  * dlog(scale**2/mdl_mt**2)
-
-        
-
 
         do i=1,nexternal-1
           if(abs(pdglist(i)).eq.21) then
@@ -2113,11 +1964,7 @@ c      double complex smallL_rij_over_s, bigL_rij_over_s
            endif
         enddo
 
-
-
-
         get_qcd_lo2 = CMPLX(logfromLOip1,0d0)
-
 
 c      elseif (sud_mod.eq.0) then  
 c      TOBE modified 
@@ -2126,15 +1973,10 @@ c        print*,"sud_mod=0 and QCD not implemented.
 c     .  Switch to sud_mod=1 or turn this error off."
 c        stop
 c      
-
       else 
-
-       print*,"sud_mod=",sud_mod,"is not possible"
-       stop
-
+        print*,"sud_mod=",sud_mod,"is not possible"
+        stop
       endif
-
-         
 
 c      get_qcd_lo2 =0d0
 
