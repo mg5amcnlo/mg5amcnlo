@@ -4212,8 +4212,23 @@ c
           xkk(:) = 0d0
         endif
       else if (PDFscheme.eq.5) then
+        ! nobeta scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*(2-(1-x)*(1+x))
+          xkk(2)=ch1**2*(2-(1-x)*(1+x))
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.6) then
         ! DELTA scheme (lepton)
-        write(*,*) 'DELTA NOT IMPLEMENTED'
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*(1+x**2)
+          xkk(2)=ch1**2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
       else
         write(6,*)'Error in xkplus: wrong PDF scheme', PDFscheme
         stop
@@ -4287,7 +4302,6 @@ c
         endif
       else if (PDFscheme.eq.4) then
         ! MIXED scheme (lepton)
-        ! BETA scheme (lepton)
         if((abs(col1).eq.3.and.col2.eq.8) .or. 
      $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
           xkk(1)=vcf*2*(1+x**2)
@@ -4296,8 +4310,23 @@ c
           xkk(:) = 0d0
         endif
       else if (PDFscheme.eq.5) then
+        ! nobeta scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*2*(1+x**2)
+          xkk(2)=ch1**2*2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.6) then
         ! DELTA scheme (lepton)
-        write(*,*) 'DELTA NOT IMPLEMENTED'
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*2*(1+x**2)
+          xkk(2)=ch1**2*2*(1+x**2)
+        else
+          xkk(:) = 0d0
+        endif
       else
         write(6,*)'Error in xklog: wrong PDF scheme', PDFscheme
         stop
@@ -4378,8 +4407,23 @@ c
           xkk(:) = 0d0
         endif
       else if (PDFscheme.eq.5) then
+        ! nobeta scheme (lepton)
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=-vcf*2d0
+          xkk(2)=-ch1**2*2d0
+        else
+          xkk(:) = 0d0
+        endif
+      else if (PDFscheme.eq.6) then
         ! DELTA scheme (lepton)
-        write(*,*) 'DELTA NOT IMPLEMENTED'
+        if((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
+          xkk(1)=vcf*(-2d0)
+          xkk(2)=ch1**2*(-2d0)
+        else
+          xkk(:) = 0d0
+        endif
       else
         write(6,*)'Error in xkdelta: wrong PDF scheme', PDFscheme
         stop
@@ -4941,7 +4985,8 @@ C keep track of each split orders
       ! 2 -> eta (leptonic)
       ! 3 -> beta (leptonic)
       ! 4 -> mixed (leptonic)
-      ! 5 -> delta (leptonic)
+      ! 5 -> nobeta (leptonic)
+      ! 6 -> delta (leptonic)
 
       amp_split_collrem_xi(1:amp_split_size) = 0d0
       amp_split_collrem_lxi(1:amp_split_size) = 0d0

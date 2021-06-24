@@ -89,6 +89,14 @@ C     dressed leptons
         else 
           ipart = ipdg
         endif
+
+        ! MZ Kill the photon
+        if (abs(ipart).ne.11) then
+            pdg2pdf=0d0
+            ee_components(:)=0d0
+            return
+        endif
+
         pdg2pdf = 0d0
         do i_ee = 1, n_ee 
           ee_components(i_ee) = call_epdf(x,xmu,i_ee,ipart,ee_ibeam)
