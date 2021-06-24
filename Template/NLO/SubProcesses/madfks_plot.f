@@ -115,16 +115,16 @@ c set the weights_info string for PDF variation
 
                else if (j==2) then !pA
 
-                  write(temp,'(a4,i8)') "PDS=",lhaPDFid(nn)+n
+                  write(temp,'(a4,i8)') "RpA=",lhaPDFid(nn)+n
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
-     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' multip by '/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(2)))
 
               else if (j==3) then !Ap
 
-                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
+                  write(temp,'(a4,i8)') "RAp=",lhaPDFid(nn)+n
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
-     $                 /'  '//trim(adjustl(lhaPDFsetname(2)))//' m by '/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(2)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(1)))
 
               endif

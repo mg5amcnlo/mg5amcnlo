@@ -655,7 +655,9 @@ class HwU(Histogram):
     
 
 ############Anton
-    weight_label_PDF_pA = re.compile('^\s*PDS\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*$')
+    weight_label_PDF_pA = re.compile('^\s*RpA\s*=\s*(?P<PDF_set1>\d+)\s+(?P<PDF_set_1>\S+)\s+\s*with\s+(?P<PDF_set_2>\S+)\s*$')
+
+    weight_label_PDF_Ap = re.compile('^\s*RAp\s*=\s*(?P<PDF_set2>\d+)\s+(?P<PDF_set_3>\S+)\s+\s*with\s+(?P<PDF_set_4>\S+)\s*$')
     #weight_label_PDF_pA = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*$')
 
 #^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*$'
@@ -911,7 +913,10 @@ class HwU(Histogram):
             #elif label_type == 'pdf_pA':
                 #others.append('PDF=%i %s multiply by %s'%(label[1],label[2],label[3]))
 	    elif label_type == 'pdf_pA':
-                others.append('PDS=%i %s multiply by %s'%(label[1],label[2],label[3]))
+                others.append('RpA=%i %s with %s'%(label[1],label[2],label[3]))
+
+	    elif label_type == 'pdf_Ap':
+                others.append('RAp=%i %s with %s'%(label[1],label[2],label[3]))
 #############Anton
 
 
@@ -1032,6 +1037,7 @@ class HwU(Histogram):
                     PDF_wgt_adv   = HwU.weight_label_PDF_adv.match(h)
 #######Anton
 		    PDF_wgt_pA = HwU.weight_label_PDF_pA.match(h)
+		    PDF_wgt_Ap = HwU.weight_label_PDF_Ap.match(h)
 #######Anton
                     if scale_wgt_adv:
                         header[i] = ('scale_adv',
@@ -1062,9 +1068,14 @@ class HwU(Histogram):
 
                     elif PDF_wgt_pA:
                         header[i] = ('pdf_pA',
-                                     int(PDF_wgt_pA.group('PDF_set')),
-                                     PDF_wgt_pA.group('PDF_set_cen'),
-                                     PDF_wgt_pA.group('PDF_set_2'))                        
+                                     int(PDF_wgt_pA.group('PDF_set1')),
+                                     PDF_wgt_pA.group('PDF_set_1'),
+                                     PDF_wgt_pA.group('PDF_set_2'))
+	            elif PDF_wgt_Ap:
+                        header[i] = ('pdf_Ap',
+                                     int(PDF_wgt_Ap.group('PDF_set2')),
+                                     PDF_wgt_Ap.group('PDF_set_3'),
+                                     PDF_wgt_Ap.group('PDF_set_4'))                         
 ##########Anton
 
 
@@ -1253,9 +1264,12 @@ class HwU(Histogram):
             scale_position = -2 
 
 #################Anton
-        elif type.upper()=='PDS':
-            new_wgt_label = 'delta_pds'
-            scale_position = -3   
+        elif type.upper()=='RPA':
+            new_wgt_label = 'delta_RPA'
+            scale_position = -3
+	elif type.upper()=='RAP':
+            new_wgt_label = 'delta_RAP'
+            scale_position = -4   
             #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
 	    #f.write('delta_pds')
  	    #f.close()
@@ -1363,6 +1377,24 @@ class HwU(Histogram):
 	    #f.write('1')
  	    #f.close()
 
+
+
+
+
+        elif scale_position == -4:             
+            pdf_sets=[label[2] for label in self.bins.weight_labels if \
+                        HwU.get_HwU_wgt_label_type(label)=='pdf_Ap']
+
+	    
+	    # remove doubles in list but keep the order!
+            pdf_sets=[ii for n,ii in enumerate(pdf_sets) if ii not in pdf_sets[:n]]
+            for pdf_set in pdf_sets:
+                wgts=[label for label in self.bins.weight_labels if \
+                      HwU.get_HwU_wgt_label_type(label)=='pdf_Ap' and label[2]==pdf_set]
+                if wgts:
+                    wgts_to_consider.append(wgts)
+                    label_to_consider.append(pdf_set)
+
 ##############Anton
 
 
@@ -1381,7 +1413,7 @@ class HwU(Histogram):
 
 
 ################################ or type=='PDS':!!!!!!!!Anton
-        if type=='PDF' or type=='PDS':
+        if type=='PDF' or type=='RPA' or type=='RAP':
             use_lhapdf=False
             try:
                 lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
@@ -1445,8 +1477,12 @@ class HwU(Histogram):
  	        #f.close()
 
 ###################Anton
-	    if type=='PDS' and use_lhapdf:
+	    if type=='RPA' and use_lhapdf:
                 lhapdf.setVerbosity(0)
+
+	    if type=='RAP' and use_lhapdf:
+                lhapdf.setVerbosity(0)
+
 ##################Anton
 
 		
@@ -1487,7 +1523,13 @@ class HwU(Histogram):
  	        #f.close()
 
 ###################Anton
-	    if type=='PDS' and use_lhapdf and label != 'none':
+	    if type=='RPA' and use_lhapdf and label != 'none':
+                p=lhapdf.getPDFSet(label)
+                #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
+	        #f.write(label)
+ 	        #f.close()
+
+	    if type=='RAP' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
                 #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
 	        #f.write(label)
@@ -1500,7 +1542,7 @@ class HwU(Histogram):
 
 
 ###################Anton
-                if type!='PDF' and type!='PDS': 
+                if type!='PDF' and type!='RPA' and type!='RAP': 
 ###################Anton
 
 
@@ -1510,8 +1552,15 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
                                                   for label in wgts)
 ###################Anton
-                elif type=='PDS' and use_lhapdf and label != 'none' and len(wgts) > 1:
-		    pdfs   = [bin.wgts[pds] for pds in sorted(wgts)]
+                elif type=='RPA' and use_lhapdf and label != 'none' and len(wgts) > 1:
+		    pdfs   = [bin.wgts[rpa] for rpa in sorted(wgts)]
+                    ep=p.uncertainty(pdfs,-1)
+                    bin.wgts[new_wgt_labels[0]] = ep.central
+                    bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
+                    bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
+
+		elif type=='RAP' and use_lhapdf and label != 'none' and len(wgts) > 1:
+		    pdfs   = [bin.wgts[rap] for rap in sorted(wgts)]
                     ep=p.uncertainty(pdfs,-1)
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
@@ -1977,14 +2026,17 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','PDS']:##############3Anton
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############3Anton
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                 if mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 
 ##############3Anton
-		if mandatory_attribute=='PDS':
+		if mandatory_attribute=='RPA':
+                    wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
+
+		if mandatory_attribute=='RAP':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 ##############3Anton
 
@@ -2003,7 +2055,8 @@ class HwUList(histograms_PhysicsObjectList):
         central_PDF  = all_weights[2]['PDF']
 
 ##############Anton
-	central_PDS  = all_weights[2]['PDS']
+	central_RPA  = all_weights[2]['RPA']
+	central_RAP  = all_weights[2]['RAP']
 ##############Anton
 
         # Assume central scale is one, unless specified.
@@ -2044,8 +2097,10 @@ class HwUList(histograms_PhysicsObjectList):
                 differences.append('pdf')
 
 ##############Anton
-	    if weight['PDS'] not in [central_PDS,-1]:
-                differences.append('pds')
+	    if weight['RPA'] not in [central_RPA,-1]:
+                differences.append('rpa')
+	    if weight['RAP'] not in [central_RAP,-1]:
+                differences.append('rap')
 ##############Anton
 
             if weight['ALPSFACT'] not in [central_alpsfact, -1]:
@@ -2068,7 +2123,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    not weight[property] is None]
             
             # then add PDF, MUR, MUF and MERGING if present
-            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','PDS']:#########Anton
+            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########Anton
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
                     ordered_properties.append(property)
@@ -2132,8 +2187,10 @@ class HwUList(histograms_PhysicsObjectList):
 
  
 ############Anton
-            if variations == set(['pds']):
-                wgt_label = ('pds',weight['PDS'])
+            if variations == set(['rpa']):
+                wgt_label = ('rpa',weight['RPA'])
+	    if variations == set(['rap']):
+                wgt_label = ('rap',weight['RAP'])
 ############Anton            
 
 
@@ -2604,7 +2661,7 @@ set key invert
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, 
-          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','pds'],############Anton
+          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############Anton
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
@@ -2805,10 +2862,15 @@ set key invert
 
 
 #########Anton
- 	if 'pds' in uncertainties: 
-            (PDS_var_pos,pds) = self[0].set_uncertainty(type='PDS',lhapdfconfig=lhapdfconfig)
+ 	if 'rpa' in uncertainties: 
+            (RPA_var_pos,rpa) = self[0].set_uncertainty(type='RPA',lhapdfconfig=lhapdfconfig)
         else:
-            (PDS_var_pos,pds) = (None,[None])
+            (RPA_var_pos,rpa) = (None,[None])
+
+	if 'rap' in uncertainties: 
+            (RAP_var_pos,rap) = self[0].set_uncertainty(type='RAP',lhapdfconfig=lhapdfconfig)
+        else:
+            (RAP_var_pos,rap) = (None,[None])
 
 #########Anton
         
@@ -2827,8 +2889,12 @@ set key invert
 
 #########Anton
 	uncertainties_present =  list(uncertainties)
-	if PDS_var_pos is None and 'pds' in uncertainties_present:
-            uncertainties_present.remove('pds')
+	if RPA_var_pos is None and 'rpa' in uncertainties_present:
+            uncertainties_present.remove('rpa')
+
+	uncertainties_present =  list(uncertainties)
+	if RAP_var_pos is None and 'rap' in uncertainties_present:
+            uncertainties_present.remove('rap')
 #########Anton
 
         if mu_var_pos is None and 'scale' in uncertainties_present:
@@ -2871,8 +2937,16 @@ set key invert
 
 
 ###########Anton
-	    if (not PDS_var_pos is None) and\
-                               PDS_var_pos != histo.set_uncertainty(type='PDS',\
+	    if (not RPA_var_pos is None) and\
+                               RPA_var_pos != histo.set_uncertainty(type='RPA',\
+                                                                    lhapdfconfig=lhapdfconfig)[0]:
+               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+                 ' PDF uncertainties. It is required to be able to output them'+\
+                 ' together.'
+
+
+	    if (not RAP_var_pos is None) and\
+                               RAP_var_pos != histo.set_uncertainty(type='RAP',\
                                                                     lhapdfconfig=lhapdfconfig)[0]:
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' PDF uncertainties. It is required to be able to output them'+\
@@ -2952,11 +3026,17 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+2])
 #############Anton
-	if not PDS_var_pos is None:
-            for PDS_var in PDS_var_pos:
-                wgts_to_consider.append(self[0].bins.weight_labels[PDS_var])
-                wgts_to_consider.append(self[0].bins.weight_labels[PDS_var+1])
-                wgts_to_consider.append(self[0].bins.weight_labels[PDS_var+2])   
+	if not RPA_var_pos is None:
+            for RPA_var in RPA_var_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[RPA_var])
+                wgts_to_consider.append(self[0].bins.weight_labels[RPA_var+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[RPA_var+2])   
+
+	if not RAP_var_pos is None:
+            for RAP_var in RAP_var_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[RAP_var])
+                wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+2])   
 #############Anton
                 
         if not merging_var_pos is None:
@@ -3099,14 +3179,24 @@ plot \\"""
 ##############Anton
 
 
-		if not PDS_var_pos is None and len(PDS_var_pos)>0:
+		if not RPA_var_pos is None and len(RPA_var_pos)>0:
                     if 'pdf' in use_band:
-                        uncertainty_plot_lines[-1]['pds'] = get_uncertainty_lines(
-                     HwU_name,block_position+i, PDS_var_pos[0]+4, color_index+20,
-                             '%s, PDS variation'%title, band='pds' in use_band)
+                        uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+                     HwU_name,block_position+i, RPA_var_pos[0]+4, color_index+20,
+                             '%s, RPA variation'%title, band='rpa' in use_band)
                     else:
-                        uncertainty_plot_lines[-1]['pds'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDS variation'%title)]
+                        uncertainty_plot_lines[-1]['rpa'] = \
+        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RPA variation'%title)]
+
+
+		if not RAP_var_pos is None and len(RAP_var_pos)>0:
+                    if 'pdf' in use_band:
+                        uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+                     HwU_name,block_position+i, RAP_var_pos[0]+4, color_index+20,
+                             '%s, RAP variation'%title, band='rap' in use_band)
+                    else:
+                        uncertainty_plot_lines[-1]['rap'] = \
+        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RAP variation'%title)]
 
 ##############3Anton
 
@@ -3165,15 +3255,27 @@ plot \\"""
 
 
 ##############Anton
-	    if not PDS_var_pos is None:
-                for j,PDS_var in enumerate(PDS_var_pos):
+	    if not RPA_var_pos is None:
+                for j,RPA_var in enumerate(RPA_var_pos):
                     if j!=0:
                         n=n+1
                         color_index = n%self.number_line_colors_defined+1
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,PDS_var+3,color_index,\
-'%s PDS=%s' % (title,pds[j].replace('_','\_'))))
+%(HwU_name,block_position+i,RPA_var+3,color_index,\
+'%s RPA=%s' % (title,rpa[j].replace('_','\_'))))
+
+
+
+	    if not RAP_var_pos is None:
+                for j,RAP_var in enumerate(RAP_var_pos):
+                    if j!=0:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
+                        plot_lines.append(
+"'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
+%(HwU_name,block_position+i,RAP_var+3,color_index,\
+'%s RPA=%s' % (title,rap[j].replace('_','\_'))))
 
 ##############Anton
 
@@ -3315,8 +3417,8 @@ plot \\"""
 
 ##############Anton
 
-            if not PDS_var_pos is None:
-                for j,PDS_var in enumerate(PDS_var_pos):
+            if not RPA_var_pos is None:
+                for j,RPA_var in enumerate(RPA_var_pos):
                     uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
@@ -3324,13 +3426,32 @@ plot \\"""
                         n=n+1
                         color_index = n%self.number_line_colors_defined+1
                     # Add the central line only if advanced pdf variation                            
-                    if j>0 or pds[j]!='none':
+                    if j>0 or rpa[j]!='none':
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-                      %(HwU_name,block_position+i,PDS_var+3,color_index))
-                    uncertainty_plot_lines[-1]['pds'] = get_uncertainty_lines(
-                    HwU_name, block_position+i, PDS_var+4, color_index+20,'',
-                                        ratio=True, band='pds' in use_band)
+                      %(HwU_name,block_position+i,RPA_var+3,color_index))
+                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+                    HwU_name, block_position+i, RPA_var+4, color_index+20,'',
+                                        ratio=True, band='rpa' in use_band)
+
+
+
+	    if not RAP_var_pos is None:
+                for j,RAP_var in enumerate(RAP_var_pos):
+                    uncertainty_plot_lines.append({})
+                    if j==0:
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
+                    # Add the central line only if advanced pdf variation                            
+                    if j>0 or rap[j]!='none':
+                        plot_lines.append(
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+                      %(HwU_name,block_position+i,RAP_var+3,color_index))
+                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+                    HwU_name, block_position+i, RAP_var+4, color_index+20,'',
+                                        ratio=True, band='rap' in use_band)
 
 
 ##############Anton
@@ -3454,8 +3575,13 @@ plot \\"""
                 if j!=0: n=n+1
 
 ###########Anton
-	if not PDS_var_pos is None:
-            for j,PDS_var in enumerate(PDS_var_pos):
+	if not RPA_var_pos is None:
+            for j,RPA_var in enumerate(RPA_var_pos):
+                if j!=0: n=n+1
+
+
+	if not 	RAP_var_pos is None:
+            for j,RAP_var in enumerate(RAP_var_pos):
                 if j!=0: n=n+1
 ###########Anton
 
@@ -3520,8 +3646,8 @@ plot \\"""
 
 ###############ANton
 
-            if not PDS_var_pos is None:
-                for j,PDS_var in enumerate(PDS_var_pos):
+            if not RPA_var_pos is None:
+                for j,RPA_var in enumerate(RPA_var_pos):
                     uncertainty_plot_lines.append({})
                     if j==0: 
                         color_index = k%self.number_line_colors_defined+1
@@ -3532,10 +3658,31 @@ plot \\"""
                     if j>0 or pdf[j]!='none':                        
                       plot_lines.append(
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDS_var+3,color_index))
-                    uncertainty_plot_lines[-1]['pds'] = get_uncertainty_lines(
-                      HwU_name, block_ratio_pos, PDS_var+4, color_index+20,'',
-                                                       band='pds' in use_band)
+    %(HwU_name,block_ratio_pos,RPA_var+3,color_index))
+                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+                      HwU_name, block_ratio_pos, RPA_var+4, color_index+20,'',
+                                                       band='rpa' in use_band)
+
+
+
+
+	    if not RAP_var_pos is None:
+                for j,RAP_var in enumerate(RAP_var_pos):
+                    uncertainty_plot_lines.append({})
+                    if j==0: 
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
+                    # Only print out the additional central value for advanced pdf variation
+                    if j>0 or pdf[j]!='none':                        
+                      plot_lines.append(
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,RAP_var+3,color_index))
+                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+                      HwU_name, block_ratio_pos, RAP_var+4, color_index+20,'',
+                                                       band='rap' in use_band)
+
 
 ###############ANton
 
@@ -3760,12 +3907,12 @@ if __name__ == "__main__":
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
                       '--keep_all_weights','--colours']
     n_ratios   = -1
-    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','pds']#################Anton
+    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap']#################Anton
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
     use_band      = None
     auto_open = True
     ratio_correlations = True
-    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','pds']#################Anton
+    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap']#################Anton
 
     def log(msg):
         print "histograms.py :: %s"%str(msg)
