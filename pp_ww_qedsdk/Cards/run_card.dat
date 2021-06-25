@@ -178,7 +178,7 @@
 # {6:100, 25:200} for multiple particles                               *
 #***********************************************************************
   {24: 7500, 23:7500} = pt_min_pdg ! Min pT for a massive particle
-  {} = pt_min_pdg ! Min pT for a massive particle
+##  {} = pt_min_pdg ! Min pT for a massive particle
   {} = pt_max_pdg ! Max pT for a massive particle
   {} = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
