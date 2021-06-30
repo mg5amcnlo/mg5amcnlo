@@ -1265,10 +1265,10 @@ class HwU(Histogram):
 
 #################Anton
         elif type.upper()=='RPA':
-            new_wgt_label = 'delta_RPA'
+            new_wgt_label = 'delta_RpA'
             scale_position = -3
 	elif type.upper()=='RAP':
-            new_wgt_label = 'delta_RAP'
+            new_wgt_label = 'delta_RAp'
             scale_position = -4   
             #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
 	    #f.write('delta_pds')
