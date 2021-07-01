@@ -676,7 +676,7 @@ c Generate the rapditity of the Born system
            call generate_y(tau_born,rndx(2),ycm_born,ycmhat,xjac)
 
          else  ! this is for dressed ee collisions
-           call generate_ee_tau_y(rndx(1), rndx(2), one_body,
+           call generate_ee_tau_y(rndx(1), rndx(2), one_body, totmass,
      $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
      $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
      $        cBW_width(-1,-ns_channel-1),
@@ -4226,12 +4226,12 @@ c     S=A/(B-x) transformation:
       end
 
 
-      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, stot, nt_channel,
-     $     qmass, qwidth, cBW, cBW_mass, cBW_width,
+      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, totmass, 
+     $     stot, nt_channel, qmass, qwidth, cBW, cBW_mass, cBW_width,
      $     tau_born, ycm_born, ycmhat, xjac0)
       implicit none
       double precision rnd1_in, rnd2_in
-      double precision rnd1, rnd2, stot, qmass, qwidth
+      double precision rnd1, rnd2, totmass, stot, qmass, qwidth
       double precision cBW_mass(-1:1), cBW_width(-1:1)
       integer nt_channel, cBW
       logical one_body
@@ -4280,8 +4280,10 @@ C dressed lepton stuff
       tau_w = qwidth**2/stot
 
       bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
-     $ .and.tau_m.lt.1d0
+     $ .and.tau_m.lt.1d0.and.totmass.lt.qmass
+
       generate_with_bw=.false.
+
       ! if there are BWs, decide whether to generate flat or
       ! to use the BW-specific generation (half and half, or
       ! as determined by frac_bw)
