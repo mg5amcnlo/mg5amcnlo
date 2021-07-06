@@ -3110,7 +3110,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             else:
                 run_card = self.run_card
             self.run_card = run_card
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
