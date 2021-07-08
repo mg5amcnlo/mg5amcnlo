@@ -119,8 +119,8 @@ C     Make sure cuts are evaluated for first subprocess
 c		  ! set both mode 1: resonances, 2: no resonances to 50-50
 		  call DS_add_bin('ee_mc', 1)
 		  call DS_add_bin('ee_mc', 2)
-		  call DS_add_entry('ee_mc', 1, 0.75d0, .true.)
-		  call DS_add_entry('ee_mc', 2, 0.25d0, .true.)
+		  call DS_add_entry('ee_mc', 1, 0.5d0, .true.)
+		  call DS_add_entry('ee_mc', 2, 0.5d0, .true.)
 		  call DS_update_grid('ee_mc')
           endif				      
 
