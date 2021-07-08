@@ -2410,6 +2410,12 @@ class Diagram(PhysicsObject):
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
+                    if __debug__:
+                        if vert['legs'][-1]['number'] != min([l['number'] for l in vert['legs'][:-1]]):
+                            pass_sanity = False
+                            responsible = id(vert)
+
+
                 lastleg = vert['legs'][-1]
                 if lastleg['polarization']:
                     mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
