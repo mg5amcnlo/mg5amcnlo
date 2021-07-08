@@ -1616,7 +1616,7 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
-      double complex ls
+      double complex ls, ls_o_mt
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
       double complex dmt_QCD
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
@@ -1653,6 +1653,7 @@ C     ipara = 1->AEWm1; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       amp_split_ewsud(:) = (0d0,0d0)
 
       ls = smallL(invariants(1,2))
+      ls_o_mt = dble(gal(1))**2 / (4d0*pi)**2 * dlog(invariants(1,2)/mdl_mt**2) 
 
       ! the parameter renormalisation in Denner-Pozzorini reads:
       !  dM/de de + dM/dcw dcw + dM/dht dht + dM/dhh dhh
@@ -1696,7 +1697,7 @@ c     $       dAlpha
 
       dmt_QCD =  - 3d0 * 4d0/3d0 
 
-      dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
+      dmt_QCD =  dmt_QCD * mdl_mt * ls_o_mt  * (G/gal(1))**2
 
       if(has_lo1) then
 
@@ -1749,7 +1750,7 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       DOUBLE COMPLEX AMP_SPLIT_EWSUD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_SPLIT_EWSUD/ AMP_SPLIT_EWSUD
 
-      double complex ls
+      double complex ls, ls_o_mt
       double complex dalpha, dcw, dmw2, dmz2, dmt, dmh2, dt, dheff_o_heff
       double complex dmt_QCD, dGmu, dGmudalpha, dGmudmz2, dGmudmw2
       double complex smallL, sdk_betaew_diag, sdk_cew_diag
@@ -1786,6 +1787,7 @@ C     ipara = 1->GF; 2->MZ; 3->MW; 4->MT/YMT; 5->MH
       amp_split_ewsud(:) = (0d0,0d0)
 
       ls = smallL(invariants(1,2))
+      ls_o_mt = dble(gal(1))**2 / (4d0*pi)**2 * dlog(invariants(1,2)/mdl_mt**2) 
 
 CC DAVIDE CHANGE HERE      
       ! the parameter renormalisation in Denner-Pozzorini reads:
@@ -1838,7 +1840,7 @@ c     $       dAlpha
 
       dmt_QCD =  - 3d0 * 4d0/3d0 
 
-      dmt_QCD =  dmt_QCD * mdl_mt * ls * (G/gal(1))**2
+      dmt_QCD =  dmt_QCD * mdl_mt * ls_o_mt * (G/gal(1))**2
 
       if(has_lo1) then
   
