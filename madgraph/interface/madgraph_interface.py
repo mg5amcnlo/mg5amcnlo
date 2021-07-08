@@ -2884,7 +2884,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
+                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -5899,15 +5900,16 @@ This implies that with decay chains:
                                '--with_pythia8=%s'%self.options['pythia8_path'])
 
         # Special rules for certain tools
-        if tool=='madanalysis5':
+        if tool in ['madanalysis5', 'rivet']:
             add_options.append('--mg5_path=%s'%MG5DIR)
             if not any(opt.startswith(('--with_fastjet', '--veto_fastjet')) for opt in add_options):
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
-                else:
-                    add_options.append('--with_fastjet')
-           
+                #else:
+                #    add_options.append('--with_fastjet')
+
+        if tool in ['madanalysis5']:
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
                 add_options.append('--with_delphes3=%s'%\
@@ -5979,6 +5981,7 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
+            misc.sprint(add_options)
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)

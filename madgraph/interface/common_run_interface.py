@@ -5928,7 +5928,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.run_card['event_norm'] == 'sum':
                     logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
                     self.do_set('run_card event_norm average')  
-                
+
+            misc.sprint(proc_charac, type(proc_charac))                
             if 'MLM' in proc_charac['limitations']:
                 if self.run_card['dynamical_scale_choice'] == -1:
                     raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
