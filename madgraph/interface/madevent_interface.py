@@ -3132,7 +3132,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                             if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
                                 raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
                                                                          mandatory_file,run_card['bias_module']))
-                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                        misc.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
                                                                      os.path.basename(run_card['bias_module'])))
                 
                 #check expected parameters for the module.

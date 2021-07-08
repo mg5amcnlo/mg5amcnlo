@@ -361,7 +361,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     if update and path.isdir(_hc_comparison_files):
         if path.isdir(hc_comparison_files_BackUp):        
             shutil.rmtree(hc_comparison_files_BackUp)
-        shutil.copytree(_hc_comparison_files,hc_comparison_files_BackUp)
+        misc.copytree(_hc_comparison_files,hc_comparison_files_BackUp)
 
     IOTestManager.testFolders_filter = arg.split('/')[0].split('&')
     IOTestManager.testNames_filter = arg.split('/')[1].split('&')
@@ -498,7 +498,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         else:
             if path.isdir(hc_comparison_files_BackUp):
                 shutil.rmtree(_hc_comparison_files)
-                shutil.copytree(hc_comparison_files_BackUp,_hc_comparison_files)
+                misc.copytree(hc_comparison_files_BackUp,_hc_comparison_files)
                 print(colored%(32,"INFO:: No modifications applied."))
             else:
                 print(colored%(31,
