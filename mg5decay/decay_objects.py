@@ -3418,7 +3418,9 @@ class Channel(base_objects.Diagram):
         numbers = [l.get('number') for l in self['final_legs'] if l.get('id') == handling]
         
         for new_numbers in itertools.permutations(numbers):
+            
             mapping_id = dict([(o,n) for o,n in zip(numbers, new_numbers) if o!=n])        
+
             if not mapping_id:
                 out.append(self)
                 continue
@@ -3432,6 +3434,7 @@ class Channel(base_objects.Diagram):
             channel['helas_number'] = None
             # diagram written by IdentifyHelasTag
             channel['std_diagram'] = None
+            
             for l,vertex in enumerate(self['vertices']):
                 new_vertex = copy.copy(vertex)
                 new_vertex['legs'] = base_objects.LegList()
@@ -3442,16 +3445,16 @@ class Channel(base_objects.Diagram):
                         new_leg.set('number', mapping_id[leg['number']])
                         new_vertex['legs'].append(new_leg)
                     else:
-                        new_vertex['legs'].append(leg)
-                    min_id = min(min_id, leg['number'])
-                    
-                if min_id != new_vertex['legs'][-1]['number']:
-                    if l != len(self['vertices']) -1:
-                        mapping_id[new_vertex['legs'][-1]['number']] = min_id
-                        new_vertex['legs'][-1]['number'] = min_id
+                        new_leg = copy.copy(leg)
+                        new_vertex['legs'].append(new_leg)
+                    min_id = min(min_id, new_leg['number'])
+                
+                if l != len(self['vertices']) -1:
+                    new_vertex['legs'][-1]['number'] = min_id
+                    mapping_id[vertex['legs'][-1]['number']] = min_id
+
                 channel['vertices'].append(new_vertex)
-            out.append(channel)
-                        
+            out.append(channel)                      
         
         # do the recursion
         if len(remain_id) > 1:
