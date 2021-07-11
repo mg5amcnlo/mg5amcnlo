@@ -2922,6 +2922,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'madanalysis_path': './MadAnalysis',
                        'madanalysis5_path':'./HEPTools/madanalysis5/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
+                       'rivet_path' : './HEPTools/rivet',
+                       'contur_path' : './HEPTools/contur',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',

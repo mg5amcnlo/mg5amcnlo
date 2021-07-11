@@ -338,7 +338,14 @@ class HelpToCmd(object):
         self.run_options_help([('-f','answer all question by default'),
                                ('--tag=', 'define the tag for the pythia8 run'),
                                ('--no_default', 'not run if pythia8_card not present')])
-    
+
+    def help_rivet(self):
+        logger.info("syntax: rivet [RUN] [--run_options]")
+        logger.info("-- run rivet on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the rivet run'),
+                               ('--no_default', 'not run if rivet_card not present')])
+
     def help_banner_run(self):
         logger.info("syntax: banner_run Path|RUN [--run_options]")
         logger.info("-- Reproduce a run following a given banner")
@@ -518,7 +525,7 @@ class AskRun(cmd.ControlSwitch):
     def check_available_module(self, options):
         
         self.available_module = set()
-        
+        misc.sprint(options)
         if options['pythia-pgs_path']:
             self.available_module.add('PY6')
             self.available_module.add('PGS')
@@ -535,6 +542,12 @@ class AskRun(cmd.ControlSwitch):
                 self.available_module.add('Delphes')
             else:
                 logger.warning("Delphes program installed but no parton shower module detected.\n    Please install pythia8")
+        if options['rivet_path']:
+            if 'PY8' in self.available_module:
+                self.available_module.add('Rivet')
+            else:
+                logger.warning("Rivet program installed but no parton shower with hepmc output detected.\n    Please install pythia8")
+        
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
@@ -631,6 +644,9 @@ class AskRun(cmd.ControlSwitch):
             return 'OFF'
         
         return None
+
+
+        
 #
 #   HANDLING DETECTOR
 #
@@ -745,7 +761,9 @@ class AskRun(cmd.ControlSwitch):
         if 'MA4' in self.available_module:
             self.allowed_analysis.append('MadAnalysis4')
         if 'MA5' in self.available_module:
-            self.allowed_analysis.append('MadAnalysis5')            
+            self.allowed_analysis.append('MadAnalysis5') 
+        if 'Rivet' in self.available_module:
+            self.allowed_analysis.append('Rivet') 
             
         if self.allowed_analysis:
             self.allowed_analysis.append('OFF')
@@ -770,8 +788,32 @@ class AskRun(cmd.ControlSwitch):
                 return False
         else:
             return False
+
+    def consistency_shower_analysis(self, vshower, vanalysis):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower != 'Pythia8' and vanalysis == 'Rivet':
+            return 'OFF' #new value for analysis
         
+        return None
         
+    def consistency_analysis_shower(self, vanalysis, vshower):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower != 'Pythia8' and vanalysis == 'Rivet':
+            return 'Pythia8' #new value for analysis
+        
+        return None
+
+
     def set_default_analysis(self):
         """initialise the switch for analysis"""
         
@@ -2045,11 +2087,8 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--tag=','--no_default'], line)
 
-    complete_delphes = complete_pgs        
-
-
-
-
+    complete_delphes = complete_pgs   
+    complete_rivet = complete_pgs     
 
 #===============================================================================
 # MadEventCmd

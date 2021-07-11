@@ -2694,9 +2694,44 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return self.list_completion(text, ['-f', 
                 '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
+    def do_rivet(self, line):
+        """launch rivet on the HepMC output"""
+
+
+
+        # Check argument's validity
+        args = self.split_arg(line)
+        
+        if '--no_default' in args:
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False    
+
+        if no_default and not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
+            return
+ 
+        rivet_path = self.options['rivet_path']
+        #1. determine pythonpath / ldlibrary path
+
+        my_env = os.environ.copy()
+        my_env['LD_LIBRARY_PATH'] = "%s:%s:5s" % (my_env['LD_LIBRARY_PATH'],
+           pjoin(rivet_path, 'lib'),pjoin(rivet_path, 'lib64'))
+
+        major, minor = sys.version_info[0:2]
+        my_env['PYTHONPATH'] = '%s:%s' % (my_env['PYTHONPATH'], 
+            pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'))
+
+        #2. excute rivet
+        
+        misc.call([sys.executable, pjoin(rivet_path, 'bin', 'rivet-mg5.py'), 
+            pjoin(self.me_dir, 'Cards', 'rivet_card.dat')], env=my_env)
+
     def do_madanalysis5_hadron(self, line):
         """launch MadAnalysis5 at the hadron level."""
         return self.run_madanalysis5(line,mode='hadron')
+
+
 
     def run_madanalysis5(self, line, mode='parton'):
         """launch MadAnalysis5 at the parton level or at the hadron level with
