@@ -78,6 +78,14 @@ c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if no
 
       if(iabs(ipart).eq.21) then ! g
          ipart=0
+      else if(ipart.eq.12) then ! ve
+         ipart=12
+      else if(ipart.eq.-12) then ! ve~
+         ipart=-12
+      else if(ipart.eq.14) then ! vm
+         ipart=14
+      else if(ipart.eq.-14) then ! vm~
+         ipart=-14   
       else if(ipart.eq.24) then  ! w+
          ipart=24
       else if(ipart.eq.-24) then ! w-
@@ -88,7 +96,7 @@ c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if no
          ipart=7
       else if(iabs(ipart).eq.7) then  ! a
          ipart=7
-c     This will be called for any PDG code, but we only support up to 7
+c     This will be called for any PDG code. We only support (for now) 0-7, 12, 14, and 22-24
       else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
@@ -100,22 +108,24 @@ c     This will be called for any PDG code, but we only support up to 7
       
       if(pdsublabel(beamid).eq.'eva') then
          if(iabs(ipart).ne.7.and.
+     &      iabs(ipart).ne.12.and.
+     &      iabs(ipart).ne.14.and.     
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
-            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
-            stop 24
+            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W/ve/vm, not for pdg = ',ipart
+            stop 7142324
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))
             case (0:2)
-               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
+               write(*,*) 'ERROR: EVA PDF only supported for e+/- and mu+/- beams, not for lpp/ih=',ih
                stop 24
             case (3) ! e+/-
                ppid = 11
             case (4) ! mu+/-
                ppid = 13
             case default
-               write(*,*) 'ERROR: EVA PDF only supported for charged leptons, not for lpp/ih=',ih
+               write(*,*) 'ERROR: EVA PDF only supported for e+/- and mu+/- beams, not for lpp/ih=',ih
                stop 24
             end select
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
