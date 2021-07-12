@@ -3689,8 +3689,8 @@ class RunCardLO(RunCard):
                 self.display_block.append('ecut')       
 
             # check for possibility of eva
-            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24])
-            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24])
+            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24,12,-12,14,-14])
+            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24,12,-12,14,-14])
             misc.sprint(eva_in_b1, eva_in_b2)
             if eva_in_b1 and eva_in_b2:
                 #reserved for 100 TeV pp collider
@@ -3731,7 +3731,7 @@ class RunCardLO(RunCard):
                         self['ebeam1']  = '15k'
                         self['ebeam2']  = '15k'
 
-            if any(i in beam_id for i in [22,23,24,-24]):
+            if any(i in beam_id for i in [22,23,24,-24,12,-12,14,-14]):
                 self.display_block.append('eva_scale')
 
             # automatic polarisation of the beam if neutrino beam  
@@ -3755,7 +3755,7 @@ class RunCardLO(RunCard):
                     self['polbeam2'] = -100
                     if not all(id  in [12,14,16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
-                if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[1] for id in [-12,-14,-16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
