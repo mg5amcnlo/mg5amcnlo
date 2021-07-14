@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.1.2 (??/??/??)
+      MZ+CS: Fixes relevant to PineAPPL: 
+            - minor fix on the gluon pdg code in pineappl_interface.cc
+            - the integration channels are threated the same way with or without PineAPPL 
+            (maxchannels is kept the same in both cases)
+      RF: Fix for montecarlocounter in case the Born is not strictly positive
+           (i.e., only interference contributions).
 
 3.1.1 (28/05/21)
       ALL: put a crash for potentially ambiguous syntax with explanation
