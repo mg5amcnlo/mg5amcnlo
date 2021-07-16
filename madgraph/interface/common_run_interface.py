@@ -1080,6 +1080,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madweight_card.dat [MW]
            madanalysis5_hadron_card.dat
            madanalysis5_parton_card.dat
+           rivet_card.dat
            
            Please update the unit-test: test_card_type_recognition when adding
            cards.
@@ -1118,7 +1119,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     '@MG5aMC skip_analysis',              #MA5 --both--
                     '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
                     '@MG5aMC\s*reconstruction_name', # MA5 hadronique
-                    '@MG5aMC' # MA5 hadronique
+                    '@MG5aMC', # MA5 hadronique
+                    'Analyses\s*=', # Rivet
                     ]
         
         
@@ -1130,7 +1132,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
-        elif '@mg5amc' in text:
+        elif any('@mg5amc' in t for t in text):
             ma5_flag = [f[7:].strip() for f in text if f.startswith('@mg5amc')]
             if any(f.startswith('reconstruction_name') for f in ma5_flag):
                 return 'madanalysis5_hadron_card.dat'
@@ -1179,6 +1181,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return 'reweight_card.dat'
             else:
                 return 'reweight_card.dat'
+        elif len(text) == 1 and text[0].startswith('analyses'):
+            return 'rivet_card.dat' 
         else:
             return 'unknown'
 
@@ -2696,8 +2700,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     def do_rivet(self, line):
         """launch rivet on the HepMC output"""
-
-
 
         # Check argument's validity
         args = self.split_arg(line)
@@ -4513,7 +4515,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """
 
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
-                     'madweight_card', 'MadLoopParams', 'shower_card']
+                     'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
     to_init_card = ['param', 'run', 'madweight', 'madloop', 
                     'shower', 'pythia8','delphes','madspin']
     special_shortcut = {}
@@ -4543,6 +4545,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_shower = False
         self.has_PY8 = False
         self.has_delphes = False
+        self.has_rivet = False
         self.paths = {}
         self.update_block = []
 
@@ -4576,6 +4579,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
+        self.paths['rivet'] = pjoin(self.me_dir,'Cards','rivet_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
         self.paths['plot_default'] = pjoin(self.me_dir,'Cards','plot_card_default.dat')
         self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
@@ -4625,6 +4629,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.paths[card_name] = card
                 
         # go trough the initialisation of each card and detect conflict
+        misc.sprint(self.to_init_card)
         for name in self.to_init_card:
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
             new_conflict = self.all_vars.intersection(new_vars)
@@ -5963,8 +5968,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.run_card['event_norm'] == 'sum':
                     logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:BOLD' )
                     self.do_set('run_card event_norm average')  
-
-            misc.sprint(proc_charac, type(proc_charac))                
+                
             if 'MLM' in proc_charac['limitations']:
                 if self.run_card['dynamical_scale_choice'] == -1:
                     raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\

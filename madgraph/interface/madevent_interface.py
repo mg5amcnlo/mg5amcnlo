@@ -525,7 +525,6 @@ class AskRun(cmd.ControlSwitch):
     def check_available_module(self, options):
         
         self.available_module = set()
-        misc.sprint(options)
         if options['pythia-pgs_path']:
             self.available_module.add('PY6')
             self.available_module.add('PGS')
@@ -2218,6 +2217,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     if not os.path.exists(pjoin(path, 'plot_events')):
                         logger.info("No valid MadAnalysis path found")
                         continue
+                elif key == "rivet_path":
+                    if not os.path.exists(pjoin(path, 'bin', 'rivet')):
+                        logger.info("No valid rivet path found")
+                        continue
                 elif key == "td_path":
                     if not os.path.exists(pjoin(path, 'td')):
                         logger.info("No valid td path found")
@@ -2622,6 +2625,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 # shower launches pgs/delphes if needed    
                 self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
                 self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+                self.exec_cmd('rivet --no_default', postcmd=False, printcmd=False)
                 self.store_result()
                         
             if self.allow_notification_center:    
@@ -5881,7 +5885,7 @@ tar -czf split_$1.tar.gz split_$1
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron', 'rivet']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -5899,7 +5903,8 @@ tar -czf split_$1.tar.gz split_$1
                        'madanalysis5_hadron':['madanalysis5_hadron'],
                        'madanalysis5_parton':['madanalysis5_parton'],
                        'plot':[],
-                       'syscalc':[]}
+                       'syscalc':[],
+                       'rivet':['rivet']}
 
         if name == self.run_name:        
             if reload_card:
@@ -6287,8 +6292,10 @@ tar -czf split_$1.tar.gz split_$1
             cards.append('madanalysis5_parton_card.dat')
         if switch['analysis'].upper() in ['MADANALYSIS5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
-        if switch['analysis'].upper() in ['MADANALYSIS4']:
+        elif switch['analysis'].upper() in ['MADANALYSIS4']:
             cards.append('plot_card.dat')
+        elif switch['analysis'].upper() in ['RIVET']:
+            cards.append('rivet_card.dat')
 
         self.keep_cards(cards)
         
