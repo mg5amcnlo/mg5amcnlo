@@ -274,7 +274,7 @@ class Cluster(object):
         if target.endswith('/'):
             target = target[:-1]   
 
-        target = misc.digest(target)[-self.identifier_length:]
+        target = misc.digest(target.encode())[-self.identifier_length:]
         if not target[0].isalpha():
             target = 'a' + target[1:]
 

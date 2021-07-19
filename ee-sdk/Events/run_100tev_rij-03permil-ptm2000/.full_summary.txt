@@ -1,0 +1,95 @@
+
+   --------------------------------------------------------------
+      Final results and run summary:
+      Process p p > e+ e- [QED SDK]
+      Run at p-p collider (50000.0 + 50000.0 GeV)
+      Total cross section: 1.456e-04 +- 3.9e-08 pb
+   --------------------------------------------------------------
+      Scale variation (computed from histogram information):
+          Dynamical_scale_choice 10 (envelope of 9 values): 
+              1.456e-04 pb  +2.1% -2.2%
+   --------------------------------------------------------------
+
+
+  Number of loop ME evaluations (by MadLoop): 121779231
+    Stability unknown:                   0
+    Stable PS point:                     121779231
+    Unstable PS point (and rescued):     0
+    Unstable PS point (and not rescued): 0
+    Only double precision used:          121779231
+    Quadruple precision used:            0
+    Initialization phase-space points:   0
+    Reduction methods used:
+      > Ninja (double precision)         121779231
+
+  Statistics on virtual integration optimization : 
+  Could not find statistics on the integration optimization. 
+
+  Inclusive timing profile :
+    Overall slowest channel          0:15:44 (P0_ddx_emep/all_G1_18 [step 2])
+    Average channel running time     0:09:03
+    Aggregated total running time    2 days, 22:48:41
+  Timing profile for <Virtuals> :
+    Overall fraction of time         74.358 %
+    Largest fraction of time         83.509 % (P0_bxb_emep/all_G1 [step 0])
+    Smallest fraction of time        47.095 % (P0_aa_emep/all_G1_5 [step 1])
+  Timing profile for <EW_sudakov> :
+    Overall fraction of time         6.819 %
+    Largest fraction of time         19.927 % (P0_aa_emep/all_G1_13 [step 1])
+    Smallest fraction of time        5.080 % (P0_bbx_emep/all_G1_9 [step 1])
+  Timing profile for <Reweight_scale> :
+    Overall fraction of time         6.046 %
+    Largest fraction of time         9.536 % (P0_aa_emep/all_G1_16 [step 2])
+    Smallest fraction of time        0.000 % (P0_aa_emep/all_G1 [step 0])
+  Timing profile for <Other_tasks> :
+    Overall fraction of time         3.541 %
+    Largest fraction of time         7.248 % (P0_aa_emep/all_G1_16 [step 2])
+    Smallest fraction of time        2.789 % (P0_uux_emep/all_G1_82 [step 2])
+  Timing profile for <Filling_plots> :
+    Overall fraction of time         2.260 %
+    Largest fraction of time         4.369 % (P0_aa_emep/all_G1_6 [step 2])
+    Smallest fraction of time        1.740 % (P0_bxb_emep/all_G1 [step 0])
+  Timing profile for <Adding_alphas_pdf> :
+    Overall fraction of time         1.424 %
+    Largest fraction of time         1.720 % (P0_aa_emep/all_G1_16 [step 2])
+    Smallest fraction of time        0.740 % (P0_bxb_emep/all_G1_3 [step 1])
+  Timing profile for <Integrated_CT> :
+    Overall fraction of time         1.414 %
+    Largest fraction of time         3.478 % (P0_aa_emep/all_G1_24 [step 2])
+    Smallest fraction of time        1.155 % (P0_bxb_emep/all_G1_9 [step 1])
+  Timing profile for <Nbody_prefactor> :
+    Overall fraction of time         1.333 %
+    Largest fraction of time         3.929 % (P0_aa_emep/all_G1_4 [step 1])
+    Smallest fraction of time        0.979 % (P0_bbx_emep/all_G1_9 [step 1])
+  Timing profile for <Reals_evaluation> :
+    Overall fraction of time         0.870 %
+    Largest fraction of time         1.606 % (P0_aa_emep/all_G1_10 [step 1])
+    Smallest fraction of time        0.688 % (P0_bxb_emep/all_G1_3 [step 1])
+  Timing profile for <Counter_terms> :
+    Overall fraction of time         0.809 %
+    Largest fraction of time         1.881 % (P0_aa_emep/all_G1_15 [step 2])
+    Smallest fraction of time        0.632 % (P0_bxb_emep/all_G1_4 [step 1])
+  Timing profile for <Applying_cuts> :
+    Overall fraction of time         0.802 %
+    Largest fraction of time         1.473 % (P0_aa_emep/all_G1_16 [step 2])
+    Smallest fraction of time        0.621 % (P0_uux_emep/all_G1_83 [step 2])
+  Timing profile for <Born> :
+    Overall fraction of time         0.212 %
+    Largest fraction of time         0.509 % (P0_aa_emep/all_G1_15 [step 2])
+    Smallest fraction of time        0.152 % (P0_bbx_emep/all_G1_5 [step 1])
+  Timing profile for <N1body_prefactor> :
+    Overall fraction of time         0.113 %
+    Largest fraction of time         0.253 % (P0_aa_emep/all_G1_16 [step 2])
+    Smallest fraction of time        0.079 % (P0_uux_emep/all_G1_84 [step 2])
+  Zero time record for PS_Generation.
+  Zero time record for MCsubtraction.
+  Zero time record for FxFx_cluster.
+  Zero time record for Reweight_pdf.
+  Zero time record for Sum_ident_contr.
+  Zero time record for Pick_unwgt.
+  Zero time record for Write_events.
+      WARNING:: A total of 51 errors have been found in the following log files:
+       > 1 error in ee-sdk/SubProcesses/P0_uux_emep/all_G1_26/log_MINT2.txt
+       > 1 error in ee-sdk/SubProcesses/P0_uux_emep/all_G1_28/log_MINT2.txt
+       > 1 error in ee-sdk/SubProcesses/P0_uux_emep/all_G1_35/log_MINT2.txt
+      And another 48 errors in 46 other log files 
