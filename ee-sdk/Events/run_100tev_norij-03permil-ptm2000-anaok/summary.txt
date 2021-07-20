@@ -3,7 +3,7 @@
       Final results and run summary:
       Process p p > e+ e- [QED SDK]
       Run at p-p collider (50000.0 + 50000.0 GeV)
-      Total cross section: 1.503e-04 +- 3.7e-08 pb
+      Total cross section: 1.503e-04 +- 3.8e-08 pb
    --------------------------------------------------------------
       Scale variation (computed from histogram information):
           Dynamical_scale_choice 10 (envelope of 9 values): 
