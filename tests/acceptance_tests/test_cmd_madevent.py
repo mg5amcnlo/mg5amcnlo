@@ -188,11 +188,11 @@ class TestMECmdShell(unittest.TestCase):
             if self.debugging:
                 if os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
                     shutil.rmtree(pjoin(MG5DIR,'BackUp_tmp_test'))
-                shutil.copytree(pjoin(MG5DIR,'tmp_test'),
+                misc.copytree(pjoin(MG5DIR,'tmp_test'),
                                 pjoin(MG5DIR,'BackUp_tmp_test'))
         else:
             shutil.rmtree(pjoin(MG5DIR,'tmp_test'))
-            shutil.copytree(pjoin(MG5DIR,'BackUp_tmp_test'),pjoin(MG5DIR,'tmp_test'))
+            misc.copytree(pjoin(MG5DIR,'BackUp_tmp_test'),pjoin(MG5DIR,'tmp_test'))
 
         biased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_01','unweighted_events.lhe.gz'))
         unbiased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_02','unweighted_events.lhe.gz'))

@@ -99,7 +99,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
@@ -308,7 +308,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -964,7 +964,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         elif output_dependencies == 'internal':
             StdHEP_internal_path = pjoin(self.dir_path,'Source','StdHEP')
-            shutil.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
+            misc.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
             # Create the links to the lib folder
             linkfiles = ['libstdhep.a', 'libFmcfio.a']
             for file in linkfiles:
@@ -3878,7 +3878,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)

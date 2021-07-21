@@ -1641,12 +1641,12 @@ class ReweightInterface(extended_cmd.Cmd):
 
         for i in range(2):
             pdir = pjoin(path_me,data['paths'][i])
-        if os.path.exists(pdir):
-            try:
-                shutil.rmtree(pjoin(path_me,data['paths'][0]))
-            except Exception as error:
-                misc.sprint('fail to rm rwgt dir:', error) 
-                pass 
+            if os.path.exists(pdir):
+                try:
+                    shutil.rmtree(pdir)
+                except Exception as error:
+                    misc.sprint('fail to rm rwgt dir:', error) 
+                    pass 
 
         # 1. prepare the interface----------------------------------------------
         mgcmd = self.mg5cmd

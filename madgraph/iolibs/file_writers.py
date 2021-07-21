@@ -456,7 +456,7 @@ class FortranWriter(FileWriter):
                 else:
                     if not line.endswith('\n'):
                         line = '%s\n' % line
-                    file.writelines(self, line)
+                    super(FileWriter,self).writelines(line)
             else:
                 removed.append(line)
                 

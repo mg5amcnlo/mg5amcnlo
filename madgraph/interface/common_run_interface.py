@@ -1855,9 +1855,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return
         
         if self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
-            nb_submit = min(self.options['nb_core'], nb_event//2500)
+            nb_submit = min(int(self.options['nb_core']), nb_event//2500)
         elif self.options['run_mode'] ==1:
-            nb_submit = min(self.options['cluster_size'], nb_event//25000)
+            try:
+                nb_submit = min(int(self.options['cluster_size']), nb_event//25000)
+            except Exception:
+                nb_submit =1
         else:
             nb_submit =1 
 

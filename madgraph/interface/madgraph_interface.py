@@ -5932,7 +5932,7 @@ This implies that with decay chains:
                 add_options.remove('--local')
                 logger.warning('you are using a local installer. This is intended for debugging only!')
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-                shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+                misc.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 
         # Potential change in naming convention
@@ -6723,13 +6723,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             pattern = re.compile(r'''^=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #= = = renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
-                shutil.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
+                misc.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
                 full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
                 for i, name in enumerate(full_path):
                     path = os.path.sep.join(full_path[:i+1])
                     if path and not os.path.isdir(path):
                         os.mkdir(path)
-                shutil.copytree(pjoin(MG5DIR, 'UPDATE_TMP'), pjoin(MG5DIR, new))
+                misc.copytree(pjoin(MG5DIR, 'UPDATE_TMP'), pjoin(MG5DIR, new))
                 shutil.rmtree(pjoin(MG5DIR, 'UPDATE_TMP'))
             # track rename since patch fail to apply those correctly.
             pattern = re.compile(r'''=== renamed file \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')

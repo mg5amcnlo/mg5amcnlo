@@ -255,7 +255,7 @@ class ProcessExporterFortran(VirtualExporter):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
@@ -280,7 +280,7 @@ class ProcessExporterFortran(VirtualExporter):
 #                if os.path.isfile(filename):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
-#                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
+#                     misc.copytree(filename, pjoin(self.dir_path,name), True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
@@ -2956,9 +2956,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         super(ProcessExporterFortranMW, self).copy_template(model)        
 
         # Add the MW specific file
-        shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
+        misc.copytree(pjoin(MG5DIR,'Template','MadWeight'),
                                pjoin(self.dir_path, 'Source','MadWeight'), True)        
-        shutil.copytree(pjoin(MG5DIR,'madgraph','madweight'),
+        misc.copytree(pjoin(MG5DIR,'madgraph','madweight'),
                         pjoin(self.dir_path, 'bin','internal','madweight'), True) 
         files.mv(pjoin(self.dir_path, 'Source','MadWeight','src','setrun.f'),
                                       pjoin(self.dir_path, 'Source','setrun.f'))
@@ -3005,7 +3005,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -3853,7 +3853,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
