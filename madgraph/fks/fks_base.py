@@ -128,6 +128,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         if 'nlo_mixed_expansion' in options:
             self['nlo_mixed_expansion'] = options['nlo_mixed_expansion']
             del options['nlo_mixed_expansion']
+        else:
+            self['nlo_mixed_expansion'] = True
 
 
         #swhich the other loggers off

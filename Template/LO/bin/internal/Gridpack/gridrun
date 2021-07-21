@@ -79,7 +79,7 @@ if __debug__:
 try:
     if __debug__ and options.logging == 'INFO':
         options.logging = 'DEBUG'    
-    logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+    logging.config.fileConfig(os.path.join(root_path, 'bin', 'internal', 'me5_logging.conf'))
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
 except:

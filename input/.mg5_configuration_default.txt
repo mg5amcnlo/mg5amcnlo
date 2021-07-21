@@ -25,6 +25,13 @@
 #    one version of MG5. 
 #
 ################################################################################
+
+#! Allow/Refuse syntax that changed meaning in version 3.1 of the code
+#! (Compare to 3.0, 3.1 is back to the meaning of 2.x branch)
+#!
+# acknowledged_v3.1_syntax = False
+
+
 #! Prefered Fortran Compiler
 #! If None: try to find g77 or gfortran on the system
 #!

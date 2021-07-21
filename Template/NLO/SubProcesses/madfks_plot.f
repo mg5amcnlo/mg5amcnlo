@@ -166,7 +166,7 @@ c
       xnorm=1.d0/float(ncalls0)
       if(useitmax)xnorm=xnorm/float(itmax)
 c Normalization factor for the PineAPPL grids
-      if(pineappl) appl_norm_histo = 1d0 / dble(ncalls0*itmax)
+      if(pineappl) appl_norm_histo = 1d0 / (dble(ncalls0)*dble(itmax))
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
