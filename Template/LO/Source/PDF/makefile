@@ -22,7 +22,7 @@ ifdef lhapdf
     endif    
   endif
 else
-  PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o
+  PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o eepdf.o gridpdfaux.o dfint.o kerset.o
 endif
 
 all: $(LIBDIR)$(LIBRARY)

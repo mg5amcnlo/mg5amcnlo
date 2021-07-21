@@ -22,13 +22,20 @@ c timing statistics
       double precision function pdg2pdf(ih,ipdg,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
+c     ih is now signed <0 for antiparticles
+c     if ih<0 does not have a dedicated pdf, then the one for ih>0 will be called
+c     and the sign of ipdg flipped accordingly.
+c
+c     ibeam is the beam identity 1/2
+c      if set to -1/-2 it meand that ipdg should not be flipped even if ih<0
+c      usefull for re-weighting
 c***************************************************************************
       implicit none
 c
 c     Arguments
 c
       DOUBLE  PRECISION x,xmu
-      INTEGER IH,ipdg
+      INTEGER IH,ipdg, ibeam
 C
 C     Include
 C
@@ -63,8 +70,12 @@ c     instead of stopping the code, as this might accidentally happen.
          write (*,*) 'PDF not supported for Bjorken x ', x
          stop 1
       endif
-
-      ipart=ipdg
+      if (ibeam.gt.0)then
+         ipart=sign(1,ih)*ipdg
+      else
+         ipart=ipdg
+      endif
+      
       if(iabs(ipart).eq.21) then
          ipart=0
       else if(iabs(ipart).eq.22) then

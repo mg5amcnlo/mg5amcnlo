@@ -1561,14 +1561,14 @@ c     vertex or last 2->2
      $                    ' to: ',sqrt(pt2pdf(imocl(n)))
                   else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                    n.le.jlast(j))then
-                     pdfj1=pdg2pdf(abs(lpp(IB(j))),
+                     pdfj1=pdg2pdf(lpp(IB(j)),
      $                    ipdgcl(idacl(n,i),
      $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
-     $                    xnow(j),sqrt(q2now))
-                     pdfj2=pdg2pdf(abs(lpp(IB(j))),
+     $                    -IB(j), xnow(j),sqrt(q2now))
+                     pdfj2=pdg2pdf(lpp(IB(j)),
      $                    ipdgcl(idacl(n,i),
      $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
-     $                    xnow(j),sqrt(pt2pdf(idacl(n,i))))
+     $                    -IB(j),xnow(j),sqrt(pt2pdf(idacl(n,i))))
                      if(pdfj2.lt.1d-10)then
 c     Scale too low for heavy quark
                         rewgt=0d0
@@ -1684,9 +1684,9 @@ c     Set reweight factor for systematics studies
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
-            s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
+            s_rwfact=s_rwfact*pdg2pdf(lpp(IB(i)),
      $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
-     $           s_xpdf(1,i),s_qpdf(1,i))
+     $           -IB(i),s_xpdf(1,i),s_qpdf(1,i))
          enddo
          s_rwfact=s_rwfact*asref**n_qcd
       endif

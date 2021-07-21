@@ -1600,6 +1600,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model = processes[0].get('model')
 
         pdf_definition_lines = ""
+        ee_pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
 
@@ -1617,6 +1618,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
+            misc.sprint(tuple(initial_states))
+            if tuple(initial_states) in [([-11],[11]), ([11],[-11]), ([-13],[13]),([13],[-13])]:
+                dressed_lep = True
+            else:
+                dressed_lep = False
+            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n"
+
+   
             # Prepare all variable names
             pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
                               sum(initial_states,[])])
@@ -1641,6 +1650,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
+                ee_pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i] if abs(pdg) in [11,13]]) + \
+                                                 "\n"
+
 
             # Get PDF data lines for all initial states
             for i in [0,1]:
@@ -1654,30 +1669,36 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n!LP=SIGN(1,LPP(IB(%d)))\n" \
                                  % (i + 1, i + 1)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
 
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
+                                        ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
                                          "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
-                                          i + 1, i + 1, pdgtopdf[initial_state],
+                                          i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
+                            if dressed_lep:
+                                pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
+                                (pdf_codes[initial_state],i + 1)
                         else:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP, %d," + \
+                                        ("%s%d=PDG2PDF(LPP(%d)),%d, %d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
                                           i + 1,
                                           i + 1, i + 1)
+                            if dressed_lep:
+                                pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
+                                (pdf_codes[initial_state],i + 1)
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -1686,19 +1707,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC)="
+                comp_list = []
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
+                        comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                     else:
                         pdf_lines = pdf_lines + "1d0*"
+                        comp_list.append("DUMMY")
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                
+                # this is for the lepton collisions with electron luminosity 
+                # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                if dressed_lep:
+                    pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                             tuple(comp_list)
                 pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
+                if not dressed_lep:
+                    ee_pdf_definition_lines = ""
+                misc.sprint(dressed_lep)
         # Remove last line break from the return variables
-        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
     #===========================================================================
     # write_props_file
@@ -3509,11 +3543,12 @@ c     channel position
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Lines that differ between subprocess group and regular
         if proc_id:
@@ -4526,11 +4561,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Lines that differ between subprocess group and regular
         if proc_id:

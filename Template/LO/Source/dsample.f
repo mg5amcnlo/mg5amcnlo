@@ -1007,6 +1007,13 @@ c
      &                                              grid_type=grid_type)
       endif
 
+      if(DS_get_dim_status('ee_mc').ge.1) then
+        call DS_write_grid(stream_id, dim_name='ee_mc', 
+     &                                              grid_type=grid_type)
+      endif      
+
+
+      
       end subroutine write_discrete_grids
 
       subroutine write_grid(name)
@@ -1450,7 +1457,11 @@ c
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       logical cutsdone, cutspassed
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-c
+ 
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+c     
 c     Begin code
 c
 c       It is important to divide the wgt stored in the grid by the 
@@ -1465,6 +1476,10 @@ c       that they shouldn't be added here.
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 
+        if(pdlabel.eq.'dressed'.and.ee_picked.ne.-1) then
+          call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))           
+       endif
+       
       end subroutine add_entry_to_discrete_dimensions
 
 C
@@ -1507,6 +1522,10 @@ C       Security in case of all helicity vanishing (G1 of gg > qq )
       endif
       if(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').ne.-1) then
         call DS_update_grid('grouped_processes', filterZeros=.True.)
+      endif
+
+      if (DS_get_dim_status('ee_mc').ne.-1)then
+         call DS_update_grid('ee_mc', filterZeros=.True.)
       endif
 
       end subroutine update_discrete_dimensions
@@ -1720,7 +1739,10 @@ c--------------
 c     tjs 3/5/2011  use stored value for last bin
 c--------------
                i = lastbin(j)
-c               write(*,*) 'bin choice',j,i,lastbin(j)
+               if (i.eq.0) then
+                  write(*,*) "issue with", j,'/',invar
+               endif
+c     write(*,*) 'bin choice',j,i,lastbin(j)
                if (i .gt. ng) then
                   print*,'error i>ng',i,j,ng,point(j)
                   i=ng

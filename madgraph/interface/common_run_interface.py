@@ -2513,6 +2513,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         daughters if need be."""
         pass
 
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+
     ############################################################################
     # Start of MadAnalysis5 related function
     ############################################################################
@@ -6138,8 +6154,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.do_set('shower_card njmax %i' % njmax) 
                     if self.shower_card['njmax'] == 0:
                         raise Exception("Invalid njmax parameter. Can not be set to 0")
+
+
+            #check relation between lepton PDF // dressed lepton collisions // ...
+            if abs(self.run_card['lpp1']) != 1  or  abs(self.run_card['lpp2']) != 1:
+                if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 3:
+                    # this can be dressed lepton or photon-flux
+                    if proc_charac['pdg_initial1'] in [[11],[-11]] and  proc_charac['pdg_initial2'] in [[11],[-11]]:
+                        if self['pdlabel'] not in self.allowed_lep_densities[(-11,11)]:
+                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+                elif abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 4:
+                    # this can be dressed lepton or photon-flux
+                    if proc_charac['pdg_initial1'] in [[13],[-13]] and  proc_charac['pdg_initial2'] in [[13],[-13]]:
+                        if self['pdlabel'] not in self.allowed_lep_densities[(-13,13)]:
+                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])   
+                        
                     
-                
        
         
         # Check the extralibs flag.

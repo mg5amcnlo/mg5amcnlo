@@ -89,8 +89,9 @@ c     For each t-channel invarient x(ndim-1), x(ndim-3), .... are used
 c     in place of the cos(theta) variable used in s-channel.
 c     x(ndim), x(ndim-2),.... are the phi angles.
 c**************************************************************************
+      use DiscreteSampler
       implicit none
-c
+c     
 c     Constants
 c
       include 'genps.inc'
@@ -130,8 +131,10 @@ c
       double precision maxwgt
       integer imatch
       save maxwgt
-
+      double precision R        !random value
       integer ninvar
+      double precision tau_m, tau_w, t1, t2
+      double precision get_ee_expo
       
 c
 c     External
@@ -141,6 +144,12 @@ c
 c
 c     Global
 c
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
+      
       integer          lwgt(0:maxconfigs,maxinvar)
       common/to_lwgt/lwgt
 
@@ -159,6 +168,11 @@ c
       double precision   psect(maxconfigs),alpha(maxconfigs)
       common/to_mconfig2/psect            ,alpha
 
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+      
       include 'run.inc'
 
 
@@ -175,6 +189,9 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+      
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
@@ -183,6 +200,9 @@ c
       logical set_cm_rap
       common/to_cm_rap/set_cm_rap,cm_rap      
 
+
+      double precision x1_ee, x2_ee
+      
 c     External function
       double precision SumDot
       external SumDot
@@ -209,6 +229,7 @@ c      write(*,*) 'using iconfig',iconfig
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -231,12 +252,81 @@ c
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
                set_cm_rap=.true.
             endif
+c        lpp1=+-3 or +-4 and lpp2 as well
+c        For ISR/beamstrhalung case         
+         else if (pdlabel.eq.'dressed') then
+            if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               call ntuple(R,0.0d0,1.0d0,0,iconfig)
+               ee_jacobian = 1d0
+               call DS_get_point('ee_mc', R , ee_picked, ee_jacobian)
+               sjac = sjac *  ee_jacobian
+            else
+               ee_picked = 1
+            endif
+            
+            if(ee_picked.eq.2) then
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,smin/stot,1d0)               
+               xtau = x(ndim-1)
+               if(nexternal .eq. 3) then
+                  x(ndim-1) = pmass(3)*pmass(3)/stot
+                  sjac=1 / stot !for delta function in d_tau
+               endif
+
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               CALL GENCMS_EE(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+               x(ndim-1) = xtau !Fix for 2->1 process
+c     Set CM rapidity for use in the rap() function
+               cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+               set_cm_rap=.true.
+c           Set shat
+               s(-nbranch) = xbk(1)*xbk(2)*stot
+               x1_ee = Xbk(1)
+               x2_ee =  Xbk(2)
+            else   
+c        ! for dressed ee collisions the generation is different
+c        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+c        ! while in the ee case x1 and x2 are generated first.
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               call generate_x_ee(x(ndim-1), smin/stot,x1_ee, omx_ee(1), sjac)
+               call generate_x_ee(x(ndim), smin/stot/x1_ee,x2_ee, omx_ee(2), sjac)
+
+               s(-nbranch) =  x1_ee * x2_ee * stot
+               xbk(1)   = x1_ee
+               xbk(2)   = x2_ee
+c        ! now we are done. We must call the following function 
+c        ! in order to (re-)generate tau and ycm
+c        ! from x1 and x2. It also (re-)checks that tau_born 
+c        ! is pysical, and otherwise sets xjac0=-1000
+               call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
+               set_cm_rap=.true.
+            endif
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+           if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               tau_m = spole(ndim-1)
+               tau_w = swidth(ndim-1)
+               t1 =  (Max(1e-12,1- x1_ee * x2_ee))**(1d0-2*get_ee_expo())
+c               if (dabs(x1_ee * x2_ee-tau_m).lt.5*tau_w)then
+                  t2 =  (1d0/(( x1_ee * x2_ee-tau_m)**2 + tau_m*tau_w))
+c               else
+c                  t2=0d0
+c               endif
+               
+               if (ee_picked.eq.1) then
+                  sjac = sjac * t1 / (t1+t2)
+               else
+                  sjac = sjac * t2 / (t1+t2)
+               endif
+            endif
+
+
          else
-            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
-            xtau = x(ndim-1)
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+           xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
                sjac=1 / stot    !for delta function in d_tau
@@ -1591,7 +1681,74 @@ c      eta = 0d0
       X2 = SQRT(TAU)*EXP(-ETA)
 
       END
+
+      SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)
+C***********************************************************************
+C     PICKS PARTON MOMENTUM FRACTIONS X1 AND X2 BY CHOOSING ETA AND TAU
+C     X(1) --> TAU = X1*X2
+C     X(2) --> one of the bjorken x
+C***********************************************************************
+      IMPLICIT NONE
+
+C     ARGUMENTS
+
+      DOUBLE PRECISION X1,X2,S,SMIN,SJACOBI
+      DOUBLE PRECISION X(2)
+C     global
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+C     FUNCTION
+      double precision get_ee_expo
+      external get_ee_expo
+C     LOCAL
+
+      DOUBLE PRECISION TAU,TAUMIN,TAUMAX
+
+C------------
+C  BEGIN CODE
+C------------
+
+      IF (S .LT. SMIN) THEN
+         PRINT*,'ERROR CMS ENERGY LESS THAN MINIMUM CMS ENERGY',S,SMIN
+         RETURN
+      ENDIF
+
+C     TO FLATTEN BRIET WIGNER POLE AT WMASS WITH WWIDTH USE BELOW:
+C      CALL TRANSPOLE(REAL(WMASS**2/S),REAL(WMASS*WWIDTH/S),
+C     &     X(1),TAU,SJACOBI)
+
+C     IF THERE IS NO S CHANNEL POLE USE BELOW:
+
+      TAUMIN = 0d0 !SMIN/S !keep scale fix
+      TAUMAX = 1D0
+      TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
+      SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
+
+        ! then pick either x1 or x2 and generate it the usual way;
+        ! Note that:
+        ! - setting xmin=sqrt(tau_born) ensures that the largest 
+        !    bjorken x is being generated.
+        ! -  there is a jacobian for x1 x2 -> tau x1(2)
+        ! -  we must include the factor 1/(1-x)^get_ee_expo,
+        !    (x is the bjorken x which is not generated)
+        !    because the compute_eepdf function assumes that
+        !    this is the case in general
+        if (x(2).lt.0.5d0) then
+          call generate_x_ee(x(2)*2d0, dsqrt(tau), x1, omx_ee(1), sjacobi)
+          x2 = tau / x1
+          omx_ee(2) = 1d0 - x2
+          sjacobi = sjacobi / x1 * 2d0  / (1d0-x2)**get_ee_expo()
+        else
+          call generate_x_ee(1d0-2d0*(x(2)-0.5d0), dsqrt(tau), x2, omx_ee(2), sjacobi)
+          x1 = tau / x2
+          omx_ee(1) = 1d0 - x1
+          sjacobi = sjacobi / x2 * 2d0  / (1d0-x1)**get_ee_expo()
+       endif
       
+
+      END
+
 
 C     -----------------------------------------
 C     Subroutine to return momenta in a dedicated frame
@@ -1777,3 +1934,497 @@ c      write(*,*) 'final for config', config, get_channel_cut
       end
 
 
+      subroutine get_y_from_x12(x1, x2, omx, ycm) 
+      implicit none
+      double precision x1, x2, omx(2), tau, ycm
+      double precision ylim
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
+      double precision tolerance
+      parameter (tolerance=1e-3)
+      double precision y_settozero
+      parameter (y_settozero=1e-12)
+      double precision lx1, lx2
+      double precision ylim0, ycm0
+
+
+      ! ycm=-log(tau)/2 ;  ylim = log(x1/x2)/2
+      if (1d0-x1.gt.tolerance) then
+         lx1 = dlog(x1)
+      else if (omx(1).lt.tolerance**5)then
+         lx1=0d0
+      else
+        lx1 = -omx(1)-omx(1)**2/2d0-omx(1)**3/3d0-omx(1)**4/4d0-omx(1)**5/5d0
+      endif
+      ylim = -0.5d0*lx1
+      ycm = 0.5d0*lx1
+
+      if (1d0-x2.gt.tolerance) then
+         lx2 = dlog(x2)
+      else if (omx(2).lt.tolerance**5)then
+         lx2=0d0         
+      else
+        lx2 = -omx(2)-omx(2)**2/2d0-omx(2)**3/3d0-omx(2)**4/4d0-omx(2)**5/5d0
+      endif
+      ylim = ylim-0.5d0*lx2
+      ycm = ycm-0.5d0*lx2
+
+c      ycmhat = ycm / ylim
+
+      ! this is to prevent numerical inaccuracies
+      ! when botn x->1
+      if (ylim.lt.y_settozero) then
+        ylim = 0d0
+        ycm = 0d0
+      endif
+
+      return 
+      end
+
+      subroutine generate_x_ee(rnd, xmin, x, omx, jac)
+      implicit none
+      ! generates the momentum fraction with importance
+      !  sampling suitable for ee collisions
+      ! rnd is generated uniformly in [0,1], 
+      ! x is generated according to (1 -rnd)^-expo, starting
+      ! from xmin
+      ! jac is the corresponding jacobian
+      ! omx is 1-x, stored to improve numerical accuracy
+      double precision rnd, x, omx, jac, xmin
+      double precision expo
+      double precision get_ee_expo
+      double precision tolerance
+      parameter (tolerance=1.d-5)
+
+      expo = get_ee_expo()
+
+      x = 1d0 - rnd ** (1d0/(1d0-expo))
+      omx = rnd ** (1d0/(1d0-expo))
+      if (x.ge.1d0) then
+        if (x.lt.1d0+tolerance) then
+          x=1d0
+        else
+          write(*,*) 'ERROR in generate_x_ee', rnd, x
+          stop 1
+        endif
+      endif
+      jac = jac/(1d0-expo) 
+      ! then rescale it between xmin and 1
+      x = x * (1d0 - xmin) + xmin
+      omx = omx * (1d0 - xmin)
+      jac = jac * (1d0 - xmin)**(1d0-expo)
+
+      return 
+      end
+
+
+      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, dummy, nt_channel,
+     $     qmass, qwidth, cBW, cBW_mass, cBW_width,
+     $     tau_born, ycm_born, ycmhat, xjac0)
+      implicit none
+      double precision rnd1_in, rnd2_in
+      double precision rnd1, rnd2, dummy, qmass, qwidth
+c     dummy is supposed to be equel to stot      
+      double precision cBW_mass(-1:1), cBW_width(-1:1)
+      integer nt_channel, cBW
+      logical one_body
+      double precision tau_born, ycm_born, ycmhat, xjac0
+
+      logical bw_exists, generate_with_bw
+      common /to_ee_generatebw/ generate_with_bw
+      double precision frac_bw
+      parameter (frac_bw=0.5d0)
+      integer idim_dum
+C dressed lepton stuff
+      double precision x1_ee, x2_ee, jac_ee
+      
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+
+      double precision SMIN
+      common/to_smin/ smin
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+      
+c      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+c     $     ,tau_lower_bound
+c      common/ctau_lower_bound/tau_Born_lower_bound
+c     $     ,tau_lower_bound_resonance,tau_lower_bound
+
+      double precision get_ee_expo
+      double precision tau_m, tau_w
+
+      ! these common blocks are never used
+      ! we leave them here for the moment 
+      ! as e.g. one may want to plot random numbers, etc.
+c      double precision r1, r2, x1bk, x2bk
+c      common /to_random_numbers/r1,r2, x1bk, x2bk
+
+
+      ! copy the random numbers, as they may be rescaled
+      ! (avoids side effects)
+      rnd1=rnd1_in
+      rnd2=rnd2_in
+
+c      ! these lines store the random numbers in the common
+c      ! block (may be removed)
+c      r1=rnd1
+c      r2=rnd2
+
+      ! define the analogous of tau for mass and width
+      tau_m = qmass**2/stot
+      tau_w = qwidth**2/stot
+
+      bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
+     $ .and.tau_m.lt.1d0
+      generate_with_bw=.false.
+      ! if there are BWs, decide whether to generate flat or
+      ! to use the BW-specific generation (half and half, or
+      ! as determined by frac_bw)
+      if (bw_exists) then
+        generate_with_bw = rnd1.lt.frac_bw
+        if (generate_with_bw) then
+            rnd1 = rnd1 / frac_bw
+            xjac0 = xjac0 / frac_bw
+        else
+            rnd1 = (rnd1 - frac_bw) / (1d0 - frac_bw)
+            xjac0 = xjac0 / (1d0 - frac_bw)
+        endif
+      endif
+
+      if (one_body) then
+        write(*,*) 'one body with ee collisions not implemented'
+        stop 1
+      endif
+
+      if(generate_with_bw) then
+        ! here we treat the case of resonances
+c            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+c-----
+c tjs 5/24/2010 for 2->1 process
+c-------
+c           xtau = x(ndim-1)
+c            if(nexternal .eq. 3) then
+c               x(ndim-1) = pmass(3)*pmass(3)/stot
+c               sjac=1 / stot    !for delta function in d_tau
+c            endif
+
+c            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+c            CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+c            x(ndim-1) = xtau    !Fix for 2->1 process
+c           Set CM rapidity for use in the rap() function
+c            cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+c            set_cm_rap=.true.
+c           Set shat
+c            s(-nbranch) = xbk(1)*xbk(2)*stot
+        ! first generate tau with the dedicated function
+         idim_dum = 1000        ! this is never used in practice
+        call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
+     $       cBW_width,tau_born,xjac0)
+        ! multiply the jacobian by a multichannel factor
+        xjac0 = xjac0 * (1d0/((tau_born-tau_m)**2 + tau_m*tau_w)) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+
+        ! then pick either x1 or x2 and generate it the usual way;
+        ! Note that:
+        ! - setting xmin=sqrt(tau_born) ensures that the largest 
+        !    bjorken x is being generated.
+        ! -  there is a jacobian for x1 x2 -> tau x1(2)
+        ! -  we must include the factor 1/(1-x)^get_ee_expo,
+        !    (x is the bjorken x which is not generated)
+        !    because the compute_eepdf function assumes that
+        !    this is the case in general
+        if (rnd2.lt.0.5d0) then
+          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx1_ee, jac_ee)
+          x2_ee = tau_born / x1_ee
+          omx2_ee = 1d0 - x2_ee
+          xjac0 = xjac0 / x1_ee * 2d0 * jac_ee / (1d0-x2_ee)**get_ee_expo()
+        else
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx2_ee, jac_ee)
+          x1_ee = tau_born / x2_ee
+          omx1_ee = 1d0 - x1_ee
+          xjac0 = xjac0 / x2_ee * 2d0  * jac_ee / (1d0-x1_ee)**get_ee_expo()
+        endif
+      else
+        ! standard (without resonances) generation:
+        ! for dressed ee collisions the generation is different
+        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+        ! while in the ee case x1 and x2 are generated first.
+
+        call generate_x_ee(rnd1, smin/stot,
+     $      x1_ee, omx1_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+        call generate_x_ee(rnd2, smin/(stot*x1_ee),
+     $      x2_ee, omx2_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+
+        tau_born = x1_ee * x2_ee
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+      endif
+
+      ! Check here if the bjorken x's are physical (may not be so
+      ! because of instabilities
+      if (x1_ee.gt.1d0.or.x2_ee.gt.1d0) then
+        write(*,*) 'generate_ee_tau_y: Warning, unphysical x:', 
+     $   x1_ee, x2_ee, generate_with_bw
+        xjac0 = -1000d0
+        return
+      endif
+
+      ! now we are done. We must call the following function 
+      ! in order to (re-)generate tau and ycm
+      ! from x1 and x2. It also (re-)checks that tau_born 
+      ! is pysical, and otherwise sets xjac0=-1000
+      call get_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+
+c      x1bk=x1_ee
+c      x2bk=x2_ee
+
+      return
+      end
+
+      subroutine generate_tau_BW(stot,idim,x,mass,width,cBW,BWmass
+     $     ,BWwidth,tau,jac)
+      implicit none
+      integer cBW,idim
+      double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
+     $     -1:1),s_mass,s
+      double precision smax,smin
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
+      if (cBW.eq.1 .and. width.gt.0d0 .and. BWwidth(1).gt.0d0) then
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x(5,idim,x,smin,smax,s_mass,mass,width,BWmass(
+     $        -1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      else
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x(3,idim,x,smin,smax,s_mass,mass,width,BWmass(
+     $        -1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      endif
+      return
+      end
+
+
+
+      subroutine trans_x(itype,idim,x,smin,smax,s_mass,qmass,qwidth
+     $     ,cBW_mass,cBW_width,jac,s)
+c Given the input random number 'x', returns the corresponding value of
+c the invariant mass squared 's'.
+c
+c     itype=1: flat transformation
+c     itype=2: flat between 0 and s_mass/stot, 1/x above
+c     itype=3: Breit-Wigner
+c     itype=4: Conflicting BW, with alternative mass smaller
+c     itype=5: Conflicting BW, with alternative mass larger
+c     itype=6: Conflicting BW on both sides
+c
+      implicit none
+      integer itype,idim
+      double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
+     $     ,cBW_width(-1:1),jac,s
+      double precision fract,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      integer j
+c
+      if (itype.eq.1) then
+c     flat transformation:
+         A=smax-smin
+         B=smin
+         s=A*x+B
+         jac=jac*A
+      elseif (itype.eq.2) then
+         fract=0.25d0
+         if (s_mass.eq.0d0) then
+            write (*,*) 's_mass is zero',itype,idim
+         endif
+         if (x.lt.fract) then
+c     flat transformation:
+            if (s_mass.lt.smin) then
+               jac=-421d0
+               return
+            endif
+            maxi=min(s_mass,smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         else
+c     S=A/(B-x) transformation:
+            if (s_mass.ge.smax) then
+               jac=-422d0
+               return
+            endif
+            mini=max(s_mass,smin)
+            A=mini*smax*(1d0-fract)/(smax-mini)
+            B=(smax-fract*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif(itype.eq.3) then
+c     Normal Breit-Wigner, i.e.
+c        \int_smin^smax ds g(s)/((s-qmass^2)^2-qmass^2*qwidth^2) =
+c        \int_0^1 dx g(s(x))
+         A=atan((qmass-smin/qmass)/qwidth)
+         B=atan((qmass-smax/qmass)/qwidth)
+         s=qmass*(qmass-qwidth*tan(A-(A-B)*x))
+         jac=jac*qmass*qwidth*(A-B)/(cos(A-(A-B)*x))**2
+      elseif(itype.eq.4) then
+c     Conflicting BW, with alternative mass smaller than current
+c     mass. That is, we need to throw also many events at smaller masses
+c     than the peak of the current BW. Split 'x' at 'bs(-1)', using a
+c     flat distribution below the split, and a BW above the split.
+         fract=0.3d0
+         bs(-1)=(cBW_mass(-1)-qmass)/
+     &        (qwidth+cBW_width(-1)) ! bs(-1) is negative here
+         bs(-1)=qmass+bs(-1)*qwidth
+         bs(-1)=bs(-1)**2
+         if (x.lt.fract) then
+            if(smin.gt.bs(-1)) then
+               jac=-441d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.lt.bs(-1)) then
+               jac=-442d0
+               return
+            endif
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
+            B=atan((qmass-smax/qmass)/qwidth)
+            C=((1d0-x)*A+(x-fract)*B)/(1d0-fract)
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=jac*qmass*qwidth*(A-B)/((cos(C))**2*(1d0-fract))
+         endif
+      elseif(itype.eq.5) then
+c     Conflicting BW, with alternative mass larger than current
+c     mass. That is, we need to throw also many events at larger masses
+c     than the peak of the current BW. Split 'x' at 'bs(1)' and the
+c     alternative mass. Use a BW below bs(1), a flat distribution
+c     between bs(1) and the alternative mass, and a 1/x above the
+c     alternative mass.
+         fract=0.35d0
+         bs(1)=(cBW_mass(1)-qmass)/
+     &        (qwidth+cBW_width(1))
+         bs(1)=qmass+bs(1)*qwidth
+         bs(1)=bs(1)**2
+         if (x.lt.fract) then
+            if(smin.gt.bs(1)) then
+               jac=-451d0
+               return
+            endif
+            maxi=min(bs(1),smax)
+            A=atan((qmass-smin/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
+            C=((B-A)*x+fract*A)/fract
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=jac*qmass*qwidth*(A-B)/((cos(C))**2*fract)
+         elseif (x.lt.1d0-fract) then
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-452d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=(maxi-mini)/(1d0-2d0*fract)
+            B=((1d0-fract)*mini-fract*maxi)/(1d0-2d0*fract)
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.le.cBW_mass(1)**2) then
+               jac=-453d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(smax-mini)
+            B=(smax-(1d0-fract)*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif(itype.eq.6) then
+         fract=0.3d0
+c     Conflicting BW on both sides. Use flat below bs(-1); BW between
+c     bs(-1) and bs(1); flat between bs(1) and alternative mass; and 1/x
+c     above alternative mass.
+         do j=-1,1,2
+            bs(j)=(cBW_mass(j)-qmass)/
+     &           (qwidth+cBW_width(j))
+            bs(j)=qmass+bs(j)*qwidth
+            bs(j)=bs(j)**2
+         enddo
+         if (x.lt.fract) then
+            if(smin.gt.bs(-1)) then
+               jac=-461d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         elseif(x.lt.1d0-fract) then
+            if(smin.gt.bs(1) .or. smax.lt.bs(-1)) then
+               jac=-462d0
+               return
+            endif
+            maxi=min(bs(1),smax)
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
+            C=((1d0-fract-x)*A+(x-fract)*B)/(1d0-2d0*fract)
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=-jac*qmass*qwidth*(B-A)/((cos(C))**2*(1d0-2d0*fract))
+         elseif(x.lt.1d0-fract/2d0) then
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-463d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=2d0*(maxi-mini)/fract
+            B=2d0*maxi-mini-2d0*(maxi-mini)/fract
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.le.cBW_mass(1)**2) then
+               jac=-464d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(2d0*(smax-mini))
+            B=(smax-(1d0-fract/2d0)*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif (itype.eq.7) then
+c     S=A/(B-x) transformation:
+         if (smin.le.0d0) then
+            jac=-471d0
+            return
+         endif
+         A=smin*smax/(smax-smin)
+         B=smax/(smax-smin)
+         s=A/(B-x)
+         jac=jac*s**2/A
+      endif
+      return
+      end      

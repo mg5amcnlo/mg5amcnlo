@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+
 3.1.1 (28/05/21)
       ALL: put a crash for potentially ambiguous syntax with explanation
            on how to bypass such crash via a new entry in
@@ -72,6 +73,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
                              ** Main Branch (version 2.x) Update **
+
 
 2.9.3(25/03/21)
       OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
