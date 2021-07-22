@@ -2514,11 +2514,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             args.pop(0)
             
         self.run_generate_events(switch_mode, args)
+
+        self.exec_cmd("contur")
         
-        
+    def postscan(self, iteratorobj):
+        ....
+
         
     # this decorator handle the loop related to scan.
-    @common_run.scanparamcardhandling()
+    @common_run.scanparamcardhandling(postprocessing=MadEventCmd.postscan)
     def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:

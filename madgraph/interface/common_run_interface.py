@@ -7071,6 +7071,7 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                       iteratorclass=param_card_mod.ParamCardIterator,
                       summaryorder=lambda obj: lambda:None,
                       check_card=lambda obj: CommonRunCmd.static_check_param_card,
+                      postprocessing: None
                       ):
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
@@ -7180,6 +7181,9 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                 logger.info("write scan results in %s" % path ,'$MG:BOLD')
                 order = summaryorder(obj)()
                 param_card_iterator.write_summary(path, order=order)
+                if postprocessing:
+                    postprocessing(obj, param_card_iterator)
+
         return new_fct
     return decorator    
 
