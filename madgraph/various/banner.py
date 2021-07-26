@@ -4217,14 +4217,13 @@ class RunCardNLO(RunCard):
         super(RunCardNLO, self).check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
-        if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
-            #if self['lpp1'] == 1 or self['lpp2']==1:
-                #raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
-            
+        if abs(self['lpp1'])!=1 and abs(self['lpp2'])!=1:
+          
             if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]
                 logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+                
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
