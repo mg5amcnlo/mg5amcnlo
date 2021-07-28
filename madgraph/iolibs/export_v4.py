@@ -6561,6 +6561,7 @@ class UFO_model_to_mg4(object):
                     complex_mass.add('CMASS_%s' % one_mass)
             
         if masses:
+            masses = sorted(list(masses))
             fsock.writelines('double precision '+','.join(masses)+'\n')
             fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
             if self.opt['mp']:
@@ -6574,6 +6575,7 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+m for m in masses])+'\n\n')                
 
         if widths:
+            widths = sorted(list(widths))
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
             if self.opt['mp']:

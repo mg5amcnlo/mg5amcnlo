@@ -3102,7 +3102,7 @@ class Process(PhysicsObject):
                     mystr = mystr + 'sqrvirt = '
                 else:
                     mystr = mystr + self['NLO_mode'] + ' = '
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
@@ -3220,7 +3220,7 @@ class Process(PhysicsObject):
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
