@@ -616,6 +616,8 @@ class TestRunCard(unittest.TestCase):
         """ensure that some handling are done correctly"""
 
         run_card = bannermod.RunCardLO()
+        run_card['dsqrt_q2fact1'] = 10
+        run_card['dsqrt_q2fact2'] = 20
 
         # check that if fixed_fac_scale is on False and lpp1=1 fixed_fac_scale1 is False but if lpp=2 then  fixed_fac_scale1 is True
         run_card.set('fixed_fac_scale', False, user=True)
@@ -628,6 +630,16 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
+        # check that for elastisc a a collision we force to use fixed_fac_scale1/2
+        run_card.set('lpp1', 2, user=True)
+        run_card.set('lpp2', 2, user=True)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            run_card.check_validity()
+        run_card.set('fixed_fac_scale1', False, user=True)
+        run_card.set('fixed_fac_scale2', False, user=True)
+        run_card.check_validity()  # no crashing anymore
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
 
 
             
