@@ -23,6 +23,7 @@ import os
 import models
 import six
 StringIO = six
+import sys
 from madgraph import MG5DIR
 
 
@@ -610,6 +611,25 @@ class TestRunCard(unittest.TestCase):
         run_card3.write(fsock2)
         fsock2.close()
         self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
+
+    def test_check_valid_LO(self):
+        """ensure that some handling are done correctly"""
+
+        run_card = bannermod.RunCardLO()
+
+        # check that if fixed_fac_scale is on False and lpp1=1 fixed_fac_scale1 is False but if lpp=2 then  fixed_fac_scale1 is True
+        run_card.set('fixed_fac_scale', False, user=True)
+        run_card.set('lpp1', 2, user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['fixed_fac_scale1'], True)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+        run_card.set('lpp1', 1, user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+
+
             
 
 MadLoopParam = bannermod.MadLoopParam
