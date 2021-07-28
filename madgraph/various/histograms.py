@@ -654,17 +654,13 @@ class HwU(Histogram):
     weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
 
-############Anton
+############S.A
+############ We read two additional new flags for pA and Ap collisions
     weight_label_PDF_pA = re.compile('^\s*RpA\s*=\s*(?P<PDF_set1>\d+)\s+(?P<PDF_set_1>\S+)\s+\s*with\s+(?P<PDF_set_2>\S+)\s*$')
 
     weight_label_PDF_Ap = re.compile('^\s*RAp\s*=\s*(?P<PDF_set2>\d+)\s+(?P<PDF_set_3>\S+)\s+\s*with\s+(?P<PDF_set_4>\S+)\s*$')
-    #weight_label_PDF_pA = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*$')
 
-#^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip(?:ly)?\s+by\s+(?P<PDF_set_2>\S+)\s*$'
-#'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip by\s*$')
-#('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip by\s*$')
-#('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s+\s*multip by\s*(?P<PDF1_set_cen>\d+)\s*$')
-############Anton
+############S.A
 
     
     class ParseError(MadGraph5Error):
@@ -909,7 +905,8 @@ class HwU(Histogram):
             elif label_type == 'alpsfact':
                 others.append('alpsfact=%d'%label[1])
 
-#############Anton
+#############S.A
+#############Creating additional two labels
             #elif label_type == 'pdf_pA':
                 #others.append('PDF=%i %s multiply by %s'%(label[1],label[2],label[3]))
 	    elif label_type == 'pdf_pA':
@@ -917,7 +914,7 @@ class HwU(Histogram):
 
 	    elif label_type == 'pdf_Ap':
                 others.append('RAp=%i %s with %s'%(label[1],label[2],label[3]))
-#############Anton
+#############S.A
 
 
         return res+' & '.join(others)
@@ -1035,10 +1032,10 @@ class HwU(Histogram):
                     alpsfact_wgt = HwU.weight_label_alpsfact.match(h)
                     scale_wgt_adv = HwU.weight_label_scale_adv.match(h)
                     PDF_wgt_adv   = HwU.weight_label_PDF_adv.match(h)
-#######Anton
+#######S.A
 		    PDF_wgt_pA = HwU.weight_label_PDF_pA.match(h)
 		    PDF_wgt_Ap = HwU.weight_label_PDF_Ap.match(h)
-#######Anton
+#######S.A
                     if scale_wgt_adv:
                         header[i] = ('scale_adv',
                                      int(scale_wgt_adv.group('dyn_choice')),
@@ -1059,7 +1056,8 @@ class HwU(Histogram):
                     elif alpsfact_wgt:
                         header[i] = ('alpsfact',float(alpsfact_wgt.group('alpsfact')))                      
 
-##########Anton
+##########S.A
+##########Creating additional two arrys of data, that will be inside our new HwU files
                     #elif PDF_wgt_pA:
                         #header[i] = ('pdf_pA',
                                      #int(PDF_wgt_pA.group('PDF_set')),
@@ -1076,7 +1074,7 @@ class HwU(Histogram):
                                      int(PDF_wgt_Ap.group('PDF_set2')),
                                      PDF_wgt_Ap.group('PDF_set_3'),
                                      PDF_wgt_Ap.group('PDF_set_4'))                         
-##########Anton
+##########S.A
 
 
                 return header
@@ -1263,17 +1261,14 @@ class HwU(Histogram):
             new_wgt_label = 'delta_pdf'
             scale_position = -2 
 
-#################Anton
+#################S.A
         elif type.upper()=='RPA':
             new_wgt_label = 'delta_RpA'
             scale_position = -3
 	elif type.upper()=='RAP':
             new_wgt_label = 'delta_RAp'
             scale_position = -4   
-            #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
-	    #f.write('delta_pds')
- 	    #f.close()
-#################Anton    
+#################S.A    
 
         elif type.upper()=='MERGING':
             new_wgt_label = 'delta_merging'
@@ -1345,9 +1340,6 @@ class HwU(Histogram):
                     wgts_to_consider.append(wgts)
                     label_to_consider.append(pdf_set)
 
-            #f = open('/projet/pth/safronov/MG5/Anton-Process/text.txt', 'wb+')
-	    #f.write('1')
- 	    #f.close()
 
 
             ##########: normal PDF
@@ -1358,7 +1350,7 @@ class HwU(Histogram):
                 label_to_consider.append('none')
 
 
-##############Anton
+##############S.A
         elif scale_position == -3:             
             pdf_sets=[label[3] for label in self.bins.weight_labels if \
                         HwU.get_HwU_wgt_label_type(label)=='pdf_pA']
@@ -1372,14 +1364,6 @@ class HwU(Histogram):
                 if wgts:
                     wgts_to_consider.append(wgts)
                     label_to_consider.append(pdf_set)
-
-            #f = open('/projet/pth/safronov/MG5/Anton-Process/text1.txt', 'wb+')
-	    #f.write('1')
- 	    #f.close()
-
-
-
-
 
         elif scale_position == -4:             
             pdf_sets=[label[2] for label in self.bins.weight_labels if \
@@ -1395,7 +1379,7 @@ class HwU(Histogram):
                     wgts_to_consider.append(wgts)
                     label_to_consider.append(pdf_set)
 
-##############Anton
+##############S.A
 
 
             ##########: normal PDF
@@ -1412,7 +1396,7 @@ class HwU(Histogram):
         # find and import python version of lhapdf if doing PDF uncertainties
 
 
-################################ or type=='PDS':!!!!!!!!Anton
+################################ S.A
         if type=='PDF' or type=='RPA' or type=='RAP':
             use_lhapdf=False
             try:
@@ -1472,23 +1456,14 @@ class HwU(Histogram):
             if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 		
-                #f = open('/projet/pth/safronov/MG5/Anton-Process/text2.txt', 'wb+')
-	        #f.write('2')
- 	        #f.close()
-
-###################Anton
+###################S.A
 	    if type=='RPA' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 
 	    if type=='RAP' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 
-##################Anton
-
-		
-                #f = open('/projet/pth/safronov/MG5/Anton-Process/text3.txt', 'wb+')
-	        #f.write('3')
- 	        #f.close()
+##################S.A
 
         # Place the new weight label last before the first tuple
         position=[]
@@ -1518,32 +1493,24 @@ class HwU(Histogram):
 
             if type=='PDF' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
-                #f = open('/projet/pth/safronov/MG5/Anton-Process/text4.txt', 'wb+')
-	        #f.write(label)
- 	        #f.close()
 
-###################Anton
+
+###################S.A
 	    if type=='RPA' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
-                #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
-	        #f.write(label)
- 	        #f.close()
 
 	    if type=='RAP' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
-                #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
-	        #f.write(label)
- 	        #f.close()
-###################Anton
 
-	    #f = open('/projet/pth/safronov/MG5/Anton-Process/text5.txt', 'wb+')
+###################S.A
+
             # Now add the corresponding weight to all Bins
             for bin in self.bins:
 
 
-###################Anton
+###################S.A
                 if type!='PDF' and type!='RPA' and type!='RAP': 
-###################Anton
+###################S.A
 
 
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
@@ -1551,7 +1518,7 @@ class HwU(Histogram):
                                                   for label in wgts)
                     bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
                                                   for label in wgts)
-###################Anton
+###################S.A
                 elif type=='RPA' and use_lhapdf and label != 'none' and len(wgts) > 1:
 		    pdfs   = [bin.wgts[rpa] for rpa in sorted(wgts)]
                     ep=p.uncertainty(pdfs,-1)
@@ -1565,24 +1532,8 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-		    #f.write(type)
-
-		    #if use_lhapdf==True:
-		    	#f.write('True')
-		    #else:
-		        #f.write('False')
-
-		    #f.write(label)
-		    #f.write(str(len(wgts)))
-
-
-                    #bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
-                    #bin.wgts[new_wgt_labels[1]] = min(bin.wgts[label] \
-                                                  #for label in wgts)
-                    #bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
-                                                  #for label in wgts)
-
-###################Anton
+		    
+###################S.A
 		    
                 elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) > 1:
                     pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
@@ -1590,19 +1541,15 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-		    
-	            #f.write(pdf[1])
-		    #f.write(pdfs[1])
- 	            
 
-###################Anton
+###################S.A
 		#elif type=='PDS' and use_lhapdf and label != 'none' and len(wgts) > 1:
                     #pdfs   = [bin.wgts[pds] for pds in sorted(wgts)]
                     #ep=p.uncertainty(pdfs,-1)
                     #bin.wgts[new_wgt_labels[0]] = ep.central
                     #bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     #bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-###################Anton
+###################S.A
 
                 elif type=='PDF' and use_lhapdf and label != 'none' and len(bin.wgts) == 1:
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
@@ -1657,7 +1604,6 @@ class HwU(Histogram):
 
         # And return the position in self.bins.weight_labels of the first
         # of the two new weight label added.
-	    #f.close()
         return (position,labels)
     
     
@@ -2026,19 +1972,19 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############3Anton
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############S.A
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                 if mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 
-##############3Anton
+##############S.A
 		if mandatory_attribute=='RPA':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 
 		if mandatory_attribute=='RAP':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
-##############3Anton
+##############S.A
 
                 elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
@@ -2054,10 +2000,10 @@ class HwUList(histograms_PhysicsObjectList):
         # Central weight parameters are enforced to be those of the third weight
         central_PDF  = all_weights[2]['PDF']
 
-##############Anton
+##############S.A
 	central_RPA  = all_weights[2]['RPA']
 	central_RAP  = all_weights[2]['RAP']
-##############Anton
+##############S.A
 
         # Assume central scale is one, unless specified.
 
@@ -2096,12 +2042,12 @@ class HwUList(histograms_PhysicsObjectList):
             if weight['PDF'] not in [central_PDF,-1]:
                 differences.append('pdf')
 
-##############Anton
+##############S.A
 	    if weight['RPA'] not in [central_RPA,-1]:
                 differences.append('rpa')
 	    if weight['RAP'] not in [central_RAP,-1]:
                 differences.append('rap')
-##############Anton
+##############S.A
 
             if weight['ALPSFACT'] not in [central_alpsfact, -1]:
                 differences.append('ALPSFACT')
@@ -2123,7 +2069,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    not weight[property] is None]
             
             # then add PDF, MUR, MUF and MERGING if present
-            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########Anton
+            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########S.A
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
                     ordered_properties.append(property)
@@ -2186,12 +2132,12 @@ class HwUList(histograms_PhysicsObjectList):
                 wgt_label = ('pdf',weight['PDF'])
 
  
-############Anton
+############S.A
             if variations == set(['rpa']):
                 wgt_label = ('rpa',weight['RPA'])
 	    if variations == set(['rap']):
                 wgt_label = ('rap',weight['RAP'])
-############Anton            
+############S.A            
 
 
 
@@ -2661,7 +2607,7 @@ set key invert
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, 
-          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############Anton
+          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############S.A
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
@@ -2861,7 +2807,7 @@ set key invert
             (PDF_var_pos,pdf) = (None,[None])
 
 
-#########Anton
+#########S.A
  	if 'rpa' in uncertainties: 
             (RPA_var_pos,rpa) = self[0].set_uncertainty(type='RPA',lhapdfconfig=lhapdfconfig)
         else:
@@ -2872,7 +2818,7 @@ set key invert
         else:
             (RAP_var_pos,rap) = (None,[None])
 
-#########Anton
+#########S.A
         
         if 'merging_scale' in uncertainties:
             (merging_var_pos,merging) = self[0].set_uncertainty(type='merging')
@@ -2887,7 +2833,7 @@ set key invert
         if PDF_var_pos is None and 'pdf' in uncertainties_present:
             uncertainties_present.remove('pdf')
 
-#########Anton
+#########S.A
 	uncertainties_present =  list(uncertainties)
 	if RPA_var_pos is None and 'rpa' in uncertainties_present:
             uncertainties_present.remove('rpa')
@@ -2895,7 +2841,7 @@ set key invert
 	uncertainties_present =  list(uncertainties)
 	if RAP_var_pos is None and 'rap' in uncertainties_present:
             uncertainties_present.remove('rap')
-#########Anton
+#########S.A
 
         if mu_var_pos is None and 'scale' in uncertainties_present:
             uncertainties_present.remove('scale')
@@ -2936,7 +2882,7 @@ set key invert
                  ' together.'
 
 
-###########Anton
+###########S.A
 	    if (not RPA_var_pos is None) and\
                                RPA_var_pos != histo.set_uncertainty(type='RPA',\
                                                                     lhapdfconfig=lhapdfconfig)[0]:
@@ -2951,7 +2897,7 @@ set key invert
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' PDF uncertainties. It is required to be able to output them'+\
                  ' together.'
-###########Anton
+###########S.A
 
 
 
@@ -3025,7 +2971,7 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var])
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+2])
-#############Anton
+#############S.A
 	if not RPA_var_pos is None:
             for RPA_var in RPA_var_pos:
                 wgts_to_consider.append(self[0].bins.weight_labels[RPA_var])
@@ -3037,7 +2983,7 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var])
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+2])   
-#############Anton
+#############S.A
                 
         if not merging_var_pos is None:
             for merging_var in merging_var_pos:
@@ -3176,7 +3122,7 @@ plot \\"""
         ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
 
 
-##############Anton
+##############S.A
 
 
 		if not RPA_var_pos is None and len(RPA_var_pos)>0:
@@ -3198,7 +3144,7 @@ plot \\"""
                         uncertainty_plot_lines[-1]['rap'] = \
         ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RAP variation'%title)]
 
-##############3Anton
+##############3S.A
 
 
                 # And now merging variation if available
@@ -3254,7 +3200,7 @@ plot \\"""
 
 
 
-##############Anton
+##############S.A
 	    if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
                     if j!=0:
@@ -3277,7 +3223,7 @@ plot \\"""
 %(HwU_name,block_position+i,RAP_var+3,color_index,\
 '%s RPA=%s' % (title,rap[j].replace('_','\_'))))
 
-##############Anton
+##############S.A
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines
@@ -3415,7 +3361,7 @@ plot \\"""
                                         ratio=True, band='pdf' in use_band)
 
 
-##############Anton
+##############S.A
 
             if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
@@ -3454,7 +3400,7 @@ plot \\"""
                                         ratio=True, band='rap' in use_band)
 
 
-##############Anton
+##############S.A
 
 
 
@@ -3574,7 +3520,7 @@ plot \\"""
             for j,PDF_var in enumerate(PDF_var_pos):
                 if j!=0: n=n+1
 
-###########Anton
+###########S.A
 	if not RPA_var_pos is None:
             for j,RPA_var in enumerate(RPA_var_pos):
                 if j!=0: n=n+1
@@ -3583,7 +3529,7 @@ plot \\"""
 	if not 	RAP_var_pos is None:
             for j,RAP_var in enumerate(RAP_var_pos):
                 if j!=0: n=n+1
-###########Anton
+###########S.A
 
 
         if not merging_var_pos is None:
@@ -3644,7 +3590,7 @@ plot \\"""
 
 
 
-###############ANton
+###############S.A
 
             if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
@@ -3684,7 +3630,7 @@ plot \\"""
                                                        band='rap' in use_band)
 
 
-###############ANton
+###############S.A
 
             if not merging_var_pos is None:
                 for j,merging_var in enumerate(merging_var_pos):
@@ -3907,12 +3853,12 @@ if __name__ == "__main__":
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
                       '--keep_all_weights','--colours']
     n_ratios   = -1
-    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap']#################Anton
+    uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap']#################S.A
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
     use_band      = None
     auto_open = True
     ratio_correlations = True
-    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap']#################Anton
+    consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap']#################S.A
 
     def log(msg):
         print "histograms.py :: %s"%str(msg)

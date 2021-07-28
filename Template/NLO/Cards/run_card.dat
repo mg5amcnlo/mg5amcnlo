@@ -61,7 +61,10 @@
  %(lpp2)s   = lpp2    ! beam 2 type (0 = no PDF)
  %(ebeam1)s   = ebeam1  ! beam 1 energy in GeV
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
- %(rpa_choice)s = rpa_choice ! choice of the regime
+#*****************************************************
+# RPA choice: this flag switches to the pA(Ap) mode  *
+#*****************************************************
+ %(rpa_choice)s = rpa_choice ! choice of the regime 
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************

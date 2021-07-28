@@ -89,7 +89,7 @@ c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                 if (nn.eq.1) then    
            	jmax=1
-       		else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+       		else if (nn.ne.1.and.rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
            	jmax=3
        		else if (nn.ne.1.and.rpa_choice.eqv..false.) then
 	   	jmax=1
@@ -115,14 +115,14 @@ c set the weights_info string for PDF variation
 
                else if (j==2) then !pA
 
-                  write(temp,'(a4,i8)') "RpA=",lhaPDFid(nn)+n
+                  write(temp,'(a4,i8)') "RpA=",lhaPDFid(nn)+n !Here we fill HwU file with pA crossections only if we have the right flag in run_card dat
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(2)))
 
               else if (j==3) then !Ap
 
-                  write(temp,'(a4,i8)') "RAp=",lhaPDFid(nn)+n
+                  write(temp,'(a4,i8)') "RAp=",lhaPDFid(nn)+n !Here we fill HwU file with Ap crossections only if we have the right flag in run_card dat
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /'  '//trim(adjustl(lhaPDFsetname(2)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(1)))

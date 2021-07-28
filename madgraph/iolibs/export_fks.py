@@ -3626,7 +3626,7 @@ Parameters              %(params)s\n\
                         pdf_lines = pdf_lines + "1d0*"
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
-	    pdf_lines = pdf_lines + "\nPD2(0) = 0d0\nIPROS = 0\n"
+            pdf_lines = pdf_lines + "\nPD2(0) = 0d0\nIPROS = 0\n"
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "\nIPROS=IPROS+1 ! " + process_line + "b"
@@ -3639,7 +3639,7 @@ Parameters              %(params)s\n\
 			#pdf_lines = pdf_lines[:-1] + "\n"
                     else:
                         pdf_lines = pdf_lines + "1d0*"
-	    pdf_lines = pdf_lines + "\nPD1(0) = 0d0\nIPROSS = 0\n"
+            pdf_lines = pdf_lines + "\nPD1(0) = 0d0\nIPROSS = 0\n"
             for proc in processes:
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "\nIPROSS=IPROSS+1 ! " + process_line + "b"

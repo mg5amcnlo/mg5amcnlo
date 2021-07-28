@@ -2274,7 +2274,7 @@ c over the icontr. This reduces the number of calls to InitPDF and
 c allows for better caching of the PDFs
        if (nn.eq.1) then    
            jmax=1
-       else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+       else if (nn.ne.1.and.rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
            jmax=3
        else if (nn.ne.1.and.rpa_choice.eqv..false.) then
 	   jmax=1
@@ -2310,9 +2310,9 @@ c Compute the luminosity
                xlum_mod(1)=0D0
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
-cc dlum() being called, the common "PDFvalues" is updated              
+             
 
-               if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored; j=1 condition is redundant
+               if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored;
                       do ii=1,IPROC
 		        f1_p(i,ii)=PD1(ii)
                         f2_p(i,ii)=PD2(ii)
