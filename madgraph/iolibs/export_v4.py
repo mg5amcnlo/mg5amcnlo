@@ -1455,7 +1455,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             start_time = 0
         
         res_list = []
-        #misc.sprint(len(all_element))  
         
         self.myjamp_count = 0
         for key in all_element:
@@ -1499,8 +1498,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             else:
                 res_list.append(' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb))  
 
-
-#        misc.sprint(new_mat)
         jamp_res = collections.defaultdict(list)
         max_jamp=0
         for (jamp, var), factor in new_mat.items():
@@ -1618,7 +1615,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
-            misc.sprint(tuple(initial_states))
             if tuple(initial_states) in [([-11],[11]), ([11],[-11]), ([-13],[13]),([13],[-13])]:
                 dressed_lep = True
             else:
@@ -1681,7 +1677,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         if subproc_group:
                             pdf_lines = pdf_lines + \
                                         ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
@@ -1690,7 +1686,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                 (pdf_codes[initial_state],i + 1)
                         else:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(LPP(%d)),%d, %d," + \
+                                        ("%s%d=PDG2PDF(LPP(%d),%d, %d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
@@ -1730,7 +1726,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 if not dressed_lep:
                     ee_pdf_definition_lines = ""
-                misc.sprint(dressed_lep)
+
         # Remove last line break from the return variables
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
@@ -3011,6 +3007,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             # Probably madweight already called
             pass
         
+        ln(pjoin(self.dir_path, 'Source','PDF','eepdf.inc'),pjoin(self.dir_path, 'Source'))
+
         # Copy the different python file in the Template
         self.copy_python_file()
         # create the appropriate cuts.f
@@ -3190,7 +3188,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         #proc_charac
-        self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
+        if hasattr(self, "nlo_mixed_expansion"):
+            self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         self.create_proc_charac()
 
         # Write maxparticles.inc based on max of ME's/subprocess groups

@@ -1,18 +1,18 @@
-      double precision function pdg2pdf_timed(ih,ipdg,x,xmu)
+      double precision function pdg2pdf_timed(ih,ipdg,ibeam,x,xmu)
 c        function
          double precision pdg2pdf
          external pdg2pdf
 
 c        argument
 
-         integer ih, ipdg
+         integer ih, ipdg, ibeam
          DOUBLE  PRECISION x,xmu
 
 c timing statistics
          include "timing_variables.inc"
 
          call cpu_time(tbefore)
-         pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)
+         pdg2pdf_timed = pdg2pdf(ih,ipdg,ibeam,x,xmu)
          call cpu_time(tAfter)
          tPDF = tPDF + (tAfter-tBefore)
          return

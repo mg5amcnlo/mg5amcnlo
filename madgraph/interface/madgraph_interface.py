@@ -4800,8 +4800,8 @@ This implies that with decay chains:
                             old_name, old_value, name, value)
             if name.endswith('^2'):
                 basename = name[:-2]
-                if basename not in model_orders:
-                    valid = list(model_orders) + coupling_alias.keys()
+                if basename not in list(model_orders) + ['WEIGHTED']:
+                    valid = list(model_orders) +list(coupling_alias.keys()) + ['WEIGHTED']
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
 
                 if type not in self._valid_sqso_types:

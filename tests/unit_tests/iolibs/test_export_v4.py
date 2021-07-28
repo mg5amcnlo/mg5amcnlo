@@ -3548,21 +3548,8 @@ C       This is dummy particle used in multiparticle vertices
 
         # Test pdf output (for auto_dsig.f)
         self.assertEqual(exporter.get_pdf_lines(matrix_element, 2),
-                         ('DOUBLE PRECISION u1\nDOUBLE PRECISION ux2', 
-                          'DATA u1/1*1D0/\nDATA ux2/1*1D0/', 
-                          """IF (ABS(LPP(1)) .GE. 1) THEN
-LP=SIGN(1,LPP(1))
-u1=PDG2PDF(ABS(LPP(1)),2*LP, 1,XBK(1),DSQRT(Q2FACT(1)))
-ENDIF
-IF (ABS(LPP(2)) .GE. 1) THEN
-LP=SIGN(1,LPP(2))
-ux2=PDG2PDF(ABS(LPP(2)),-2*LP, 2,XBK(2),DSQRT(Q2FACT(2)))
-ENDIF
-PD(0) = 0d0
-IPROC = 0
-IPROC=IPROC+1 ! u u~ > u u~ u u~
-PD(IPROC)=u1*ux2
-PD(0)=PD(0)+DABS(PD(IPROC))"""))
+        ('DOUBLE PRECISION u1\nDOUBLE PRECISION ux2', 'DATA u1/1*1D0/\nDATA ux2/1*1D0/', 'IF (ABS(LPP(1)) .GE. 1) THEN\n!LP=SIGN(1,LPP(1))\nu1=PDG2PDF(LPP(1)),2, 1,XBK(1),DSQRT(Q2FACT(1)))\nENDIF\nIF (ABS(LPP(2)) .GE. 1) THEN\n!LP=SIGN(1,LPP(2))\nux2=PDG2PDF(LPP(2)),-2, 2,XBK(2),DSQRT(Q2FACT(2)))\nENDIF\nPD(0) = 0d0\nIPROC = 0\nIPROC=IPROC+1 ! u u~ > u u~ u u~\nPD(IPROC)=u1*ux2\nPD(0)=PD(0)+DABS(PD(IPROC))', '')
+                         )
 
         # Test mg.sym
         writer = writers.FortranWriter(self.give_pos('test'))

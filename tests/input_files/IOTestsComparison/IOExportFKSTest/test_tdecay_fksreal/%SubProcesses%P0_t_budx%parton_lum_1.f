@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: t > b u d~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
-C     Process: t > b c s~ g [ real = QCD QED ] QCD^2<=2 QED^2<=4
+C     Process: t > b u d~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
+C     Process: t > b c s~ g [ real = QED QCD ] QCD^2<=2 QED^2<=4
 C     
 C     ****************************************************            
 C         
@@ -48,6 +48,20 @@ C
       INCLUDE 'run.inc'
       INTEGER IMIRROR
       COMMON/CMIRROR/IMIRROR
+C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE 'eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+
+      INTEGER I_EE
+C     
+C     
+C     
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C     
 C     DATA                                                            
 C         

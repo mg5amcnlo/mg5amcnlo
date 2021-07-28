@@ -1,11 +1,11 @@
-      double precision function pdg2pdf_timed(ih,ipdg,x,xmu)
+      double precision function pdg2pdf_timed(ih,ipdg,ibeam,x,xmu)
 c        function
          double precision pdg2pdf
          external pdg2pdf
 
 c        argument
 
-         integer ih, ipdg
+         integer ih, ipdg, ibeam
          DOUBLE  PRECISION x,xmu
 
 c timing statistics
@@ -19,7 +19,7 @@ c timing statistics
 
       end
 
-      double precision function pdg2pdf(ih,ipdg,x,xmu)
+      double precision function pdg2pdf(ih,ipdg,ibeam,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
 c     ih is now signed <0 for antiparticles

@@ -8,7 +8,7 @@
 
       open(unit=78,file="orderstags_glob.dat",status="old",err=101)
       goto 99
-101   open(unit=78,file="../orderstags_glob.dat",status="old",err=101)
+101   open(unit=78,file="../orderstags_glob.dat",status="old")
 
 99    read(78,*) n_orderstags
       write(*,*) 'get_orderstags_glob_infos: n_orderstags=', n_orderstags 

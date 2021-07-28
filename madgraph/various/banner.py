@@ -2661,6 +2661,8 @@ class RunCard(ConfigFile):
         This modifies ONLY the value within the fortran code"""
         if value in sum(self.allowed_lep_densities.values(),[]):
             return 'dressed'
+        else:
+            return value
 
     @staticmethod
     def f77_formatting(value, formatv=None):

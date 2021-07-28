@@ -2042,7 +2042,8 @@ C dressed lepton stuff
       
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
-
+      double precision omx(2)
+      
       double precision SMIN
       common/to_smin/ smin
 
@@ -2177,11 +2178,13 @@ c            s(-nbranch) = xbk(1)*xbk(2)*stot
         return
       endif
 
+      omx(1) = omx1_ee
+      omx(2) = omx2_ee
       ! now we are done. We must call the following function 
       ! in order to (re-)generate tau and ycm
       ! from x1 and x2. It also (re-)checks that tau_born 
       ! is pysical, and otherwise sets xjac0=-1000
-      call get_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+      call get_y_from_x12(x1_ee, x2_ee, omx, ycm_born) 
 
 c      x1bk=x1_ee
 c      x2bk=x2_ee
