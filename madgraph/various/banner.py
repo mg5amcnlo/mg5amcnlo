@@ -1504,9 +1504,12 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('limitations', [], typelist=str)  
+        self.add_param('splitting_types',[], typelist=str)
+        self.add_param('perturbation_order', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)        
         self.add_param('hel_recycling', False)  
-        self.add_param('single_color', True)    
+        self.add_param('single_color', True)
+        self.add_param('nlo_mixed_expansion', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -2361,9 +2364,10 @@ class RunCard(ConfigFile):
 
     filename = 'run_card'
     LO = True
+
     blocks = []
     parameter_in_block = {}
-
+    allowed_lep_densities = {}    
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -2382,6 +2386,7 @@ class RunCard(ConfigFile):
     def __new__(cls, finput=None, **opt):
 
         cls.fill_post_set_from_blocks()
+        RunCard.get_lepton_densities()
 
         if cls is RunCard:
             if not finput:
@@ -2433,6 +2438,31 @@ class RunCard(ConfigFile):
 
 
         super(RunCard, self).__init__(*args, **opts)
+
+    @classmethod
+    def get_lepton_densities(cls):
+        """ """
+
+        if cls.allowed_lep_densities:
+            return
+
+        if MADEVENT:
+            check_dir = pjoin(MEDIR, 'Source', 'PDF', 'lep_densities')
+        else:
+            check_dir = pjoin( MG5DIR, 'Template', 'Common', 'Source', 'PDF', 'lep_densities')
+
+        for name in os.listdir(check_dir):
+            if os.path.isdir(pjoin(check_dir, name)):
+                identity = (-11,11)
+                if os.path.exists(pjoin(check_dir, name, 'info')):
+                    for line in open(pjoin(check_dir, name, 'info')):
+                        if 'identity:' in line:
+                            identity = tuple([int(x) for x in line.split(':',1)[1].split(',')])
+
+            if identity not in cls.allowed_lep_densities:
+                cls.allowed_lep_densities[identity] = [name]
+            else:
+                cls.allowed_lep_densities[identity].append(name)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
                   hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
@@ -2725,7 +2755,14 @@ class RunCard(ConfigFile):
         else:
             return self[name]   
 
-    
+    def mod_inc_pdlabel(self, value):
+        """flag pdlabel has 'dressed' if one of the special lepton PDF with beamstralung.
+        This modifies ONLY the value within the fortran code"""
+        if value in sum(self.allowed_lep_densities.values(),[]):
+            return 'dressed'
+        else:
+            return value
+
     @staticmethod
     def f77_formatting(value, formatv=None):
         """format the variable into fortran. The type is detected by default"""
@@ -2742,6 +2779,7 @@ class RunCard(ConfigFile):
             else:
                 logger.debug("unknow format for f77_formatting: %s" , str(value))
                 formatv = 'str'
+                value = str(value).lower()
         else:
             assert formatv
             
@@ -2833,6 +2871,8 @@ class RunCard(ConfigFile):
                     
                 #get the value with warning if the user didn't set it
                 value = self.get_default(key)
+                if hasattr(self, 'mod_inc_%s' % key):
+                    value = getattr(self, 'mod_inc_%s' % key)(value)
                 # Special treatment for strings containing a list of
                 # strings. Convert it to a list of strings
                 if isinstance(value, list):
@@ -2902,10 +2942,13 @@ class RunCard(ConfigFile):
             else:
                 return lhaid
         else: 
-            return {'none': 0, 'iww': 0, 'eva':0,
+            try:
+                return {'none': 0, 'iww': 0, 'eva':0,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
-                    }[pdf]    
+                    }[pdf] 
+            except:
+                return 0   
     
     def get_lhapdf_id(self):
         return self.get_pdf_id(self['pdlabel'])
@@ -3220,7 +3263,8 @@ class RunCardLO(RunCard):
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
         
-        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdlabel")
+        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none']+\
+                       sum(self.allowed_lep_densities.values(),[]))
         self.add_param("pdlabel1", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(1)")
         self.add_param("pdlabel2", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
@@ -3456,6 +3500,7 @@ class RunCardLO(RunCard):
         if len(self['pdgs_for_merging_cut']) > 1000:
             raise InvalidRunCard("The number of elements in "+\
                                "'pdgs_for_merging_cut' should not exceed 1000.")
+
   
         # some cut need to be deactivated in presence of isolation
         if self['ptgmin'] > 0:
@@ -3555,13 +3600,13 @@ class RunCardLO(RunCard):
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")   
 
         # check if lpp = 
-        for i in [1,2]:
-            if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale'] and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
-                time.sleep(5)
+        if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
+            for i in [1,2]:
+                if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
-            if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+                if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
                 time.sleep(5)
 
         # check that fixed_fac_scale(1/2) is setting as expected
@@ -3601,13 +3646,12 @@ class RunCardLO(RunCard):
             elif self['lpp1'] !=0 or self['lpp2']!=0:
                 raise Exception('fixed_fac_scale not defined whithin your run_card. Plase fix this.')
 
-            
+        if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):            
+            # if both lpp1/2 are on PA mode -> force fixed factorization scale
+            if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
+                if 'fixed_fac_scale1' not in self.user_set or 'fixed_fac_scale2' not in self.user_set:
+                    raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]. If you really want a running scale here, please define fixed_fac_scale1 on False and fixed_fac_scale2 on False")
 
-                
-        # if both lpp1/2 are on PA mode -> force fixed factorization scale
-        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
-            if 'fixed_fac_scale1' not in self.user_set or 'fixed_fac_scale2' not in self.user_set:
-                raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]. If you really want a running scale here, please define fixed_fac_scale1 on False and fixed_fac_scale2 on False")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
@@ -3638,9 +3682,7 @@ class RunCardLO(RunCard):
         elif self['tmin_for_channel'] > 0:
             logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
             self.set('tmin_for_channel',  -self['tmin_for_channel'])
-            
 
-            
             
     def update_system_parameter_for_include(self):
         """system parameter need to be setupe"""
@@ -4458,7 +4500,7 @@ class MadAnalysis5Card(dict):
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-    
+     
     LO = False
     
     def default_setup(self):
@@ -4468,6 +4510,7 @@ class RunCardNLO(RunCard):
         self.add_param('nevents', 10000)
         self.add_param('req_acc', -1.0, include=False)
         self.add_param('nevt_job', -1, include=False)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param('event_norm', 'average')
         #FO parameter
         self.add_param('req_acc_fo', 0.01, include=False)        
@@ -4481,7 +4524,8 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo'])                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+             sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -4523,12 +4567,17 @@ class RunCardNLO(RunCard):
         self.add_param('jetradius', 0.7)         
         self.add_param('ptj', 10.0 , cut=True)
         self.add_param('etaj', -1.0, cut=True)        
+        self.add_param('gamma_is_j', True)        
         self.add_param('ptl', 0.0, cut=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
         self.add_param('drll_sf', 0.0, cut=True)        
         self.add_param('mll', 0.0, cut=True)
         self.add_param('mll_sf', 30.0, cut=True) 
+        self.add_param('rphreco', 0.1) 
+        self.add_param('etaphreco', -1.0) 
+        self.add_param('lepphreco', True) 
+        self.add_param('quarkphreco', True) 
         self.add_param('ptgmin', 20.0, cut=True)
         self.add_param('etagamma', -1.0)        
         self.add_param('r0gamma', 0.4)
@@ -4536,7 +4585,7 @@ class RunCardNLO(RunCard):
         self.add_param('epsgamma', 1.0)
         self.add_param('isoem', True)        
         self.add_param('maxjetflavor', 4, hidden=True)
-        self.add_param('iappl', 0)   
+        self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
         #internal variable related to FO_analyse_card
@@ -4566,12 +4615,13 @@ class RunCardNLO(RunCard):
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
-            
-            if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
-                self['pdlabel']='nn23nlo'
-                self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF-related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
+            if self['lpp1'] == 0  == self['lpp2']:
+                if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                    self['pdlabel']='nn23nlo'
+                    self['reweight_pdf']=[False]
+                    logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
             # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed       
@@ -4602,11 +4652,11 @@ class RunCardNLO(RunCard):
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:BOLD')            
                                 
-        # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
-        if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
-            raise InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
-        if self['iappl'] != 0 and not self['reweight_scale']:
-            raise InvalidRunCard('APPLgrid generation only possible with including' +\
+        # For interface to PINEAPPL, need to use LHAPDF and reweighting to get scale uncertainties
+        if self['pineappl'] and self['pdlabel'].lower() != 'lhapdf':
+            raise InvalidRunCard('PineAPPL generation only possible with the use of LHAPDF')
+        if self['pineappl'] and not self['reweight_scale']:
+            raise InvalidRunCard('PineAPPL generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         # Hidden values check

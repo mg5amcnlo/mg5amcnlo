@@ -74,8 +74,8 @@ c specified in coupl.inc
          is_a_lp(i)=.false.
          is_a_lm(i)=.false.
          is_a_ph(i)=.false.
-
-c-light-jets
+         
+c     -light-jets
          if (abs(idup(i,1)).le.maxjetflavor) then
               is_a_j(i)=.true.
          endif
@@ -90,8 +90,10 @@ c-charged-leptons
          if (idup(i,1).eq.-15) is_a_lp(i)=.true. !  ta-
 
 c-photons
-         if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
+         if (idup(i,1).eq.22.and..not.gamma_is_j)  is_a_ph(i)=.true. ! iso photon
+         if (idup(i,1).eq.22.and.gamma_is_j)  is_a_j(i)=.true. !  photon in jets
       enddo
+
 c
 c     check for pdg specific cut (pt/eta)
 c
@@ -151,6 +153,7 @@ c     fully ensure that this is not a jet/lepton/photon
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
+      use mint_module
       implicit none
       double precision zero,vtiny
       parameter (zero=0.d0,vtiny=1d-8)
@@ -161,33 +164,33 @@ c variable ptj
       include 'coupl.inc'
       include 'nFKSconfigs.inc'
       include "fks_info.inc"
-      include "mint.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
+      integer pow(-nexternal:0,lmaxconfigs)
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision taumin(fks_configs,maxchannels)
      $     ,taumin_s(fks_configs,maxchannels),taumin_j(fks_configs
-     $     ,maxchannels),stot,xk(nexternal)
-      save  taumin,taumin_s,taumin_j
+     $     ,maxchannels),stot,xk(-nexternal:nexternal)
+      save  taumin,taumin_s,taumin_j,stot
       integer i,j,k,d1,d2,iFKS,nt
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
-      integer tsign,j_fks
+      integer tsign,i_fks,j_fks
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
      &     ,tau_lower_bound_resonance,tau_lower_bound
 c BW stuff
-      double precision mass_min(-nexternal:nexternal),masslow(
-     $     -nexternal:-1),widthlow(-nexternal:-1),sum_all_s
+      double precision mass_min(-nexternal:nexternal,maxchannels)
+     $     ,masslow(-nexternal:-1),widthlow(-nexternal:-1),sum_all_s
+      save mass_min
       integer t_channel
       integer cBW_FKS_level_max(fks_configs,maxchannels),
      &     cBW_FKS(fks_configs,-nexternal:-1,maxchannels),
@@ -234,13 +237,9 @@ c
       endif
       include "born_props.inc"
 
-      if(.not.IS_A_J(NEXTERNAL))then
-        write(*,*)'Fatal error in set_tau_min'
-        stop
-      endif
 c The following assumes that light QCD particles are at the end of the
-c list. Exclude one of them to set tau bound at the Born level This
-c sets a hard cut in the minimal shat of the Born phase-space
+c list. Exclude one of them (i_fks) to set tau bound at the Born level 
+c This sets a hard cut in the minimal shat of the Born phase-space
 c generation.
 c
 c The contribution from ptj should be treated only as a 'soft lower
@@ -252,17 +251,20 @@ c event could.
          do i=-nexternal,nexternal
             xm(i)=0d0
             xw(i)=0d0
-            mass_min(i)=0d0
+            mass_min(i,ichan)=0d0
          end do
          firsttime_chans(ichan)=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)
+            i_fks=FKS_I_D(iFKS)
             taumin(iFKS,ichan)=0.d0
             taumin_s(iFKS,ichan)=0.d0
             taumin_j(iFKS,ichan)=0.d0
             do i=nincoming+1,nexternal
+C Skip i_fks
+               if (i.eq.i_fks) cycle
 c Add the minimal jet pTs to tau
-               if(IS_A_J(i) .and. i.ne.nexternal)then
+               if(IS_A_J(i)) then
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
                      taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
                      taumin_s(iFKS,ichan)=taumin_s(iFKS,ichan)+dsqrt(ptj**2 +emass(i)**2)
@@ -480,7 +482,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
             do i=nincoming+1,nexternal-1
-               mass_min(i)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
+               mass_min(i,ichan)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
             enddo
             cBW_FKS_level_max(iFKS,ichan)=0
             t_channel=0
@@ -493,17 +495,18 @@ c mass of the BW
                widthlow(i)=0d0
                if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
                if (t_channel.ne.0) exit ! only s-channels
-               mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
-               if (xm(i).lt.mass_min(i)-vtiny) then
+               mass_min(i,ichan)=mass_min(itree(1,i),ichan)
+     $              +mass_min(itree(2,i),ichan)
+               if (xm(i).lt.mass_min(i,ichan)-vtiny) then
                   write (*,*)
      $                 'ERROR in the determination of conflicting BW',i
-     $                 ,xm(i),mass_min(i)
+     $                 ,xm(i),mass_min(i,ichan)
                   stop
                endif
                if (pmass(i,iconf).lt.xm(i) .and.
      $              pwidth(i,iconf).gt.0d0) then
 c     Possible conflict in BW
-                  if (pmass(i,iconf).lt.mass_min(i)) then
+                  if (pmass(i,iconf).lt.mass_min(i,ichan)) then
 c     Resonance can never go on-shell due to the kinematics of the event
                      cBW_FKS(iFKS,i,ichan)=2
                      cBW_FKS_level(iFKS,i,ichan)=0
@@ -620,19 +623,19 @@ c
          s_mass(i)=s_mass_FKS(nFKSprocess,i,ichan)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess,ichan)
+      call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
       return
       end
 
 
       subroutine sChan_order(ns_channel,order)
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'maxparticles.inc'
       include 'maxconfigs.inc'
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      logical new_point
-      common /c_new_point/new_point
       double precision ran2,rnd
       integer i,j,order(-nexternal:0),ipos,ns_channel,npos
      $     ,pos(nexternal),ord(-nexternal:0)
@@ -676,3 +679,5 @@ c
       new_point=.false.
       return
       end
+
+

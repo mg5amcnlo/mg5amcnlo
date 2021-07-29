@@ -1,6 +1,13 @@
       double precision function pdg2pdf(ih,ipdg,beamid,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
+c     ih is now signed <0 for antiparticles
+c     if ih<0 does not have a dedicated pdf, then the one for ih>0 will be called
+c     and the sign of ipdg flipped accordingly.
+c
+c     ibeam is the beam identity 1/2
+c      if set to -1/-2 it meand that ipdg should not be flipped even if ih<0
+c      usefull for re-weighting
 c***************************************************************************
       implicit none
 c
@@ -8,12 +15,24 @@ c     Arguments
 c
       DOUBLE  PRECISION x,xmu
       INTEGER IH,ipdg
-      integer beamid ! 1 or 2 (for left or right beam)
+      integer beamid            ! 1 or 2 (for left or right beam)
+C                                -1/-2  same as 1/2 but no change on ipdg needed
 C
 C     Include
 C
       include 'pdf.inc'
+C dressed lepton stuff
+      include '../eepdf.inc'
+      integer i_ee, ih_local
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+
+      double precision compute_eepdf
+      double precision tolerance
+      parameter (tolerance=1.d-2)
 c
+      
       double precision tmp1, tmp2
       integer nb_proton(2), nb_neutron(2) 
       common/to_heavyion_pdg/ nb_proton, nb_neutron
@@ -77,16 +96,49 @@ c     instead of stopping the code, as this might accidentally happen.
          endif
       endif
 
+C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
+C      and check that it is not a photon initial state --elastic photon is handle below --
+      if (pdlabel.eq.'dressed')then
+c       change e/mu/tau = 8/9/10 to 11/13/15
+        ipart = ipdg
+        if (abs(ipart).eq.8) then
+          ipart = sign(1,ipart) * 11
+        else if (abs(ipart).eq.9) then
+          ipart = sign(1,ipart) * 13
+        else if (abs(ipart).eq.10) then
+          ipart = sign(1,ipart) * 15
+        endif
+	pdg2pdf = 0d0
+
+        if (beamid.lt.0) then
+           ih_local = ipart
+        elseif (abs(ih) .eq.3) then
+           ih_local = sign(1,ih) * 11
+        else if (abs(ih) .eq.4) then
+           ih_local = sign(1,ih) * 13
+        else
+           write(*,*) "not supported beam type"
+           stop 1
+        endif
+        do i_ee = 1, n_ee
+          ee_components(i_ee) = compute_eepdf(x,omx_ee(beamid),xmu,i_ee,ipart,ih_local)
+	enddo
+        pdg2pdf =  ee_components(1) ! temporary to test pdf load
+c        write(*,*), x, beamid ,omx_ee(beamid),xmu,1,ipart,ih_local,pdg2pdf
+        return
+      endif
+      
+
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
       if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
          ipart=ipdg
-      else 
-         ipart=ipdg*ih/iabs(ih)
+      else
+         ipart=sign(1,ih)*ipdg
       endif      
 
-      if(iabs(ipart).eq.21) then ! g
+      if(iabs(ipart).eq.21) then ! g      
          ipart=0
       else if(ipart.eq.12) then ! ve
          ipart=12
@@ -248,3 +300,74 @@ C        Be carefull u and d are flipped inside cteq6
       return
       end
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      double precision expo
+      parameter (expo=0.96d0)
+      get_ee_expo = expo
+      return
+      end
+
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu
+      integer n_ee, id, idbeam
+
+      double precision xmu2
+      double precision k_exp
+
+      double precision eps
+      parameter (eps=1e-20)
+
+      double precision eepdf_tilde, eepdf_tilde_power
+      double precision get_ee_expo
+      double precision ps_expo
+
+      double precision omx_ee
+
+
+      if (id.eq.7) then
+        compute_eepdf = 0d0
+        return
+      endif
+
+      xmu2=xmu**2
+
+      compute_eepdf = eepdf_tilde(x,xmu2,n_ee,id,idbeam) 
+      ! this does not include a factor (1-x)^(-kappa)
+      ! where k is given by
+      k_exp = eepdf_tilde_power(xmu2,n_ee,id,idbeam)
+      ps_expo = get_ee_expo()
+
+      if (k_exp.gt.ps_expo) then
+          write(*,*) 'WARNING, e+e- exponent exceeding limit', k_exp, ps_expo
+      endif
+
+      compute_eepdf = compute_eepdf * (omx_ee)**(-k_exp+ps_expo)
+
+      return
+      end
+
+
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      include 'eepdf.inc'
+      double precision comp1(n_ee), comp2(n_ee)
+      integer i
+
+      ee_comp_prod = 0d0
+      do i = 1, n_ee
+        ee_comp_prod = ee_comp_prod + comp1(i) * comp2(i)
+      enddo
+      return
+      end
+
+
+
+     

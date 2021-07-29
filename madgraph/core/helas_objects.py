@@ -963,10 +963,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
         
     
-        
-        
-
-
     def get_analytic_info(self, info, alohaModel=None):
         """ Returns a given analytic information about this loop wavefunction or
         its characterizing interaction. The list of available information is in
@@ -1012,6 +1008,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             aloha_info = self.get_aloha_info(True)
             # aloha_info[0] is the tuple of all lorent structures for this lwf,
             # aloha_info[1] are the tags and aloha_info[2] is the outgoing number.
+
             max_rank = max([ alohaModel.get_info('rank', lorentz,
                                  aloha_info[2], aloha_info[1], cached=True) 
                                                 for lorentz in aloha_info[0] ])

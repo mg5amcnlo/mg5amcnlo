@@ -27,6 +27,7 @@ C----------------------------------------------------------------------
       SUBROUTINE PYABEG
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       implicit double precision(a-h, o-z)
       implicit integer(i-n)
       common/pydat2/kchg(500,4),pmas(500,4),parf(2000),vckm(4,4)
@@ -50,7 +51,7 @@ c
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)

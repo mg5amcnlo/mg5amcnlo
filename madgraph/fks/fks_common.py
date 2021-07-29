@@ -52,6 +52,19 @@ class FKSDiagramTag(diagram_generation.DiagramTag): #test written
         return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
 
+def get_qed_qcd_orders_from_weighted(nexternal, hierarchy, weighted):
+    """computes the QED/QCD orders from the knowledge of the n of ext particles
+    and of the weighted orders"""
+    qed_w = hierarchy['QED']
+    qcd_w = hierarchy['QCD']
+    # n vertices = nexternal - 2 =QED + QCD
+    # weighted = qed_w*QED + qcd_w*QCD
+
+    QED = (weighted - qcd_w * (nexternal - 2) ) / (qed_w - qcd_w)
+    QCD = (weighted - qed_w * QED) / qcd_w
+    return int(QED), int(QCD)
+
+
 def link_rb_configs(born_amp, real_amp, i, j, ij):
     """finds the real configurations that match the born ones, i.e.  for
     each born configuration, the real configuration that has the ij ->
@@ -241,9 +254,12 @@ def find_orders(amp): #test_written
     return orders
 
 
-def find_splittings(leg, model, dict, pert='QCD'): #test written
+def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #test written
     """Finds the possible splittings corresponding to leg
     """
+
+    leptons = model.get_lepton_pdgs()
+
     if dict == {}:
         dict = find_pert_particles_interactions(model, pert)
     splittings = []
@@ -257,14 +273,53 @@ def find_splittings(leg, model, dict, pert='QCD'): #test written
             parts = copy.deepcopy(ii['particles'])
             nsoft = 0
             if part in parts:
-                #pops the ANTI-particle of part from the interaction
-                parts.pop(parts.index(antipart))
+                #try to pop the ANTI-particle of part from the interaction
+                #if not there, pop part
+                try:
+                    parts.pop(parts.index(antipart))
+                except ValueError:
+                    parts.pop(parts.index(part))
                 for p in parts:
                     if p.get_pdg_code() in dict['soft_particles']:
                         nsoft += 1
                 if nsoft >= 1:
-                    splittings.extend(split_leg(leg, parts, model))
+                    for split in split_leg(leg, parts, model):
+                        # add the splitting, but check if there is 
+                        # an initial-state lepton if the flag
+                        # include_init_leptons is False
+                        if include_init_leptons or \
+                           not (any([l['id'] in leptons for l in split if not l['state']])):
+                            splittings.append(split)
     return splittings
+
+
+def find_mothers(leg1, leg2, model, dict={}, pert='', mom_mass=''):
+    """Find the possible mothers of leg1, leg2.
+    If mom_mass is passed, only the mothers with mom_mass are returned
+    """
+    if pert:
+        if dict == {}:
+            dict = find_pert_particles_interactions(model, pert)
+    interactions = dict['interactions']
+    mothers = []
+
+    for inte in interactions:
+        # loop over interactions which contain leg1 and leg2
+        # and add the third particle to mothers
+        pdgs = [p.get_pdg_code() for p in inte['particles']]
+        try:
+            for l in [leg1, leg2]:
+                if not l['state']:
+                    pdgs.remove(l['id'])
+                else:
+                    pdgs.remove(model.get('particle_dict')[l['id']].get_anti_pdg_code())
+        except ValueError:
+            continue
+        if mom_mass and \
+           mom_mass.lower() == model.get('particle_dict')[pdgs[0]]['mass'].lower():
+            mothers.append(pdgs[0])
+
+    return mothers
 
 
 def split_leg(leg, parts, model): #test written
@@ -452,7 +507,9 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     """
     #ghost_list = [82, -82] # make sure ghost_list is non-empty
     ghost_list = []
-    ghost_list += [ p.get_pdg_code() for p in model.get('particles') if p.get('ghost')]
+    ghost_list += [ p.get_pdg_code() for p in model.get('particles') 
+                                            if p.get('ghost') or p.get('goldstone')]
+
     qcd_inter = MG.InteractionList()
     pert_parts = []
     soft_parts = []
@@ -484,7 +541,8 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             except ValueError:
                 continue
             if len(set(masslist)) == 1 and not \
-                    any( [ p.get_pdg_code() in ghost_list for p in ii['particles']]) :
+                    any( [ p.get_pdg_code() in ghost_list or \
+                           p.get_anti_pdg_code() in ghost_list for p in ii['particles']]) :
                 qcd_inter.append(ii)
                 for pp in ii['particles']:
                     pert_parts.append(pp.get_pdg_code())
@@ -717,6 +775,7 @@ class FKSLegList(MG.LegList):
         """Test if object obj is a valid FKSLeg for the list."""
         return isinstance(obj, FKSLeg)
 
+
     def sort(self,pert='QCD'):
         """Sorting routine, sorting chosen to be optimal for madfks"""
         sorted_leglist = FKSLegList()
@@ -733,65 +792,37 @@ class FKSLegList(MG.LegList):
         else: 
             raise FKSProcessError('Too many initial legs')
         #find color representations
-        if pert == 'QCD':
-            color = 'color'
-            zero = 1
-        elif pert == 'QED':
-            color = 'charge'
-            zero = 0.
-        else:
-            raise FKSProcessError("Only QCD and QED is allowed not %s"% pert)
-        colors = sorted(set([abs(l[color]) for l in final_legs]))
-        # first put massless particles, without any rearrangment
-        if zero in colors:
-            sorted_leglist.extend(sorted(\
-                    [l for l in final_legs if l[color] == zero], key = itemgetter('number')))
-            colors.remove(zero)
+        # order according to spin and mass
+        #find massive and massless legs 
+        massive_legs = [l for l in final_legs if not l['massless']]
+        massless_legs = [l for l in final_legs if l['massless']]
 
-        #now go for colored legs, put first all massive legs, then all massless legs
-        massless_dict = {}
-        massive_dict = {}
-        for col in colors:
-            col_legs = FKSLegList([l for l in final_legs if abs(l[color]) == col])
-            #find massive and massless legs in this color repr
-            massive_dict[col] = [l for l in col_legs if not l['massless']]
-            massless_dict[col] = [l for l in col_legs if l['massless']]
-
-        for i_m, dict in enumerate([massive_dict, massless_dict]):
-            for col in colors:
-                # sorting may be different for massive and massless particles
-                # for color singlets, do not change order
-                if col == zero:
-                    keys = [itemgetter('number'), itemgetter('number')]
-                    reversing = False
-                else:
-                    keys = [itemgetter('id'), itemgetter('id')]
-                    reversing = True
-
+        for leglist in [massive_legs, massless_legs]:
+            spins = sorted(set([abs(l['spin']) for l in leglist]))
+            for spin in spins:
+                spin_legs = FKSLegList([l for l in leglist if abs(l['spin']) == spin])
                 init_pdg_legs = []
-                list = dict[col]
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
-                    for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
-                        pdg = abs(initial_legs[i]['id'])
-                        init_pdg_legs = [l for l in list if abs(l['id']) == pdg]
+                    for j in range(len(set([ abs(l['id']) for l in initial_legs]))):
+                        pdg = abs(initial_legs[j]['id'])
+                        init_pdg_legs = [l for l in spin_legs if abs(l['id']) == pdg]
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = keys[i_m], reverse=reversing)
+                            init_pdg_legs.sort(key = itemgetter('id'), reverse=True)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
-                    other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = keys[i_m], reverse=reversing)
+                    other_legs = [l for l in spin_legs if not abs(l['id']) in init_pdgs]
+                    other_legs.sort(key = itemgetter('id'), reverse=True)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = keys[i_m], reverse=reversing)
-                    sorted_leglist.extend(FKSLegList(list))
+                    #llist.sort(key = itemgetter('id'), reverse=True)
+                    sorted_leglist.extend(FKSLegList(spin_legs))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
-
 
 
 class FKSLeg(MG.Leg):

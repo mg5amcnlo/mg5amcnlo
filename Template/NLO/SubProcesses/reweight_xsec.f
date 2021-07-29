@@ -3,9 +3,11 @@ c     include a muR-dependent pre-factor. Multiply by the muR-dependent
 c     factor and devide by the muR-independent one.
 c Note: This is implemented below for the Bottom Yukawa in the SM.
 c       Change it to the factor you need to reweight.
-      Double precision function rwgt_muR_dep_fac(scale,central)
+      Double precision function rwgt_muR_dep_fac(scale,central
+     $     ,cpower_in)
       use extra_weights
       implicit none
+      double precision cpower_in
       double precision scale,vev,mbmb,apimuR,apimZ,apimb,mbmuR,alphas,pi
       parameter (pi=3.14159265358979323846d0)
       include "nexternal.inc"
@@ -17,7 +19,7 @@ c       Change it to the factor you need to reweight.
       parameter (tootiny=1d-9)
       rwgt_muR_dep_fac = 1d0
 c     This is relevant for a muR-dependent bottom-mass in Yukawa.
-      IF(wgtcpower .ne. 0d0 .and. runfac .eq. 1) THEN
+      IF(cpower_in .ne. 0d0 .and. runfac .eq. 1) THEN
 c$$$      vev    = 246.21845813429518469305d0 !vev in aMC@NLO from y_b->m_b
 c$$$      mbmb = MDL_YB*vev/dsqrt(2d0)
 c$$$com-- mbmb input for fixed Yukawa bmass in param_card.dat is used here
@@ -42,7 +44,7 @@ c$$$c         order consistent with computation LO: 1-loop, NLO: 2-loop
 c$$$         CALL runalpha(apicentral,central,scale,4d0,2,0,apimuR)
 c$$$         CALL runmass(mbcentral,apicentral,apimuR,4d0,2,mbmuR)
 c$$$      endif
-c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**wgtcpower
+c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**cpower_in
       ELSE
          return
       ENDIF

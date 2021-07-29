@@ -28,6 +28,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
 from six.moves import range
+import re
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 #===============================================================================
@@ -300,17 +301,26 @@ class ProcCardV4ReaderTest(unittest.TestCase):
                    'define vl ve vm', 
                    'define vl~ ve~ vm~', 
                    '# Specify process(es) to run',
-                   'generate p p > ve~ e- @1 QED=2 QCD=99', 
-                   'add process p p > z, (z > w+ w-, w- > mu- vm) @2 QED=4 QCD=2',
+                   'generate p p > ve~ e- @1 QCD=99 QED=2', 
+                   'add process p p > z, (z > w+ w-, w- > mu- vm) @2 QCD=2 QED=4',
                    'add process p p > t t~ $ a @3 QED=0 QCD=99',
                    'add process p p > t t~ $ g / a @2 QED=0 QCD=99', 
-                   'add process p p > z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g) @4 QED=4 QCD=99',
-                   'add process p p > z z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g), z > w+ w- $ a / g @4 QED=1 QCD=99',
+                   'add process p p > z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g) @4 QCD=99 QED=4 ',
+                   'add process p p > z z $ a / g, (z > w+ w- $ a / g, w- > mu- vm $ a / g), z > w+ w- $ a / g @4 QCD=99 QED=1',
                    'add process p p > Z Z, Z > W+ W- $a /g @4',
                    'add process p p > Z Z QCD=2 @4',
                    '# Output processes to MadEvent directory',
                    'output -f'] 
         self.assertEqual(len(lines),len(solution))
         for i,command in enumerate(lines):
-            self.assertEqual(command,solution[i])
-
+            try:
+                self.assertEqual(command,solution[i])
+            except:
+                if re.match('QCD=\d+ QED=\d+', command):
+                    qcd, qed =re.findall('QCD=(\d+) QED=(\d+)')
+                    sol = solution[i].replace('QCD=%s QED=%s' % (qcd,qed), 
+                                              'QED=%s QCD=%s' % (qed,qcd))
+                    self.assertEqual(command,sol)
+                
+                
+                

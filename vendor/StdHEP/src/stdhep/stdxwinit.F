@@ -17,14 +17,18 @@ c
 
 C...print version number if this is the first call
       if(lfirst)then
+        write(*,*) "try to call version number" 
         call stdversn
+        write(*,*) "done to call version number" 
         lfirst=.FALSE.
       endif
 c
 c      Initialization phase.
 c
+      write(*,*) 'mcfio starting to init'
       call mcfio_init()
+      write(*,*) 'start to open the file'
       call stdxwopen(filename,title,ntries,istream,lok)
-        
+      write(*,*) "done"
       return
       end

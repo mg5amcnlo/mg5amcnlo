@@ -112,16 +112,16 @@ class TestMECmdShell(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            print("install pythia-pgs")
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+        #if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+        #    print("install pythia-pgs")
+        #    p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
+        #                     stdin=subprocess.PIPE,
+        #                     stdout=stdout,stderr=stderr)
+        #    out = p.communicate('install pythia-pgs'.encode())
+        #misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print("install MadAnalysis")
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install MadAnalysis4'.encode())
@@ -443,7 +443,6 @@ class TestMECmdShell(unittest.TestCase):
         
         val2 = self.cmd_line.results.current['cross']
         err2 = self.cmd_line.results.current['error']        
-        
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
         target = 1310200.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
@@ -730,12 +729,7 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
@@ -755,7 +749,6 @@ class TestMEfromfile(unittest.TestCase):
                  set event_norm sum
                  set systematics_program none
                  add_time_of_flight --threshold=4e-14
-                 pythia
                  """ %self.run_dir
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
@@ -766,13 +759,13 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'mg5_cmd')],
                          #cwd=self.path,
                         stdout=stdout, stderr=stderr)
 
         self.check_parton_output(cross=15.62, error=0.19)
-        self.check_pythia_output()
+        #self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
             misc.gunzip(event)
@@ -806,12 +799,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -829,7 +816,6 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
-        pythia=ON
         %(path)s/../madspin_card.dat
         set nevents 1000
         set lhaid 10042
@@ -853,7 +839,7 @@ class TestMEfromfile(unittest.TestCase):
         """)
         fsock.close()
                 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -863,7 +849,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=666, delta_event=40)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
-        self.check_pythia_output(run_name='run_01_decayed_1')
+        #self.check_pythia_output(run_name='run_01_decayed_1')
         
         #check the first decayed events for energy-momentum conservation.
         
@@ -888,12 +874,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -904,7 +884,7 @@ class TestMEfromfile(unittest.TestCase):
                     {'dir_name': self.run_dir, 'mg5_path':pjoin(_file_path, os.path.pardir)})
         fsock.close()
 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'test_mssm_generation')],
                          #cwd=pjoin(self.path),
                         stdout=stdout,stderr=stdout)
@@ -912,7 +892,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output(cross=4.541638, error=0.035)
     
         self.check_parton_output('run_02', cross=4.41887317, error=0.035)
-        self.check_pythia_output()
+        #self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
         #
         

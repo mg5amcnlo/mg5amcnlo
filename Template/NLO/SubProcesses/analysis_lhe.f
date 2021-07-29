@@ -7,9 +7,10 @@ c event (event with lower weights will be un-weighted)
       implicit none
       integer nwgt
       character*(*) weights_info(*)
+      logical passed_unwgt
       integer nwgts,nevents
       double precision sum_of_wgts
-      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents
+      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents,passed_unwgt
       logical lopen
       nwgts=nwgt
       sum_of_wgts=0d0
@@ -23,9 +24,10 @@ c event (event with lower weights will be un-weighted)
       subroutine analysis_end(xnorm)
       implicit none
       double precision xnorm
+      logical passed_unwgt
       integer nwgts,nevents
       double precision sum_of_wgts
-      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents
+      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents,passed_unwgt
       logical lopen
       integer                                   npoints
       double precision            cross_section
@@ -55,9 +57,10 @@ c      include 'genps.inc'
       double precision p(0:4,nexternal)
       double precision wgts(*)
       integer ibody
+      logical passed_unwgt
       integer nwgts,nevents
       double precision sum_of_wgts
-      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents
+      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents,passed_unwgt
 c
       integer i,j,npart
       double precision ran2
@@ -95,23 +98,33 @@ c maximum weight ratio for the partial unweighting
       integer                                   npoints
       double precision            cross_section
       common /for_FixedOrder_lhe/ cross_section,npoints
+      double precision,allocatable :: wwgts(:)
 c --- do the partial unweighting (don't do it when to close to singular
 c --- region)
+      if (.not. allocated(wwgts)) then
+         allocate(wwgts(nwgts))
+      endif
+      passed_unwgt=.true.
       twgt=abs(cross_section)*FO_LHE_weight_ratio !/npoints
       if(abs(wgts(1)).lt.abs(twgt) .and. xi_i_fks_ev.gt.1d-3 .and.
      $     1d0-y_ij_fks_ev.gt.1d-2)then
          R = ran2()*abs(twgt)
          if (R.gt.abs(wgts(1)))then
+            passed_unwgt=.false.
             return
          else
             do i=2,nwgts
-               wgts(i) = wgts(i)*abs(twgt/wgts(1))
+               wwgts(i) = wgts(i)*abs(twgt/wgts(1))
             enddo
-            wgts(1) = sign(twgt,wgts(1))
+            wwgts(1) = sign(twgt,wgts(1))
          endif
+      else
+         do i=1,nwgts
+            wwgts(i)=wgts(i)
+         enddo
       endif
 c --- accumulate the total weights of all the events in the event file
-      sum_of_wgts=sum_of_wgts+wgts(1)
+      sum_of_wgts=sum_of_wgts+wwgts(1)
 
 c --- fill the multi-weight common blocks with the scale and PDF
 c --- variation weights
@@ -122,12 +135,12 @@ c --- variation weights
                do ii=1,nint(scalevarF(0))
                   do jj=1,nint(scalevarR(0))
                      i_wgt=i_wgt+1
-                     wgtxsecmu(jj,ii,kk)= wgts(i_wgt)
+                     wgtxsecmu(jj,ii,kk)= wwgts(i_wgt)
                   enddo
                enddo
             else
                i_wgt=i_wgt+1
-               wgtxsecmu(1,1,kk)= wgts(i_wgt)
+               wgtxsecmu(1,1,kk)= wwgts(i_wgt)
             endif
          enddo
       endif
@@ -136,11 +149,11 @@ c --- variation weights
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   i_wgt=i_wgt+1
-                  wgtxsecPDF(n,nn) = wgts(i_wgt)
+                  wgtxsecPDF(n,nn) = wwgts(i_wgt)
                enddo
             else
                i_wgt=i_wgt+1
-               wgtxsecPDF(0,nn) = wgts(i_wgt)
+               wgtxsecPDF(0,nn) = wwgts(i_wgt)
             endif
          enddo
       endif
@@ -187,7 +200,7 @@ c --- prepare the buffer information
 
 c --- write the event
       call write_lhef_event(41,
-     &     npart,IDPRUP,wgts(1),0d0,0d0,0d0,
+     &     npart,IDPRUP,wwgts(1),0d0,0d0,0d0,
      &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
@@ -196,12 +209,15 @@ c --- write the event
 c This we can use for the event grouping!      
       subroutine HwU_add_points
       implicit none
+      logical passed_unwgt
       integer nwgts,nevents
       double precision sum_of_wgts
-      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents
-      nevents=nevents+1
-      write (41,'(a)') '</eventgroup>'
-      write (41,'(a)') '<eventgroup>'
+      common/to_lhe_analysis/sum_of_wgts,nwgts,nevents,passed_unwgt
+      if (passed_unwgt) then
+         nevents=nevents+1
+         write (41,'(a)') '</eventgroup>'
+         write (41,'(a)') '<eventgroup>'
+      endif
       end
 
 c Dummy routines

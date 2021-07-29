@@ -314,7 +314,7 @@ c$$$          if(i.eq.1)print*,xpt,xv(i,j+1),xv(i,ioff(i))
       close(99)
       do i=0,nfil-1
         iunit=10+i
-        close(iunit)
+        close(iunit, status='delete')
       enddo
       end
 

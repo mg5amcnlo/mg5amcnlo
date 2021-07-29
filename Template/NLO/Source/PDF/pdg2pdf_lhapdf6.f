@@ -1,11 +1,11 @@
-      double precision function pdg2pdf_timed(ih,ipdg,x,xmu)
+      double precision function pdg2pdf_timed(ih,ipdg,ibeam,x,xmu)
 c        function
          double precision pdg2pdf
          external pdg2pdf
 
 c        argument
 
-         integer ih, ipdg
+         integer ih, ipdg, ibeam
          DOUBLE  PRECISION x,xmu
 
 c timing statistics
@@ -19,16 +19,23 @@ c timing statistics
 
       end
 
-      double precision function pdg2pdf(ih,ipdg,x,xmu)
+      double precision function pdg2pdf(ih,ipdg,ibeam,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
+c     ih is now signed <0 for antiparticles
+c     if ih<0 does not have a dedicated pdf, then the one for ih>0 will be called
+c     and the sign of ipdg flipped accordingly.
+c
+c     ibeam is the beam identity 1/2
+c      if set to -1/-2 it meand that ipdg should not be flipped even if ih<0
+c      usefull for re-weighting
 c***************************************************************************
       implicit none
 c
 c     Arguments
 c
       DOUBLE  PRECISION x,xmu
-      INTEGER IH,ipdg
+      INTEGER IH,ipdg, ibeam
 C
 C     Include
 C
@@ -63,8 +70,12 @@ c     instead of stopping the code, as this might accidentally happen.
          write (*,*) 'PDF not supported for Bjorken x ', x
          stop 1
       endif
-
-      ipart=ipdg
+      if (ibeam.gt.0)then
+         ipart=sign(1,ih)*ipdg
+      else
+         ipart=ipdg
+      endif
+      
       if(iabs(ipart).eq.21) then
          ipart=0
       else if(iabs(ipart).eq.22) then
@@ -73,10 +84,14 @@ c     instead of stopping the code, as this might accidentally happen.
          ipart=7
       else if(iabs(ipart).gt.7)then
 c     This will be called for any PDG code, but we only support up to 7
-         write(*,*) 'PDF not supported for pdg ',ipdg
-         write(*,*) 'For lepton colliders, please set the lpp* '//
-     $    'variables to 0 in the run_card'  
-         stop 1
+C         write(*,*) 'PDF not supported for pdg ',ipdg
+C         write(*,*) 'For lepton colliders, please set the lpp* '//
+C     $    'variables to 0 in the run_card'  
+C         open(unit=26,file='../../../error',status='unknown')
+C         write(26,*) 'Error: PDF not supported for pdg ',ipdg
+C         stop 1
+         pdg2pdf=0d0
+         return
       endif
 
 c     Determine the iset used in lhapdf

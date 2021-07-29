@@ -17,18 +17,16 @@ C
 C                                                                     
 C ARGUMENTS                                                           
 C                                                                     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), lum                         
+      DOUBLE PRECISION lum                         
 C                                                                     
 C LOCAL VARIABLES                                                     
 C                                                                     
-      INTEGER I, ICROSS,ITYPE,LP                                      
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)                              
+      INTEGER I, ICROSS,LP                                      
 %(pdf_vars)s
-      DOUBLE PRECISION XPQ(-7:7)                                      
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
 C                                                                     
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF                          
+      DOUBLE PRECISION PDG2PDF                          
 C                                                                     
 C GLOBAL VARIABLES                                                    
 C                                                                     
@@ -39,6 +37,20 @@ C
       include "run.inc"                                               
       integer imirror
       common/cmirror/imirror
+C
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      include 'eepdf.inc'
+      double precision ee_comp_prod
+%(ee_comp_vars)s
+      integer i_ee
+c
+c
+c
+c Common blocks
+      character*7         pdlabel,epa_label
+      integer       lhaid
+      common/to_pdf/lhaid,pdlabel,epa_label
 C                                                                     
 C DATA                                                                
 C                                                                     
@@ -48,11 +60,7 @@ C ----------
 C BEGIN CODE                                                          
 C ----------                                                          
       lum = 0D0                                                      
-      if (imirror.eq.2) then
-%(pdf_lines_mirr)s
-      else
 %(pdf_lines)s
-      endif
       do i=1,IPROC
         if (nincoming.eq.2) then
            lum = lum + pd(i) * conv 

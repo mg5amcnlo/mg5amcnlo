@@ -125,6 +125,7 @@ C----------------------------------------------------------------------
 C  Reads MC@NLO input headers and fills Les Houches run common HEPRUP
 C  Event file is written by MadFKS
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       INCLUDE 'HERWIG65.INC'
 C--Les Houches Common Blocks
       INTEGER MAXPUP
@@ -150,7 +151,7 @@ c Hard event file (to be entered in Herwig driver)
       include 'reweight0.inc'
       integer nwgt
       common/cnwgt/nwgt
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
       
       nwgt=1

@@ -179,7 +179,7 @@ class TestMadWeight(unittest.TestCase):
             stdout=devnull
             stderr=devnull
         
-        subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
+        subprocess.call([pjoin(MG5DIR,'bin','mg5_aMC'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
@@ -242,7 +242,7 @@ class TestMadWeight(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
+        subprocess.call([pjoin(MG5DIR,'bin','mg5_aMC'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)

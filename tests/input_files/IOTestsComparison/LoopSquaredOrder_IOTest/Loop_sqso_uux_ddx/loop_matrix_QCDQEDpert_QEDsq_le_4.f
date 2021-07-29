@@ -664,6 +664,14 @@ C      helicity is asked
  101    CONTINUE
         CLOSE(1)
 
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
+
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
           DO J=1,NCOMB
@@ -2116,6 +2124,50 @@ C
      $ //' ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
+
+      END
+
+      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['QCD', 'QED']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=2, NSQSO=4)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  2) /    6,    0/
+      DATA (SQPLITORDERS(  2,I),I=  1,  2) /    4,    2/
+      DATA (SQPLITORDERS(  3,I),I=  1,  2) /    2,    4/
+      DATA (SQPLITORDERS(  4,I),I=  1,  2) /    0,    6/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 
