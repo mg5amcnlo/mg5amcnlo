@@ -1069,7 +1069,7 @@ class ConfigFile(dict):
             value = self[name]
 
         if hasattr(self, 'post_set_%s' % name):
-            return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror)
+            return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror, name=name)
     
     def __setitem__(self, name, value, change_userdefine=False,raiseerror=False):
         """set the attribute and set correctly the type if the value is a string.
@@ -1275,7 +1275,7 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         if change_userdefine:
             self.user_set.add(lower_name)
-        self.post_set(lower_name, None, change_userdefine, raiseerror)
+        self.post_set(lower_name, value, change_userdefine, raiseerror)
 
 
     def add_param(self, name, value, system=False, comment=False, typelist=None,
@@ -1479,7 +1479,6 @@ class ConfigFile(dict):
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
-            
         self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
  
 
@@ -3117,7 +3116,7 @@ class PDLabelBlock(RunBlock):
         #card['pdlabel2'] = value
 
     @staticmethod
-    def post_set(card, value, change_userdefine, raiseerror, **opt):
+    def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
         """call when change to pdlabel1 or pdlabel2 --do not know which one """
 
         if 'pdlabel' in card.user_set:
@@ -3134,13 +3133,58 @@ template_off = \
 
 pdlabel_block = PDLabelBlock('pdlabel', template_on=template_on, template_off=template_off)
 
+# FIXED_FAC_SCALE ------------------------------------------------------------------------------------
+class FixedfacscaleBlock(RunBlock):
+
+    def check_validity(self, card):
+        """check which template is active and fill accordingly."""
+        return
+
+    @staticmethod
+    def post_set_fixed_fac_scale(card, value, change_userdefine, raiseerror, **opt):
+
+        if 'fixed_fac_scale1' in card.user_set:
+            card.user_set.remove('fixed_fac_scale1')
+        if 'fixed_fac_scale2' in card.user_set:
+            card.user_set.remove('fixed_fac_scale2')
+
+        # #card['pdlabel1'] = value
+        # #card['pdlabel2'] = value
+
+    @staticmethod
+    def post_set(card, value, change_userdefine, raiseerror, name='unknown', **opt):
+        """call when change to fixed_fac_scale1/2 --do not know which one--  """
+
+        if name in card.user_set:
+            if 'fixed_fac_scale' in card.user_set:
+                card.user_set.remove('fixed_fac_scale')
+            if name == 'fixed_fac_scale2' and 'fixed_fac_scale1' not in card.user_set:
+                dict.__setitem__(card, 'fixed_fac_scale1', card['fixed_fac_scale'])
+            if name == 'fixed_fac_scale1' and 'fixed_fac_scale2' not in card.user_set:
+                dict.__setitem__(card, 'fixed_fac_scale2', card['fixed_fac_scale'])   
+      
+
+
+
+template_on = \
+"""     %(fixed_fac_scale)s = fixed_fac_scale  ! if .true. use fixed fac scale 
+"""
+
+template_off = \
+"""    %(fixed_fac_scale1)s = fixed_fac_scale1  ! if .true. use fixed fac scale for beam 1
+    %(fixed_fac_scale2)s = fixed_fac_scale2  ! if .true. use fixed fac scale for beam 2
+"""
+
+fixedfacscale = FixedfacscaleBlock('fixed_fact_scale', template_on=template_on, template_off=template_off)
+
+
 
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card information"""
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
-             pdlabel_block]
+             pdlabel_block, fixedfacscale]
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -3484,7 +3528,7 @@ class RunCardLO(RunCard):
                     mod = True
             elif self[lpp] == 1: # PDF from PDF library
                 if self[pdlabel] in ['eva', 'iww', 'none']:
-                    raise Exception("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabel, self[pdlabel]))
+                    raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabel, self[pdlabel]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
                 if self[pdlabel] not in ['eva', 'iww']:
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabel, self[pdlabel], pdlabel))
@@ -3546,10 +3590,10 @@ class RunCardLO(RunCard):
                 if self['lpp1'] in [2,3,4]:
                     logger.warning('fixed factorization scale is used for beam1. You can prevent this by setting fixed_fac_scale1 to False')
                     self['fixed_fac_scale1'] = True
-                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
+                    #self['fixed_fac_scale2'] = self['fixed_fac_scale']
                 elif self['lpp2'] in [2,3,4]:
                     logger.warning('fixed factorization scale is used for beam2. You can prevent this by setting fixed_fac_scale2 to False')
-                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    #self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = True
                 else:
                     self['fixed_fac_scale1'] = self['fixed_fac_scale']
@@ -3735,18 +3779,18 @@ class RunCardLO(RunCard):
             # check for possibility of eva
             eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24,12,-12,14,-14])
             eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24,12,-12,14,-14])
-            misc.sprint(eva_in_b1, eva_in_b2)
             if eva_in_b1 and eva_in_b2:
-                #reserved for 100 TeV pp collider
                 self['lpp1'] = -3
                 self['lpp2'] = 3
                 self['ebeam1'] = '15k'
                 self['ebeam2'] = '15k'
                 self['nhel'] = 1
                 self['pdlabel'] = 'eva'
+                self['fixed_fac_scale'] = True
 
             elif eva_in_b1:
                 self['pdlabel1'] = 'eva'
+                self['fixed_fac_scale1'] = True
                 self['nhel']    = 1
                 for i in beam_id_split[1]:
                     exit
@@ -3762,6 +3806,7 @@ class RunCardLO(RunCard):
                         self['ebeam2']  = '15k'
             elif eva_in_b2:
                 self['pdlabel2'] = 'eva'
+                self['fixed_fac_scale2'] = True
                 self['nhel']    = 1
                 for i in beam_id_split[0]:
                     if abs(i) == 11:

@@ -623,9 +623,15 @@ class TestRunCard(unittest.TestCase):
         run_card.set('fixed_fac_scale', False, user=True)
         run_card.set('lpp1', 2, user=True)
         run_card.check_validity()
+
         self.assertEqual(run_card['fixed_fac_scale1'], True)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
         run_card.set('lpp1', 1, user=True)
+        run_card.set('pdlabel', 'none', user=True)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            run_card.check_validity()
+        run_card.set('pdlabel', 'nn23lo1', user=True)
+        self.assertEqual(run_card['pdlabel'], 'nn23lo1')
         run_card.check_validity()
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
@@ -641,8 +647,21 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
+    def test_fixed_fac_scale_block(self):
 
-            
+        run_card = bannermod.RunCardLO()
+        run_card['dsqrt_q2fact1'] = 10
+        run_card['dsqrt_q2fact2'] = 20
+
+        run_card.set('fixed_fac_scale', True, user=True)
+        #self.assertNotIn('fixed_fact_scale', run_card.display_block)
+        self.assertEqual(run_card['fixed_fac_scale2'], False) #check that this is default value
+
+        run_card.set('fixed_fac_scale1', False, user=True)
+        #self.assertIn('fixed_fact_scale', run_card.display_)
+        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertNotIn('fixed_fac_scale', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale2', run_card.user_set)    
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
