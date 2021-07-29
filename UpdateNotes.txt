@@ -1,12 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+3.2.0 (xx/xx/xx)
+      SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
+      BUG FIX (from 2.9.5 long term stable)
+      
+2.9.5 (xx/xx/xx)
+      OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
+             This was claimed to be using fixed scale computation while in some case the scale was dynamical
+	     To have full flexibility we introduced two additional (hidden) parameter
+	     fixed_fac_scale1 and fixed_fac_scale2 that allow to choose fixed scale for only one beam.
 
 3.1.1 (28/05/21)
       ALL: put a crash for potentially ambiguous syntax with explanation
            on how to bypass such crash via a new entry in
 	   input/mg5_configuration.txt
-   BUG FIX (from 2.9.4 long term stable):
+      BUG FIX (from 2.9.4 long term stable)
+
+2.9.4(28/05/21)
       OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
       OM: Fix an issue for non positive definite matrix-element when using the
           "set group_subprocesses False"  mode of MG5aMc
