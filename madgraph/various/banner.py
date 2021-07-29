@@ -3181,7 +3181,9 @@ class RunCardLO(RunCard):
         self.add_param("pdlabel2", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
-        self.add_param("fixed_fac_scale", False)
+        self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
+        self.add_param("fixed_fac_scale1", False, hidden=True)
+        self.add_param("fixed_fac_scale2", False, hidden=True)
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
@@ -3517,10 +3519,51 @@ class RunCardLO(RunCard):
             if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
                 logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
                 time.sleep(5)
+
+        # check that fixed_fac_scale(1/2) is setting as expected
+        # if lpp=2/3/4 -> default is that beam in fixed scale
+        # check that fixed_fac_scale is not setup if fixed_fac_scale1/2 are 
+        # check that both fixed_fac_scale1/2 are defined together
+        # ensure that fixed_fac_scale1 and fixed_fac_scale2 are setup as needed
+        if 'fixed_fac_scale1' in self.user_set:
+            if 'fixed_fac_scale2' in self.user_set:
+                    if 'fixed_fac_scale' in self.user_set:
+                        if not (self['fixed_fac_scale'] == self['fixed_fac_scale2'] == self['fixed_fac_scale2']):
+                            logger.warning('Both fixed_fac_scale, fixed_fac_scale1 and fixed_fac_scale2 are defined. The value of fixed_fac_scale is ignored')
+            elif 'fixed_fac_scale' in self.user_set:
+                logger.warning('Both fixed_fac_scale, fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale')
+                self['fixed_fac_scale2'] = self['fixed_fac_scale']
+            elif self['lpp2'] !=0: 
+                raise Exception('fixed_fac_scale2 not defined while fixed_fac_scale1 is. Please fix your run_card.')
+        elif 'fixed_fac_scale2' in self.user_set:
+            if 'fixed_fac_scale' in self.user_set:
+                logger.warning('Both fixed_fac_scale, fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale')
+                self['fixed_fac_scale1'] = self['fixed_fac_scale']
+            elif self['lpp1'] !=0: 
+                raise Exception('fixed_fac_scale1 not defined while fixed_fac_scale2 is. Please fix your run_card.')
+        else:
+            if 'fixed_fac_scale' in self.user_set:
+                if self['lpp1'] in [2,3,4]:
+                    logger.warning('fixed factorization scale is used for beam1. You can prevent this by setting fixed_fac_scale1 to False')
+                    self['fixed_fac_scale1'] = True
+                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
+                elif self['lpp2'] in [2,3,4]:
+                    logger.warning('fixed factorization scale is used for beam2. You can prevent this by setting fixed_fac_scale2 to False')
+                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    self['fixed_fac_scale2'] = True
+                else:
+                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
+            elif self['lpp1'] !=0 or self['lpp2']!=0:
+                raise Exception('fixed_fac_scale not defined whithin your run_card. Plase fix this.')
+
+            
+
                 
         # if both lpp1/2 are on PA mode -> force fixed factorization scale
-        if (abs(self['lpp1']) == 2 and abs(self['lpp2']) in [2, 3,4] or abs(self['lpp2']) == 2 and abs(self['lpp1']) in [2, 3,4]) and not self['fixed_fac_scale']:
-            raise InvalidRunCard("Having one beam in `elastic photon from proton' mode requires fixed_fac_scale be True [since this is use as cutoff]")
+        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
+            if 'fixed_fac_scale1' not in self.user_set or 'fixed_fac_scale2' not in self.user_set:
+                raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]. If you really want a running scale here, please define fixed_fac_scale1 on False and fixed_fac_scale2 on False")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
@@ -3556,6 +3599,7 @@ class RunCardLO(RunCard):
             
             
     def update_system_parameter_for_include(self):
+        """system parameter need to be setupe"""
         
         # polarization
         self['frame_id'] = sum(2**(n) for n in self['me_frame'])

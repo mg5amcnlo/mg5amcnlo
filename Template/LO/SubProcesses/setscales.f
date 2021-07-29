@@ -126,7 +126,7 @@ c
       integer i
       logical first
       data first/.true./
-
+      double precision tempscale
 c----------
 c     start
 c----------
@@ -134,8 +134,8 @@ c----------
       if (dynamical_scale_choice.eq.-1) then
 c         Cluster external states until reducing the system to a 2->2 topology whose transverse mass is used for setting the scale.
 c         This is not done in this file due to the clustering.
-         q2factorization(1)=0d0          !factorization scale**2 for pdf1
-         q2factorization(2)=0d0          !factorization scale**2 for pdf2
+         if(.not.fixed_fac_scale1) q2factorization(1)=0d0          !factorization scale**2 for pdf1
+         if(.not.fixed_fac_scale2) q2factorization(2)=0d0          !factorization scale**2 for pdf2
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc
@@ -143,9 +143,9 @@ cc      to use this code you need to set                                        
 cc                 dymamical_scale_choice to 0 in the run_card                   cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c         default: use the renormalization scale
-          call set_ren_scale(P,q2factorization(1))
-          q2factorization(1)=q2factorization(1)**2
-          q2factorization(2)=q2factorization(1)   !factorization scale**2 for pdf2
+          call set_ren_scale(P,tempscale)
+          if(.not.fixed_fac_scale1) q2factorization(1)=scale**2
+          if(.not.fixed_fac_scale1) q2factorization(2)=scale**2   !factorization scale**2 for pdf2
 
 c
 c-some examples of dynamical scales
@@ -181,9 +181,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: END of USER CODE                                      cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       else
-          call set_ren_scale(P,q2factorization(1))
-          q2factorization(1)=q2factorization(1)**2
-          q2factorization(2)=q2factorization(1)   !factorization scale**2 for pdf2
+          call set_ren_scale(P,tempscale)
+          if(.not.fixed_fac_scale1)  q2factorization(1)=scale**2
+          if(.not.fixed_fac_scale1)  q2factorization(2)=scale**2 !factorization scale**2 for pdf2
       endif
 
 

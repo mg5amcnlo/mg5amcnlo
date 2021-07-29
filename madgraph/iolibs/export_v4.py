@@ -291,7 +291,7 @@ class ProcessExporterFortran(VirtualExporter):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
@@ -316,7 +316,7 @@ class ProcessExporterFortran(VirtualExporter):
 #                if os.path.isfile(filename):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
-#                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
+#                     misc.copytree(filename, pjoin(self.dir_path,name), True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
@@ -1473,7 +1473,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     
                 if common_factor:
                     res = res + ')'
-    
                 res_list.append(res)
         
         if 'jamp_optim' in self.cmd_options:
@@ -1513,9 +1512,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     return "%id0/%id0" % (frac.numerator, frac.denominator)
             elif frac.real == frac:
                 #misc.sprint(frac.real, frac)
-                return str(float(frac.real)).replace('e','d')
+                return ('%.15e' % frac.real).replace('e','d')
+                #str(float(frac.real)).replace('e','d')
             else:
-                return str(frac).replace('e','d').replace('j','*imag1')
+                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                #str(frac).replace('e','d').replace('j','*imag1')
                 
         
         
@@ -2993,9 +2994,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         super(ProcessExporterFortranMW, self).copy_template(model)        
 
         # Add the MW specific file
-        shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
+        misc.copytree(pjoin(MG5DIR,'Template','MadWeight'),
                                pjoin(self.dir_path, 'Source','MadWeight'), True)        
-        shutil.copytree(pjoin(MG5DIR,'madgraph','madweight'),
+        misc.copytree(pjoin(MG5DIR,'madgraph','madweight'),
                         pjoin(self.dir_path, 'bin','internal','madweight'), True) 
         files.mv(pjoin(self.dir_path, 'Source','MadWeight','src','setrun.f'),
                                       pjoin(self.dir_path, 'Source','setrun.f'))
@@ -3042,7 +3043,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -3889,7 +3890,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -5005,6 +5006,7 @@ c           This is dummy particle used in multiparticle vertices
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         #ProcessExporterFortranME.ordering +=1
+
         if len(tchannels) < 3 or tstrat == 2 or not model:
             return tchannels, 2
         elif tstrat == 1:
@@ -5143,7 +5145,7 @@ c           This is dummy particle used in multiparticle vertices
             old_vert = tchannels.pop()
                 
             #copy the vertex /leglist to avoid side effects
-            new_vert = base_objects.Vertex(old_vert)
+            new_vert = copy.copy(old_vert)
             new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
             # vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 

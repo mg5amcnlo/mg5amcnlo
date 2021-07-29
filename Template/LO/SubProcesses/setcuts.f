@@ -142,7 +142,8 @@ c
                scale=pmass(1)
                fixed_ren_scale=.true.
             endif
-            fixed_fac_scale=.true.
+            fixed_fac_scale1=.true.
+            fixed_fac_scale2=.true.            
             use_syst=.false.
          endif
 

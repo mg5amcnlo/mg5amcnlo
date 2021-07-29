@@ -17,6 +17,8 @@
 """This is the main executable, a simple frontend to set up the PYTHONPATH
 and call immediately the command line interface scripts"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadSpin works only with python 2.6 or later (but not python 3.X).\n\
@@ -68,7 +70,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print("For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -99,7 +101,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print('Running MG5 in debug mode')
 
 
 # Set logging level according to the logging level given by options
@@ -130,7 +132,7 @@ try:
             cmd_line.import_command_file(input_file)
             cmd_line.run_cmd('quit')
         else:
-            print "using input+file", input_file
+            print("using input+file", input_file)
             cmd_line = interface.MadSpinInterface()
             cmd_line.use_rawinput = False
             cmd_line.haspiping = False
@@ -139,7 +141,7 @@ try:
     else:
         # Interactive mode
         if options.web:
-            if not os.environ.has_key('MADGRAPH_DATA'):
+            if 'MADGRAPH_DATA' not in os.environ:
                 os.environ['MADGRAPH_DATA'] = root_path
                 os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
                 os.environ['REMOTE_USER'] = 'webmode'
@@ -158,10 +160,10 @@ try:
             if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
                 os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
             readline.write_history_file(history_file)
-        except Exception, error:
+        except Exception as error:
             pass
 except KeyboardInterrupt:
-    print 'writting history and quit on KeyboardInterrupt' 
+    print('writting history and quit on KeyboardInterrupt') 
     pass
 
 

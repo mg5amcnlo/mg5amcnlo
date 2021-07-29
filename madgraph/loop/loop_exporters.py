@@ -136,7 +136,7 @@ class LoopExporterFortran(object):
             
         if self.dependencies=='internal':
             new_CT_path = pjoin(targetPath,'Source','CutTools')
-            shutil.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
+            misc.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
             
             current = misc.detect_current_compiler(os.path.join(new_CT_path,
                                                                     'makefile'))
@@ -2029,7 +2029,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             elif tir_name == "iregi":
                 # This is the right paths for IREGI
                 new_iregi_path = pjoin(targetPath,os.path.pardir,'Source','IREGI')
-                shutil.copytree(pjoin(libpath,os.path.pardir), new_iregi_path, 
+                misc.copytree(pjoin(libpath,os.path.pardir), new_iregi_path, 
                                                                   symlinks=True)
                 
                 current = misc.detect_current_compiler(
@@ -3096,6 +3096,11 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """ Initialize the process, setting the proc characteristics."""
         super(LoopInducedExporterME, self).__init__(*args, **opts)
         self.proc_characteristic['loop_induced'] = True
+
+        if self.opt and isinstance(self.opt['output_options'], dict) and \
+                                       't_strategy' in self.opt['output_options']:
+            self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
+                  self.opt['output_options']['t_strategy'], int, 't_strategy')
     
     def get_context(self,*args,**opts):
         """ Make sure that the contextual variable MadEventOutput is set to

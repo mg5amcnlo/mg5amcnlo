@@ -161,7 +161,7 @@ class MG4Runner(MERunner):
             raise IOError("Path %s for test already exist" % \
                                     str(os.path.join(mg4_path, temp_dir)))
 
-        shutil.copytree(os.path.join(mg4_path, 'Template'),
+        misc.copytree(os.path.join(mg4_path, 'Template'),
                         os.path.join(mg4_path, temp_dir))
 
         self.temp_dir_name = temp_dir

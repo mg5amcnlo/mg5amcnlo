@@ -180,13 +180,13 @@ C         Amplitude(s) for UVCT diagram with ID 14
           AMPL(2,25)=AMPL(2,25)*(2.0D0*UVWFCT_G_1_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 15
           CALL MP_FFV2_0(W(1,6,H),W(1,2,H),W(1,7,H),GC_11,AMPL(1,26))
-          AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+          AMPL(1,26)=AMPL(1,26)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 C         Amplitude(s) for UVCT diagram with ID 16
           CALL MP_FFV2_0(W(1,1,H),W(1,8,H),W(1,7,H),GC_11,AMPL(2,27))
           AMPL(2,27)=AMPL(2,27)*(2.0D0*UVWFCT_G_1_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 17
           CALL MP_FFV2_0(W(1,1,H),W(1,8,H),W(1,7,H),GC_11,AMPL(1,28))
-          AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_2+1.0D0*UVWFCT_G_1)
+          AMPL(1,28)=AMPL(1,28)*(1.0D0*UVWFCT_G_1+1.0D0*UVWFCT_G_2)
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS

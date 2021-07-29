@@ -78,8 +78,8 @@ C
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
-    INTEGER IMIRROR
-    COMMON/TO_MIRROR/ IMIRROR
+    INTEGER IMIRROR,IPROC
+    COMMON/TO_MIRROR/ IMIRROR,IPROC
 
        double precision tmin_for_channel	
        integer sde_strat ! 1 means standard single diagram enhancement strategy,

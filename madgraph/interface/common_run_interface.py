@@ -907,9 +907,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 fsock.close()
                 return
             else:
-                subprocess.call(['python', 'write_param_card.py'],
-                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
+                devnull = open(os.devnull, 'w')  
+                subprocess.call([sys.executable, 'write_param_card.py'],
+                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'), stdout=devnull, stderr=devnull)
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
+                if not os.path.exists(default):
+                    files.cp(pjoin(self.me_dir, 'Cards','param_card_default.dat'), default)
 
 
             if amcatnlo and not keepwidth:
@@ -1796,9 +1799,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return
         
         if self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
-            nb_submit = min(self.options['nb_core'], nb_event//2500)
+            nb_submit = min(int(self.options['nb_core']), nb_event//2500)
         elif self.options['run_mode'] ==1:
-            nb_submit = min(self.options['cluster_size'], nb_event//25000)
+            try:
+                nb_submit = min(int(self.options['cluster_size']), nb_event//25000)
+            except Exception:
+                nb_submit =1
         else:
             nb_submit =1 
 

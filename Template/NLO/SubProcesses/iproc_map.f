@@ -25,7 +25,6 @@ c absolute value).
       integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
      $     ,nequal,equal_to(maxproc,fks_configs)
      $     ,equal_to_inverse(maxproc,fks_configs)
-      character*100 buff
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     This is the common block that this subroutine fills
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
@@ -174,18 +173,18 @@ c Print the map to the screen
      &        write (*,*) '================================'
          if (nFKSprocess.eq.1) write (*,*) 'process combination map '
      &        //'(specified per FKS dir):'
-         write (buff(1:3),'(i3)') nFKSprocess
-         write (buff(4:13),'(a)') ' map     '
+         write (*,'(i3)', advance="no") nFKSprocess
+         write (*,'(a)', advance="no") ' map     '
          do j=1,iproc
-            write (buff(10+4*j:13+4*j),'(i4)') eto(j,nFKSprocess)
+            write (*,'(i4)', advance="no") eto(j,nFKSprocess)
          enddo
-         write (*,'(a)') buff(1:13+4*iproc)
-         write (buff(1:3),'(i3)') nFKSprocess
-         write (buff(4:13),'(a)') ' inv. map'
+         write (*,'(a)') ''
+         write (*,'(i3)', advance="no") nFKSprocess
+         write (*,'(a)', advance="no") ' inv. map'
          do j=1,maxproc_found
-            write (buff(10+4*j:13+4*j),'(i4)') etoi(j,nFKSprocess)
+            write (*,'(i4)', advance="no") etoi(j,nFKSprocess)
          enddo
-         write (*,'(a)') buff(1:13+4*maxproc_found)
+         write (*,'(a)') ''
          if (nFKSprocess.eq.fks_configs) 
      &        write (*,*) '================================'
       enddo

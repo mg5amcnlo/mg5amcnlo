@@ -588,6 +588,7 @@ from object_library import all_propagators, Propagator
                 logger.warning('The particle name \'%s\' is present in both model with different pdg code' % name)
                 logger.warning('The particle coming from the plug-in model will be rename to \'%s%s\'' % (name, self.addon))
                 particle.name = '%s%s' % (name, self.addon)
+                particle.antiname = '%s%s' % (particle.antiname, self.addon)
                 self.particles.append(particle)
                 return
         elif identify:

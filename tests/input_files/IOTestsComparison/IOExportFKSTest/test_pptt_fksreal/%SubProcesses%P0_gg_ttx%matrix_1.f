@@ -240,21 +240,32 @@ C     Amplitude(s) for diagram number 16
       TMP_JAMP(2) = AMP(1) +  AMP(18)  ! used 4 times
       TMP_JAMP(1) = AMP(12) - AMP(17)  ! used 4 times
       TMP_JAMP(10) = TMP_JAMP(3) - TMP_JAMP(2)  ! used 2 times
-      TMP_JAMP(9) = TMP_JAMP(1) + ((-0+1*IMAG1)) * AMP(11)  ! used 2 times
+      TMP_JAMP(9) = TMP_JAMP(1) + ((-0.000000000000000D+00
+     $ ,1.000000000000000D+00)) * AMP(11)  ! used 2 times
       TMP_JAMP(8) = TMP_JAMP(2) - TMP_JAMP(1)  ! used 2 times
-      TMP_JAMP(7) = TMP_JAMP(1) + (-1*IMAG1) * AMP(10)  ! used 2 times
+      TMP_JAMP(7) = TMP_JAMP(1) + ((0.000000000000000D+00,
+     $ -1.000000000000000D+00)) * AMP(10)  ! used 2 times
       TMP_JAMP(6) = TMP_JAMP(3) - TMP_JAMP(1)  ! used 2 times
-      TMP_JAMP(5) = TMP_JAMP(2) + (-1*IMAG1) * AMP(3)  ! used 2 times
-      TMP_JAMP(4) = TMP_JAMP(3) + ((-0+1*IMAG1)) * AMP(5)  ! used 2 times
-      JAMP(1) = (-1.0)*AMP(6)+TMP_JAMP(4)+(-1.0)*TMP_JAMP(5)
-      JAMP(2) = (-1.0)*AMP(4)+(-1.0)*TMP_JAMP(4)+TMP_JAMP(9)
-      JAMP(3) = (-1.0)*AMP(13)+TMP_JAMP(5)+(-1.0)*TMP_JAMP(7)
-      JAMP(4) = (-1.0)*AMP(7)+(1*IMAG1)*AMP(8)+(-1*IMAG1)*AMP(10)+(
-     $ -1.0)*TMP_JAMP(6)
-      JAMP(5) = (1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(11)+(-1.0)*AMP(14)
-     $ +TMP_JAMP(8)
-      JAMP(6) = (-1*IMAG1)*AMP(2)+(-1*IMAG1)*AMP(8)+(-1.0)*AMP(9)
-     $ +TMP_JAMP(10)
+      TMP_JAMP(5) = TMP_JAMP(2) + ((0.000000000000000D+00,
+     $ -1.000000000000000D+00)) * AMP(3)  ! used 2 times
+      TMP_JAMP(4) = TMP_JAMP(3) + ((-0.000000000000000D+00
+     $ ,1.000000000000000D+00)) * AMP(5)  ! used 2 times
+      JAMP(1) = (-1.000000000000000D+00)*AMP(6)+TMP_JAMP(4)+(
+     $ -1.000000000000000D+00)*TMP_JAMP(5)
+      JAMP(2) = (-1.000000000000000D+00)*AMP(4)+(-1.000000000000000D
+     $ +00)*TMP_JAMP(4)+TMP_JAMP(9)
+      JAMP(3) = (-1.000000000000000D+00)*AMP(13)+TMP_JAMP(5)+(
+     $ -1.000000000000000D+00)*TMP_JAMP(7)
+      JAMP(4) = (-1.000000000000000D+00)*AMP(7)+((0.000000000000000D
+     $ +00,1.000000000000000D+00))*AMP(8)+((0.000000000000000D+00,
+     $ -1.000000000000000D+00))*AMP(10)+(-1.000000000000000D+00)
+     $ *TMP_JAMP(6)
+      JAMP(5) = ((0.000000000000000D+00,1.000000000000000D+00))*AMP(2)
+     $ +((0.000000000000000D+00,-1.000000000000000D+00))*AMP(11)+(
+     $ -1.000000000000000D+00)*AMP(14)+TMP_JAMP(8)
+      JAMP(6) = ((0.000000000000000D+00,-1.000000000000000D+00))*AMP(2)
+     $ +((0.000000000000000D+00,-1.000000000000000D+00))*AMP(8)+(
+     $ -1.000000000000000D+00)*AMP(9)+TMP_JAMP(10)
       MATRIX_1 = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
