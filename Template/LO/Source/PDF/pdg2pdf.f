@@ -140,14 +140,14 @@ c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if no
 
       if(iabs(ipart).eq.21) then ! g      
          ipart=0
-      else if(ipart.eq.12) then ! ve
-         ipart=12
-      else if(ipart.eq.-12) then ! ve~
-         ipart=-12
-      else if(ipart.eq.14) then ! vm
-         ipart=14
-      else if(ipart.eq.-14) then ! vm~
-         ipart=-14
+c      else if(ipart.eq.12) then ! ve
+c         ipart=12
+c      else if(ipart.eq.-12) then ! ve~
+c         ipart=-12
+c      else if(ipart.eq.14) then ! vm
+c         ipart=14
+c      else if(ipart.eq.-14) then ! vm~
+c         ipart=-14
       else if(ipart.eq.24) then  ! w+
          ipart=24
       else if(ipart.eq.-24) then ! w-
@@ -158,7 +158,7 @@ c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if no
          ipart=7
       else if(iabs(ipart).eq.7) then  ! a
          ipart=7
-c     This will be called for any PDG code. We only support (for now) 0-7, 12, 14, and 22-24
+c     This will be called for any PDG code. We only support (for now) 0-7, and 22-24
       else if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
