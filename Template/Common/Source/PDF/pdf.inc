@@ -6,6 +6,7 @@ c
 c     pdlabel= string identifying the pdf    
 c***********************************************************************
       character*7 pdlabel,epa_label
+      character*7 pdsublabel(2)
       integer lhaid
-      common/to_pdf/lhaid,pdlabel,epa_label
+      common/to_pdf/lhaid,pdlabel,epa_label,pdsublabel
  	
