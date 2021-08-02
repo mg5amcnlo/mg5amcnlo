@@ -2403,14 +2403,14 @@ c Jacobian due to delta() of tau_born
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
-      if (s_mass.gt.smin+tiny) then
+      if (s_mass.gt.smin*(1d0+tiny)) then
          call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
-      elseif(abs(s_mass-smin).lt.tiny) then
+      elseif(abs(s_mass-smin).lt.tiny*smin) then
          call trans_x(7,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
       else
-         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
          jac=-1d0
       endif
       tau=s/stot
