@@ -144,8 +144,8 @@ cc                 dymamical_scale_choice to 0 in the run_card                  
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c         default: use the renormalization scale
           call set_ren_scale(P,tempscale)
-          if(.not.fixed_fac_scale1) q2factorization(1)=scale**2
-          if(.not.fixed_fac_scale1) q2factorization(2)=scale**2   !factorization scale**2 for pdf2
+          if(.not.fixed_fac_scale1) q2factorization(1)=tempscale**2
+          if(.not.fixed_fac_scale2) q2factorization(2)=tempscale**2   !factorization scale**2 for pdf2
 
 c
 c-some examples of dynamical scales
@@ -182,8 +182,8 @@ cc      USER DEFINE SCALE: END of USER CODE                                     
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       else
           call set_ren_scale(P,tempscale)
-          if(.not.fixed_fac_scale1)  q2factorization(1)=scale**2
-          if(.not.fixed_fac_scale1)  q2factorization(2)=scale**2 !factorization scale**2 for pdf2
+          if(.not.fixed_fac_scale1)  q2factorization(1)=tempscale**2
+          if(.not.fixed_fac_scale2)  q2factorization(2)=tempscale**2 !factorization scale**2 for pdf2
       endif
 
 
