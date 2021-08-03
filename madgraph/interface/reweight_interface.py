@@ -715,7 +715,6 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             rw_dir = pjoin(path_me, 'rw_me')
         
-        
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
@@ -1805,7 +1804,6 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir        
-        
         self.id_to_path = {}
         self.id_to_path_second = {}
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
@@ -1965,6 +1963,7 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['rwgt_mode'] = self.rwgt_mode
         to_save['rwgt_name'] = self.options['rwgt_name']
         to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
+        to_save['nb_library'] = self.nb_library
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -2000,6 +1999,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_process = obj['second_process']
         self.second_model = obj['second_model']
         self.has_nlo = obj['has_nlo']
+        self.nb_library = obj['nb_library']
         if not self.rwgt_mode:
             self.rwgt_mode = obj['rwgt_mode']
             logger.info("mode set to %s" % self.rwgt_mode)
