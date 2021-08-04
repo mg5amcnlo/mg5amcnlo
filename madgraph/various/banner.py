@@ -4137,8 +4137,11 @@ class RunCardNLO(RunCard):
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
-        self.add_param('fixed_fac_scale', False)
-        self.add_param('mur_ref_fixed', 91.118)                       
+        #self.add_param('fixed_fac_scale', False)
+        self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define  fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam") 
+        self.add_param("fixed_fac_scale1", False, hidden=True) # added new parameters
+        self.add_param("fixed_fac_scale2", False, hidden=True)
+        self.add_param('mur_ref_fixed', 91.118,)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
@@ -4223,12 +4226,73 @@ class RunCardNLO(RunCard):
                 self['pdlabel']='nn23nlo'
                 self['reweight_pdf']=[False]
                 logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
-                
-        
+      # for lepton-proton collision make sure that factorisation scales are set correctly and 'muF' also
+        if 'fixed_fac_scale1' in self.user_set:
+            if 'fixed_fac_scale2' in self.user_set:
+                    if 'fixed_fac_scale' in self.user_set:
+                        if not ((self['fixed_fac_scale'] == self['fixed_fac_scale1'] == self['fixed_fac_scale2'])):
+                            logger.warning('Both fixed_fac_scale, fixed_fac_scale1 and fixed_fac_scale2 are defined. The value of fixed_fac_scale is ignored')                    
+            elif 'fixed_fac_scale'  in self.user_set:
+                logger.warning('Both fixed_fac_scale, fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale')
+                self['fixed_fac_scale2'] = self['fixed_fac_scale'] 
+            elif self['lpp2'] !=0: 
+                raise Exception('fixed_fac_scale2 not defined while fixed_fac_scale1 is. Please fix your run_card.')
+        elif 'fixed_fac_scale2' in self.user_set:
+            if 'fixed_fac_scale'in self.user_set:
+                logger.warning('Both fixed_fac_scale, fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale')
+                self['fixed_fac_scale1'] = self['fixed_fac_scale']
+            elif self['lpp1'] !=0: 
+                raise Exception('fixed_fac_scale1 not defined while fixed_fac_scale2 is. Please fix your run_card.')
+        else:
+            if 'fixed_fac_scale' in self.user_set:
+                if self['lpp1'] in [2,3,4]:
+                    logger.warning('fixed factorization scale is used for beam1. You can prevent this by setting fixed_fac_scale1 to False')
+                    self['fixed_fac_scale1'] = True
+                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
+                    if not 'muf1_ref_fixed' in self.user_set:
+                        logger.warning('Please fix muF1  value otherwise it will be fixed by muF')
+                        self['muf1_ref_fixed'] = self['muf_ref_fixed']
+                elif self['lpp2'] in [2,3,4]:
+                    logger.warning('fixed factorization scale is used for beam2. You can prevent this by setting fixed_fac_scale2 to False')
+                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    self['fixed_fac_scale2'] = True
+                    if not 'muf2_ref_fixed' in self.user_set:
+                        logger.warning('Please fix  muF2 value otherwise it will be fixed by muF')
+                        self['muf2_ref_fixed'] = self['muf_ref_fixed']
+                else:
+                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
+                    if 'muf_ref_fixed' in self.user_set:
+                        self['muf1_ref_fixed']= self['muf_ref_fixed']
+                        self['muf2_ref_fixed']= self['muf_ref_fixed']
+            elif self['lpp1'] !=0 or self['lpp2']!=0:
+                raise Exception('fixed_fac_scale not defined within your run_card. Plase fix this.')
+        if 'muf1_ref_fixed' in self.user_set:
+            if 'muf2_ref_fixed' in self.user_set:
+                if 'muf_ref_fixed' in self.user_set:
+                    if not ((self['muf_ref_fixed'] == self['muf1_ref_fixed'] == self['muf2_ref_fixed'])):
+                        logger.warning('Both muf_ref_fixed, muf1_ref_fixed and muf2_ref_fixed are defined. The value of muf_ref_fixed is ignored')
+            elif 'muf_ref_fixed'  in self.user_set:
+                logger.warning('Both muf_ref_fixed, muf1_ref_fixed are defined but not muf2_ref_fixed. The value of muf2_ref_fixed will be set to the one of muf_ref_fixed')
+                self['muf2_ref_fixed'] = self['muf_ref_fixed']    
+            elif self['lpp2'] !=0: 
+                raise Exception('muF2 is not defined muF1 is. Please fix your run_card.')
+        elif 'muf2_ref_fixed' in self.user_set:
+            if 'muf_ref_fixed'in self.user_set:   
+                logger.warning('Both muf_ref_fixed, muf2_ref_fixed are defined but not muf1_ref_fixed. The value of muf1_ref_fixed will be set to the one of muf_ref_fixed')
+                self['muf1_ref_fixed'] = self['muf_ref_fixed']
+            elif self['lpp1'] !=0: 
+                 raise Exception('muf1_ref_fixed is not defined while muf2_ref_fixed is. Please fix your run_card.') 
+        elif 'muf_ref_fixed' in self.user_set:
+            if not 'muf1_ref_fixed' and 'muf2_ref_fixed' in self.user_set:
+                logger.warning(' muf_ref_fixed  is defined but not muf1_ref_fixed and muf2_ref_fixed. The value of muf1_ref_fixed and muf2_ref_fixed  will be set to  muf_ref_fixed value')
+                self['muf1_ref_fixed']= self ['muf_ref_fixed']
+                self['muf2_ref_fixed']= self ['muf_ref_fixed']
+                 
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
             # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed       
-            scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
+            scales=['fixed_ren_scale','fixed_fac_scale1','fixed_fac_scale2','fixed_QES_scale']
             for scale in scales:
                 if self[scale]:
                     logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
@@ -4273,12 +4337,6 @@ class RunCardNLO(RunCard):
             self['muf1_over_ref']=self['muf_over_ref']
         if self['muf2_over_ref'] == -1.0:
             self['muf2_over_ref']=self['muf_over_ref']
-        if self['muf1_ref_fixed'] != -1.0 and self['muf1_ref_fixed'] == self['muf2_ref_fixed']:
-            self['muf_ref_fixed']=self['muf1_ref_fixed']
-        if self['muf1_ref_fixed'] == -1.0:
-            self['muf1_ref_fixed']=self['muf_ref_fixed']
-        if self['muf2_ref_fixed'] == -1.0:
-            self['muf2_ref_fixed']=self['muf_ref_fixed']
         # overwrite rw_rscale and rw_fscale when rw_(r/f)scale_(down/up) are explicitly given in the run_card for backward compatibility.
         if (self['rw_rscale_down'] != -1.0 and ['rw_rscale_down'] not in self['rw_rscale']) or\
            (self['rw_rscale_up'] != -1.0 and ['rw_rscale_up'] not in self['rw_rscale']):

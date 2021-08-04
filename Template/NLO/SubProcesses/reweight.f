@@ -605,7 +605,7 @@ c FxFx
 c
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and. q2fact(2).gt.0.and.scale.gt.0)
      $     return
 
       if (ickkw.eq.3) then
@@ -663,13 +663,20 @@ C     scale, i.e. last two scales (ren. scale for these vertices are
 C     anyway already set by "scale" above) (Do not do this for FxFx
 C     merging)
         if(ickkw.gt.0 .and. ickkw.ne.3) then
-           if(fixed_fac_scale.and.first)then
+           if(fixed_fac_scale1.and.first)then
               q2bck(1)=q2fact(1)
+             ! q2bck(2)=q2fact(2)
+              first=.false.
+           else if(fixed_fac_scale2.and.first)then
               q2bck(2)=q2fact(2)
               first=.false.
-           else if(fixed_fac_scale) then
+           else if(fixed_fac_scale1) then
               q2fact(1)=q2bck(1)
+              !q2fact(2)=q2bck(2)
+           else if(fixed_fac_scale2) then
+              !q2fact(1)=q2bck(1)
               q2fact(2)=q2bck(2)
+           
            endif
         endif
 
@@ -1012,8 +1019,9 @@ c     For FxFx skip the cut on xmtc
          endif
       endif
       
-      if(ickkw.eq.0.and.(fixed_fac_scale.or.q2fact(1).gt.0).and.
-     $     (fixed_ren_scale.or.scale.gt.0)) return
+      if(ickkw.eq.0.and.(fixed_fac_scale1.or.q2fact(1).gt.0)
+     $    .and. (fixed_fac_scale2.or.q2fact(2).gt.0)
+     $    .and. (fixed_ren_scale.or.scale.gt.0)) return
 
 c     Ensure that last scales are at least as big as first scales
       if(jlast(1).gt.0) pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1))
@@ -1021,7 +1029,7 @@ c     Ensure that last scales are at least as big as first scales
       if(jlast(2).gt.0) pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2))
      $     ,pt2ijcl(jfirst(2)))
 
-      if(ickkw.gt.0.and.q2fact(1).gt.0 .and. ickkw.ne.3) then
+      if(ickkw.gt.0.and. q2fact(1).gt.0 .and. q2fact(2).gt.0 .and. ickkw.ne.3) then
 c     Use the fixed or previously set scale for central scale
          if(jcentral(1).gt.0) pt2ijcl(jcentral(1))=q2fact(1)
          if(jcentral(2).gt.0.and.jcentral(2).ne.jcentral(1))
@@ -1030,28 +1038,35 @@ c     Use the fixed or previously set scale for central scale
 
       if ( (nexternal.eq.3.and.nincoming.eq.2.and.ickkw.eq.3) .or.
      &     (nexternal.eq.3.and.nincoming.eq.2.and.
-     &                           q2fact(1).eq.0.and.ickkw.ne.3)) then
-         q2fact(1)=pt2ijcl(nexternal-2)
-         q2fact(2)=pt2ijcl(nexternal-2)
+     &                           q2fact(1).eq.0 .or. q2fact(2).eq.0  .and.ickkw.ne.3)) then
+         if (.not. fixed_fac_scale1) q2fact(1)=pt2ijcl(nexternal-2)
+         if (.not. fixed_fac_scale2) q2fact(2)=pt2ijcl(nexternal-2)
       endif
 
-      if(q2fact(1).eq.0d0 .or. ickkw.eq.3) then
+      if(q2fact(1).eq.0d0 .or. q2fact(2).eq.0d0 .or. ickkw.eq.3) then
 c     Use the geom. average of central scale and first non-radiation vertex
-         if(jlast(1).gt.0)
+         if(jlast(1).gt.0.and. .not.fixed_fac_scale1 )
      &        q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
-         if(jlast(2).gt.0)
+         if(jlast(2).gt.0.and..not.fixed_fac_scale2)
      &        q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
          if(jcentral(1).gt.0.and.jcentral(1).eq.jcentral(2))then
 c     We have a qcd line going through the whole event, use single scale
-            q2fact(1)=max(q2fact(1),q2fact(2))
-            q2fact(2)=q2fact(1)
+            if (.not.fixed_fac_scale1.and..not.fixed_fac_scale2)then
+                q2fact(1)=max(q2fact(1),q2fact(2))
+                q2fact(2)=q2fact(1)
+            endif
          endif
       endif
-      if(.not. fixed_fac_scale) then
-         q2fact(1)=scalefact**2*q2fact(1)
-         q2fact(2)=scalefact**2*q2fact(2)
-         q2bck(1)=q2fact(1)
-         q2bck(2)=q2fact(2)
+      if(.not. fixed_fac_scale1 .or. fixed_fac_scale2 ) then
+         if (.not. fixed_fac_scale1) then
+             q2fact(1)=scalefact**2*q2fact(1)
+             q2bck(1)=q2fact(1)
+         endif
+         if (.not. fixed_fac_scale2) then
+             q2fact(2)=scalefact**2*q2fact(2)
+             !q2bck(1)=q2fact(1)
+             q2bck(2)=q2fact(2)
+         endif
          if (btest(mlevel,3))
      $      write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
       endif
@@ -1088,20 +1103,23 @@ c     Use geom. average of central scales
 
 c     Take care of case when jcentral are zero
       if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
-         if(q2fact(1).gt.0)then
+         if(q2fact(1).gt.0 .and. .not.fixed_fac_scale1)then
             pt2ijcl(nexternal-2)=q2fact(1)
             if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(1)
+         else if(q2fact(2).gt.0 .and. .not.fixed_fac_scale2)then
+            pt2ijcl(nexternal-2)=q2fact(2)
+            if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(2)
          else
-            q2fact(1)=pt2ijcl(nexternal-2)
-            q2fact(2)=q2fact(1)
+            if(.not.fixed_fac_scale1) q2fact(1)=pt2ijcl(nexternal-2)
+            if(.not.fixed_fac_scale2) q2fact(2)=q2fact(1)
          endif
       elseif(ickkw.ge.2.or.pdfwgt)then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
+         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1).and..not.fixed_fac_scale1)
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
-         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
+         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2).and..not.fixed_fac_scale2)
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
@@ -1112,8 +1130,9 @@ c included above and it should not be included for the FxFx scales)
       
       if (ickkw.ne.3) then  ! For FxFx, this is done in setscales.f
 c     Check that factorization scale is >= 2 GeV
-         if ( lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
-     $        lpp(2).ne.0.and.q2fact(2).lt.4d0    )then
+         if ( lpp(1).ne.0.and.q2fact(1).lt.4d0.and..not.fixed_fac_scale1.or.
+     $        lpp(2).ne.0.and.q2fact(2).lt.4d0.and..not.fixed_fac_scale2)then
+            
             if(nwarning.le.10) then
                nwarning=nwarning+1
                write(*,*) 'Warning: Too low fact scales: ',
@@ -1127,7 +1146,7 @@ c     Check that factorization scale is >= 2 GeV
             setclscales=.false.
             clustered = .false.
             return
-         endif
+          endif
       endif
 
       if (btest(mlevel,3))
@@ -1208,7 +1227,7 @@ c Include
       include 'coupl.inc'
       include 'real_from_born_configs.inc'
       double precision ZERO,PI
-      parameter (ZERO=0d0)
+      parameter (ZERO=0.0d0)
       parameter( PI = 3.14159265358979323846d0 )
 c Argument
       double precision p(0:3,nexternal),rewgt_exp

@@ -363,7 +363,7 @@ c Note: the old version returned the factorization scales squared
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
-      character*80 temp_scale_id,temp_scale_id2
+      character*80 temp_scale_id,temp_scale_id2,temp_scale_id3,temp_scale_id4
       common/ctemp_scale_id/temp_scale_id
 c this is to avoid too low dynamic scales      
       double precision minscaleF
@@ -371,22 +371,40 @@ c this is to avoid too low dynamic scales
 c
       temp_scale_id='  '
       temp_scale_id2='  '
-      if(fixed_fac_scale)then
+      temp_scale_id3='  '
+      temp_scale_id4='  '
+      if(fixed_fac_scale1.and.fixed_fac_scale2)then
         muf_temp(1)=muF1_ref_fixed
         muf_temp(2)=muF2_ref_fixed
         temp_scale_id='fixed'
         temp_scale_id2='fixed'
-      else
+        muF1_id_str=temp_scale_id
+        muF2_id_str=temp_scale_id2
+      elseif (fixed_fac_scale1 .and..not.fixed_fac_scale2.and.lpp(1).ne.1)then
+        muf_temp(1)=muF1_ref_fixed
+        muf_temp(2)=max(minscaleF,muF_ref_dynamic(pp))
+        temp_scale_id3='fixed'
+        temp_scale_id4=temp_scale_id
+        muF1_id_str=temp_scale_id3
+        muF2_id_str=temp_scale_id4
+      elseif (fixed_fac_scale2.and..not.fixed_fac_scale1.and.lpp(2).ne.1)then
         muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
+        muf_temp(2)=muF2_ref_fixed
+        temp_scale_id3='fixed' 
+        temp_scale_id4= temp_scale_id
+        muF1_id_str=temp_scale_id4
+        muF2_id_str=temp_scale_id3
+      else 
+        muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))  ! It is the only case for pp if Facotrisation scales are False
         muf_temp(2)=muf_temp(1)
-        temp_scale_id2=temp_scale_id
+        temp_scale_id2=temp_scale_id 
+        muF1_id_str=temp_scale_id
+        muF2_id_str=temp_scale_id2
       endif
       muF(1)=muF1_over_ref*muf_temp(1)
       muF(2)=muF2_over_ref*muf_temp(2)
       muF12_current=muF(1)**2
       muF22_current=muF(2)**2
-      muF1_id_str=temp_scale_id
-      muF2_id_str=temp_scale_id2
       if(muF(1).le.0.d0.or.muF(2).le.0.d0)then
         write(*,*)'Error in set_fac_scale: muF(*)=',muF(1),muF(2)
         stop

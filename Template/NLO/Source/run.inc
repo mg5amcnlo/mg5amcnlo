@@ -1,14 +1,15 @@
 c**************************************************************
 c    run.inc 
+c logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
 c**************************************************************
 c
 c     Scales
 c
       real*8          scale,scalefact,ellissextonfact,alpsfact
-      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
+      logical         fixed_ren_scale,fixed_fac_scale1,fixed_fac_scale2,fixed_couplings,hmult
       integer         ickkw,nhmult,dynamical_scale_choice
       common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
-     $                fixed_fac_scale,fixed_couplings,ickkw,nhmult,hmult,
+     $                fixed_fac_scale1,fixed_fac_scale2,fixed_couplings,ickkw,nhmult,hmult,
      $                dynamical_scale_choice
 
 c
