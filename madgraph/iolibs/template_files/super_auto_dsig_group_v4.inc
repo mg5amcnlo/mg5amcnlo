@@ -782,7 +782,9 @@ C       Flip CM_RAP (to get rapidity right)
 
       DSIGPROC=0D0
 
-c      IF (PASSCUTS(P1)) THEN
+      IF (.not.PASSCUTS(P1)) THEN
+      stop 1
+      endif
       if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
@@ -899,17 +901,14 @@ C       Flip momenta (rotate around x axis)
         DO I=1,NEXTERNAL
           ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
           ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
-        ENDDO
+	enddo
+          XDUM=ALL_XBK(1, ivec)
+	  ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
+	  ALL_XBK(2, ivec) = XDUM
+	  all_cm_rap(ivec) = - all_cm_rap(ivec)
 C       Flip beam identity
         IB(1)=2
         IB(2)=1
-	
-C       Flip x values (to get boost right)
-c        XDUM=XBK(1)
-c        XBK(1)=XBK(2)
-c        XBK(2)=XDUM
-C       Flip CM_RAP (to get rapidity right)
-c        CM_RAP=-all_cm_rap(ivec)
       ENDDO
       ENDIF
 
