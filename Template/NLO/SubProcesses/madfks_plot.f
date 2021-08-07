@@ -5,7 +5,7 @@ c Wrapper routines for the fixed order analyses
       include 'run.inc'
       include "nexternal.inc"
       integer nwgt,j,jmax
-      character(len=3000),allocatable :: weights_info(:),ctemp(:)
+      character(len=100),allocatable :: weights_info(:),ctemp(:)
       character*100 temp
       integer i,npdfs,ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
@@ -137,7 +137,7 @@ c set the weights_info string for PDF variation
                allocate(ctemp(nwgt))
                ctemp(1:nwgt-1)=weights_info
                call move_alloc(ctemp,weights_info)
-               write(temp,'(a4,i8)') "PDF=",nwgt!lhaPDFid(nn)
+               write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $              /' '//trim(adjustl(lhaPDFsetname(nn)))
             

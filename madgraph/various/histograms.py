@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 ################################################################################
 #
 # Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
@@ -18,6 +18,8 @@ and scale/PDF uncertainties."""
 
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import array
 import copy
 import fractions
@@ -27,10 +29,17 @@ import math
 import os
 import re
 import sys
-import StringIO
+
 import subprocess
 import xml.dom.minidom as minidom
 from xml.parsers.expat import ExpatError as XMLParsingError
+import six
+StringIO = six
+from six.moves import range
+from six.moves import zip
+import io
+if six.PY3:
+    file = io.IOBase
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 
@@ -41,7 +50,7 @@ try:
     from madgraph import MadGraph5Error
     logger = logging.getLogger("madgraph.various.histograms")
 
-except ImportError, error:
+except ImportError as error:
     # import from madevent directory
     import internal.misc as misc    
     from internal import MadGraph5Error
@@ -116,26 +125,26 @@ class Bin(object):
     def __setattr__(self, name, value):
         if name=='boundaries':
             if not isinstance(value, tuple):
-                raise MadGraph5Error, "Argument '%s' for bin property "+\
-                                        "'boundaries' must be a tuple."%str(value)
+                raise MadGraph5Error("Argument '%s' for bin property "+\
+                                        "'boundaries' must be a tuple."%str(value))
             else:
                 for coordinate in value:
                     if isinstance(coordinate, tuple):
                         for dim in coordinate:
                             if not isinstance(dim, float):
-                                raise MadGraph5Error, "Coordinate '%s' of the bin"+\
-                                  " boundary '%s' must be a float."%str(dim,value)
+                                raise MadGraph5Error("Coordinate '%s' of the bin"+\
+                                  " boundary '%s' must be a float."%str(dim,value))
                     elif not isinstance(coordinate, float):
-                        raise MadGraph5Error, "Element '%s' of the bin boundaries"+\
-                                          " specified must be a float."%str(bound)
+                        raise MadGraph5Error("Element '%s' of the bin boundaries"+\
+                                          " specified must be a float."%str(bound))
         elif name=='wgts':
             if not isinstance(value, dict):
-                raise MadGraph5Error, "Argument '%s' for bin uncertainty "+\
-                                          "'wgts' must be a dictionary."%str(value)
+                raise MadGraph5Error("Argument '%s' for bin uncertainty "+\
+                                          "'wgts' must be a dictionary."%str(value))
             for val in value.values():
                 if not isinstance(val,float):
-                    raise MadGraph5Error, "The bin weight value '%s' is not a "+\
-                                                                 "float."%str(val)   
+                    raise MadGraph5Error("The bin weight value '%s' is not a "+\
+                                                                 "float."%str(val))   
    
         super(Bin, self).__setattr__(name,value)
         
@@ -144,8 +153,8 @@ class Bin(object):
         try:
             return self.wgts[key]
         except KeyError:
-            raise MadGraph5Error, "Weight with ID '%s' is not defined for"+\
-                                                            " this bin"%str(key)
+            raise MadGraph5Error("Weight with ID '%s' is not defined for"+\
+                                                            " this bin"%str(key))
                                                             
     def set_weight(self, wgt, key='central'):
         """ Accesses a specific weight from this bin."""
@@ -157,8 +166,8 @@ class Bin(object):
         try:
             self.wgts[key] = wgt
         except KeyError:
-            raise MadGraph5Error, "Weight with ID '%s' is not defined for"+\
-                                                            " this bin"%str(key)                                                
+            raise MadGraph5Error("Weight with ID '%s' is not defined for"+\
+                                                            " this bin"%str(key))                                                
 
     def addEvent(self, weights = 1.0):
         """ Add an event to this bin. """
@@ -192,7 +201,7 @@ class Bin(object):
         if not short:
             res.append("Bin weights    :")
             if order is None:
-                label_list = self.wgts.keys()
+                label_list = list(self.wgts.keys())
             else:
                 label_list = order
         
@@ -217,17 +226,17 @@ class Bin(object):
     
         res_bin = cls()
         if binA.boundaries != binB.boundaries:
-            raise MadGraph5Error, 'The two bins to combine have'+\
-         ' different boundaries, %s!=%s.'%(str(binA.boundaries),str(binB.boundaries))
+            raise MadGraph5Error('The two bins to combine have'+\
+         ' different boundaries, %s!=%s.'%(str(binA.boundaries),str(binB.boundaries)))
         res_bin.boundaries = binA.boundaries
         
         try:
             res_bin.wgts = func(binA.wgts, binB.wgts)
         except Exception as e:
-            raise MadGraph5Error, "When combining two bins, the provided"+\
+            raise MadGraph5Error("When combining two bins, the provided"+\
               " function '%s' triggered the following error:\n\"%s\"\n"%\
               (func.__name__,str(e))+" when combining the following two bins:\n"+\
-              binA.nice_string(short=False)+"\n and \n"+binB.nice_string(short=False)
+              binA.nice_string(short=False)+"\n and \n"+binB.nice_string(short=False))
 
         return res_bin
 
@@ -245,8 +254,8 @@ class BinList(histograms_PhysicsObjectList):
             if not self.weight_labels:
                 self.weight_labels = ['central', 'stat_error']
             if len(bin_range)!=3 or any(not isinstance(f, float) for f in bin_range):
-                raise MadGraph5Error, "The range argument to build a BinList"+\
-                  " must be a list of exactly three floats."
+                raise MadGraph5Error("The range argument to build a BinList"+\
+                  " must be a list of exactly three floats.")
             current = bin_range[0]
             while current < bin_range[1]:
                 self.append(Bin(boundaries =
@@ -264,26 +273,26 @@ class BinList(histograms_PhysicsObjectList):
     def __setattr__(self, name, value):
         if name=='weight_labels':
             if not value is None and not isinstance(value, list):
-                raise MadGraph5Error, "Argument '%s' for BinList property '%s'"\
-                                           %(str(value),name)+' must be a list.'
+                raise MadGraph5Error("Argument '%s' for BinList property '%s'"\
+                                           %(str(value),name)+' must be a list.')
             elif not value is None:
                 for label in value:
                     if all((not isinstance(label,cls)) for cls in \
                                                       [str, int, float, tuple]):
-                        raise MadGraph5Error, "Element '%s' of the BinList property '%s'"\
+                        raise MadGraph5Error("Element '%s' of the BinList property '%s'"\
                                  %(str(value),name)+' must be a string, an '+\
-                                        'integer, a float or a tuple of float.'
+                                        'integer, a float or a tuple of float.')
                     if isinstance(label, tuple):
                         if len(label)>=1:
                             if not isinstance(label[0], (float, str)):
-                                    raise MadGraph5Error, "Argument "+\
+                                    raise MadGraph5Error("Argument "+\
                             "'%s' for BinList property '%s'"%(str(value),name)+\
-           ' can be a tuple, but its first element must be a float or string.'
+           ' can be a tuple, but its first element must be a float or string.')
                         for elem in label[1:]:
                             if not isinstance(elem, (float,int,str)):
-                                raise MadGraph5Error, "Argument "+\
+                                raise MadGraph5Error("Argument "+\
                             "'%s' for BinList property '%s'"%(str(value),name)+\
-           ' can be a tuple, but its elements past the first one must be either floats, integers or strings'
+           ' can be a tuple, but its elements past the first one must be either floats, integers or strings')
                                 
    
         super(BinList, self).__setattr__(name, value)    
@@ -294,7 +303,7 @@ class BinList(histograms_PhysicsObjectList):
         super(BinList,self).append(object)    
         # Assign the weight labels to those of the first bin added
         if len(self)==1 and self.weight_labels is None:
-            self.weight_labels = object.wgts.keys()
+            self.weight_labels = list(object.wgts.keys())
 
     def nice_string(self, short=True):
         """ Nice representation of this BinList."""
@@ -338,36 +347,36 @@ class Histogram(object):
     def __setattr__(self, name, value):
         if name=='title':
             if not isinstance(value, str):
-                raise MadGraph5Error, "Argument '%s' for the histogram property "+\
-                                          "'title' must be a string."%str(value)
+                raise MadGraph5Error("Argument '%s' for the histogram property "+\
+                                          "'title' must be a string."%str(value))
         elif name=='dimension':
             if not isinstance(value, int):
-                raise MadGraph5Error, "Argument '%s' for histogram property "+\
-                                    "'dimension' must be an integer."%str(value)
+                raise MadGraph5Error("Argument '%s' for histogram property "+\
+                                    "'dimension' must be an integer."%str(value))
             if self.allowed_dimensions and value not in self.allowed_dimensions:
-                raise MadGraph5Error, "%i-Dimensional histograms not supported "\
+                raise MadGraph5Error("%i-Dimensional histograms not supported "\
                          %value+"by class '%s'. Supported dimensions are '%s'."\
-                              %(self.__class__.__name__,self.allowed_dimensions)
+                              %(self.__class__.__name__,self.allowed_dimensions))
         elif name=='bins':
             if not isinstance(value, BinList):
-                raise MadGraph5Error, "Argument '%s' for histogram property "+\
-                                        "'bins' must be a BinList."%str(value)
+                raise MadGraph5Error("Argument '%s' for histogram property "+\
+                                        "'bins' must be a BinList."%str(value))
             else:
                 for bin in value:
                     if not isinstance(bin, Bin):
-                        raise MadGraph5Error, "Element '%s' of the "%str(bin)+\
-                                  " histogram bin list specified must be a bin."
+                        raise MadGraph5Error("Element '%s' of the "%str(bin)+\
+                                  " histogram bin list specified must be a bin.")
         elif name=='type':
             if not (value is None or value in self.allowed_types or 
                                                         self.allowed_types==[]):
-                raise MadGraph5Error, "Argument '%s' for histogram"%str(value)+\
+                raise MadGraph5Error("Argument '%s' for histogram"%str(value)+\
                              " property 'type' must be a string in %s or None."\
-                                         %([str(t) for t in self.allowed_types])
+                                         %([str(t) for t in self.allowed_types]))
         elif name in ['x_axis_mode','y_axis_mode']:
             if not value in self.allowed_axis_modes:
-                raise MadGraph5Error, "Attribute '%s' of the histogram"%str(name)+\
+                raise MadGraph5Error("Attribute '%s' of the histogram"%str(name)+\
                   " must be in [%s], ('%s' given)"%(str(self.allowed_axis_modes),
-                                                                     str(value))
+                                                                     str(value)))
                                         
         super(Histogram, self).__setattr__(name,value)
     
@@ -416,12 +425,12 @@ class Histogram(object):
     
         res_histogram.bins = BinList([])
         if len(histoA.bins)!=len(histoB.bins):
-            raise MadGraph5Error, 'The two histograms to combine have a '+\
-         'different number of bins, %d!=%d.'%(len(histoA.bins),len(histoB.bins))
+            raise MadGraph5Error('The two histograms to combine have a '+\
+         'different number of bins, %d!=%d.'%(len(histoA.bins),len(histoB.bins)))
 
         if histoA.dimension!=histoB.dimension:
-            raise MadGraph5Error, 'The two histograms to combine have a '+\
-         'different dimensions, %d!=%d.'%(histoA.dimension,histoB.dimension)            
+            raise MadGraph5Error('The two histograms to combine have a '+\
+         'different dimensions, %d!=%d.'%(histoA.dimension,histoB.dimension))            
         res_histogram.dimension = histoA.dimension
     
         for i, bin in enumerate(histoA.bins):
@@ -653,7 +662,6 @@ class HwU(Histogram):
                                         '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
     weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
-
 ############S.A
 ############ We read two additional new flags for pA and Ap collisions
     weight_label_PDF_pA = re.compile('^\s*RpA\s*=\s*(?P<PDF_set1>\d+)\s+(?P<PDF_set_1>\S+)\s+\s*with\s+(?P<PDF_set_2>\S+)\s*$')
@@ -661,7 +669,7 @@ class HwU(Histogram):
     weight_label_PDF_Ap = re.compile('^\s*RAp\s*=\s*(?P<PDF_set2>\d+)\s+(?P<PDF_set_3>\S+)\s+\s*with\s+(?P<PDF_set_4>\S+)\s*$')
 
 ############S.A
-
+    
     
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
@@ -708,11 +716,13 @@ class HwU(Histogram):
             return
         elif isinstance(file_path, str):
             stream = open(file_path,'r')
+        elif isinstance(file_path, io.IOBase):
+            stream = file_path
         elif isinstance(file_path, file):
             stream = file_path
         else:
-            raise MadGraph5Error, "Argument file_path '%s' for HwU init"\
-            %str(file_path)+"ialization must be either a file path or a stream."
+            raise MadGraph5Error("Argument file_path '%s' for HwU init"\
+            %str(file_path)+"ialization must be either a file path or a stream.")
 
         # Attempt to find the weight headers if not specified        
         if not weight_header:
@@ -820,16 +830,16 @@ class HwU(Histogram):
         # Start the real work
         if mode == 'min/max':
             min_value, max_value = [], []
-            for i in xrange(len(values[0])):
-                data = [values[s][i] for s in xrange(len(values))]
+            for i in range(len(values[0])):
+                data = [values[s][i] for s in range(len(values))]
                 min_value.append(min(data))
                 max_value.append(max(data))
         elif mode == 'gaussian':
             # use Gaussian method (NNPDF)
             min_value, max_value = [], []
-            for i in xrange(len(values[0])):
+            for i in range(len(values[0])):
                 pdf_stdev = 0.0
-                data = [values[s][i] for s in xrange(len(values))]
+                data = [values[s][i] for s in range(len(values))]
                 sdata = sum(data)/len(data)
                 sdata2 = sum(x**2 for x in data)/len(data)
                 pdf_stdev = math.sqrt(max(sdata2 -sdata**2,0.0))
@@ -859,7 +869,7 @@ class HwU(Histogram):
                 
             #Do the computation
             min_value, max_value = [], []
-            for i in xrange(len(values[0])):
+            for i in range(len(values[0])):
                 pdf_up = 0
                 pdf_down = 0
                 cntrl_val = central[i]
@@ -904,7 +914,7 @@ class HwU(Histogram):
                 others.append('PDF=%i %s'%(label[1],label[2]))
             elif label_type == 'alpsfact':
                 others.append('alpsfact=%d'%label[1])
-
+                
 #############S.A
 #############Creating additional two labels
             #elif label_type == 'pdf_pA':
@@ -915,7 +925,6 @@ class HwU(Histogram):
 	    elif label_type == 'pdf_Ap':
                 others.append('RAp=%i %s with %s'%(label[1],label[2],label[3]))
 #############S.A
-
 
         return res+' & '.join(others)
 
@@ -946,9 +955,9 @@ class HwU(Histogram):
         or not."""
         
         if not format in HwU.output_formats_implemented:
-            raise MadGraph5Error, "The specified output format '%s'"%format+\
+            raise MadGraph5Error("The specified output format '%s'"%format+\
                              " is not yet supported. Supported formats are %s."\
-                                                 %HwU.output_formats_implemented
+                                                 %HwU.output_formats_implemented)
 
         if format == 'HwU':
             str_output_list = self.get_HwU_source(print_header=print_header)
@@ -1006,9 +1015,9 @@ class HwU(Histogram):
                 header = [h.group('wgt_name') for h in 
                                             cls.weight_header_re.finditer(line)]
                 if any((name not in header) for name in cls.mandatory_weights):
-                    raise HwU.ParseError, "The mandatory weight names %s were"\
-                     %str(cls.mandatory_weights.keys())+" are not all present"+\
-                     " in the following HwU header definition:\n   %s"%line
+                    raise HwU.ParseError("The mandatory weight names %s were"\
+                     %str(list(cls.mandatory_weights.keys()))+" are not all present"+\
+                     " in the following HwU header definition:\n   %s"%line)
                 
                 # Apply replacement rules specified in mandatory_weights
                 if raw_labels:
@@ -1036,6 +1045,7 @@ class HwU(Histogram):
 		    PDF_wgt_pA = HwU.weight_label_PDF_pA.match(h)
 		    PDF_wgt_Ap = HwU.weight_label_PDF_Ap.match(h)
 #######S.A
+                    
                     if scale_wgt_adv:
                         header[i] = ('scale_adv',
                                      int(scale_wgt_adv.group('dyn_choice')),
@@ -1054,8 +1064,8 @@ class HwU(Histogram):
                     elif Merging_wgt:
                         header[i] = ('merging_scale',float(Merging_wgt.group('Merging_scale')))
                     elif alpsfact_wgt:
-                        header[i] = ('alpsfact',float(alpsfact_wgt.group('alpsfact')))                      
-
+                        header[i] = ('alpsfact',float(alpsfact_wgt.group('alpsfact')))  
+                        
 ##########S.A
 ##########Creating additional two arrys of data, that will be inside our new HwU files
                     #elif PDF_wgt_pA:
@@ -1074,12 +1084,11 @@ class HwU(Histogram):
                                      int(PDF_wgt_Ap.group('PDF_set2')),
                                      PDF_wgt_Ap.group('PDF_set_3'),
                                      PDF_wgt_Ap.group('PDF_set_4'))                         
-##########S.A
-
+##########S.A                    
 
                 return header
             
-        raise HwU.ParseError, "The weight headers could not be found."
+        raise HwU.ParseError("The weight headers could not be found.")
     
     
     def process_histogram_name(self, histogram_name):
@@ -1093,8 +1102,8 @@ class HwU(Histogram):
                 stag = tag.split('@')
                 if len(stag)==1 and stag[0].startswith('#'): continue
                 if len(stag)!=2:
-                    raise MadGraph5Error, 'Specifier in title must have the'+\
-            " syntax @<attribute_name>:<attribute_value>, not '%s'."%tag.strip()
+                    raise MadGraph5Error('Specifier in title must have the'+\
+            " syntax @<attribute_name>:<attribute_value>, not '%s'."%tag.strip())
                 # Now list all supported modifiers here
                 stag = [t.strip().upper() for t in stag]
                 if stag[0] in ['T','TYPE']:
@@ -1106,7 +1115,7 @@ class HwU(Histogram):
                 elif stag[0] in ['JETSAMPLE', 'JS']:
                     self.jetsample = int(stag[1])
                 else:
-                    raise MadGraph5Error, "Specifier '%s' not recognized."%stag[0]                    
+                    raise MadGraph5Error("Specifier '%s' not recognized."%stag[0])                    
         
     def get_HwU_histogram_name(self, format='human'):
         """ Returns the histogram name in the HwU syntax or human readable."""
@@ -1186,8 +1195,8 @@ class HwU(Histogram):
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
                 if j == len(all_weight_header):
-                    raise HwU.ParseError, "There is more bin weights"+\
-                              " specified than expected (%i)"%len(weight_header)
+                    raise HwU.ParseError("There is more bin weights"+\
+                              " specified than expected (%i)"%len(weight_header))
                 if selected_central_weight == all_weight_header[j]:
                     bin_weights['central'] = float(weight.group('weight'))
                 if all_weight_header[j] == 'boundary_xmin':
@@ -1204,16 +1213,16 @@ class HwU(Histogram):
             # specified in the weight_header are in fact the boundary 
             # coordinate, so we must subtract two.    
             if len(bin_weights)<(len(weight_header)-2):
-                raise HwU.ParseError, " There are only %i weights"\
+                raise HwU.ParseError(" There are only %i weights"\
                     %len(bin_weights)+" specified and %i were expected."%\
-                                                      (len(weight_header)-2)
+                                                      (len(weight_header)-2))
             self.bins.append(Bin(tuple(boundaries), bin_weights))
             if len(self.bins)==n_bins:
                 break
 
         if len(self.bins)!=n_bins:
-            raise HwU.ParseError, "%i bin specification "%len(self.bins)+\
-                               "were found and %i were expected."%n_bins
+            raise HwU.ParseError("%i bin specification "%len(self.bins)+\
+                               "were found and %i were expected."%n_bins)
 
         # Now jump to the next <\histo> tag.
         for line_end in stream:
@@ -1259,25 +1268,25 @@ class HwU(Histogram):
             scale_position = -1
         elif type.upper()=='PDF':
             new_wgt_label = 'delta_pdf'
-            scale_position = -2 
-
+            scale_position = -2
+            
 #################S.A
         elif type.upper()=='RPA':
-            new_wgt_label = 'delta_RpA'
+            new_wgt_label = 'delta_pA'
             scale_position = -3
 	elif type.upper()=='RAP':
-            new_wgt_label = 'delta_RAp'
+            new_wgt_label = 'delta_Ap'
             scale_position = -4   
-#################S.A    
-
+#################S.A
+                        
         elif type.upper()=='MERGING':
             new_wgt_label = 'delta_merging'
         elif type.upper()=='ALPSFACT':
             new_wgt_label = 'delta_alpsfact'
         else:
-            raise MadGraph5Error, ' The function set_uncertainty can'+\
+            raise MadGraph5Error(' The function set_uncertainty can'+\
               " only handle the scales 'mur', 'muf', 'all_scale', 'pdf',"+\
-              "'merging' or 'alpsfact'."       
+              "'merging' or 'alpsfact'.")       
         
         wgts_to_consider=[]
         label_to_consider=[]
@@ -1329,9 +1338,7 @@ class HwU(Histogram):
             ##########: advanced PDF
             pdf_sets=[label[2] for label in self.bins.weight_labels if \
                         HwU.get_HwU_wgt_label_type(label)=='pdf_adv']
-
-	    
-	    # remove doubles in list but keep the order!
+            # remove doubles in list but keep the order!
             pdf_sets=[ii for n,ii in enumerate(pdf_sets) if ii not in pdf_sets[:n]]
             for pdf_set in pdf_sets:
                 wgts=[label for label in self.bins.weight_labels if \
@@ -1339,17 +1346,13 @@ class HwU(Histogram):
                 if wgts:
                     wgts_to_consider.append(wgts)
                     label_to_consider.append(pdf_set)
-
-
-
             ##########: normal PDF
             wgts = [ label for label in self.bins.weight_labels if \
                      HwU.get_HwU_wgt_label_type(label)=='pdf']  
             if wgts:
                 wgts_to_consider.append(wgts)
                 label_to_consider.append('none')
-
-
+                
 ##############S.A
         elif scale_position == -3:             
             pdf_sets=[label[3] for label in self.bins.weight_labels if \
@@ -1380,28 +1383,19 @@ class HwU(Histogram):
                     label_to_consider.append(pdf_set)
 
 ##############S.A
-
-
-            ##########: normal PDF
-            #wgts = [ label for label in self.bins.weight_labels if \
-                     #HwU.get_HwU_wgt_label_type(label)=='pdf']  
-            #if wgts:
-               # wgts_to_consider.append(wgts)
-               # label_to_consider.append('none')
+                
 
         if len(wgts_to_consider)==0 or all(len(wgts)==0 for wgts in wgts_to_consider):
             # No envelope can be constructed, it is not worth adding the weights
             return (None,[None])
 
         # find and import python version of lhapdf if doing PDF uncertainties
-
-
 ################################ S.A
-        if type=='PDF' or type=='RPA' or type=='RAP':
+        if type=='PDF' or type=='RPA' or type=='RAP':        
             use_lhapdf=False
             try:
                 lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                               stdout=subprocess.PIPE).stdout.read().strip()
+                                               stdout=subprocess.PIPE).stdout.read().decode().strip()
             except:
                 use_lhapdf=False
             else:
@@ -1455,7 +1449,7 @@ class HwU(Histogram):
             
             if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
-		
+                
 ###################S.A
 	    if type=='RPA' and use_lhapdf:
                 lhapdf.setVerbosity(0)
@@ -1493,8 +1487,7 @@ class HwU(Histogram):
 
             if type=='PDF' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
-
-
+                
 ###################S.A
 	    if type=='RPA' and use_lhapdf and label != 'none':
                 p=lhapdf.getPDFSet(label)
@@ -1506,18 +1499,16 @@ class HwU(Histogram):
 
             # Now add the corresponding weight to all Bins
             for bin in self.bins:
-
-
+            
 ###################S.A
                 if type!='PDF' and type!='RPA' and type!='RAP': 
 ###################S.A
-
-
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = min(bin.wgts[label] \
                                                   for label in wgts)
                     bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
                                                   for label in wgts)
+                                                  
 ###################S.A
                 elif type=='RPA' and use_lhapdf and label != 'none' and len(wgts) > 1:
 		    pdfs   = [bin.wgts[rpa] for rpa in sorted(wgts)]
@@ -1534,34 +1525,23 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
 		    
 ###################S.A
-		    
+                                                  
                 elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) > 1:
                     pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
                     ep=p.uncertainty(pdfs,-1)
                     bin.wgts[new_wgt_labels[0]] = ep.central
                     bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                     bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-
-###################S.A
-		#elif type=='PDS' and use_lhapdf and label != 'none' and len(wgts) > 1:
-                    #pdfs   = [bin.wgts[pds] for pds in sorted(wgts)]
-                    #ep=p.uncertainty(pdfs,-1)
-                    #bin.wgts[new_wgt_labels[0]] = ep.central
-                    #bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
-                    #bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
-###################S.A
-
                 elif type=='PDF' and use_lhapdf and label != 'none' and len(bin.wgts) == 1:
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]
-
                 else:
                     pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
                     pdf_up     = 0.0
                     pdf_down   = 0.0
                     cntrl_val  = bin.wgts['central']
-                    if wgts[0] <= 90000:
+                    if wgts[0][1] <= 90000:
                         # use Hessian method (CTEQ & MSTW)
                         if len(pdfs)>2:
                             for i in range(int((len(pdfs)-1)/2)):
@@ -1581,7 +1561,8 @@ class HwU(Histogram):
                          wgts[0] in range(91200, 91303) or \
                          wgts[0] in range(91400, 91433) or \
                          wgts[0] in range(91700, 91801) or \
-                         wgts[0] in range(91900, 91931):
+                         wgts[0] in range(91900, 90931) or \
+                         wgts[0] in range(92000, 92031):
                         # PDF4LHC15 Hessian sets
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
@@ -1589,8 +1570,30 @@ class HwU(Histogram):
                         pdf_stdev = math.sqrt(pdf_stdev)
                         pdf_up   = cntrl_val+pdf_stdev
                         pdf_down = cntrl_val-pdf_stdev
+                    elif wgts[0] in range(244400, 244501) or \
+                         wgts[0] in range(244600, 244701) or \
+                         wgts[0] in range(244800, 244901) or \
+                         wgts[0] in range(245000, 245101) or \
+                         wgts[0] in range(245200, 245301) or \
+                         wgts[0] in range(245400, 245501) or \
+                         wgts[0] in range(245600, 245701) or \
+                         wgts[0] in range(245800, 245901) or \
+                         wgts[0] in range(246000, 246101) or \
+                         wgts[0] in range(246200, 246301) or \
+                         wgts[0] in range(246400, 246501) or \
+                         wgts[0] in range(246600, 246701) or \
+                         wgts[0] in range(246800, 246901) or \
+                         wgts[0] in range(247000, 247101) or \
+                         wgts[0] in range(247200, 247301) or \
+                         wgts[0] in range(247400, 247501): 
+                        # use Gaussian (68%CL) method (NNPDF)
+                        pdf_stdev = 0.0
+                        pdf_diff = sorted([abs(pdf-cntrl_val) for pdf in pdfs[1:]])
+                        pdf_stdev = pdf_diff[67]
+                        pdf_up   = cntrl_val+pdf_stdev
+                        pdf_down = cntrl_val-pdf_stdev
                     else:
-                        # use Gaussian method (NNPDF)
+                        # use Gaussian (one sigma) method (NNPDF)
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
                             pdf_stdev += (pdf - cntrl_val)**2
@@ -1606,11 +1609,10 @@ class HwU(Histogram):
         # of the two new weight label added.
         return (position,labels)
     
-    
     def select_central_weight(self, selected_label):
         """ Select a specific merging scale for the central value of this Histogram. """
         if selected_label not in self.bins.weight_labels:
-            raise MadGraph5Error, "Selected weight label '%s' could not be found in this HwU."%selected_label
+            raise MadGraph5Error("Selected weight label '%s' could not be found in this HwU."%selected_label)
         
         for bin in self.bins:
             bin.wgts['central']=bin.wgts[selected_label]                    
@@ -1620,8 +1622,8 @@ class HwU(Histogram):
         single one. """
         
         if n_rebin < 1 or not isinstance(n_rebin, int):
-            raise MadGraph5Error, "The argument 'n_rebin' of the HwU function"+\
-              " 'rebin' must be larger or equal to 1, not '%s'."%str(n_rebin)
+            raise MadGraph5Error("The argument 'n_rebin' of the HwU function"+\
+              " 'rebin' must be larger or equal to 1, not '%s'."%str(n_rebin))
         elif n_rebin==1:
             return
         
@@ -1669,8 +1671,8 @@ class HwU(Histogram):
             all_boundaries = sum([ list(bin.boundaries) for histo in histo_list \
                                                       for bin in histo.bins],[])
             if len(all_boundaries)==0:
-                raise MadGraph5Error, "The histograms with title '%s'"\
-                                  %histo_list[0].title+" seems to have no bins."
+                raise MadGraph5Error("The histograms with title '%s'"\
+                                  %histo_list[0].title+" seems to have no bins.")
                 
         x_min = min(all_boundaries)
         x_max = max(all_boundaries)
@@ -1823,8 +1825,8 @@ class HwUList(histograms_PhysicsObjectList):
                             selected_label = label
                             break
                 if selected_label is None:
-                    raise MadGraph5Error, "No weight could be found in the input HwU "+\
-                      "for the selected merging scale '%4.2f'."%merging_scale
+                    raise MadGraph5Error("No weight could be found in the input HwU "+\
+                      "for the selected merging scale '%4.2f'."%merging_scale)
 
             new_histo = HwU(stream, weight_header,raw_labels=raw_labels,
                             consider_reweights=consider_reweights,
@@ -1888,7 +1890,7 @@ class HwUList(histograms_PhysicsObjectList):
             if hist.get_HwU_histogram_name() == name:
                 return hist
 
-        raise NameError, "no histogram with name: %s" % name
+        raise NameError("no histogram with name: %s" % name)
     
     def parse_histos_from_PY8_XML_stream(self, stream, run_id=None, 
             merging_scale=None, accepted_types_order=[], 
@@ -1917,12 +1919,10 @@ class HwUList(histograms_PhysicsObjectList):
         
         if selected_run_node is None:
             if run_id is None:
-                raise MadGraph5Error, \
-                    'No histogram was found in the specified XML source.'
+                raise MadGraph5Error('No histogram was found in the specified XML source.')
             else:
-                raise MadGraph5Error, \
-                    "Histogram with run_id '%d' was not found in the "%run_id+\
-                                                         "specified XML source."
+                raise MadGraph5Error("Histogram with run_id '%d' was not found in the "%run_id+\
+                                                         "specified XML source.")
  
         # If raw weight label are asked for, then simply read the weight_labels
         # directly as specified in the XML header
@@ -1963,21 +1963,21 @@ class HwUList(histograms_PhysicsObjectList):
                     all_weights[-1][property[0].strip()] = property[1].strip()
                 elif len(property)==1:
                     all_weights[-1][property[0].strip()] = None
-                else:
-                    raise MadGraph5Error, \
-                         "The weight label property %s could not be parsed."%wgt_item
+                #else:
+                #    misc.sprint(all_weights)
+                #    raise MadGraph5Error("The weight label property %s could not be parsed."%wgt_item)
         
         # Now make sure that for all weights, there is 'PDF', 'MUF' and 'MUR' 
         # and 'MERGING' defined. If absent we specify '-1' which implies that
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
-        for wgt_label in all_weights:
+        for wgt_label in all_weights:            
             for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############S.A
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                 if mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
-
+                    
 ##############S.A
 		if mandatory_attribute=='RPA':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
@@ -1985,7 +1985,7 @@ class HwUList(histograms_PhysicsObjectList):
 		if mandatory_attribute=='RAP':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 ##############S.A
-
+                    
                 elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
 
@@ -1999,14 +1999,13 @@ class HwUList(histograms_PhysicsObjectList):
 
         # Central weight parameters are enforced to be those of the third weight
         central_PDF  = all_weights[2]['PDF']
-
+        
 ##############S.A
 	central_RPA  = all_weights[2]['RPA']
 	central_RAP  = all_weights[2]['RAP']
 ##############S.A
 
         # Assume central scale is one, unless specified.
-
         central_MUR   = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
         central_MUF   = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
         central_alpsfact = all_weights[2]['ALPSFACT'] if all_weights[2]['ALPSFACT']!=-1.0 else 1.0
@@ -2019,8 +2018,8 @@ class HwUList(histograms_PhysicsObjectList):
            'xmax' not in all_weights[1] or \
            'Weight' not in all_weights[2] or \
            'WeightError' not in all_weights[3]:
-            raise MadGraph5Error, 'The first weight entries in the XML HwU '+\
-              ' source are not the standard expected ones  (xmin, xmax, sigmaCentral, errorCentral)'
+            raise MadGraph5Error('The first weight entries in the XML HwU '+\
+              ' source are not the standard expected ones  (xmin, xmax, sigmaCentral, errorCentral)')
         selected_weights[0] = ['xmin']
         selected_weights[1] = ['xmax']
 
@@ -2041,14 +2040,14 @@ class HwUList(histograms_PhysicsObjectList):
                 differences.append('mur_muf_scale')
             if weight['PDF'] not in [central_PDF,-1]:
                 differences.append('pdf')
-
+                
 ##############S.A
 	    if weight['RPA'] not in [central_RPA,-1]:
                 differences.append('rpa')
 	    if weight['RAP'] not in [central_RAP,-1]:
                 differences.append('rap')
 ##############S.A
-
+                
             if weight['ALPSFACT'] not in [central_alpsfact, -1]:
                 differences.append('ALPSFACT')
             return set(differences) 
@@ -2056,7 +2055,7 @@ class HwUList(histograms_PhysicsObjectList):
         def format_weight_label(weight):
             """ Print the weight attributes in a nice order."""
             
-            all_properties = weight.keys()
+            all_properties = list(weight.keys())
             all_properties.pop(all_properties.index('POSITION'))
             ordered_properties = []
             # First add the attributes without value
@@ -2068,7 +2067,7 @@ class HwUList(histograms_PhysicsObjectList):
             all_properties = [property for property in all_properties if 
                                                    not weight[property] is None]
             
-            # then add PDF, MUR, MUF and MERGING if present
+            # then add PDF, MUR, MUF and MERGING if present            
             for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########S.A
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
@@ -2096,7 +2095,7 @@ class HwUList(histograms_PhysicsObjectList):
                         selected_weights[weight_position] = ['central value']
                         break
             # Make sure a central value was found, throw a warning if found
-            if 'central value' not in sum(selected_weights.values(),[]):
+            if 'central value' not in sum(list(selected_weights.values()),[]):
                 central_merging_scale = all_weights[2]['MERGING']
                 logger.warning('Could not find the central weight for the'+\
                 ' chosen merging scale (%f).\n'%merging_scale_chosen+\
@@ -2129,18 +2128,15 @@ class HwUList(histograms_PhysicsObjectList):
             if variations in [set(['ALPSFACT']),set(['pdf','ALPSFACT'])]:
                 wgt_label = ('alpsfact',weight['ALPSFACT'])
             if variations == set(['pdf']):
-                wgt_label = ('pdf',weight['PDF'])
-
- 
+                wgt_label = ('pdf',weight['PDF'])    
+                
 ############S.A
             if variations == set(['rpa']):
                 wgt_label = ('rpa',weight['RPA'])
 	    if variations == set(['rap']):
                 wgt_label = ('rap',weight['RAP'])
-############S.A            
-
-
-
+############S.A     
+      
             if variations == set([]):
                 # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
@@ -2158,7 +2154,7 @@ class HwUList(histograms_PhysicsObjectList):
             # Make sure that the weight label does not already exist. If it does,
             # this means that the source has redundant information and that
             # there is no need to specify it again.
-            if wgt_label in sum(selected_weights.values(),[]):
+            if wgt_label in sum(list(selected_weights.values()),[]):
                 continue
 
             # Now register the selected weight
@@ -2168,7 +2164,7 @@ class HwUList(histograms_PhysicsObjectList):
                 selected_weights[weight_position+4]=[wgt_label,]
         
         if merging_scale and merging_scale > 0.0 and \
-                                       len(sum(selected_weights.values(),[]))==4:
+                                       len(sum(list(selected_weights.values()),[]))==4:
             logger.warning('No additional variation weight was found for the '+\
                                        'chosen merging scale %f.'%merging_scale)
 
@@ -2194,7 +2190,7 @@ class HwUList(histograms_PhysicsObjectList):
             selected_weights = new_selected_weights                         
 
         # Cache the list of selected weights to be defined at each line
-        weight_label_list = sum(selected_weights.values(),[])
+        weight_label_list = sum(list(selected_weights.values()),[])
 
         # The weight_label list to set to self.bins 
         ordered_weight_label_list = ['central','stat_error']
@@ -2253,9 +2249,8 @@ class HwUList(histograms_PhysicsObjectList):
                                     boundaries[1] = float(weight.group('weight'))                            
                                 else:
                                     if weight.group('weight').upper()=='NAN':
-                                        raise MadGraph5Error, \
-    "Some weights are found to be 'NAN' in histogram with name '%s'"%hist_name+\
-    " and jet sample multiplicity %d."%multiplicity
+                                        raise MadGraph5Error("Some weights are found to be 'NAN' in histogram with name '%s'"%hist_name+\
+    " and jet sample multiplicity %d."%multiplicity)
                                     else:
                                         bin_weights[wgt_label] = \
                                                    float(weight.group('weight'))
@@ -2263,13 +2258,12 @@ class HwUList(histograms_PhysicsObjectList):
                             continue
                     # For this check, we subtract two because of the bin boundaries
                     if len(bin_weights)!=len(ordered_weight_label_list):
-                        raise MadGraph5Error, \
-                         'Not all defined weights were found in the XML source.\n'+\
+                        raise MadGraph5Error('Not all defined weights were found in the XML source.\n'+\
                          '%d found / %d expected.'%(len(bin_weights),len(ordered_weight_label_list))+\
                          '\nThe missing ones are: %s.'%\
                          str(list(set(ordered_weight_label_list)-set(bin_weights.keys())))+\
                          "\nIn plot with title '%s' and jet sample multiplicity %d."%\
-                                                       (hist_name, multiplicity)
+                                                       (hist_name, multiplicity))
             
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
@@ -2311,17 +2305,17 @@ class HwUList(histograms_PhysicsObjectList):
             return MadGraph5Error, 'No histograms stored in the list yet.'
         
         if not format in HwU.output_formats_implemented:
-            raise MadGraph5Error, "The specified output format '%s'"%format+\
+            raise MadGraph5Error("The specified output format '%s'"%format+\
                              " is not yet supported. Supported formats are %s."\
-                                                 %HwU.output_formats_implemented
+                                                 %HwU.output_formats_implemented)
 
         if isinstance(path, str) and not any(ext in os.path.basename(path) \
                                    for ext in ['.Hwu','.ps','.gnuplot','.pdf']):
             output_base_name = os.path.basename(path)
             HwU_stream       = open(path+'.HwU','w')
         else:
-            raise MadGraph5Error, "The path argument of the output function of"+\
-              " the HwUList instance must be file path without its extension."
+            raise MadGraph5Error("The path argument of the output function of"+\
+              " the HwUList instance must be file path without its extension.")
 
         HwU_output_list = []
         # If the format is just the raw HwU source, then simply write them
@@ -2567,7 +2561,12 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            if float(output.split()[1]) < 5. :
+            output.decode()
+            try:
+                version = float(output.split()[1])
+            except:
+                version = 5
+            if version < 5. :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5
@@ -2606,7 +2605,7 @@ set key invert
                                          "now be rendered by invoking gnuplot.")
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
-          number_of_ratios = -1, 
+          number_of_ratios = -1,
           uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############S.A
           use_band = None,
           ratio_correlations = True, 
@@ -2741,9 +2740,8 @@ set key invert
 
         # Remove the curve of individual jet samples if they are not desired
         if not jet_samples_to_keep is None:
-            self[:] = filter(lambda histo: 
-              (not hasattr(histo,'jetsample')) or (histo.jetsample == -1) or
-                                 (histo.jetsample in jet_samples_to_keep), self)
+            self[:] = [histo for histo in self if (not hasattr(histo,'jetsample')) or (histo.jetsample == -1) or
+                                 (histo.jetsample in jet_samples_to_keep)]
 
         # This function is to create the ratio histograms if the user turned off
         # correlations.
@@ -2805,9 +2803,9 @@ set key invert
             (PDF_var_pos,pdf) = self[0].set_uncertainty(type='PDF',lhapdfconfig=lhapdfconfig)
         else:
             (PDF_var_pos,pdf) = (None,[None])
-
-
+            
 #########S.A
+
  	if 'rpa' in uncertainties: 
             (RPA_var_pos,rpa) = self[0].set_uncertainty(type='RPA',lhapdfconfig=lhapdfconfig)
         else:
@@ -2832,7 +2830,7 @@ set key invert
         uncertainties_present =  list(uncertainties)
         if PDF_var_pos is None and 'pdf' in uncertainties_present:
             uncertainties_present.remove('pdf')
-
+            
 #########S.A
 	uncertainties_present =  list(uncertainties)
 	if RPA_var_pos is None and 'rpa' in uncertainties_present:
@@ -2842,7 +2840,7 @@ set key invert
 	if RAP_var_pos is None and 'rap' in uncertainties_present:
             uncertainties_present.remove('rap')
 #########S.A
-
+            
         if mu_var_pos is None and 'scale' in uncertainties_present:
             uncertainties_present.remove('scale')
         if merging_var_pos is None and 'merging' in uncertainties_present:
@@ -2871,17 +2869,17 @@ set key invert
         for histo in self[1:]:
             if (not mu_var_pos is None) and \
                           mu_var_pos != histo.set_uncertainty(type='all_scale')[0]:
-               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+               raise MadGraph5Error('Not all histograms in this group specify'+\
                  ' scale uncertainties. It is required to be able to output them'+\
-                 ' together.'
+                 ' together.')
             if (not PDF_var_pos is None) and\
                                PDF_var_pos != histo.set_uncertainty(type='PDF',\
                                                                     lhapdfconfig=lhapdfconfig)[0]:
-               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+               raise MadGraph5Error('Not all histograms in this group specify'+\
                  ' PDF uncertainties. It is required to be able to output them'+\
-                 ' together.'
-
-
+                 ' together.')
+                 
+                 
 ###########S.A
 	    if (not RPA_var_pos is None) and\
                                RPA_var_pos != histo.set_uncertainty(type='RPA',\
@@ -2898,19 +2896,17 @@ set key invert
                  ' PDF uncertainties. It is required to be able to output them'+\
                  ' together.'
 ###########S.A
-
-
-
+                 
             if (not merging_var_pos is None) and\
                             merging_var_pos != histo.set_uncertainty(type='merging')[0]:
-               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+               raise MadGraph5Error('Not all histograms in this group specify'+\
                  ' merging uncertainties. It is required to be able to output them'+\
-                 ' together.'
+                 ' together.')
             if (not alpsfact_var_pos is None) and\
                             alpsfact_var_pos != histo.set_uncertainty(type='alpsfact')[0]:
-               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+               raise MadGraph5Error('Not all histograms in this group specify'+\
                  ' alpsfact uncertainties. It is required to be able to output them'+\
-                 ' together.'
+                 ' together.')
 
 
         # Now output the corresponding HwU histogram data
@@ -2970,7 +2966,8 @@ plot \\"""
             for PDF_var in PDF_var_pos:
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var])
                 wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+1])
-                wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+2])
+                wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+2])    
+                
 #############S.A
 	if not RPA_var_pos is None:
             for RPA_var in RPA_var_pos:
@@ -2985,6 +2982,7 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+2])   
 #############S.A
                 
+                            
         if not merging_var_pos is None:
             for merging_var in merging_var_pos:
                 wgts_to_consider.append(self[0].bins.weight_labels[merging_var])
@@ -3120,8 +3118,8 @@ plot \\"""
                     else:
                         uncertainty_plot_lines[-1]['pdf'] = \
         ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
-
-
+        
+        
 ##############S.A
 
 
@@ -3144,9 +3142,10 @@ plot \\"""
                         uncertainty_plot_lines[-1]['rap'] = \
         ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RAP variation'%title)]
 
-##############3S.A
-
-
+###############S.A
+        
+        
+        
                 # And now merging variation if available
                 if not merging_var_pos is None and len(merging_var_pos)>0:
                     if 'merging_scale' in use_band:
@@ -3199,7 +3198,6 @@ plot \\"""
 '%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
 
 
-
 ##############S.A
 	    if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
@@ -3224,6 +3222,8 @@ plot \\"""
 '%s RPA=%s' % (title,rap[j].replace('_','\_'))))
 
 ##############S.A
+
+
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines
@@ -3359,8 +3359,8 @@ plot \\"""
                     uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
                     HwU_name, block_position+i, PDF_var+4, color_index+20,'',
                                         ratio=True, band='pdf' in use_band)
-
-
+                                        
+                                        
 ##############S.A
 
             if not RPA_var_pos is None:
@@ -3401,10 +3401,9 @@ plot \\"""
 
 
 ##############S.A
-
-
-
-
+                                        
+                                        
+                                        
             if not merging_var_pos is None:
                 for j,merging_var in enumerate(merging_var_pos):
                     uncertainty_plot_lines.append({})
@@ -3519,7 +3518,7 @@ plot \\"""
         if not PDF_var_pos is None:
             for j,PDF_var in enumerate(PDF_var_pos):
                 if j!=0: n=n+1
-
+                
 ###########S.A
 	if not RPA_var_pos is None:
             for j,RPA_var in enumerate(RPA_var_pos):
@@ -3530,8 +3529,7 @@ plot \\"""
             for j,RAP_var in enumerate(RAP_var_pos):
                 if j!=0: n=n+1
 ###########S.A
-
-
+                
         if not merging_var_pos is None:
             for j,merging_var in enumerate(merging_var_pos):
                 if j!=0: n=n+1
@@ -3586,10 +3584,7 @@ plot \\"""
                     uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
                       HwU_name, block_ratio_pos, PDF_var+4, color_index+20,'',
                                                        band='pdf' in use_band)
-
-
-
-
+                                                       
 ###############S.A
 
             if not RPA_var_pos is None:
@@ -3631,7 +3626,7 @@ plot \\"""
 
 
 ###############S.A
-
+                                                       
             if not merging_var_pos is None:
                 for j,merging_var in enumerate(merging_var_pos):
                     uncertainty_plot_lines.append({})
@@ -3710,7 +3705,7 @@ def plot_ratio_from_HWU(path, ax, hwu_variable, hwu_numerator, hwu_denominator, 
         hwu = path
 
     if 'hwu_denominator_path' in opts:
-        print 'found second hwu'
+        print('found second hwu')
         if isinstance(opts['hwu_denominator_path'],str):
             hwu2 = HwUList(path, raw_labels=True)
         else:
@@ -3725,7 +3720,7 @@ def plot_ratio_from_HWU(path, ax, hwu_variable, hwu_numerator, hwu_denominator, 
     bins = select_hist.get('bins')
     num = select_hist.get(hwu_numerator)
     denom = select_hist2.get(hwu_denominator)
-    ratio = [num[i]/denom[i] if denom[i] else 1 for i in xrange(len(bins))]
+    ratio = [num[i]/denom[i] if denom[i] else 1 for i in range(len(bins))]
     if 'drawstyle' not in opts:
         opts['drawstyle'] = 'steps'
     ax.plot(bins, ratio, *args, **opts)
@@ -3852,16 +3847,16 @@ if __name__ == "__main__":
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
                       '--variations','--band','--central_only', '--lhapdf-config','--titles',
                       '--keep_all_weights','--colours']
-    n_ratios   = -1
+    n_ratios   = -1    
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact','rpa','rap']#################S.A
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
     use_band      = None
     auto_open = True
-    ratio_correlations = True
+    ratio_correlations = True    
     consider_reweights = ['pdf','scale','murmuf_scales','merging_scale','alpsfact','rpa','rap']#################S.A
 
     def log(msg):
-        print "histograms.py :: %s"%str(msg)
+        print("histograms.py :: %s"%str(msg))
     
     if '--help' in sys.argv or len(sys.argv)==1:
         log('\n\n%s'%main_doc)
@@ -3940,7 +3935,7 @@ if __name__ == "__main__":
         if opt=='--variations':
             uncertainties=[variation_type_map[type] for type in eval(value,
                          dict([(key,key) for key in variation_type_map.keys()]+
-                                          [('all',variation_type_map.keys())]))]
+                                          [('all',list(variation_type_map.keys()))]))]
         if opt=='--band':
             use_band=[variation_type_map[type] for type in eval(value,
                          dict([(key,key) for key in variation_type_map.keys()]+

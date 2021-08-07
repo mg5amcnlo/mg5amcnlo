@@ -2274,9 +2274,9 @@ c over the icontr. This reduces the number of calls to InitPDF and
 c allows for better caching of the PDFs
        if (nn.eq.1) then    
            jmax=1
-       else if (nn.ne.1.and.rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
+       else if (rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
            jmax=3
-       else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+       else if (rpa_choice.eqv..false.) then
 	   jmax=1
        endif
 
@@ -2307,11 +2307,9 @@ c Compute the luminosity
                   endif
                endif
 
-               xlum_mod(1)=0D0
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
              
-
                if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored;
                       do ii=1,IPROC
 		        f1_p(i,ii)=PD1(ii)
@@ -2325,23 +2323,14 @@ c add the weights to the array
 
               if (j==1) then! pp or AA case
         
-		 f3(0)=0
-                 do ii=1,IPROC
-                 f3(ii)=PD1(ii)*PD2(ii)
-                 
-		 enddo
-
-		 do bb=1,IPROC
-		 xlum_mod(1)=xlum_mod(1)+f3(bb)*conv
 		 
-        	 enddo
-
-               wgts(iwgt,i)=xlum_mod(1) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+               wgts(iwgt,i)= xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
 
-
                wgts(iwgt,i)=wgts(iwgt,i)*
-     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
+
+
 
               else if (j==2) then! pA case
            
@@ -2358,7 +2347,7 @@ c add the weights to the array
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
 
                wgts(iwgt,i)=wgts(iwgt,i)*
-     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
   
               else if (j==3) then! Ap case
          
@@ -2376,7 +2365,7 @@ c add the weights to the array
 
 
                wgts(iwgt,i)=wgts(iwgt,i)*
-     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r)) 
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
 
               endif
               enddo ! i loop
