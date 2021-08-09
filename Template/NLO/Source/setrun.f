@@ -60,10 +60,12 @@ c Determine if there is a need to do scale and/or PDF reweighting
 c Default scale and PDF choice used for the actual run
       dynamical_scale_choice=dyn_scale(1)
       lhaid=lhaPDFid(1)
+      write(*,*) dynamical_scale_choice, lhaid
 c For backward compatibility
       scale = muR_ref_fixed
       q2fact(1) = muF1_ref_fixed**2      ! fact scale**2 for pdf1
-      q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
+      q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2
+      write (*,*) 'the value of muF1 and muF2', dsqrt( q2fact(1)), dsqrt( q2fact(1))    
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
 

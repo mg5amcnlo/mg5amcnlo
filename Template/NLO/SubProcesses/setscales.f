@@ -380,26 +380,45 @@ c
         temp_scale_id2='fixed'
         muF1_id_str=temp_scale_id
         muF2_id_str=temp_scale_id2
-      elseif (fixed_fac_scale1 .and..not.fixed_fac_scale2.and.lpp(1).ne.1)then
-        muf_temp(1)=muF1_ref_fixed
-        muf_temp(2)=max(minscaleF,muF_ref_dynamic(pp))
-        temp_scale_id3='fixed'
-        temp_scale_id4=temp_scale_id
-        muF1_id_str=temp_scale_id3
-        muF2_id_str=temp_scale_id4
-      elseif (fixed_fac_scale2.and..not.fixed_fac_scale1.and.lpp(2).ne.1)then
-        muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
-        muf_temp(2)=muF2_ref_fixed
-        temp_scale_id3='fixed' 
-        temp_scale_id4= temp_scale_id
-        muF1_id_str=temp_scale_id4
-        muF2_id_str=temp_scale_id3
+      elseif (fixed_fac_scale1 .and..not.fixed_fac_scale2)then
+        if (lpp(1)==1.and.lpp(2)==1)then
+            muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
+            muf_temp(2)=max(minscaleF,muF_ref_dynamic(pp))
+            temp_scale_id3='fixed'
+            temp_scale_id4=temp_scale_id
+            muF1_id_str=temp_scale_id3
+            muF2_id_str=temp_scale_id4
+        else    
+            muf_temp(1)=muF1_ref_fixed
+            muf_temp(2)=max(minscaleF,muF_ref_dynamic(pp))
+            temp_scale_id3='fixed'
+            temp_scale_id4=temp_scale_id
+            muF1_id_str=temp_scale_id3
+            muF2_id_str=temp_scale_id4
+        endif
+      elseif (fixed_fac_scale2.and..not.fixed_fac_scale1)then
+        if (lpp(1)==1.and.lpp(2)==1)then
+            muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
+            muf_temp(2)=max(minscaleF,muF_ref_dynamic(pp))
+            temp_scale_id3='fixed'
+            temp_scale_id4=temp_scale_id
+            muF1_id_str=temp_scale_id3
+            muF2_id_str=temp_scale_id4
+        else 
+            muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
+            muf_temp(2)=muF2_ref_fixed
+            temp_scale_id3='fixed' 
+            temp_scale_id4= temp_scale_id
+            muF1_id_str=temp_scale_id4
+            muF2_id_str=temp_scale_id3
+         endif
       else 
         muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))  ! It is the only case for pp if Facotrisation scales are False
         muf_temp(2)=muf_temp(1)
         temp_scale_id2=temp_scale_id 
         muF1_id_str=temp_scale_id
         muF2_id_str=temp_scale_id2
+        write (*,*) 'case4', muf_temp(2), muf_temp(1)
       endif
       muF(1)=muF1_over_ref*muf_temp(1)
       muF(2)=muF2_over_ref*muf_temp(2)
@@ -412,6 +431,7 @@ c
 c The following is for backward compatibility. DO NOT REMOVE
       q2fact(1)=muF12_current
       q2fact(2)=muF22_current
+      write (*,*) 'q2values value in this choice of  scale', dsqrt(q2fact(1)),dsqrt(q2fact(2))
 c
       return
       end

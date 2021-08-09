@@ -663,20 +663,14 @@ C     scale, i.e. last two scales (ren. scale for these vertices are
 C     anyway already set by "scale" above) (Do not do this for FxFx
 C     merging)
         if(ickkw.gt.0 .and. ickkw.ne.3) then
-           if(fixed_fac_scale1.and.first)then
+           if(fixed_fac_scale1 .and.fixed_fac_scale2.and.first)then
               q2bck(1)=q2fact(1)
-             ! q2bck(2)=q2fact(2)
-              first=.false.
-           else if(fixed_fac_scale2.and.first)then
               q2bck(2)=q2fact(2)
               first=.false.
-           else if(fixed_fac_scale1) then
+           else if(fixed_fac_scale1)then 
               q2fact(1)=q2bck(1)
-              !q2fact(2)=q2bck(2)
-           else if(fixed_fac_scale2) then
-              !q2fact(1)=q2bck(1)
+           else if(fixed_fac_scale2)then    
               q2fact(2)=q2bck(2)
-           
            endif
         endif
 
@@ -1057,7 +1051,7 @@ c     We have a qcd line going through the whole event, use single scale
             endif
          endif
       endif
-      if(.not. fixed_fac_scale1 .or. fixed_fac_scale2 ) then
+      if(.not. (fixed_fac_scale1 .or. fixed_fac_scale2 )) then
          if (.not. fixed_fac_scale1) then
              q2fact(1)=scalefact**2*q2fact(1)
              q2bck(1)=q2fact(1)
