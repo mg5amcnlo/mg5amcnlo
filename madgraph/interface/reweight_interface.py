@@ -1848,7 +1848,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
                 if (self.second_model or self.second_process or self.dedicated_path):
                     break
-
             data = self.id_to_path
             if onedir not in ["rw_me",  "rw_mevirt"]:
                 data = self.id_to_path_second
@@ -1858,7 +1857,6 @@ class ReweightInterface(extended_cmd.Cmd):
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
             all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
-
 
             hel_dict={}
             for prefix in prefix_set:
@@ -1975,10 +1973,16 @@ class ReweightInterface(extended_cmd.Cmd):
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
-        self.options = {'curr_dir': os.path.realpath(os.getcwd()),
-                        'rwgt_name': None}
+        if 'rwgt_info' in self.options:
+            self.options = {'rwgt_info': self.options['rwgt_info']}
+        else: 
+            self.options = {}
+        self.options.update({'curr_dir': os.path.realpath(os.getcwd()),
+                        'rwgt_name': None})
+        
         if keep_name:
             self.options['rwgt_name'] = obj['rwgt_name']
+
         self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
         old_rwgt = obj['rwgt_dir']
            
