@@ -487,6 +487,49 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
         
+
+    def test_eva_collision(self):
+        """check that e p > e j gives the correct result"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.02174605
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""
         mg_cmd = MGCmd.MasterCmd()

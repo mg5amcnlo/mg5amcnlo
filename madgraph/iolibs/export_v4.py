@@ -1027,7 +1027,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         i = 0            
         if add_nb_comb:
             spins = matrix_element.get_spin_state()
-            misc.sprint(spins)
             spins.insert(0, len(spins))
             helicity_line_list.append(\
                 ("DATA ("+array_name+"(I,0),I=1,%d) /" + \
@@ -6832,8 +6831,11 @@ class UFO_model_to_mg4(object):
         """
 
         
-
-        fsock = self.open('../PDF/ElectroweakFlux.inc', format='fortran')
+        try:
+            fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
+        except:
+            logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
+            return
 
         masses = {}
         for particle in self.model['particles']:

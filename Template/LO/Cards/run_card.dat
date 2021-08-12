@@ -51,7 +51,7 @@ $ion_pdf
 # Renormalization and factorization scales                           *
 #*********************************************************************
  %(fixed_ren_scale)s = fixed_ren_scale  ! if .true. use fixed ren scale
- %(fixed_fac_scale)s        = fixed_fac_scale  ! if .true. use fixed fac scale
+$fixed_fact_scale
  %(scale)s  = scale            ! fixed ren scale
  %(dsqrt_q2fact1)s  = dsqrt_q2fact1    ! fixed fact scale for pdf1
  %(dsqrt_q2fact2)s  = dsqrt_q2fact2    ! fixed fact scale for pdf2

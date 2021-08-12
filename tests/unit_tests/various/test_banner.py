@@ -577,6 +577,8 @@ class TestRunCard(unittest.TestCase):
         for key in run_card:
             if key == 'hel_recycling' and six.PY2:
                 continue 
+            if key in ['pdlabel1', 'pdlabel2']:
+                continue
             self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))
       
         run_card = bannermod.RunCardNLO()
@@ -623,9 +625,10 @@ class TestRunCard(unittest.TestCase):
         run_card.set('fixed_fac_scale', False, user=True)
         run_card.set('lpp1', 2, user=True)
         run_card.check_validity()
-
         self.assertEqual(run_card['fixed_fac_scale1'], True)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+
         run_card.set('lpp1', 1, user=True)
         run_card.set('pdlabel', 'none', user=True)
         with self.assertRaises(bannermod.InvalidRunCard):
@@ -636,16 +639,117 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
 
-        # check that for elastisc a a collision we force to use fixed_fac_scale1/2
+        # check that for elastisc a a collision we do  not force to use fixed_fac_scale1/2
         run_card.set('lpp1', 2, user=True)
         run_card.set('lpp2', 2, user=True)
-        with self.assertRaises(bannermod.InvalidRunCard):
-            run_card.check_validity()
+        #with self.assertRaises(bannermod.InvalidRunCard):
+        run_card.check_validity()
         run_card.set('fixed_fac_scale1', False, user=True)
         run_card.set('fixed_fac_scale2', False, user=True)
         run_card.check_validity()  # no crashing anymore
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+
+
+    def test_pdlabel_block(self):
+        """ check that pdlabel handling is done correctly
+            this include that check_validity works as expected for such parameter too """
+
+        run_card = bannermod.RunCardLO()
+
+        # setting e- p collision
+        run_card['lpp1'] = 3
+        run_card['lpp2'] = 1
+        run_card.check_validity()
+        # check that pdlabel is set correctly
+        self.assertEqual(run_card['pdlabel'], 'mixed')
+        self.assertEqual(run_card['pdlabel1'], 'eva') # since automatically set to eva if lpp=3/4 and pdlabel is lhapdf/nnpdf
+        self.assertEqual(run_card['pdlabel2'], 'nn23lo1')
+        run_card.set('pdlabel', 'lhapdf', user=True) 
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'lhapdf') #important for linking the correct library
+        self.assertEqual(run_card['pdlabel1'], 'eva') # since automatically set to eva if lpp=3/4 and pdlabel is lhapdf/nnpdf
+        self.assertEqual(run_card['pdlabel2'], 'lhapdf')
+        # check that pdlabel is set on the proton pdf
+        self.assertEqual(run_card['pdlabel'], run_card['pdlabel2'])
+
+        # setting p p collision
+        run_card = bannermod.RunCardLO()
+        run_card['lpp1'] = 1
+        run_card['lpp2'] = 1
+        run_card.check_validity()
+        # check that pdlabel is set on the proton pdf
+        self.assertEqual(run_card['pdlabel'], run_card['pdlabel2'])
+        self.assertEqual(run_card['pdlabel'], run_card['pdlabel1'])
+        # should now allow assymetric pdlabel here
+        run_card.set('pdlabel1','lhapdf', user=True) 
+        run_card.set('pdlabel2', 'nnpdf23lo1', user=True) 
+        with self.assertRaises(bannermod.InvalidRunCard):
+            run_card.check_validity()
+        run_card.set('pdlabel2', 'lhapdf', user=True) 
+        run_card.check_validity()
+
+        # setting mu+ mu- collision
+        run_card = bannermod.RunCardLO()
+        run_card['lpp1'] = 0
+        run_card['lpp2'] = 0
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'none')
+        # one EVA mode
+        run_card['lpp2'] = 4
+        run_card.set('pdlabel2', 'eva', user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['pdlabel1'], 'none')
+        self.assertEqual(run_card['pdlabel2'], 'eva')
+        # one EVA mode
+        run_card['lpp1'] = 3
+        run_card['lpp2'] = 0
+        run_card.set('pdlabel1', 'iww', user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'iww')
+        self.assertEqual(run_card['pdlabel2'], 'none')
+        self.assertEqual(run_card['pdlabel1'], 'iww')
+        
+        
+        # double EVA mode
+        run_card = bannermod.RunCardLO()
+        run_card['lpp1'] = 4
+        run_card['lpp2'] = 4
+        run_card.set('pdlabel', 'eva', user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['pdlabel1'], 'eva')
+        self.assertEqual(run_card['pdlabel2'], 'eva') 
+
+        #check that random PDF can not be assigned
+        run_card.set('pdlabel', 'xxx', user=True)
+        self.assertNotEqual(run_card['pdlabel'], 'xxx')
+
+        # dressed electron check list of valid dressed pdf is working
+        self.assertEqual(len(run_card.allowed_lep_densities), 1)
+        self.assertEqual(len(run_card.allowed_lep_densities[(-11,11)]), 6)
+
+        # Dressed lepton
+        run_card = bannermod.RunCardLO()
+        run_card['lpp1'] = 4
+        run_card['lpp2'] = 4
+
+        run_card.set('pdlabel', 'isronlyll', user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['pdlabel'], 'isronlyll') # at python kept dedicated value
+        self.assertEqual(run_card['pdlabel1'], 'isronlyll')
+        self.assertEqual(run_card['pdlabel2'], 'isronlyll')
+        # check that at fortran pdlabel is passed to generic value "dressed"
+        # but that invidual value are kept 
+        f = StringIO.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("pdlabel = 'dressed'", f.getvalue())
+        self.assertIn("pdsublabel(1) = 'isronlyll'", f.getvalue())
+        self.assertIn("pdsublabel(2) = 'isronlyll", f.getvalue())
+        # to be 100% that wrong name is not passed to fortran
+        self.assertNotIn("pdlabel = 'isronlyll'", f.getvalue())
 
     def test_fixed_fac_scale_block(self):
 
