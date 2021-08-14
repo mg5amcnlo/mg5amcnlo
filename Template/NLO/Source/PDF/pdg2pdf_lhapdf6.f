@@ -12,7 +12,7 @@ c timing statistics
          include "timing_variables.inc"
 
          call cpu_time(tbefore)
-         pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)
+         pdg2pdf_timed = pdg2pdf(ih,ipdg,ibeam,x,xmu)
          call cpu_time(tAfter)
          tPDF = tPDF + (tAfter-tBefore)
          return
@@ -148,3 +148,30 @@ c
       return
       end
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      stop 21
+      return
+      end
+
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu, omx_ee(*)
+      integer n_ee, id, idbeam
+      stop 21
+      return
+      end
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      double precision comp1(*), comp2(*)
+      stop 21
+      return
+      end
+      
+      
