@@ -1937,7 +1937,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             multicore = True
             if self.options['run_mode'] in [0,1]:
-                multicore = False
+                return False
 
             lines = [l.strip() for l in open(card) if not l.strip().startswith('#')]
             while lines and not lines[0].startswith('launch'):
