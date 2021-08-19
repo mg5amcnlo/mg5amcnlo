@@ -400,7 +400,8 @@ class MatrixElementEvaluator(object):
         if events:
             ids = [l.get('id') for l in sorted_legs]
             import MadSpin.decay as madspin
-            if not hasattr(self, 'event_file'):
+            if not hasattr(self, 'event_file') or self.event_file.inputfile.closed:
+                print( "reset")
                 fsock = open(events)
                 self.event_file = madspin.Event(fsock)
 
@@ -419,6 +420,7 @@ class MatrixElementEvaluator(object):
             for part in event.values():
                 m = part['momentum']
                 p.append([m.E, m.px, m.py, m.pz])
+            fsock.close()
             return p, 1
 
         nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])

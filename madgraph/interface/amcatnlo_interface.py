@@ -914,8 +914,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
                     if six.PY2:
-                        self.born_processes.extend(diroutput[4])
-                        self.born_processes_for_olp.append(diroutput[4][0])
+                        self.born_processes.extend(diroutput[5])
+                        self.born_processes_for_olp.append(diroutput[5][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)
