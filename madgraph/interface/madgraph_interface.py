@@ -8583,7 +8583,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
                 for name, val in self.options.items():
                     if name in me_cmd.options and me_cmd.options[name] != val:
-                        me_cmd.exec_cmd('set %s %s --no_save' % (name, val)) 
+                        try:
+                            me_cmd.exec_cmd('set %s %s --no_save' % (name, val)) 
+                        except madgraph.InvalidCmd:
+                            continue
                 #me_cmd.options.update(self.options)
                 #me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)
