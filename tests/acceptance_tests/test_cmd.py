@@ -205,7 +205,8 @@ class TestCmdShell1(unittest.TestCase):
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
-                    'applgrid': 'applgrid-config',
+                    #'applgrid': 'applgrid-config',
+                    'pineappl': 'pineappl',
                     'cluster_size': 100,
                     'loop_color_flows': False,
                     'cluster_local_path': None,
@@ -216,6 +217,8 @@ class TestCmdShell1(unittest.TestCase):
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
                      'auto_convert_model': False,
+                     'nlo_mixed_expansion': True,
+                     'acknowledged_v3.1_syntax': False,
                     }
 
         self.assertEqual(config, expected)

@@ -365,9 +365,14 @@ class TestMECmdShell(unittest.TestCase):
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
 
+        misc.sprint('start')
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
+
+        if not self.cmd_line.options['pythia-pgs_path']:
+            return
+
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
@@ -380,8 +385,8 @@ class TestMECmdShell(unittest.TestCase):
         except:
             pass
         self.do('generate_events -f')     
-        
-        
+
+
         f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
         
