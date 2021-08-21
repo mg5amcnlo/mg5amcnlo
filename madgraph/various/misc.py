@@ -461,6 +461,12 @@ def get_scan_name(first, last):
         name = "%s[%s-%s]%s" % (base, first[len(base):], last[len(base):],end)
     return name
 
+def copytree(*args, **opts):
+
+    if 'copy_function' not in opts:
+        opts['copy_function'] = shutil.copy
+    return misc.copytree(*args, **opts)
+
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================

@@ -193,7 +193,7 @@ C       Include the Jacobian from helicity sampling
         R=XRAN1(IDUM)*ANS
         SUMHEL=0D0
         DO I=1,NCOMB
-          SUMHEL=SUMHEL+TS(I)
+          SUMHEL=SUMHEL+DABS(TS(I))
           IF(R.LT.SUMHEL)THEN
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
             ANS=DSIGN(ANS,TS(I))

@@ -284,7 +284,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
             #add the code in the correct format
             x, y = self.rescale(line.begin.pos_x, line.begin.pos_y)
-            self.text += '%s %s moveto'%(x, y)
+            self.text += '%s %s moveto \n'%(x, y)
             self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
              line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
                                    '%s Fhiggsl' % (curvature*7))

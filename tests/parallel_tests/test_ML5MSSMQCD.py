@@ -71,7 +71,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
     def setUp(self):
         """ Copy the model form the test input_files to the default directory."""
         if not os.path.exists(os.path.join(_mg5_path,'models','loop_MSSM')):
-            shutil.copytree(os.path.join(_mg5_path,'tests','input_files','loop_MSSM'),
+            misc.copytree(os.path.join(_mg5_path,'tests','input_files','loop_MSSM'),
                         os.path.join(_mg5_path,'models','loop_MSSM'))
 
     # The tests below probe one quite long process at a time individually, so

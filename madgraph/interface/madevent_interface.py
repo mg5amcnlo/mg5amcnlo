@@ -2992,8 +2992,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            misc.gunzip('%s/%s/unweighted_events.lhe.gz' % 
-                                  (pjoin(self.me_dir,'Events'), self.run_name))
+            path = '%s/%s/unweighted_events.lhe.gz' % (pjoin(self.me_dir,'Events'), self.run_name)
+
+            if os.path.exists(path):
+                misc.gunzip(path)
 
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
@@ -3108,7 +3110,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             else:
                 run_card = self.run_card
             self.run_card = run_card
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
@@ -3129,7 +3132,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                             if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
                                 raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
                                                                          mandatory_file,run_card['bias_module']))
-                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                        misc.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
                                                                      os.path.basename(run_card['bias_module'])))
                 
                 #check expected parameters for the module.
@@ -6572,7 +6575,8 @@ class GridPackCmd(MadEventCmd):
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        elif self.run_card['use_syst']:
+        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+            self.options['nb_core']  = 1
             self.exec_cmd('systematics %s --from_card' % 
                           pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
                                                postcmd=False,printcmd=False)

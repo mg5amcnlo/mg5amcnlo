@@ -628,7 +628,7 @@ c     Variables for keeping track of jets
       external is_octet
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0) then
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
             s_scale=scale
             n_qcd=nqcd(iconfig)
@@ -689,10 +689,8 @@ C   anyway already set by "scale" above)
             q2bck(2)=q2fact(2)
             first=.false.
       else if(ickkw.gt.0) then
-         if(fixed_fac_scale) then
-            q2fact(1)=q2bck(1)
-            q2fact(2)=q2bck(2)
-         endif
+         if(fixed_fac_scale1) q2fact(1)=q2bck(1)
+         if (fixed_fac_scale2) q2fact(2)=q2bck(2)
       endif
 
 c   Preparing graph particle information (ipart, needed to keep track of
@@ -1081,8 +1079,10 @@ c     JA: Check xmtc cut for central process
          endif
       endif
       
-      if(ickkw.eq.0.and.(fixed_fac_scale.or.q2fact(1).gt.0).and.
-     $     (fixed_ren_scale.or.scale.gt.0)) return
+      if(ickkw.eq.0
+     $    .and. (fixed_fac_scale1.or.q2fact(1).gt.0)
+     $    .and. (fixed_fac_scale2.or.q2fact(2).gt.0)
+     $    .and. (fixed_ren_scale.or.scale.gt.0)) return
 
 c     Ensure that last scales are at least as big as first scales
       if(jlast(1).gt.0)
@@ -1090,34 +1090,36 @@ c     Ensure that last scales are at least as big as first scales
       if(jlast(2).gt.0)
      $     pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
 
-      if(ickkw.gt.0.and.q2fact(1).gt.0) then
+      if(ickkw.gt.0.and.q2fact(1).gt.0.and.q2fact(2).gt.0) then
 c     Use the fixed or previously set scale for central scale
          if(jcentral(1).gt.0) pt2ijcl(jcentral(1))=q2fact(1)
          if(jcentral(2).gt.0.and.jcentral(2).ne.jcentral(1))
      $        pt2ijcl(jcentral(2))=q2fact(2)
       endif
 
-      if(nexternal.eq.3.and.nincoming.eq.2.and.q2fact(1).eq.0) then
-         q2fact(1)=pt2ijcl(nexternal-2)
-         q2fact(2)=pt2ijcl(nexternal-2)
+      if(nexternal.eq.3.and.nincoming.eq.2.and.(q2fact(1).eq.0.or.q2fact(2).eq.0)) then
+         if(.not.fixed_fac_scale1) q2fact(1)=pt2ijcl(nexternal-2)
+         if(.not.fixed_fac_scale2) q2fact(2)=pt2ijcl(nexternal-2)
       endif
 
-      if(q2fact(1).eq.0d0) then
+      if(q2fact(1).eq.0d0.or.q2fact(2).eq.0d0) then
 c     Use the geom. average of central scale and first non-radiation vertex
-         if(jlast(1).gt.0) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
-         if(jlast(2).gt.0) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
+         if(jlast(1).gt.0.and..not.fixed_fac_scale1) q2fact(1)=sqrt(pt2ijcl(jlast(1))*pt2ijcl(jcentral(1)))
+         if(jlast(2).gt.0.and..not.fixed_fac_scale2) q2fact(2)=sqrt(pt2ijcl(jlast(2))*pt2ijcl(jcentral(2)))
          if(jcentral(1).gt.0.and.jcentral(1).eq.jcentral(2))then
 c     We have a qcd line going through the whole event, use single scale
-            q2fact(1)=max(q2fact(1),q2fact(2))
-            q2fact(2)=q2fact(1)
+            if(.not.fixed_fac_scale1.and..not.fixed_fac_scale2) then
+               q2fact(1)=max(q2fact(1),q2fact(2))
+               q2fact(2)=q2fact(1)
+            endif
          endif
       endif
-      if(.not. fixed_fac_scale) then
-         q2fact(1)=scalefact**2*q2fact(1)
-         q2fact(2)=scalefact**2*q2fact(2)
+      if(.not. fixed_fac_scale1.or. fixed_fac_scale2) then
+         if(.not.fixed_fac_scale1) q2fact(1)=scalefact**2*q2fact(1)
+         if(.not.fixed_fac_scale2) q2fact(2)=scalefact**2*q2fact(2)
          if (.not.keepq2bck)then
-            q2bck(1)=q2fact(1)
-            q2bck(2)=q2fact(2)
+            if(.not.fixed_fac_scale1) q2bck(1)=q2fact(1)
+            if(.not.fixed_fac_scale2) q2bck(2)=q2fact(2)
          endif
          if (btest(mlevel,3))
      $      write(*,*) 'Set central fact scales to ',sqrt(q2bck(1)),sqrt(q2bck(2))
@@ -1155,30 +1157,33 @@ c           Use geom. average of central scales
 
 c     Take care of case when jcentral are zero
       if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
-         if(q2fact(1).gt.0)then
+         if(q2fact(1).gt.0.and..not.fixed_fac_scale1)then
             pt2ijcl(nexternal-2)=q2fact(1)
             if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(1)
+         else if (q2fact(2).gt.0.and..not.fixed_fac_scale2)then
+            pt2ijcl(nexternal-2)=q2fact(2)
+            if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(2)
          else
-            q2fact(1)=scalefact**2*pt2ijcl(nexternal-2)
-            q2fact(2)=scalefact**2*q2fact(1)
+            if(.not.fixed_fac_scale1) q2fact(1)=scalefact**2*pt2ijcl(nexternal-2)
+            if(.not.fixed_fac_scale2) q2fact(2)=scalefact**2*q2fact(1)
          endif
       elseif(jcentral(1).eq.0)then
-            q2fact(1) = scalefact**2*pt2ijcl(jfirst(1))
+            if(.not.fixed_fac_scale1)  q2fact(1) = scalefact**2*pt2ijcl(jfirst(1))
       elseif(jcentral(2).eq.0)then
-            q2fact(2) = scalefact**2*pt2ijcl(jfirst(2))
+            if(.not.fixed_fac_scale2) q2fact(2) = scalefact**2*pt2ijcl(jfirst(2))
       elseif(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0))then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
+         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1).and..not.fixed_fac_scale1)
      $        q2fact(1)=scalefact**2*min(pt2ijcl(jfirst(1)),q2fact(1))
-         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
+         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2).and..not.fixed_fac_scale2)
      $        q2fact(2)=scalefact**2*min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
 c     Check that factorization scale is >= 2 GeV
-      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
-     $   lpp(2).ne.0.and.q2fact(2).lt.4d0)then
+      if(lpp(1).ne.0.and.(q2fact(1).lt.4d0.and..not.fixed_fac_scale1).or.
+     $   lpp(2).ne.0.and.(q2fact(2).lt.4d0.and..not.fixed_fac_scale2))then
          if(nwarning.le.10) then
              nwarning=nwarning+1
              write(*,*) 'Warning: Too low fact scales: ',
@@ -1743,10 +1748,6 @@ c           fs sudakov weight
          if (btest(mlevel,3))
      $        write(*,*)' set fact scales for PS to ',
      $        sqrt(q2fact(1)),sqrt(q2fact(2))
-      else if (abs(lpp(1)).ge.2.and.abs(lpp(1)).le.4) then
-         q2fact(1)=q2bck(1)
-      else if (abs(lpp(2)).ge.2.or.abs(lpp(2)).le.4) then
-         q2fact(2)=q2bck(2)
       endif
 
       if (btest(mlevel,3)) then
