@@ -825,7 +825,6 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
         logger.info("acknowledged_v3.1_syntax <value>",'$MG:color:GREEN') 
         logger.info("if set to True allows to use syntax which have change meaning between 3.0 and 3.1 version")
-
           
 #===============================================================================
 # CheckValidForCmd
@@ -1570,8 +1569,8 @@ This will take effect only in a NEW terminal
         if args[0].lower() in ['ewscheme']:
             if not self._curr_model:
                 raise self.InvalidCmd("ewscheme acts on the current model please load one first.")
-            if args[1] not in ['external']:
-                raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
+            if args[1] not in ['external', 'MZ_MW_alpha']:
+                raise self.InvalidCmd('Only valid ewscheme are "external" and "MZ_MW_alpha". To restore default, please re-import the model.')
 
         if args[0] in ['output_dependencies']:
             if args[1] not in MadGraphCmd._output_dependencies_supported:
@@ -2594,7 +2593,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
             elif args[1].lower() == 'ewscheme':
-                return self.list_completion(text, ["external"])
+                return self.list_completion(text, ["external", "MZ_MW_alpha"])
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
@@ -4801,8 +4800,8 @@ This implies that with decay chains:
                             old_name, old_value, name, value)
             if name.endswith('^2'):
                 basename = name[:-2]
-                if basename not in model_orders:
-                    valid = list(model_orders) + coupling_alias.keys()
+                if basename not in list(model_orders) + ['WEIGHTED']:
+                    valid = list(model_orders) +list(coupling_alias.keys()) + ['WEIGHTED']
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
 
                 if type not in self._valid_sqso_types:
@@ -5932,7 +5931,7 @@ This implies that with decay chains:
                 add_options.remove('--local')
                 logger.warning('you are using a local installer. This is intended for debugging only!')
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-                shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+                misc.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
            'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 
         # Potential change in naming convention
@@ -6723,13 +6722,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             pattern = re.compile(r'''^=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #= = = renamed directory 'Template' => 'Template/LO'
             for orig, new in pattern.findall(text):
-                shutil.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
+                misc.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
                 full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
                 for i, name in enumerate(full_path):
                     path = os.path.sep.join(full_path[:i+1])
                     if path and not os.path.isdir(path):
                         os.mkdir(path)
-                shutil.copytree(pjoin(MG5DIR, 'UPDATE_TMP'), pjoin(MG5DIR, new))
+                misc.copytree(pjoin(MG5DIR, 'UPDATE_TMP'), pjoin(MG5DIR, new))
                 shutil.rmtree(pjoin(MG5DIR, 'UPDATE_TMP'))
             # track rename since patch fail to apply those correctly.
             pattern = re.compile(r'''=== renamed file \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
@@ -7638,9 +7637,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if log:
                 logger.info('set output information to level: %s' % level)
         elif args[0].lower() == "ewscheme":
-            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+            if args[1] == 'external':
+                logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
                                               (self._curr_model.get('name'), args[1]))
-            logger.info("Importing a model will restore the default scheme")
+            else:
+                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
+            logger.info("Importing a new model will restore the default scheme")
+
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
@@ -8641,9 +8644,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logger.info('Pass to numerical integration for computing the widths:')
         else:            
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
-            
-            
-            
             return  decay_info
 
         # Do the MadEvent integration!!
@@ -8672,7 +8672,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
                 for name, val in self.options.items():
                     if name in me_cmd.options and me_cmd.options[name] != val:
-                        self.exec_cmd('set %s %s --no_save' % (name, val)) 
+                        try:
+                            me_cmd.exec_cmd('set %s %s --no_save' % (name, val)) 
+                        except madgraph.InvalidCmd:
+                            continue
                 #me_cmd.options.update(self.options)
                 #me_cmd.configure_run_mode(self.options['run_mode'])
                 #self.define_child_cmd_interface(me_cmd, interface=False)

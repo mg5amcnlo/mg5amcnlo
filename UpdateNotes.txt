@@ -1,15 +1,17 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+3.2.0 (22/08/21)
+      SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
+      BUG FIX (from 2.9.5 long term stable, see below)
+      OM: Fix an infinite loop when running with condor cluster
+          or with other cluster/multi-core when cluster_temp_path
+	  was used.
+      
 3.1.1 (28/05/21)
       ALL: put a crash for potentially ambiguous syntax with explanation
            on how to bypass such crash via a new entry in
 	   input/mg5_configuration.txt
-   BUG FIX (from 2.9.4 long term stable):
-      OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
-      OM: Fix an issue for non positive definite matrix-element when using the
-          "set group_subprocesses False"  mode of MG5aMc
-      OM: Fix a speed issue for gridpack in readonly mode where the grid were recomputed 
+      BUG FIX (from 2.9.4 long term stable)
 
 3.1.0 (30/03/21)
     ALL: include all changes up to 2.9.3 of the 2.x release
@@ -30,6 +32,28 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
     OM: Some aliases have been added for the orders constraints:
             - aEW<=X / aS<=Y is equivalent to QCD^2<=2X / QED^2<=2Y
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
+
+                        ** Long Term Stable Update **
+
+2.9.5 (22/08/21)
+      OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
+
+            This was claimed to be using fixed scale computation while
+	    in some case the scale was dynamical
+            To have full flexibility we introduced two additional
+	    (hidden) parameter: "fixed_fac_scale1" and "fixed_fac_scale2"
+	    that allow to choose fixed scale for only one beam.
+      OM: fix auto-width that was not following	run_mode specification
+      OM: fixing missing rwgt_info for reweighting with gridpack mode
+      OM: fixing 'check' command with the skip_event mode
+      OM: fixing auto-width computation for 3 body decay and identical particle which was sometimes leading to crash
+      OM: Fix some potential infinite loop when running with python3
+      
+2.9.4(28/05/21)
+      OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
+      OM: Fix an issue for non positive definite matrix-element when using the
+          "set group_subprocesses False"  mode of MG5aMc
+      OM: Fix a speed issue for gridpack in readonly mode where the grid were recomputed 
 
 
 
@@ -72,6 +96,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: remove ./bin/mg5 executable
 
                              ** Main Branch (version 2.x) Update **
+
 
 2.9.3(25/03/21)
       OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)

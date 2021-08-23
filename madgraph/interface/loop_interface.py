@@ -975,7 +975,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if os.path.exists(pjoin(install_dir1, 'collier')):
                 self.code['collier'] =  pjoin(install_dir1, 'collier')
             if os.path.exists(pjoin(install_dir2, 'golem95')):
-                self.code['glem'] =  pjoin(install_dir2, 'golem95')
+                self.code['golem'] =  pjoin(install_dir2, 'golem95')
             if os.path.exists(pjoin(install_dir1, 'ninja')):
                 self.code['ninja'] =  pjoin(install_dir2, 'ninja','lib')
         

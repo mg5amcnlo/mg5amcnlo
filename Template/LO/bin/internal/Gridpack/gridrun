@@ -63,6 +63,7 @@ if __debug__ and not options.debug and \
 
 import logging
 import logging.config
+import internal.coloring_logging
 
 try:
    import psyco
