@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
 import glob
 import logging
 import os
@@ -98,7 +99,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
@@ -313,7 +314,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -590,9 +591,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               nconfigs,max_leg_number,nfksconfs,
                               fortran_model)
         
-# THIS IS A TEMPORARY FIX!!!!
+        # For processes with only QCD splittings, write
+        # the file with the mapping of born vs real diagrams
+        # Otherwise, write a dummy file
         filename = 'real_from_born_configs.inc'
-        self.write_real_from_born_configs_dummy(
+        if self.proc_characteristic['splitting_types'] == ['QCD']:
+            self.write_real_from_born_configs(
+                              writers.FortranWriter(filename), 
+                              matrix_element,
+                              fortran_model)
+        else:
+            self.write_real_from_born_configs_dummy(
                               writers.FortranWriter(filename), 
                               matrix_element,
                               fortran_model)
@@ -679,6 +688,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_powers.inc',
                      'fks_singular.f',
                      'splitorders_stuff.f',
+                     'orderstags_glob.f',
                      'chooser_functions.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
@@ -704,6 +714,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec_events_pdf_dummy.f',
                      'iproc_map.f',
                      'run.inc',
+                     'eepdf.inc',
                      'run_card.inc',
                      'setcuts.f',
                      'setscales.f',
@@ -816,6 +827,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         self.proc_characteristic['grouped_matrix'] = False
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+        self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
@@ -959,7 +971,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         elif output_dependencies == 'internal':
             StdHEP_internal_path = pjoin(self.dir_path,'Source','StdHEP')
-            shutil.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
+            misc.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
             # Create the links to the lib folder
             linkfiles = ['libstdhep.a', 'libFmcfio.a']
             for file in linkfiles:
@@ -1106,13 +1118,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         for all the orders which are split"""
 
         born_orders = {}
-        for ordd, val in matrix_element.born_me['processes'][0]['born_orders'].items():
-            # factor 2 to pass to squared orders
-            born_orders[ordd] = 2 * val 
+        for ordd, val in matrix_element.born_me['processes'][0]['born_sq_orders'].items():
+            born_orders[ordd] = val 
 
         nlo_orders = {}
         for ordd, val in matrix_element.born_me['processes'][0]['squared_orders'].items():
-            # no need to multiply by 2 here
             nlo_orders[ordd] = val
         
         split_orders = \
@@ -1879,7 +1889,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_temp_jamp = self.get_JAMP_lines(matrix_element)
         else:
             split_orders_name = matrix_element['processes'][0]['split_orders']
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
@@ -1894,11 +1904,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             replace_dict['sqsplitorders']= \
     'C the values listed below are for %s\n' % ', '.join(split_orders_name)
             replace_dict['sqsplitorders']+='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
+            jamp_lines, nb_temp_jamp = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
-
+            
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-
+        replace_dict['nb_temp_jamp'] = nb_temp_jamp
+        
         if proc_type=='born':
             file = open(pjoin(_file_path, \
             'iolibs/template_files/bornmatrix_splitorders_fks.inc')).read()
@@ -2333,6 +2344,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         else:
             QED, QCD = fks_common.get_qed_qcd_orders_from_weighted(\
                     len(process_list[0].get('legs')),
+                    process_list[0].get('model').get('order_hierarchy'),
                     orders['WEIGHTED'])
 
         replace_dict = {}
@@ -2463,8 +2475,10 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
 
         # Set the size of Wavefunction
         if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
@@ -2557,13 +2571,16 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
+        misc.sprint(replace_dict['den_factor_lines'])
+        replace_dict['den_factor_lines'] = ''
+
         # Extract the number of FKS process
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
@@ -2709,7 +2726,7 @@ Parameters              %(params)s\n\
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP1(%s)")
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
@@ -2720,23 +2737,25 @@ Parameters              %(params)s\n\
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
+                                      matrix_element,amp_orders,split_order_names=split_orders,
+                                                                      JAMP_format="JAMP1(%s,{0})")
 
-        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines).replace('JAMP', 'JAMP1')    
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         matrix_element.set('color_basis', link['link_basis'] )
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP2(%s)")
         else:
-            jamp_lines = self.get_JAMP_lines_split_order(\
-                       matrix_element,amp_orders,split_order_names=split_orders)
-
-        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('JAMP','JAMP2')
-    
-    
+            jamp_lines,nb_tmp_jamp  = self.get_JAMP_lines_split_order(\
+                                            matrix_element,amp_orders,split_order_names=split_orders,
+                                            JAMP_format="JAMP2(%s,{0})")
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = max(nb_tmp_jamp, replace_dict['nb_temp_jamp'])
+        
         # Extract the number of FKS process
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
@@ -2963,9 +2982,10 @@ Parameters              %(params)s\n\
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
     
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                 self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
         replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['ee_comp_vars'] = eepdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
@@ -3503,6 +3523,7 @@ Parameters              %(params)s\n\
         model = processes[0].get('model')
 
         pdf_definition_lines = ""
+        ee_pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
 
@@ -3537,9 +3558,15 @@ Parameters              %(params)s\n\
                     pdgtopdf[pdg] = 6000000 + pdg
 
             # Get PDF variable declarations for all initial states
+            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n" 
             for i in [0,1]:
                 pdf_definition_lines += "DOUBLE PRECISION " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
+                ee_pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
@@ -3560,23 +3587,25 @@ Parameters              %(params)s\n\
                     ibeam = 2 - i
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
-                                 % (ibeam, ibeam)
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n" \
+                                 % (ibeam)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
-                                 % (ibeam, ibeam)
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n" \
+                                 % (ibeam)
 
                 for initial_state in init_states:
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
-                                          i + 1, ibeam, pdgtopdf[initial_state],
-                                          ibeam, ibeam)
+                                     ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n" + \
+                                     "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (
+                                           pdf_codes[initial_state], i + 1, ibeam, pdgtopdf[initial_state], ibeam,
+                                          ibeam, ibeam,
+                                          ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3586,11 +3615,13 @@ Parameters              %(params)s\n\
                         else:
                             if abs(pdgtopdf[initial_state]) <= 10:  
                                 pdf_lines = pdf_lines + \
-                                    ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP," + \
-                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
-                                         (pdf_codes[initial_state],
-                                          i + 1, ibeam, pdgtopdf[initial_state],
-                                          ibeam, ibeam)
+                                     ("%s%d=PDG2PDF(LPP(%d),%d,%d," + \
+                                         "XBK(%d),DSQRT(Q2FACT(%d)))\n" + \
+                                     "IF ((ABS(LPP(%d)).EQ.4.or.ABS(LPP(%d)).EQ.3).and.pdlabel.ne.'none') %s%d_components(1:n_ee) = ee_components(1:n_ee)\n") % \
+                                         (
+                                           pdf_codes[initial_state], i + 1, ibeam, pdgtopdf[initial_state], ibeam,
+                                          ibeam, ibeam,
+                                          ibeam, ibeam, pdf_codes[initial_state], ibeam)
                             else:
                                 # setting other partons flavours outside quark, gluon, photon to be 0d0
                                 pdf_lines = pdf_lines + \
@@ -3606,18 +3637,28 @@ Parameters              %(params)s\n\
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC) = "
+                comp_list = []
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
+                        comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                     else:
                         pdf_lines = pdf_lines + "1d0*"
+                        comp_list.append("DUMMY")
+
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
 
+                # this is for the lepton collisions with electron luminosity 
+                # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                pdf_lines += "if (ABS(LPP(1)).EQ.ABS(LPP(2)).and. (ABS(LPP(1)).EQ.3.or.ABS(LPP(1)).EQ.4).and.pdlabel.ne.'none')" + \
+                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                             tuple(comp_list)
+
         # Remove last line break from pdf_lines
-        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
 
     #test written
@@ -3632,14 +3673,12 @@ Parameters              %(params)s\n\
             my_cs = color.ColorString()
             for index, denominator in \
                 enumerate(color_matrix.get_line_denominators()):
-                # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
-                num_list = color_matrix.get_line_numerators(index, denominator)    
+                num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
             return ret_list
 
     #===========================================================================
@@ -3844,6 +3883,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    jamp_optim = True 
 
     def finalize(self, *args, **opts):
         ProcessExporterFortranFKS.finalize(self, *args, **opts)
@@ -3867,7 +3907,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)

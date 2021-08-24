@@ -74,7 +74,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
-	weight_lines.o
+	weight_lines.o orderstags_glob.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
@@ -96,17 +96,17 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
-	$(FC) $(LDFLAGS) -o gensym $(SYM) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o gensym $(SYM) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm fks_singular.o
 	strip gensym
 
 test_soft_col_limits: $(TEST)
-	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
 
 check_poles: $(POLES) $(libmadloop)
-	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	strip check_poles
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)

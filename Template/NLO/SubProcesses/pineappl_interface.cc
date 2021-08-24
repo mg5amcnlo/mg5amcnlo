@@ -87,31 +87,19 @@ extern "C" struct
     double xsec12, xsec11, xsec20;
 } appl_common_reco_;
 
-// Check if a file exists
-bool file_exists(const std::string& s)
+extern "C" struct
 {
-    if (std::FILE* testfile = std::fopen(s.c_str(), "r"))
-    {
-        std::fclose(testfile);
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-// Banner
-std::string Banner()
-{
-    return "\n"
-        "    █████╗ ███╗   ███╗ ██████╗██████╗ ██╗      █████╗ ███████╗████████╗\n"
-        "   ██╔══██╗████╗ ████║██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝╚══██╔══╝\n"
-        "   ███████║██╔████╔██║██║     ██████╔╝██║     ███████║███████╗   ██║\n"
-        "   ██╔══██║██║╚██╔╝██║██║     ██╔══██╗██║     ██╔══██║╚════██║   ██║\n"
-        "   ██║  ██║██║ ╚═╝ ██║╚██████╗██████╔╝███████╗██║  ██║███████║   ██║\n"
-        "   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝\n";
-}
+    int idbmup[2];
+    double ebmup[2];
+    int pdfgup[2];
+    int pdfsup[2];
+    int idwtup;
+    int nprup;
+    double xsecup[100];
+    double xerrup[100];
+    double xmaxup[100];
+    int lprup[100];
+} heprup_;
 
 extern "C" void appl_init_()
 {
@@ -222,8 +210,12 @@ extern "C" void appl_init_()
 
         for (int iproc = 0; iproc != nproc; ++iproc)
         {
-            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][0]);
-            pdg_ids.push_back(appl_common_lumi_.lumimap[ilumi][iproc][1]);
+            int32_t a = appl_common_lumi_.lumimap[ilumi][iproc][0];
+            int32_t b = appl_common_lumi_.lumimap[ilumi][iproc][1];
+
+            // give the gluon a proper PDG id
+            pdg_ids.push_back(a == 0 ? 21 : a);
+            pdg_ids.push_back(b == 0 ? 21 : b);
         }
 
         pineappl_lumi_add(lumi, nproc, pdg_ids.data(), nullptr);
@@ -234,6 +226,12 @@ extern "C" void appl_init_()
 
     // valid choices are: "LagrangeSubgrid", "NtupleSubgrid"
     pineappl_keyval_set_string(key_vals, "subgrid_type", "LagrangeSubgrid");
+
+    // set PDG ids of the initial states
+    pineappl_keyval_set_string(key_vals, "initial_state_1",
+        std::to_string(heprup_.idbmup[0]).c_str());
+    pineappl_keyval_set_string(key_vals, "initial_state_2",
+        std::to_string(heprup_.idbmup[1]).c_str());
 
     // Create a grid with the binning given in the "obsbins[Nbins+1]" array
     grid_obs.push_back(pineappl_grid_new(
@@ -247,6 +245,56 @@ extern "C" void appl_init_()
 
     pineappl_keyval_delete(key_vals);
     pineappl_lumi_delete(lumi);
+}
+
+extern "C" void appl_delete_itype_()
+{
+    // Check that itype ranges from 1 to 5.
+    int itype = appl_common_histokin_.itype_histo;
+    if ((itype < 1) || (itype > 5))
+    {
+        std::cout << "amcblast ERROR: Invalid value of itype = " << itype << std::endl;
+        std::exit(-10);
+    }
+
+    // this is the second index of the WB/R/F/0 arrays
+    int index = appl_common_histokin_.amp_pos - 1;
+
+    // aMC@NLO weights. Four grids, ordered as {W0,WR,WF,WB}.
+    double(&W0)[4] = appl_common_weights_.W0[index];
+    double(&WR)[4] = appl_common_weights_.WR[index];
+    double(&WF)[4] = appl_common_weights_.WF[index];
+    double(&WB)[4] = appl_common_weights_.WB[index];
+
+    int k;
+
+    switch (itype)
+    {
+    case 1:
+        k = 0;
+        break;
+
+    case 2:
+    case 3:
+        k = 1;
+        break;
+
+    case 4:
+        k = 2;
+        break;
+
+    case 5:
+        k = 3;
+        break;
+
+    default:
+        assert( false );
+    }
+
+    W0[k] = 0.0;
+    WR[k] = 0.0;
+    WF[k] = 0.0;
+    WB[k] = 0.0;
 }
 
 extern "C" void appl_fill_()
@@ -268,11 +316,8 @@ extern "C" void appl_fill_()
     double(&WF)[4] = appl_common_weights_.WF[index];
     double(&WB)[4] = appl_common_weights_.WB[index];
 
-    int ilumi;
     int nlumi = appl_common_lumi_.nlumi;
     double ttol = 1e-100;
-    double x1, x2;
-    double scale2;
     double obs = appl_common_histokin_.obs_histo;
 
     // Histogram number
@@ -306,26 +351,10 @@ extern "C" void appl_fill_()
         assert( false );
     }
 
-    x1 = appl_common_weights_.x1[k];
-    x2 = appl_common_weights_.x2[k];
-
-    static std::vector<std::vector<std::vector<double>>> x1Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(pineappl_grid_order_count(grid_obs[nh]), 0.0)));
-    static std::vector<std::vector<std::vector<double>>> x2Saved(5, std::vector<std::vector<double>>(
-        grid_obs.size(), std::vector<double>(pineappl_grid_order_count(grid_obs[nh]), 0.0)));
-
-    if (x1 == x1Saved[itype - 1][nh][grid_index] && x2 == x2Saved[itype - 1][nh][grid_index])
-    {
-        return;
-    }
-    else
-    {
-        x1Saved[itype - 1][nh][grid_index] = x1;
-        x2Saved[itype - 1][nh][grid_index] = x2;
-    }
-
-    scale2 = appl_common_weights_.muF2[k];
-    ilumi = appl_common_weights_.flavmap[k] - 1;
+    double const x1 = appl_common_weights_.x1[k];
+    double const x2 = appl_common_weights_.x2[k];
+    double const scale2 = appl_common_weights_.muF2[k];
+    int const ilumi = appl_common_weights_.flavmap[k] - 1;
 
     if (x1 < 0.0 || x1 > 1.0 || x2 < 0.0 || x2 > 1.0)
     {

@@ -5,12 +5,12 @@ c
 c     Scales
 c
       real*8          scale,scalefact,alpsfact,mue_ref_fixed,mue_over_ref
-      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
+      logical         fixed_ren_scale,fixed_fac_scale1, fixed_fac_scale2,fixed_couplings,hmult
       logical         fixed_extra_scale
       integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
       
       common/to_scale/scale,scalefact,alpsfact, mue_ref_fixed, mue_over_ref,
-     $                fixed_ren_scale,fixed_fac_scale,
+     $                fixed_ren_scale,fixed_fac_scale1, fixed_fac_scale2,
      $                fixed_couplings, fixed_extra_scale,ickkw,nhmult,hmult,asrwgtflavor,
      $                dynamical_scale_choice
 c
@@ -101,3 +101,8 @@ c
 
        double precision small_width_treatment
        common/narrow_width/small_width_treatment
+
+       double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c                          2 means approximation by the denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel, sde_strat

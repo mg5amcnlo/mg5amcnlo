@@ -954,7 +954,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
         if self['mothers']:
             nb_t_channel= sum(int(wf.is_t_channel()) for wf in self['mothers'])
-            #raise Exception
         else:
             return True
             
@@ -964,10 +963,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
             return False
         
     
-        
-        
-
-
     def get_analytic_info(self, info, alohaModel=None):
         """ Returns a given analytic information about this loop wavefunction or
         its characterizing interaction. The list of available information is in
@@ -1013,6 +1008,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             aloha_info = self.get_aloha_info(True)
             # aloha_info[0] is the tuple of all lorent structures for this lwf,
             # aloha_info[1] are the tags and aloha_info[2] is the outgoing number.
+
             max_rank = max([ alohaModel.get_info('rank', lorentz,
                                  aloha_info[2], aloha_info[1], cached=True) 
                                                 for lorentz in aloha_info[0] ])
@@ -3935,11 +3931,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     # Extract all wavefunctions contributing to this amplitude
                     diagram_wfs = HelasWavefunctionList()
                     for amplitude in diagram.get('amplitudes'):
-                        wavefunctions = \
-                          sorted(HelasWavefunctionList.\
-                               extract_wavefunctions(amplitude.get('mothers')),
-                                 key=lambda wf: wf.get('number'))
-                        for wf in wavefunctions:
+                        wavefunctions = HelasWavefunctionList.\
+                               extract_wavefunctions(amplitude.get('mothers'))
+
+                        for wf in reversed(wavefunctions):
                             # Check if wavefunction already used, otherwise add
                             if wf.get('number') not in wf_numbers and \
                                    wf not in diagram_wfs:
@@ -5457,7 +5452,6 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                         )      
                     # Add the decays to the list
                     decay_list.append(list(zip(fs_numbers[fs_id], prod)))
-
                 decay_lists.append(decay_list)
                  
             # Finally combine all decays for this process,
@@ -5490,12 +5484,13 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                              ", ".join([d.get('processes')[0].nice_string().\
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
-
-                if pols:
-                    if hasattr(matrix_element,'ordering_for_pol'):
-                        matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
-                    else:
-                        matrix_element.ordering_for_pol = {fs_id: ordered_for_pol}
+                
+                for fs_id in set(fs_ids):
+                    if fs_pols_dict[fs_id]:
+                        if hasattr(matrix_element,'ordering_for_pol'):
+                            matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
+                        else:
+                            matrix_element.ordering_for_pol = {fs_id: ordered_for_pol}
                         
                     
                 matrix_element.insert_decay_chains(decay_dict)

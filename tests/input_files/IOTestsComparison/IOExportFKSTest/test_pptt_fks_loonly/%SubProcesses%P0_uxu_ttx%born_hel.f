@@ -66,10 +66,10 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u~ u > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: c~ c > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: d~ d > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: s~ s > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
+C     Process: u~ u > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c~ c > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: d~ d > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s~ s > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -155,10 +155,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u~ u > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: c~ c > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: d~ d > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
-C     Process: s~ s > t t~ [ LOonly = QCD QED ] QCD^2=6 QED^2=0
+C     Process: u~ u > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: c~ c > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: d~ d > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: s~ s > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -186,8 +186,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -202,11 +203,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
 C     1 T(1,2) T(3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     1 T(1,4) T(3,2)
 C     ----------
 C     BEGIN CODE
@@ -221,8 +222,8 @@ C     ----------
         ENDDO
       ENDIF
 C     JAMPs contributing to orders QCD=2 QED=0
-      JAMP(1,1)=+1D0/2D0*(-1D0/3D0*AMP(1))
-      JAMP(2,1)=+1D0/2D0*(+AMP(1))
+      JAMP(1,1) = (-1.666666666666667D-01)*AMP(1)
+      JAMP(2,1) = (5.000000000000000D-01)*AMP(1)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -233,7 +234,7 @@ C     JAMPs contributing to orders QCD=2 QED=0
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
-     $     *DCONJG(JAMP(I,M))/DENOM(I)
+     $     *DCONJG(JAMP(I,M))
         ENDDO
       ENDDO
       END

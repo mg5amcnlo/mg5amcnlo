@@ -40,179 +40,191 @@ import six
 class TestFKSProcess(unittest.TestCase):
     """a class to test FKS Processes"""
 
-    
-    def setUp(self):
-        
-        if hasattr(TestFKSProcess, "myproc"):
-            return
-        
-        # the model, import the SM but remove 2nd and 3rd gen quarks
-        remove_list = [3,4,5,6,-3,-4,-5,-6]
-        mymodel = import_ufo.import_model('sm')
-        for p in mymodel['particles']:
+    # the model, import the SM but remove 2nd and 3rd gen quarks
+    remove_list = [3,4,5,6,-3,-4,-5,-6]
+    mymodel = import_ufo.import_model('sm')
+    for p in mymodel['particles'][:]:
+        if p.get_pdg_code() in remove_list:
+            mymodel['particles'].remove(p)
+    for ii in mymodel['interactions'][:]:
+        for p in ii['particles']:
             if p.get_pdg_code() in remove_list:
-                mymodel['particles'].remove(p)
-        for ii in mymodel['interactions']:
-            if any([p.get_pdg_code() in remove_list for p in ii['particles']]):
-                    mymodel['interactions'].remove(ii)
-    
-        myleglist = MG.LegList()
-        # PROCESS: u g > u g 
-        mylegs = [{
-            'id': 2,
-            'number': 1,
-            'state': False}, 
-            { 
-            'id': 21,
-            'number': 2,
-            'state': False},
-            {
-            'id': 2,
-            'number': 3,
-            'state': True},
-            {
-            'id': 21,
-            'number': 4,
-            'state': True}]
-    
-        for i in mylegs:
-            myleglist.append(MG.Leg(i))
-    
-        myleglist2 = MG.LegList()
-        # PROCESS: d d~ > u u~
-        mylegs2 = [{ 
-            'id': 1,
-            'number': 1,
-            'state': False}, 
-            { 
-            'id': -1,
-            'number': 2,
-            'state': False},
-            {
-            'id': 2,
-            'number': 3,
-            'state': True},
-            {
-            'id': -2,
-            'number': 4,
-            'state': True}]
-    
-        for i in mylegs2:
-            myleglist2.append(MG.Leg(i))
-            
-            myleglist3 = MG.LegList()
-        # PROCESS: d d~ > a a
-        mylegs3 = [{ 
-            'id': 1,
-            'number': 1,
-            'state': False}, 
-            { 
-            'id': -1,
-            'number': 2,
-            'state': False},
-            {
-            'id': 22,
-            'number': 3,
-            'state': True},
-            {
-            'id': 22,
-            'number': 4,
-            'state': True}]
-    
-        for i in mylegs3:
-            myleglist3.append(MG.Leg(i))
+                mymodel['interactions'].remove(ii)
+                break
+
+    myleglist = MG.LegList()
+    # PROCESS: u g > u g 
+    mylegs = [{
+        'id': 2,
+        'number': 1,
+        'state': False}, 
+        { 
+        'id': 21,
+        'number': 2,
+        'state': False},
+        {
+        'id': 2,
+        'number': 3,
+        'state': True},
+        {
+        'id': 21,
+        'number': 4,
+        'state': True}]
+
+    for i in mylegs:
+        myleglist.append(MG.Leg(i))
+
+    myleglist2 = MG.LegList()
+    # PROCESS: d d~ > u u~
+    mylegs2 = [{ 
+        'id': 1,
+        'number': 1,
+        'state': False}, 
+        { 
+        'id': -1,
+        'number': 2,
+        'state': False},
+        {
+        'id': 2,
+        'number': 3,
+        'state': True},
+        {
+        'id': -2,
+        'number': 4,
+        'state': True}]
+
+    for i in mylegs2:
+        myleglist2.append(MG.Leg(i))
         
-        # PROCESS: u g > u g 
-        dict_qcd = {'legs' : myleglist, 
-                    'orders':{'QCD':4, 'QED':0},
-                    'born_orders':{'QCD':2, 'QED':0},
-                    'squared_orders':{'QCD':6, 'QED':0},
-                    'split_orders':['QCD', 'QED'],
-                    'sqorders_types':{'QED':'=', 'QCD':'='},
-                    'model': mymodel,
-                    'id': 1,
-                    'required_s_channels':[],
-                    'forbidden_s_channels':[],
-                    'forbidden_particles':[],
-                    'is_decay_chain': False,
-                    'perturbation_couplings':['QCD'],
-                    'decay_chains': MG.ProcessList(),
-                    'overall_orders': {}}
-        
-        dict_qed = {'legs' : myleglist, 
-                    'orders':{'QCD':2, 'QED':2},
-                    'born_orders':{'QCD':2, 'QED':0},
-                    'squared_orders':{'QCD':4, 'QED':2},
-                    'split_orders':['QCD', 'QED'],
-                    'sqorders_types':{'QED':'=', 'QCD':'='},
-                    'model': mymodel,
-                    'id': 1,
-                    'required_s_channels':[],
-                    'forbidden_s_channels':[],
-                    'forbidden_particles':[],
-                    'is_decay_chain': False,
-                    'perturbation_couplings':['QED'],
-                    'decay_chains': MG.ProcessList(),
-                    'overall_orders': {}}
+        myleglist3 = MG.LegList()
+    # PROCESS: d d~ > a a
+    mylegs3 = [{ 
+        'id': 1,
+        'number': 1,
+        'state': False}, 
+        { 
+        'id': -1,
+        'number': 2,
+        'state': False},
+        {
+        'id': 22,
+        'number': 3,
+        'state': True},
+        {
+        'id': 22,
+        'number': 4,
+        'state': True}]
+
+    for i in mylegs3:
+        myleglist3.append(MG.Leg(i))
     
-        # PROCESS: d d~ > u u~
-        dict2_qcd = {'legs' : myleglist2, 
-                     'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
-                     'model': mymodel,
-                     'id': 1,
-                     'required_s_channels':[],
-                     'forbidden_s_channels':[],
-                     'forbidden_particles':[],
-                     'is_decay_chain': False,
-                     'perturbation_couplings':['QCD'],
-                     'decay_chains': MG.ProcessList(),
-                     'overall_orders': {}}
-        
-        dict2_qed = {'legs' : myleglist2, 
-                     'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
-                     'model': mymodel,
-                     'id': 1,
-                     'required_s_channels':[],
-                     'forbidden_s_channels':[],
-                     'forbidden_particles':[],
-                     'is_decay_chain': False,
-                     'perturbation_couplings':['QED'],
-                     'decay_chains': MG.ProcessList(),
-                     'overall_orders': {}}
-        
-        # PROCESS: d d~ > a a
-        dict3_qcd = {'legs' : myleglist3, 
-                     'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
-                     'model': mymodel,
-                     'id': 1,
-                     'required_s_channels':[],
-                     'forbidden_s_channels':[],
-                     'forbidden_particles':[],
-                     'is_decay_chain': False,
-                     'perturbation_couplings':['QCD'],
-                     'decay_chains': MG.ProcessList(),
-                     'overall_orders': {}}
-        
-        dict3_qed = {'legs' : myleglist3, 
-                     'orders':{'QCD':0, 'QED':2, 'WEIGHTED':4},
-                     'model': mymodel,
-                     'id': 1,
-                     'required_s_channels':[],
-                     'forbidden_s_channels':[],
-                     'forbidden_particles':[],
-                     'is_decay_chain': False,
-                     'perturbation_couplings':['QED'],
-                     'decay_chains': MG.ProcessList(),
-                     'overall_orders': {}}
+    # PROCESS: u g > u g 
+    dict_qcd = {'legs' : myleglist, 
+                'born_sq_orders':{'QCD':4, 'QED':0},
+                'squared_orders':{'QCD':6, 'QED':0},
+                'split_orders':['QCD', 'QED'],
+                'sqorders_types':{'QED':'=', 'QCD':'='},
+                'model': mymodel,
+                'id': 1,
+                'required_s_channels':[],
+                'forbidden_s_channels':[],
+                'forbidden_particles':[],
+                'is_decay_chain': False,
+                'perturbation_couplings':['QCD'],
+                'decay_chains': MG.ProcessList(),
+                'overall_orders': {}}
     
-        
-        TestFKSProcess.myproc = MG.Process(dict_qcd)
-        TestFKSProcess.myproc2 = MG.Process(dict2_qcd)
-        TestFKSProcess.myprocaa= MG.Process(dict3_qcd)
-        TestFKSProcess.myproc_qed = MG.Process(dict_qed)
-        TestFKSProcess.myproc2_qed = MG.Process(dict2_qed)
-        TestFKSProcess.myprocaa_qed = MG.Process(dict3_qed)
-        TestFKSProcess.mymodel = mymodel
+    dict_qed = {'legs' : myleglist, 
+                'born_sq_orders':{'QCD':4, 'QED':0},
+                'squared_orders':{'QCD':4, 'QED':2},
+                'split_orders':['QCD', 'QED'],
+                'sqorders_types':{'QED':'=', 'QCD':'='},
+                'model': mymodel,
+                'id': 1,
+                'required_s_channels':[],
+                'forbidden_s_channels':[],
+                'forbidden_particles':[],
+                'is_decay_chain': False,
+                'perturbation_couplings':['QED'],
+                'decay_chains': MG.ProcessList(),
+                'overall_orders': {}}
+
+    # PROCESS: d d~ > u u~
+    dict2_qcd = {'legs' : myleglist2, 
+                 #'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
+                 #'squared_orders':{'QCD':6, 'QED':0, 'WEIGHTED':6},
+                 'born_sq_orders':{'QCD':4, 'QED':0},
+                 'squared_orders':{'QCD':6, 'QED':0},
+                 'split_orders':['QCD', 'QED'],
+                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'model': mymodel,
+                 'id': 1,
+                 'required_s_channels':[],
+                 'forbidden_s_channels':[],
+                 'forbidden_particles':[],
+                 'is_decay_chain': False,
+                 'perturbation_couplings':['QCD'],
+                 'decay_chains': MG.ProcessList(),
+                 'overall_orders': {}}
+    
+    dict2_qed = {'legs' : myleglist2, 
+                 #'born_sq_orders':{'QCD':4, 'QED':0, 'WEIGHTED':4},
+                 #'squared_orders':{'QCD':4, 'QED':2, 'WEIGHTED':8},
+                 'born_sq_orders':{'QCD':4, 'QED':0},
+                 'squared_orders':{'QCD':4, 'QED':2},
+                 'split_orders':['QCD', 'QED'],
+                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'model': mymodel,
+                 'id': 1,
+                 'required_s_channels':[],
+                 'forbidden_s_channels':[],
+                 'forbidden_particles':[],
+                 'is_decay_chain': False,
+                 'perturbation_couplings':['QED'],
+                 'decay_chains': MG.ProcessList(),
+                 'overall_orders': {}}
+    
+    # PROCESS: d d~ > a a
+    dict3_qcd = {'legs' : myleglist3, 
+                 #'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
+                 #'squared_orders':{'QCD':2, 'QED':4, 'WEIGHTED':10},
+                 'born_sq_orders':{'QCD':0, 'QED':4},
+                 'squared_orders':{'QCD':2, 'QED':4},
+                 'split_orders':['QCD', 'QED'],
+                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'model': mymodel,
+                 'id': 1,
+                 'required_s_channels':[],
+                 'forbidden_s_channels':[],
+                 'forbidden_particles':[],
+                 'is_decay_chain': False,
+                 'perturbation_couplings':['QCD'],
+                 'decay_chains': MG.ProcessList(),
+                 'overall_orders': {}}
+    
+    dict3_qed = {'legs' : myleglist3, 
+                 #'born_sq_orders':{'QCD':0, 'QED':4, 'WEIGHTED':8},
+                 #'squared_orders':{'QCD':0, 'QED':6, 'WEIGHTED':12},
+                 'born_sq_orders':{'QCD':0, 'QED':4},
+                 'squared_orders':{'QCD':0, 'QED':6},
+                 'split_orders':['QCD', 'QED'],
+                 'sqorders_types':{'QED':'=', 'QCD':'='},
+                 'model': mymodel,
+                 'id': 1,
+                 'required_s_channels':[],
+                 'forbidden_s_channels':[],
+                 'forbidden_particles':[],
+                 'is_decay_chain': False,
+                 'perturbation_couplings':['QED'],
+                 'decay_chains': MG.ProcessList(),
+                 'overall_orders': {}}
+    
+    myproc = MG.Process(dict_qcd)
+    myproc2 = MG.Process(dict2_qcd)
+    myprocaa= MG.Process(dict3_qcd)
+    myproc_qed = MG.Process(dict_qed)
+    myproc2_qed = MG.Process(dict2_qed)
+    myprocaa_qed = MG.Process(dict3_qed)
     
     
     def test_FKSMultiProcess(self):
@@ -230,8 +242,7 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':4, 'QED':0},
-                        'born_orders': {'QCD':2, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':6, 'QED':0},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -240,8 +251,7 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':2, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -322,8 +332,7 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -334,8 +343,7 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':2, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -379,16 +387,14 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist_qed,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':2, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':4, 'QED':2},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -427,8 +433,7 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -437,8 +442,7 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':0, 'QED':4},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':0, 'QED':6},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
@@ -461,8 +465,7 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist1[1].set('state', False)
         my_process_definition1 = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
@@ -472,8 +475,7 @@ class TestFKSProcess(unittest.TestCase):
         my_process_definition1_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
                         'perturbation_couplings': ['QED'],
-                        'orders': {'QCD':0, 'QED':4},
-                        'born_orders': {'QCD':0, 'QED':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4},
                         'squared_orders': {'QCD':0, 'QED':6},
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -510,8 +512,7 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': 21, 'state':True})])
         
         dict = {'legs' : leglist, 
-                'orders':{'QCD':4, 'QED':0},
-                'born_orders':{'QCD':2, 'QED':0},
+                'born_sq_orders':{'QCD':4, 'QED':0},
                 'squared_orders':{'QCD':6, 'QED':0},
                 'split_orders':['QED','QCD'],
                 'sqorders_types':{'QED':'=','QCD':'='},
@@ -597,65 +598,104 @@ class TestFKSProcess(unittest.TestCase):
                 # real config 1: g g > g g g
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}],
                     },
                  {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                     'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}],
                      },
                  {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                     'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}],
                      }],
                 # real config 2: u g > u g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 3: ux g > ux g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 4: d g > d g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 5: dx g > dx g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 6: g u > u g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 7: g ux > ux g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 8: g d > d g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 9: g dx > dx g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 10: g g > u ux g
                 [{'i':4, 'j':3, 'ij':3, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}],
                     }],
                 # real config 11: g g > d dx g
                 [{'i':4, 'j':3, 'ij':3, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}]
                     }]]
 
         myfks.generate_reals([],[])
@@ -673,8 +713,7 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': -2, 'state':True})])
 
         dict = {'legs' : leglist, 
-                'orders':{'QCD':1, 'QED':3},
-                'born_orders': {'QCD':1, 'QED':1},
+                'born_sq_orders': {'QCD':2, 'QED':2},
                 'squared_orders': {'QCD':2, 'QED':4},
                 'sqorders_types': {'QED':'=', 'QCD':'='},
                 'model': self.mymodel,
@@ -971,36 +1010,31 @@ class TestFKSProcess(unittest.TestCase):
                 if amp.pdgs == array.array('i', [2, 21, 2, 21, 21])]
         self.assertEqual(len(amp_ugugg), 1)
         self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
-#        misc.sprint('fix rb links')
         self.assertEqual(amp_ugugg[0].fks_infos,
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                    #'rb_links':[{'born_conf': 0, 'real_conf': 11},
-                    #            {'born_conf': 1, 'real_conf': 10},
-                    #            {'born_conf': 2, 'real_conf': 9}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}]},
                  {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 14},
-                     #            {'born_conf': 1, 'real_conf': 4},
-                     #            {'born_conf': 2, 'real_conf': 7}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}]},
                  {'i':5, 'j':3, 'ij':3, 'ij_id':2, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 1},
-                     #           {'born_conf': 1, 'real_conf': 13},
-                     #           {'born_conf': 2, 'real_conf': 8}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 1},
+                                {'born_conf': 1, 'real_conf': 13},
+                                {'born_conf': 2, 'real_conf': 8}]},
                  {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  }
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 2},
-                     #            {'born_conf': 1, 'real_conf': 5},
-                     #            {'born_conf': 2, 'real_conf': 12}]}
+                  'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}]}
                      ])
 
         

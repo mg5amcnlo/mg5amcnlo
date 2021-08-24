@@ -197,10 +197,7 @@ def import_model_from_db(model_name, local_dir=False):
         raise Exception("Impossible to unpack the model. Please install it manually")
     return True
 
-def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
-                                                    complex_mass_scheme = None):
-    """ a practical and efficient way to import a model"""
-    
+def get_path_restrict(model_name, restrict=True):
     # check if this is a valid path or if this include restriction file       
     try:
         model_path = find_ufo_path(model_name)
@@ -239,6 +236,14 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                 restrict_file = restrict
             else:
                 raise Exception("%s is not a valid path for restrict file" % restrict)
+    
+    return model_path, restrict_file, restrict_name
+
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
+                                                    complex_mass_scheme = None):
+    """ a practical and efficient way to import a model"""
+    
+    model_path, restrict_file, restrict_name = get_path_restrict(model_name, restrict)
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
@@ -2013,6 +2018,21 @@ class RestrictModel(model_reader.ModelReader):
                     self['parameter_dict'][parameter.name[4:]] = 'auto'
                 else:
                     raise Exception
+
+        # delete cache for coupling_order if some coupling are not present in the model anymore
+        old_order = self['coupling_orders']
+        self['coupling_orders'] = None
+        if old_order and old_order != self.get('coupling_orders'):
+            removed = set(old_order).difference(set(self.get('coupling_orders')))
+            logger.warning("Some coupling order do not have any coupling associated to them: %s", list(removed))
+            logger.warning("Those coupling order will not be valid anymore for this model")
+
+            self['order_hierarchy'] = {}
+            self['expansion_order'] = None
+            #and re-initialize it to avoid any potential side effect
+            self.get('order_hierarchy')
+            self.get('expansion_order')
+
 
 
         

@@ -290,8 +290,8 @@ class MatrixElementEvaluator(object):
                                                 mode='mg5',
                                                 language = 'Python'))
         for routine in aloha_model.external_routines:
-            aloha_routines.append(
-                     open(aloha_model.locate_external(routine, 'Python')).read())
+            for path in aloha_model.locate_external(routine, 'Python'):
+                aloha_routines.append(open(path).read())
 
         # Define the routines to be available globally
         previous_globals = list(globals().keys())
@@ -400,7 +400,8 @@ class MatrixElementEvaluator(object):
         if events:
             ids = [l.get('id') for l in sorted_legs]
             import MadSpin.decay as madspin
-            if not hasattr(self, 'event_file'):
+            if not hasattr(self, 'event_file') or self.event_file.inputfile.closed:
+                print( "reset")
                 fsock = open(events)
                 self.event_file = madspin.Event(fsock)
 
@@ -419,6 +420,7 @@ class MatrixElementEvaluator(object):
             for part in event.values():
                 m = part['momentum']
                 p.append([m.E, m.px, m.py, m.pz])
+            fsock.close()
             return p, 1
 
         nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])

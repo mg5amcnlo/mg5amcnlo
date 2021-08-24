@@ -72,6 +72,12 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+C     Common blocks
+
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
       INTEGER NB_SPIN_STATE(2)
       DATA  NB_SPIN_STATE /2,2/
       COMMON /NB_HEL_STATE/ NB_SPIN_STATE
@@ -105,6 +111,8 @@ C      and to 0 to reset the cache.
       DATA LAST_ICONF/-1/
       COMMON/TO_LAST_ICONF/LAST_ICONF
 
+      LOGICAL INIT_MODE
+      COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -113,6 +121,18 @@ C     ----------
 C     Make sure cuts are evaluated for first subprocess
       CUTSDONE=.FALSE.
       CUTSPASSED=.FALSE.
+
+      IF(PDLABEL.EQ.'dressed'.AND.DS_GET_DIM_STATUS('ee_mc').EQ.-1)THEN
+        CALL DS_REGISTER_DIMENSION('ee_mc', 0)
+C       ! set both mode 1: resonances, 2: no resonances to 50-50
+        CALL DS_ADD_BIN('ee_mc', 1)
+        CALL DS_ADD_BIN('ee_mc', 2)
+        CALL DS_ADD_ENTRY('ee_mc', 1, 0.5D0, .TRUE.)
+        CALL DS_ADD_ENTRY('ee_mc', 2, 0.5D0, .TRUE.)
+        CALL DS_UPDATE_GRID('ee_mc')
+      ENDIF
+
+
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
@@ -191,7 +211,7 @@ C     IMODE.EQ.0, regular run mode
         CALL DS_SET_MIN_POINTS(10,'grouped_processes')
         DO J=1,SYMCONF(0)
           DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
               DO IMIRROR=1,2
                 IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -208,13 +228,14 @@ C     IMODE.EQ.0, regular run mode
      $    ALL_GRIDS=.FALSE.)
       ENDIF
 
+
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
 C     Turn caching on in dsigproc to avoid too many calls to switchmom
       LAST_ICONF=0
       DO J=1,SYMCONF(0)
         DO IPROC=1,MAXSPROC
-          IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+          IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
             DO IMIRROR=1,2
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
@@ -262,7 +283,7 @@ C        switchmom
         LAST_ICONF=0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
               DO K=1,2
                 IF(K.EQ.1.OR.MIRRORPROCS(I))THEN
                   IPROC=I
@@ -283,7 +304,11 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+                  IF(INIT_MODE) THEN
+                    SELPROC(K,I,J) = 1D0
+                  ELSE
+                    SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+                  ENDIF
                   SUMPROB = SUMPROB + SELPROC(K,I,J)
                 ENDIF
               ENDDO
@@ -311,7 +336,7 @@ C      all, then we pick a point based on PDF only.
         TOTWGT=0D0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
               DO K=1,2
                 TOTWGT=TOTWGT+SELPROC(K,I,J)
                 IF(R.LT.TOTWGT)THEN
@@ -596,5 +621,10 @@ C
 
 
 
+      SUBROUTINE PRINT_ZERO_AMP()
 
+      CALL PRINT_ZERO_AMP_1()
+      CALL PRINT_ZERO_AMP_2()
+      RETURN
+      END
 

@@ -179,10 +179,11 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=16)
+      parameter (npdfs=17)
       character*7 pdflabs(npdfs)
       data pdflabs/
-     $   'none',
+     $     'none',
+     $     'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
      $   'cteq4_m',
@@ -200,7 +201,8 @@ C-------------------------------------------------
      $   'nn23nlo'/
       integer numspdf(npdfs)
       data numspdf/
-     $   00000,
+     $     00000,
+     $     00000, 
      $   20250,
      $   20270,
      $   19150,

@@ -11,8 +11,8 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: d~ d > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: s~ s > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     
 C     
 C     CONSTANTS
@@ -199,8 +199,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: d~ d > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: s~ s > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -367,8 +367,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: d~ d > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: s~ s > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: d~ d > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: s~ s > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -400,9 +400,10 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS), JAMPH(2, NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -430,11 +431,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
 C     1 T(1,2) T(3,4)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     1 T(1,4) T(3,2)
 C     ----------
 C     BEGIN CODE
@@ -507,11 +508,10 @@ C           Amplitude(s) for diagram number 3
             ENDDO
           ENDIF
 C         JAMPs contributing to orders QCD=2 QED=0
-          JAMP(1,1)=+1D0/2D0*(-1D0/3D0*AMP(2))
-          JAMP(2,1)=+1D0/2D0*(+AMP(2))
+          JAMP(1,1) = (-1.666666666666667D-01)*AMP(2)
+          JAMP(2,1) = (5.000000000000000D-01)*AMP(2)
 C         JAMPs contributing to orders QCD=0 QED=2
-          JAMP(1,2)=+AMP(1)+AMP(3)
-          JAMP(2,2)=0D0
+          JAMP(1,2) = AMP(1)+AMP(3)
           DO M = 1, NAMPSO
             DO I = 1, NCOLOR
               ZTEMP = (0.D0,0.D0)
@@ -521,7 +521,7 @@ C         JAMPs contributing to orders QCD=0 QED=2
               DO N = 1, NAMPSO
                 BORNS(2-(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))=BORNS(2
      $           -(1+BACK_HEL*IHEL)/2,SQSOINDEXB(M,N))+ZTEMP
-     $           *DCONJG(JAMP(I,N))/DENOM(I)
+     $           *DCONJG(JAMP(I,N))
               ENDDO
             ENDDO
           ENDDO
@@ -549,7 +549,7 @@ C         JAMPs contributing to orders QCD=0 QED=2
           ENDDO
           DO N = 1, NAMPSO
             ANS(2,SQSOINDEXB(M,N))= ANS(2,SQSOINDEXB(M,N)) + ZTEMP
-     $       *DCONJG(JAMPH(1,I,N))/DENOM(I)
+     $       *DCONJG(JAMPH(1,I,N))
           ENDDO
         ENDDO
       ENDDO

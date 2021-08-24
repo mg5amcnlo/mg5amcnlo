@@ -1464,6 +1464,8 @@ class AskRunNLO(cmd.ControlSwitch):
 class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCmd):
     """The command line processor of MadGraph"""    
     
+
+    LO = False
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
@@ -1714,7 +1716,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             name = 'fo_lhe_postprocessing'
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
-                        
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1793,7 +1795,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
-        
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file, options)
@@ -2015,7 +2019,42 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
+            # gather the various orders tag and write include files
+            self.write_orders_tag_info()
+
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def write_orders_tag_info(self):
+        """Collects the informations on the orders_tag variable from the 
+        different channels and writes a file, linked to the P0 dirs
+        """
+        log = pjoin(self.me_dir, 'Events', self.run_name, 'alllogs_0.html')
+        content = open(log).read()
+        taglines = [l for l in content.split('\n') if 'orders_tag_plot=' in l]
+        orderstags = []
+        for l in taglines:
+            tag = int(l.split()[1])
+            if not tag in orderstags:
+                orderstags.append(tag)
+        # now write a fortran include file with all the informations
+        content = '%d\n' % len(orderstags)
+        content+= '%s\n' % ' '.join(['%d' % v for v in orderstags])
+        outfile = open(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
+        outfile.write(content)
+        outfile.close()
+
+        # finally link it into the p dirs
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+
+        for p_dir in p_dirs:
+            if not os.path.isfile(pjoin(self.me_dir, 'SubProcesses', p_dir, 'orderstags_glob.dat')):
+                files.ln(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'),
+                         pjoin(self.me_dir, 'SubProcesses', p_dir))
+
+        return
+
 
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
@@ -3048,7 +3087,7 @@ RESTART = %(mint_mode)s
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
-                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                                            info = 'cluster handling will be done with PLUGIN: %(plug)s' )
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
         
@@ -3114,7 +3153,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'elastic photon from e'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'e-', 4:'mu-', -3:'e+', -4:'mu+'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:
@@ -3850,6 +3889,12 @@ RESTART = %(mint_mode)s
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
+
+        # HwU.f now contains some calls to the PineAPPL functions. One should add the 
+        #  dummy interface to have them linked
+        if "HwU.o" in self.shower_card['analyse'] and \
+          not "pineappl_interface_dummy.o" in self.shower_card['analyse']: 
+            self.shower_card['analyse'] += " pineappl_interface_dummy.o"
 
         # set the PATH for the dynamic libraries
         if sys.platform == 'darwin':
@@ -4895,6 +4940,7 @@ RESTART = %(mint_mode)s
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
+            input_files.append(pjoin(cwd, os.path.pardir, 'orderstags_glob.dat'))
             input_files.append(args[0])
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
@@ -5108,6 +5154,7 @@ RESTART = %(mint_mode)s
             exe = 'madevent_mintFO'
             tests = ['test_ME']
             self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
+            self.analyse_card.update_FO_extrapaths_ajob(pjoin(self.me_dir, 'SubProcesses', 'ajob_template'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
@@ -5132,14 +5179,26 @@ RESTART = %(mint_mode)s
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') != 0 or \
-                 self.banner.get_detail('run_card', 'lpp2') != 0):
+                (abs(self.banner.get_detail('run_card', 'lpp1')) not in [0, 3, 4] or \
+                 abs(self.banner.get_detail('run_card', 'lpp2')) not in [0, 3, 4]):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
+        # this is the case of collision with dressed leptons
+        elif abs(self.banner.get_detail('run_card', 'lpp1')) == \
+             abs(self.banner.get_detail('run_card', 'lpp2')) in [3,4]:
+
+            # force not to use LHAPDF in this case
+            if self.run_card['pdlabel'] == 'lhapdf':
+                raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
+            # copy the files for the chosen density
+            if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
+
+        # bare leptons, or anything else
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
@@ -5424,7 +5483,7 @@ RESTART = %(mint_mode)s
         ####mode = None # allow to overwrite it due to EW
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
-                              mode=mode, force=force,
+                              mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
                               return_instance=True)
 
@@ -5510,7 +5569,7 @@ RESTART = %(mint_mode)s
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
-            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower'] and self.run_card['parton_shower'].upper() != 'PYTHIA8':
+            elif self.run_card['ickkw'] == 3 and ((mode in ['aMC@NLO'] and self.run_card['parton_shower'].upper() != 'PYTHIA8') or mode in ['noshower']):
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
@@ -5653,9 +5712,10 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
+
     if sys.version_info[1] < 7:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.7 or python3.7 and later.\n'+\
-               'Please upgrade your version of python or specify a compatible version')
+        sys.exit('MadGraph5_aMc@NLO works only with python 2.7 or python3.7 and later.\n'+\
+               'Please upgrade your version of python or specify a compatible version.')
 
     import os
     import optparse

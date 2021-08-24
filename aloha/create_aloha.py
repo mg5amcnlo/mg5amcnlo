@@ -311,7 +311,6 @@ in presence of majorana particle/flow violation"""
                 propa = [t[1:] for t in self.tag if t.startswith('P')]
                 if propa == ['0']: 
                     if spin == 3 and aloha.unitary_gauge == 2:
-                        misc.sprint(spin)
                         lorentz *= complex(0,1) * self.get_custom_propa('1PS', spin, id)
                         continue
                     else:
@@ -481,6 +480,12 @@ in presence of majorana particle/flow violation"""
         elif propa == "1PS":
             numerator = "(-1*(P(-1,id)*PBar(-1,id)) * Metric(1, 2) + P(1,id)*PBar(2,id) + PBar(1,id)*P(2,id))"
             denominator = "(P(-3,id)*PBar(-3,id))*P(-2,id)**2"
+        elif propa == "1N":
+            if spin == 3:
+                numerator = '-1*IdentityL(1,2)'
+            else:
+                numerator = "-1"
+            denominator = "1"
         else:
             raise Exception
 
@@ -538,6 +543,7 @@ in presence of majorana particle/flow violation"""
             return eval(numerator) * propaR
         else:
             return eval(numerator)
+        
     
             
 
@@ -788,13 +794,20 @@ class AbstractALOHAModel(dict):
         if hasattr(self, 'cached_interaction_infos'):
             # Now try to recover it
             for info_key in infos:
+                all_done = True
                 try:
                     returned_dict[info] = self.cached_interaction_infos[\
                                          (lorentzname,outgoing,tuple(tag),info)]
                 except KeyError:
                     # Some information has never been computed before, so they
                     # will be computed later.
-                    pass             
+                    all_done = False
+                    pass
+            if all_done:             
+                if isinstance(info, str):
+                    return returned_dict[info]
+                else:
+                    return returned_dict
         elif cached:
             self.cached_interaction_infos = {}
 
@@ -921,7 +934,20 @@ class AbstractALOHAModel(dict):
         # self.explicit_combine = False
         request = {}
 
+        #handle special outgoing=-1 flag (which means do it for all particle outgoing)
+        # use for P1N
+        for list_l_name, tag, outgoing in data[:]:
+            if outgoing == -1: #means do for all particle.
+                data.remove((list_l_name, tag, outgoing))
+                l_name = list_l_name[0]
+                lorentz = eval('self.model.lorentz.%s' % l_name)
+                for i in range(len(lorentz.spins)):
+                    data.append((list_l_name, tag, i+1))
+                
+                
+
         for list_l_name, tag, outgoing in data:
+            
             #allow tag to have integer for retro-compatibility
             all_tag = tag[:]
             conjugate = [i for i in tag if isinstance(i, int)]
@@ -1110,7 +1136,8 @@ class AbstractALOHAModel(dict):
 
         ext_files  = []
         for path in paths:
-            ext_files = misc.glob('%s.%s' % (name, ext), path)
+            base, amp = name.rsplit('_',1)
+            ext_files = misc.glob('%s*_%s.%s' % (base,amp, ext), path)
             if ext_files:
                 break
         else: 
@@ -1122,6 +1149,7 @@ class AbstractALOHAModel(dict):
             for filepath in ext_files:
                 
                 files.cp(filepath, output_dir)
+
         return ext_files
                     
         

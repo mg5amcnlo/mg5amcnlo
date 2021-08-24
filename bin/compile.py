@@ -18,6 +18,7 @@ from __future__ import print_function
 import os
 import sys
 import logging
+import logging.config
 import time
 import shutil
 import subprocess
@@ -33,11 +34,18 @@ import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import madgraph.interface.coloring_logging
 import re
 
 # Set logging level to error
-logging.basicConfig(level=vars(logging)['INFO'],
-                    format="%(message)s")
+#logging.basicConfig(level=vars(logging)['INFO'],
+#                    format="%(message)s")
+level=50
+logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+logging.root.setLevel(level)
+logging.getLogger('madgraph').setLevel(level)
+logging.getLogger('madevent').setLevel(level)
+
 pjoin = os.path.join
 
 class Compile_MG5:
@@ -76,8 +84,8 @@ class Compile_MG5:
 
     def test_output_NLO(self):
         """do the output of a simple LO process to ensure that LO is correctly configure."""
-        self.cmd.exec_cmd('generate p p > e+ ve [QCD]')
-        self.cmd.exec_cmd('output %s/TESTNLO' %root_path)
+        self.cmd.run_cmd('generate p p > e+ ve [QCD]')
+        self.cmd.run_cmd('output %s/TESTNLO' %root_path)
         shutil.rmtree('%s/TESTNLO' % root_path)
 
     @staticmethod
@@ -280,7 +288,7 @@ class Compile_MG5:
     def install_package(self, programs=[]):
         print("installing external package")
         if not programs:
-            programs = ['pythia-pgs','Delphes','ExRootAnalysis','MadAnalysis4','SysCalc']
+            programs = ['pythia8','Delphes','ExRootAnalysis','MadAnalysis5']
             
         for prog in programs:
             self.cmd.exec_cmd('install %s' % prog)

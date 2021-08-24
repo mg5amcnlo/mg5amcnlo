@@ -2322,7 +2322,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         already created and can be specified here instead of being generated.
         This can make a difference for very complicated models."""
         
-        if not alohaModel:# is None:
+        if not isinstance(alohaModel, create_aloha.AbstractALOHAModel):# is None:
+            assert not alohaModel
             # Generate it here
             model = self.get('processes')[0].get('model')
             myAlohaModel = create_aloha.AbstractALOHAModel(model.get('modelpath'))
@@ -2337,6 +2338,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for diag in self.get_loop_diagrams():
             for amp in diag.get_loop_amplitudes():
                 amp.compute_analytic_information(myAlohaModel)
+                
+        return myAlohaModel
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, tags, outgoing) with

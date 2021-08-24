@@ -114,7 +114,7 @@ c Set alphaS(mZ)
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
-      if (nlo_ps) then
+      if (nlo_ps.or.pineappl) then
 C Fill common block for Les Houches init info
          do i=1,2
             if(lpp(i).eq.1.or.lpp(i).eq.2) then
@@ -125,6 +125,10 @@ C Fill common block for Les Houches init info
                idbmup(i)=11
             elseif(lpp(i).eq.-3) then
                idbmup(i)=-11
+            elseif(lpp(i).eq.4) then
+               idbmup(i)=13
+            elseif(lpp(i).eq.-4) then
+               idbmup(i)=-13               
             elseif(lpp(i).eq.0) then
                open (unit=71,status='old',file='initial_states_map.dat')
                read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
@@ -134,7 +138,8 @@ C Fill common block for Les Houches init info
             endif
             ebmup(i)=ebeam(i)
          enddo
-         call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+         if (abs(lpp(1)).eq.1 .or. abs(lpp(2)).eq.1)
+     $       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
       endif
 c Fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.

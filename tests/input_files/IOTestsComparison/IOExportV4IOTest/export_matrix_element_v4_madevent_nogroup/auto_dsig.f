@@ -47,6 +47,13 @@ C
       DATA NFACT/1/
       SAVE NFACT
 C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE '../../Source/PdF/eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+
+      INTEGER I_EE
+C     
 C     EXTERNAL FUNCTIONS
 C     
       LOGICAL PASSCUTS
@@ -68,6 +75,10 @@ C     Keep track of whether cuts already calculated for this event
 
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C     
 C     local
 C     
@@ -106,12 +117,12 @@ C     Continue only if IMODE is 0, 4 or 5
 
       IF (PASSCUTS(PP)) THEN
         IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(ABS(LPP(1)),2*LP, 1,XBK(1),DSQRT(Q2FACT(1)))
+            !LP=SIGN(1,LPP(1))
+          U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
         ENDIF
         IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          UX2=PDG2PDF(ABS(LPP(2)),-2*LP, 2,XBK(2),DSQRT(Q2FACT(2)))
+            !LP=SIGN(1,LPP(2))
+          UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
         ENDIF
         PD(0) = 0D0
         IPROC = 0
@@ -221,3 +232,8 @@ C
 
 
 
+
+      SUBROUTINE PRINT_ZERO_AMP()
+
+      RETURN
+      END

@@ -367,7 +367,7 @@ class EventFile(object):
                 events=[]
                 text = ''
             elif '<event' in line:
-                text = []
+                text = ''
                 mode=1
             elif '</event>' in line:
                 if self.parsing:
@@ -2709,8 +2709,7 @@ class OneNLOWeight(object):
     def parse(self, text, keep_bias=False):
         """parse the line and create the related object.
            keep bias allow to not systematically correct for the bias in the written information"""
-        #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
-        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
+        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 404 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
         data = text.split()
         # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
@@ -2748,6 +2747,10 @@ class OneNLOWeight(object):
         # 5. next integer is the power of g_strong in the matrix elements (as before)
         #    from example: 2
         self.qcdpower = int(data[flag])
+        # 5[bis] next integer is the expansion order defined at NLO (from example 404)
+        # New since 3.1.0.
+        self.orderflag = int(data[flag+1])
+        flag= flag+1
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
         #    from example: 0.52500539D-02 0.30205908D+00 
         self.bjks = [float(f) for f in data[flag+1:flag+3]]
@@ -3181,28 +3184,64 @@ if '__main__' == __name__:
         output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
-    if False:
-        lhe = EventFile('unweighted_events.lhe.gz')
+    if True:
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/it4.lhe')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
         
         nb_pass = 0
-        data = []
+        data_t1 = []
+        data_t2 = []
+        wgts = []
+        colors = []
         for event in lhe:
-            etaabs = 0 
-            etafinal = 0
-            for particle in event:
-                if particle.status==1:
-                    p = FourMomentum(particle)
-                    eta = p.pseudorapidity
-                    if abs(eta) > etaabs:
-                        etafinal = eta
-                        etaabs = abs(eta)
-            if etaabs < 4:
-                data.append(etafinal)
-                nb_pass +=1     
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors.append('red')
+            else:
+                colors.append('blue')
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/unweighted.lhe')
+        import numpy as np
+        import matplotlib.pyplot as plt
+        data2_t1 = []
+        data2_t2 = []
+        wgts = []
+        colors2 = []
+        for event in lhe:
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data2_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data2_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors2.append('black')
+            else:
+                colors2.append('green')
 
+
+        
+#        colors = (0,0,0)
+        area = np.pi*3
+
+        # Plot
+#        ax.set_xlim([10^-20,13000**2])
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('pa')
+        plt.ylabel('pmu')
+        plt.scatter(data_t1, data_t2, c=colors, label='weighted')#, s=area, c=colors, alpha=0.5)
+        plt.scatter(data2_t1, data2_t2, c=colors2, label='unweighted')#, s=area, c=colors, alpha=0.5)
+        plt.legend()        
+        
+        plt.show()
+            
                         
         print(nb_pass)
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
@@ -3215,7 +3254,6 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
-        ax.set_xlim([-4,4])
         print("bin value:", n)
         print("start/end point of bins", bins)
         plt.axis('on')

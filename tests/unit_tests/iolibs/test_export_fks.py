@@ -77,32 +77,32 @@ class IOExportFKSTest(IOTests.IOTestManager):
     @IOTests.createIOTest()
     def testIO_test_pptt_fksreal(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > t t~ QED=0 QCD=2 [real=QCD]'], 'sm')
+        self.generate(['p p > t t~ QED^2=0 QCD^2=4 [real=QCD]'], 'sm')
 
     @IOTests.createIOTest()
     def testIO_test_ppw_fksall(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > w+ QED=1 QCD=0 [QCD]'], 'sm')
+        self.generate(['p p > w+ QED^2=2 QCD^2=0 [QCD]'], 'sm')
 
     @IOTests.createIOTest()
     def testIO_test_tdecay_fksreal(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['t > j j b QED=2 QCD=0 [real=QCD]'], 'sm')
+        self.generate(['t > j j b QED^2=4 QCD^2=0 [real=QCD]'], 'sm')
 
     @IOTests.createIOTest()
     def testIO_test_pptt_fks_loonly(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > t t~ QED=0 QCD=2 [LOonly=QCD]'], 'sm')
+        self.generate(['p p > t t~ QED^2=0 QCD^2=4 [LOonly=QCD]'], 'sm')
 
     @IOTests.createIOTest()
     def testIO_test_wprod_fksew(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QED]'], 'loop_qcd_qed_smCMS')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QED]'], 'loop_qcd_qed_smCMS')
 
     @IOTests.createIOTest()
     def testIO_test_pptt_fksrealew(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > t t~ QED=0 QCD=2 [real=QED]'], 'sm', 
+        self.generate(['p p > t t~ QED^2=0 QCD^2=4 [real=QED]'], 'sm', 
                       multiparticles = ['p = u u~ d d~ s s~ c c~ g a'])
 
 
@@ -134,10 +134,10 @@ class TestFKSOutput(unittest.TestCase):
         interface = MGCmd.MasterCmd()
         
         run_cmd('set low_mem_multicore_nlo_generation True')
-        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QCD]')
+        run_cmd('generate p p > e+ ve QED^2=4 QCD^2=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
-        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QCD]')
+        run_cmd('generate p p > e+ ve QED^2=4 QCD^2=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-oldway'))
         
         # the P0 dirs
@@ -182,10 +182,10 @@ class TestFKSOutput(unittest.TestCase):
         interface = MGCmd.MasterCmd()
         
         run_cmd('set low_mem_multicore_nlo_generation True')
-        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QED]')
+        run_cmd('generate p p > e+ ve QED^2=4 QCD^2=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'W-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
-        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QED]')
+        run_cmd('generate p p > e+ ve QED^2=4 QCD^2=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'W-oldway'))
         
         # the P0 dirs
@@ -232,10 +232,10 @@ class TestFKSOutput(unittest.TestCase):
         
         run_cmd('define p3 = d s b d~ s~ b~')
         run_cmd('set low_mem_multicore_nlo_generation True')
-        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QED]')
+        run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'Z-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
-        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QED]')
+        run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'Z-oldway'))
         
         # the P0 dirs
@@ -281,10 +281,10 @@ class TestFKSOutput(unittest.TestCase):
         
         run_cmd('define p3 = d s b d~ s~ b~ a')
         run_cmd('set low_mem_multicore_nlo_generation True')
-        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QCD]')
+        run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'Z-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
-        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QCD]')
+        run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'Z-oldway'))
         
         # the P0 dirs
@@ -391,7 +391,7 @@ class TestFKSOutput(unittest.TestCase):
         try:
             run_cmd('set low_mem_multicore_nlo_generation True')
             run_cmd('set OLP GoSam')
-            run_cmd('generate p p > w+ QED=1 QCD=0 [QCD]')
+            run_cmd('generate p p > w+ QED^2=2 QCD^2=0 [QCD]')
             try:
                 run_cmd('output %s' % os.path.join(path, 'W-newway'))
             except fks_common.FKSProcessError as err:

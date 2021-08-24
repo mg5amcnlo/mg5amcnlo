@@ -142,7 +142,8 @@ c     be saved
       else if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron
             pdg2pdf=epa_lepton(x,xmu*xmu, ih)
       else if(ih.eq.2) then ! photon from a proton without breaking
-          pdg2pdf = epa_proton(x,xmu*xmu)
+          pdg2pdf = epa_proton(x,xmu*xmu, beamid)
+
       else
          write (*,*) 'beam type not supported in lhadpf'
          stop 1
@@ -155,3 +156,28 @@ c
       return
       end
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      stop 21
+      return
+      end
+
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu, omx_ee(*)
+      integer n_ee, id, idbeam
+      stop 21
+      return
+      end
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      double precision comp1(*), comp2(*)
+      stop 21
+      return
+      end
