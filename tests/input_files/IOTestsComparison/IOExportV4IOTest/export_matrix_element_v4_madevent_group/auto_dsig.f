@@ -49,7 +49,7 @@ C
 C     
 C     STUFF FOR DRESSED EE COLLISIONS
 C     
-      INCLUDE '../../Source/PdF/eepdf.inc'
+      INCLUDE '../../Source/PDF/eepdf.inc'
       DOUBLE PRECISION EE_COMP_PROD
 
       INTEGER I_EE
