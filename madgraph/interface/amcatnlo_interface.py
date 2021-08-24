@@ -639,6 +639,16 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         else:
             self.ncores_for_proc_gen = 0
 
+        # check if any initial-state leg contains leptons. If so, switch 
+        # include_lepton_initiated_processes to True
+        lep_ids = [11, -11, 13, -13, 15, -15]
+        initial_ids = sum([l['ids'] for l in myprocdef['legs'] if not l['state']], [])
+        if any([idd in lep_ids for idd in initial_ids]) and \
+                not self.options['include_lepton_initiated_processes']:
+            logger.warning('The process definition has leptons in the initial state')
+            logger.warning('The flag \'include_lepton_initiated_processes\' will be set to True')
+            self.do_set('include_lepton_initiated_processes True')
+
         # this is the options dictionary to pass to the FKSMultiProcess
         fks_options = {'OLP': self.options['OLP'],
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
@@ -914,8 +924,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
                     if six.PY2:
-                        self.born_processes.extend(diroutput[4])
-                        self.born_processes_for_olp.append(diroutput[4][0])
+                        self.born_processes.extend(diroutput[5])
+                        self.born_processes_for_olp.append(diroutput[5][0])
 
                 # transform proc_charac['splitting_types'] back to a list
                 proc_charac['splitting_types'] = list(splitting_types)

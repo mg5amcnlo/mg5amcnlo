@@ -84,8 +84,8 @@ class Compile_MG5:
 
     def test_output_NLO(self):
         """do the output of a simple LO process to ensure that LO is correctly configure."""
-        self.cmd.exec_cmd('generate p p > e+ ve [QCD]')
-        self.cmd.exec_cmd('output %s/TESTNLO' %root_path)
+        self.cmd.run_cmd('generate p p > e+ ve [QCD]')
+        self.cmd.run_cmd('output %s/TESTNLO' %root_path)
         shutil.rmtree('%s/TESTNLO' % root_path)
 
     @staticmethod

@@ -1993,7 +1993,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             multicore = True
             if self.options['run_mode'] in [0,1]:
-                multicore = False
+                return False
 
             lines = [l.strip() for l in open(card) if not l.strip().startswith('#')]
             while lines and not lines[0].startswith('launch'):
@@ -3385,7 +3385,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 elif os.path.exists(pjoin(self.me_dir, args[1])):
                     self.options[args[0]] = pjoin(self.me_dir, args[1])
                 else:
-                    raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.options[args[0]])
+                    raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\' for %s instead of %s' % (self.options[args[0]], args[0], args[1]) )
             else:
                 self.options[args[0]] = args[1]
 
