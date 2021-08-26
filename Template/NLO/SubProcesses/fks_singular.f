@@ -2290,6 +2290,12 @@ c allows for better caching of the PDFs
             call weight_lines_allocated(nexternal,max_contr,iwgt
      $           ,max_iproc)
             call InitPDFm(nn,n)
+
+            if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then
+	    	allocate(f1_p(icontr,MAXPROC))
+            	allocate(f2_p(icontr,MAXPROC))
+	    endif
+
             do i=1,icontr
                nFKSprocess=nFKS(i)
                xbk(1) = bjx(1,i)
@@ -2311,9 +2317,7 @@ c Compute the luminosity
 
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
-	       allocate(f1_p(icontr,MAXPROC))
-               allocate(f2_p(icontr,MAXPROC)) 
-             
+	                    
                if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored;
                       do ii=1,IPROC
 		        f1_p(i,ii)=PD1(ii)
@@ -2373,14 +2377,14 @@ c add the weights to the array
 
               endif
               enddo ! i loop
-	      deallocate(f1_p)
-              deallocate(f2_p)
-              enddo ! n loop
+	      enddo ! n loop
               enddo ! j loop 
               enddo ! nn loop
       call InitPDFm(1,0)
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
+      deallocate(f1_p)
+      deallocate(f2_p)
       return
       end
 
