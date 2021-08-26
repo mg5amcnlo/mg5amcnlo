@@ -2254,8 +2254,10 @@ c wgts() array to include the weights.
       DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
       COMMON /PDFvalues/ PD1, PD2
 
-      DOUBLE PRECISION f1_p(0:100,0:MAXPROC),f2_p(0:100,0:MAXPROC),f3_p(0:100,0:MAXPROC)
-      COMMON /PDFvalues/ f1_p,f2_p,f3_p
+      !DOUBLE PRECISION f1_p(0:100,0:MAXPROC),f2_p(0:100,0:MAXPROC),f3_p(0:100,0:MAXPROC)
+      !COMMON /PDFvalues/ f1_p,f2_p,f3_p
+
+      double precision, allocatable :: f1_p(:,:),f2_p(:,:)
 
       DOUBLE PRECISION f3(0:MAXPROC)
       COMMON /PDFvalues/ f3
@@ -2309,6 +2311,8 @@ c Compute the luminosity
 
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
+	       allocate(f1_p(icontr,MAXPROC))
+               allocate(f2_p(icontr,MAXPROC)) 
              
                if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored;
                       do ii=1,IPROC
@@ -2369,6 +2373,8 @@ c add the weights to the array
 
               endif
               enddo ! i loop
+	      deallocate(f1_p)
+              deallocate(f2_p)
               enddo ! n loop
               enddo ! j loop 
               enddo ! nn loop
