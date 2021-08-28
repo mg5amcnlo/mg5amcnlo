@@ -549,7 +549,8 @@ class ParamCard(dict):
     def create_diff(self, new_card):
         """return a text file allowing to pass from this card to the new one
            via the set command"""
-        
+        misc.sprint(self)
+        misc.sprint(new_card)
         diff = ''
         for blockname, block in self.items():
             for param in block:
