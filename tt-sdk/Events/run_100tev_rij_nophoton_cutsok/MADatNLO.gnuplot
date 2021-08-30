@@ -9,7 +9,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-# /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/bin/internal/histograms.py /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_90/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_80/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_99/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_79/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_97/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_70/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_46/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_43/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_38/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_49/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_62/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_68/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_100/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_77/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_67/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_92/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_78/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_63/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_41/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_87/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_96/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_95/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_61/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_58/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_40/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_83/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_44/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_73/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_81/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_82/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_52/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_69/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_98/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_48/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_66/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_37/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_60/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_35/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_50/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_56/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_57/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_36/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_94/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_86/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_74/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_89/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_76/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_54/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_59/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_72/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_84/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_53/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_51/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_75/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_39/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_55/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_71/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_85/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_65/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_32/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_34/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_33/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_64/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_47/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_45/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_93/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_42/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_88/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_91/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_32/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_36/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_34/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ga_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_33/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_35/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ag_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_30/MADatNLO.HwU --out=/home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/Events/run_100tev_rij_nophoton_cutsok/MADatNLO --gnuplot --band=[] --lhapdf-config=lhapdf-config --sum --keep_all_weights --no_open
+# /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/bin/internal/histograms.py /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_64/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_84/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_46/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_77/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_75/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_51/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_88/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_71/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_39/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_41/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_62/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_32/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_96/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_73/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_79/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_63/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_44/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_49/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_52/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_78/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_59/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_99/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_91/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_68/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_89/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_100/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_34/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_74/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_82/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_43/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_70/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_33/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_56/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_54/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_66/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_35/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_65/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_45/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_81/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_50/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_58/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_57/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_76/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_55/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_97/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_61/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_83/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_42/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_67/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_72/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_94/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_86/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_69/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_40/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_80/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_37/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_60/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_90/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_95/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_53/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_93/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_36/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_85/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_48/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_38/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_98/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_92/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_47/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_gg_ttx/all_G1_87/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_43/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_40/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_35/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_38/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_36/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_31/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_ddx_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_37/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_45/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_30/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_40/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_dxd_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_41/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_33/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_27/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_29/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_38/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_32/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_44/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_42/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_35/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_39/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_37/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_41/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_28/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_33/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_26/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_36/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uxu_ttx/all_G1_34/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_42/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_39/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_13/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_34/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_uux_ttx/all_G1_32/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_25/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_1/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_14/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_9/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_23/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_7/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_8/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_17/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_2/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_11/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_21/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_18/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_4/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_15/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_6/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bbx_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_3/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_5/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_10/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_22/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_19/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_24/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_12/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_20/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_16/MADatNLO.HwU /home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/SubProcesses/P0_bxb_ttx/all_G1_1/MADatNLO.HwU --out=/home/marcozaro/MadGraph/3.0.4-sudakov/tt-sdk/Events/run_100tev_rij_nophoton_cutsok/MADatNLO --gnuplot --band=[] --lhapdf-config=lhapdf-config --sum --keep_all_weights --no_open
 reset
 
 set lmargin 10
@@ -111,7 +111,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [6.0226e+00:1.2014e+02]
+set yrange [6.0401e+00:1.2012e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -144,7 +144,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.4914e-01:2.7736e-01]
+set yrange [-2.4917e-01:2.7740e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -174,7 +174,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-2.7362e-01:1.3669e+00]
+set yrange [-2.7247e-01:1.3611e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -2258,7 +2258,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.5898e-12:7.8337e+01]
+set yrange [4.0728e-08:7.8335e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -2291,7 +2291,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.2522e-01:3.9819e-01]
+set yrange [-1.3094e+00:1.2387e+00]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -2321,7 +2321,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-3.6442e+00:3.4148e+00]
+set yrange [-4.3258e+00:5.4073e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -2371,7 +2371,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.1869e-12:7.8337e+01]
+set yrange [4.4984e-08:7.8335e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -2404,7 +2404,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.2352e-01:3.8969e-01]
+set yrange [-1.3094e+00:1.2387e+00]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -2434,7 +2434,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-3.9337e+00:4.0109e+00]
+set yrange [-4.1683e+00:5.2862e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -2484,7 +2484,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [2.5466e-05:8.4907e-01]
+set yrange [4.4607e-06:2.3359e-01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -2517,7 +2517,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.5430e-02:1.4656e-02]
+set yrange [-6.0518e-02:6.3255e-02]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -3388,7 +3388,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.0691e-12:7.8337e+01]
+set yrange [4.4683e-08:7.8335e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -3421,7 +3421,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.2177e-01:3.8092e-01]
+set yrange [-1.3094e+00:1.2387e+00]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -3451,7 +3451,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-3.7479e+00:3.4212e+00]
+set yrange [-4.2293e+00:5.3462e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -3501,7 +3501,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.7751e-12:7.8337e+01]
+set yrange [4.1131e-08:7.8335e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -3534,7 +3534,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.2531e-01:3.9863e-01]
+set yrange [-1.3094e+00:1.2387e+00]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -3564,7 +3564,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-3.5991e+00:3.9165e+00]
+set yrange [-4.3133e+00:5.3839e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -3614,7 +3614,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [1.3497e-13:3.1247e-01]
+set yrange [1.1395e-10:1.3227e-01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -3647,7 +3647,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.1445e-02:2.6713e-02]
+set yrange [-7.0430e-02:7.6291e-02]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -4857,7 +4857,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [1.7837e-08:4.0450e+01]
+set yrange [1.7010e-08:4.0445e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -4890,7 +4890,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.3338e-01:3.9715e-01]
+set yrange [-3.4455e-01:4.0546e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -4920,7 +4920,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-6.1016e-01:2.6804e+00]
+set yrange [-1.9981e+00:3.2585e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5083,7 +5083,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [1.8545e-08:4.0450e+01]
+set yrange [1.7368e-08:4.0445e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5116,7 +5116,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.3431e-01:4.0178e-01]
+set yrange [-3.4455e-01:4.0546e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5146,7 +5146,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-6.1236e-01:2.7012e+00]
+set yrange [-1.9904e+00:3.2503e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5196,7 +5196,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.9694e-11:1.7861e-01]
+set yrange [1.0326e-16:8.1013e-03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5229,7 +5229,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.7398e-01:1.8810e-01]
+set yrange [-2.4244e-01:2.6501e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5309,7 +5309,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [3.6309e-14:3.5096e-01]
+set yrange [3.4463e-10:1.0579e-01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5342,7 +5342,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.7556e-01:1.9266e-01]
+set yrange [-5.2891e-01:6.0117e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5422,7 +5422,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [5.7083e-10:1.3115e+00]
+set yrange [1.1462e-10:5.6512e-01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5455,7 +5455,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.8994e-01:2.0432e-01]
+set yrange [-2.9823e-01:3.4122e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5648,7 +5648,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [1.1324e-01:8.1011e+01]
+set yrange [1.1084e-01:8.1023e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5681,7 +5681,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.2712e-04:2.1771e-04]
+set yrange [-2.2714e-04:2.1766e-04]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5711,7 +5711,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-2.8588e-01:1.4228e+00]
+set yrange [-2.9032e-01:1.4451e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5761,7 +5761,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO|#1 and LO|#1 results'
 
 set format y '10^{%T}'
-set yrange [1.9825e+00:6.6605e+01]
+set yrange [2.0076e+00:6.6607e+01]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -5794,7 +5794,7 @@ sqrt(-1) ls 11 title 'NLO|#1, scale variation',\
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.4978e-01:2.7818e-01]
+set yrange [-2.4981e-01:2.7822e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -5824,7 +5824,7 @@ plot \
 #-- rendering subhistograms '(LO|#1SD0|#1SD1|#1)/(NLO|#1 central value) ratio'
 unset label
 unset format
-set yrange [-2.7444e-01:1.3692e+00]
+set yrange [-2.7200e-01:1.3570e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
