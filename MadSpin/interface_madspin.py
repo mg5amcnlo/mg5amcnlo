@@ -702,6 +702,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         import madgraph.iolibs.save_load_object as save_load_object
         
         generate_all = save_load_object.load_from_file(pjoin(self.options['ms_dir'], 'madspin.pkl'))
+        
+        #restore data passed to string to help pickle
+        generate_all.all_decay = eval(generate_all.all_decay)
+        for me in generate_all.all_ME:
+            for d in generate_all.all_ME[me]['decays']:
+                d['decay_struct'] = eval(d['decay_struct'])
+
+
         # Re-create information which are not save in the pickle.
         generate_all.evtfile = self.events_file
         generate_all.curr_event = madspin.Event(self.events_file, self.banner ) 

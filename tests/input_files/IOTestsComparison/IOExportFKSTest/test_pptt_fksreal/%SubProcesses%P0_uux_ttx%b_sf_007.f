@@ -115,8 +115,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8  CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -127,10 +128,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -143,17 +144,17 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP1(1)=+1D0/2D0*(+1D0/3D0*AMP(1))
-      JAMP1(2)=+1D0/2D0*(-AMP(1))
-      JAMP2(1)=+1D0/4D0*(+1D0/9D0*AMP(1))
-      JAMP2(2)=+1D0/4D0*(-1D0/3D0*AMP(1))
+      JAMP1(1) = (1.666666666666667D-01)*AMP(1)
+      JAMP1(2) = (-5.000000000000000D-01)*AMP(1)
+      JAMP2(1) = (2.777777777777778D-02)*AMP(1)
+      JAMP2(2) = (-8.333333333333333D-02)*AMP(1)
       B_SF_007 = 0.D0
       DO I = 1, NCOLOR1
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR2
           ZTEMP = ZTEMP + CF(J,I)*JAMP2(J)
         ENDDO
-        B_SF_007 =B_SF_007+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)
+        B_SF_007 =B_SF_007+ZTEMP*DCONJG(JAMP1(I))
       ENDDO
       END
 

@@ -170,7 +170,7 @@ c           Include the Jacobian from helicity sampling
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB
-       SUMHEL=SUMHEL+TS(I)
+       SUMHEL=SUMHEL+DABS(TS(I))
        IF(R.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
           ANS=DSIGN(ANS,TS(I))		  
@@ -233,8 +233,8 @@ C
 C LOCAL VARIABLES 
 C  
     INTEGER I,J,M,N
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+    COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
+    REAL*8 CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(18,NWAVEFUNCS)
 C   Needed for v4 models
@@ -282,7 +282,7 @@ endif
         ENDDO
 		DO N = 1, NAMPSO
           IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
 		  ENDIF
 		ENDDO
       ENDDO

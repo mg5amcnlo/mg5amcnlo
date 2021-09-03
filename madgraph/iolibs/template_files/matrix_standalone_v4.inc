@@ -85,7 +85,10 @@ C
       INTEGER USERHEL
 	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 	  DATA USERHEL/-1/	  
-
+      LOGICAL HELRESET
+      common/%(proc_prefix)shelreset/HELRESET
+      data HELRESET/.true./
+      
 %(helicity_lines)s
 %(den_factor_line)s
 
@@ -97,6 +100,17 @@ C
 C     FUNCTIONS
 C
       LOGICAL %(proc_prefix)sIS_BORN_HEL_SELECTED
+
+c----------
+c   Check if helreset mode is on
+c---------
+if (HELRESET) then
+   NTRY = 0
+   do i=1,NCOMB
+      GOODHEL(I) = .false.
+   enddo
+   HELRESET = .false.
+endif
 
 C ----------
 C BEGIN CODE
@@ -180,8 +194,8 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
@@ -206,8 +220,8 @@ C ----------
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
-      ENDDO
+          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))
+	  ENDDO
 %(amp2_lines)s
       END
 

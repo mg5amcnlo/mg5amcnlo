@@ -109,8 +109,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -121,11 +122,11 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/3/
-      DATA (CF(I,  1),I=  1,  2) /   16,   -2/
+      DATA (CF(I,  1),I=  1,  2) /5.333333333333333D+00,
+     $ -6.666666666666666D-01/
 C     1 T(1,2,3,4)
-      DATA DENOM(2)/3/
-      DATA (CF(I,  2),I=  1,  2) /   -2,   16/
+      DATA (CF(I,  2),I=  1,  2) /-6.666666666666666D-01
+     $ ,5.333333333333333D+00/
 C     1 T(2,1,3,4)
 C     ----------
 C     BEGIN CODE
@@ -139,15 +140,17 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-      JAMP(1)=+IMAG1*AMP(1)-AMP(2)
-      JAMP(2)=-IMAG1*AMP(1)-AMP(3)
+      JAMP(1) = ((0.000000000000000D+00,1.000000000000000D+00))*AMP(1)
+     $ +(-1.000000000000000D+00)*AMP(2)
+      JAMP(2) = ((0.000000000000000D+00,-1.000000000000000D+00))*AMP(1)
+     $ +(-1.000000000000000D+00)*AMP(3)
       BORN_HEL = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        BORN_HEL =BORN_HEL+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+        BORN_HEL =BORN_HEL+ZTEMP*DCONJG(JAMP(I))
       ENDDO
       END
 

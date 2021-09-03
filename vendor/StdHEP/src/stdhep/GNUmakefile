@@ -7,6 +7,8 @@ STDHEP_DIR = ../..
 
 #this has been added by MZ
 FFLAGS+= -fd-lines-as-code -fPIE
+FFLAGS += -std=legacy
+CFLAGS += -Wno-implicit-function-declaration
 
 SLIB = $(STDHEP_DIR)/lib
 SBIN = $(STDHEP_DIR)/bin

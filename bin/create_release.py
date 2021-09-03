@@ -127,8 +127,10 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
-        web_version = int(filetext.read().strip())            
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        text = filetext.read().decode().split('\n')
+        web_version = int(text[0].strip())
+        last_message = int(text[1].strip())
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
@@ -194,6 +196,7 @@ if rev_nb:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
     fsock.write("version_nb   %s\n" % rev_nb)
     fsock.write("last_check   %s\n" % int(time.time()))
+    fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
     
 # 1. Copy the .mg5_configuration_default.txt to it's default path

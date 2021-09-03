@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+from __future__ import division
 import glob
 import logging
 import os
@@ -97,7 +98,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
             # Copy plot_card
@@ -306,7 +307,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -880,7 +881,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         elif output_dependencies == 'internal':
             StdHEP_internal_path = pjoin(self.dir_path,'Source','StdHEP')
-            shutil.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
+            misc.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
             # Create the links to the lib folder
             linkfiles = ['libstdhep.a', 'libFmcfio.a']
             for file in linkfiles:
@@ -2016,8 +2017,10 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
 
         # Set the size of Wavefunction
         if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
@@ -2109,8 +2112,9 @@ Parameters              %(params)s\n\
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
 
         # Extract den_factor_lines
         den_factor_lines = self.get_den_factor_lines(fksborn)
@@ -2272,20 +2276,15 @@ c     this subdir has no soft singularities
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = line.replace('JAMP', 'JAMP1')
-            new_jamp_lines.append(line)
-        replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP1(%s)")
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
     
+        
         matrix_element.set('color_basis', link['link_basis'] )
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = line.replace( 'JAMP', 'JAMP2')
-            new_jamp_lines.append(line)
-        replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element, JAMP_format="JAMP2(%s)")
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = max(nb_tmp_jamp, replace_dict['nb_temp_jamp'])
     
     
         # Extract the number of FKS process
@@ -2526,9 +2525,9 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             replace_dict['wavefunctionsize'] = 8
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-    
+        jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_tmp_jamp
     
         realfile = open(os.path.join(_file_path, \
                              'iolibs/template_files/realmatrix_fks.inc')).read()
@@ -3176,13 +3175,13 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             for index, denominator in \
                 enumerate(color_matrix.get_line_denominators()):
                 # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+                #ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
-                num_list = color_matrix.get_line_numerators(index, denominator)    
+                num_list = color_matrix.get_line_numerators(index, denominator)  
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5r" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))  
             return ret_list
 
     #===========================================================================
@@ -3389,6 +3388,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+    jamp_optim = True 
 
     def finalize(self, *args, **opts):
         ProcessExporterFortranFKS.finalize(self, *args, **opts)
@@ -3412,7 +3412,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(dir_path))
-            shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
+            misc.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)

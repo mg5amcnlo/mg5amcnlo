@@ -1,5 +1,94 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.5 (22/08/21)
+      OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
+             This was claimed to be using fixed scale computation while in
+	     some case the scale was dynamical
+             To have full flexibility we introduced two additional (hidden)
+	     parameter
+             fixed_fac_scale1 and fixed_fac_scale2 that allow to choose
+	     fixed scale for only one beam.
+      OM: fix auto-width that was not following	run_mode specification
+      OM: fixing missing rwgt_info for reweighting with gridpack mode
+      OM: fixing 'check' command with the skip_event mode
+      OM: fixing auto-width computation for 3 body decay and identical particle which was sometimes leading to crash
+      OM: Fix some potential infinite loop when running with python3
+      
+2.9.4(30/05/21)
+      OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
+      OM: Fix an issue for non positive definite matrix-element when using the
+          "set group_subprocesses False"  mode of MG5aMc
+      OM: Fix a speed issue for gridpack in readonly mode where the grid were recomputed 
+
+2.9.3(25/03/21)
+      OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
+          was close to the mass of the initial mass. boundary condition on t-channnel were
+	  incorrectly setup leading to strange spectrum in various distribution (very old bug)
+      OM: Fix an issue with a crash for loop computation
+      OM: more python3 fixing bug
+      OM: Fix a bug in the re-writting of the run_card when seed was specify leading to a wrong templating
+      OM: various small fix of crash/better logging/debug information
+     
+2.9.2(14/02/21)
+      MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
+        The generation of tau was not taking into account the information.
+      OM: fix an issue when running with python3 where the normalization of pythia8 file were wrong
+          when pythia8 was run in parralel.
+      OM: Fix some wrong scale variation at NLO+PS (introduced in 2.9.0)
+      OM: Fix loop-induced which was not working anymore
+      OM: Fix an issue with the installation of pythia-pgs
+      
+
+2.9.1.2 (02/02/21)
+      Kiran+OM: Fixing issue for the MSSM model
+      OM: Fixing issue with mac support
+      OM: fix a bug introduced within 2.8.2 related to a wrong phase-space mapping of conflicting resonances.
+          Leading to zero cross-section and/or potential bias cross-section for more complex cases.
+	  The issue occurs only if you have a conflicting resonances followed by a massless propopagator.
+	  one example is generate p p > z h , z > e+ e-, h > b b~ a
+
+2.9.0 (30/01/21)    **** Major speed-up update for LO computation ***
+      Kiran+OM: Optimization of the matrix-element at run-time using recycling helicity method
+                - This fasten LO computation by a factor around 2
+		- This can be turned off via the command "output PATH --hel_recycling=False"
+      OM: Various optimization fot T-channel integration
+          - use different ordering for T-channel. Four different ordering have been implemented
+	    at generation time, the code decides which ordering to use channel-per-channel.
+	    This can be turned off via the command "output PATH --t_strategy=2"
+	  - increase number of maximum iteration for double or more T-channel
+	  - implement an alternative to the standard multi-channel.
+	     instead of using the amplitude square it use the product of the denominator
+	     (the default strategy use depends of the process)
+	  - speed-up for VBF type of process  are often around 100 times faster
+	  - This fixes a lot of issue for processes failing to generate the targetted number of events.
+      OM: Better version of the color-computation (but this leads to only modest gain but for very complex processes.)
+          This optimizations leads to a longer generation time of the code (only for complex processes).
+	  This can be turned off  via "output PATH --jamp_optim=False"
+      OM: New parameter in the run_card:
+          - sde_strategy: allows to change the default multi-channel strategy
+	  - a new phase-space optimization parameter are now easily availabe via the command "update ps_optim" 
+      OM: New global parameter "auto_convert_model"
+          if set on True (set auto_convert_model T or via input/mg5_configuration.txt)
+	  all model crashing due to a python3 compatibility issue of the UFO model will be automatically converted
+	  to a python3 compatible model. 
+
+2.8.3 (26/01/21):
+      OM: Buch of bunch fixing related to python3 issue (mainly related to unicode encoding)
+      OM: Various fix for reweighting with loop (mainly with python3 as well)
+      OM: Fix a potential bug for polarized sample with at least three polarised particles with a least two
+          identical particles and one different polarised particle.
+      OM: Fix various bug for maddm interface (thanks Daniele)
+      OM: Fix various issue with overall order usage
+      OM: Fix compatibility with MacOS 11
+      OM: fix additional GCC10 compatibility issue
+      OM: fix issue for 1>n process where width were set to zero automatically (introduced in 2.8.0)
+      OM: fix aloha output mode for python output
+      OM: avoid a bug with helicity filtering that was kept for all benchmark when using
+          multiple successive re-weighting
+      OM: Edition of the reweighting card via "set" command is not starting from the original param_card
+          used to generated the events file and not from the model default anymore.
+      OM: Interference have now their default dynamical scale set to HT/2
+
 
 2.8.2 (30/10/20):
       OM: Fix a bug when setting width to zero where they were actually set to 1e-6 times the width

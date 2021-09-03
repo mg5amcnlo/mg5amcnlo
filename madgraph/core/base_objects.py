@@ -2391,6 +2391,8 @@ class Diagram(PhysicsObject):
         """Returns a nicely formatted string of the diagram content."""
 
         pass_sanity = True
+        removed_index = set()
+
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
@@ -2406,10 +2408,21 @@ class Diagram(PhysicsObject):
                 if __debug__ and len(used_leg) != len(set(used_leg)):
                     pass_sanity = False
                     responsible = id(vert)
+                if __debug__ and any(l['number'] in removed_index for l in vert['legs']):
+                    pass_sanity = False
+                    responsible = id(vert)
                     
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
+                    if __debug__:
+                        if vert['legs'][-1]['number'] != min([l['number'] for l in vert['legs'][:-1]]):
+                            pass_sanity = False
+                            responsible = id(vert)
+                        for l in vert['legs']:
+                            removed_index.add(l['number'])
+                        removed_index.remove(vert['legs'][-1]['number'])
+
                 lastleg = vert['legs'][-1]
                 if lastleg['polarization']:
                     mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
@@ -2557,7 +2570,7 @@ class Diagram(PhysicsObject):
 
 
         if max_n_loop == 0:
-            max_n_loop = Vertex.max_n_loop_for_multichanneling
+            max_n_loop = int(Vertex.max_n_loop_for_multichanneling)
         
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
@@ -3138,7 +3151,7 @@ class Process(PhysicsObject):
             mystr = mystr + '[ '
             if self['NLO_mode']:
                 mystr = mystr + self['NLO_mode']
-                if not self['has_born']:
+                if not self['has_born'] and self['NLO_mode'] != 'noborn':
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 

@@ -214,7 +214,8 @@ class TestCmdShell1(unittest.TestCase):
                     'ninja': './HEPTools/lib',
                     'samurai': None,
                     'max_t_for_channel': 99,
-                    'zerowidth_tchannel': True
+                    'zerowidth_tchannel': True,
+                     'auto_convert_model': False,
                     }
 
         self.assertEqual(config, expected)
@@ -236,7 +237,7 @@ class TestCmdShell2(unittest.TestCase,
                     test_file_writers.CheckFileCreate):
     """Test all command line related to MG_ME"""
 
-    debugging = False
+    debugging = True
     def setUp(self):
         
         self.cmd = Cmd.MasterCmd()
@@ -948,6 +949,8 @@ C
                                                'lib', 'libpdf.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libbias.a')))
+        
+        
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 
@@ -1130,7 +1133,7 @@ C
         proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
-        status = subprocess.call(['make', 'madevent'],
+        status = subprocess.call(['make', 'madevent_forhel'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'))
@@ -1138,7 +1141,7 @@ C
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq',
-                                                    'madevent')))
+                                                    'madevent_forhel')))
         
     def test_madevent_subproc_group_symmetry(self):
         """Check that symmetry.f gives right output"""
@@ -1296,7 +1299,7 @@ P1_qq_wp_wp_lvl
         proc.communicate('100 4 0.1 .false.\n'.encode())
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
-        status = subprocess.call(['make', 'madevent'],
+        status = subprocess.call(['make', 'madevent_forhel'],
                                  stdout=devnull, 
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'))
@@ -1304,7 +1307,7 @@ P1_qq_wp_wp_lvl
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_qq_wpg_wp_lvl',
-                                                    'madevent')))
+                                                    'madevent_forhel')))
         
     def test_ungroup_decay(self):
         """Test group_subprocesses=False for decay process"""

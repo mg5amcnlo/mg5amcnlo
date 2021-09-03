@@ -152,7 +152,7 @@ def cp(path1, path2, log=True, error=False):
         try: 
             if os.path.exists(path2):
                 path2 = os.path.join(path2, os.path.split(path1)[1])
-            shutil.copytree(path1, path2)
+            misc.copytree(path1, path2)
         except IOError as why:
             if error:
                 raise

@@ -309,7 +309,8 @@ c     scale choice is requested. In this case edit the
 c     user subroutines set_ren_scale and set_fac_scale in setpara.f
 
       call get_logical(npara,param,value," fixed_ren_scale ",fixed_ren_scale,.true.)
-      call get_logical(npara,param,value," fixed_fac_scale ",fixed_fac_scale,.true.)
+      call get_logical(npara,param,value," fixed_fac_scale1 ",fixed_fac_scale1,.true.)
+      call get_logical(npara,param,value," fixed_fac_scale2 ",fixed_fac_scale2,.true.)      
       call get_real   (npara,param,value," scale "          ,scale,91.188d0)
       call get_real   (npara,param,value," dsqrt_q2fact1 "  ,sf1  ,91.188d0)
       call get_real   (npara,param,value," dsqrt_q2fact2 "  ,sf2  ,91.188d0)

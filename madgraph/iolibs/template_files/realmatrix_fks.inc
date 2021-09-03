@@ -112,8 +112,9 @@ C
       INTEGER I,J
       INTEGER IC(NEXTERNAL)
       data ic /nexternal*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C COLOR DATA
 C  
@@ -129,6 +130,6 @@ C ----------
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX_%(N_me)d = MATRIX_%(N_me)d+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          MATRIX_%(N_me)d = MATRIX_%(N_me)d+ZTEMP*DCONJG(JAMP(I))   
       ENDDO
       END
