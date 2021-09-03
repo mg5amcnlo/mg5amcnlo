@@ -51,6 +51,12 @@ Pythia82: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIR)/libpythia8.a
 	  -L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP) \
 	  $(HEPMCINCLIB) $(EXTRAPATHS) $(EXTRALIBS)  \
 
+Pythia83: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIR)/libpythia8.a
+	  $(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
+	  -I$(TOPDIR)/$(INCDIR) $(INCLOPTION) $@.cc -o Pythia8.exe $(FORFILE) \
+	  -L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP) \
+	  $(HEPMCINCLIB) $(EXTRAPATHS) $(EXTRALIBS)  \
+
 .PHONY: clean
 clean:
 	rm -rf *.exe
