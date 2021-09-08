@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.1.2 (??/??/??)
+      MZ+CS: Fixes relevant to PineAPPL: 
+            - minor fix on the gluon pdg code in pineappl_interface.cc
+            - the integration channels are threated the same way with or without PineAPPL 
+            (maxchannels is kept the same in both cases)
+      RF: Fix for montecarlocounter in case the Born is not strictly positive
+           (i.e., only interference contributions).
+	   
 3.2.0 (22/08/21)
       SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
       BUG FIX (from 2.9.5 long term stable, see below)
