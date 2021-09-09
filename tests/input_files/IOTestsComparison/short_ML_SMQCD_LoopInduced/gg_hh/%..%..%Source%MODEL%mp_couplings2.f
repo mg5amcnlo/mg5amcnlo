@@ -12,6 +12,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
+      MP__GC_5 = MP__MDL_COMPLEXI*MP__G
       MP__R2_GGHB = 4.000000E+00_16*(-((MP__MDL_COMPLEXI*MP__MDL_YB)
      $ /MP__MDL_SQRT__2))*(1.000000E+00_16/2.000000E+00_16)
      $ *(MP__MDL_G__EXP__2/(8.000000E+00_16*MP__PI**2))*MP__MDL_MB
@@ -24,5 +25,4 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       MP__R2_GGHHT = 4.000000E+00_16*(-MP__MDL_YT__EXP__2/2.000000E
      $ +00_16)*(1.000000E+00_16/2.000000E+00_16)*((MP__MDL_COMPLEXI
      $ *MP__MDL_G__EXP__2)/(8.000000E+00_16*MP__PI**2))
-      MP__GC_5 = MP__MDL_COMPLEXI*MP__G
       END

@@ -15,6 +15,7 @@
 """Unit test Library for importing and restricting model"""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -69,12 +70,81 @@ class TestNFlav(unittest.TestCase):
         model = import_ufo.import_model(sm_path + '-no_b_mass')
         self.assertEqual(model.get_nflav(), 5)
 
-
     def test_get_nflav_sm_nomasses(self):
         """Tests the get_nflav_function for the SM, with the no_masses restriction"""
         sm_path = import_ufo.find_ufo_path('sm')
         model = import_ufo.import_model(sm_path + '-no_masses')
         self.assertEqual(model.get_nflav(), 5)
+
+class TestGetQuarkPDG(unittest.TestCase):
+    """Test class for the get_nflav function"""
+
+    def test_get_quark_pdgs_sm(self):
+        """Tests the get_quark_pdg_function for the full SM.
+        Here b and c quark are massive"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_full_model(sm_path)
+        self.assertEqual(model.get_quark_pdgs(), [-3, -2, -1, 1, 2, 3])
+
+    def test_get_quark_pdgs_sm_nobmass(self):
+        """Tests the get_quark_pdg_function for the SM, with the no-b-mass restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_b_mass')
+        self.assertEqual(model.get_quark_pdgs(), [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
+
+    def test_get_quark_pdgs_sm_nomasses(self):
+        """Tests the get_quark_pdg_function for the SM, with the no_masses restriction"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_masses')
+        self.assertEqual(model.get_quark_pdgs(), [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5])
+
+class TestNLeps(unittest.TestCase):
+    """Test class for the get_nflav function"""
+
+    def test_get_nleps_sm(self):
+        """Tests the get_nleps_function for the full SM.
+        Here all leptons have a mass"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_full_model(sm_path)
+        self.assertEqual(model.get_nleps(), 0)
+
+    def test_get_nleps_sm_nobmass(self):
+        """Tests the get_nleps_function for the SM, with the no-b-mass restriction
+        here the electron and muon are massless"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_b_mass')
+        self.assertEqual(model.get_nleps(), 2)
+
+    def test_get_nleps_sm_nomasses(self):
+        """Tests the get_nleps_function for the SM, with the no_masses restriction
+        here the three leptons are massless"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_masses')
+        self.assertEqual(model.get_nleps(), 3)
+
+class TestGetLuarkPDG(unittest.TestCase):
+    """Test class for the get_nflav function"""
+
+    def test_get_lepton_pdgs_sm(self):
+        """Tests the get_lepton_pdg_function for the full SM.
+        Here all leptons have a mass"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_full_model(sm_path)
+        self.assertEqual(model.get_lepton_pdgs(), [])
+
+    def test_get_lepton_pdgs_sm_nobmass(self):
+        """Tests the get_lepton_pdg_function for the SM, with the no-b-mass restriction
+        here the electron and muon are massless"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_b_mass')
+        self.assertEqual(model.get_lepton_pdgs(), [-13, -11, 11, 13])
+
+    def test_get_lepton_pdgs_sm_nomasses(self):
+        """Tests the get_lepton_pdg_function for the SM, with the no_masses restriction
+        here the three leptons are massless"""
+        sm_path = import_ufo.find_ufo_path('sm')
+        model = import_ufo.import_model(sm_path + '-no_masses')
+        self.assertEqual(model.get_lepton_pdgs(), [-15, -13, -11, 11, 13, 15])
 
 class TestImportUFONoSideEffect(unittest.TestCase):
     """Test class for the the possible side effect on a UFO model loaded when
@@ -118,7 +188,7 @@ class TestImportUFONoSideEffect(unittest.TestCase):
                 elif hasattr(part,"goldstoneboson"):
                     self.assertEqual(part.goldstoneboson,True)
                 else:
-                    raise import_ufo.UFOImportError, "Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name
+                    raise import_ufo.UFOImportError("Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name)
                     
         
     def test_ImportUFONoSideEffectNLO(self):
@@ -284,8 +354,29 @@ class TestRestrictModel(unittest.TestCase):
                     [('GC_76', 1), ('GC_79', -1)],
                     [('GC_77', 1), ('GC_78', -1)],
                     [('GC_97', 1), ('GC_96', -1)]]
-        expected.sort()
-        iden.sort()
+        expected = [[('GC_100',1), ('GC_108',1), ('GC_49',1), ('GC_45',1), ('GC_40',1), ('GC_41',1), ('GC_104',1)],
+                    [('GC_21', 1), ('GC_27', -1)],
+                    [('GC_3', 1), ('GC_4', -1)],
+                    [('GC_38', 1), ('GC_39', -1)],
+                    [('GC_50', 1), ('GC_51', -1)],
+                    #[('GC_53', 1), ('GC_52', -1)], #GC_52 is not assigned to a vertex to they are consider as different coupling order and not merged... not relevant anyway
+                    [('GC_54', 1), ('GC_56', -1)],
+                    [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_7', 1), ('GC_9', -1)],
+                    [('GC_70', 1), ('GC_73', -1)],
+                    [('GC_74', 1), ('GC_75', -1)],
+                    [('GC_76', 1), ('GC_79', -1)],
+                    [('GC_77', 1), ('GC_78', -1)],
+                    [('GC_96', 1), ('GC_97', -1)]]
+        
+        for elem in expected:
+            elem.sort(key=str)
+        for elem in iden:
+            elem.sort(key=str)
+        
+        expected.sort(key=str)
+        iden.sort(key=str)
+        
         self.assertEqual(expected, iden)
 
     def test_locate_couplings(self):
@@ -362,7 +453,7 @@ class TestRestrictModel(unittest.TestCase):
             self.assertTrue(has_GC, True)
         
         # check that the same occur with opposite sign coupling
-        target = [i for i in iden if len(i)==2][1] 
+        target = [i for i in sorted(iden) if len(i)==2][1] 
         target2 = [i[0] for i in target]
         GC = target2[0]
         
@@ -466,10 +557,10 @@ class TestRestrictModel(unittest.TestCase):
         assert coupling_ddz_1 == coupling_eez_1
         
         result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
-        self.assertTrue(coupling_eez_2 in input_eez['couplings'].values())
-        self.assertFalse(coupling_eez_1 in input_eez['couplings'].values())
-        self.assertFalse(coupling_ddz_1 in input_ddz['couplings'].values())
-        self.assertFalse(coupling_ddz_2 in input_ddz['couplings'].values())
+        self.assertTrue(coupling_eez_2 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_eez_1 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_ddz_1 in list(input_ddz['couplings'].values()))
+        self.assertFalse(coupling_ddz_2 in list(input_ddz['couplings'].values()))
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""

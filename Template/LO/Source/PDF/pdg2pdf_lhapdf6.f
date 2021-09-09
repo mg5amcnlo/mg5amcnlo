@@ -24,7 +24,7 @@ C
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
      &     ,i_replace,ii,ipartlast(20)
       double precision xlast(20),xmulast(20),pdflast(-7:7,20)
-      double precision epa_proton, epa_electron
+      double precision epa_proton, epa_lepton
       save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
       data ipartlast/20*-99/
@@ -139,10 +139,11 @@ c     be saved
             pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
          endif
          pdg2pdf=pdg2pdf/x
-      else if(ih.eq.3) then       !from the electron
-            pdg2pdf=epa_electron(x,xmu*xmu)
+      else if(abs(ih).eq.3.or.abs(ih).eq.4) then       !from the electron
+            pdg2pdf=epa_lepton(x,xmu*xmu, ih)
       else if(ih.eq.2) then ! photon from a proton without breaking
-          pdg2pdf = epa_proton(x,xmu*xmu)
+          pdg2pdf = epa_proton(x,xmu*xmu, beamid)
+
       else
          write (*,*) 'beam type not supported in lhadpf'
          stop 1
@@ -155,3 +156,28 @@ c
       return
       end
 
+      double precision function get_ee_expo()
+      ! return the exponent used in the
+      ! importance-sampling transformation to sample
+      ! the Bjorken x's
+      implicit none
+      stop 21
+      return
+      end
+
+      double precision function compute_eepdf(x,omx_ee, xmu, n_ee, id, idbeam)
+      implicit none
+      double precision x, xmu, omx_ee(*)
+      integer n_ee, id, idbeam
+      stop 21
+      return
+      end
+
+      double precision function ee_comp_prod(comp1, comp2)
+      ! compute the scalar product for the two array
+      ! of eepdf components
+      implicit none
+      double precision comp1(*), comp2(*)
+      stop 21
+      return
+      end

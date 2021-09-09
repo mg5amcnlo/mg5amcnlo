@@ -256,22 +256,6 @@ c               call set_ren_scale(P,scale)
 c            endif
 c         endif
          
-c         if(.not.fixed_fac_scale) then
-c            call set_fac_scale(P,q2fact)
-c            if(q2fact(1).eq.0d0.or.q2fact(2).eq.0d0) then
-c               write(6,*) 
-c               write(6,*) '* >>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<<<<*'
-c               write(6,*) ' Dynamical renormalization scale choice '
-c               write(6,*) ' selected but user subroutine' 
-c               write(6,*) ' set_fac_scale not edited in file:setpara.f'
-c               write(6,*) ' Switching to a fixed_fac_scale choice'
-c               write(6,*) ' with q2fact(i)=zmass**2'
-c               fixed_fac_scale=.true.
-c               q2fact(1)=91.2d0**2
-c               q2fact(2)=91.2d0**2
-c               write(6,*) 'scales=',q2fact(1),q2fact(2)
-c            endif
-c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
@@ -1237,7 +1221,7 @@ C...Set couplings if event passed cuts
          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
       endif
 
-      if(.not.fixed_fac_scale) then
+      if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
          call set_fac_scale(P,q2fact)
       endif
 
@@ -1372,10 +1356,10 @@ C
 C
     2 IF (N.EQ.1)            RETURN
       IF (MODE)    10,20,30
-   10 CALL SORTTI (A,INDEX,N)
+   10 STOP 5 ! CALL SORTTI (A,INDEX,N)
       GO TO 40
 C
-   20 CALL SORTTC(A,INDEX,N)
+   20 STOP 5 ! CALL SSORTTC(A,INDEX,N)
       GO TO 40
 C
    30 CALL SORTTF (A,INDEX,N)

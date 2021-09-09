@@ -141,7 +141,7 @@ pathextraincl "$INCLUDEPATHS"
 EXEC_NAME=
 EXEC_NAMEF=
 EXEC_NAMEFF=
-HWUTI+=' jimmy.o'
+HWUTI+=' pineappl_interface_dummy.o jimmy.o HwU.o'
 read -a HWUTIA <<< "$HWUTI"
 HWUTI=
 for i in "${HWUTIA[@]}"; do HWUTI+=`pwd`"/objects/$i "; done

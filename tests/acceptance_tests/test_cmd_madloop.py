@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -24,6 +25,7 @@ import sys
 import logging
 import time
 import tests.IOTests as IOTests
+from six.moves import range
 
 logger = logging.getLogger('test_cmd')
 
@@ -61,7 +63,7 @@ class TestCmdLoop(unittest.TestCase):
         """Create a process"""
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
 
         self.interface.onecmd('import model %s' % model)
@@ -406,7 +408,8 @@ class TestCmdLoop(unittest.TestCase):
                        'report':'full'}
             cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
                                                                 options.items())
-            # print "Running first CMS check cmd: ",cmd
+            
+            #print "Running first CMS check cmd: %s" %cmd
             self.do(cmd)
             self.assertEqual(cwd, os.getcwd())
             for mode in ['NWA','CMS']:

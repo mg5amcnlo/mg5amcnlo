@@ -12,8 +12,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     
 C     Modules
 C     
@@ -70,7 +70,7 @@ C
 C     These are constants related to the split orders
       INCLUDE 'nsqso_born.inc'
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
       INTEGER NSQSOXNLG
@@ -78,8 +78,8 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSOP1
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai
-C     , Ninja and COLLIER
+C     At present, there are only
+C      CutTools,PJFry++,IREGI,Golem95,Samurai, Ninja and COLLIER
       INTEGER NLOOPLIB
       PARAMETER (NLOOPLIB=7)
 C     Only CutTools or possibly Ninja (if installed with qp support)
@@ -404,14 +404,15 @@ C     using the MadLoop subroutine, we don't overwrite his choice when
 C      reading the parameters
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
       DATA  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION
      $ ,FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION/.FALSE.,.FALSE./
-      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
-     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      COMMON/COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
 C     This variable controls the general initialization which is
 C      *common* between all MadLoop SubProcesses.
@@ -655,6 +656,14 @@ C      helicity is asked
  101    CONTINUE
         CLOSE(1)
 
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
+
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
           DO J=1,NCOMB
@@ -880,8 +889,8 @@ C      to the computation of the next helicity.
      $ +P(2,2))**2-(P(3,1)+P(3,2))**2))
 
       CTCALL_REQ_SO_DONE=.FALSE.
-      FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARG
-     $ET.NE.-1)
+      FILTER_SO = (.NOT.CHECKPHASE)
+     $ .AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.NE.-1)
 
       DO I=1,NLOOPGROUPS
         DO J=0,LOOPMAXCOEFS-1
@@ -920,13 +929,14 @@ C       computed in quadruple precision.
       ENDIF
 
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
-     $   .NE.0)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H)
+     $   .GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
 
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
 
@@ -1164,8 +1174,8 @@ C              others to this new one
 C             Of course if it is one, then we do not need to do
 C              anything (because with HELINITSTARTOVER=.FALSE. we only
 C              support exactly identical Hels.)
-              IF(GOODHEL(HELPICKED).GT.-HELOFFSET.AND.GOODHEL(HELPICKED)
-     $         .NE.1) THEN
+              IF(GOODHEL(HELPICKED).GT.
+     $         -HELOFFSET.AND.GOODHEL(HELPICKED).NE.1) THEN
                 NEWHELREF=-1
                 DO H=1,NCOMB
                   IF (GOODHEL(H).EQ.(-HELOFFSET-HELPICKED)) THEN
@@ -1359,16 +1369,18 @@ C            answer from mode 1 and carry on.
 
         CTMODE=BASIC_CT_MODE
 
-        IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
+        IF(.NOT.EVAL_DONE(3).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.1)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
           EVAL_DONE(3)=.TRUE.
           CALL ROTATE_PS(PS,P,1)
           IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
           GOTO 200
         ENDIF
 
-        IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
+        IF(.NOT.EVAL_DONE(4).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.2)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
           EVAL_DONE(4)=.TRUE.
           CALL ROTATE_PS(PS,P,2)
           IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
@@ -1924,8 +1936,8 @@ C       The following is used instead
 C       When using COLLIER with the internal stability test, the first
 C        evaluation is typically more reliable so we do not want to
 C        use the average but rather the first evaluation.
-        IF (MLREDUCTIONLIB(I_LIB).EQ.7.AND.COLLIERUSEINTERNALSTABILITYT
-     $EST) THEN
+        IF (MLREDUCTIONLIB(I_LIB)
+     $   .EQ.7.AND.COLLIERUSEINTERNALSTABILITYTEST) THEN
           DO I=1,3
             ESTIMATE(I,K) = FULLLIST(I,K,1)
           ENDDO
@@ -2041,12 +2053,12 @@ C
 C     This functions returns the integer index identifying the split
 C      orders list passed in argument which correspond to the values
 C      of the following list of couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO
-      PARAMETER (NSO=1, NSQSO=1)
+      PARAMETER (NSO=2, NSQSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -2056,7 +2068,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J
       INTEGER SQPLITORDERS(NSQSO,NSO)
-      DATA (SQPLITORDERS(  1,I),I=  1,  1) /    2/
+      DATA (SQPLITORDERS(  1,I),I=  1,  2) /    2,    2/
       COMMON/ML5SQPLITORDERS/SQPLITORDERS
 C     
 C     BEGIN CODE
@@ -2070,10 +2082,51 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5SOINDEX_FOR_SQUARED_ORDE'
-     $ //'RS'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
+
+      END
+
+      INTEGER FUNCTION GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['QCD', 'QED']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=2, NSQSO=1)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  2) /    2,    2/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 
@@ -2149,7 +2202,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -2159,8 +2212,8 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    0/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  1) /    2/
+      DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    0,    1/
+      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    2,    1/
       COMMON/ML5AMPSPLITORDERS/AMPSPLITORDERS
 C     
 C     FUNCTION
@@ -2170,8 +2223,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       ML5SQSOINDEX=ML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -2183,12 +2236,12 @@ C
 C     This functions returns the orders identified by the squared
 C      split order index in argument. Order values correspond to
 C      following list of couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO
-      PARAMETER (NSO=1, NSQSO=1)
+      PARAMETER (NSO=2, NSQSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -2209,8 +2262,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5GET_SQUARED_ORDERS_FOR_S'
-     $ //'OINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -2223,12 +2276,12 @@ C
 C     This functions returns the orders identified by the split order
 C      index in argument. Order values correspond to following list of
 C      couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -2249,8 +2302,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5GET_ORDERS_FOR_AMPSOINDE'
-     $ //'X'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5GET_ORDERS_FOR_AMPSOINDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
@@ -2265,12 +2318,12 @@ C     This functions returns the integer index identifying the
 C      amplitude split orders passed in argument which correspond to
 C      the values of the following list of couplings (and in this
 C      order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -2315,12 +2368,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
-     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEUVPOLES                        = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2342,12 +2396,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
-     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEIRPOLES         = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2547,11 +2602,14 @@ C
       PARAMETER (NEXTERNAL=3)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
+      INCLUDE 'nsqso_born.inc'
 C     
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, USERHEL
       COMMON/USERCHOICE/USERHEL
 C     ----------
@@ -2575,7 +2633,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, RET_CODE
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C     
@@ -2692,7 +2753,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
       INTEGER RET_CODE
 C     

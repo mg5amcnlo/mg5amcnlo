@@ -26,7 +26,7 @@ C
       PARAMETER (MP__ZERO=0.0E0_16)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -99,11 +99,11 @@ C      if true.
       CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
 C     Amplitude(s) for born diagram with ID 1
-      CALL FFV2_0(W(1,2),W(1,1),W(1,3),GC_47,AMP(1))
+      CALL FFV2_0(W(1,2),W(1,1),W(1,3),GC_11,AMP(1))
 C     Counter-term amplitude(s) for loop diagram number 2
-      CALL FFV2_0(W(1,2),W(1,1),W(1,3),R2_SXCW,AMPL(1,1))
-C     At this point, all CT amps needed for (QCD=2), i.e. of split
-C      order ID=1, are computed.
+      CALL FFV2_0(W(1,2),W(1,1),W(1,3),R2_BXTW,AMPL(1,1))
+C     At this point, all CT amps needed for (QCD=2 QED=2), i.e. of
+C      split order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 2000
 
       GOTO 1001

@@ -15,8 +15,12 @@
 
 """Testing modules for fks_common functions and classes"""
 
+from __future__ import absolute_import
 import sys
+import operator
 import os
+from six.moves import range
+from six.moves import zip
 pjoin = os.path.join
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
@@ -28,10 +32,12 @@ import madgraph.core.color_algebra as color
 import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
 import fractions
+import operator
 
 class TestFKSCommon(unittest.TestCase):
     """ a class to test FKS common functions and classes"""
@@ -138,6 +144,21 @@ class TestFKSCommon(unittest.TestCase):
                           'line':'straight',
                           'charge':0.,
                           'pdg_code':12,
+                          'is_part':True,
+                          'propagating':True,
+                          'self_antipart':False}))
+
+            mypartlist.append(MG.Particle({'name':'w+',
+                          'antiname':'w-',
+                          'spin':3,
+                          'color':1,
+                          'mass':'mdl_MW',
+                          'width':'mdl_WW',
+                          'texname':'W+',
+                          'antitexname':'W-',
+                          'line':'wavy',
+                          'charge':1.,
+                          'pdg_code':24,
                           'is_part':True,
                           'propagating':True,
                           'self_antipart':False}))
@@ -348,7 +369,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'GQQ'},
                               'orders':{'QCD':1}}))
             
-            expected_qcd_inter.sort()
+            expected_qcd_inter.sort(key=operator.itemgetter('id'))
             
             expected_qed_inter = MG.InteractionList()
             
@@ -396,7 +417,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'ATT'},
                               'orders':{'QED':1}}))
             
-            expected_qed_inter.sort()
+            expected_qed_inter.sort(key=operator.itemgetter('id'))
             
             model = MG.Model()
             model.set('particles', mypartlist)
@@ -422,15 +443,19 @@ class TestFKSCommon(unittest.TestCase):
             self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
             
         # QED test
-###        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1]]
-###        sorted_pdgs = [ [1,1,22,1,1],[1,2,1,-2,-11],[1,2,1,6,2]]
-###        for input,goal in zip(input_pdgs, sorted_pdgs):
-###            leglist = fks_common.to_fks_legs(
-###                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
-###                            for i, id in enumerate(input)]), self.model)
-###            leglist.sort(pert = 'QED')
-###            self.assertEqual([l['id'] for l in leglist], goal)
-###            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1],[21,-1,-2,24]]
+        sorted_pdgs = [ [1,1,1,1,22],[1,2,1,-2,-11],[1,2,6,1,2],[21,-1,24,-2]]
+        for input,goal in zip(input_pdgs, sorted_pdgs):
+            leglist = fks_common.to_fks_legs(
+                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
+                            for i, id in enumerate(input)]), self.model)
+            leglist.sort(pert = 'QED')
+            self.assertEqual([l['id'] for l in leglist], goal)
+            if len(input) == 5:
+                self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+            elif len(input) == 4:
+                self.assertEqual([l['state'] for l in leglist], [False, False, True, True])
+
 
     
     def test_split_leg(self):
@@ -890,6 +915,8 @@ class TestFKSCommon(unittest.TestCase):
         res_list_qcd = []
         leg_list_qed = []
         res_list_qed = []
+        res_list_qed_noleptons = []
+
         # QCD splitting
         #INITIAL STATE SPLITTINGS
         # u to u>g u or g>u~u
@@ -911,6 +938,7 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                                  ])
+
         # g to g>gg or g>uu~ or g>u~u or g>dd~ or g>d~d
         leg_list_qcd.append( MG.Leg({'id' : 21, 
                                  'state' : False, 
@@ -965,6 +993,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #d to dg
         leg_list_qcd.append( MG.Leg({'id' : 1, 
                                  'state' : True, 
@@ -976,6 +1005,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #t to tg
         leg_list_qcd.append( MG.Leg({'id' : 6, 
                                  'state' : True, 
@@ -999,6 +1029,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #d~ to dg
         leg_list_qcd.append( MG.Leg({'id' : -1, 
                                  'state' : True, 
@@ -1010,6 +1041,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #t~ to tg
         leg_list_qcd.append( MG.Leg({'id' : -6, 
                                  'state' : True, 
@@ -1070,6 +1102,9 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                                  ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         # a or u>ua or u~>u~a or d>da or d~>d~a or e->e-a or e+>e+a
         leg_list_qed.append( MG.Leg({'id' : 22, 
                                  'state' : False, 
@@ -1118,7 +1153,38 @@ class TestFKSCommon(unittest.TestCase):
                                  'fks' : 'i'})], self.model)
                                  ]
                                  )
-        # FINAL STATE splitting
+        res_list_qed_noleptons.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model)
+                                 ]
+                                 )
+
+        # FINAL STATE splittings
         #u~ to da
         leg_list_qed.append( MG.Leg({'id' : -2, 
                                  'state' : True, 
@@ -1130,6 +1196,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #d~ to da
         leg_list_qed.append( MG.Leg({'id' : -1, 
                                  'state' : True, 
@@ -1141,6 +1210,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #e+ to e+a
         leg_list_qed.append( MG.Leg({'id' : -11, 
                                  'state' : True, 
@@ -1152,7 +1224,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
-        
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #t~ to ta
         leg_list_qed.append( MG.Leg({'id' : -6, 
                                  'state' : True, 
@@ -1164,6 +1238,8 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
         
         #a > e-e+ or uu~ or dd~
         leg_list_qed.append( MG.Leg({'id' : 22, 
@@ -1191,14 +1267,25 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                         ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
 
+        # now check the results
+        #QCD
         for leg, res in zip (leg_list_qcd, res_list_qcd):    
             self.assertEqual(res, 
                              fks_common.find_splittings(leg, self.model, {},pert='QCD') )
-            
+            # nothing should change if the include_init_leptons Flag is set to False
+            self.assertEqual(res, 
+                             fks_common.find_splittings(leg, self.model, {},pert='QCD', include_init_leptons=False) )
+        #QED    
         for leg, res in zip (leg_list_qed, res_list_qed):   
             self.assertEqual(res, 
                              fks_common.find_splittings(leg, self.model, {},pert='QED') )               
+        for leg, res in zip (leg_list_qed, res_list_qed_noleptons):   
+            # if the include_init_leptons flag is true, one should have different splittings in this case
+            self.assertEqual(res, 
+                             fks_common.find_splittings(leg, self.model, {},pert='QED', include_init_leptons=False) )               
     
     def test_insert_legs(self):
         """test the correct implementation of the fks_common function"""
@@ -2167,23 +2254,24 @@ class TestFKSCommon(unittest.TestCase):
         to the perturbative expansion are correctly extracted from the model"""
         # QCD
         dict = fks_common.find_pert_particles_interactions(self.model, 'QCD')
-        res_int = self.expected_qcd_inter
+        res_int = sorted(self.expected_qcd_inter, key=operator.itemgetter('id'))
         res_part = [-6,-2,-1,1,2,6,21]
         res_soft = [-2,-1,1,2,21]
+
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
         # QED
         dict = fks_common.find_pert_particles_interactions(self.model, 'QED')
-        res_int = self.expected_qed_inter
+        res_int = sorted(self.expected_qed_inter, key=operator.itemgetter('id'))
         res_part = [-11,-6,-2,-1,1,2,6,11,22]
         res_soft = [-11,-2,-1,1,2,11,22]
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
 
 
-    def test_find_pert_particles_interactionsi_mssm(self):
+    def test_find_pert_particles_interactions_mssm(self):
         """ for the mssm, the soft_particles should be the same as for the sm"""
         # QCD
         dict_mssm = fks_common.find_pert_particles_interactions(\
@@ -2214,6 +2302,18 @@ class TestFKSCommon(unittest.TestCase):
         
         for inte in dict['interactions']:
             self.assertTrue(not any([p['name'].startswith('gh') for p in inte['particles']]))
+
+
+    def test_find_particles_interactions_no_goldstones(self):
+        """tests that interactions involving goldstones are NOT returned by the
+        find_particles_interactions function when using a loop model"""
+        
+        dict = fks_common.find_pert_particles_interactions( \
+                import_ufo.import_model('loop_qcd_qed_sm'))
+
+        for inte  in dict['interactions']:
+            self.assertTrue(not 'g+' in [p['name'] for p in inte['particles']])
+            self.assertTrue(not 'g-' in [p['name'] for p in inte['particles']])
     
     
     def test_to_fks_leg_s(self):

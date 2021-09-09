@@ -15,6 +15,8 @@
 """  A file containing different extension of the cmd basic python library"""
 
 
+from __future__ import absolute_import
+from __future__ import print_function
 import logging
 import math
 import os
@@ -24,6 +26,13 @@ import signal
 import subprocess
 import sys
 import traceback
+import six
+if six.PY3:
+    import io
+    file = io.IOBase
+from six.moves import map
+from six.moves import range
+from six.moves import input
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -41,7 +50,7 @@ try:
     import madgraph.various.misc as misc
     from madgraph import MG5DIR, MadGraph5Error
     MADEVENT = False
-except ImportError, error:
+except ImportError as error:
     try:
         import internal.misc as misc
     except:
@@ -65,7 +74,7 @@ def debug(debug_only=True):
         def deco_f(*args, **opt):
             try:
                 return f(*args, **opt)
-            except Exception, error:
+            except Exception as error:
                 logger.error(error)
                 logger.error(traceback.print_exc(file=sys.stdout))
                 return
@@ -154,7 +163,7 @@ class OriginalCmd(object):
                 else:
                     if self.use_rawinput:
                         try:
-                            line = raw_input(self.prompt)
+                            line = input(self.prompt)
                         except EOFError:
                             line = 'EOF'
                     else:
@@ -277,9 +286,21 @@ class OriginalCmd(object):
         dotext = 'do_'+text
         
         done = set() # store the command already handle
+        out = []
+        #misc.sprint([a for a in self.get_names() if a.startswith(dotext)])
+        for a in self.get_names():
+            if a.startswith(dotext) and a not in done and not done.add(a):
+                # to allow practical shortcut of type do_arg1_arg2 
+                # do not include such here
+                if ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done):
+                    done.add(a)
+                    out.append(a[3:])
+        return out
         
         return [a[3:] for a in self.get_names() 
-                if a.startswith(dotext) and a not in done and not done.add(a)]
+                if a.startswith(dotext) and a not in done and not done.add(a)
+                and ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done)
+                ]
 
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
@@ -368,7 +389,7 @@ class OriginalCmd(object):
                         cmds_undoc.append(cmd)
             self.stdout.write("%s\n"%str(self.doc_leader))
             self.print_topics(self.doc_header,   cmds_doc,   15,80)
-            self.print_topics(self.misc_header,  help.keys(),15,80)
+            self.print_topics(self.misc_header,  list(help.keys()),15,80)
             self.print_topics(self.undoc_header, cmds_undoc, 15,80)
 
     def print_topics(self, header, cmds, cmdlen, maxcol):
@@ -391,7 +412,7 @@ class OriginalCmd(object):
         nonstrings = [i for i in range(len(list))
                         if not isinstance(list[i], str)]
         if nonstrings:
-            raise TypeError, ("list[i] not a string for i in %s" %
+            raise TypeError("list[i] not a string for i in %s" %
                               ", ".join(map(str, nonstrings)))
         size = len(list)
         if size == 1:
@@ -541,7 +562,7 @@ class BasicCmd(OriginalCmd):
     
             self.stdout.write(self.prompt+readline.get_line_buffer())
             self.stdout.flush()
-        except Exception, error:
+        except Exception as error:
             if __debug__:
                 logger.error(error)
             
@@ -596,9 +617,9 @@ class BasicCmd(OriginalCmd):
                 else:
                     try:
                         compfunc = getattr(self, 'complete_' + cmd)
-                    except AttributeError, error:
+                    except AttributeError as error:
                         compfunc = self.completedefault
-                    except Exception, error:
+                    except Exception as error:
                         misc.sprint(error)
             else:
                 compfunc = self.completenames
@@ -623,8 +644,8 @@ class BasicCmd(OriginalCmd):
                 data = compfunc(Ntext, line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]
-             except Exception, error:
-                 print error                
+             except Exception as error:
+                 print(error)                
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
@@ -635,7 +656,7 @@ class BasicCmd(OriginalCmd):
         
         try:
             return self.completion_matches[state]
-        except IndexError, error:
+        except IndexError as error:
             # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
@@ -755,13 +776,13 @@ class CheckCmd(object):
         
         if len(args) > 2:
             self.help_save()
-            raise self.InvalidCmd, 'too many arguments for save command.'
+            raise self.InvalidCmd('too many arguments for save command.')
         
         if len(args) == 2:
             if args[0] != 'options':
                 self.help_save()
-                raise self.InvalidCmd, '\'%s\' is not recognized as first argument.' % \
-                                                args[0]
+                raise self.InvalidCmd('\'%s\' is not recognized as first argument.' % \
+                                                args[0])
             else:
                 args.pop(0)           
 
@@ -922,7 +943,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if intro is not None:
             self.intro = intro
         if self.intro:
-            print self.intro
+            print(self.intro)
         stop = None
         while not stop:
             if self.cmdqueue:
@@ -931,7 +952,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else:
                 if self.use_rawinput:
                     try:
-                        line = raw_input(self.prompt)
+                        line = input(self.prompt)
                     except EOFError:
                         line = 'EOF'
                 else:
@@ -945,7 +966,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             try:
                 line = self.precmd(line)
                 stop = self.onecmd(line)
-            except BaseException, error:
+            except BaseException as error:
                 self.error_handling(error, line)
                 if isinstance(error, KeyboardInterrupt):
                     stop = True
@@ -1086,7 +1107,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             obj = SmartQuestion
 
         if alias:
-            choices += alias.keys()
+            choices += list(alias.keys())
         
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
@@ -1138,6 +1159,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if value == default and ask_class:
             value = question_instance.default(default)
+            if hasattr(question_instance, 'answer'):
+                value = question_instance.answer
+           
 
         if not return_instance:
             return value
@@ -1182,7 +1206,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if not line:
             try:
-                line = self.inputfile.next()
+                line = next(self.inputfile)
             except StopIteration:
                 if self.haspiping:
                     logger.debug('piping')
@@ -1286,7 +1310,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             os.remove(self.debug_output)
         try:
             super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
-        except Exception, error:
+        except Exception as error:
             logger.error(error)
 
         debug_file = open(self.debug_output, 'a')
@@ -1310,7 +1334,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
-        except Exception, error:
+        except Exception as error:
             debug_file.write('Fail to write options with error %s' % error)
         
         #add the cards:
@@ -1325,6 +1349,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
+                raise 
                 sys.exit(str(error))
             elif self.options['crash_on_error'] == 'never':
                 return False
@@ -1396,6 +1421,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         super(Cmd,self).onecmd('history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        try:
+            error = error.encode('utf-8','backslashreplace')
+        except:
+            error = str(error)
         error_text += self.config_debug % {'debug' :self.debug_output}
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
@@ -1404,7 +1433,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
-        except Exception, error:
+        except Exception as error:
             debug_file.write('Fail to write options with error %s' % error)
             
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
@@ -1442,7 +1471,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         This allow to pass extra argument for internal call.
         """
-        if '~/' in line and os.environ.has_key('HOME'):
+        if '~/' in line and 'HOME' in os.environ:
             line = line.replace('~/', '%s/' % os.environ['HOME'])
         if '#' in line:
             line = line.split('#')[0]
@@ -1513,7 +1542,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
         try:
             return self.onecmd_orig(line, **opt)
-        except BaseException, error: 
+        except BaseException as error: 
             return self.error_handling(error, line)
             
     
@@ -1604,7 +1633,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def compile(self, *args, **opts):
         """ """
-        
+        import multiprocessing
+        if not self.options['nb_core'] or self.options['nb_core'] == 'None':
+            self.options['nb_core'] = multiprocessing.cpu_count()
         return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):
@@ -1720,7 +1751,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = raw_input
+            fct = six.moves.input
         
         if timeout:
             signal.alarm(timeout)
@@ -1831,7 +1862,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             last_action_2 = last_action = 'none'
         
         pos = 0
-        authorize = self.next_possibility.keys() 
+        authorize = list(self.next_possibility.keys()) 
         while last_action_2  not in authorize and last_action not in authorize:
             pos += 1
             if pos > len(self.history):
@@ -1866,7 +1897,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if len(args) == 0:
             self.help_display()
-            raise self.InvalidCmd, 'display require at least one argument'
+            raise self.InvalidCmd('display require at least one argument')
         
         if args[0] == "options":
             outstr = "Value of current Options:\n" 
@@ -1899,7 +1930,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 except ImportError:
                     try:
                         var = eval(args[1])
-                    except Exception, error:
+                    except Exception as error:
                         outstr += 'EXTERNAL:\nVariable %s is not a external variable\n' % args[1]
                         break
                     else:
@@ -1956,11 +1987,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # keep track of all key that we need to write.
 
         logger.info('save configuration file to %s' % filepath)
-        to_write = to_keep.keys()
+        to_write = list(to_keep.keys())
         text = ""
         has_mg5_path = False
         # Use local configuration => Need to update the path
-        for line in file(basefile):
+        for line in open(basefile):
             if '=' in line:
                 data, value = line.split('=',1)
             else: 
@@ -2014,7 +2045,7 @@ class CmdShell(Cmd):
     def do_shell(self, line):
         "Run a shell command"
 
-        if line.strip() is '':
+        if not line.strip():
             self.help_shell()
         else:
             logging.info("running shell command: " + line)
@@ -2086,7 +2117,7 @@ class SmartQuestion(BasicCmd):
         for key,value in opts:
             setattr(self, key, value)
         if reprint_opt:
-            print question
+            print(question)
             logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
             logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
         return self.cmdloop()
@@ -2105,8 +2136,8 @@ class SmartQuestion(BasicCmd):
             out[' Recognized command'] = super(SmartQuestion, self).completenames(text,line, *ignored)
             
             return self.deal_multiple_categories(out)
-        except Exception, error:
-            print error
+        except Exception as error:
+            print(error)
     
     completedefault = completenames
 
@@ -2126,7 +2157,7 @@ class SmartQuestion(BasicCmd):
         This allow to pass extra argument for internal call.
         """
         try:
-            if '~/' in line and os.environ.has_key('HOME'):
+            if '~/' in line and 'HOME' in os.environ:
                 line = line.replace('~/', '%s/' % os.environ['HOME'])
             line = os.path.expandvars(line)
             cmd, arg, line = self.parseline(line)
@@ -2159,7 +2190,7 @@ class SmartQuestion(BasicCmd):
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
-            print self.question.encode('utf8')
+            print(self.question)
 
         if self.mother_interface:
             answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
@@ -2245,7 +2276,7 @@ class SmartQuestion(BasicCmd):
                 
             else: 
                 raise Exception
-        except Exception,error:
+        except Exception as error:
             if self.wrong_answer < 100:
                 self.wrong_answer += 1
                 logger.warning("""%s not valid argument. Valid argument are in (%s).""" \
@@ -2262,7 +2293,7 @@ class SmartQuestion(BasicCmd):
     
 # a function helper
 def smart_input(input_text, allow_arg=[], default=None):
-    print input_text
+    print(input_text)
     obj = SmartQuestion(allow_arg=allow_arg, default=default)
     return obj.cmdloop()
 
@@ -2290,8 +2321,8 @@ class OneLinePathCompletion(SmartQuestion):
             out[' Recognized command'] = BasicCmd.completenames(self, text, line, begidx, endidx)
             
             return self.deal_multiple_categories(out, formatting)
-        except Exception, error:
-            print error
+        except Exception as error:
+            print(error)
             
     def precmd(self, *args):
         """ """
@@ -2308,8 +2339,8 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.flush()
         try:
             args = Cmd.split_arg(line[0:begidx])
-        except Exception, error:
-            print error
+        except Exception as error:
+            print(error)
 
         # Directory continuation                 
         if args[-1].endswith(os.path.sep):
@@ -2337,10 +2368,10 @@ class OneLinePathCompletion(SmartQuestion):
                 reprint_opt = True         
             else:
                 raise Exception
-        except Exception, error:  
-            print """not valid argument. Valid argument are file path or value in (%s).""" \
-                          % ','.join(self.allow_arg)
-            print 'please retry'
+        except Exception as error:  
+            print("""not valid argument. Valid argument are file path or value in (%s).""" \
+                          % ','.join(self.allow_arg))
+            print('please retry')
             reprint_opt = False 
 
         if line != 'EOF':
@@ -2349,7 +2380,7 @@ class OneLinePathCompletion(SmartQuestion):
             
 # a function helper
 def raw_path_input(input_text, allow_arg=[], default=None):
-    print input_text
+    print(input_text)
     obj = OneLinePathCompletion(allow_arg=allow_arg, default=default )
     return obj.cmdloop()
 
@@ -2401,6 +2432,11 @@ class ControlSwitch(SmartQuestion):
         """
     
         self.to_control = to_control
+        if 'hide_line' in opts:
+            self.hide_line = opts['hide_line']
+        else:
+            self.hide_line = []
+
         self.mother_interface = motherinstance
         self.inconsistent_keys = {} #flag parameter which are currently not consistent
                                     # and the value by witch they will be replaced if the
@@ -2417,7 +2453,7 @@ class ControlSwitch(SmartQuestion):
         question = self.create_question()
         
         #check all default for auto-completion
-        allowed_args = [ `i`+';' for i in range(1, 1+len(self.to_control))] 
+        allowed_args = [ repr(i)+';' for i in range(1, 1+len(self.to_control))] 
         for key in self.switch:
             allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
         # adding special mode
@@ -2553,7 +2589,7 @@ class ControlSwitch(SmartQuestion):
             base, value = line.split(' ', 1)
         elif hasattr(self, 'ans_%s' % line.lower()):
             base, value = line.lower(), None
-        elif line.isdigit() and line in [`i` for i in range(1, len(self.to_control)+1)]:
+        elif line.isdigit() and line in [repr(i) for i in range(1, len(self.to_control)+1)]:
             # go from one valid option to the next in the get_allowed for that option
             base = self.to_control[int(line)-1][0].lower()
             return self.default(base) # just recall this function with the associate name
@@ -2586,6 +2622,8 @@ class ControlSwitch(SmartQuestion):
         elif line in 'auto':
             self.switch['dynamical'] = True
             return super(ControlSwitch, self).default(line)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('unknow command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('unknow command: %s' % line)
         else:
@@ -2601,6 +2639,8 @@ class ControlSwitch(SmartQuestion):
             getattr(self, 'ans_%s' % base)(value)
         elif base in self.switch:
             self.set_switch(base, value)
+        elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
+            raise NotValidInput('Not valid command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
             raise NotValidInput('Not valid command: %s' % line)                
         else:
@@ -2627,7 +2667,7 @@ class ControlSwitch(SmartQuestion):
         for key,_ in self.to_control:
             if not self.check_value(key, self.switch[key]):
                 self.switch[key] = 'OFF'
-        
+
         if not self.inconsistent_keys:
             return self.switch
         else:
@@ -2784,27 +2824,21 @@ class ControlSwitch(SmartQuestion):
                          for k in self.inconsistent_details.values() for c in k
                          if c['changed_key'] != key] 
 
-        to_check.sort(lambda x, y: -1 if self.last_changed.index(x[0])>self.last_changed.index(y[0]) else 1)
+        to_check.sort(key=lambda x: self.last_changed.index(x[0]))
 
         # validate tmp_switch.
         to_check = [(key, value)] + to_check
 
-        i = 0
-        while len(to_check) and i < 50:
-            #misc.sprint(i, to_check, tmp_switch)
+        nstep = 0
+        while len(to_check) and nstep < 50:
             # check in a iterative way the consistency of the tmp_switch parameter
-            i +=1
+            nstep +=1
             key2, value2 = to_check.pop(0)
             if hasattr(self, 'consistency_%s' % key2):
-                rules2 = dict([(key2, None) for key2 in self.switch])
-                rules2.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
+                rules = dict([(k, None) for k in self.switch])
+                rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
-                rules = {}
-                for key3,value3 in self.switch.items():
-                    if hasattr(self, 'consistency_%s_%s' % (key2,key3)):
-                        rules[key3] = getattr(self, 'consistency_%s_%s' % (key2,key3))(value2, value3)
-                    else:
-                        rules[key3] = None
+                rules = self.check_consistency_with_all(key2)
                         
             for key, replacement in rules.items():
                 if replacement:
@@ -2821,7 +2855,7 @@ class ControlSwitch(SmartQuestion):
                 if pos[key] == i:
                     to_check_new.append((key,value))
             to_check = to_check_new
-        if i>=50:
+        if nstep >=50:
             logger.critical('Failed to find a consistent set of switch values.')
             
         # Now tmp_switch is to a fully consistent setup for sure.
@@ -2834,6 +2868,15 @@ class ControlSwitch(SmartQuestion):
                     continue
                 self.inconsistent_keys[key2] = value2
             
+            
+    def check_consistency_with_all(self, key, value):
+        rules = {}
+        for key2,value2 in self.switch.items():
+            if hasattr(self, 'consistency_%s_%s' % (key,key2)):
+                rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+            else:
+                rules[key2] = None
+        return rules
     #    
     # Helper routine for putting questions with correct color 
     #
@@ -2862,14 +2905,14 @@ class ControlSwitch(SmartQuestion):
                 return self.red % switch_value
 
     def print_options(self,key, keep_default=False):
-    
+
         if hasattr(self, 'print_options_%s' % key) and not keep_default:
             return getattr(self, 'print_options_%s' % key)()
 
         #re-order the options in order to have those in cycling order    
         try:
             ind =  self.get_allowed(key).index(self.switch[key])
-        except Exception, err:
+        except Exception as err:
             options = self.get_allowed(key)
         else:
             options = self.get_allowed(key)[ind:]+ self.get_allowed(key)[:ind] 
@@ -3094,7 +3137,6 @@ class ControlSwitch(SmartQuestion):
                           lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
         
-        
         return upper, lower, f1, f2
                 
     def create_question(self, help_text=True):
@@ -3105,7 +3147,7 @@ class ControlSwitch(SmartQuestion):
         try:
             nb_rows, nb_col = os.popen('stty size', 'r').read().split()
             nb_rows, nb_col = int(nb_rows), int(nb_col)
-        except Exception,error:
+        except Exception as error:
             nb_rows, nb_col = 20, 80
         
         #compute information on the length of element to display
@@ -3115,8 +3157,12 @@ class ControlSwitch(SmartQuestion):
         max_len_add_info = 0
         max_len_potential_switch = 0
         max_nb_key = 1 + int(math.log10(len(self.to_control)))
-
+        
+        
         for key, descrip in self.to_control:
+            if key in self.hide_line:
+                continue
+
             if len(descrip) > max_len_description: max_len_description = len(descrip)
             if len(key) >  max_len_name: max_len_name = len(key)
             if key in self.inconsistent_keys:
@@ -3137,17 +3183,19 @@ class ControlSwitch(SmartQuestion):
         upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
                                          max_len_name, max_len_add_info, 
                                          max_len_potential_switch, max_nb_key)
+        f3 = 0 #formatting for hidden line
         
         text = \
         ["The following switches determine which programs are run:",
          upper_line
         ]                     
-        
+
 
         
         for i,(key, descrip) in enumerate(self.to_control):
 
-
+            if key in self.hide_line and not __debug__:
+                continue
             
             data_to_format = {'nb': i+1,
                            'descrip': descrip,
@@ -3157,6 +3205,14 @@ class ControlSwitch(SmartQuestion):
                            'switch_nc': self.switch[key],
                            'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }
+            
+            hidden_line = False
+            if __debug__ and key in self.hide_line:
+                data_to_format['descrip'] = '\x1b[32m%s\x1b[0m' % data_to_format['descrip']
+                data_to_format['add_info'] = '\x1b[32m%s\x1b[0m' % data_to_format['add_info']
+                data_to_format['name'] = '\x1b[32m%s\x1b[0m' % data_to_format['name']
+                hidden_line=True
+                
             if key in self.inconsistent_keys:
                 # redefine the formatting here, due to the need to know the conflict size
                 _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
@@ -3166,7 +3222,18 @@ class ControlSwitch(SmartQuestion):
                 
                 data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
+                
+                if hidden_line: 
+                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                                lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
+                                 f2)
                 text.append(f2 % data_to_format)
+            elif hidden_line:
+                if not f3:
+                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                                lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
+                                 f1)
+                text.append(f3 % data_to_format)
             else:
                 text.append(f1 % data_to_format)
 

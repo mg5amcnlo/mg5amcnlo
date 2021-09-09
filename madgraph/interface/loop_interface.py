@@ -16,6 +16,7 @@
    Uses the cmd package for command interpretation and tab completion.
 """
 
+from __future__ import absolute_import
 import os
 import shutil
 import time
@@ -95,7 +96,7 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         mg_interface.MadGraphCmd.check_output(self,args, default=default)
 
         if self._export_format not in self.supported_ML_format:
-            raise self.InvalidCmd, "not supported format %s" % self._export_format
+            raise self.InvalidCmd("not supported format %s" % self._export_format)
 
         
     def check_launch(self, args, options):
@@ -281,6 +282,18 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
+        if proc['perturbation_couplings'] and proc['orders'] and not proc['squared_orders']:
+            if any(val not in [0,99] for val in proc['orders'].values()):
+                message = "Potentially ambigious syntax detected. Note that the syntax of paper 1804.10017 (used in 3.0.x) is not used anymore (since version 3.1.0).\n" +\
+                    'If you want to follow the syntax of that paper, you can just replace "QED" by "aEW" and "QCD" by "aS".\n' +\
+                    'More information here: http://amcatnlo.cern.ch/co.htm\n'
+                if not self.options['acknowledged_v3.1_syntax']:
+                    raise Exception(message+ 'If you know the current meaning of the syntax you can bypass this crash by running (once per machine) this command:\n set acknowledged_v3.1_syntax True --global')
+
+
+
+
+
     def validate_model(self, loop_type='virtual',coupling_type=['QCD'], stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
@@ -289,9 +302,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if isinstance(coupling_type,str):
             coupling_type = [coupling_type,]
 
-        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
-            c = ' '.join(coupling_type)
-            raise self.InvalidCmd, 'MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c)
+##        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
+##            c = ' '.join(coupling_type)
+##            raise self.InvalidCmd('MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c))
         
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
@@ -602,8 +615,9 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
-            self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
-                                 a1.get_number_of_diagrams())
+            self._curr_amps.sort(key=lambda x: x.get_number_of_diagrams())
+                
+
 
             cpu_time1 = time.time()
             ndiags = 0
@@ -801,6 +815,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         """Generate an amplitude for a given process and add to
         existing amplitudes
         """
+
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
@@ -829,7 +844,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                     else:
                         loop_filter = arg[14:]
                 if not isinstance(self, extended_cmd.CmdShell):
-                    raise self.InvalidCmd, "loop_filter is not allowed in web mode"
+                    raise self.InvalidCmd("loop_filter is not allowed in web mode")
             args = [a for a in args if not a.startswith('--loop_filter=')]
 
             # Rejoin line
@@ -905,6 +920,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                       amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
             (cpu_time2 - cpu_time1))
+            
 
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
@@ -924,11 +940,11 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     def __init__(self, question, *args, **opts):
 
-        import urllib2
+        import six.moves.urllib.request, six.moves.urllib.error, six.moves.urllib.parse
         try:
-            response=urllib2.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+            response=six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
             self.online=True
-        except urllib2.URLError as err: 
+        except six.moves.urllib.error.URLError as err: 
             self.online=False        
         
         self.code = {'ninja': 'install',
@@ -959,7 +975,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if os.path.exists(pjoin(install_dir1, 'collier')):
                 self.code['collier'] =  pjoin(install_dir1, 'collier')
             if os.path.exists(pjoin(install_dir2, 'golem95')):
-                self.code['glem'] =  pjoin(install_dir2, 'golem95')
+                self.code['golem'] =  pjoin(install_dir2, 'golem95')
             if os.path.exists(pjoin(install_dir1, 'ninja')):
                 self.code['ninja'] =  pjoin(install_dir2, 'ninja','lib')
         

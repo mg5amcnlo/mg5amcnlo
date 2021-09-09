@@ -28,6 +28,7 @@ C----------------------------------------------------------------------
       SUBROUTINE PYABEG
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       implicit none
       include 'reweight0.inc'
       integer j,kk,l,i
@@ -46,7 +47,7 @@ c
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c
 c Initialize histograms

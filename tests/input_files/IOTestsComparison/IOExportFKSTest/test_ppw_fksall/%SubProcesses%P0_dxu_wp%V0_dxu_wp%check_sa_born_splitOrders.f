@@ -125,7 +125,7 @@ C     Now we can call the matrix element!
 C     
       CALL SMATRIX_SPLITORDERS(P,MATELEMS)
       MATELEM=MATELEMS(0)
-      WRITE(*,*) '1) Matrix element for (QCD=0) = ',MATELEMS(1)
+      WRITE(*,*) '1) Matrix element for (QCD=0 QED=2) = ',MATELEMS(1)
 C     
       IF (NCHOSEN.NE.NSPLITORDERS) THEN
         WRITE (*,*) 'Selected squared coupling orders combination for'
@@ -170,8 +170,8 @@ C
 C     CALL SMATRIX(P,MATELEM)
 C     
 C     write (*,*) "-------------------------------------------------"
-C     write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
-C     	
+C     write (*,*) "Matrix element = ", MATELEM, "
+C      GeV^",-(2*nexternal-8)	
 C     write (*,*) "-------------------------------------------------"
 
       END
@@ -228,7 +228,7 @@ C     LOCAL
         P(2,2)=0D0
         P(3,2)=-MOM
 
-        CALL RAMBO(NEXTERNAL-2,ENERGY,PMASS(3),PRAMBO,WGT)
+        CALL RAMBO(NEXTERNAL-2,ENERGY,PMASS(NINCOMING+1),PRAMBO,WGT)
         DO I=3, NEXTERNAL
           P(0,I)=PRAMBO(4,I-2)
           P(1,I)=PRAMBO(1,I-2)

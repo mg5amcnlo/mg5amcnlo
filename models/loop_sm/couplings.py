@@ -3,9 +3,10 @@
 # Date: Fri 18 Mar 2011 18:40:51
 
 
-from object_library import all_couplings, Coupling
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from __future__ import absolute_import
+from .object_library import all_couplings, Coupling
+from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 GC_HHHH = Coupling(name = 'GC_HHHH',
                  value = '-6*complex(0,1)*lam',

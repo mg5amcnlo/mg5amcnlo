@@ -35,8 +35,6 @@ c     Global
 c
 c      include 'coupl.inc'
 c      real*8          scale
-c      logical               fixed_ren_scale,fixed_fac_scale
-c      common/to_scale/scale,fixed_ren_scale,fixed_fac_scale
 
       logical banner_open
       integer lun_ban

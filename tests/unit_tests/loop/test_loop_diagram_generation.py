@@ -16,20 +16,26 @@
 """Unit test library for the various properties of objects in 
    loop_diagram_generaiton"""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import copy
 import itertools
 import logging
 import math
 import os
 import sys
+from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 
+import tests.IOTests as IOTests
 import tests.unit_tests as unittest
 
 
+import madgraph.various.misc as misc
+import madgraph.core.color_algebra as color
 import madgraph.core.drawing as draw_lib
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
@@ -45,6 +51,7 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 _model_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 os.path.pardir,'models')
+_color_one = color.ColorString()
 #===============================================================================
 # Function to load a toy hardcoded Loop Model
 #===============================================================================
@@ -154,7 +161,7 @@ def loadLoopModel():
                   'id': 1,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 3),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':1}}))
@@ -164,7 +171,7 @@ def loadLoopModel():
                   'id': 2,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 4),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G^2'},
                   'orders':{'QCD':2}}))
@@ -176,7 +183,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1}}))
@@ -187,7 +194,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1}}))
@@ -198,7 +205,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1}}))
@@ -209,7 +216,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1}}))
@@ -222,7 +229,7 @@ def loadLoopModel():
                                         [mypartlist[4], \
                                          antie, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1}}))
@@ -235,7 +242,7 @@ def loadLoopModel():
                   'id': 8,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 3),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':3},
@@ -248,7 +255,7 @@ def loadLoopModel():
                   'id': 9,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 4),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G^2'},
                   'orders':{'QCD':4},
@@ -263,7 +270,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
@@ -277,7 +284,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
@@ -291,7 +298,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
@@ -305,7 +312,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -319,7 +326,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
@@ -333,7 +340,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':1, 'QED':2},
@@ -347,7 +354,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':1, 'QCD':2},
@@ -361,7 +368,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -377,7 +384,7 @@ def loadLoopModel():
                                         [mypartlist[4], \
                                          antie, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -394,7 +401,7 @@ def loadLoopModel():
                   'id': 19,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 2),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
@@ -407,7 +414,7 @@ def loadLoopModel():
                   'id': 20,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[3]] * 2),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -421,7 +428,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[4], \
                                          antie]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -435,7 +442,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[2], \
                                          antid]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -449,7 +456,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[2], \
                                          antid]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
@@ -463,7 +470,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[1], \
                                          antiu]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -477,7 +484,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[1], \
                                          antid]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
@@ -493,7 +500,7 @@ def loadLoopModel():
                   'id': 26,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[3]] * 3),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':3},
@@ -508,7 +515,7 @@ def loadLoopModel():
                                         [mypartlist[3],\
                                         mypartlist[3],\
                                         mypartlist[0],]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2, 'QCD':1},
@@ -523,7 +530,7 @@ def loadLoopModel():
                                         [mypartlist[3],\
                                         mypartlist[0],\
                                         mypartlist[0],]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':1, 'QCD':2},
@@ -536,7 +543,7 @@ def loadLoopModel():
                   'id': 29,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[3]] * 4),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':4},
@@ -552,7 +559,7 @@ def loadLoopModel():
                                         mypartlist[3],\
                                         mypartlist[3],\
                                         mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':3,'QCD':1},
@@ -567,7 +574,7 @@ def loadLoopModel():
                                         mypartlist[3],\
                                         mypartlist[0],\
                                         mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2,'QCD':2},
@@ -582,7 +589,7 @@ def loadLoopModel():
                                         mypartlist[0],\
                                         mypartlist[0],\
                                         mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':1,'QCD':3},
@@ -596,7 +603,7 @@ def loadLoopModel():
                   'id': 33,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 3),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':3},
@@ -609,7 +616,7 @@ def loadLoopModel():
                   'id': 34,
                   'particles': base_objects.ParticleList(\
                                         [mypartlist[0]] * 4),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G^2'},
                   'orders':{'QCD':4},
@@ -624,7 +631,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
@@ -639,7 +646,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QED':2,'QCD':1},
@@ -653,7 +660,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QCD':2,'QED':1},
@@ -667,7 +674,7 @@ def loadLoopModel():
                                         [mypartlist[1], \
                                          antiu, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -681,7 +688,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QCD':3},
@@ -695,7 +702,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[0]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQQ'},
                   'orders':{'QED':2,'QCD':1},
@@ -709,7 +716,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QCD':2,'QED':1},
@@ -723,7 +730,7 @@ def loadLoopModel():
                                         [mypartlist[2], \
                                          antid, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -739,7 +746,7 @@ def loadLoopModel():
                                         [mypartlist[4], \
                                          antie, \
                                          mypartlist[3]]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'GQED'},
                   'orders':{'QED':3},
@@ -756,7 +763,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[2], \
                                          antid]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -770,7 +777,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[2], \
                                          antid]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
@@ -784,7 +791,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[1], \
                                          antiu]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QED':2},
@@ -798,7 +805,7 @@ def loadLoopModel():
                   'particles': base_objects.ParticleList([\
                                         mypartlist[1], \
                                          antiu]),
-                  'color': [],
+                  'color': [_color_one],
                   'lorentz':['L1'],
                   'couplings':{(0, 0):'G'},
                   'orders':{'QCD':2},
@@ -1196,7 +1203,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                       # a dd~d~ R2
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]]*4),
-                      'color': [],
+                      'color': [_color_one],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':4},
@@ -1319,7 +1326,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         for inter in newLoopModel['interactions']:
             if inter['type']=='base':
                 newInteractionList.append(inter)
-        
+
         myleglist = base_objects.LegList()
         myleglist.append(base_objects.Leg({'id':1,
                                          'state':False}))
@@ -1340,7 +1347,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                              antid,
                                              self.mypartlist[2],
                                              antid,]),
-                      'color': [],
+                      'color': [_color_one],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':4},
@@ -1433,7 +1440,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
                       'id': 1,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 3),
-                      'color': [],
+                      'color': [_color_one],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G'},
                       'orders':{'QCD':1}}))
@@ -1443,7 +1450,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
                       'id': 2,
                       'particles': base_objects.ParticleList(\
                                             [self.mypartlist[0]] * 4),
-                      'color': [],
+                      'color': [_color_one],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'G^2'},
                       'orders':{'QCD':2}}))
@@ -1455,7 +1462,7 @@ class LoopDiagramFDStructTest(unittest.TestCase):
                                             [self.mypartlist[1], \
                                              antid, \
                                              self.mypartlist[0]]),
-                      'color': [],
+                      'color': [_color_one],
                       'lorentz':['L1'],
                       'couplings':{(0, 0):'GQQ'},
                       'orders':{'QCD':1}}))
@@ -1599,6 +1606,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
 
     myamplitude = diagram_generation.Amplitude()
 
+    @IOTests.set_global(unitary=False)
     def setUp(self):
         """Load different objects for the tests."""
         
@@ -2260,5 +2268,5 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
 if __name__ == '__main__':
         # Save this model so that it can be loaded by other loop tests
         save_load_object.save_to_file(os.path.join(_input_file_path, 'test_toyLoopModel.pkl'),loadLoopModel())
-        print "test_toyLoopModel.pkl created."
+        print("test_toyLoopModel.pkl created.")
         #unittest.main()

@@ -634,6 +634,8 @@ c-----
          eta=25d0
       elseif (abs(tp-pi).lt.1d-5) then
          eta=-25d0
+      elseif (tp.ne.tp) then ! NAN or INF
+         eta=-99d99
       else
          eta=-dlog(dtan(theta(p)/2d0))
       endif

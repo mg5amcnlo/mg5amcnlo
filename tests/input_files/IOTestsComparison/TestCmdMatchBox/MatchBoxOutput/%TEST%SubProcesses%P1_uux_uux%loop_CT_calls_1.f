@@ -95,38 +95,38 @@ C      if true.
         GOTO 1001
       ENDIF
 
-C     CutTools call for loop numbers 1,19,21
+C     CutTools call for loop numbers 1,15,17
       CALL MG5_1_LOOP_2(5,7,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,1)
-C     CutTools call for loop numbers 2,20,22
-      CALL MG5_1_LOOP_2(6,8,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,2)
-C     CutTools call for loop numbers 3,4
+C     CutTools call for loop numbers 2,3
       CALL MG5_1_LOOP_3(3,4,5,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
-     $ ,I_SO,3)
+     $ ,I_SO,2)
+C     CutTools call for loop numbers 4,16,18
+      CALL MG5_1_LOOP_2(6,8,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,3)
 C     CutTools call for loop numbers 5,6
       CALL MG5_1_LOOP_3(2,4,6,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
      $ ,I_SO,4)
 C     CutTools call for loop numbers 7,8
       CALL MG5_1_LOOP_3(1,3,8,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
      $ ,I_SO,5)
-C     CutTools call for loop numbers 9,13
+C     CutTools call for loop numbers 9,12
       CALL MG5_1_LOOP_4(1,2,4,3,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,DCMPLX(ZERO),2,I_SO,6)
-C     CutTools call for loop numbers 10
-      CALL MG5_1_LOOP_4(1,2,3,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
-     $ ,DCMPLX(ZERO),2,I_SO,7)
-C     CutTools call for loop numbers 11,12
+C     CutTools call for loop numbers 10,11
       CALL MG5_1_LOOP_3(1,2,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
-     $ ,I_SO,8)
+     $ ,I_SO,7)
+C     CutTools call for loop numbers 13
+      CALL MG5_1_LOOP_4(1,2,3,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),2,I_SO,8)
 C     CutTools call for loop numbers 14
       CALL MG5_1_LOOP_4(1,3,2,4,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,DCMPLX(ZERO),2,I_SO,9)
-C     CutTools call for loop numbers 15
+C     CutTools call for loop numbers 19
       CALL MG5_1_LOOP_2(5,7,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,10)
-C     CutTools call for loop numbers 16
+C     CutTools call for loop numbers 20
       CALL MG5_1_LOOP_2(6,8,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,11)
-C     CutTools call for loop numbers 17
+C     CutTools call for loop numbers 21
       CALL MG5_1_LOOP_2(5,7,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,12)
-C     CutTools call for loop numbers 18
+C     CutTools call for loop numbers 22
       CALL MG5_1_LOOP_2(6,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,13)
 C     At this point, all reductions needed for (QCD=6), i.e. of split
 C      order ID=1, are computed.

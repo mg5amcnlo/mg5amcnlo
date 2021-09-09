@@ -166,8 +166,9 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor)
+      COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C GLOBAL VARIABLES
 C  
@@ -195,7 +196,6 @@ C ----------
       glu_ij = ij_values(nfksprocess)
       BORN = 0d0
       BORNTILDE = (0d0,0d0)
-      back_hel = nhel(glu_ij)
       borns(1) = 0d0
       borns(2) = 0d0
       if (glu_ij.ne.0) then
@@ -249,7 +249,7 @@ C ----------
           DO J = 1, NCOLOR
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          BORNS(2-(1+back_hel*ihel)/2)=BORNS(2-(1+back_hel*ihel)/2)+ZTEMP*DCONJG(JAMP(I))   
         ENDDO
         Do I = 1, NGRAPHS
           amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
@@ -266,7 +266,7 @@ C ----------
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J)
         ENDDO
-        BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))/DENOM(I)
+        BORNTILDE = BORNTILDE + ZTEMP*DCONJG(JAMPH(1,I))
       ENDDO
       if (glu_ij.ne.0) nhel(glu_ij) = back_hel
       END

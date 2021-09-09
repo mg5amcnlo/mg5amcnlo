@@ -9,8 +9,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     
 C     
 C     CONSTANTS 
@@ -340,8 +340,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and Ninja.
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     
 C     
 C     CONSTANTS 
@@ -663,8 +663,8 @@ C     ----------
 C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $EX,LOOPNUM)) THEN
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3

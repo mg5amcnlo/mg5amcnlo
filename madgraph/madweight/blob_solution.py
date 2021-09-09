@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+from __future__ import print_function
+import six
+from six.moves import range
 try:
     import madgraph.madweight.particle_class as particle_class
     import madgraph.various.misc as misc
@@ -593,14 +597,14 @@ class Blob_solution(Level_generation):
 
     def debug(self):
         """ function for debugging: print how_gen"""
-        print "how_gen"
-        list=self.how_gen.items()
+        print("how_gen")
+        list=list(self.how_gen.items())
         for i in range(0,len(list)):
             try:
-                print '{'+str(list[i][0].MG),':'+str(list[i][1].chgt_var)+'}',
+                print('{'+str(list[i][0].MG),':'+str(list[i][1].chgt_var)+'}', end=' ')
             except:
-                print '}',
-        print
+                print('}', end=' ')
+        print()
 
 
     def __str__(self):
@@ -800,13 +804,13 @@ class Block_B(Block_sector):
                 self.order_content=self.in_part+propa_content
             else:
                 self.order_content=[self.in_part[1],self.in_part[0],self.in_part[2]]+propa_content
-        elif isinstance(self.in_part[0].MG, basestring): #check if first particle are fuse particle
+        elif isinstance(self.in_part[0].MG, six.string_types): #check if first particle are fuse particle
             self.order_content=self.in_part+[self.in_part[0].mother]
             try:
                 self.order_content.append(self.in_part[2].mother)
             except:
                 pass
-        elif isinstance(self.in_part[1].MG, basestring): #check if first particle are fuse particle
+        elif isinstance(self.in_part[1].MG, six.string_types): #check if first particle are fuse particle
             self.order_content=self.in_part+[self.in_part[1].mother]
             try:
                 self.order_content.append(self.in_part[2].mother)
@@ -842,9 +846,9 @@ class Block_B(Block_sector):
                         obj.chgt_var=new_chgt_var
                         obj.def_unaligned()
         if obj.chgt_var!=new_chgt_var:
-            print 'WARNING: unexpected modification:'
-            print '         pass from',[obj.chgt_var],'to',[new_chgt_var]
-            print '         there are strictly non equivalent: but we go on anyway'
+            print('WARNING: unexpected modification:')
+            print('         pass from',[obj.chgt_var],'to',[new_chgt_var])
+            print('         there are strictly non equivalent: but we go on anyway')
             obj.chgt_var=new_chgt_var               
 
     def def_unaligned(self):

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 
+from __future__ import absolute_import
+from six.moves import range
 try:
     import madgraph.madweight.blob_solution as blob_solution
 except ImportError:
@@ -82,7 +84,7 @@ class diagram:
         #organise in level in a dictionary
         dict_level_to_part={}
         for particle in self.ext_content:
-            if particle.level in dict_level_to_part.keys():
+            if particle.level in list(dict_level_to_part.keys()):
                 dict_level_to_part[particle.level].append(particle)
             else:
                 dict_level_to_part[particle.level]=[particle]
@@ -100,7 +102,7 @@ class diagram:
         """ check if tha particle is in the diagram """
         #note that content is a dict or list depending of the object
         if type(self.content)== dict: 
-            if self.content.has_key(particle.MG):
+            if particle.MG in self.content:
                 return 1
             else:
                 return 0
@@ -527,7 +529,7 @@ class blob_sector(diagram):
         """create completly a blob if he is not defined already """
 
         #Check if already defined + validity of the definition of a blob
-        if diag.blob_content.has_key(particle.MG): # check if the blob is already defined
+        if particle.MG in diag.blob_content: # check if the blob is already defined
             self=diag.blob_content[particle.MG]
             self.put_in_ecs(ECS_sec)
             return #stop creation

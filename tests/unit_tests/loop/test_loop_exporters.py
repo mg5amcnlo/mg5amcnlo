@@ -16,6 +16,7 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 
+from __future__ import absolute_import
 import copy
 import math
 import os
@@ -160,8 +161,8 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                'SubProc_prefix': 'P',
                                'compute_color_flows': False})
         else:
-            raise MadGraph5Error, 'Exporter with nickname '+\
-                                          '%s not implemented'%exporter_name
+            raise MadGraph5Error('Exporter with nickname '+\
+                                          '%s not implemented'%exporter_name)
         return self.loop_exporters[exporter_name]
 
     def load_IOTestsUnit(self):
@@ -202,7 +203,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                        exporters = 'default',
                                        orders = {'QCD': 2, 'QED': 2} )
 
-    def testIO_ProcOutputIOTests(self, load_only=False):
+    def testIO_UnitProcOutputIOTests(self, load_only=False):
       """ Run the iotests """
       
       self.load_IOTestsUnit()      

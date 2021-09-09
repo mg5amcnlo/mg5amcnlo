@@ -16,6 +16,7 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 
+from __future__ import absolute_import
 import copy
 import math
 import os
@@ -69,7 +70,7 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
     """Test class for the loop exporter modules. It uses hardcoded output 
     for the comparisons."""
 
-    def testIO_ProcOutputIOTests(self, load_only=False):
+    def testIO_AcceptanceProcOutputIOTests(self, load_only=False):
       """ Run the iotests """
       
       self.load_IOTestsAcceptance()      

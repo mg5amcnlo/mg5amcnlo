@@ -15,6 +15,7 @@
 """Classes for diagram generation with loop features.
 """
 
+from __future__ import absolute_import
 import array
 import copy
 import itertools
@@ -27,6 +28,8 @@ import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 from madgraph import InvalidCmd
+from six.moves import range
+from six.moves import zip
 logger = logging.getLogger('madgraph.loop_diagram_generation')
 
 def ldg_debug_info(msg,val, force=False):
@@ -104,37 +107,29 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         if name == 'diagrams':
             if not isinstance(value, base_objects.DiagramList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid DiagramList" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid DiagramList" % str(value))
             for diag in value:
                 if not isinstance(diag,loop_base_objects.LoopDiagram) and \
                    not isinstance(diag,loop_base_objects.LoopUVCTDiagram):
-                    raise self.PhysicsObjectError, \
-                        "%s contains a diagram which is not an NLODiagrams." % str(value)
+                    raise self.PhysicsObjectError("%s contains a diagram which is not an NLODiagrams." % str(value))
         if name == 'born_diagrams':
             if not isinstance(value, base_objects.DiagramList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid DiagramList" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid DiagramList" % str(value))
             for diag in value:
                 if not isinstance(diag,loop_base_objects.LoopDiagram):
-                    raise self.PhysicsObjectError, \
-                        "%s contains a diagram which is not an NLODiagrams." % str(value)
+                    raise self.PhysicsObjectError("%s contains a diagram which is not an NLODiagrams." % str(value))
         if name == 'loop_diagrams':
             if not isinstance(value, base_objects.DiagramList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid DiagramList" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid DiagramList" % str(value))
             for diag in value:
                 if not isinstance(diag,loop_base_objects.LoopDiagram):
-                    raise self.PhysicsObjectError, \
-                        "%s contains a diagram which is not an NLODiagrams." % str(value)
+                    raise self.PhysicsObjectError("%s contains a diagram which is not an NLODiagrams." % str(value))
         if name == 'has_born':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid bool" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid bool" % str(value))
         if name == 'structure_repository':
             if not isinstance(value, loop_base_objects.FDStructureList):
-                raise self.PhysicsObjectError, \
-                        "%s is not a valid bool" % str(value)
+                raise self.PhysicsObjectError("%s is not a valid bool" % str(value))
 
         else:
             super(LoopAmplitude, self).filter(name, value)
@@ -300,7 +295,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             neworder=self['born_diagrams'].get_max_order(order)
             if order in self['process']['perturbation_couplings']:
                 neworder+=2
-            if order not in self['process']['orders'].keys() or \
+            if order not in list(self['process']['orders'].keys()) or \
                                       neworder<self['process']['orders'][order]:
                 self['process']['orders'][order]=neworder
 
@@ -329,8 +324,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         n_discarded = 0
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
-                raise MadGraph5Error, "The loop diagrams should have been tagged"+\
-                  " before going through the Furry filter."
+                raise MadGraph5Error("The loop diagrams should have been tagged"+\
+                  " before going through the Furry filter.")
             
             loop_line_pdgs = diag.get_loop_lines_pdgs()
             attached_pdgs   = diag.get_pdgs_attached_to_loop(structs)
@@ -402,8 +397,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         i=0
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
-                raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tagged first."
+                raise MadGraph5Error("Before using the user_filter, please "+\
+                       "make sure that the loop diagrams have been tagged first.")
             valid_diag = True
             i=i+1
     
@@ -569,7 +564,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if self['process']['has_born']:
             for order in self['process']['model']['coupling_orders']:
                 if order not in self['process']['perturbation_couplings'] and \
-                                                order not in user_orders.keys():
+                                                order not in list(user_orders.keys()):
                     order_power=self['born_diagrams'][0].get_order(order)
                     for diag in self['born_diagrams'][1:]:
                         if diag.get_order(order)!=order_power:
@@ -644,8 +639,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
             logger.debug("Born diagrams generation skipped by user request.")
 
         # Make sure that all orders specified belong to the model:
-        for order in self['process']['orders'].keys()+\
-                                       self['process']['squared_orders'].keys():
+        for order in list(self['process']['orders'].keys())+\
+                                       list(self['process']['squared_orders'].keys()):
             if not order in model.get('coupling_orders') and \
                                                             order != 'WEIGHTED':
                 if self['process']['orders'][order] == 0:
@@ -725,7 +720,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 self['process']['orders'][order]=user_orders[order]+2
             else:
                 self['process']['orders'][order]=user_orders[order]
-        if 'WEIGHTED' in user_orders.keys():
+        if 'WEIGHTED' in list(user_orders.keys()):
             self['process']['orders']['WEIGHTED']=user_orders['WEIGHTED']+\
                                      2*min([hierarchy[order] for order in \
                                      self['process']['perturbation_couplings']])
@@ -956,7 +951,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 diagram_identification[loop_tag] = [(i+1,loop_diag)]
                 
         # Now sort the loop_tag keys according to their order of appearance
-        sorted_loop_tag_keys = sorted(diagram_identification.keys(),
+        sorted_loop_tag_keys = sorted(list(diagram_identification.keys()),
                                    key=lambda k:diagram_identification[k][0][0])
         
         new_loop_diagram_base = base_objects.DiagramList([])
@@ -1001,7 +996,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             sqorders_types['WEIGHTED']='<='
         
         sorted_hierarchy = [order[0] for order in \
-                                sorted(hierarchy.items(), key=lambda el: el[1])]
+                                sorted(list(hierarchy.items()), key=lambda el: el[1])]
         
         loop_SOs = set(tuple([d.get_order(order) for order in sorted_hierarchy]) 
                       for d in self['loop_diagrams']+self['loop_UVCT_diagrams'])
@@ -1106,65 +1101,99 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Make sure to start with an empty l-cut particle list.
         self.lcutpartemployed=[]
 
-        for order in self['process']['perturbation_couplings']:
-            ldg_debug_info("Perturbation coupling generated now ",order)
+        # It is important to try and obtain an ordering of the loop diagrams
+        # as canonical as possible so that loop ME for identical processes that
+        # differ only by the external massless flavors can be identified and
+        # merged together. We therefore choose to always start with QCD and QED
+        # perturbation if specified and then follow alphabetical order.
+        pert_orders = \
+          (['QCD'] if 'QCD' in self['process']['perturbation_couplings'] else [])+\
+          (['QED'] if 'QED' in self['process']['perturbation_couplings'] else [])+\
+          sorted(order for order in self['process']['perturbation_couplings'] if 
+                                                       order not in ['QCD','QED'])
+
+        whole_spin_no_anti = []
+        whole_spin_has_anti = []
+        half_spin_no_anti = []
+        half_spin_has_anti = []
+        for order in pert_orders:
             lcutPart=[particle for particle in \
                 self['process']['model']['particles'] if \
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==6]
-#            misc.sprint("lcutPart=",[part.get('name') for part in lcutPart])
-            for part in lcutPart:
-                if part.get_pdg_code() not in self.lcutpartemployed:
-                    # First create the two L-cut particles to add to the process.
-                    # Remember that in the model only the particles should be
-                    # tagged as contributing to the a perturbation. Never the 
-                    # anti-particle. We chose here a specific orientation for 
-                    # the loop momentum flow, say going IN lcutone and OUT 
-                    # lcuttwo. We also define here the 'positive' loop fermion
-                    # flow by always setting lcutone to be a particle and 
-                    # lcuttwo the corresponding anti-particle.
-                    ldg_debug_info("Generating loop diagram with L-cut type",\
-                                                                part.get_name())
-                    lcutone=base_objects.Leg({'id': part.get_pdg_code(),
-                                              'state': True,
-                                              'loop_line': True})
-                    lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
-                                              'state': True,
-                                              'loop_line': True})
-                    self['process'].get('legs').extend([lcutone,lcuttwo])
-                    # WARNING, it is important for the tagging to notice here 
-                    # that lcuttwo is the last leg in the process list of legs 
-                    # and will therefore carry the highest 'number' attribute as
-                    # required to insure that it will never be 'propagated' to
-                    # any output leg.
-                                    
-                    # We generate the diagrams now
-                    loopsuccessful, lcutdiaglist = \
-                              super(LoopAmplitude, self).generate_diagrams(True)
+            whole_spin_no_anti += [p for p in lcutPart if p.get('spin')%2==1 and p.get('self_antipart') 
+                                      and p not in whole_spin_no_anti] 
+            whole_spin_has_anti += [p for p in lcutPart if p.get('spin')%2==1 and not p.get('self_antipart')
+                                     and p not in whole_spin_has_anti]
+            half_spin_no_anti += [p for p in lcutPart if p.get('spin')%2==0 and p.get('self_antipart')
+                                       and p not in half_spin_no_anti] 
+            half_spin_has_anti += [p for p in lcutPart if p.get('spin')%2==0 and not p.get('self_antipart')
+                                      and p not in half_spin_has_anti]
 
-                    # Now get rid of all the previously defined l-cut particles.
-                    leg_to_remove=[leg for leg in self['process']['legs'] \
-                                            if leg['loop_line']]
-                    for leg in leg_to_remove:
-                        self['process']['legs'].remove(leg)
+        # In an effort to canonically order loop diagrams generated, we
+        # choose here to always start with whole integer spin particles and then
+        # half-integer ones and in each of these subset, put first self-antiparticles.
+        # The remaining degeneracy is fixed by ordering by PDGs.
+        for l in [whole_spin_no_anti,whole_spin_has_anti,
+                  half_spin_no_anti,half_spin_has_anti]:
+             l.sort(key=lambda p: p.get('pdg_code'))
 
-                    # The correct L-cut type is specified
-                    for diag in lcutdiaglist:
-                        diag.set('type',part.get_pdg_code())
-                    self['loop_diagrams']+=lcutdiaglist
+        # Finally add them together to the list of l-cut particles to be processed.
+        lcutPart = whole_spin_no_anti + whole_spin_has_anti + \
+                   half_spin_no_anti  + half_spin_has_anti
+                   
+#       misc.sprint(" lcutPart=",[part.get('name') for part in lcutPart]) 
+        for part in lcutPart:
+            if part.get_pdg_code() not in self.lcutpartemployed:
+                # First create the two L-cut particles to add to the process.
+                # Remember that in the model only the particles should be
+                # tagged as contributing to the a perturbation. Never the 
+                # anti-particle. We chose here a specific orientation for 
+                # the loop momentum flow, say going IN lcutone and OUT 
+                # lcuttwo. We also define here the 'positive' loop fermion
+                # flow by always setting lcutone to be a particle and 
+                # lcuttwo the corresponding anti-particle.
+                ldg_debug_info("Generating loop diagram with L-cut type",\
+                                                            part.get_name())
+                lcutone=base_objects.Leg({'id': part.get_pdg_code(),
+                                          'state': True,
+                                          'loop_line': True})
+                lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
+                                          'state': True,
+                                          'loop_line': True})
+                self['process'].get('legs').extend([lcutone,lcuttwo])
+                # WARNING, it is important for the tagging to notice here 
+                # that lcuttwo is the last leg in the process list of legs 
+                # and will therefore carry the highest 'number' attribute as
+                # required to insure that it will never be 'propagated' to
+                # any output leg.
+                                
+                # We generate the diagrams now
+                loopsuccessful, lcutdiaglist = \
+                          super(LoopAmplitude, self).generate_diagrams(True)
 
-                    # Update the list of already employed L-cut particles such 
-                    # that we never use them again in loop particles
-                    self.lcutpartemployed.append(part.get_pdg_code())
-                    self.lcutpartemployed.append(part.get_anti_pdg_code())
+                # Now get rid of all the previously defined l-cut particles.
+                leg_to_remove=[leg for leg in self['process']['legs'] \
+                                        if leg['loop_line']]
+                for leg in leg_to_remove:
+                    self['process']['legs'].remove(leg)
 
-                    ldg_debug_info("#Diags generated w/ this L-cut particle",\
-                                                              len(lcutdiaglist))
-                    # Accordingly update the totloopsuccessful tag
-                    if loopsuccessful:
-                        totloopsuccessful=True
+                # The correct L-cut type is specified
+                for diag in lcutdiaglist:
+                    diag.set('type',part.get_pdg_code())
+                self['loop_diagrams']+=lcutdiaglist
+
+                # Update the list of already employed L-cut particles such 
+                # that we never use them again in loop particles
+                self.lcutpartemployed.append(part.get_pdg_code())
+                self.lcutpartemployed.append(part.get_anti_pdg_code())
+
+                ldg_debug_info("#Diags generated w/ this L-cut particle",\
+                                                          len(lcutdiaglist))
+                # Accordingly update the totloopsuccessful tag
+                if loopsuccessful:
+                    totloopsuccessful=True
 
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
@@ -1230,7 +1259,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 newUVCTDiag.get('UVCT_couplings').append((len([1 for loop_parts \
                   in UVCTinter.get('loop_particles') if set(loop_parts).intersection(\
                   set(self['process']['forbidden_particles']))==set([])])) if
-                  loop_parts!=[[]] else  1)
+                  UVCTinter.get('loop_particles')[-1]!=[[]] else  1)
                 self['loop_UVCT_diagrams'].append(newUVCTDiag)
 
         # Remove the additional order requirement in the born orders for this
@@ -1477,6 +1506,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                             CT_added[trackingKeyLoopPart].append(CTID)
                         except KeyError:
                             CT_added[trackingKeyLoopPart] = [CTID, ]
+            # Now make sure that the CT vertices added are cannonically ordered
+            # (using coupling names and color and lorenz strings)
+            # This plays a role when doing comparisons for potential merging of 
+            # identical processes (i.e. Identical HelasMatrixElement where only 
+            # massless flavors differ).
+            diag['CT_vertices'].sort(key=lambda ct: 
+              self['process']['model'].get_interaction(ct.get('id')).canonical_repr())
+            
 
     def create_diagram(self, vertexlist):
         """ Return a LoopDiagram created."""
@@ -1690,13 +1727,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
             except KeyError:
                 diag_by_so[so_key]=base_objects.DiagramList([diag,])
 
-        so_keys = diag_by_so.keys()
+        so_keys = list(diag_by_so.keys())
         # Complete the order hierarchy by possibly missing defined order for
         # which we set the weight to zero by default (so that they are ignored).
         order_hierarchy = self.get('process').get('model').get('order_hierarchy')
         order_weights = copy.copy(order_hierarchy)
         for so in split_orders:
-            if so not in order_hierarchy.keys():
+            if so not in list(order_hierarchy.keys()):
                 order_weights[so]=0
 
         # Now order the keys of diag_by_so by the WEIGHT of the split_orders

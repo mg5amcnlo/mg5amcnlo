@@ -89,8 +89,9 @@ c     For each t-channel invarient x(ndim-1), x(ndim-3), .... are used
 c     in place of the cos(theta) variable used in s-channel.
 c     x(ndim), x(ndim-2),.... are the phi angles.
 c**************************************************************************
+      use DiscreteSampler
       implicit none
-c
+c     
 c     Constants
 c
       include 'genps.inc'
@@ -130,8 +131,10 @@ c
       double precision maxwgt
       integer imatch
       save maxwgt
-
+      double precision R        !random value
       integer ninvar
+      double precision tau_m, tau_w, t1, t2
+      double precision get_ee_expo
       
 c
 c     External
@@ -141,6 +144,12 @@ c
 c
 c     Global
 c
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
+      
       integer          lwgt(0:maxconfigs,maxinvar)
       common/to_lwgt/lwgt
 
@@ -159,11 +168,17 @@ c
       double precision   psect(maxconfigs),alpha(maxconfigs)
       common/to_mconfig2/psect            ,alpha
 
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+      
       include 'run.inc'
 
 
       integer iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
 
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
@@ -174,6 +189,9 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+      
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
@@ -182,6 +200,9 @@ c
       logical set_cm_rap
       common/to_cm_rap/set_cm_rap,cm_rap      
 
+
+      double precision x1_ee, x2_ee
+      
 c     External function
       double precision SumDot
       external SumDot
@@ -208,6 +229,7 @@ c      write(*,*) 'using iconfig',iconfig
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -230,12 +252,81 @@ c
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
                set_cm_rap=.true.
             endif
+c        lpp1=+-3 or +-4 and lpp2 as well
+c        For ISR/beamstrhalung case         
+         else if (pdlabel.eq.'dressed') then
+            if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               call ntuple(R,0.0d0,1.0d0,0,iconfig)
+               ee_jacobian = 1d0
+               call DS_get_point('ee_mc', R , ee_picked, ee_jacobian)
+               sjac = sjac *  ee_jacobian
+            else
+               ee_picked = 1
+            endif
+            
+            if(ee_picked.eq.2) then
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,smin/stot,1d0)               
+               xtau = x(ndim-1)
+               if(nexternal .eq. 3) then
+                  x(ndim-1) = pmass(3)*pmass(3)/stot
+                  sjac=1 / stot !for delta function in d_tau
+               endif
+
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               CALL GENCMS_EE(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+               x(ndim-1) = xtau !Fix for 2->1 process
+c     Set CM rapidity for use in the rap() function
+               cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+               set_cm_rap=.true.
+c           Set shat
+               s(-nbranch) = xbk(1)*xbk(2)*stot
+               x1_ee = Xbk(1)
+               x2_ee =  Xbk(2)
+            else   
+c        ! for dressed ee collisions the generation is different
+c        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+c        ! while in the ee case x1 and x2 are generated first.
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               call generate_x_ee(x(ndim-1), smin/stot,x1_ee, omx_ee(1), sjac)
+               call generate_x_ee(x(ndim), smin/stot/x1_ee,x2_ee, omx_ee(2), sjac)
+
+               s(-nbranch) =  x1_ee * x2_ee * stot
+               xbk(1)   = x1_ee
+               xbk(2)   = x2_ee
+c        ! now we are done. We must call the following function 
+c        ! in order to (re-)generate tau and ycm
+c        ! from x1 and x2. It also (re-)checks that tau_born 
+c        ! is pysical, and otherwise sets xjac0=-1000
+               call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
+               set_cm_rap=.true.
+            endif
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+           if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               tau_m = spole(ndim-1)
+               tau_w = swidth(ndim-1)
+               t1 =  (Max(1e-12,1- x1_ee * x2_ee))**(1d0-2*get_ee_expo())
+c               if (dabs(x1_ee * x2_ee-tau_m).lt.5*tau_w)then
+                  t2 =  (1d0/(( x1_ee * x2_ee-tau_m)**2 + tau_m*tau_w))
+c               else
+c                  t2=0d0
+c               endif
+               
+               if (ee_picked.eq.1) then
+                  sjac = sjac * t1 / (t1+t2)
+               else
+                  sjac = sjac * t2 / (t1+t2)
+               endif
+            endif
+
+
          else
-            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
-            xtau = x(ndim-1)
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+           xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
                sjac=1 / stot    !for delta function in d_tau
@@ -321,7 +412,7 @@ c
       endif
       pswgt = 1d0
       jac   = 1d0
-      call one_tree(iforest(1,-max_branch,iconfig),mincfig,
+      call one_tree(iforest(1,-max_branch,iconfig), tstrategy(iconfig),mincfig,
      &     nbranch,P,M,S,X,jac,pswgt)
 c
 c     Add what I think are the essentials
@@ -520,7 +611,7 @@ c     local
       integer nbranch,ndim,nconfigs
       integer ninvar
       integer nparticles,nfinal
-
+      integer nb_tchannel
 
 c
 c     Arguments
@@ -572,6 +663,8 @@ c        Set stot
             if (abs(lpp(2)) .eq. 1 .or. abs(lpp(2)) .eq. 2) m2 = 0.938d0
             if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
             if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
+            if (abs(lpp(1)) .eq. 4) m1 = 0.105658d0
+            if (abs(lpp(2)) .eq. 4) m2 = 0.105658d0
             if (mass_ion(1).ge.0d0) m1 = mass_ion(1)
             if (mass_ion(2).ge.0d0) m2 = mass_ion(2)
             if(ebeam(1).lt.m1.and.lpp(1).ne.9) ebeam(1)=m1
@@ -593,7 +686,7 @@ c        Start graph mapping
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
-         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming)
+         call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
          maxwgt=0d0
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
@@ -630,7 +723,7 @@ c     Initialize dsig (needed for subprocess group running mode)
       return
       end
 
-      subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
+      subroutine one_tree(itree,tstrategy,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
 c     Calculates the momentum for everything below in the tree until
 c     it reaches the end.
@@ -650,8 +743,10 @@ c
 c     Arguments
 c
       integer itree(2,-max_branch:-1) !Structure of configuration
+      integer tstrategy ! current strategy for t-channel
       integer iconfig                 !Which configuration working on
       double precision P(0:3,-max_branch:max_particles)
+      double precision pother(0:3), ptemp(0:3), pboost(0:3), ptemp2(0:3)
       double precision M(-max_branch:max_particles)
       double precision S(-max_branch:0)
 c      double precision spole(-max_branch:0),swidth(-max_branch:0)
@@ -662,11 +757,13 @@ c
 c     Local
 c
       logical pass
+      double precision tmass(-max_branch:-1)
       integer ibranch,i,ns_channel,nt_channel,ix  !,nerr
-c      data nerr/0/
+      integer iopposite ! index for t-channel mapping for the part not handle by itree
+c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
       double precision costh,phi,tmin,tmax,t
-      double precision ma2,mb2,m12,mn2,s1
+      double precision ma2,mb2,m12,mn2,s1, mi2
 c
 c     External
 c
@@ -700,7 +797,12 @@ c     Determine number of s channel branches, this doesn't count
 c     the s channel p1+p2
 c
       ns_channel=1
-      do while(itree(1,-ns_channel) .ne. 1 .and.ns_channel.lt.nbranch)
+      iopposite = 1
+      if (abs(tstrategy).eq.1) then
+         iopposite = 2
+      endif
+      
+      do while(itree(1,-ns_channel) .ne. iopposite .and.ns_channel.lt.nbranch)
          m(-ns_channel)=0d0                 
          ns_channel=ns_channel+1         
       enddo
@@ -710,7 +812,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-
 c
 c     Determine masses for all intermediate states.  Starting
 c     from outer most (real particle) states
@@ -808,7 +909,7 @@ c
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
-
+         
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -834,18 +935,239 @@ c     Particle Kinematics Chapter 6 section 3 page 166
 c
 c     From here, on we can just pretend this is a 2->2 scattering with
 c     Pa                    + Pb     -> P1          + P2
+
+      if (tstrategy.eq.-2.or.tstrategy.eq.-1) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
+cc       T-channel ping-pong strategy starting with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+         
+c     No -flipping case:      
+c      p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       -  M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)
+c
+c     With flipping case
+c      p(0,itree(ibranch,1)) + pother -> p(0,ibranch)+ p(0,itree(ibranch,2))
+c       - pother = p(0,itree(ibranch,1)) -p(0,itree(ibranch,2))         
+c       - M(ibranch) is the total mass available (Pa+Pb)^2
+c       - M(ibranch-1) is the mass of P2  (all the remaining particles)      
+c
+c     This assumes that P(0, ibranch) is set to the T-channel propa (likely)
+c      do ibranch = -ns_channel-1,-nbranch,-1
+c         totmass=totmass+m(itree(2,ibranch))
+c      enddo
+      do ibranch=-ns_channel-1,-nbranch+1,-1
+c         totmass=totmass-m(itree(2,ibranch))      !for remaining particles
+c         smin = totmass**2                        !This affects t_min/max
+c         smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
+         if (ibranch.ne.-ns_channel-1)then
+            pother(:) = P(:,ibranch+1)
+            iopposite = ibranch +1
+         else
+            pother(:) = p(:,2)
+            iopposite = abs(tstrategy)
+         endif
+         s1  = m(ibranch)**2                        !Total mass available
+         ma2 = dot(pother, pother)
+         mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
+         m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+c
+c$$$         write(*,*) itree(1, ibranch), '-----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+c$$$         write(*,*)        '                       |           '
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)   	   '                       | ',ibranch
+c$$$         write(*,*)   	   '                       |           '
+c$$$         write(*,*)        '                       |           '
+c$$$         if (ibranch.ne.-ns_channel-1)then
+c$$$            write(*,*) iopposite, '-----------T---------- m=', m(ibranch-1)
+c$$$         else
+c$$$            write(*,*) 2, '-----------T---------- m=', m(ibranch-1)
+c$$$            write(*,*) m(1), m(2), m(3), m(4), m(5)
+c$$$         endif
+c$$$         write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+c$$$         if (ibranch.ne.-ns_channel-1) then
+c$$$            write(*,*) 'Pb', P(0,iopposite),P(1,iopposite),P(2,iopposite), P(3,iopposite)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,itree(1, ibranch)) + P(i,ibranch+1) 
+c$$$            enddo
+c$$$         else
+c$$$            write(*,*) 'Pb', P(0,2),P(1,2),P(2,2),P(3,2)
+c$$$            do i=0,3
+c$$$               pother(i) = P(i,1) + P(i,2)
+c$$$            enddo
+c$$$         endif
+c$$$         do i=0,3
+c$$$            pother(i) = P(i,itree(1, ibranch)) + P(i,iopposite)
+c$$$         enddo
+c$$$         write(*,*) 'DSQRT(s1) = ', m(ibranch), DSQRT(dot(pother, pother))
+c$$$c         if (m(ibranch)**2.ne.dot(pother, pother)) stop 1
+c$$$         write(*,*) 'm12= Pd**2 = ', m12 ,DSQRT(m12)
+c$$$         write(*,*) 'mn2 = Pc**2 =', mn2, DSQRT(mn2)
+         
+C     WRITE(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
+         
+         call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+c         call yminmax(s1,0d0,m12,ma2,mb2,smax,tmin_temp,tmax_temp)
+c         if (tmin_temp.lt.tmin) tmin = tmin_temp
+c         if (tmax_temp.gt.tmax) tmax = tmax_temp
+         
+c
+c     Call for 0<x<1
+c
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     &        .5d0*(tmin/stot+1d0),
+c     &        .5d0*(tmax/stot+1d0))
+c         t   = Stot*(x(-ibranch)*2d0-1d0)
+c
+c     call for -1<x<1
+c
+
+c         write(*,*) 'tmin, tmax/ temp',tmin,tmax, tmin_temp, tmax_temp
+
+c         if (nt_channel.ge.2)then
+c            tmin = max(tmin, -stot)
+c         endif
+c      if ((tmax-tmin)/stot.gt.0.1)then
+c            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $           0d0, 1d0)
+c         t = stot*(-x(-ibranch))
+      
+c      else if (tmax/stot.gt.-0.01.and.tmin/stot.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         tmax = max(tmax,0d0) !This line if want really t freedom
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+
+c      else
+         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        -tmax/stot, -tmin/stot)
+         t = stot*(-x(-ibranch))
+c      endif
+
+c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
+      if (t .lt. tmin .or. t .gt. tmax) then
+         jac=-3d0
+         return
+      endif
+c
+c     tmin and tmax set to -s,+s for jacobian because part of jacobian
+c     was determined from choosing the point x from the grid based on
+c     tmin and tmax.  (ie wgt contains some of the jacobian)
+c
+         tmin=-stot
+         tmax= stot
+         call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+         phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+         jac = jac*(tmax-tmin)*2d0*pi /2d0 ! I need /2d0 if -1<x<1
+
+         
+c
+c     Finally generate the momentum. The call is of the form
+c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
+c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
+c
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,iopposite),t,phi,mi2,
+     &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
+     &        p(0,ibranch),jac)
+c$$$         write(*,*) 'RESULT'
+c$$$         write(*,*) 'pa', p(0,itree(1,ibranch)),p(1,itree(1,ibranch)),p(2,itree(1,ibranch)),p(3,itree(1,ibranch))
+c$$$         write(*,*) 'pb', p(0,iopposite),p(1,iopposite),p(2,iopposite),p(3,iopposite)
+c$$$         write(*,*) '->'
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         do i =0,3
+c$$$            pother(i) = p(i,itree(1,ibranch)) + p(i,iopposite) - p(i,itree(2,ibranch))
+c$$$         enddo
+c$$$         write(*,*) 'pc', p(0,itree(2,ibranch)),p(1,itree(2,ibranch)),p(2,itree(2,ibranch)),p(3,itree(2,ibranch))
+c$$$         write(*,*) 'pd', pother(0), pother(1), pother(2), pother(3) , DSQRT(dot(pother,pother))
+c$$$         write(*,*) 'T channel'
+c$$$         write(*,*) 'pr', p(0,ibranch),p(1,ibranch),p(2,ibranch),p(3,ibranch)
+c$$$         write(*,*) 'pa-pc', p(0,itree(1,ibranch))-p(0,itree(2,ibranch)),p(1,itree(1,ibranch))-p(1,itree(2,ibranch))
+
+
+         
+         if (jac .lt. 0d0) then
+c            nerr=nerr+1
+c            if(nerr.le.5)
+c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
+            return              !Failed, probably due to negative x
+         endif
+
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      enddo
+
+c     
+c     We need to get the momentum of the last external particle.
+c     This should just be the sum of p(0,2) and the remaining
+c     momentum from our last t channel 2->2
+c
+      if (nt_channel.eq.1) then
+c$$$         write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         enddo
+      else
+c$$$                  write(*,*) 'need to assign last', itree(2,-nbranch)
+c$$$         write(*,*) 'nbranch is at', nbranch
+c$$$         do i=-nbranch,nexternal
+c$$$            write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$         enddo
+         do i=0,3
+            p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,-nbranch+2)
+         enddo
+      endif
+
+
+      else if (tstrategy.eq.2.or.tstrategy.eq.1) then
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cc       T-channel One side eat all strategy ending with 2
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c
+c     Now perform the t-channel decay sequence. Most of this comes from: 
+c     Particle Kinematics Chapter 6 section 3 page 166
+c
+c     From here, on we can just pretend this is a 2->2 scattering with
+c     Pa                    + Pb     -> P1          + P2
 c     p(0,itree(ibranch,1)) + p(0,2) -> p(0,ibranch)+ p(0,itree(ibranch,2))
 c     M(ibranch) is the total mass available (Pa+Pb)^2
 c     M(ibranch-1) is the mass of P2  (all the remaining particles)
 c
       do ibranch=-ns_channel-1,-nbranch+1,-1
          s1  = m(ibranch)**2                        !Total mass available
-         ma2 = m(2)**2
+         ma2 = m(tstrategy)**2
          mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
 c         write(*,*) 'Enertering yminmax',sqrt(s1),sqrt(m12),sqrt(mn2)
          call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin,tmax)
+
+         if(.false.) then
+             write(*,*) itree(1, ibranch), 'a----------T----------', itree(2, ibranch), 'm=', m(itree(2, ibranch))
+             write(*,*)        '                       |           '
+             write(*,*)   	   '                       |           '
+             write(*,*)   	   '                       | ',ibranch
+             write(*,*)   	   '                       |           '
+             write(*,*)        '                       |           '
+             write(*,*) tstrategy, '-----------T---------- m=', m(ibranch-1), ibranch-1
+             write(*,*) 'S', dsqrt(s1), 'm_top=', dsqrt(mb2), 'M_bottom', dsqrt(ma2)
+             
+c     write(*,*) m(1), m(2), m(3), m(4), m(5)
+            write(*,*) 'Pa', P(0,itree(1, ibranch)),P(1,itree(1, ibranch)),P(2,itree(1, ibranch)),P(3,itree(1, ibranch))
+         endif
 c
 c     Call for 0<x<1
 c
@@ -858,20 +1180,92 @@ c     call for -1<x<1
 c
 
 c         write(*,*) 'tmin, tmax',tmin,tmax
+         if(.false.) then
+            ! NOT VALIDATED METHOD, momenta are ok but not jacobian
+            
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $        0d0, 1d0)
+            costh= 2d0*x(-ibranch)-1d0
+            call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
+     &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
+            phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
+            jac = jac * 4d0*pi
+                     m12 = m(itree(2,ibranch))**2
+         mn2 = m(ibranch-1)**2
+         call mom2cx(dsqrt(s1),m(itree(2,ibranch)),m(ibranch-1),costh,phi,
+     &        p(0,itree(2,ibranch)),pother)
 
-      if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
-c         set tmax to 0. The idea is to be sure to be able to hit zero
-c         and not to be block by numerical inacuracy
-c         tmax = max(tmax,0d0) !This line if want really t freedom
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0, -tmin/stot)
-         t = stot*(-x(-ibranch))
+         I= itree(2,ibranch)
+         DO I=0,3
+            pboost(I) = P(I,tstrategy) + P(I,itree(1, ibranch))
+         ENDDO
+         
+         call boostm(p(0,itree(2,ibranch)),pboost,m(itree(2,ibranch)),p(0,itree(2,ibranch)))
+         call boostm(pother,pboost,m(ibranch),pother)
+
+         do I=0,3
+            p(I,ibranch) = pother(i) - p(i, tstrategy)
+         enddo
+         if(.false.)then
+         write(*,*) 'input'
+         write(*,*) 'p(tstrategy=',tstrategy,')', p(0,tstrategy), p(1,tstrategy), p(2,tstrategy), p(3,tstrategy)
+         I=itree(1, ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'output'
+         I= itree(2,ibranch)
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i)
+         write(*,*) 'pother', pother(0),pother(1),pother(2),pother(3)
+         write(*,*) 'check'
+         do i=0,3
+            ptemp(i) = p(i,tstrategy) + p(i, itree(1, ibranch))
+         enddo
+         write(*,*) 'pa+pb', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         do i=0,3
+            ptemp(i) = pother(i) + p(i,itree(2,ibranch))
+         enddo
+         write(*,*) 'p1+p2', ptemp(0), ptemp(1), ptemp(2), ptemp(3), dsqrt(dot(ptemp, ptemp))
+         
+         write(*,*) 'Tchannel'
+         I = ibranch
+         write(*,*) 'p(',I,',)', p(0,i), p(1,i), p(2,i), p(3,i), dot(p(0,I), p(0,I))
+         endif
+         
+         pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
 
       else
+
+c     test of impact of low t part
+c         if (nt_channel.ge.2)then
+c            tmin = max(tmin,  -stot)
+c         endif
+
+
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
      $        -tmax/stot, -tmin/stot)
          t = stot*(-x(-ibranch))
-      endif
+         
+
+c         if ((tmax-tmin)/stot.gt.0.1)then
+c            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $           0d0, 1d0)
+c         t = stot*(-x(-ibranch))
+c     if (dabs(tmax - tmin)/stot.gt.0.05d0) then
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0,  1d0)
+c     set tmax to 0 and tmin to -1 The idea is to avoid dimension correlation
+c     the condition ensure a minimum efficiency in the generation of events
+c         t = stot*(-x(-ibranch))
+c      else if (tmax.gt.-0.01.and.tmin.lt.-0.02)then
+c         set tmax to 0. The idea is to be sure to be able to hit zero
+c         and not to be block by numerical inacuracy
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        0d0, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+c      else
+c         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+c     $        -tmax/stot, -tmin/stot)
+c         t = stot*(-x(-ibranch))
+c      endif
 
          if (t .lt. tmin .or. t .gt. tmax) then
             jac=-3d0
@@ -893,7 +1287,14 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         call gentcms(p(0,itree(1,ibranch)),p(0,2),t,phi,
+
+         if (itree(1,ibranch).gt.-ns_channel-1)then
+            mi2 = m(itree(1,ibranch))**2
+         else
+            mi2 = tmass(itree(1,ibranch))
+         endif
+         tmass(ibranch) = t
+         call gentcms(p(0,itree(1,ibranch)),p(0,tstrategy),t,phi, mi2,
      &        m(itree(2,ibranch)),m(ibranch-1),p(0,itree(2,ibranch)),
      &        p(0,ibranch),jac)
 
@@ -905,6 +1306,7 @@ c     $           write(*,*) 'Failed gentcms',iconfig,ibranch
          endif
 
          pswgt = pswgt/(4d0*dsqrt(lambda(s1,ma2,mb2)))
+      endif
       enddo
 c
 c     We need to get the momentum of the last external particle.
@@ -912,9 +1314,15 @@ c     This should just be the sum of p(0,2) and the remaining
 c     momentum from our last t channel 2->2
 c
       do i=0,3
-         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,2)
+         p(i,itree(2,-nbranch)) = p(i,-nbranch+1)+p(i,tstrategy)
       enddo
 
+
+      
+      else
+         write(*,*) 'not supported tstrategy'
+         stop 2
+      endif
 
       endif                     !t-channel stuff
 
@@ -950,6 +1358,18 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
          call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
+c$$$      write(*,*) '****'
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'mass', i, m(i)
+c$$$      enddo
+c$$$      do i=-nbranch,nexternal
+c$$$         write(*,*) 'p',i, p(0,i),p(1,i),p(2,i),p(3,i)
+c$$$      enddo
+c$$$      do i =0,3
+c$$$         pother(i) = p(i,1) + p(i,2) - p(i,3) -p(i,4)
+c$$$      enddo
+c$$$      write(*,*) 'p5 expected', pother(0), pother(1),pother(2),pother(3)
+
       jac = jac*wgt
       if (.not. pass) jac = -99
       end
@@ -1002,7 +1422,7 @@ c-----
       endif
       end
 
-      subroutine gentcms(pa,pb,t,phi,m1,m2,p1,pr,jac)
+      subroutine gentcms(pa,pb,t,phi,ma2,m1,m2,p1,pr,jac)
 c*************************************************************************
 c     Generates 4 momentum for particle 1, and remainder pr
 c     given the values t, and phi
@@ -1014,7 +1434,7 @@ c*************************************************************************
 c
 c     Arguments
 c
-      double precision t,phi,m1,m2               !inputs
+      double precision t,phi,m1,m2,ma               !inputs
       double precision pa(0:3),pb(0:3),jac
       double precision p1(0:3),pr(0:3)           !outputs
 c
@@ -1038,7 +1458,6 @@ c-----
             ptotm(i) = ptot(i)
          endif
       enddo
-      ma2 = dot(pa,pa)
 c
 c     determine magnitude of p1 in cms frame (from dhelas routine mom2cx)
 c
@@ -1262,7 +1681,74 @@ c      eta = 0d0
       X2 = SQRT(TAU)*EXP(-ETA)
 
       END
+
+      SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)
+C***********************************************************************
+C     PICKS PARTON MOMENTUM FRACTIONS X1 AND X2 BY CHOOSING ETA AND TAU
+C     X(1) --> TAU = X1*X2
+C     X(2) --> one of the bjorken x
+C***********************************************************************
+      IMPLICIT NONE
+
+C     ARGUMENTS
+
+      DOUBLE PRECISION X1,X2,S,SMIN,SJACOBI
+      DOUBLE PRECISION X(2)
+C     global
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+C     FUNCTION
+      double precision get_ee_expo
+      external get_ee_expo
+C     LOCAL
+
+      DOUBLE PRECISION TAU,TAUMIN,TAUMAX
+
+C------------
+C  BEGIN CODE
+C------------
+
+      IF (S .LT. SMIN) THEN
+         PRINT*,'ERROR CMS ENERGY LESS THAN MINIMUM CMS ENERGY',S,SMIN
+         RETURN
+      ENDIF
+
+C     TO FLATTEN BRIET WIGNER POLE AT WMASS WITH WWIDTH USE BELOW:
+C      CALL TRANSPOLE(REAL(WMASS**2/S),REAL(WMASS*WWIDTH/S),
+C     &     X(1),TAU,SJACOBI)
+
+C     IF THERE IS NO S CHANNEL POLE USE BELOW:
+
+      TAUMIN = 0d0 !SMIN/S !keep scale fix
+      TAUMAX = 1D0
+      TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
+      SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
+
+        ! then pick either x1 or x2 and generate it the usual way;
+        ! Note that:
+        ! - setting xmin=sqrt(tau_born) ensures that the largest 
+        !    bjorken x is being generated.
+        ! -  there is a jacobian for x1 x2 -> tau x1(2)
+        ! -  we must include the factor 1/(1-x)^get_ee_expo,
+        !    (x is the bjorken x which is not generated)
+        !    because the compute_eepdf function assumes that
+        !    this is the case in general
+        if (x(2).lt.0.5d0) then
+          call generate_x_ee(x(2)*2d0, dsqrt(tau), x1, omx_ee(1), sjacobi)
+          x2 = tau / x1
+          omx_ee(2) = 1d0 - x2
+          sjacobi = sjacobi / x1 * 2d0  / (1d0-x2)**get_ee_expo()
+        else
+          call generate_x_ee(1d0-2d0*(x(2)-0.5d0), dsqrt(tau), x2, omx_ee(2), sjacobi)
+          x1 = tau / x2
+          omx_ee(1) = 1d0 - x1
+          sjacobi = sjacobi / x2 * 2d0  / (1d0-x1)**get_ee_expo()
+       endif
       
+
+      END
+
 
 C     -----------------------------------------
 C     Subroutine to return momenta in a dedicated frame
@@ -1305,6 +1791,643 @@ c     find the boost momenta --sum of particles--
       return
       end
 
+      double precision function get_channel_cut(p, config)
+      implicit none
+
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'maxamps.inc'
+      include 'coupl.inc'
+c     include 'run.inc'
+
+      double precision p(0:3, nexternal)
+      integer config
+      
+
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/ iforest, tstrategy
+
+      integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      common/to_sprop/sprop,tprid
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+
+      double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c      	      	      	   2 means approximation by the	denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel,	sde_strat
+      
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
+
+      double precision      spole(maxinvar),swidth(maxinvar),bwjac
+      common/to_brietwigner/spole          ,swidth          ,bwjac
+
+      double precision ptemp(0:3, -nexternal:nexternal)
+      integer i,j
+      integer d1, d2
+      double precision t
+      double precision dot
+      external dot
+      integer ns_channel
+      integer nb_tchannel
+      integer nbranch
+      double precision tmp, tmp2
+      
+      double precision ZERO
+      parameter (ZERO=0d0)
+      double precision prmass(-nexternal:0,lmaxconfigs)
+      double precision prwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      logical first_time
+      save prmass,prwidth,pow
+      data first_time /.true./
+
+      double precision Mass, Width
+      
+      include 'configs.inc'
+
+      if(sde_strat.eq.1.and.tmin_for_channel.eq.-1)then
+         get_channel_cut = 1d0
+         return
+      endif
+      
+      if (first_time) then
+         include 'props.inc'
+         first_time=.false.
+      endif
+      
+      do i = 1, nexternal
+         do j =0,3
+            ptemp(j,i) = p(j,i)
+            ptemp(j,-i) = 0d0
+         enddo
+      enddo
+
+      nbranch = nexternal -2
+      ns_channel=1
+      do while((iforest(1,-ns_channel,config) .ne. 1.and.iforest(1,-ns_channel,config) .ne. 2).and.ns_channel.lt.nbranch)
+         ns_channel=ns_channel+1
+      enddo
+      ns_channel=ns_channel - 1
+      nb_tchannel=nbranch-ns_channel-1
+c      write(*,*) 'T-channel found: ',nb_tchannel
 
 
 
+
+
+      
+      get_channel_cut = 1.
+      if (nb_tchannel.lt.2.and.sde_strat.eq.1)then
+         get_channel_cut = 1.
+         return
+      endif
+      
+      do i = 1, nexternal-3
+         d1 = iforest(1, -i, config)
+         d2 = iforest(2, -i, config)
+         do j=0,3
+            if (d1.gt.0.and.d1.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
+            endif
+            if (d2.gt.0.and.d2.le.2) then
+               ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
+            else
+               ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)
+            endif
+         enddo
+         if (tprid(-i,config).ne.0)then
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
+            endif
+c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
+            t = t/stot 
+            if (t.lt.tmin_for_channel)then
+                get_channel_cut = get_channel_cut * exp((t-tmin_for_channel)/(t+1))
+c               get_channel_cut = get_channel_cut * (t+1)/(1+tmin_for_channel)
+c            else if(t.gt.2*tmin_for_channel)then
+c               get_channel_cut = get_channel_cut * (2*tmin_for_channel-t)/tmin_for_channel
+            endif
+         else
+            if(sde_strat.eq.2)then
+               t = dot(ptemp(0,-i), ptemp(0,-i))
+               Mass  = prmass(-i, config)
+               Width = prwidth(-i, config)
+               tmp = (t-Mass)*(t+Mass)
+               tmp2 = Mass*Width
+               get_channel_cut = get_channel_cut* (tmp**2 - tmp2**2)/(tmp**2 + tmp2**2)**2 
+            endif
+c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t+Mass) )**2 + Width**2*Mass**2), get_channel_cut
+         endif
+      enddo
+c      write(*,*) 'final for config', config, get_channel_cut
+      return
+      end
+
+
+      subroutine get_y_from_x12(x1, x2, omx, ycm) 
+      implicit none
+      double precision x1, x2, omx(2), tau, ycm
+      double precision ylim
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     $     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     $     ,tau_lower_bound_resonance,tau_lower_bound
+      double precision tolerance
+      parameter (tolerance=1e-3)
+      double precision y_settozero
+      parameter (y_settozero=1e-12)
+      double precision lx1, lx2
+      double precision ylim0, ycm0
+
+
+      ! ycm=-log(tau)/2 ;  ylim = log(x1/x2)/2
+      if (1d0-x1.gt.tolerance) then
+         lx1 = dlog(x1)
+      else if (omx(1).lt.tolerance**5)then
+         lx1=0d0
+      else
+        lx1 = -omx(1)-omx(1)**2/2d0-omx(1)**3/3d0-omx(1)**4/4d0-omx(1)**5/5d0
+      endif
+      ylim = -0.5d0*lx1
+      ycm = 0.5d0*lx1
+
+      if (1d0-x2.gt.tolerance) then
+         lx2 = dlog(x2)
+      else if (omx(2).lt.tolerance**5)then
+         lx2=0d0         
+      else
+        lx2 = -omx(2)-omx(2)**2/2d0-omx(2)**3/3d0-omx(2)**4/4d0-omx(2)**5/5d0
+      endif
+      ylim = ylim-0.5d0*lx2
+      ycm = ycm-0.5d0*lx2
+
+c      ycmhat = ycm / ylim
+
+      ! this is to prevent numerical inaccuracies
+      ! when botn x->1
+      if (ylim.lt.y_settozero) then
+        ylim = 0d0
+        ycm = 0d0
+      endif
+
+      return 
+      end
+
+      subroutine generate_x_ee(rnd, xmin, x, omx, jac)
+      implicit none
+      ! generates the momentum fraction with importance
+      !  sampling suitable for ee collisions
+      ! rnd is generated uniformly in [0,1], 
+      ! x is generated according to (1 -rnd)^-expo, starting
+      ! from xmin
+      ! jac is the corresponding jacobian
+      ! omx is 1-x, stored to improve numerical accuracy
+      double precision rnd, x, omx, jac, xmin
+      double precision expo
+      double precision get_ee_expo
+      double precision tolerance
+      parameter (tolerance=1.d-5)
+
+      expo = get_ee_expo()
+
+      x = 1d0 - rnd ** (1d0/(1d0-expo))
+      omx = rnd ** (1d0/(1d0-expo))
+      if (x.ge.1d0) then
+        if (x.lt.1d0+tolerance) then
+          x=1d0
+        else
+          write(*,*) 'ERROR in generate_x_ee', rnd, x
+          stop 1
+        endif
+      endif
+      jac = jac/(1d0-expo) 
+      ! then rescale it between xmin and 1
+      x = x * (1d0 - xmin) + xmin
+      omx = omx * (1d0 - xmin)
+      jac = jac * (1d0 - xmin)**(1d0-expo)
+
+      return 
+      end
+
+
+      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, dummy, nt_channel,
+     $     qmass, qwidth, cBW, cBW_mass, cBW_width,
+     $     tau_born, ycm_born, ycmhat, xjac0)
+      implicit none
+      double precision rnd1_in, rnd2_in
+      double precision rnd1, rnd2, dummy, qmass, qwidth
+c     dummy is supposed to be equel to stot      
+      double precision cBW_mass(-1:1), cBW_width(-1:1)
+      integer nt_channel, cBW
+      logical one_body
+      double precision tau_born, ycm_born, ycmhat, xjac0
+
+      logical bw_exists, generate_with_bw
+      common /to_ee_generatebw/ generate_with_bw
+      double precision frac_bw
+      parameter (frac_bw=0.5d0)
+      integer idim_dum
+C dressed lepton stuff
+      double precision x1_ee, x2_ee, jac_ee
+      
+      double precision omx1_ee, omx2_ee
+      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx(2)
+      
+      double precision SMIN
+      common/to_smin/ smin
+
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+      
+c      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+c     $     ,tau_lower_bound
+c      common/ctau_lower_bound/tau_Born_lower_bound
+c     $     ,tau_lower_bound_resonance,tau_lower_bound
+
+      double precision get_ee_expo
+      double precision tau_m, tau_w
+
+      ! these common blocks are never used
+      ! we leave them here for the moment 
+      ! as e.g. one may want to plot random numbers, etc.
+c      double precision r1, r2, x1bk, x2bk
+c      common /to_random_numbers/r1,r2, x1bk, x2bk
+
+
+      ! copy the random numbers, as they may be rescaled
+      ! (avoids side effects)
+      rnd1=rnd1_in
+      rnd2=rnd2_in
+
+c      ! these lines store the random numbers in the common
+c      ! block (may be removed)
+c      r1=rnd1
+c      r2=rnd2
+
+      ! define the analogous of tau for mass and width
+      tau_m = qmass**2/stot
+      tau_w = qwidth**2/stot
+
+      bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
+     $ .and.tau_m.lt.1d0
+      generate_with_bw=.false.
+      ! if there are BWs, decide whether to generate flat or
+      ! to use the BW-specific generation (half and half, or
+      ! as determined by frac_bw)
+      if (bw_exists) then
+        generate_with_bw = rnd1.lt.frac_bw
+        if (generate_with_bw) then
+            rnd1 = rnd1 / frac_bw
+            xjac0 = xjac0 / frac_bw
+        else
+            rnd1 = (rnd1 - frac_bw) / (1d0 - frac_bw)
+            xjac0 = xjac0 / (1d0 - frac_bw)
+        endif
+      endif
+
+      if (one_body) then
+        write(*,*) 'one body with ee collisions not implemented'
+        stop 1
+      endif
+
+      if(generate_with_bw) then
+        ! here we treat the case of resonances
+c            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+c-----
+c tjs 5/24/2010 for 2->1 process
+c-------
+c           xtau = x(ndim-1)
+c            if(nexternal .eq. 3) then
+c               x(ndim-1) = pmass(3)*pmass(3)/stot
+c               sjac=1 / stot    !for delta function in d_tau
+c            endif
+
+c            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+c            CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+c            x(ndim-1) = xtau    !Fix for 2->1 process
+c           Set CM rapidity for use in the rap() function
+c            cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+c            set_cm_rap=.true.
+c           Set shat
+c            s(-nbranch) = xbk(1)*xbk(2)*stot
+        ! first generate tau with the dedicated function
+         idim_dum = 1000        ! this is never used in practice
+        call generate_tau_BW(stot,idim_dum,rnd1,qmass,qwidth,cBW,cBW_mass,
+     $       cBW_width,tau_born,xjac0)
+        ! multiply the jacobian by a multichannel factor
+        xjac0 = xjac0 * (1d0/((tau_born-tau_m)**2 + tau_m*tau_w)) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+
+        ! then pick either x1 or x2 and generate it the usual way;
+        ! Note that:
+        ! - setting xmin=sqrt(tau_born) ensures that the largest 
+        !    bjorken x is being generated.
+        ! -  there is a jacobian for x1 x2 -> tau x1(2)
+        ! -  we must include the factor 1/(1-x)^get_ee_expo,
+        !    (x is the bjorken x which is not generated)
+        !    because the compute_eepdf function assumes that
+        !    this is the case in general
+        if (rnd2.lt.0.5d0) then
+          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx1_ee, jac_ee)
+          x2_ee = tau_born / x1_ee
+          omx2_ee = 1d0 - x2_ee
+          xjac0 = xjac0 / x1_ee * 2d0 * jac_ee / (1d0-x2_ee)**get_ee_expo()
+        else
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx2_ee, jac_ee)
+          x1_ee = tau_born / x2_ee
+          omx1_ee = 1d0 - x1_ee
+          xjac0 = xjac0 / x2_ee * 2d0  * jac_ee / (1d0-x1_ee)**get_ee_expo()
+        endif
+      else
+        ! standard (without resonances) generation:
+        ! for dressed ee collisions the generation is different
+        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+        ! while in the ee case x1 and x2 are generated first.
+
+        call generate_x_ee(rnd1, smin/stot,
+     $      x1_ee, omx1_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+        call generate_x_ee(rnd2, smin/(stot*x1_ee),
+     $      x2_ee, omx2_ee, jac_ee)
+        xjac0 = xjac0 * jac_ee
+
+        tau_born = x1_ee * x2_ee
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+      endif
+
+      ! Check here if the bjorken x's are physical (may not be so
+      ! because of instabilities
+      if (x1_ee.gt.1d0.or.x2_ee.gt.1d0) then
+        write(*,*) 'generate_ee_tau_y: Warning, unphysical x:', 
+     $   x1_ee, x2_ee, generate_with_bw
+        xjac0 = -1000d0
+        return
+      endif
+
+      omx(1) = omx1_ee
+      omx(2) = omx2_ee
+      ! now we are done. We must call the following function 
+      ! in order to (re-)generate tau and ycm
+      ! from x1 and x2. It also (re-)checks that tau_born 
+      ! is pysical, and otherwise sets xjac0=-1000
+      call get_y_from_x12(x1_ee, x2_ee, omx, ycm_born) 
+
+c      x1bk=x1_ee
+c      x2bk=x2_ee
+
+      return
+      end
+
+      subroutine generate_tau_BW(stot,idim,x,mass,width,cBW,BWmass
+     $     ,BWwidth,tau,jac)
+      implicit none
+      integer cBW,idim
+      double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
+     $     -1:1),s_mass,s
+      double precision smax,smin
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
+      if (cBW.eq.1 .and. width.gt.0d0 .and. BWwidth(1).gt.0d0) then
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x(5,idim,x,smin,smax,s_mass,mass,width,BWmass(
+     $        -1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      else
+         smin=tau_Born_lower_bound*stot
+         smax=stot
+         s_mass=smin
+         call trans_x(3,idim,x,smin,smax,s_mass,mass,width,BWmass(
+     $        -1),BWwidth(-1),jac,s)
+         tau=s/stot
+         jac=jac/stot
+      endif
+      return
+      end
+
+
+
+      subroutine trans_x(itype,idim,x,smin,smax,s_mass,qmass,qwidth
+     $     ,cBW_mass,cBW_width,jac,s)
+c Given the input random number 'x', returns the corresponding value of
+c the invariant mass squared 's'.
+c
+c     itype=1: flat transformation
+c     itype=2: flat between 0 and s_mass/stot, 1/x above
+c     itype=3: Breit-Wigner
+c     itype=4: Conflicting BW, with alternative mass smaller
+c     itype=5: Conflicting BW, with alternative mass larger
+c     itype=6: Conflicting BW on both sides
+c
+      implicit none
+      integer itype,idim
+      double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
+     $     ,cBW_width(-1:1),jac,s
+      double precision fract,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      integer j
+c
+      if (itype.eq.1) then
+c     flat transformation:
+         A=smax-smin
+         B=smin
+         s=A*x+B
+         jac=jac*A
+      elseif (itype.eq.2) then
+         fract=0.25d0
+         if (s_mass.eq.0d0) then
+            write (*,*) 's_mass is zero',itype,idim
+         endif
+         if (x.lt.fract) then
+c     flat transformation:
+            if (s_mass.lt.smin) then
+               jac=-421d0
+               return
+            endif
+            maxi=min(s_mass,smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         else
+c     S=A/(B-x) transformation:
+            if (s_mass.ge.smax) then
+               jac=-422d0
+               return
+            endif
+            mini=max(s_mass,smin)
+            A=mini*smax*(1d0-fract)/(smax-mini)
+            B=(smax-fract*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif(itype.eq.3) then
+c     Normal Breit-Wigner, i.e.
+c        \int_smin^smax ds g(s)/((s-qmass^2)^2-qmass^2*qwidth^2) =
+c        \int_0^1 dx g(s(x))
+         A=atan((qmass-smin/qmass)/qwidth)
+         B=atan((qmass-smax/qmass)/qwidth)
+         s=qmass*(qmass-qwidth*tan(A-(A-B)*x))
+         jac=jac*qmass*qwidth*(A-B)/(cos(A-(A-B)*x))**2
+      elseif(itype.eq.4) then
+c     Conflicting BW, with alternative mass smaller than current
+c     mass. That is, we need to throw also many events at smaller masses
+c     than the peak of the current BW. Split 'x' at 'bs(-1)', using a
+c     flat distribution below the split, and a BW above the split.
+         fract=0.3d0
+         bs(-1)=(cBW_mass(-1)-qmass)/
+     &        (qwidth+cBW_width(-1)) ! bs(-1) is negative here
+         bs(-1)=qmass+bs(-1)*qwidth
+         bs(-1)=bs(-1)**2
+         if (x.lt.fract) then
+            if(smin.gt.bs(-1)) then
+               jac=-441d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.lt.bs(-1)) then
+               jac=-442d0
+               return
+            endif
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
+            B=atan((qmass-smax/qmass)/qwidth)
+            C=((1d0-x)*A+(x-fract)*B)/(1d0-fract)
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=jac*qmass*qwidth*(A-B)/((cos(C))**2*(1d0-fract))
+         endif
+      elseif(itype.eq.5) then
+c     Conflicting BW, with alternative mass larger than current
+c     mass. That is, we need to throw also many events at larger masses
+c     than the peak of the current BW. Split 'x' at 'bs(1)' and the
+c     alternative mass. Use a BW below bs(1), a flat distribution
+c     between bs(1) and the alternative mass, and a 1/x above the
+c     alternative mass.
+         fract=0.35d0
+         bs(1)=(cBW_mass(1)-qmass)/
+     &        (qwidth+cBW_width(1))
+         bs(1)=qmass+bs(1)*qwidth
+         bs(1)=bs(1)**2
+         if (x.lt.fract) then
+            if(smin.gt.bs(1)) then
+               jac=-451d0
+               return
+            endif
+            maxi=min(bs(1),smax)
+            A=atan((qmass-smin/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
+            C=((B-A)*x+fract*A)/fract
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=jac*qmass*qwidth*(A-B)/((cos(C))**2*fract)
+         elseif (x.lt.1d0-fract) then
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-452d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=(maxi-mini)/(1d0-2d0*fract)
+            B=((1d0-fract)*mini-fract*maxi)/(1d0-2d0*fract)
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.le.cBW_mass(1)**2) then
+               jac=-453d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(smax-mini)
+            B=(smax-(1d0-fract)*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif(itype.eq.6) then
+         fract=0.3d0
+c     Conflicting BW on both sides. Use flat below bs(-1); BW between
+c     bs(-1) and bs(1); flat between bs(1) and alternative mass; and 1/x
+c     above alternative mass.
+         do j=-1,1,2
+            bs(j)=(cBW_mass(j)-qmass)/
+     &           (qwidth+cBW_width(j))
+            bs(j)=qmass+bs(j)*qwidth
+            bs(j)=bs(j)**2
+         enddo
+         if (x.lt.fract) then
+            if(smin.gt.bs(-1)) then
+               jac=-461d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
+            B=smin
+            s=A*x+B
+            jac=jac*A
+         elseif(x.lt.1d0-fract) then
+            if(smin.gt.bs(1) .or. smax.lt.bs(-1)) then
+               jac=-462d0
+               return
+            endif
+            maxi=min(bs(1),smax)
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
+            C=((1d0-fract-x)*A+(x-fract)*B)/(1d0-2d0*fract)
+            s=qmass*(qmass-qwidth*tan(C))
+            jac=-jac*qmass*qwidth*(B-A)/((cos(C))**2*(1d0-2d0*fract))
+         elseif(x.lt.1d0-fract/2d0) then
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-463d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=2d0*(maxi-mini)/fract
+            B=2d0*maxi-mini-2d0*(maxi-mini)/fract
+            s=A*x+B
+            jac=jac*A
+         else
+            if(smax.le.cBW_mass(1)**2) then
+               jac=-464d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(2d0*(smax-mini))
+            B=(smax-(1d0-fract/2d0)*mini)/(smax-mini)
+            s=A/(B-x)
+            jac=jac*s**2/A
+         endif
+      elseif (itype.eq.7) then
+c     S=A/(B-x) transformation:
+         if (smin.le.0d0) then
+            jac=-471d0
+            return
+         endif
+         A=smin*smax/(smax-smin)
+         B=smax/(smax-smin)
+         s=A/(B-x)
+         jac=jac*s**2/A
+      endif
+      return
+      end      

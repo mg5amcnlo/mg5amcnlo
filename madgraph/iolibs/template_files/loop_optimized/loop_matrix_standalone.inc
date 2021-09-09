@@ -659,6 +659,14 @@ OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
 101  CONTINUE
 CLOSE(1)
 
+IF (.NOT.USELOOPFILTER) THEN
+  DO J=1,NLOOPGROUPS
+    DO I=1,NSQUAREDSO
+      GOODAMP(I,J)=.True.
+    ENDDO
+  ENDDO
+ENDIF
+
 IF (HelicityFilterLevel.eq.0) then
   FOUNDHELFILTER=.TRUE.
   DO J=1,NCOMB
@@ -2299,6 +2307,46 @@ C
 
       END
 
+      INTEGER FUNCTION %(proc_prefix)sGETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C
+C Return the power of the IORDER-th order appearing at position INDX
+C in the split-orders output
+C
+C %(split_order_str_list)s
+C
+C CONSTANTS
+C
+      INTEGER    NSO, NSQSO
+	  PARAMETER (NSO=%(nSO)d, NSQSO=%(nSquaredSO)d)
+C
+C ARGUMENTS
+C
+      INTEGER ORDERS(NSO)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+	  INTEGER SQPLITORDERS(NSQSO,NSO)
+	  %(SquaredSO)s
+C
+C BEGIN CODE
+C
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+      WRITE(*,*) "INVALID IORDER ML5", IORDER
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSO
+      STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+      WRITE(*,*) "INVALID INDX ML5", INDX
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQSO
+      STOP
+      ENDIF
+
+      %(proc_prefix)sGETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
+
+      END
+
       INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(AMPID)
 C
 C For a given born amplitude number, it returns the ID of the split orders it has
@@ -2737,11 +2785,14 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      %(get_nsqso_born)s
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+	  INTEGER ANS_DIMENSION
+	  PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  INTEGER HEL, USERHEL
 	  common/%(proc_prefix)sUSERCHOICE/USERHEL
 C ----------
@@ -2764,7 +2815,10 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+      %(get_nsqso_born)s
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  INTEGER HEL, RET_CODE
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C
@@ -2875,7 +2929,10 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+      %(get_nsqso_born)s
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 	  INTEGER RET_CODE	  
 C

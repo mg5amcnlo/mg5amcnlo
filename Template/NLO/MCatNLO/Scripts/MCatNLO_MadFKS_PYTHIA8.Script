@@ -305,11 +305,11 @@ TAUMASSPY=$TAUMASS
 GMASSPY=$GMASS
 
 if [ $BEAM1 == 1 ]; then iA=2212; elif [ $BEAM1 == -1 ]; then iA=-2212;
-elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 2 ]; then iA=2112;
+elif [ $BEAM1 == 0 ]; then iA=-11; elif [ $BEAM1 == 4 ]; then iA=-11; elif [ $BEAM1 == 2 ]; then iA=2112;
 elif [ $BEAM1 == -2 ]; then iA=-2112; else echo "Unrecognized incoming beam 1";
 exit 1; fi
 if [ $BEAM2 == 1 ]; then iB=2212; elif [ $BEAM2 == -1 ]; then iB=-2212;
-elif [ $BEAM2 == 0 ]; then iB=11; elif [ $BEAM2 == 2 ]; then iB=2112;
+elif [ $BEAM2 == 0 ]; then iA=-11; elif [ $BEAM2 == 4 ]; then iA=-11; elif [ $BEAM2 == 2 ]; then iA=2112;
 elif [ $BEAM2 == -2 ]; then iB=-2112; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
@@ -477,17 +477,18 @@ TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
 TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-
-TimeShower:QEDshowerByQ = off      ! Prevent quarks from radiating photons
+TimeShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByL = off      ! Prevent leptons from radiating photons
+TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByGamma = off  ! Prevent photons from branching
+TimeShower:QEDshowerByGamma = on  ! Prevent photons from branching
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
+TimeShower:pTminChgQ = 0.01
+TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -495,15 +496,15 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-
-SpaceShower:QEDshowerByQ = off     ! Prevent quarks from radiating photons
+SpaceShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-SpaceShower:QEDshowerByL = off     ! Prevent leptons from radiating photons
+SpaceShower:QEDshowerByL = on     ! Prevent leptons from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-
 SpaceShower:MEcorrections = off    ! No Matrix-element corrections
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
+SpaceShower:pTminChgQ = 0.01
+SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = off    ! No primordial kT

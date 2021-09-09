@@ -30,13 +30,21 @@ if [[  "$1" == ""  ]]; then
     exit
 fi
 
-
-cp  $1_results.dat results.dat  >& /dev/null
+if [[ -e $1_results.dat ]]; then
+    cp  $1_results.dat results.dat  >& /dev/null
+else
+    cp  results.dat $1_results.dat  >& /dev/null
+fi
+    
 for i in `cat subproc.mg` ; do
     cd $i
     echo $i
     rm -f ftn25 ftn26 >& /dev/null
-    cp $1_results.dat results.dat  >& /dev/null
+    if [[ -e $1_results.dat ]]; then
+	cp  $1_results.dat results.dat  >& /dev/null
+    else
+	cp  results.dat $1_results.dat  >& /dev/null
+    fi
     for k in G* ; do
 	if [[ ! -d $k ]]; then
 	    continue
@@ -45,6 +53,8 @@ for i in `cat subproc.mg` ; do
 	for j in $1_results.dat ; do
 	    if [[ -e $j ]] ; then
 		cp  $j results.dat
+	    else
+		cp  results.dat $j
 	    fi
 	done
 	for j in $1_ftn26.gz ; do

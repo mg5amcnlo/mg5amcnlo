@@ -96,11 +96,11 @@ C      if true.
       ENDIF
 
 C     Amplitude(s) for UVCT diagram with ID 13
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(1,28))
-      AMPL(1,28)=AMPL(1,28)*(2.0D0*UVWFCT_T_0)
+      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(2,28))
+      AMPL(2,28)=AMPL(2,28)*(2.0D0*UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 14
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(2,29))
-      AMPL(2,29)=AMPL(2,29)*(2.0D0*UVWFCT_B_0_1EPS)
+      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(1,29))
+      AMPL(1,29)=AMPL(1,29)*(2.0D0*UVWFCT_T_0)
 
       GOTO 1001
  3000 CONTINUE
