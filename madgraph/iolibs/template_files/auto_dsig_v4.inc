@@ -46,7 +46,7 @@ C
 C
 C     STUFF FOR DRESSED EE COLLISIONS
 C     
-      include '../../Source/PdF/eepdf.inc'
+      include '../../Source/PDF/eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars)s
       integer i_ee
