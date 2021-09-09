@@ -612,6 +612,14 @@ class ProcessExporterFortran(VirtualExporter):
                 shutil.copy2(pjoin(model_path, file), \
                                      pjoin(self.dir_path, 'Source', 'MODEL'))
 
+        # add file for EWA 
+        misc.sprint('pass here')
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock = open(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'),'w')
+        fsock.write(template % {'MW': 'wmass','MZ':'zmass'})                 
+        fsock.close() 
+        ln(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'), self.dir_path + '/Source/PDF')
+
 
     def make_model_symbolic_link(self):
         """Make the copy/symbolic links"""
