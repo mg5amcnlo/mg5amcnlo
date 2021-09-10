@@ -3341,6 +3341,7 @@ class RunCardLO(RunCard):
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
+        self.add_param('dsqrt_shat',0., cut=True)
         self.add_param("nhel", 0, include=False)
         #pt cut
         self.add_param("ptj", 20.0, cut='j')

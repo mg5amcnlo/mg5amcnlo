@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+      OM: adding a new cut dsqrt_shat to set a minimum center of mass energy cut
+      
+
 3.2.0 (22/08/21)
       SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
       BUG FIX (from 2.9.5 long term stable, see below)
