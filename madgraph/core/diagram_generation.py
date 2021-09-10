@@ -128,7 +128,6 @@ class DiagramTag(object):
 
     def get_external_numbers(self):
         """Get the order of external particles in this tag"""
-
         return self.tag.get_external_numbers()
 
     def diagram_from_tag(self, model):
@@ -355,8 +354,10 @@ class DiagramTagChainLink(object):
         second entry in the end link tuples)"""
 
         if self.end_link:
+            #misc.sprint(self.links[0][1])
             return [self.links[0][1]]
 
+        misc.sprint([(l.get_external_numbers()) for l in self.links])
         return sum([l.get_external_numbers() for l in self.links], [])
 
     def __lt__(self, other):
@@ -634,16 +635,19 @@ class Amplitude(base_objects.PhysicsObject):
                     return res, res
 
         if not returndiag:
+            misc.sprint("pass here")
             logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process
         for i in range(0, len(process.get('legs'))):
             # Make sure legs are unique
             leg = copy.copy(process.get('legs')[i])
+            misc.sprint(leg)
             process.get('legs')[i] = leg
             if leg.get('number') == 0:
                 leg.set('number', i + 1)
 
+            
         # Copy leglist from process, so we can flip leg identities
         # without affecting the original process
         leglist = self.copy_leglist(process.get('legs'))
