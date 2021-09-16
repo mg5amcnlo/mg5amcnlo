@@ -2437,7 +2437,11 @@ class Declaration_list(set):
 class WriterFactory(object):
     
     def __new__(cls, data, language, outputdir, tags):
-        language = language.lower()
+        try:
+            language = language.lower()
+        except AttributeError:
+            pass
+        misc.sprint(language)
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
             if 'MP' in tags:
@@ -2455,6 +2459,8 @@ class WriterFactory(object):
             return ALOHAWriterForCPP(data, outputdir)
         elif language in ['gpu','cudac']:
             return ALOHAWriterForGPU(data, outputdir)
+        elif issubclass(language, WriteALOHA):
+            return language(data, outputdir)
         else:
             raise Exception('Unknown output format')
 

@@ -496,18 +496,20 @@ class UFOModelConverterGPU(UFOModelConverterCPP):
     #param_template_cc = 'cpp_model_parameters_cc.inc'
     aloha_template_h = pjoin('gpu','cpp_hel_amps_h.inc')
     aloha_template_cc = pjoin('gpu','cpp_hel_amps_cc.inc')
+    helas_h = pjoin('gpu', 'helas.h')
+    helas_cc = pjoin('gpu', 'helas.cu')
 
     def read_aloha_template_files(self, ext):
         """Read all ALOHA template files with extension ext, strip them of
         compiler options and namespace options, and return in a list"""
 
-        path = pjoin(MG5DIR, 'aloha','template_files','gpu')
+        path = pjoin(MG5DIR, 'aloha','template_files')
         out = []
         
         if ext == 'h':
-            out.append(open(pjoin(path, 'helas.h')).read())
+            out.append(open(pjoin(path, self.helas_h)).read())
         else:
-            out.append(open(pjoin(path, 'helas.cu')).read())
+            out.append(open(pjoin(path, self.helas_cc)).read())
     
         return out
 
@@ -515,7 +517,6 @@ class UFOModelConverterGPU(UFOModelConverterCPP):
         
         replace_dict = UFOModelConverterCPP.write_process_h_file(self, None)
         replace_dict['include_for_complex'] = '#include "mgOnGpuTypes.h"'
-        
         if writer:
             file = self.read_template_file(self.process_template_h) % replace_dict
             # Write the file
@@ -730,10 +731,7 @@ class OneProcessExporterCPP(object):
         replace_dict['process_class_definitions'] = process_class_definitions
         replace_dict['include_for_complex'] = ''
 
-        misc.sprint(type(self))
         if writer:
-            misc.sprint(self.process_template_h, replace_dict.keys())
-            misc.sprint(self.read_template_file(self.process_template_h))
             file = self.read_template_file(self.process_template_h) % replace_dict
             # Write the file
             writer.writelines(file)
@@ -1647,7 +1645,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     def write_process_h_file(self, writer):
         """Write the class definition (.h) file for the process"""
         
-        misc.sprint(self.path)
         replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
         try:
             replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.h' % self.model_name)).read()
@@ -2469,7 +2466,6 @@ class ProcessExporterCPP(VirtualExporter):
             # Copy the needed src files
             for key in self.from_template:
                 for f in self.from_template[key]:
-                    misc.sprint(f,key)
                     cp(f, key)
 
             if self.template_src_make:

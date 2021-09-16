@@ -8036,7 +8036,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                              group_subprocesses=group_processes,
                                              cmd_options=line_options)
-        elif options['exporter'] == 'cpp':
+        elif options['exporter'] in ['cpp', 'gpu']:
             self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
                                                               cmd_options=line_options)
         
@@ -8078,20 +8078,23 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
 
         # Define the helas call  writer
+        if hasattr(self._curr_exporter, 'helas_exporter') and self._curr_exporter.helas_exporter:
+            self._curr_helas_model = getattr(helas_call_writers, self._curr_exporter.exporter)(self._curr_model, options=options)
         if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
         elif self._curr_exporter.exporter == 'gpu':       
             self._curr_helas_model = helas_call_writers.GPUFOHelasCallWriter(self._curr_model)
-        elif self._model_v4_path:
-            assert self._curr_exporter.exporter == 'v4'
-            self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
+        elif self._curr_exporter.exporter == 'v4':
+            if self._model_v4_path:
+                self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
+            else:
+                options = {'zerowidth_tchannel': True}
+                if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
+                    options['zerowidth_tchannel'] = False
+                self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model, options=options)
         else:
-            assert self._curr_exporter.exporter == 'v4'
-            options = {'zerowidth_tchannel': True}
-            if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
-                options['zerowidth_tchannel'] = False
-            
-            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model, options=options)
+            raise Exception('unable to associate an helas format')
+           
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
         if version:
