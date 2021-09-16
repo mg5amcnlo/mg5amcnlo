@@ -1170,10 +1170,10 @@ class ConfigFile(dict):
 
                     text= "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
-                    text += "allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
+                    text += "allowed values are any list composed of the following entries: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                     return self.warn(text, 'warning', raiseerror)                    
                 elif dropped:               
-                    text = "some value for entry '%s' are not valid. Invalid item are: '%s'.\n" \
+                    text = "some value for entry '%s' are not valid. Invalid items are: '%s'.\n" \
                                % (value, name, dropped)
                     text += "value will be set to %s" % new_values
                     text += "allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])        
@@ -2475,10 +2475,10 @@ class RunCard(ConfigFile):
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
-        fortran_name defines what is the associate name in the f77 code
-        include defines if we have to put the value in the include file
-        hidden defines if the parameter is expected to be define by the user.
-        legacy:Parameter which is not used anymore (raise a warning if not default)
+        fortran_name: defines what is the associate name in the f77 code
+        include: defines if we have to put the value in the include file
+        hidden: defines if the parameter is expected to be define by the user.
+        legacy: parameter that is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         sys_default: default used if the parameter is not in the card
         
@@ -2836,7 +2836,7 @@ class RunCard(ConfigFile):
 
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
-                logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
+                logger.warning("The parameter %s is not supported anymore. This parameter will be ignored." % name)
 
         for block in self.blocks:
             block.check_validity(self)
@@ -3275,9 +3275,9 @@ class RunCardLO(RunCard):
         self.add_param("iseed", 0)
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
         self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
-                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from antiproton\n 2:photon from proton, +/-3:from electron/positron beam, +/-4:from muon/antimuon beam, 9: PLUGIN MODE')
+                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
-                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from antiproton\n 2:photon from proton, +/-3:from electron/positron beam, +/-4:from muon/antimuon beam, 9: PLUGIN MODE')
+                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
@@ -3647,15 +3647,15 @@ class RunCardLO(RunCard):
             if 'fixed_fac_scale2' in self.user_set:
                     if 'fixed_fac_scale' in self.user_set:
                         if not (self['fixed_fac_scale'] == self['fixed_fac_scale2'] == self['fixed_fac_scale2']):
-                            logger.warning('Both fixed_fac_scale, fixed_fac_scale1 and fixed_fac_scale2 are defined. The value of fixed_fac_scale is ignored')
+                            logger.warning('fixed_fac_scale, fixed_fac_scale1, and fixed_fac_scale2 are all defined. Ignoring the value of fixed_fac_scale.')
             elif 'fixed_fac_scale' in self.user_set:
-                logger.warning('Both fixed_fac_scale, fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale')
+                logger.warning('fixed_fac_scale and fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale.')
                 self['fixed_fac_scale2'] = self['fixed_fac_scale']
             elif self['lpp2'] !=0: 
                 raise Exception('fixed_fac_scale2 not defined while fixed_fac_scale1 is. Please fix your run_card.')
         elif 'fixed_fac_scale2' in self.user_set:
             if 'fixed_fac_scale' in self.user_set:
-                logger.warning('Both fixed_fac_scale, fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale')
+                logger.warning('fixed_fac_scale and fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale.')
                 self['fixed_fac_scale1'] = self['fixed_fac_scale']
             elif self['lpp1'] !=0: 
                 raise Exception('fixed_fac_scale1 not defined while fixed_fac_scale2 is. Please fix your run_card.')
@@ -3683,7 +3683,7 @@ class RunCardLO(RunCard):
                     logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
+                    logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
         if six.PY2 and self['hel_recycling']:
@@ -3734,8 +3734,8 @@ class RunCardLO(RunCard):
             raise Exception("Maximum 25 different pdgs are allowed for pdg specific cut")
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
-            raise MadGraph5Error('Some PDG specific cuts are defined with negative pdg code')
+            logger.warning('PDG specific cuts are always applied symmetrically on particles/anti-particles. Always use positve PDG codes')
+            raise MadGraph5Error('Some PDG specific cuts are defined using negative pdg code')
         
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
@@ -4673,14 +4673,14 @@ class RunCardNLO(RunCard):
             scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
             for scale in scales:
                 if self[scale]:
-                    logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                    logger.warning('''For consistency in FxFx merging, \'%s\' has been set to false'''
                                 % scale,'$MG:BOLD')
                     self[scale]= False
             #and left to default dynamical scale
             if len(self["dynamical_scale_choice"]) > 1 or self["dynamical_scale_choice"][0] != -1:
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
-                logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
+                logger.warning('''For consistency in FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
                                 ,'$MG:BOLD')
                 
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
@@ -4818,8 +4818,8 @@ class RunCardNLO(RunCard):
             raise Exception("Maximum 25 different PDGs are allowed for PDG specific cut")
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
-            raise MadGraph5Error('Some PDG specific cuts are defined with negative PDG codes')
+            logger.warning('PDG specific cuts are always applied symmetrically on particles/anti-particles. Always use positve PDG codes')
+            raise MadGraph5Error('Some PDG specific cuts are defined using negative PDG codes')
         
         
         if any(pdg in pdg_to_cut for pdg in [21,22,11,13,15]+ list(range(self['maxjetflavor']+1))):
