@@ -583,7 +583,7 @@ contains
           ans_chan(kchan)=0d0
           ans_chan(kchan+1)=1d0
           ntotcalls(1:nintegrals)=0
-!          non_zero_point(1:nintegrals)=0  ! don't set this to zero
+          non_zero_point(1:nintegrals)=0
           pass_cuts_point=0
           kpoint_iter=0
           channel_loop_done=.false.
@@ -603,6 +603,8 @@ contains
   
 
   subroutine get_amount_of_points(enough_points)
+    ! fill the ntotcalls() array with the total number of calls used
+    ! and check if this is enough for this iteration.
     implicit none
     logical :: enough_points
     integer :: i
@@ -613,36 +615,63 @@ contains
        if (i.eq.4 .and. non_zero_point(i).ne.0 ) &
             ntotcalls(i) = non_zero_point(i)
     enddo
-    if (ntotcalls(1).gt.max_points .and. pass_cuts_point.lt.25  &
-         .and. double_events) then
-! Not enough points passed the cuts: give an error message
-       write (*,*) 'ERROR: NOT ENOUGH POINTS PASS THE CUTS. ' // &
-            'RESULTS CANNOT BE TRUSTED. ' // &
-            'LOOSEN THE GENERATION CUTS, OR ADAPT SET_TAU_MIN()' // &
-            ' IN SETCUTS.F ACCORDINGLY.'
-       stop 1
-    endif
-    if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25 .and. &
-         double_events .and. &
-         ( (nit.eq.1 .and. ichan.eq.nchans) .or. nit.gt.1 )  ) then
-! zero cross-section: warn the user in the log, but print everything
-! and save files/grids as any other run
-       write (*,*) 'THE INTEGRAL APPEARS TO BE ZERO: END THE RUN GRACEFULLY'
-       write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '  &
-            ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
-       call close_run_zero_res
-       stop 0
-    endif
-! Goto beginning of loop over PS points until enough points have found
-! that pass cuts.
-    if ( ( ((non_zero_point(1).lt.int(0.99*ncalls) .and. nit.gt.1) .or. &
-            (non_zero_point(1).lt.int(0.99*ncalls*ichan) .and. nit.eq.1)) &
-           .and. double_events ) &
-        .and. ntotcalls(1).lt.max_points) then
-       enough_points=.false.
-    else
+    
+    if (.not.double_events) then
+! If not doubling the number of events for each iteration, nothing
+! needs to be done here.
        enough_points=.true.
+       return
     endif
+    if (pass_cuts_point.lt.25) then
+! Not enough points have passed to cuts to get a reliable estimate
+       if (ntotcalls(1).gt.max_points) then
+! tried many points already. Need to crash. 
+          write (*,*) 'ERROR: NOT ENOUGH POINTS PASS THE CUTS. ' // &
+               'RESULTS CANNOT BE TRUSTED. ' // &
+               'LOOSEN THE GENERATION CUTS, OR ADAPT SET_TAU_MIN()' // &
+               ' IN SETCUTS.F ACCORDINGLY.'
+          stop 1
+       else
+          enough_points=.false.
+          return
+       endif
+    endif
+    if (non_zero_point(1).lt.int(0.99*ncalls)) then
+! Not enough (non-zero) points have been generated
+       if ( pass_cuts_point.gt.ncalls .and. &
+            non_zero_point(1).lt.2) then
+! Many points passed the cuts, but less than 2 non-zero integrand
+! values: must be that the PDFs or the matrix elements (e.g. coupling
+! constants) are numerically zero. End the run gracefully
+          if (nit.gt.1 .or. imode.ne.0) then
+             write (*,*) 'THE INTEGRAL APPEARS TO BE ZERO: END THE RUN GRACEFULLY.'
+             write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '  &
+                  ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
+             call close_run_zero_res
+             stop 0
+          else
+! This is for the special channels loop. Simply assume that the result
+! for this channel is zero, and go to the next channel. If all
+! channels give a zero result, end the run gracefully.
+             vtot(1,ichan)=0d0
+             if(ichan.eq.nchans .and. all(vtot(1,1:nchans).eq.0d0) ) then
+                write (*,*) 'THE INTEGRAL APPEARS TO BE ZERO: END THE RUN GRACEFULLY.'
+                write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '  &
+                     ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
+                call close_run_zero_res
+                stop 0
+             endif
+             enough_points=.true.
+             return
+          endif
+       else
+          if (ntotcalls(1).lt.max_points) then
+             enough_points=.false.
+             return
+          endif
+       endif
+    endif
+    enough_points=.true.
   end subroutine get_amount_of_points
   
   
