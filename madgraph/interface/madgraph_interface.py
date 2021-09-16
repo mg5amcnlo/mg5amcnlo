@@ -5069,6 +5069,9 @@ This implies that with decay chains:
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
 
+        if any(['is_tagged' in l.keys()  and l['is_tagged'] for l in myleglist]):
+            logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
+
         # Apply the keyword 'all' for perturbed coupling orders.
         if perturbation_couplings.lower() in ['all', 'loonly']:
             if perturbation_couplings.lower() in ['loonly']:
