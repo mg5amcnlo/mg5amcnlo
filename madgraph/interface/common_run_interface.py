@@ -6042,7 +6042,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if  self.run_card['pdlabel']  == 'eva' or \
                 self.run_card['pdlabel1'] == 'eva' or \
                 self.run_card['pdlabel2'] == 'eva':
-                logger.warning("Running with EVA. Verify that SM inputs in param_card align with Source/PDF/ElectroweakFlux.inc")
+                logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
 
                 if self.run_card['nhel'] == 0:
                     logger.warning("EVA mode requies MC sampling by polarization: updating run_card with nhel=1")
