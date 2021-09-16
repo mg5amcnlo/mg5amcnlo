@@ -13,6 +13,7 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -21,6 +22,7 @@ import shutil
 import sys
 import logging
 import time
+from six.moves import map
 
 logger = logging.getLogger('test_cmd')
 
@@ -50,7 +52,7 @@ class Testmadweight(unittest.TestCase):
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
+        except Exception as error:
             pass
 
         interface = MGCmd.MasterCmd()
@@ -136,10 +138,10 @@ class TestMadWeight(unittest.TestCase):
             if not len(split) in [4,5]:
                 continue
             if len(split) ==4:
-                event_nb, card_nb, weight, error = map(float, split)
+                event_nb, card_nb, weight, error = list(map(float, split))
                 tf_set = 1.
             else:
-                event_nb, card_nb, tf_set, weight, error = map(float, split)
+                event_nb, card_nb, tf_set, weight, error = list(map(float, split))
             
             solution[(event_nb,card_nb,tf_set)] = (weight,error)
         return solution
@@ -149,7 +151,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """set automatic_html_opening False --no_save
@@ -204,7 +206,7 @@ class TestMadWeight(unittest.TestCase):
             
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
 
     def test_mw_wjjproduction(self):
@@ -212,7 +214,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W2J_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """set automatic_html_opening False --no_save
@@ -267,7 +269,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W2J_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         import glob

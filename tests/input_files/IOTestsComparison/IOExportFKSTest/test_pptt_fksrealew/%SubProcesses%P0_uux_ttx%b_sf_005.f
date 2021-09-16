@@ -11,8 +11,8 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     spectators: 2 4 
 
 C     
@@ -36,6 +36,9 @@ C
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       COMMON /C_KEEP_ORDER_CNT/ KEEP_ORDER_CNT
       INTEGER AMP_ORDERS(NSPLITORDERS)
+      DOUBLE PRECISION TINY
+      PARAMETER (TINY = 1D-12)
+      DOUBLE PRECISION MAX_VAL
 C     
 C     FUNCTIONS
 C     
@@ -47,10 +50,16 @@ C
       CALL SB_SF_005_SPLITORDERS(P,ANS)
 C     color-linked borns are called for QCD-type emissions
       ANS_SUMMED = 0D0
+      MAX_VAL = 0D0
 
 C     reset the amp_split_cnt array
       AMP_SPLIT_CNT(1:AMP_SPLIT_SIZE,1:2,1:NSPLITORDERS) = DCMPLX(0D0
      $ ,0D0)
+
+
+      DO I = 1, NSQAMPSO
+        MAX_VAL = MAX(MAX_VAL, ABS(ANS(I)))
+      ENDDO
 
       DO I = 1, NSQAMPSO
         IF (KEEP_ORDER_CNT(QCD_POS, I)) THEN
@@ -60,10 +69,15 @@ C     reset the amp_split_cnt array
 C           take into account the fact that this is for QCD
             IF (J.EQ.QCD_POS) AMP_ORDERS(J) = AMP_ORDERS(J) + 2
           ENDDO
-          AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1,QCD_POS)
-     $      = ANS(I)
+            !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
+          IF(ABS(ANS(I)).GT.MAX_VAL*TINY)
+     $      AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1
+     $     ,QCD_POS) = ANS(I)
         ENDIF
       ENDDO
+
+C     this is to avoid fake non-zero contributions 
+      IF (ABS(ANS_SUMMED).LT.MAX_VAL*TINY) ANS_SUMMED=0D0
 
       RETURN
       END
@@ -79,8 +93,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     spectators: 2 4 
 
 C     
@@ -164,8 +178,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QED QCD ] QCD^2<=4 QED^2<=2
 C     spectators: 2 4 
 
 C     
@@ -194,9 +208,10 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO),
      $  JAMP2(NCOLOR2,NAMPSO)
+      COMPLEX*16 TMP_JAMP(1)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -211,10 +226,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -227,18 +242,19 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-C     JAMP1s contributing to orders QCD=2 QED=0
-      JAMP1(1,1)=+1D0/2D0*(+1D0/3D0*AMP(2))
-      JAMP1(2,1)=+1D0/2D0*(-AMP(2))
-C     JAMP1s contributing to orders QCD=0 QED=2
-      JAMP1(1,2)=-AMP(1)-AMP(3)
-      JAMP1(2,2)=0D0
-C     JAMP2s contributing to orders QCD=2 QED=0
-      JAMP2(1,1)=+1D0/4D0*(+1D0/9D0*AMP(2))
-      JAMP2(2,1)=+3D0/4D0*AMP(2)-1D0/6D0*AMP(2)
-C     JAMP2s contributing to orders QCD=0 QED=2
-      JAMP2(1,2)=+1D0/2D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(3))
-      JAMP2(2,2)=+1D0/2D0*(+AMP(1)+AMP(3))
+C     JAMPs contributing to orders QCD=2 QED=0
+      JAMP1(1,1) = (1.666666666666667D-01)*AMP(2)
+      JAMP1(2,1) = (-5.000000000000000D-01)*AMP(2)
+C     JAMPs contributing to orders QCD=0 QED=2
+      JAMP1(1,2) = (-1.000000000000000D+00)*AMP(1)+(
+     $ -1.000000000000000D+00)*AMP(3)
+C     JAMPs contributing to orders QCD=2 QED=0
+      JAMP2(1,1) = (2.777777777777778D-02)*AMP(2)
+      JAMP2(2,1) = (5.833333333333334D-01)*AMP(2)
+C     JAMPs contributing to orders QCD=0 QED=2
+      TMP_JAMP(1) = AMP(1) +  AMP(3)  ! used 2 times
+      JAMP2(1,2) = (-1.666666666666667D-01)*TMP_JAMP(1)
+      JAMP2(2,2) = (5.000000000000000D-01)*TMP_JAMP(1)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -250,7 +266,7 @@ C     JAMP2s contributing to orders QCD=0 QED=2
           ENDDO
           DO N = 1, NAMPSO
             ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))/DENOM(I)
+     $       *DCONJG(JAMP1(I,N))
           ENDDO
         ENDDO
       ENDDO

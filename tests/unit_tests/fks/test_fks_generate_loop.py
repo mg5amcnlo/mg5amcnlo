@@ -15,6 +15,7 @@
 
 """Testing modules for FKS_process class"""
 
+from __future__ import absolute_import
 import sys
 import os
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -52,8 +53,7 @@ class TestGenerateLoopFKS(unittest.TestCase):
     
         myproc1 = MG.ProcessDefinition({'legs':myleglist,
                                         'model':self.mymodel,
-                                        'orders':{'QCD':4, 'QED':0},
-                                        'born_orders':{'QCD':2, 'QED':0},
+                                        'born_sq_orders':{'QCD':4, 'QED':0},
                                         'squared_orders':{'QCD':6, 'QED':0},
                                         'split_orders':['QCD', 'QED'],
                                         'sqorders_types':{'QED':'=', 'QCD':'='},
@@ -62,8 +62,7 @@ class TestGenerateLoopFKS(unittest.TestCase):
 
         myproc2 = MG.ProcessDefinition({'legs':myleglist,
                                         'model':self.mymodel,
-                                        'orders':{'QCD':4, 'QED':0},
-                                        'born_orders':{'QCD':2, 'QED':0},
+                                        'born_sq_orders':{'QCD':4, 'QED':0},
                                         'squared_orders':{'QCD':6, 'QED':0},
                                         'split_orders':['QCD', 'QED'],
                                         'sqorders_types':{'QED':'=', 'QCD':'='},
@@ -101,8 +100,7 @@ class TestGenerateLoopFKS(unittest.TestCase):
     
         myproc = MG.ProcessDefinition({'legs':myleglist,
                                        'model':self.mymodel,
-                                       'orders':{'QCD':4, 'QED':0},
-                                       'born_orders':{'QCD':2, 'QED':0},
+                                       'born_sq_orders':{'QCD':4, 'QED':0},
                                        'squared_orders':{'QCD':6, 'QED':0},
                                        'split_orders':['QCD', 'QED'],
                                        'sqorders_types':{'QED':'=', 'QCD':'='},

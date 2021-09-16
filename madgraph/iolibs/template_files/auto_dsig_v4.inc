@@ -43,6 +43,13 @@ C
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
+C
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      include '../../Source/PdF/eepdf.inc'
+      double precision ee_comp_prod
+%(ee_comp_vars)s
+      integer i_ee
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -65,6 +72,15 @@ C     Keep track of whether cuts already calculated for this event
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+c
+c     local
+c
+	   double precision P1(0:3, nexternal)
+
 C  
 C DATA
 C  
@@ -100,7 +116,12 @@ C     Continue only if IMODE is 0, 4 or 5
             DSIG%(proc_id)s = PD(0)
             RETURN
          ENDIF
-         CALL SMATRIX%(proc_id)s(PP,DSIGUU)
+	 if(frame_id.ne.6)then
+           call boost_to_frame(PP, frame_id, P1)
+         else
+           P1 = PP
+         endif
+         CALL SMATRIX%(proc_id)s(P1,DSIGUU)
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      DSIG%(proc_id)s = DSIGUU*CONV
@@ -146,3 +167,9 @@ C
 %(read_write_good_hel)s
 
 ## }
+
+
+     SUBROUTINE PRINT_ZERO_AMP%(proc_id)s()
+
+     return
+     end

@@ -141,6 +141,7 @@ pathextraincl "$INCLUDEPATHS"
 EXEC_NAME=
 EXEC_NAMEF=
 EXEC_NAMEFF=
+PYUTI+=' pineappl_interface_dummy.o HwU.o'
 read -a PYUTIA <<< "$PYUTI"
 PYUTI=
 for i in "${PYUTIA[@]}"; do PYUTI+=`pwd`"/objects/$i "; done

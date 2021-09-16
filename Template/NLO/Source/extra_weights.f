@@ -1,18 +1,18 @@
       module extra_weights
       
          integer,parameter :: iwgtinfo=-5,maxscales=9,maxPDFs=200
-     $     ,maxPDFsets=25,maxdynscales=10
+     $     ,maxPDFsets=25,maxdynscales=10,maxorders=10
          integer :: max_mom_str=1,max_mext=1,max_n_ctr=1
          logical :: doreweight,lscalevar(maxdynscales)
      $        ,lpdfvar(maxPDFsets)
          integer :: iwgtnumpartn,jwgtinfo,mexternal
      $        ,lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
      $        ,dyn_scale(0:maxdynscales),n_ctr_found,n_mom_conf
-     $        ,QCD_power,orders_tag
+     $        ,QCD_power,orders_tag,amp_pos
          double precision :: wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
      $        ,wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtnstmp_avgvirt
      $        ,wgtref,scalevarR(0:maxscales),scalevarF(0:maxscales)
-     $        ,wgtxsecmu(maxscales,maxscales,maxdynscales)
+     $        ,wgtxsecmu(maxorders,maxscales,maxscales,maxdynscales)
      $        ,wgtxsecPDF(0:maxPDFs,maxPDFsets),wgtbpower,wgtcpower
      $        ,veto_multiplier,H1_factor_virt,veto_compensating_factor
      $        ,born_wgt_veto

@@ -40,9 +40,9 @@ class MultiTagLeg(MG.MultiLeg):
 
         if name == 'is_tagged':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
+                raise self.PhysicsObjectError( \
                         "%s is not a valid string for leg 'is_tagged' flag" \
-                                                        % str(value)
+                                                        % str(value))
         return super(MultiTagLeg,self).filter(name, value)
     
      
@@ -69,7 +69,7 @@ class TagLeg(MG.Leg):
 
         if name == 'is_tagged':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError, \
+                raise self.PhysicsObjectError( \
                         "%s is not a valid string for leg 'is_tagged' flag" \
-                                                        % str(value)
+                                                        % str(value))
         return super(TagLeg,self).filter(name, value)

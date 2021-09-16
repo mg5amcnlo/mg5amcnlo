@@ -13,8 +13,10 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import random
-import StringIO
+import six
+StringIO = six
 import os
 import sys
 import tests.unit_tests as unittest
@@ -88,7 +90,7 @@ BLOCK SMINPUTS Q= 1.000000e+00 #  test
         
         b.remove([1,2])
         self.assertEqual(len(b),1)
-        self.assertEqual(b.param_dict.keys(),[(1,)])               
+        self.assertEqual(list(b.param_dict.keys()),[(1,)])               
 
 
 class TestParamCard(unittest.TestCase):
@@ -127,7 +129,7 @@ class TestParamCard(unittest.TestCase):
         self.assertFalse(card.has_param('new', [23]))
         self.assertTrue(card.has_param('mass', [23]))
         
-        self.assertFalse('new' in card.keys())
+        self.assertFalse('new' in list(card.keys()))
         
         card.mod_param('mass', [23], 'new', [25], 43)
         card.mod_param('decay', [23], 'new', [26], 43)
@@ -142,7 +144,7 @@ class TestParamCard(unittest.TestCase):
         card.mod_param('new', [25], 'mass', [23])
         card.mod_param('new', [26], 'decay', [23])       
                 
-        self.assertFalse('new' in card.keys())       
+        self.assertFalse('new' in list(card.keys()))       
         
                 
 
@@ -156,10 +158,10 @@ class TestParamCard(unittest.TestCase):
         # Rename the blocks
         mass = card['mass']
         card.rename_blocks({'mass':'polemass','decay':'width'})
-        self.assertTrue(card.has_key('polemass'))
-        self.assertTrue(card.has_key('width'))
-        self.assertFalse(card.has_key('mass'))
-        self.assertFalse(card.has_key('decay'))        
+        self.assertTrue('polemass' in card)
+        self.assertTrue('width' in card)
+        self.assertFalse('mass' in card)
+        self.assertFalse('decay' in card)        
         self.assertEqual(mass, card['polemass'])
         self.assertEqual(mass.name, 'polemass')
     
@@ -183,7 +185,7 @@ class TestParamCard(unittest.TestCase):
         # change the block of a parameter and lhacode
         card.mod_param('mass', [32], block='polemass', lhacode=[35])
         
-        self.assertFalse(card.has_key('mass'))
+        self.assertFalse('mass' in card)
         self.assertRaises(KeyError, card['polemass'].get, [32])
         self.assertRaises(KeyError, card['width'].get, [32])
         self.assertEqual(param, card['polemass'].get([35]))

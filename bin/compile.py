@@ -13,9 +13,12 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 import logging
+import logging.config
 import time
 import shutil
 import subprocess
@@ -31,11 +34,18 @@ import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
+import madgraph.interface.coloring_logging
 import re
 
 # Set logging level to error
-logging.basicConfig(level=vars(logging)['INFO'],
-                    format="%(message)s")
+#logging.basicConfig(level=vars(logging)['INFO'],
+#                    format="%(message)s")
+level=50
+logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+logging.root.setLevel(level)
+logging.getLogger('madgraph').setLevel(level)
+logging.getLogger('madevent').setLevel(level)
+
 pjoin = os.path.join
 
 class Compile_MG5:
@@ -74,8 +84,8 @@ class Compile_MG5:
 
     def test_output_NLO(self):
         """do the output of a simple LO process to ensure that LO is correctly configure."""
-        self.cmd.exec_cmd('generate p p > e+ ve [QCD]')
-        self.cmd.exec_cmd('output %s/TESTNLO' %root_path)
+        self.cmd.run_cmd('generate p p > e+ ve [QCD]')
+        self.cmd.run_cmd('output %s/TESTNLO' %root_path)
         shutil.rmtree('%s/TESTNLO' % root_path)
 
     @staticmethod
@@ -90,13 +100,13 @@ class Compile_MG5:
         for model_path in v4_model:
             #remove old pkl
             start = time.time()
-            print 'make pkl for %s :' % os.path.basename(model_path),
+            print('make pkl for %s :' % os.path.basename(model_path), end=' ')
             try:
                 os.remove(os.path.join(model_path,'model.pkl'))
             except:
                 pass
             import_v4.import_model(model_path)
-            print '%2fs' % (time.time() - start)
+            print('%2fs' % (time.time() - start))
     
     @staticmethod
     def make_UFO_pkl():
@@ -109,20 +119,20 @@ class Compile_MG5:
         # model.pkl
         for model_path in ufo_model:
             start = time.time()
-            print 'make model.pkl for %s :' % os.path.basename(model_path),
+            print('make model.pkl for %s :' % os.path.basename(model_path), end=' ')
             #remove old pkl
             try:
                 os.remove(os.path.join(model_path,'model.pkl'))
             except:
                 pass
             import_ufo.import_full_model(model_path)
-            print '%2fs' % (time.time() - start)
+            print('%2fs' % (time.time() - start))
         
         return
         # aloha routine 
         for model_path in ufo_model:
             start = time.time()
-            print 'make ALOHA for %s' % os.path.basename(model_path)
+            print('make ALOHA for %s' % os.path.basename(model_path))
             #remove old pkl
             try:
                 os.remove(os.path.join(model_path,'aloha.pkl'))
@@ -137,11 +147,11 @@ class Compile_MG5:
             sys.path.insert(0, ufo_path)
             output_dir = os.path.join(model_path, 'Fortran')
             create_aloha.AbstractALOHAModel(ufo_name, write_dir=output_dir, format='Fortran')
-            print 'done in %2fs' % (time.time() - start)
+            print('done in %2fs' % (time.time() - start))
            
     @staticmethod
     def make_stdHep():
-        print "Compiling StdHEP in %s."%str(os.path.join(MG5DIR, 'vendor', 'StdHEP'))
+        print("Compiling StdHEP in %s."%str(os.path.join(MG5DIR, 'vendor', 'StdHEP')))
         # this is for 64-bit systems
         if sys.maxsize > 2**32:
             path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
@@ -171,7 +181,7 @@ class Compile_MG5:
 
     @staticmethod
     def make_CutTools():
-        print "Compiling CutTools in %s."%str(os.path.join(MG5DIR, 'vendor', 'CutTools'))
+        print("Compiling CutTools in %s."%str(os.path.join(MG5DIR, 'vendor', 'CutTools')))
         # Set the correct fortran compiler
         if 'FC' not in os.environ or not os.environ['FC']:
             if misc.which('gfortran'):
@@ -193,7 +203,7 @@ class Compile_MG5:
 
     @staticmethod
     def make_IREGI():
-        print "Compiling IREGI in %s."%str(os.path.join(MG5DIR, 'vendor', 'IREGI','src'))
+        print("Compiling IREGI in %s."%str(os.path.join(MG5DIR, 'vendor', 'IREGI','src')))
         # Set the correct fortran compiler
         if 'FC' not in os.environ or not os.environ['FC']:
             if misc.which('gfortran'):
@@ -276,9 +286,9 @@ class Compile_MG5:
         misc.compile(cwd = os.path.join(iregi_path,'src'))        
 
     def install_package(self, programs=[]):
-        print "installing external package"
+        print("installing external package")
         if not programs:
-            programs = ['pythia-pgs','Delphes','ExRootAnalysis','MadAnalysis4','SysCalc']
+            programs = ['pythia8','Delphes','ExRootAnalysis','MadAnalysis5']
             
         for prog in programs:
             self.cmd.exec_cmd('install %s' % prog)

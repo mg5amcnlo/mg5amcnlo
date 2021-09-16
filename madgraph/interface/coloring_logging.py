@@ -1,10 +1,12 @@
+from __future__ import absolute_import
 import logging
+from six.moves import range
 # method to add color to a logging.info add a second argument:
 # '$MG:BOLD'
 # '$MG:color:RED'
 
 
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = list(range(8))
 
 COLORS = {
     'WARNING'  : BLUE,

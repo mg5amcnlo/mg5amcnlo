@@ -9,7 +9,7 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: g g > t t~ g [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -84,8 +84,8 @@ C          different coupling combinations
           DO J = 1, NSPLITORDERS
             AMP_ORDERS(J) = GETORDPOWFROMINDEX1(J, I)
           ENDDO
-          IF (ABS(ANS(I)).GT.ANS_MAX*TINY) AMP_SPLIT(ORDERS_TO_AMP_SPLI
-     $T_POS(AMP_ORDERS)) = ANS(I)
+          IF (ABS(ANS(I)).GT.ANS_MAX*TINY)
+     $      AMP_SPLIT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS)) = ANS(I)
         ENDIF
       ENDDO
 
@@ -108,7 +108,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: g g > t t~ g [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -232,7 +232,7 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > t t~ g [ real = QED QCD ] QCD^2=6 QED^2=0
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -262,9 +262,10 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(10)
 C     
 C     FUNCTION
 C     
@@ -272,23 +273,33 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/9/
-      DATA (CF(I,  1),I=  1,  6) /   64,   -8,   -8,    1,    1,   10/
+      DATA (CF(I,  1),I=  1,  6) /7.111111111111111D+00,
+     $ -8.888888888888888D-01,-8.888888888888888D-01
+     $ ,1.111111111111111D-01,1.111111111111111D-01,1.111111111111111D
+     $ +00/
 C     1 T(1,2,5,3,4)
-      DATA DENOM(2)/9/
-      DATA (CF(I,  2),I=  1,  6) /   -8,   64,    1,   10,   -8,    1/
+      DATA (CF(I,  2),I=  1,  6) /-8.888888888888888D-01
+     $ ,7.111111111111111D+00,1.111111111111111D-01,1.111111111111111D
+     $ +00,-8.888888888888888D-01,1.111111111111111D-01/
 C     1 T(1,5,2,3,4)
-      DATA DENOM(3)/9/
-      DATA (CF(I,  3),I=  1,  6) /   -8,    1,   64,   -8,   10,    1/
+      DATA (CF(I,  3),I=  1,  6) /-8.888888888888888D-01
+     $ ,1.111111111111111D-01,7.111111111111111D+00,
+     $ -8.888888888888888D-01,1.111111111111111D+00,1.111111111111111D
+     $ -01/
 C     1 T(2,1,5,3,4)
-      DATA DENOM(4)/9/
-      DATA (CF(I,  4),I=  1,  6) /    1,   10,   -8,   64,    1,   -8/
+      DATA (CF(I,  4),I=  1,  6) /1.111111111111111D-01
+     $ ,1.111111111111111D+00,-8.888888888888888D-01
+     $ ,7.111111111111111D+00,1.111111111111111D-01,
+     $ -8.888888888888888D-01/
 C     1 T(2,5,1,3,4)
-      DATA DENOM(5)/9/
-      DATA (CF(I,  5),I=  1,  6) /    1,   -8,   10,    1,   64,   -8/
+      DATA (CF(I,  5),I=  1,  6) /1.111111111111111D-01,
+     $ -8.888888888888888D-01,1.111111111111111D+00,1.111111111111111D
+     $ -01,7.111111111111111D+00,-8.888888888888888D-01/
 C     1 T(5,1,2,3,4)
-      DATA DENOM(6)/9/
-      DATA (CF(I,  6),I=  1,  6) /   10,    1,    1,   -8,   -8,   64/
+      DATA (CF(I,  6),I=  1,  6) /1.111111111111111D+00
+     $ ,1.111111111111111D-01,1.111111111111111D-01,
+     $ -8.888888888888888D-01,-8.888888888888888D-01
+     $ ,7.111111111111111D+00/
 C     1 T(5,2,1,3,4)
 C     ----------
 C     BEGIN CODE
@@ -346,18 +357,36 @@ C     Amplitude(s) for diagram number 16
       CALL FFV1_0(W(1,4),W(1,3),W(1,7),GC_11,AMP(17))
       CALL FFV1_0(W(1,4),W(1,3),W(1,10),GC_11,AMP(18))
 C     JAMPs contributing to orders QCD=3 QED=0
-      JAMP(1,1)=-AMP(1)+IMAG1*AMP(3)+IMAG1*AMP(5)-AMP(6)+AMP(15)
-     $ -AMP(18)+AMP(16)
-      JAMP(2,1)=-AMP(4)-IMAG1*AMP(5)+IMAG1*AMP(11)+AMP(12)-AMP(15)
-     $ -AMP(17)-AMP(16)
-      JAMP(3,1)=+AMP(1)-IMAG1*AMP(3)+IMAG1*AMP(10)-AMP(12)-AMP(13)
-     $ +AMP(18)+AMP(17)
-      JAMP(4,1)=-AMP(7)+IMAG1*AMP(8)-IMAG1*AMP(10)+AMP(12)-AMP(15)
-     $ -AMP(17)-AMP(16)
-      JAMP(5,1)=+AMP(1)+IMAG1*AMP(2)-IMAG1*AMP(11)-AMP(12)-AMP(14)
-     $ +AMP(18)+AMP(17)
-      JAMP(6,1)=-AMP(1)-IMAG1*AMP(2)-IMAG1*AMP(8)-AMP(9)+AMP(15)
-     $ -AMP(18)+AMP(16)
+      TMP_JAMP(3) = AMP(15) +  AMP(16)  ! used 4 times
+      TMP_JAMP(2) = AMP(1) +  AMP(18)  ! used 4 times
+      TMP_JAMP(1) = AMP(12) - AMP(17)  ! used 4 times
+      TMP_JAMP(10) = TMP_JAMP(3) - TMP_JAMP(2)  ! used 2 times
+      TMP_JAMP(9) = TMP_JAMP(1) + ((-0.000000000000000D+00
+     $ ,1.000000000000000D+00)) * AMP(11)  ! used 2 times
+      TMP_JAMP(8) = TMP_JAMP(2) - TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(7) = TMP_JAMP(1) + ((0.000000000000000D+00,
+     $ -1.000000000000000D+00)) * AMP(10)  ! used 2 times
+      TMP_JAMP(6) = TMP_JAMP(3) - TMP_JAMP(1)  ! used 2 times
+      TMP_JAMP(5) = TMP_JAMP(2) + ((0.000000000000000D+00,
+     $ -1.000000000000000D+00)) * AMP(3)  ! used 2 times
+      TMP_JAMP(4) = TMP_JAMP(3) + ((-0.000000000000000D+00
+     $ ,1.000000000000000D+00)) * AMP(5)  ! used 2 times
+      JAMP(1,1) = (-1.000000000000000D+00)*AMP(6)+TMP_JAMP(4)+(
+     $ -1.000000000000000D+00)*TMP_JAMP(5)
+      JAMP(2,1) = (-1.000000000000000D+00)*AMP(4)+(-1.000000000000000D
+     $ +00)*TMP_JAMP(4)+TMP_JAMP(9)
+      JAMP(3,1) = (-1.000000000000000D+00)*AMP(13)+TMP_JAMP(5)+(
+     $ -1.000000000000000D+00)*TMP_JAMP(7)
+      JAMP(4,1) = (-1.000000000000000D+00)*AMP(7)+((0.000000000000000D
+     $ +00,1.000000000000000D+00))*AMP(8)+((0.000000000000000D+00,
+     $ -1.000000000000000D+00))*AMP(10)+(-1.000000000000000D+00)
+     $ *TMP_JAMP(6)
+      JAMP(5,1) = ((0.000000000000000D+00,1.000000000000000D+00))
+     $ *AMP(2)+((0.000000000000000D+00,-1.000000000000000D+00))*AMP(11)
+     $ +(-1.000000000000000D+00)*AMP(14)+TMP_JAMP(8)
+      JAMP(6,1) = ((0.000000000000000D+00,-1.000000000000000D+00))
+     $ *AMP(2)+((0.000000000000000D+00,-1.000000000000000D+00))*AMP(8)
+     $ +(-1.000000000000000D+00)*AMP(9)+TMP_JAMP(10)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
@@ -370,7 +399,7 @@ C     JAMPs contributing to orders QCD=3 QED=0
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX1(M,N)) = RES(SQSOINDEX1(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
+     $       *DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
       ENDDO
@@ -420,8 +449,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSPLITORDERS
-        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDER
-     $B,I)
+        SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)
+     $   +AMPSPLITORDERS(AMPORDERB,I)
       ENDDO
       SQSOINDEX1=SQSOINDEX_FROM_ORDERS1(SQORDERS)
       END

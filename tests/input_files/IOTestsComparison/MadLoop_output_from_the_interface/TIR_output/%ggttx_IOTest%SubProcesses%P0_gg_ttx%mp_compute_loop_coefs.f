@@ -267,13 +267,14 @@ C     This, for now, is only defined for 4-fermionic currents.
 
       DPW_COPIED = .FALSE.
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
-     $   .NE.0)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H)
+     $   .GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
 
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
 
@@ -347,8 +348,9 @@ C            containers (but only those needed)
                 CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16)
      $           ,0.0E0_16,KIND=16)
                 IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-                ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AM
-     $P(I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+                ITEMP =
+     $            ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(I)
+     $           ,ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
                 IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                   DO K=1,3
                     TEMP2 = REAL(CFTOT*AMPL(K,I)*CTEMP,KIND=16)
@@ -367,8 +369,9 @@ C            containers (but only those needed)
                 DP_CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=8)
      $           ,0.0D0,KIND=8)
                 IF(CF_D(I,J).LT.0) DP_CFTOT=DP_CFTOT*DP_IMAG1
-                ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AM
-     $P(I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+                ITEMP =
+     $            ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(I)
+     $           ,ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
                 IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                   DO K=1,3
                     DP_TEMP2 = REAL(DP_CFTOT*DP_AMPL(K,I)*DP_CTEMP

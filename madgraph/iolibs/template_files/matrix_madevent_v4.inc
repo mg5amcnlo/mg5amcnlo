@@ -37,6 +37,9 @@ c
     LOGICAL GOODHEL(NCOMB)
     INTEGER NTRY
     common/BLOCK_GOODHEL/NTRY,GOODHEL
+    integer nb_spin_state(2)
+    data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
+    common /nb_hel_state/ nb_spin_state
 C  
 C LOCAL VARIABLES 
 C  
@@ -102,9 +105,9 @@ C ----------
                T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))            
              DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
-                 T=T*ABS(POL(JJ))
+                 T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
                ELSE IF(POL(JJ).NE.1d0)THEN
-                 T=T*(2d0-ABS(POL(JJ)))
+                 T=T*(2d0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2d0
                ENDIF
              ENDDO
 			 IF (ISUM_HEL.NE.0) then
@@ -167,7 +170,7 @@ c           Include the Jacobian from helicity sampling
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB
-       SUMHEL=SUMHEL+TS(I)
+       SUMHEL=SUMHEL+DABS(TS(I))
        IF(R.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
           ANS=DSIGN(ANS,TS(I))		  
@@ -196,7 +199,7 @@ REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC)
 C  
 %(info_lines)s
 C
-C Returns amplitude squared summed/avg over colors
+C Returns amplitude squared -- no average over initial state/symmetry factor
 c for the point with external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
@@ -230,8 +233,8 @@ C
 C LOCAL VARIABLES 
 C  
     INTEGER I,J,M,N
-    COMPLEX*16 ZTEMP
-    REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+    COMPLEX*16 ZTEMP, TMP_JAMP(%(nb_temp_jamp)i)
+    REAL*8 CF(NCOLOR,NCOLOR)
     COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
     COMPLEX*16 W(18,NWAVEFUNCS)
 C   Needed for v4 models
@@ -279,7 +282,7 @@ endif
         ENDDO
 		DO N = 1, NAMPSO
           IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN
-		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+		     MATRIX%(proc_id)s = MATRIX%(proc_id)s + ZTEMP*DCONJG(JAMP(I,N))
 		  ENDIF
 		ENDDO
       ENDDO

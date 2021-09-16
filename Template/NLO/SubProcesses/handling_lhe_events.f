@@ -21,6 +21,9 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer n_orderstags,oo,tag
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c
       write(ifile,'(a)')
      #     '<LesHouchesEvents version="3.0">'
@@ -30,28 +33,38 @@ c
          write(ifile,'(a)') '  <initrwgt>'
          idwgt=1000
          if (do_rwgt_scale) then
-            do kk=1,dyn_scale(0)
-               write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup name='scale_variation ",
-     &              dyn_scale(kk),"' combine='envelope'>"
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        idwgt=idwgt+1
-                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                       "      <weight id='",idwgt,"'> dyn=",
-     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
-     $                       ,scalevarF(ii)," </weight>"
-                     enddo
-                  enddo
+            do oo=0,n_orderstags
+               if (oo.eq.0) then
+                   tag = 0
                else
-                  idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                 "      <weight id='",idwgt,"'> dyn=",
-     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
-     $                 ," </weight>"
+                   tag = orderstags_glob(oo)
                endif
-               write(ifile,'(a)') "    </weightgroup>"
+               do kk=1,dyn_scale(0)
+                  write(ifile,'(a,i15,i4,a)') 
+     &                 "    <weightgroup name='scale_variation ",
+     &                 tag, dyn_scale(kk),"' combine='envelope'>"
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           idwgt=idwgt+1
+                           write(ifile,
+     $                           '(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",scalevarR(jj)," muF="
+     $                       ,scalevarF(ii)," </weight>"
+                        enddo
+                     enddo
+                  else
+                     idwgt=idwgt+1
+                     write(ifile,'(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",1d0 ," muF=",1d0
+     $                       ," </weight>"
+                  endif
+                  write(ifile,'(a)') "    </weightgroup>"
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then
@@ -113,7 +126,7 @@ c     parameter to allow to include run_card.inc
       include './cuts.inc'
       integer lhaid
       character*20 pdlabel
-      integer iappl
+      logical pineappl
       character*7 event_norm
       character*13 temp
 c     other parameter
@@ -126,6 +139,9 @@ c     other parameter
       character*150 buffer,buffer_lc,buffer2
       integer event_id
       common /c_event_id/ event_id
+      integer n_orderstags,oo,tag
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 
 c     Set the event_id to 0. If 0 or positive, this value will be update
 c     in write_lhe_event. It is set to -99 through a block data
@@ -215,28 +231,38 @@ c Write here the reweight information if need be
          write(ifile,'(a)') '  <initrwgt>'
          idwgt=1000
          if (do_rwgt_scale) then
-            do kk=1,dyn_scale(0)
-               write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup name='scale_variation ",
-     &              dyn_scale(kk),"' combine='envelope'>"
-               if (lscalevar(kk)) then
-                  do ii=1,nint(scalevarF(0))
-                     do jj=1,nint(scalevarR(0))
-                        idwgt=idwgt+1
-                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                       "      <weight id='",idwgt,"'> dyn=",
-     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
-     $                       ,scalevarF(ii)," </weight>"
-                     enddo
-                  enddo
+            do oo=0,n_orderstags
+               if (oo.eq.0) then
+                   tag = 0
                else
-                  idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
-     $                 "      <weight id='",idwgt,"'> dyn=",
-     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
-     $                 ," </weight>"
+                   tag = orderstags_glob(oo)
                endif
-               write(ifile,'(a)') "    </weightgroup>"
+               do kk=1,dyn_scale(0)
+                  write(ifile,'(a,i15,i4,a)') 
+     &                 "    <weightgroup name='scale_variation ",
+     &                 tag, dyn_scale(kk),"' combine='envelope'>"
+                  if (lscalevar(kk)) then
+                     do ii=1,nint(scalevarF(0))
+                        do jj=1,nint(scalevarR(0))
+                           idwgt=idwgt+1
+                           write(ifile,
+     $                           '(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",scalevarR(jj)," muF="
+     $                       ,scalevarF(ii)," </weight>"
+                        enddo
+                     enddo
+                  else
+                     idwgt=idwgt+1
+                     write(ifile,'(a,i4,a,i15,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> tag=" ,tag,
+     $                       " dyn=",dyn_scale(kk),
+     $                       " muR=",1d0 ," muF=",1d0
+     $                       ," </weight>"
+                  endif
+                  write(ifile,'(a)') "    </weightgroup>"
+               enddo
             enddo
          endif
          if (do_rwgt_pdf) then
@@ -648,7 +674,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*140 buff
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -662,11 +688,16 @@ c
       common/event_attributes/nattr,npNLO,npLO
       include './run.inc'
       include 'unlops.inc'
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
+      logical do_rwgt
       event_id = -99
 c
+      do_rwgt = do_rwgt_scale .or. do_rwgt_pdf .or. store_rwgt_info
       if (event_id.ge.0) then
          event_id=event_id+1
          if (event_id.le.9) then
@@ -720,7 +751,7 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf .or.
+      if(buff(1:1).eq.'#' .and. (do_rwgt .or.
      &     jwgtinfo.lt.0)) then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
@@ -759,20 +790,23 @@ c
                write(ifile,'(a)') '  <rwgt>'
                idwgt=1000
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              idwgt=idwgt+1
-                              write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                             ,wgtxsecmu(j,i,kk)," </wgt>"
+                  do oo=0,n_orderstags
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 idwgt=idwgt+1
+                                 write(ifile,601) 
+     $                                "   <wgt id='",idwgt,"'>"
+     $                                ,wgtxsecmu(oo,j,i,kk)," </wgt>"
+                              enddo
                            enddo
-                        enddo
-                     else
-                        idwgt=idwgt+1
-                        write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                       ,wgtxsecmu(1,1,kk)," </wgt>"
-                     endif
+                        else
+                           idwgt=idwgt+1
+                           write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecmu(oo,1,1,kk)," </wgt>"
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then
@@ -804,7 +838,7 @@ c
  441  format(4(1x,e16.10))
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
+ 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
@@ -819,7 +853,7 @@ c
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*140 buff
       character*80 string
       character*12 dummy12
@@ -833,6 +867,9 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -908,18 +945,20 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              call read_rwgt_line(ifile,idwgt
-     $                             ,wgtxsecmu(j,i,kk))
+                  do oo=0,n_orderstags
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 call read_rwgt_line(ifile,idwgt
+     $                                ,wgtxsecmu(oo,j,i,kk))
+                              enddo
                            enddo
-                        enddo
-                     else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+                        else
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
      $                       ,kk))
-                     endif
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then
@@ -966,7 +1005,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk
+      integer ifile,i,kk,oo
       character*140 buff
       character*80 string
       character*12 dummy12
@@ -980,6 +1019,9 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      integer n_orderstags
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -1064,18 +1106,20 @@ c
                read(ifile,'(a)')string
                wgtref=XWGTUP
                if (do_rwgt_scale) then
-                  do kk=1,dyn_scale(0)
-                     if (lscalevar(kk)) then
-                        do i=1,nint(scalevarF(0))
-                           do j=1,nint(scalevarR(0))
-                              call read_rwgt_line(ifile,idwgt
-     $                             ,wgtxsecmu(j,i,kk))
+                  do oo=0,n_orderstags
+                     do kk=1,dyn_scale(0)
+                        if (lscalevar(kk)) then
+                           do i=1,nint(scalevarF(0))
+                              do j=1,nint(scalevarR(0))
+                                 call read_rwgt_line(ifile,idwgt
+     $                                ,wgtxsecmu(oo,j,i,kk))
+                              enddo
                            enddo
-                        enddo
-                     else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+                        else
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
      $                       ,kk))
-                     endif
+                        endif
+                     enddo
                   enddo
                endif
                if (do_rwgt_pdf) then

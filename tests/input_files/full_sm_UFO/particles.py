@@ -4,7 +4,8 @@
 
 
 from __future__ import division
-from object_library import all_particles, Particle
+from __future__ import absolute_import
+from .object_library import all_particles, Particle
 
 ve = Particle(pdg_code = 12,
               name = 've',

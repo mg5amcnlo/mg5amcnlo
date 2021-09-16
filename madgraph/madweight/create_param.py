@@ -42,6 +42,9 @@
 ##
 ## BEGIN INCLUDE
 ##
+from __future__ import absolute_import
+from __future__ import print_function
+from six.moves import range
 try:
     import madgraph.madweight.MW_info as MW_param
 except ImportError:
@@ -70,7 +73,7 @@ class Param_card:
             self.source=0
 
         if run_name:
-            print 'starting the creation of the param_card'
+            print('starting the creation of the param_card')
             self.create_set_card(run_name)
             
     #2#########################################################################
@@ -100,7 +103,7 @@ class Param_card:
         #line_content=line_content[1:]
         obj=self.info[name_blok]
         for i in range(0,len(line_content)-1):
-            if line_content[i] not in obj.keys():
+            if line_content[i] not in list(obj.keys()):
                 self.add_content([name_blok]+line_content)
                 return
             if i!=len(line_content)-2:
@@ -149,7 +152,7 @@ class Param_card:
         try:
             exec('new_value='+fct[1:-1])   #supress the ' on the fct and find the correct value
         except:
-            print 'WARNING: fct undefined for card ',self.creating_card,'. This card will be desactivated'
+            print('WARNING: fct undefined for card ',self.creating_card,'. This card will be desactivated')
             self.wrong_generation.append(self.creating_card)
             new_value=-1
 
@@ -170,7 +173,7 @@ class Param_card:
         #put in final data
         dico=self.info[name_block]
         for i in range(0,len(line_content)-1):
-            if line_content[i] not in dico.keys():
+            if line_content[i] not in list(dico.keys()):
                 dico[line_content[i]]=obj[line_content[i]]
                 break
             elif i!=len(line_content)-2:
@@ -232,8 +235,8 @@ class Param_card:
         text='Block '+blok_name.upper()+' '+self.info['comment'][blok_name]+'\n'
         prop_text=self.create_line_text(self.info[blok_name])
         if prop_text.count('$$'):
-            print 'multiple inputs are not supported yet'
-            print 'you must create your Cards by hand'
+            print('multiple inputs are not supported yet')
+            print('you must create your Cards by hand')
             sys.exit()
 
         return text+prop_text
@@ -272,7 +275,7 @@ class Param_card:
             text+='DECAY        '+key+'    '
             text+=self.create_line_text(decay[key])
             if br:
-                if key in br.keys():
+                if key in list(br.keys()):
                     text+=self.create_br_text(br[key])
             
 
@@ -328,7 +331,7 @@ class Param_card:
         if self.MWparam['mw_parameter']['2']:
             self.file_ParamInfo=open('./Cards/info_card.dat','a')	            
         else:
-            print 'define new mapping file'
+            print('define new mapping file')
             self.file_ParamInfo=open('./Cards/info_card.dat','w')	            
 
         param_list=self.create_change_tag(self.MWparam)
@@ -347,9 +350,9 @@ class Param_card:
             num=self.generated_corolated_card(param_list)
 
         self.define_mapping_file()
-        print 'we have created ',num-1,' param_card\'s'
+        print('we have created ',num-1,' param_card\'s')
         if self.wrong_generation:
-            print 'but ',len(self.wrong_generation),' are desactivated'
+            print('but ',len(self.wrong_generation),' are desactivated')
                         
         if self.MWparam['mw_parameter']['2']:
             self.update_event_dir()
@@ -360,7 +363,7 @@ class Param_card:
         #update event directory
         self.file_mapping.close()
         self.MWparam.def_actif_param()
-        import create_run as Create
+        from . import create_run as Create
         create_obj=Create.create_dir(self.MWparam)
         create_obj.update_card_status()
 
@@ -374,7 +377,7 @@ class Param_card:
 
         nb_param=1
         line=str(nb_card)+'\t'
-        while self.MWparam['mw_parameter'].has_key(str(nb_param*10+1)):
+        while str(nb_param*10+1) in self.MWparam['mw_parameter']:
             tag1=self.MWparam['mw_parameter'][str(nb_param*10+1)]
             tag2=self.MWparam['mw_parameter'][str(nb_param*10+2)]
             if 'fct_' in tag1:
@@ -401,12 +404,12 @@ class Param_card:
         """
 
         if self.MWparam['mw_parameter']['2']:
-            print 'add card in mapping file'
+            print('add card in mapping file')
             gap=self.MWparam.nb_card
             self.file_mapping=open('./Cards/mapping_card.dat','a')
             self.file_ParamInfo=open('./Cards/info_card.dat','a')	            
         else:
-            print 'define new mapping file'
+            print('define new mapping file')
             gap=0
             self.file_mapping=open('./Cards/mapping_card.dat','w')
             self.file_ParamInfo=open('./Cards/info_card.dat','w')	            
@@ -442,7 +445,7 @@ class Param_card:
         start=1+gap
         nb_new_card=1
         nb_param=1
-        while self.MWparam.info['mw_parameter'].has_key(str(nb_param*10+1)):		
+        while str(nb_param*10+1) in self.MWparam.info['mw_parameter']:		
             nb_new_card*=len(self.MWparam['mw_parameter'][str(nb_param*10+3)])
             nb_param+=1
                         
@@ -494,7 +497,7 @@ class Param_card:
 
         output=[]
         num=1
-        while info['mw_parameter'].has_key(str(10*num+1)):
+        while str(10*num+1) in info['mw_parameter']:
             content=[]
             tag=str(10*num+1)
             data=[num]
@@ -548,7 +551,7 @@ class Param_card:
         # 1) check if all parameter have the same number of data:
         for i in range(0,len(param_list)-1):
             if len(param_list[i])!=len(param_list[i+1]):
-                print """ERROR: all parameters don't have the same number of entries"""
+                print("""ERROR: all parameters don't have the same number of entries""")
                 sys.exit()
                 
         # 2) pass in all case

@@ -42,11 +42,14 @@ This file contains 4 class:
 
 from __future__ import division
 
+from __future__ import absolute_import
 import math
 
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
 import madgraph.various.misc as misc
+import six
+from six.moves import range
 
 #===============================================================================
 # FeynmanLine
@@ -177,11 +180,27 @@ class FeynmanLine(object):
         return self.model.get_particle(pid).get(name)
 
 
-    def get_name(self, name='name'):
+    def get_name(self, name='name',add_pol=True):
         """Return the name associate to the particle."""
 
         pid = self.id
         model_info = self.model.get_particle(pid)
+        
+        if add_pol and hasattr(self, 'polarization') and self.polarization:
+            name = self.get_name(name, add_pol=False)
+            pol = self.polarization
+            if pol in [[-1,1],[1,-1]]:
+                name += '_T'
+            elif pol == [-1]:
+                name += '_L'
+            elif pol == [1]:
+                name += '_R'
+            elif pol == [0]:
+                name += '_0'            
+            else:
+                name += '_pol'
+            return name
+
         
         if pid > 0:
             return model_info.get(name)
@@ -412,8 +431,8 @@ class FeynmanLine(object):
             self.begin.pos_x
             self.end.pos_y
         except Exception:
-            raise self.FeynmanLineError, 'No vertex in begin-end position ' + \
-                        ' or no position attach at one of those vertex '
+            raise self.FeynmanLineError('No vertex in begin-end position ' + \
+                        ' or no position attach at one of those vertex ')
         return True
 
     def has_ordinate(self, x):
@@ -431,10 +450,10 @@ class FeynmanLine(object):
                 min, max = max, min
 
             if min == max:
-                raise self.FeynmanLineError, 'Vertical line: no unique solution'
+                raise self.FeynmanLineError('Vertical line: no unique solution')
             if(not(min <= x <= max)):
-                raise self.FeynmanLineError, 'point outside interval invalid ' + \
-                    'invalid order {0:3}<={1:3}<={2:3}'.format(min, x, max)
+                raise self.FeynmanLineError('point outside interval invalid ' + \
+                    'invalid order {0:3}<={1:3}<={2:3}'.format(min, x, max))
 
         return self._has_ordinate(x)
 
@@ -548,8 +567,8 @@ class VertexPoint(object):
                 del self.lines[i]
                 return # only one data to remove!
 
-        raise self.VertexPointError, 'trying to remove in a ' + \
-                            'Vertex_Point a non present Feynman_Line'
+        raise self.VertexPointError('trying to remove in a ' + \
+                            'Vertex_Point a non present Feynman_Line')
 
 
     def def_level(self, level):
@@ -1060,9 +1079,8 @@ class FeynmanDiagram(object):
             # Associate position to level 2 and following (auto-recursive fct)
             self.find_vertex_position_at_level([init_line.end], 2)
         else:
-            raise self.FeynamDiagramError, \
-                                'only for one or two initial particles not %s' \
-                                % (len(self.initial_vertex))
+            raise self.FeynamDiagramError('only for one or two initial particles not %s' \
+                                % (len(self.initial_vertex)))
 
 
     def find_vertex_position_tchannel(self):
@@ -1642,7 +1660,7 @@ class DiagramDrawer(object):
         #No need to test Diagram class, it will be tested before using it anyway
         try:
             assert(not model or isinstance(model, base_objects.Model))
-            assert(not filename or isinstance(filename, basestring))
+            assert(not filename or isinstance(filename, six.string_types))
         except AssertionError:
             raise self.DrawDiagramError('No valid model provide to convert ' + \
                                         'diagram in appropriate format')
@@ -1915,7 +1933,7 @@ class DiagramDrawer(object):
         if hasattr(self, 'draw_curved_' + line_type):
             getattr(self, 'draw_curved_' + line_type)(line, cercle)
         else:
-            self.draw_curved_straight(line, reduce)
+            self.draw_curved_straight(line, cercle)
             
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
@@ -1937,8 +1955,8 @@ class DiagramDrawer(object):
         straight is an example and can be replace by other type of line as 
         dashed, wavy, curly, ..."""
 
-        raise self.DrawDiagramError, 'DrawDiagram.draw_straight should be ' + \
-                'overwritten by Inherited Class'
+        raise self.DrawDiagramError('DrawDiagram.draw_straight should be ' + \
+                'overwritten by Inherited Class')
 
     draw_curved_straight = draw_straight
 
@@ -2258,7 +2276,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
 
                 
             for line in vertex['legs'][:-1]:
-                if binding_side.has_key(line.get('number')):
+                if line.get('number') in binding_side:
                     pass
                 binding_side[line.get('number')] = left_direction
         
@@ -2282,7 +2300,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                         continue # connecting to initial particles
                     #compute the number of vertex in the structure
                     nb_vertex = len(self.fdstructures[structure_id].get('vertices'))
-                    if not binding_side.has_key(leg.get('number')):
+                    if leg.get('number') not in binding_side:
                         continue
                         
                     if  binding_side[leg.get('number')]:
@@ -2345,16 +2363,8 @@ class LoopFeynmanDiagram(FeynmanDiagram):
             if nb_Tloop % 2:
                 direction = 1
         
-        def order(line1, line2):
-            """ put T-channel first """
-            if line1.state == line2.state:
-                return 0
-            if line2.state:
-                return -1
-            else:
-                return 1
         
-        vertex.lines.sort(order)
+        vertex.lines.sort(key=lambda l: l.state)
         for line in vertex.lines:
             if line.begin.level is not None and line.end.level is not None:
                 continue # everything correctly define

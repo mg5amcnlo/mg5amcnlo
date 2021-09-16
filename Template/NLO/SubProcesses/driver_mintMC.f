@@ -86,6 +86,9 @@ c timing statistics
 C-----
 C  BEGIN CODE
 C-----  
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
@@ -131,6 +134,7 @@ c
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       call initcluster
+      call check_amp_split 
 c     
 c     Get user input
 c
@@ -139,7 +143,7 @@ c
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
-         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
       else
          doreweight=.false.
          do_rwgt_scale=.false.

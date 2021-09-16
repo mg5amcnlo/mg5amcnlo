@@ -210,7 +210,8 @@ c**************************************************************************
       integer ignum, ipnum, ipids(nexternal,4,2:nexternal)
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest, tstrategy
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
       integer tprid(-max_branch:-1,lmaxconfigs)
       common/to_sprop/sprop,tprid
@@ -404,7 +405,8 @@ c     ibwlist has ijid, propid
       common/to_mconfigs/mapconfig, this_config
 C $B$ IFOREST $B$ !this is a tag for MadWeight
       integer i, iforest(2,-max_branch:-1,lmaxconfigs)
-      common/to_forest/ iforest
+      integer tstrategy(lmaxconfigs)
+      common/to_forest/iforest,	tstrategy
 C $E$ IFOREST $E$ !this is a tag for MadWeight
 C $B$ DECAYBW $E$ !this is a tag for MadWeight
 

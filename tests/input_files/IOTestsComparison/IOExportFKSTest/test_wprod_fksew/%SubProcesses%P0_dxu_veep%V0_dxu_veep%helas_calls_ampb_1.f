@@ -99,35 +99,35 @@ C      if true.
       CALL IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
       CALL OXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
       CALL IXXXXX(P(0,4),ZERO,NHEL(4),-1*IC(4),W(1,4))
-      CALL FFV2P0_3(W(1,2),W(1,1),GC_67,DCMPLX(CMASS_MDL_MW),W(1,5))
+      CALL FFV2P0_3(W(1,2),W(1,1),GC_124,DCMPLX(CMASS_MDL_MW),W(1,5))
 C     Amplitude(s) for born diagram with ID 1
-      CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_67,AMP(1))
-      CALL FFV2P0_3(W(1,4),W(1,3),GC_67,DCMPLX(CMASS_MDL_MW),W(1,6))
+      CALL FFV2_0(W(1,4),W(1,3),W(1,5),GC_124,AMP(1))
+      CALL FFV2P0_3(W(1,4),W(1,3),GC_124,DCMPLX(CMASS_MDL_MW),W(1,6))
 C     Counter-term amplitude(s) for loop diagram number 2
-      CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5),C_UVWMWPMASS2EW_1EPS
-     $ ,C_UVWMWPMASS1EW_1EPS,AMPL(2,1))
+      CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5)
+     $ ,C_UVWMWPMASS2EW_1EPS,C_UVWMWPMASS1EW_1EPS,AMPL(2,1))
       CALL L_WMWPMASS2_L_WMWPMASS4_0(W(1,6),W(1,5),C_UVWMWPMASS2EW
      $ ,C_UVWMWPMASS1EW,AMPL(1,2))
 C     Counter-term amplitude(s) for loop diagram number 4
       CALL L_VEXVEA21_0(W(1,4),W(1,3),W(1,5),C_UVEPVEWM1EW_1EPS,AMPL(2
      $ ,3))
-      CALL L_VEXVEA21_0(W(1,4),W(1,3),W(1,5),C_UVTTPVTWM1EW,AMPL(1,4))
+      CALL L_VEXVEA21_0(W(1,4),W(1,3),W(1,5),C_UVEPVEWM1EW,AMPL(1,4))
 C     Counter-term amplitude(s) for loop diagram number 5
-      CALL L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVDXUWM1EW_1EPS,AMPL(2
+      CALL L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVCXSWP1EW_1EPS,AMPL(2
      $ ,5))
-      CALL L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVUXDWP1EW,AMPL(1,6))
+      CALL L_VEXVEA21_0(W(1,2),W(1,1),W(1,6),C_UVCXSWP1EW,AMPL(1,6))
 C     Counter-term amplitude(s) for loop diagram number 14
       CALL FFV2_0(W(1,4),W(1,3),W(1,5),R2_VLW,AMPL(1,7))
 C     Counter-term amplitude(s) for loop diagram number 16
-      CALL FFV2_0(W(1,2),W(1,1),W(1,6),R2_TXBW2CP,AMPL(1,8))
+      CALL FFV2_0(W(1,2),W(1,1),W(1,6),R2_BXTW2CP,AMPL(1,8))
 C     Counter-term amplitude(s) for loop diagram number 23
       CALL R2_GG_1_R2_GG_2_R2_GG_3_0(W(1,5),W(1,6),R2_WWBOSON1
      $ ,R2_WWBOSON2,R2_WWBOSON3,AMPL(1,9))
 C     Counter-term amplitude(s) for loop diagram number 34
-      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWUD1,AMPL(1,10))
-      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWUD1,AMPL(1,11))
+      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWCS1,AMPL(1,10))
+      CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWCS1,AMPL(1,11))
 C     Counter-term amplitude(s) for loop diagram number 35
-      CALL R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_WWUD1,R2_WWTB3,AMPL(1,12)
+      CALL R2_GG_1_R2_GG_3_0(W(1,5),W(1,6),R2_WWCS1,R2_WWTB3,AMPL(1,12)
      $ )
 C     Counter-term amplitude(s) for loop diagram number 36
       CALL R2_GG_1_0(W(1,5),W(1,6),R2_WWL,AMPL(1,13))

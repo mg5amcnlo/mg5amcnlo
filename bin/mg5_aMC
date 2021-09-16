@@ -1,4 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
+from __future__ import absolute_import
+from __future__ import print_function
 import time
 start = time.time()
 
@@ -20,9 +22,22 @@ start = time.time()
 and call immediately the command line interface scripts"""
 
 import sys
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
-               Please upgrate your version of python.')
+if  sys.version_info[1] < 7:
+    if sys.version_info[0] == 2:
+        sys.exit("MadGraph5_aMC@NLO works only with python 2.7 or python 3.7 (and later).\n"+\
+              "  You are currently using Python2.%s. Please use a more recent version of Python." % sys.version_info[1])
+    if sys.version_info[0] == 3:
+        sys.exit("MadGraph5_aMC@NLO works only with python 2.7 or python 3.7 (and later).\n"+\
+              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1] +\
+              "  If you have python2.7 installed you need to run the code as\n"+\
+              "      python27 ./bin/mg5_aMC \n")
+
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip%s install six --user"\n' % (sys.version_info[0] if sys.version_info[0]==3 else '')
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
 
 import os
 import optparse
@@ -49,7 +64,8 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
                  help='force to launch debug mode')
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
-                               
+parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
+                  help='For mac user, forbids to use caffeinate when running with a script')                               
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -65,6 +81,13 @@ if __debug__ and not options.debug and \
 import logging
 import logging.config
 import madgraph.interface.coloring_logging
+
+if sys.version_info[0] ==2:
+    logging.warning("\033[91mpython2 support will be removed in last quarter 2021. If you use python2 due to issue with Python3, please report them on https://bugs.launchpad.net/mg5amcnlo\033[0m")
+
+
+if ' ' in os.getcwd():
+    logging.warning("\033[91mPath does contains spaces. We advise that you change your current path to avoid to have space in the path.\033[0m")
 
 try: 
     import readline
@@ -125,7 +148,7 @@ except:
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
-    print( 'WARNING: loading of madgraph too slow!!!', time.time() - start)
+    print(( 'WARNING: loading of madgraph too slow!!!', time.time() - start))
 
 try:
     import madgraph.various.misc as misc
@@ -157,6 +180,10 @@ else:
 # Call the cmd interface main loop
 try:
     if options.file or args:
+        if sys.platform == "darwin" and options.nosleep:
+            logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
+            pid = os.getpid()
+            subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
         # They are an input file 
         if args:
             input_file = os.path.realpath(args[0])
@@ -176,7 +203,7 @@ try:
     else:
         # Interactive mode
         if options.web:
-            if not os.environ.has_key('MADGRAPH_DATA'):
+            if 'MADGRAPH_DATA' not in os.environ:
                 os.environ['MADGRAPH_DATA'] = root_path
                 os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
                 os.environ['REMOTE_USER'] = 'webmode'
@@ -184,7 +211,7 @@ try:
         else:
             cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print 'writting history and quit on KeyboardInterrupt' 
+    print('writting history and quit on KeyboardInterrupt') 
     pass
 
 try:
@@ -193,7 +220,7 @@ try:
     if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
         os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
     readline.write_history_file(history_file)
-except Exception, error:
+except Exception as error:
     pass
 
 

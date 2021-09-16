@@ -141,7 +141,7 @@ c
                fx =0d0
                wgt=0d0
             endif
-            call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
+            call sample_put_point(wgt,x(1),iter,ipole) !Store result
          endif
          if (wgt .ne. 0d0) kevent=kevent+1    
 c
@@ -257,6 +257,7 @@ c
 c     Need to start from scratch. This is clunky but I'll just
 c     remove the grid, so we are clean
 c
+      goto 200
       write(*,*) "Trying w/ fresh grid"
       open(unit=25,file='ftn25',status='unknown',err=102)
       write(25,*) ' '
@@ -316,8 +317,9 @@ c
                fx =0d0
                wgt=0d0
             endif
+            
             if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole,itmin) !Store result
+               call sample_put_point(wgt,x(1),iter,ipole) !Store result
             else
                nzoom = nzoom -1
                ievent=ievent-1
@@ -328,7 +330,7 @@ c
 c
 c     All done
 c
-      open(unit=66,file='results.dat',status='unknown')
+200   open(unit=66,file='results.dat',status='unknown')
       i=1
       do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
          i=i+1
@@ -452,6 +454,10 @@ c-----
       CUMULATED_TIMING = t_after - CUMULATED_TIMING
 
       if (N_EVALS.eq.0) then
+         write(outUnit,*) '<lo_statistics> '
+         write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     &        //'</cumulated_time>'
+         write(outUnit,*) '</lo_statistics>'
         return
       endif
       
@@ -705,6 +711,7 @@ c
       tmean = 0d0
       trmean = 0d0
       tsigma = 0d0
+      nb_pass_cuts = 0
       kn = 0
       cur_it = 1
       do j=1,ng
@@ -1000,6 +1007,13 @@ c
      &                                              grid_type=grid_type)
       endif
 
+      if(DS_get_dim_status('ee_mc').ge.1) then
+        call DS_write_grid(stream_id, dim_name='ee_mc', 
+     &                                              grid_type=grid_type)
+      endif      
+
+
+      
       end subroutine write_discrete_grids
 
       subroutine write_grid(name)
@@ -1443,7 +1457,11 @@ c
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       logical cutsdone, cutspassed
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-c
+ 
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+c     
 c     Begin code
 c
 c       It is important to divide the wgt stored in the grid by the 
@@ -1458,6 +1476,10 @@ c       that they shouldn't be added here.
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 
+        if(pdlabel.eq.'dressed'.and.ee_picked.ne.-1) then
+          call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))           
+       endif
+       
       end subroutine add_entry_to_discrete_dimensions
 
 C
@@ -1502,6 +1524,10 @@ C       Security in case of all helicity vanishing (G1 of gg > qq )
         call DS_update_grid('grouped_processes', filterZeros=.True.)
       endif
 
+      if (DS_get_dim_status('ee_mc').ne.-1)then
+         call DS_update_grid('ee_mc', filterZeros=.True.)
+      endif
+
       end subroutine update_discrete_dimensions
 
       subroutine sample_put_point(wgt, point, iteration,ipole)
@@ -1516,7 +1542,7 @@ c     Constants
 c
       include 'genps.inc'
       integer    max_events
-      parameter (max_events=500000) !Maximum # events before get non_zero
+      parameter (max_events=5000000) !Maximum # events before get non_zero
 c
 c     Arguments
 c
@@ -1713,7 +1739,10 @@ c--------------
 c     tjs 3/5/2011  use stored value for last bin
 c--------------
                i = lastbin(j)
-c               write(*,*) 'bin choice',j,i,lastbin(j)
+               if (i.eq.0) then
+                  write(*,*) "issue with", j,'/',invar
+               endif
+c     write(*,*) 'bin choice',j,i,lastbin(j)
                if (i .gt. ng) then
                   print*,'error i>ng',i,j,ng,point(j)
                   i=ng
@@ -1755,6 +1784,11 @@ c
 c         if (kn .eq. events) then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
+         endif
+         if (iteration.eq.1) then
+           if (nb_pass_cuts.ge.1000 .and. non_zero.eq.0) then
+              call none_pass(1000)
+           endif
          endif
          if (non_zero .ge. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
@@ -2263,12 +2297,31 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-
+c
+c     
+c
+       logical init_mode
+       common/to_determine_zero_hel/init_mode
 c----
 c  Begin Code
 c----
-      write(*,*) 'No points passed cuts!'
-      write(*,*) 'Loosen cuts or increase max_events',max_events
+      if (1000.eq.max_events) then
+         write(*,*) nb_pass_cuts, 
+     &    ' points passed the cut but all returned zero'
+         write(*,*) 'therefore considering this contribution as zero'
+         if (init_mode) then
+            call print_zero_amp()
+         endif
+      else if (nb_pass_cuts.gt.0.and.nb_pass_cuts.lt.1000)then
+         write(*,*) 'only', nb_pass_cuts, 
+     &    ' points passed the cut and they all returned zero'
+         write(*,*) 'therefore considering this contribution as zero'
+         write(*,*) 'Loosen cuts or increase max_events if you believe this is not zero'
+      else
+         write(*,*) 'No points passed cuts!'
+         write(*,*) 'Loosen cuts or increase max_events',max_events
+      endif
+
 c      open(unit=22,file=result_file,status='old',access='append',
 c     &           err=23)
 c      write(22,222) 'Iteration',0,'Mean: ',0d0,
@@ -2540,6 +2593,7 @@ C     LOCAL
 
       write(*,*) "RESET CUMULATIVE VARIABLE"
       non_zero = 0
+      nb_pass_cuts = 0
       do j=1,maxinvar
          do i=1,ng -1
             inon_zero = 0

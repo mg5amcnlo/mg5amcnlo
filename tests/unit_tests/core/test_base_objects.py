@@ -14,6 +14,7 @@
 ################################################################################
 """Unit test library for the various base objects of the core library"""
 
+from __future__ import absolute_import
 import copy
 import os
 
@@ -21,6 +22,8 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
+from six.moves import range
+from six.moves import zip
 
 #===============================================================================
 # ParticleTest
@@ -1010,7 +1013,8 @@ class LegTest(unittest.TestCase):
                       'state':True,
                       'from_group':False,
                       'onshell':None,                       
-                      'loop_line':False}
+                      'loop_line':False,
+                      'polarization':[]}
 
         self.myleg = base_objects.Leg(self.mydict)
 
@@ -1085,14 +1089,16 @@ class LegTest(unittest.TestCase):
     def test_representation(self):
         """Test leg object string representation."""
 
-        goal = "{\n"
-        goal = goal + "    \'id\': 3,\n"
-        goal = goal + "    \'number\': 5,\n"
-        goal = goal + "    \'state\': True,\n"
-        goal = goal + "    \'from_group\': False,\n" 
-        goal = goal + "    \'loop_line\': False,\n"
-        goal = goal + "    \'onshell\': None\n}"
-
+        goal ="""{
+    'id': 3,
+    'number': 5,
+    'state': True,
+    'from_group': False,
+    'loop_line': False,
+    'onshell': None,
+    'polarization': []
+}"""
+        
         self.assertEqual(goal, str(self.myleg))
 
     def test_leg_list(self):
@@ -1155,7 +1161,8 @@ class MultiLegTest(unittest.TestCase):
     def setUp(self):
 
         self.mydict = {'ids':[3, 2, 5],
-                      'state':True}
+                      'state':True,
+                      'polarization':[]}
 
         self.my_multi_leg = base_objects.MultiLeg(self.mydict)
 
@@ -1227,10 +1234,12 @@ class MultiLegTest(unittest.TestCase):
     def test_representation(self):
         """Test multi_leg object string representation."""
 
-        goal = "{\n"
-        goal = goal + "    \'ids\': [3, 2, 5],\n"
-        goal = goal + "    \'state\': True\n}"
 
+        goal ="""{
+    'ids': [3, 2, 5],
+    'state': True,
+    'polarization': []
+}"""
         self.assertEqual(goal, str(self.my_multi_leg))
 
     def test_multi_leg_list(self):
@@ -1524,7 +1533,7 @@ class ProcessTest(unittest.TestCase):
                        'sqorders_types': {},
                        'has_born': True,
                        'overall_orders': {},
-                       'born_orders': {},
+                       'born_sq_orders': {},
                        'NLO_mode':'tree',
                        'split_orders':[]}
 
@@ -1614,7 +1623,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
         goal = goal + "    \'split_orders\': [],\n"
-        goal = goal + "    \'born_orders\': {}\n}"
+        goal = goal + "    \'born_sq_orders\': {}\n}"
 
         for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
             self.assertEqual(a,b)
@@ -1877,7 +1886,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders':{},
-                       'born_orders':{},
+                       'born_sq_orders':{},
                        'constrained_orders':{},
                        'has_born': True,
                        'overall_orders':{},
@@ -1934,7 +1943,7 @@ class ProcessDefinitionTest(unittest.TestCase):
 
     def test_get_process_with_legs(self):
         """test the get_process_with_legs_function.
-        In particular, check that also the born_orders are passed"""
+        In particular, check that also the born_sq_orders are passed"""
 
         mydict = {'id':3,
                       'number':5,
@@ -1948,11 +1957,11 @@ class ProcessDefinitionTest(unittest.TestCase):
         mylist = [copy.copy(myleg) for dummy in range(1, 4) ]
         myleglist = base_objects.LegList(mylist)
         my_new_process_definition = copy.copy(self.my_process_definition)
-        my_new_process_definition['born_orders'] = {'QCD':99, 'QED':99}
+        my_new_process_definition['born_sq_orders'] = {'QCD':99, 'QED':99}
         testproc = my_new_process_definition.get_process_with_legs(myleglist)
 
         for (k, v) in testproc.items():
-            if k not in self.my_process_definition.keys(): continue
+            if k not in list(self.my_process_definition.keys()): continue
             if k != 'legs':
                 self.assertEqual(my_new_process_definition[k], testproc[k])
             else:
@@ -1966,13 +1975,49 @@ class ProcessDefinitionTest(unittest.TestCase):
                         'wrong_list':['a', {}]}
                        ]
 
-        temp_process = self.my_process_definition
+        temp_process = copy.deepcopy(self.my_process_definition)
+        
 
         for test in test_values:
             for x in test['right_list']:
                 self.assert_(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
+
+    def test_check_polarization(self):
+        
+        self.assertTrue(self.my_process_definition.check_polarization())
+
+        def set_legs(ids, polarization):
+            
+            legs = base_objects.LegList()
+            for i,(id, polarization) in enumerate(zip(ids, polarization)):
+                if i < 2:
+                    state = False
+                else:
+                    state = True
+                leg = base_objects.Leg()
+                leg['state'] = state
+                leg['ids'] = id
+                leg['polarization'] = polarization 
+                legs.append(leg)
+            return legs
+
+
+        temp_process = self.my_process_definition  
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23]],[[],[],[],[]])
+        self.assertTrue(temp_process.check_polarization())
+        
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23]],[[],[],[],[1]])
+        self.assertFalse(temp_process.check_polarization())
+        
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23],[34],[34]],
+                                        [[1],[],[1],[-1],[-1,1],[-1,1]])
+        self.assertTrue(temp_process.check_polarization())
+
+        temp_process['legs'] = set_legs([[1],[1,2],[23],[23],[34],[34]],
+                                        [[1],[],[1],[-1],[1],[-1,1]])
+        self.assertFalse(temp_process.check_polarization())
 
     def test_representation(self):
         """Test process object string representation."""
@@ -1995,7 +2040,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
         goal = goal + "    \'split_orders\': [],\n"                
-        goal = goal + "    \'born_orders\': {}\n}"                
+        goal = goal + "    \'born_sq_orders\': {}\n}"                
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

@@ -83,6 +83,22 @@ c     if no matching ensure that no pdfreweight are done
       q2fact(1) = sf1**2      ! fact scale**2 for pdf1
       q2fact(2) = sf2**2      ! fact scale**2 for pdf2     
 
+      if(pb1.ne.0d0)then
+         if (abs(lpp(1)).eq.1.or.abs(lpp(1)).eq.2)then
+            write(*,*) 'proton/anti-proton beam polarization are not allowed'
+            stop 1
+         endif
+         pol(1)=sign(1+abs(pb1)/100d0,pb1)
+      endif
+      if(pb2.ne.0d0)then
+         if (abs(lpp(2)).eq.1.or.abs(lpp(2)).eq.2)then
+            write(*,*) 'proton/anti-proton beam polarization are not allowed'
+            stop 1
+         endif
+         pol(2)=sign(1+abs(pb2)/100d0,pb2)
+      endif
+
+      
       if(pb1.ne.0d0.and.lpp(1).eq.0) pol(1)=sign(1+abs(pb1)/100d0,pb1)
       if(pb2.ne.0d0.and.lpp(2).eq.0) pol(2)=sign(1+abs(pb2)/100d0,pb2)
 
@@ -163,10 +179,11 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=16)
+      parameter (npdfs=17)
       character*7 pdflabs(npdfs)
       data pdflabs/
-     $   'none',
+     $     'none',
+     $     'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
      $   'cteq4_m',
@@ -184,7 +201,8 @@ C-------------------------------------------------
      $   'nn23nlo'/
       integer numspdf(npdfs)
       data numspdf/
-     $   00000,
+     $     00000,
+     $     00000, 
      $   20250,
      $   20270,
      $   19150,

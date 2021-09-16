@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 ################################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
@@ -27,10 +27,17 @@ import time
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
 
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\
+if sys.version_info[1] < 7:
+    sys.exit('MadEvent works with python 2.7/3.7 or higher.\n\
                Please upgrade your version of python.')
 
+try:
+    import six
+except ImportError:
+    message = 'madgraph requires the six module. The easiest way to install it is to run "pip install six --user"\n'
+    message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
+    sys.exit(message)
+    
 # Check if optimize mode is (and should be) activated
 if __debug__ and (not os.path.exists(pjoin(root_path,'../..', 'bin','create_release.py'))):
     subprocess.call([sys.executable] + ['-O'] + sys.argv)
@@ -50,7 +57,7 @@ except ImportError:
     try:
         import pyreadline as readline
     except:
-        print "For tab completion and history, install module readline."
+        print("For tab completion and history, install module readline.")
 else:
     import rlcompleter
 
@@ -81,7 +88,7 @@ except:
    pass
 
 if __debug__:
-        print 'Running MG5 in debug mode'
+        print('Running MG5 in debug mode')
 
 
 
@@ -99,25 +106,25 @@ def treat_old_argument(argument):
     try:
         mode = int(argument[1])
     except:
-        mode = int(raw_input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
+        mode = int(six.moves.input('Enter 2 for multi-core, 1 for parallel, 0 for serial run\n'))
     if mode == 0:
         try:
             name = argument[2]
         except:
-            name = raw_input('Enter run name\n')
+            name = six.moves.input('Enter run name\n')
     else:
         try:
             opt = argument[2]
         except:
             if mode == 1: 
-                opt = raw_input('Enter name for jobs on pbs queue\n')
+                opt = six.moves.input('Enter name for jobs on pbs queue\n')
             else:
-                opt = int(raw_input('Enter number of cores\n'))
+                opt = int(six.moves.input('Enter number of cores\n'))
         
         try:
             name = argument[3]
         except:
-            name = raw_input('enter run name\n')
+            name = six.moves.input('enter run name\n')
 
 #    launch = ME.MadEventCmd(me_dir=root_path)
         
@@ -158,7 +165,7 @@ if '__main__' == __name__:
             launch = ME.MadEventCmdShell(me_dir=root_path, force_run=True)
             launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
             launch.run_cmd('quit')
-    except ME.MadEventAlreadyRunning, message:
+    except ME.MadEventAlreadyRunning as message:
         logging.getLogger('madgraph').log(40, str(message))
         sys.exit(1)
     except KeyboardInterrupt:
@@ -166,7 +173,7 @@ if '__main__' == __name__:
             launch.run_cmd('quit')
         except:
             pass
-    except Exception, error:
+    except Exception as error:
         logging.error(str(error))
         sys.exit()
             

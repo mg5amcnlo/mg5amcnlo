@@ -11,9 +11,12 @@ LIBDIR = ../../lib
 BINDIR = ../../bin
 
 include ../arch_mcfio
- 
+
+FFLAGS += -std=legacy
+CFLAGS += -Wno-implicit-function-declaration
+
 FINC = -I.
-CINC = -I.
+CINC = -I. -I/usr/include/tirpc
 HLIB =
 ifdef HISTO_DIR
    CFLAGS += -DHISTO

@@ -83,8 +83,8 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSOP1
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai
-C     , Ninja and COLLIER
+C     At present, there are only
+C      CutTools,PJFry++,IREGI,Golem95,Samurai, Ninja and COLLIER
       INTEGER NLOOPLIB
       PARAMETER (NLOOPLIB=7)
 C     Only CutTools or possibly Ninja (if installed with qp support)
@@ -411,14 +411,15 @@ C     using the MadLoop subroutine, we don't overwrite his choice when
 C      reading the parameters
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
       DATA  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION
      $ ,FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION/.FALSE.,.FALSE./
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
 C     This variable controls the general initialization which is
 C      *common* between all MadLoop SubProcesses.
@@ -896,8 +897,8 @@ C      to the computation of the next helicity.
      $ +P(2,2))**2-(P(3,1)+P(3,2))**2))
 
       CTCALL_REQ_SO_DONE=.FALSE.
-      FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARG
-     $ET.NE.-1)
+      FILTER_SO = (.NOT.CHECKPHASE)
+     $ .AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.NE.-1)
 
       DO I=1,NLOOPGROUPS
         DO J=0,LOOPMAXCOEFS-1
@@ -936,13 +937,14 @@ C       computed in quadruple precision.
       ENDIF
 
       DO H=1,NCOMB
-        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
-     $   .NE.0)))) THEN
+        IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1)
+     $   .AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H)
+     $   .GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
 
 C         Handle the possible requirement of specific polarizations
-          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
-     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+          IF ((.NOT.CHECKPHASE)
+     $     .AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0)
+     $     .EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
             CYCLE
           ENDIF
 
@@ -983,8 +985,9 @@ C         FeynRules, there are none of these type of counterterms.
             DO I=1,NCTAMPS
               CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0D0)
               IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-              ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(
-     $I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+              ITEMP =
+     $          ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(I)
+     $         ,ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
                   TEMP2 = DBLE(CFTOT*AMPL(K,I)*CTEMP)
@@ -1111,8 +1114,8 @@ C     Make sure that no NaN is present in the result
         IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
 C         Make sure that that no polarization constraint filters out
 C          this helicity
-          IF (POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_HEL_SELECTED(HELPICK
-     $ED)) THEN
+          IF (POLARIZATIONS(0,0).EQ.
+     $     -1.OR.ML5_0_IS_HEL_SELECTED(HELPICKED)) THEN
 C           TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
 C            CHECK PHASE
             DO I=0,NSQUAREDSO
@@ -1203,8 +1206,8 @@ C              others to this new one
 C             Of course if it is one, then we do not need to do
 C              anything (because with HELINITSTARTOVER=.FALSE. we only
 C              support exactly identical Hels.)
-              IF(GOODHEL(HELPICKED).GT.-HELOFFSET.AND.GOODHEL(HELPICKED)
-     $         .NE.1) THEN
+              IF(GOODHEL(HELPICKED).GT.
+     $         -HELOFFSET.AND.GOODHEL(HELPICKED).NE.1) THEN
                 NEWHELREF=-1
                 DO H=1,NCOMB
                   IF (GOODHEL(H).EQ.(-HELOFFSET-HELPICKED)) THEN
@@ -1398,16 +1401,18 @@ C            answer from mode 1 and carry on.
 
         CTMODE=BASIC_CT_MODE
 
-        IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
+        IF(.NOT.EVAL_DONE(3).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.1)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
           EVAL_DONE(3)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,1)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,1)
           GOTO 200
         ENDIF
 
-        IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $.2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
+        IF(.NOT.EVAL_DONE(4).AND.
+     $    ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE.2)
+     $   .OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
           EVAL_DONE(4)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,2)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,2)
@@ -1966,8 +1971,8 @@ C       The following is used instead
 C       When using COLLIER with the internal stability test, the first
 C        evaluation is typically more reliable so we do not want to
 C        use the average but rather the first evaluation.
-        IF (MLREDUCTIONLIB(I_LIB).EQ.7.AND.COLLIERUSEINTERNALSTABILITYT
-     $EST) THEN
+        IF (MLREDUCTIONLIB(I_LIB)
+     $   .EQ.7.AND.COLLIERUSEINTERNALSTABILITYTEST) THEN
           DO I=1,3
             ESTIMATE(I,K) = FULLLIST(I,K,1)
           ENDDO
@@ -2115,8 +2120,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5SOINDEX_FOR_SQUARE'
-     $ //'D_ORDERS'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 
@@ -2183,8 +2188,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER BORNAMPORDERS(NBORNAMPS)
-      DATA (BORNAMPORDERS(I),I=  1,  5) /    1,    2,    2,    2,    2/
-      DATA (BORNAMPORDERS(I),I=  6,  7) /    2,    2/
+      DATA (BORNAMPORDERS(I),I=  1,  5) /    1,    3,    3,    3,    3/
+      DATA (BORNAMPORDERS(I),I=  6,  7) /    3,    3/
 C     -----------
 C     BEGIN CODE
 C     -----------
@@ -2213,12 +2218,12 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER LOOPAMPORDERS(NLOOPAMPS)
-      DATA (LOOPAMPORDERS(I),I=  1,  5) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=  6, 10) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 11, 15) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 16, 20) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 21, 25) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I= 26, 30) /    3,    3,    4,    4,    4/
+      DATA (LOOPAMPORDERS(I),I=  1,  5) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=  6, 10) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 11, 15) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 16, 20) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 21, 25) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I= 26, 30) /    2,    2,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 31, 35) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 36, 40) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I= 41, 45) /    4,    4,    4,    4,    4/
@@ -2258,11 +2263,11 @@ C
       DATA (LOOPAMPORDERS(I),I=211,215) /    5,    5,    5,    5,    5/
       DATA (LOOPAMPORDERS(I),I=216,220) /    5,    5,    5,    5,    5/
       DATA (LOOPAMPORDERS(I),I=221,225) /    5,    5,    5,    5,    5/
-      DATA (LOOPAMPORDERS(I),I=226,230) /    5,    5,    5,    3,    4/
+      DATA (LOOPAMPORDERS(I),I=226,230) /    5,    5,    5,    2,    4/
       DATA (LOOPAMPORDERS(I),I=231,235) /    4,    4,    4,    4,    4/
-      DATA (LOOPAMPORDERS(I),I=236,240) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=241,245) /    3,    3,    3,    3,    3/
-      DATA (LOOPAMPORDERS(I),I=246,250) /    3,    3,    3,    3,    4/
+      DATA (LOOPAMPORDERS(I),I=236,240) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=241,245) /    2,    2,    2,    2,    2/
+      DATA (LOOPAMPORDERS(I),I=246,250) /    2,    2,    2,    2,    4/
       DATA (LOOPAMPORDERS(I),I=251,255) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=256,260) /    4,    4,    4,    4,    4/
       DATA (LOOPAMPORDERS(I),I=261,265) /    4,    4,    4,    4,    4/
@@ -2459,8 +2464,8 @@ C
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
       DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    2,    0/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    0,    2/
-      DATA (AMPSPLITORDERS(  3,I),I=  1,  2) /    4,    0/
+      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    4,    0/
+      DATA (AMPSPLITORDERS(  3,I),I=  1,  2) /    0,    2/
       DATA (AMPSPLITORDERS(  4,I),I=  1,  2) /    2,    2/
       DATA (AMPSPLITORDERS(  5,I),I=  1,  2) /    0,    4/
       COMMON/ML5_0_ML5AMPSPLITORDERS/AMPSPLITORDERS
@@ -2472,8 +2477,8 @@ C
 C     BEGIN CODE
 C     
       DO I=1,NSO
-        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $NDEXB,I)
+        SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)
+     $   +AMPSPLITORDERS(ORDERINDEXB,I)
       ENDDO
       ML5_0_ML5SQSOINDEX=ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -2512,8 +2517,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_SQUARED_ORDERS'
-     $ //'_FOR_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5GET_SQUARED_ORDERS_FOR_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -2552,8 +2557,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5GET_ORDERS_FOR_AMP'
-     $ //'SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5GET_ORDERS_FOR_AMPSOINDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
@@ -2596,8 +2601,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_ML5SOINDEX_FOR_AMPORD'
-     $ //'ERS'
+      WRITE(*,*) 'ERROR:: Stopping function'
+     $ //' ML5_0_ML5SOINDEX_FOR_AMPORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 
@@ -2619,12 +2624,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEUVPOLES                        = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2646,12 +2652,13 @@ C
 
       LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
      $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
-     $TATION_CHOICE
-      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV
-     $_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
-     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
-     $CHOICE
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE,
+     $  COLLIER_IR_POLE_COMPUTATION_CHOICE
+      COMMON/ML5_0_COLLIERPOLESFORCEDCHOICE
+     $ /FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE
+     $ ,COLLIER_IR_POLE_COMPUTATION_CHOICE
 
       COLLIERCOMPUTEIRPOLES         = ONOFF
 C     This is just so that if we read the param again, we don't
@@ -2862,11 +2869,14 @@ C
       PARAMETER (NEXTERNAL=4)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=4)
+      INCLUDE 'nsqso_born.inc'
 C     
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, USERHEL
       COMMON/ML5_0_USERCHOICE/USERHEL
 C     ----------
@@ -2890,7 +2900,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, RET_CODE
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C     
@@ -3007,7 +3020,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
       INTEGER RET_CODE
 C     

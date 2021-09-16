@@ -17,8 +17,13 @@
 Fortran, C++, etc."""
 
 
+from __future__ import absolute_import
 import re
 import collections
+from six.moves import range
+import six
+import io
+
 try:
     import madgraph
 except ImportError:
@@ -26,7 +31,7 @@ except ImportError:
 else:
     import madgraph.various.misc as misc
 
-class FileWriter(file):
+class FileWriter(io.FileIO):
     """Generic Writer class. All writers should inherit from this class."""
 
     supported_preprocessor_commands = ['if']
@@ -49,13 +54,17 @@ class FileWriter(file):
 
     def __init__(self, name, opt = 'w'):
         """Initialize file to write to"""
+        return super(FileWriter, self).__init__(name, opt)
 
-        return file.__init__(self, name, opt)
+    def write(self, line):
+        if isinstance(line,str):
+            line=line.encode()
+        super(FileWriter,self).write(line)
 
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
         for the language in question."""
-
+        return ['%s\n' % l for l in line.split('\n')]
         pass
 
     def write_comment_line(self, line):
@@ -148,8 +157,8 @@ class FileWriter(file):
             if preproc_command is None:
                 preproc_endif = self.preprocessor_endif_re.match(line[2:])
                 if len(if_stack)==0 or preproc_endif is None:
-                    raise self.FilePreProcessingError, 'Incorrect '+\
-                             'preprocessing command %s at line %d.'%(line,i)
+                    raise self.FilePreProcessingError('Incorrect '+\
+                             'preprocessing command %s at line %d.'%(line,i))
                 if preproc_endif.group('new_block') is None:
                     if_stack.pop()
                 elif preproc_endif.group('endif')=='else':
@@ -158,15 +167,15 @@ class FileWriter(file):
             elif preproc_command.group('command')=='if':
                 try:
                     if_stack.append(eval(preproc_command.group('body'))==True)
-                except Exception, e:
-                    raise self.FilePreProcessingError, 'Could not evaluate'+\
+                except Exception as e:
+                    raise self.FilePreProcessingError('Could not evaluate'+\
                       "python expression '%s' given the context %s provided."%\
                             (preproc_command.group('body'),str(context))+\
-                                           "\nLine %d of file %s."%(i,self.name)
+                                           "\nLine %d of file %s."%(i,self.name))
         
         if len(if_stack)>0:
-            raise self.FilePreProcessingError, 'Some conditional statements are'+\
-                                                     ' not properly terminated.'
+            raise self.FilePreProcessingError('Some conditional statements are'+\
+                                                     ' not properly terminated.')
         return res
 
 #===============================================================================
@@ -193,6 +202,7 @@ class FortranWriter(FileWriter):
     number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
+    uniformcase = True #force everyting to be lower/upper case 
     downcase = False
     line_length = 71
     max_split = 20
@@ -248,23 +258,24 @@ class FortranWriter(FileWriter):
             # Replace all double quotes by single quotes
             myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
-            splitline = myline.split('\'')
-            myline = ""
-            i = 0
-            while i < len(splitline):
-                if i % 2 == 1:
-                    # This is a quote - check for escaped \'s
-                    while  splitline[i] and splitline[i][-1] == '\\':
-                        splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
-                else:
-                    # Otherwise downcase/upcase
-                    if FortranWriter.downcase:
-                        splitline[i] = splitline[i].lower()
+            if self.uniformcase:
+                splitline = myline.split('\'')
+                myline = ""
+                i = 0
+                while i < len(splitline):
+                    if i % 2 == 1:
+                        # This is a quote - check for escaped \'s
+                        while  splitline[i] and splitline[i][-1] == '\\':
+                            splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                     else:
-                        splitline[i] = splitline[i].upper()
-                i = i + 1
-
-            myline = "\'".join(splitline).rstrip()
+                        # Otherwise downcase/upcase
+                        if FortranWriter.downcase:
+                            splitline[i] = splitline[i].lower()
+                        else:
+                            splitline[i] = splitline[i].upper()
+                    i = i + 1
+    
+                myline = "\'".join(splitline).rstrip()
 
             # Check if line starts with dual keyword and adjust indent 
             if self.__keyword_list and re.search(self.keyword_pairs[\
@@ -342,19 +353,28 @@ class FortranWriter(FileWriter):
         columns. Split in preferential order according to
         split_characters, and start each new line with line_start."""
 
+        def get_split_index(line, max_length, max_split, split_characters):
+            split_at = 0
+            for character in split_characters:
+                index = line[(max_length - max_split): \
+                                      max_length].rfind(character)
+                if index >= 0:
+                    split_at_tmp = max_length - max_split + index
+                    if split_at_tmp > split_at:
+                        split_at = split_at_tmp
+            return split_at
+                
+
         res_lines = [line]
 
         while len(res_lines[-1]) > self.line_length:
-            split_at = 0
-            for character in split_characters:
-                index = res_lines[-1][(self.line_length - self.max_split): \
-                                      self.line_length].rfind(character)
-                if index >= 0:
-                    split_at_tmp = self.line_length - self.max_split + index
-                    if split_at_tmp > split_at:
-                        split_at = split_at_tmp
+            split_at = get_split_index(res_lines[-1], self.line_length, 
+                                       self.max_split, split_characters)
             if split_at == 0:
-                split_at = self.line_length
+                split_at = get_split_index(res_lines[-1], self.line_length, 
+                                       self.max_split + 30, split_characters)
+                if split_at == 0:
+                    split_at = self.line_length
                 
             newline = res_lines[-1][split_at:]
             nquotes = self.count_number_of_quotes(newline)
@@ -400,11 +420,6 @@ class FortranWriter(FileWriter):
             i = i + 1
         return len(splitline)-1
 
-#===============================================================================
-# CPPWriter
-#===============================================================================
-
-
     def remove_routine(self, text, fct_names, formatting=True):
         """write the incoming text but fully removing the associate routine/function
            text can be a path to a file, an iterator, a string
@@ -441,14 +456,16 @@ class FortranWriter(FileWriter):
                 else:
                     if not line.endswith('\n'):
                         line = '%s\n' % line
-                    file.writelines(self, line)
+                    super(FileWriter,self).writelines(line)
             else:
                 removed.append(line)
                 
         return removed
         
 
-
+#===============================================================================
+# CPPWriter
+#===============================================================================
 class CPPWriter(FileWriter):
     """Routines for writing C++ lines. Keeps track of brackets,
     spaces, indentation and splitting of long lines"""
@@ -600,7 +617,7 @@ class CPPWriter(FileWriter):
                                 'Non-matching } in C++ output: ' \
                                 + myline)                
             # First take care of "case" and "default"
-            if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+            if self.__keyword_list[-1] in list(self.cont_indent_keywords.keys()):
                 key = self.__keyword_list.pop()
                 self.__indent = self.__indent - self.cont_indent_keywords[key]
             # Now check that we have matching {
@@ -731,7 +748,7 @@ class CPPWriter(FileWriter):
         for key in self.cont_indent_keywords.keys():
             if re.search(key, myline):
                 # Check if we have a continuous indent keyword since before
-                if self.__keyword_list[-1] in self.cont_indent_keywords.keys():
+                if self.__keyword_list[-1] in list(self.cont_indent_keywords.keys()):
                     self.__indent = self.__indent - \
                                     self.cont_indent_keywords[\
                                        self.__keyword_list.pop()]
@@ -967,13 +984,13 @@ class PythonWriter(FileWriter):
     
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
-        file.write(self, text)
+        self.write(text)
         
 class MakefileWriter(FileWriter):
     
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
-        file.write(self, text)
+        self.write(text)
         
     def writelines(self, lines):
         """Extends the regular file.writeline() function to write out

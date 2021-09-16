@@ -17,15 +17,16 @@ and the Feynman gauge with the unitary gauge. The comparison between the four
 possibilities is performed since there is a strong relation between complex-mass
 scheme and gauge invariance. 
 """
+from __future__ import absolute_import
 import itertools
 import logging
 import os
 import shutil
-import me_comparator
-import madevent_comparator
+from . import me_comparator
+from . import madevent_comparator
 import unittest
 import subprocess
-import loop_me_comparator
+from . import loop_me_comparator
 
 from madgraph import MG5DIR
 import tests.parallel_tests.test_aloha as test_aloha

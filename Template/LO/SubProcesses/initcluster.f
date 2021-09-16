@@ -24,7 +24,7 @@ c     check whether y_cut is used -> set scale to y_cut*S
 c
 
 c      if (ickkw.le.0) return
-      if (ickkw.le.0.and.xqcut.le.0d0.and.fixed_ren_scale.and.fixed_fac_scale) return
+      if (ickkw.le.0.and.xqcut.le.0d0.and.fixed_ren_scale.and.fixed_fac_scale1.and.fixed_fac_scale2) return
 
 c      if(ickkw.eq.2.and.xqcut.le.0d0)then
 c        write(*,*)'Must set qcut > 0 for ickkw = 2'
@@ -38,7 +38,8 @@ c        scale = xqcut
 c        q2fact(1) = scale**2    ! fact scale**2 for pdf1
 c        q2fact(2) = scale**2    ! fact scale**2 for pdf2
 c        fixed_ren_scale=.true.
-c        fixed_fac_scale=.true.
+c        fixed_fac_scale1=.true.
+c        fixed_fac_scale2=.true.      
 c      endif
 c   
 c     initialize clustering map

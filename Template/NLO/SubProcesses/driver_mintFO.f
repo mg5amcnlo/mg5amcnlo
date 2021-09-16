@@ -67,9 +67,9 @@ c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
 
-c applgrid
-      integer iappl
-      common /for_applgrid/ iappl
+c PineAPPL
+      logical pineappl
+      common /for_pineappl/ pineappl
 c stats for granny_is_res
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
@@ -83,6 +83,9 @@ c stats for granny_is_res
 C-----
 C  BEGIN CODE
 C-----
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+      
       useitmax=.false. ! to be overwritten in open_output_files.f if need be
 c
 c     Setup the timing variable
@@ -157,10 +160,10 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncalls0,itmax
-c APPLgrid
-      if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
-      if(iappl.ne.0) then
-         write(6,*) "Initializing aMCfast ..."
+c PineAPPL
+      if (imode.eq.0) pineappl=.False. ! overwrite when starting completely fresh
+      if(pineappl) then
+         write(6,*) "Initializing PineAPPL ..."
 c     Set flavor map, starting from all possible
 c     parton lumi configurations defined in initial_states_map.dat
          call setup_flavourmap
@@ -196,7 +199,7 @@ c Don't safe the reweight information when just setting up the grids.
             do_rwgt_scale=.false.
             do_rwgt_pdf=.false.
          else
-            doreweight=do_rwgt_scale.or.do_rwgt_pdf
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf.or.store_rwgt_info
          endif
 c
          write (*,*) 'imode is ',imode
@@ -362,8 +365,9 @@ c timing statistics
       common/ccalculatedBorn/calculatedBorn
       character*4      abrv
       common /to_abrv/ abrv
-      integer iappl
-      common /for_applgrid/ iappl
+c PineAPPL
+      logical pineappl
+      common /for_pineappl/ pineappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
@@ -383,9 +387,9 @@ c timing statistics
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
       endif
-      if (iappl.ne.0 .and. sum) then
-         write (*,*) 'WARNING: applgrid only possible '/
-     &        /'with MC over FKS directories',iappl,sum
+      if (pineappl .and. sum) then
+         write (*,*) 'WARNING: PineAPPL only possible '/
+     &        /'with MC over FKS directories',pineappl,sum
          write (*,*) 'Switching to MC over FKS directories'
          sum=.false.
       endif
@@ -498,13 +502,13 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          if (do_rwgt_pdf) call reweight_pdf
       endif
       
-      if (iappl.ne.0) then
+      if (pineappl) then
          if (sum) then
-            write (*,*) 'ERROR: applgrid only possible '/
-     &           /'with MC over FKS directories',iappl,sum
+            write (*,*) 'ERROR: PineAPPL only possible '/
+     &           /'with MC over FKS directories',pineappl,sum
             stop 1
          endif
-         call fill_applgrid_weights(vegas_wgt)
+         call fill_pineappl_weights(vegas_wgt)
       endif
 
 c Importance sampling for FKS configurations
