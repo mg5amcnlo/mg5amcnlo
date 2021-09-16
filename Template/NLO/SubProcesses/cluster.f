@@ -1199,6 +1199,8 @@ c
                cluster_scale=sqrt(abs(dot(pj,(pi+pj))))/2d0
             elseif (itype.eq.5) then
                cluster_scale=sqrt(abs(dot(pi,(pi+pj))))/2d0
+            elseif (itype.eq.8) then
+               cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
             endif
 c
 c Common scale geometrical average:
@@ -1253,6 +1255,11 @@ c
      $        (btest(cl(2),2).or.btest(cl(2),4))) then
          ! Three massive particles
          itype=7
+      elseif ((btest(cl(0),2).or.btest(cl(0),4)) .and.
+     $        (btest(cl(1),0).or.btest(cl(1),1).or.btest(cl(1),3)) .and.
+     $        (btest(cl(2),0).or.btest(cl(2),1).or.btest(cl(2),3))) then
+         ! massive decaying into two massless
+         itype=8
       else
          write (*,*) 'Unknown clustering type',cl
          stop
