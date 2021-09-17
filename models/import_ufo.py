@@ -1638,7 +1638,6 @@ class OrganizeModelExpression:
                         all_elements.add(one_element.name)
             all_elements.union(self.track_dependant)
             self.track_dependant = list(all_elements)
-
         
     
     def main(self, additional_couplings = []):
@@ -1700,9 +1699,19 @@ class OrganizeModelExpression:
         # if not, take Gf as the track_dependant variable
         present_aEWM1 = any(param.name == 'aEWM1' for param in
                         self.model.all_parameters if param.nature == 'external')
-
+   
         if not present_aEWM1:
-            self.track_dependant = ['aS','Gf','MU_R']
+            self.track_dependant += ['Gf']
+            self.track_dependant = list(set(self.track_dependant))
+        p = self.model.all_parameters[0]
+
+        mu_eff = list(set([param.name for param in self.model.all_parameters 
+                    if (param.nature == 'external' and
+                        param.lhablock.lower() == 'loop' and
+                        param.name != 'MU_R'
+                        )]))
+        self.track_dependant += mu_eff
+
 
         for param in self.model.all_parameters+additional_params:
             if param.nature == 'external':
