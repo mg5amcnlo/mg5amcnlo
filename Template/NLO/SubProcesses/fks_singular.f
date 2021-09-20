@@ -2252,7 +2252,7 @@ c wgts() array to include the weights.
       COMMON /SUBPROC/ PD, IPROC
 
       DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
-      COMMON /PDFvalues/ PD1, PD2
+      COMMON /PDFVALUES/ PD1, PD2
 
       !DOUBLE PRECISION f1_p(0:100,0:MAXPROC),f2_p(0:100,0:MAXPROC),f3_p(0:100,0:MAXPROC)
       !COMMON /PDFvalues/ f1_p,f2_p,f3_p
@@ -2260,7 +2260,7 @@ c wgts() array to include the weights.
       double precision, allocatable :: f1_p(:,:),f2_p(:,:)
 
       DOUBLE PRECISION f3(0:MAXPROC)
-      COMMON /PDFvalues/ f3
+      !COMMON /PDFvalues/ f3
 
       DOUBLE PRECISION xlum_mod(1:3)
       parameter (conv=389379660d0)

@@ -115,14 +115,14 @@ c set the weights_info string for PDF variation
 
                else if (j==2) then !pA
 
-                  write(temp,'(a4,i8)') "RpA=",lhaPDFid(nn)+n !Here we fill HwU file with pA crossections only if we have the right flag in run_card dat
+                  write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n !Here we fill HwU file with pA crossections only if we have the right flag in run_card dat
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(2)))
 
               else if (j==3) then !Ap
 
-                  write(temp,'(a4,i8)') "RAp=",lhaPDFid(nn)+n !Here we fill HwU file with Ap crossections only if we have the right flag in run_card dat
+                  write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n !Here we fill HwU file with Ap crossections only if we have the right flag in run_card dat
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /'  '//trim(adjustl(lhaPDFsetname(2)))//' with '/
      $                 /trim(adjustl(lhaPDFsetname(1)))

@@ -664,9 +664,9 @@ class HwU(Histogram):
     
 ############S.A
 ############ We read two additional new flags for pA and Ap collisions
-    weight_label_PDF_pA = re.compile('^\s*RpA\s*=\s*(?P<PDF_set1>\d+)\s+(?P<PDF_set_1>\S+)\s+\s*with\s+(?P<PDF_set_2>\S+)\s*$')
+    weight_label_PDF_pA = re.compile('^\s*pA\s*=\s*(?P<PDF_set1>\d+)\s+(?P<PDF_set_1>\S+)\s+\s*with\s+(?P<PDF_set_2>\S+)\s*$')
 
-    weight_label_PDF_Ap = re.compile('^\s*RAp\s*=\s*(?P<PDF_set2>\d+)\s+(?P<PDF_set_3>\S+)\s+\s*with\s+(?P<PDF_set_4>\S+)\s*$')
+    weight_label_PDF_Ap = re.compile('^\s*Ap\s*=\s*(?P<PDF_set2>\d+)\s+(?P<PDF_set_3>\S+)\s+\s*with\s+(?P<PDF_set_4>\S+)\s*$')
 
 ############S.A
     

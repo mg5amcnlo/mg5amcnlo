@@ -36,7 +36,7 @@ C
 
       INTEGER             IPROS, IPROSS                           
       DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
-      COMMON /PDFvalues/ PD1, PD2, IPROS, IPROSS 
+      COMMON /PDFVALUES/ PD1, PD2
                                       
       include "coupl.inc"                                             
       include "run.inc"                                               
