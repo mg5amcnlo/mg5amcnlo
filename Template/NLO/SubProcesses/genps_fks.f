@@ -1013,7 +1013,8 @@ c Trivial, but prevents loss of accuracy
      $      xbjrk_born,input_granny_m2,granny_m2_red,m,s,qmass,qwidth,m_born,jac,p,pass)
       endif
 
-      if(.not.pass)goto 222
+      !MZ check that adding .or.xjac0<0 does not screw things up
+      if(.not.pass.or.xjac0.lt.0d0)goto 222
       return
 
  222  continue
