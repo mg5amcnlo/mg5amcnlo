@@ -700,3 +700,38 @@ class MECmdShell(IOTests.IOTestManager):
         
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.path)
         return result[run_name]
+
+
+    def test_generate_taggedph_nloew(self):
+        """test the param_card created is correct"""
+        
+
+        text = """
+        import model loop_qcd_qed_sm_Gmu-a0
+        generate u u~ > !a! !a! [QED]
+        output %s
+        launch NLO
+        set lepphreco False
+        set quarkphreco False
+        """ % (self.path)
+        
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        
+        
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
