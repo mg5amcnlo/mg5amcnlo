@@ -919,6 +919,8 @@ c$$$            fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
 c Update shower starting scale
             shower_S_scale(nFKSprocess*2-1)=
      $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            shower_S_scale(nFKSprocess*2)=
+     $           shower_S_scale(nFKSprocess*2-1)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -976,11 +978,11 @@ c$$$            rewgt_mohdr=min(rewgt(p,rwgt_exp_mohdr),1d0)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
 c Update shower starting scale
-            shower_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)-
-     $           ref_H_scale(nFKSprocess*2)
-     $           +minval(FxFx_ren_scales(0:nFxFx_ren_scales))
             ref_H_scale(nFKSprocess*2)=
      $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            shower_H_scale(nFKSprocess*2)=ref_H_scale(nFKSprocess*2)
+            ref_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
