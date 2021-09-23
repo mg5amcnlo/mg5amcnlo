@@ -2516,6 +2516,9 @@ class RestrictModel(model_reader.ModelReader):
                         for use in  re_pat.findall(parameter.expr):
                             used.add(use)
                         
+        if madgraph.ordering:
+            used = sorted(used)
+            
         # modify the object for those which are still used
         for param in used:
             if not param:
