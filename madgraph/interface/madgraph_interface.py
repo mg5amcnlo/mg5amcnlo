@@ -2051,7 +2051,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             pert_couplings_allowed = pert_couplings_allowed + ['QCD']
 
         # Remove possible identical names
-        particles = list(set(self._particle_names + list(self._multiparticles.keys())))
+        particles = misc.make_unique(self._particle_names + list(self._multiparticles.keys()))
         n_part_entered = len([1 for a in args if a in particles])
 
         # Force '>' if two initial particles.
@@ -2570,7 +2570,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         # Format
         if len(args) == 1:
-            opts = list(set(list(self.options.keys()) + self._set_options))
+            opts = misc.make_unique(list(self.options.keys()) + self._set_options)
             return self.list_completion(text, opts)
 
         if len(args) == 2:
@@ -2650,7 +2650,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                             continue
                     all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=modeldir)
-            all_name = list(set(all_name))
+            all_name = misc.make_unique(all_name)
             # select the possibility according to the current line
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
@@ -2746,7 +2746,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                     all_name = model_list
                 
                 #avoid duplication
-                all_name = list(set(all_name))
+                all_name = misc.make_unique(all_name)
                 
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
@@ -5004,7 +5004,7 @@ This implies that with decay chains:
                 perturbation_couplings_list=[]
             # Correspondingly set 'split_order' from the squared orders and the
             # perturbation couplings list
-            split_orders=list(set(perturbation_couplings_list+list(squared_orders.keys())))
+            split_orders=misc.make_unique(perturbation_couplings_list+list(squared_orders.keys()))
             try:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
                                        self._curr_model.get('order_hierarchy')
@@ -5684,8 +5684,8 @@ This implies that with decay chains:
                  [p.get('antiname') for p in self._curr_model.get('particles') \
                                                     if p.get('propagating')]
 
-        self._couplings = list(set(sum([list(i.get('orders').keys()) for i in \
-                                        self._curr_model.get('interactions')], [])))
+        self._couplings = misc.make_unique(sum([list(i.get('orders').keys()) for i in \
+                                        self._curr_model.get('interactions')], []))
 
         self.add_default_multiparticles()
 
@@ -5971,7 +5971,7 @@ This implies that with decay chains:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
             # Make sure each otion in add_options appears only once
-            add_options = list(set(add_options))
+            add_options = misc.make_unique(add_options)
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
@@ -5983,7 +5983,7 @@ This implies that with decay chains:
             logger.info('Now installing %s. Be patient...'%tool)
             # Make sure each otion in add_options appears only once
             add_options.append('--mg5_path=%s'%MG5DIR)
-            add_options = list(set(add_options))
+            add_options = misc.make_unique(add_options)
             add_options.append('--mg5_path=%s'%MG5DIR)
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
@@ -7523,12 +7523,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if args[1].lower() == 'false':
                 self.options[args[0]] = False
                 return
-            self.options[args[0]] = list(set([abs(p) for p in \
+            self.options[args[0]] = misc.make_unique([abs(p) for p in \
                                       self._multiparticles[args[1]]\
                                       if self._curr_model.get_particle(p).\
                                       is_fermion() and \
                                       self._curr_model.get_particle(abs(p)).\
-                                      get('color') == 3]))
+                                      get('color') == 3])
             if log:
                 logger.info('Ignore processes with >= 6 quarks (%s)' % \
                         ",".join([\
@@ -8358,8 +8358,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # For a unique output of multiple type of exporter need to store this
             # information.             
             if hasattr(self, 'previous_lorentz'):
-                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                wanted_lorentz = misc.make_unique(self.previous_lorentz + wanted_lorentz)
+                wanted_couplings = misc.make_unique(self.previous_couplings + wanted_couplings)
                 del self.previous_lorentz
                 del self.previous_couplings        
             if 'store_model' in flaglist:

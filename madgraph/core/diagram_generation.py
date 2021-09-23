@@ -1517,7 +1517,7 @@ class DecayChainAmplitude(Amplitude):
             decay_ids.append(amp.get('process').get_initial_ids()[0])
             
         # Return a list with unique ids
-        return list(set(decay_ids))
+        return misc.make_unique(decay_ids)
     
     def has_loop_process(self):
         """ Returns wether this amplitude has a loop process."""

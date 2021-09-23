@@ -2882,9 +2882,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Now recast the split order basis for the loop, born and counterterm
         # amplitude into one single splitorderbasis.
-        overall_so_basis = list(set(
+        overall_so_basis = misc.make_unique(
             [born_so[0] for born_so in amps_orders['born_amp_orders']]+
-            [born_so[0] for born_so in amps_orders['loop_amp_orders']]))
+            [born_so[0] for born_so in amps_orders['loop_amp_orders']])
         # We must re-sort it to make sure it follows an increasing WEIGHT order
         order_hierarchy = matrix_element.get('processes')[0]\
                                             .get('model').get('order_hierarchy')

@@ -2183,6 +2183,19 @@ def wget(http, path, *args, **opt):
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 
+
+def make_unique(input, keepordering=None):
+    "remove duplicate in a list "
+
+    if keepordering is None:
+        keepordering = madgraph.ordering
+    sprint(keepordering)
+    if not keepordering:
+        return list(set(input))
+    else:
+        return list(dict.fromkeys(input)) 
+
+
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function (for using python2 type of sort)'
 

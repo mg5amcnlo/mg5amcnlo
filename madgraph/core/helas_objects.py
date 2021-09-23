@@ -5614,7 +5614,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
                 
-        return list(set(helas_list))
+        return misc.make_unique(helas_list)
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -5625,7 +5625,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
         
-        return list(set(coupling_list))
+        return misc.make_unique(coupling_list)
     
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
