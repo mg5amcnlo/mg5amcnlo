@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, channel, ANS, JAMP2, IVEC)
 C 
 %(info_lines)s
 C 
@@ -30,7 +30,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
-    INTEGER IVEC 
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  
@@ -43,7 +43,8 @@ C
         INTEGER JC(NEXTERNAL),II
         REAL*8 XTOT
         INTEGER  J, JJ
-
+	double precision RHEL
+	integer channel
       double precision get_channel_cut
       external get_channel_cut
 
@@ -51,8 +52,7 @@ C
 C GLOBAL VARIABLES
 C
     include '../../Source/vector.inc'
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW, NB_PAGE)
-    COMMON/TO_JAMPS/JAMP2
+    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
 
 
 C
@@ -91,9 +91,9 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0,IVEC)=%(ncolor)d
-        DO I=1,INT(JAMP2(0,ivec))
-            JAMP2(I,ivec)=0D0
+        JAMP2(0)=%(ncolor)d
+        DO I=1,INT(JAMP2(0))
+            JAMP2(I)=0D0
         ENDDO
     ENDIF
     ANS = 0D0
@@ -103,7 +103,7 @@ c   Kiran please check if you need this:
        TS(I)=0d0
     ENDDO
 
-    call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2,iVEC)
+    call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2, JAMP2, IVEC)
     DO I=1,NCOMB     
        T=TS(I)  
        DO JJ=1,nincoming
@@ -118,11 +118,10 @@ c   Kiran please check if you need this:
     ENDDO
 
     IF (ANS.ne.0d0) THEN
-        CALL RANMAR(R)
         SUMHEL=0d0
 	DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
-            IF(R.LT.SUMHEL)THEN
+            IF(RHEL.LT.SUMHEL)THEN
                 WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
                 ANS=DSIGN(ANS,TS(I))
@@ -146,7 +145,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
              endif
         ENDDO
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+	   ANS=ANS*AMP2(channel)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
 	        stop 1
@@ -156,7 +155,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-Subroutine  MATRIX%(proc_id)s(P,IC, TS, AMP2, IVEC)
+Subroutine  MATRIX%(proc_id)s(P,IC, TS, AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -220,8 +219,7 @@ C
 C GLOBAL VARIABLES
 C
     include '../../Source/vector.inc'
-    Double Precision amp2(maxamps), jamp2(0:maxflow, nb_page)
-    common/to_jamps/        jamp2
+    Double Precision amp2(maxamps), jamp2(0:maxflow)
     include 'coupl.inc'
 
        double precision tmin_for_channel
@@ -267,7 +265,7 @@ ${jamp_lines}
     	  DO M = 1, NAMPSO
     		DO N = 1, NAMPSO
 			%(select_configs_if)s
-                Jamp2(i,ivec)=Jamp2(i,ivec)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
+                Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
 			%(select_configs_endif)s
     		enddo
     	  enddo

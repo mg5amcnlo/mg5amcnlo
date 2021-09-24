@@ -112,7 +112,8 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
-         CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
+c        CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
+         stop 1 ! why is this called?
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      DSIG%(proc_id)s = DSIGUU*CONV
@@ -214,6 +215,8 @@ C
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
+      double precision RHEL ! random number
+      integer channel
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -234,6 +237,9 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
+C     jamp2 information      
+      Double Precision jamp2(0:maxflow, nb_page)
+      common/to_jamps/       jamp2
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -278,7 +284,9 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-         CALL SMATRIX%(proc_id)s(P1,ALL_OUT(IVEC), IVEC)
+	 CALL RANMAR(RHEL)
+	 channel = %(get_channel)s
+         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
 
 	 DO IVEC=1,NB_PAGE
@@ -344,6 +352,22 @@ C
 
 
      SUBROUTINE PRINT_ZERO_AMP%(proc_id)s()
+
+     return
+     end
+
+
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, out , selected_hel, jamp2_multi)
+
+     include 'nexternal.inc'
+     include '../../Source/vector.inc'
+     include 'maxamps.inc'
+     double precision p_multi(0:3, nexternal, NB_PAGE)
+     double precision hel_rand(nb_page)
+     integer channel
+     double precision out(nb_page)
+     integer selected_hel(nb_page)
+     double precision jamp2_multi(0:MAXFLOW, nb_page)
 
      return
      end

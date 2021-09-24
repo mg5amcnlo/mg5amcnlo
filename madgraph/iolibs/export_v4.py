@@ -4429,19 +4429,19 @@ class ProcessExporterFortranME(ProcessExporterFortran):
              """INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
              COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG"""
 
-        if proc_id:
-            # Set lines for subprocess group version
-            # Set define_iconfigs_lines
-            replace_dict['define_iconfigs_lines'] += \
-                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
-                 COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
-            # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
-                                            proc_id
-        else:
-            # Standard running
-            # Set set_amp2_line
-            replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
+        # if proc_id:
+        #     # Set lines for subprocess group version
+        #     # Set define_iconfigs_lines
+        #     replace_dict['define_iconfigs_lines'] += \
+        #          """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+        #          COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+        #     # Set set_amp2_line
+        #     replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(SUBDIAG(%s))/XTOT" % \
+        #                                     proc_id
+        # else:
+        #     # Standard running
+        #     # Set set_amp2_line
+        #     replace_dict['set_amp2_line'] = "ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT"
 
         # Extract nwavefuncs
         nwavefuncs = matrix_element.get_number_of_wavefunctions()
@@ -4617,11 +4617,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                  """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             replace_dict['cutsdone'] = ""
+            replace_dict['get_channel'] = "SUBDIAG(%s)" % proc_id
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
+            replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
 
         if not isinstance(self, ProcessExporterFortranMEGroup):
             ncomb=matrix_element.get_helicity_combinations()

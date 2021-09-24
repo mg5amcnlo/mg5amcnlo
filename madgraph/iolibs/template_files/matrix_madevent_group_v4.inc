@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, channel, ANS, JAMP2, IVEC)
 C 
 %(info_lines)s
 C 
@@ -31,7 +31,9 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
-    INTEGER IVEC
+    double precision RHEL ! random number for selecting helicity
+    integer channel ! channel to keep for the multi-channel
+    integer ivec ! for using the correct coupling
 c
 c global (due to reading writting) 
 c
@@ -71,8 +73,7 @@ C
     logical init_mode
     common /to_determine_zero_hel/init_mode
     include '../../Source/vector.inc'
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW, nb_page)
-    COMMON/TO_JAMPS/JAMP2
+    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
    
     CHARACTER*101         HEL_BUFF
     COMMON/TO_HELICITY/  HEL_BUFF
@@ -123,9 +124,9 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0,ivec)=%(ncolor)d
-        DO I=1,INT(JAMP2(0,ivec))
-            JAMP2(I,ivec)=0D0
+        JAMP2(0)=%(ncolor)d
+        DO I=1,INT(JAMP2(0))
+            JAMP2(I)=0D0
         ENDDO
     ENDIF
     ANS = 0D0
@@ -139,7 +140,7 @@ C ----------
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
          IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.10) THEN
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2,IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
                   T=T*ABS(POL(JJ))*NB_SPIN_STATE_IN(JJ)/2d0 ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
@@ -194,7 +195,7 @@ C ----------
 C           The helicity configuration was chosen already by genps and put in a common block defined in genps.inc.
             I = HEL_PICKED
 
-            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2,IVEC)
+            T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1),I,AMP2, JAMP2, IVEC)
 
             DO JJ=1,nincoming
               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -214,11 +215,11 @@ c           Include the Jacobian from helicity sampling
 	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
-    CALL RANMAR(R)
+c    CALL RANMAR(R) ! rhel passed as input
     SUMHEL=0d0
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS
-       IF(R.LT.SUMHEL)THEN
+       IF(RHEL.LT.SUMHEL)THEN
           WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
@@ -242,7 +243,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
             endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
-%(set_amp2_line)s
+		ANS=ANS*AMP2(channel)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
@@ -257,7 +258,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     END
  
  
-REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2,IVEC)
+REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s
 C
@@ -293,7 +294,8 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL)
     INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-    INTEGER IHEL, IVEC
+    INTEGER IHEL
+    INTEGER IVEC
 C  
 C LOCAL VARIABLES 
 C  
@@ -318,8 +320,7 @@ C
 C GLOBAL VARIABLES
 C
    include '../../Source/vector.inc'
-    Double Precision amp2(maxamps), jamp2(0:maxflow, nb_page)
-    common/to_jamps/ jamp2
+    Double Precision amp2(maxamps), jamp2(0:maxflow)
     include 'coupl.inc'
 
 	double precision small_width_treatment
@@ -387,7 +388,7 @@ endif
 	  DO M = 1, NAMPSO	
 		DO N = 1, NAMPSO
 		  %(select_configs_if)s
-            Jamp2(i,ivec)=Jamp2(i,ivec)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
+            Jamp2(i)=Jamp2(i)+DABS(DBLE(Jamp(i,m)*dconjg(Jamp(i,n))))
 		  %(select_configs_endif)s
 		enddo
 	  enddo
