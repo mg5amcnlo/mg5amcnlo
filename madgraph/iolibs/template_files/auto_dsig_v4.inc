@@ -243,6 +243,12 @@ C     jamp2 information
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
+
+      double precision p_multi(0:3, nexternal, nb_page)
+      double precision hel_rand(nb_page)
+      integer selected_hel(nb_page)
+     
+
 c
 c     local
 c
@@ -275,19 +281,26 @@ C     Continue only if IMODE is 0, 4 or 5
          ENDIF
 
 	 DO IVEC=1,NB_PAGE
+c        Do not need those three here do I?	 
 	 XBK(:) = ALL_XBK(:,IVEC)
 c	 CM_RAP = ALL_CM_RAP(IVEC)
 	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
 	 if(frame_id.ne.6)then
-           call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, P1)
+           call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
          else
-           P1 = ALL_PP(:,:,IVEC)
+           p_multi(:,:,IVEC) = ALL_PP(:,:,IVEC)
          endif
-	 CALL RANMAR(RHEL)
-	 channel = %(get_channel)s
-         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+	 CALL RANMAR(hel_rand(IVEC))
+c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
+	 channel = %(get_channel)s
+
+c	 do IVEC=1, NB_PAGE
+c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+c	 enddo 
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, ALL_OUT , selected_hel, jamp2)
+
 
 	 DO IVEC=1,NB_PAGE
 	 DSIGUU = ALL_OUT(IVEC)
@@ -359,6 +372,8 @@ C
 
      SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, out , selected_hel, jamp2_multi)
 
+     USE OMP_LIB
+
      include 'nexternal.inc'
      include '../../Source/vector.inc'
      include 'maxamps.inc'
@@ -369,5 +384,22 @@ C
      integer selected_hel(nb_page)
      double precision jamp2_multi(0:MAXFLOW, nb_page)
 
+     integer ivec
+
+
+!$OMP PARALLEL
+!$OMP DO
+      DO IVEC=1, NB_PAGE
+      	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
+     &	                         hel_rand(IVEC),
+     &				 channel,
+     &				 out(IVEC),
+c     &				 selected_hel(IVEC),
+     &				 jamp2_multi(0,IVEC),
+     &				 IVEC
+     &				 )
+      ENDDO
+!$OMP END DO
+!$OMP END PARALLEL
      return
      end

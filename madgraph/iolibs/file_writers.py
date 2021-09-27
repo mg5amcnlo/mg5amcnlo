@@ -212,7 +212,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|!\$)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):
@@ -326,6 +326,8 @@ class FortranWriter(FileWriter):
             return ["C%s\n" % line.strip()]
         elif line.startswith(('C','c')):
             return ['%s\n' % line] 
+        elif line.startswith("$OMP"):
+            return ['!%s\n' % line] 
 
         res_lines = []
 
