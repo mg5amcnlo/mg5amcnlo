@@ -7,6 +7,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: for process like p p > w+{X} w+{Y}, w+ > l+ vl
          i.e. process with polarization of  identical particle where the decay involves multi-particles and 
          where the lepton does not all have the same mass, some of the process were incorrectly discarded.
+     OM: fix an issue for photon initial state with lpp=+-4 where the lhef output was not setting the muon
+         as the correct colliding particles (thanks to Yuunjia Bao) 	  
 
 2.9.5 (22/08/21)
       OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
