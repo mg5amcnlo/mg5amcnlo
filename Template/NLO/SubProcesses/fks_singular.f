@@ -5936,11 +5936,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
-            call cpu_time(tAfter)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-            tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
                virt_wgt = 0d0
@@ -5968,6 +5966,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             virt_wgt_save=virt_wgt
             amp_split_virt_save(1:amp_split_size)=
      $           amp_split_virt(1:amp_split_size)
+            call cpu_time(tAfter)
+            tOLP=tOLP+(tAfter-tBefore)
          endif
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
