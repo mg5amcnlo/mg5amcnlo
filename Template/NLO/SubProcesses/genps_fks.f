@@ -2,6 +2,7 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       include "born_conf.inc"
@@ -32,6 +33,7 @@
       include 'coupl.inc'
       include 'born_props.inc'
 c     
+      call cpu_time(tBefore)
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -68,6 +70,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)
+      tGenPS=tGenPS+(tAfter-tBefore)
       return
       end
 
