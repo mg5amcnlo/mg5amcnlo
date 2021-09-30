@@ -840,7 +840,7 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
       double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
      &     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
-     &     ,rewgt_exp_izero,rewgt_exp_mohdr
+     &     ,rewgt_exp_izero,rewgt_exp_mohdr,pthardness
      &     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
      &     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
