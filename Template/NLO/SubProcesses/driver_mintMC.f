@@ -791,39 +791,24 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-c Set the shower scales            
+c     Set the shower scales            
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p) ! reset the FxFx scales
+            endif
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(2,p1_cnt(0,1,0))
+            endif
             call set_cms_stuff(mohdr)
             call set_shower_scale_noshape(p,iFKS*2)
-c Compute the n1-body prefactors
-            call compute_prefactors_n1body(vegas_wgt,jac)
-c Include the FxFx Sudakov terms in the prefactors:
-c   CP : counter-event kinematics passes cuts
-c   EP : event kinematics passes cuts
-c   CE : counter-event kinematics exists
-c   EE : event kinematics exists
-c   CC : compute FxFx for counter-events kinematics
-c   EC : compute FxFx for event kinematics
-c
-c     CP  EP  CE  EE | CC  EC
-c     X   X   X   X  | X   X
-c     X       X   X  | X   X
-c         X   X   X  |     X
-c     X       X      | X   X
-c         X       X  |     X
-c
             if (ickkw.eq.3) then
-               call set_FxFx_scale(0,p)
-c$$$               if (passcuts_nbody .and. abrv.ne.'real') then
-                  call set_cms_stuff(izero)
-                  call set_FxFx_scale(2,p1_cnt(0,1,0))
-c$$$               endif
                if (p(0,1).gt.0d0) then
-                  call set_cms_stuff(mohdr)
                   call set_FxFx_scale(3,p)
                endif
-            endif               
+            endif              
+c Compute the n1-body prefactors
+            call compute_prefactors_n1body(vegas_wgt,jac)
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))

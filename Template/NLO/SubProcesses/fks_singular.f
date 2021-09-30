@@ -967,11 +967,17 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
 c Update shower starting scale
+            pthardness=ref_H_scale(nFKSprocess*2)-
+     $                     shower_H_scale(nFKSprocess*2)
             ref_H_scale(nFKSprocess*2)=
      $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-            shower_H_scale(nFKSprocess*2)=ref_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2)=ref_H_scale(nFKSprocess*2)-
+     $                                    pthardness
+            pthardness=ref_H_scale(nFKSprocess*2-1)-
+     $                     shower_H_scale(nFKSprocess*2-1)
             ref_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)
-            shower_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)-
+     $                                      pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
