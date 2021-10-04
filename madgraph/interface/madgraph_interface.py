@@ -8082,7 +8082,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
-            options = {'zerowidth_tchannel': True}
+            options = {'zerowidth_tchannel': self.options['zerowidth_tchannel']}
             if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
                 options['zerowidth_tchannel'] = False
             
