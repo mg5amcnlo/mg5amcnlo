@@ -1146,19 +1146,27 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
             to_check = []
             expr = '1d0'
+            conv_pol = '0d0'
+            conv_fin = '0d0'
         
         elif startfroma0:
             to_check = ['mdl_aewgmu', 'mdl_aew']
             base = 'mdl_aewgmu/mdl_aew'
             exp = 'qed_pow/2d0-ntag'
             expr = '(%s)**(%s)' % (base, exp)
+            conv_fin = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
+            conv_pol = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
         else:
             to_check = ['mdl_aew', 'mdl_aew0']
             base = 'mdl_aew0/mdl_aew'
             exp = 'ntag'
             expr = '(%s)**(%s)' % (base, exp)
+            conv_fin = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
+            conv_pol = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
 
-        replace_dict = {'rescale_fact': expr}
+        replace_dict = {'rescale_fact': expr,
+                        'virtual_a0Gmu_conv_finite': conv_fin,
+                        'virtual_a0Gmu_conv_pole': conv_pol}
 
         if not all(p in parnames for p in to_check):
             raise fks_common.FKSProcessError(

@@ -17,3 +17,24 @@ get_rescale_alpha_factor = %(rescale_fact)s
 return
 end
 
+
+double precision function get_virtual_a0Gmu_conv(qed_pow, ntagph, ivirt, born_wgt)
+C returns the piece to compensate the a0<>Gmu change of scheme for the
+C virtuals (single pole if ivirt = 1, finite if ivirt = 0
+implicit none
+integer qed_pow, ntagph, ivirt
+double precision born_wgt
+INCLUDE '../../Source/MODEL/input.inc'
+
+if (ivirt.eq.1) then
+! single 
+get_virtual_a0Gmu_conv = %(virtual_a0Gmu_conv_pole)s
+else if (ivirt.eq.0) then
+! finite part
+get_virtual_a0Gmu_conv = %(virtual_a0Gmu_conv_finite)s
+else
+write(*,*) 'Error get_virtual_a0Gmu_conv: Invalid ivirt', ivirt
+endif
+
+return
+end
