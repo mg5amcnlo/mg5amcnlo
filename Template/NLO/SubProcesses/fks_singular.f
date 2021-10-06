@@ -1589,7 +1589,21 @@ C Secondly, the more advanced filter
       bjx(2,icontr)=xbk(2)
       scales2(1,icontr)=QES2
       scales2(2,icontr)=scale**2
-      scales2(3,icontr)=q2fact(1)
+      if (fixed_fac_scale1.and. .not.fixed_fac_scale2 ) then
+          scales2(3,icontr)=q2fact(2)
+      elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+          scales2(3,icontr)=q2fact(1)
+      elseif(fixed_fac_scale1.and. fixed_fac_scale2) then
+          if(lpp(1).ne.1.and.lpp(2)==1)then
+              scales2(3,icontr)=q2fact(2)
+          elseif(lpp(2).ne.1.and.lpp(1)==1)then
+              scales2(3,icontr)=q2fact(1)
+          else
+              scales2(3,icontr)=q2fact(1)
+          endif
+      else
+          scales2(3,icontr)=q2fact(1) 
+      endif
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
@@ -1720,9 +1734,21 @@ c call to separate_flavour_config().
          mu2_q=scales2(1,i)
          mu2_r=scales2(2,i)
          mu2_f=scales2(3,i)
-         q2fact(1)=mu2_f
-         q2fact(2)=mu2_f
-c call the PDFs
+         if (lpp(1)==1 .and. lpp(2)==1)then
+             q2fact(1)=mu2_f
+             q2fact(2)=mu2_f
+         else    
+             if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                 q2fact(1)=muF12_current
+                 q2fact(2)=mu2_f
+             elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                 q2fact(1)=mu2_f
+                 q2fact(2)= muF22_current
+             elseif(fixed_fac_scale1.and.fixed_fac_scale2) then 
+                 q2fact(1)= muF12_current
+                 q2fact(2)= muF22_current
+             endif    
+         endif
          xlum = dlum()
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
@@ -2087,8 +2113,21 @@ c factorisation scale variation (require recomputation of the PDFs)
             do kf=1,nint(scalevarF(0))
                if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
-               q2fact(1)=mu2_f(kf)
-               q2fact(2)=mu2_f(kf)
+               if (lpp(1)==1 .and. lpp(2)==1)then
+                   q2fact(1)=mu2_f(kf) 
+                   q2fact(2)=mu2_f(kf)
+               else
+                   if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                       q2fact(1)=muF12_current
+                       q2fact(2)=mu2_f(kf)
+                   elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                       q2fact(1)=mu2_f(kf) 
+                       q2fact(2)=muF22_current
+                   elseif(fixed_fac_scale1.and. fixed_fac_scale2)then
+                       q2fact(1)=muF12_current 
+                       q2fact(2)=muF22_current
+                   endif
+               endif
                xlum(kf) = dlum()
                if (separate_flavour_configs .and. ipr(i).ne.0) then
                   if (nincoming.eq.2) then
@@ -2189,8 +2228,21 @@ c soft scale variation
                mu2_r(ks)=scales2(2,i)*scalevarR(ks)**2
                g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
                mu2_f(ks)=scales2(2,i)*scalevarR(ks)**2
-               q2fact(1)=mu2_f(ks)
-               q2fact(2)=mu2_f(ks)
+               if (lpp(1)==1 .and. lpp(2)==1)then
+                   q2fact(1)=mu2_f(ks) 
+                   q2fact(2)=mu2_f(ks)
+               else
+                   if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                       q2fact(1)= muF12_current 
+                       q2fact(2)= mu2_f(ks)
+                   elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then 
+                       q2fact(1)= mu2_f(ks) 
+                       q2fact(2)= muF22_current  
+                   elseif(fixed_fac_scale1.and.fixed_fac_scale2) then 
+                       q2fact(1)= muF12_current
+                       q2fact(2)= muF22_current 
+                   endif
+               endif
                xlum(ks) = dlum()
                if (separate_flavour_configs .and. ipr(i).ne.0) then
                   if (nincoming.eq.2) then
@@ -2269,8 +2321,21 @@ c allows for better caching of the PDFs
                mu2_q=scales2(1,i)
                mu2_r=scales2(2,i)
                mu2_f=scales2(3,i)
-               q2fact(1)=mu2_f
-               q2fact(2)=mu2_f
+               if (lpp(1)==1 .and. lpp(2)==1)then
+                   q2fact(1)=mu2_f
+                   q2fact(2)=mu2_f
+               else
+                   if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                       q2fact(1)= muF12_current
+                       q2fact(2)= mu2_f
+                   elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                       q2fact(1)= mu2_f 
+                       q2fact(2)= muF22_current
+                   elseif(fixed_fac_scale1.and.fixed_fac_scale2) then 
+                       q2fact(1)=muF12_current
+                       q2fact(2)=muF22_current
+                   endif
+               endif
 c Compute the luminosity
                xlum = dlum()
                if (separate_flavour_configs .and. ipr(i).ne.0) then
@@ -4895,8 +4960,8 @@ C check if any extra_cnt is needed
         
         if (iord.eq.qcd_pos) iap = 1
         if (iord.eq.qed_pos) iap = 2
-        collrem_xi_tmp=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
-     #           apprime(iap) 
+         collrem_xi_tmp=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
+     #           apprime(iap)
         collrem_lxi_tmp=2*ap(iap)
 
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
@@ -5803,7 +5868,7 @@ c 1+2+3+4
 C Q terms for initial state partons
                   if(abrv.ne.'virt')then
 c 1+2+3+4
-                     Q=Q-dlog(q2fact(i)/QES2)*(
+                      Q=Q-dlog(q2fact(i)/QES2)*(
      &                    gamma_used+2d0*c_used*dlog(xicut_used))
                   else
                      write(*,*)'Error in bornsoftvirtual'
@@ -5986,9 +6051,19 @@ c eq.(MadFKS.C.13)
             call amp_split_pos_to_orders(iamp, orders)
             wgtcpower=0d0
             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-            contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $           +ren_group_coeff*wgtcpower)*log(q2fact(1)/QES2)*aso2pi
-     $           *dble(amp_split_cnt(iamp,1,qcd_pos))
+                if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                    contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $              +ren_group_coeff*wgtcpower)*log(q2fact(2)/QES2)*aso2pi
+     $              *dble(amp_split_cnt(iamp,1,qcd_pos))
+                elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                    contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $              +ren_group_coeff*wgtcpower)*log(q2fact(1)/QES2)*aso2pi
+     $              *dble(amp_split_cnt(iamp,1,qcd_pos))
+                else 
+                   contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $             +ren_group_coeff*wgtcpower)*log(q2fact(1)/QES2)*aso2pi
+     $             *dble(amp_split_cnt(iamp,1,qcd_pos))
+                endif
             amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufoqes
             bsv_wgt_mufoqes=bsv_wgt_mufoqes+contr_mufoqes
          enddo
@@ -6003,9 +6078,19 @@ c  eq.(MadFKS.C.14)
             call amp_split_pos_to_orders(iamp, orders)
             wgtcpower=0d0
             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-            contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+                if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                    contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $           +ren_group_coeff*wgtcpower)*log(q2fact(2)/scale**2)
+     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+                elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                    contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
      $           +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)
      $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+                else
+                   contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $           +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)
+     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+                endif 
             amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufomur
             bsv_wgt_mufomur=bsv_wgt_mufomur+contr_mufomur
          enddo
@@ -6090,11 +6175,25 @@ C     set charge factors
          endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
-         amp_split_wgtnstmp(1:amp_split_size) =
-     $        amp_split_bsv(1:amp_split_size)
-     $        -amp_split_born(1:amp_split_size)-log(q2fact(1)/QES2)
-     $        *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
-     $        /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+         if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+             amp_split_wgtnstmp(1:amp_split_size) =
+     $         amp_split_bsv(1:amp_split_size)
+     $          -amp_split_born(1:amp_split_size)-log(q2fact(2)/QES2)
+     $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
+     $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+         elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+             amp_split_wgtnstmp(1:amp_split_size) =
+     $         amp_split_bsv(1:amp_split_size)
+     $          -amp_split_born(1:amp_split_size)-log(q2fact(1)/QES2)
+     $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
+     $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+         else
+             amp_split_wgtnstmp(1:amp_split_size) =
+     $         amp_split_bsv(1:amp_split_size)
+     $          -amp_split_born(1:amp_split_size)-log(q2fact(1)/QES2)
+     $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
+     $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+         endif
       endif
 
       amp_split(1:amp_split_size)=amp_split_bsv(1:amp_split_size)
@@ -6109,7 +6208,17 @@ c we need the pure NLO terms only
 
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
-         xmu2=q2fact(1)
+         if (lpp(1)==1 .and.lpp(2)==1) then
+             xmu2=q2fact(1)
+         else
+             if(fixed_fac_scale1.and. .not.fixed_fac_scale2) then
+                 xmu2=q2fact(2)
+             elseif(fixed_fac_scale2.and. .not.fixed_fac_scale1) then
+                 xmu2=q2fact(1)    
+             elseif(fixed_fac_scale2.and.fixed_fac_scale1) then
+                 xmu2=q2fact(2)
+             endif    
+         endif    
          call getpoles(p,xmu2,double,single,fksprefact)
          print*,"BORN",born_wgt!/conv
          print*,"DOUBLE",double
@@ -6119,7 +6228,7 @@ c         print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
 c         stop
  123     format(4(1x,d22.16))
       endif
-
+c      write(*,*)'xmu2 value ',xmu2
  999  continue
       return
       end
@@ -7160,7 +7269,7 @@ c igranny, iaunt and granny_is_res from the saved information
       include 'nexternal.inc'
       include 'run.inc'
       integer ic,dd,i,j
-      double precision c_mu2_r,c_mu2_f,muR,muF,pp(0:3,nexternal)
+      double precision c_mu2_r,c_mu2_f,muR,muF(2),pp(0:3,nexternal)
       if (dd.eq.1) then
          c_mu2_r=scales2(2,ic)
          c_mu2_f=scales2(3,ic)
@@ -7175,7 +7284,13 @@ c need to recompute the scales using the momenta
          call set_ren_scale(pp,muR)
          c_mu2_r=muR**2
          call set_fac_scale(pp,muF)
-         c_mu2_f=muF**2
+         if(lpp(1).ne.1 .and.lpp(2).eq.1)then
+             c_mu2_f=muF(2)**2
+         elseif(lpp(2).ne.1 .and.lpp(1).eq.1)then    
+             c_mu2_f=muF(1)**2
+         else
+            c_mu2_f=muF(1)**2
+         endif    
 c     reset the default dynamical_scale_choice
          dynamical_scale_choice=dyn_scale(1)
       endif

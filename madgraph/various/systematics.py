@@ -211,6 +211,7 @@ class Systematics(object):
                         pdfset = lhapdf.mkPDF(data).set()
                     self.pdfsets[pdfset.lhapdfID] = pdfset 
                     self.pdf += pdfset.mkPDFs()
+                    
         else:
             self.pdf = pdf
             

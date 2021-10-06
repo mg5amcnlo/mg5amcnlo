@@ -831,23 +831,23 @@ c     not a Breit Wigner
          endif
 c Generate the rapditity of the Born system
          call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
-      elseif (abs(lpp(1)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         write(*,*)'Option x1 not implemented in one_tree'
-         stop
-      elseif (abs(lpp(2)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         write(*,*)'Option x2 not implemented in one_tree'
-         stop
+c      elseif (abs(lpp(1)).ge.1 .and.
+c     &     .not.(softtest.or.colltest)) then
+c         write(*,*)'Option x1 not implemented in one_tree'
+c         stop
+c      elseif (abs(lpp(2)).ge.1 .and.
+c     &     .not.(softtest.or.colltest)) then
+c         write(*,*)'Option x2 not implemented in one_tree'
+c        stop
       else
 c No PDFs (also use fixed energy when performing tests)
          call compute_tau_y_epem(j_fks,one_body,fksmass,stot,
      &        tau_born,ycm_born,ycmhat)
-         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
-            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
-     &           /'not allowed for processes generated at NLO.'
-            stop 1
-         endif
+c         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
+c            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
+c     &           /'not allowed for processes generated at NLO.'
+c            stop 1
+c         endif
       endif
 c Compute Bjorken x's from tau and y
       xbjrk_born(1)=sqrt(tau_born)*exp(ycm_born)

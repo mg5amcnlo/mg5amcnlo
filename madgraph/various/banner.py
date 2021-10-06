@@ -4249,22 +4249,16 @@ class RunCardNLO(RunCard):
                     logger.warning('fixed factorization scale is used for beam1. You can prevent this by setting fixed_fac_scale1 to False')
                     self['fixed_fac_scale1'] = True
                     self['fixed_fac_scale2'] = self['fixed_fac_scale']
-                    if not 'muf1_ref_fixed' in self.user_set:
-                        logger.warning('Please fix muF1  value otherwise it will be fixed by muF')
-                        self['muf1_ref_fixed'] = self['muf_ref_fixed']
                 elif self['lpp2'] in [2,3,4]:
                     logger.warning('fixed factorization scale is used for beam2. You can prevent this by setting fixed_fac_scale2 to False')
                     self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = True
-                    if not 'muf2_ref_fixed' in self.user_set:
-                        logger.warning('Please fix  muF2 value otherwise it will be fixed by muF')
-                        self['muf2_ref_fixed'] = self['muf_ref_fixed']
                 else:
                     self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = self['fixed_fac_scale']
-                    if 'muf_ref_fixed' in self.user_set:
-                        self['muf1_ref_fixed']= self['muf_ref_fixed']
-                        self['muf2_ref_fixed']= self['muf_ref_fixed']
+#                    if 'muf_ref_fixed' in self.user_set:
+#                        self['muf1_ref_fixed']= self['muf_ref_fixed']
+#                        self['muf2_ref_fixed']= self['muf_ref_fixed']
             elif self['lpp1'] !=0 or self['lpp2']!=0:
                 raise Exception('fixed_fac_scale not defined within your run_card. Plase fix this.')
         if 'muf1_ref_fixed' in self.user_set:
@@ -4284,10 +4278,11 @@ class RunCardNLO(RunCard):
             elif self['lpp1'] !=0: 
                  raise Exception('muf1_ref_fixed is not defined while muf2_ref_fixed is. Please fix your run_card.') 
         elif 'muf_ref_fixed' in self.user_set:
-            if not 'muf1_ref_fixed' and 'muf2_ref_fixed' in self.user_set:
-                logger.warning(' muf_ref_fixed  is defined but not muf1_ref_fixed and muf2_ref_fixed. The value of muf1_ref_fixed and muf2_ref_fixed  will be set to  muf_ref_fixed value')
-                self['muf1_ref_fixed']= self ['muf_ref_fixed']
-                self['muf2_ref_fixed']= self ['muf_ref_fixed']
+            if not 'muf1_ref_fixed' in self.user_set:
+                if not 'muf2_ref_fixed' in self.user_set:
+                    logger.warning(' muf_ref_fixed  is defined but not muf1_ref_fixed and muf2_ref_fixed. The value of muf1_ref_fixed and muf2_ref_fixed  will be set to  muf_ref_fixed value')
+                    self['muf1_ref_fixed']= self ['muf_ref_fixed']
+                    self['muf2_ref_fixed']= self ['muf_ref_fixed']
                  
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 

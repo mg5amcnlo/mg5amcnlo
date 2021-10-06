@@ -605,7 +605,7 @@ c FxFx
 c
       setclscales=.true.
 
-      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and. q2fact(2).gt.0.and.scale.gt.0)
+      if(ickkw.le.0.and.xqcut.le.0d0.and.(q2fact(1).gt.0.and. q2fact(2).gt.0).and.scale.gt.0)
      $     return
 
       if (ickkw.eq.3) then
@@ -882,7 +882,6 @@ c     There parton emissions with code <= jcode are not jets
          do i=3,nexternal
             if(iqjets(i).gt.0) write(*,'(i3$)') i
          enddo
-         write(*,*)
       endif
       if(njetstore(nFKSprocess,iconf).eq.-1) then
 c     Store external jet numbers if first time
@@ -1013,7 +1012,8 @@ c     For FxFx skip the cut on xmtc
          endif
       endif
       
-      if(ickkw.eq.0.and.(fixed_fac_scale1.or.q2fact(1).gt.0)
+      if(ickkw.eq.0
+     $    .and.(fixed_fac_scale1.or.q2fact(1).gt.0)
      $    .and. (fixed_fac_scale2.or.q2fact(2).gt.0)
      $    .and. (fixed_ren_scale.or.scale.gt.0)) return
 
@@ -1032,7 +1032,7 @@ c     Use the fixed or previously set scale for central scale
 
       if ( (nexternal.eq.3.and.nincoming.eq.2.and.ickkw.eq.3) .or.
      &     (nexternal.eq.3.and.nincoming.eq.2.and.
-     &                           q2fact(1).eq.0 .or. q2fact(2).eq.0  .and.ickkw.ne.3)) then
+     &                           (q2fact(1).eq.0 .or. q2fact(2).eq.0 ) .and.ickkw.ne.3)) then
          if (.not. fixed_fac_scale1) q2fact(1)=pt2ijcl(nexternal-2)
          if (.not. fixed_fac_scale2) q2fact(2)=pt2ijcl(nexternal-2)
       endif
@@ -1058,7 +1058,6 @@ c     We have a qcd line going through the whole event, use single scale
          endif
          if (.not. fixed_fac_scale2) then
              q2fact(2)=scalefact**2*q2fact(2)
-             !q2bck(1)=q2fact(1)
              q2bck(2)=q2fact(2)
          endif
          if (btest(mlevel,3))
