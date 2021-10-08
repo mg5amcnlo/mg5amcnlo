@@ -910,7 +910,8 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
             need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
             need_matching_cuts(1:nexternal)=need_matching_izero(1:nexternal)
-c Update shower starting scale
+c Update shower starting scale to be the scale down to which the MINLO
+c Sudakov factors are included.
             shower_S_scale(nFKSprocess*2-1)=
      $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
             shower_S_scale(nFKSprocess*2)=
@@ -968,16 +969,17 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
 c Update shower starting scale
             pthardness=ref_H_scale(nFKSprocess*2)-
-     $                     shower_H_scale(nFKSprocess*2)
-            ref_H_scale(nFKSprocess*2)=
+     $           shower_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2)=
      $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
-            shower_H_scale(nFKSprocess*2)=ref_H_scale(nFKSprocess*2)-
-     $                                    pthardness
+            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
+     $           +pthardness
             pthardness=ref_H_scale(nFKSprocess*2-1)-
-     $                     shower_H_scale(nFKSprocess*2-1)
-            ref_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)
-            shower_H_scale(nFKSprocess*2-1)=ref_H_scale(nFKSprocess*2)-
-     $                                      pthardness
+     $           shower_H_scale(nFKSprocess*2-1)
+            shower_H_scale(nFKSprocess*2-1)= 
+     $           shower_H_scale(nFKSprocess*2)
+            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
+     $           +pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
