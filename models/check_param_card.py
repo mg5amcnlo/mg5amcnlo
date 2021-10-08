@@ -970,7 +970,6 @@ class ParamCardIterator(ParamCard):
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
-            
         # do the loop
         lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
         for positions in itertools.product(*lengths):
@@ -1013,9 +1012,10 @@ class ParamCardIterator(ParamCard):
 
     def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
-        
+
         if path:
             ff = open(path, 'w')
+            path_events = path.rsplit("/", 1)[0]
         else:
             ff = StringIO.StringIO()        
         if order:
@@ -1040,12 +1040,10 @@ class ParamCardIterator(ParamCard):
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
       
-
         if not lastline:
             to_print = self.cross
         else:
             to_print = self.cross[-1:]
-
         for info in to_print:
             name = info['run_name']
             bench = info['bench']
@@ -1056,7 +1054,10 @@ class ParamCardIterator(ParamCard):
                 else:
                     data.append(0.)
             ff.write(formatting % tuple([name] + bench + data))
-                
+            ff_single = open(pjoin(path_events, name, "params.dat"), "w")
+            for i_bench in range(0, len(bench)):
+                ff_single.write(self.param_order[i_bench] + " = " + str(bench[i_bench]) +"\n")
+
         if not path:
             return ff.getvalue()
         

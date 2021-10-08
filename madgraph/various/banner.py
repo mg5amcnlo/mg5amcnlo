@@ -1483,6 +1483,72 @@ class ConfigFile(dict):
         self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
  
 
+class RivetCard(ConfigFile):
+
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        self.add_param('analyses', "MC_GENERIC")
+        self.add_param('weight_name', "Weight_MERGING=0.000")
+        self.add_param('run_contur', False)
+        self.add_param('draw_heatmap', True)
+        self.add_param('xaxis_heatmap', "XXX")
+        self.add_param('yaxis_heatmap', "YYY")
+        self.add_param('postprocessing', False)
+
+    def read(self, finput):
+
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception("No such file %s" % finput)
+
+        for line in finput:
+            if '#' in line:
+                line = line.split('#',1)[0]
+
+            if '!' in line:
+                line = line.split('#',1)[0]
+
+            if not line:
+                continue
+
+            if '=' in line:
+                key, value = line.split('=',1)
+                self[key.strip()] = value
+
+        if self["analyses"].lower() == "default" or self["analyses"] == "-1":
+            self["analyses"] = "MC_GENERIC"
+        if self["weight_name"].lower() == "default" or self["weight_name"] == "-1":
+            self["weight_name"] = "Weight_MERGING=0.000"
+
+    def write(self, outputpath):
+        """write the file"""
+
+        fsock = open(outputpath, 'w')
+        fsock.write(template)
+
+        for key, value in self.items():
+            fsock.write(" %s = %s \n" % (key, value))
+
+        fsock.close()
+
+    def getConturRA(self, RunCard):
+        if not ((RunCard['lpp1'] == 1) and (RunCard['lpp2'] == 1)):
+            raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
+
+        ebeamsLHC = [3500, 4000, 6500]
+        if ((int(RunCard['ebeam1']) in ebeamsLHC) and (int(RunCard['ebeam2']) in ebeamsLHC)):
+            if int(RunCard['ebeam1']) == int(RunCard['ebeam2']):
+                ebeam = str(int((int(RunCard['ebeam1']) + int(RunCard['ebeam2']))/1000))
+                return "$CONTUR_RA{0}TeV".format(ebeam)
+            else:
+                raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
+                                      ebeam1 = {0} and ebeam2 = {1}".format(RunCard['ebeam1'], RunCard['ebeam2']))
+        else:
+            raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
 
 class ProcCharacteristic(ConfigFile):
     """A class to handle information which are passed from MadGraph to the madevent

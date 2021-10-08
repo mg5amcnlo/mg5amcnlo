@@ -2515,14 +2515,47 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         self.run_generate_events(switch_mode, args)
 
-        self.exec_cmd("contur")
-        
-    def postscan(self, iteratorobj):
-        ....
+        if switch_mode['analysis'] == "Rivet":
+            self.postprocessing()
+
+
+    def postprocessing(self):
+
+        print ("##################################################################################")
+        print ("in post scan")
+        print ("##################################################################################")
+
+        startRivet = time.time()
+        rivet_config = common_run.CommonRunCmd.do_rivet(self,"")
+
+        # If postprocessing = False in rivet_card.dat, rivet_config returns None
+        if not rivet_config:
+            return
+
+        # Check number of Rivet jobs to run 
+        run_dirs = misc.glob(pjoin(self.me_dir, 'Events', "run_*"))
+        nb_rivet = len(run_dirs)
+
+        # Check run configurations
+        for i_rivet in range(nb_rivet):
+            self.cluster.submit2(pjoin(run_dirs[i_rivet], "run_rivet.sh"), argument=[str(i_rivet)])
+
+        def wait_monitoring(Idle, Running, Done):
+            if Idle+Running+Done == 0:
+                return
+            logger.info('Rivet analysis jobs: %d Idle, %d Running, %d Done [%s]'\
+                         %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
+        self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
+
+
+        if not rivet_config["run_contur"]:#FIXME split run contur
+            return
 
         
+
+
     # this decorator handle the loop related to scan.
-    @common_run.scanparamcardhandling(postprocessing=MadEventCmd.postscan)
+    @common_run.scanparamcardhandling()
     def run_generate_events(self, switch_mode, args):
 
         if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
@@ -4300,7 +4333,7 @@ already exists and is not a fifo file."""%fifo_path)
             args.remove('--no_default')
         else:
             no_default = False
-            
+
         if not self.run_name:
             self.check_pythia8(args)
             self.configure_directory(html_opening =False)

@@ -2698,36 +2698,92 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return self.list_completion(text, ['-f', 
                 '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
+
     def do_rivet(self, line):
         """launch rivet on the HepMC output"""
 
-        # Check argument's validity
         args = self.split_arg(line)
-        
+        # Check argument's validity
         if '--no_default' in args:
             no_default = True
             args.remove('--no_default')
         else:
-            no_default = False    
+            no_default = False
 
-        if no_default and not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
-            return
- 
+
+        #1 Get Rivet configurations from rivet_card.dat
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
+            if no_default:
+                logger.info('No rivet_card detected, so not running Rivet')
+                return
+
+            files.cp(pjoin(self.me_dir, 'Cards', 'rivet_card_default.dat'),
+                     pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
+            logger.info('No rivet_card found. Take the default one.')
+
+        rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
+
+        if rivet_config["run_contur"] and rivet_config["analyses"] == "MC_GENERIC":
+            rivet_config["analyses"] = rivet_config.getConturRA(RunCard=self.run_card)
+
+
+        #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
-        #1. determine pythonpath / ldlibrary path
 
-        my_env = os.environ.copy()
-        my_env['LD_LIBRARY_PATH'] = "%s:%s:5s" % (my_env['LD_LIBRARY_PATH'],
-           pjoin(rivet_path, 'lib'),pjoin(rivet_path, 'lib64'))
-
+        set_env = "export PATH=$PATH:{0}\n".format(pjoin(rivet_path, 'bin'))#FIXME madgraph rivet paths should go first
+        set_env = set_env + "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{0}:{1}\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
         major, minor = sys.version_info[0:2]
-        my_env['PYTHONPATH'] = '%s:%s' % (my_env['PYTHONPATH'], 
-            pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'))
+        set_env = set_env + "export PYTHONPATH=$PYTHONPATH:{0}:{1}\n\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                                           pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
 
-        #2. excute rivet
-        
-        misc.call([sys.executable, pjoin(rivet_path, 'bin', 'rivet-mg5.py'), 
-            pjoin(self.me_dir, 'Cards', 'rivet_card.dat')], env=my_env)
+
+        #3 Fetch HepMC files
+        py8_card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card_default.dat'))
+        py8_card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'), setter='user')
+
+        py8_output = py8_card["HEPMCoutput:file"]
+
+        if py8_output == "auto" or py8_output == "autoremove":
+            if rivet_config["postprocessing"]:
+                hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc.gz")
+            else:
+                hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
+        elif py8_output == "fifo":
+            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, "PY8.hepmc.fifo")
+        else:
+            raise MadGraph5Error("HEPMCoutput:file in pythia8_card.dat should be [auto, autoremove, fifo]")
+
+        #FIXME condor 
+
+        #4 Write Rivet lines
+        shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
+
+        yoda_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_name + ".yoda")
+        run_rivet = "rivet --skip-weights -a " + rivet_config['analyses'] + " -o " + yoda_file + " " + hepmc_file
+
+        wrapper = open(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh"), "w")
+        wrapper.write("#!{0}\n{1}".format(misc.which(shell), set_env))
+        wrapper.write("{0} &> {1}".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
+
+        if py8_output == "autoremove" or py8_output == "fifo": # For FIFO, remove it after it finishes run
+            wrapper.write("\nrm {0}".format(hepmc_file))
+            if rivet_config["postprocessing"]: # FIFO should not run through postprocessing, force single Rivet run
+                rivet_config["postprocessing"] = False
+        wrapper.close()
+
+
+        #5 decide how to run Rivet
+        if rivet_config["postprocessing"]: # postprocessing = collect all HepMC files and run them at once
+            return rivet_config
+        else: # return None if not doing postprocessing
+            print ("Running RIVET NOT POSTPROCESSING")
+            print ("Running RIVET NOT POSTPROCESSING")
+            print ("Running RIVET NOT POSTPROCESSING")
+            print ("Running RIVET NOT POSTPROCESSING")
+
+            misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+            return None
+
 
     def do_madanalysis5_hadron(self, line):
         """launch MadAnalysis5 at the hadron level."""
@@ -3588,7 +3644,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
                       'reweight_card.dat','pythia8_card.dat',
                       'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
-                      'plot_card.dat']
+                      'plot_card.dat',
+                      'rivet_card.dat']
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
@@ -4517,7 +4574,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
                      'madweight_card', 'MadLoopParams', 'shower_card', 'rivet_card']
     to_init_card = ['param', 'run', 'madweight', 'madloop', 
-                    'shower', 'pythia8','delphes','madspin']
+                    'shower', 'pythia8','delphes','madspin', 'rivet']
     special_shortcut = {}
     special_shortcut_help = {}
     
@@ -4579,6 +4636,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
+        self.paths['rivet_default'] = pjoin(self.me_dir,'Cards','rivet_card_default.dat')
         self.paths['rivet'] = pjoin(self.me_dir,'Cards','rivet_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
         self.paths['plot_default'] = pjoin(self.me_dir,'Cards','plot_card_default.dat')
@@ -4892,7 +4950,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             'mpi' : 'syntax: set mpi value: allow to turn mpi in Pythia8 on/off',
              })
         return []
-        
+
+    def init_rivet(self, cards):
+
+        self.has_rivet = False
+        if not self.get_path('rivet', cards):
+            return []
+        self.has_rivet = True
+
+        return []
+
     def init_madspin(self, cards):
         
         if not self.get_path('madspin', cards):
@@ -5174,7 +5241,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['pythia8_card'] = ''
             if self.has_delphes:
                 allowed['delphes_card'] = ''
-                
+            if self.has_rivet:
+                allowed['rivet_card'] = ''
+        
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -5196,6 +5265,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'shower_card':'default'}
             elif args[1] == 'delphes_card':
                 allowed = {'delphes_card':'default'}
+            elif args[1] == 'rivet_card':
+                allowed = {'rivet_card':'default'}
             else:
                 allowed = {'value':''}
 
@@ -5203,7 +5274,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
                             'MadLoop_card','pythia8_card','delphes_card','plot_card',
-                            'madanalysis5_parton_card','madanalysis5_hadron_card']:
+                            'madanalysis5_parton_card','madanalysis5_hadron_card', 'rivet_card']:
                 start = 2
 
             if args[-1] in list(self.pname2block.keys()):
@@ -5238,7 +5309,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 categories.append('pythia8_card')
             if self.has_delphes:
                 categories.append('delphes_card')
-            
+            if self.has_rivet:
+                categories.append('rivet_card')
+
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
         
@@ -5505,7 +5578,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
-            
+
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
 
@@ -7071,7 +7144,6 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                       iteratorclass=param_card_mod.ParamCardIterator,
                       summaryorder=lambda obj: lambda:None,
                       check_card=lambda obj: CommonRunCmd.static_check_param_card,
-                      postprocessing: None
                       ):
     """ This is a decorator for customizing/using scan over the param_card (or technically other)
     This should be use like this:
@@ -7181,8 +7253,6 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
                 logger.info("write scan results in %s" % path ,'$MG:BOLD')
                 order = summaryorder(obj)()
                 param_card_iterator.write_summary(path, order=order)
-                if postprocessing:
-                    postprocessing(obj, param_card_iterator)
 
         return new_fct
     return decorator    
