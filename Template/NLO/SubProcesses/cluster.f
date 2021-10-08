@@ -1,7 +1,8 @@
       subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
      $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
-C alpha_S scale setting. Should be called with iproc=0 for n-body
+C renormalisation scale setting (to be used to somewhere else to
+C reweight alphaS). Should be called with iproc=0 for n-body
 C contributions and iproc=nFKSprocess for the real-emissions. These
 C routines assume that the c_configuration common block has already been
 C filled with the iforest etc. information, the momenta are given in the
@@ -101,7 +102,7 @@ c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
          skip_first=.false.
       else
-         skip_first=.true.
+         skip_first=.true. ! for real-emission: skip the first clustering
       endif
       call set_array_indices(iproc,cluster_conf,il_list,il_pdg)
       need_matching(1:nexternal)=-99
@@ -260,8 +261,9 @@ c daughters correctly.
 
 c Set the type of the clustered particle. Use binary coding, since some
 c clustered particles can be multiple types (e.g. gluon/photon splitting
-c to a quark anti-quark pair). We use this to determine the clustering
-c scale in 'cluster_one_step'.
+c to a quark anti-quark pair) and through summing the binary labels, we
+c can keep track of that information. We use this to determine the
+c clustering scale in 'cluster_one_step'.
       do ibr=1,nbr*2
          iclus=cluster_list(ibr)
          imo=cluster_pdg(0,ibr)
@@ -273,6 +275,8 @@ c scale in 'cluster_one_step'.
       end
 
       subroutine set_particle_type(itype,ico,mass)
+c Based on the colour (ico) and mass of the particle, use a binary
+c labeling for the particle-type.
       implicit none
       integer ico,itype
       double precision mass
@@ -601,11 +605,6 @@ c factorisation scale if need be)
          qcd_fac_scale=qcd_ren_scale(0)
       endif
 
-c$$$      write (*,*) nqcdrenscale,skip_first
-c$$$      write (*,*) qcd_ren_scale(0:nqcdrenscale)
-c$$$      write (*,*) need_matching
-c$$$      write (*,*) '    sud:',sudakov,expanded_sudakov
-      
       return
       end
 
@@ -1190,8 +1189,6 @@ c     final state clustering
             enddo
             call get_clustering_type(cl,itype)
 c Different scale depending on itype:
-c No low pT divergence, but very few Weak-Jet contributions
-c 
             if (itype.eq.1 .or. itype.eq.6 .or.itype.eq.2 .or.
      $          itype.eq.3 .or. itype.eq.7) then
                cluster_scale=sqrt(dj_clus(pi,pj))
@@ -1202,17 +1199,6 @@ c
             elseif (itype.eq.8) then
                cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
             endif
-c
-c Common scale geometrical average:
-c No low pT divergence, normal Weak-Jet contributions, but no smooth transition on merging scale point
-c            cluster_scale=sqrt( sqrt(dj_clus(pi,pj))*
-c     $                    sqrt(abs(dot(pi,pj)/2)) )
-c
-c Default scale for checks
-c Large Weak-Jet contributions, but low pT divergence and no smooth transition on merging scale point
-c Minimum ptj cut in cuts.f is put for divergence and checked that the no smooth transition is on the QCD-jets
-c            cluster_scale=sqrt(dj_clus(pi,pj))
-c
          endif
       endif
       end
