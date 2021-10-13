@@ -3283,8 +3283,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
         if run_mode in [0, 2]:
-            self.cluster = cluster.MultiCore(**self.options)
-            self.cluster.nb_core = nb_core
+            if not( hasattr(self, 'cluster')
+                    and isinstance(self.cluster, cluster.MultiCore) 
+                    and self.cluster.nb_core == nb_core):
+                self.cluster = cluster.MultiCore(**self.options)
+                self.cluster.nb_core = nb_core
         #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
