@@ -114,6 +114,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                 args[1] = 'loop' 
 
     def check_add(self, args):
+
+        # this is for the Sudakov approximation of EW corrections
+        logger.warning('Generating a process including the Sudakov approximation of EW corrections.\n' + \
+                       'Please cite arxiv:2110.03714')
+        if "--ewsudakov" in args:
+            self.ewsudakov = True
+            args.remove('--ewsudakov')
         
         super(CheckFKS, self).check_add(args)        
         if '$' in args:
@@ -438,6 +445,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         
         args = self.split_arg(line)
         # Check the validity of the arguments
+        self.ewsudakov = False
+
         self.check_add(args)
 
         if args[0] == 'model':
@@ -453,14 +462,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         #validate_model will reset self._generate_info; to avoid
         #this store it
         geninfo = self._generate_info
-
-        # this is for the sudakov approx of EW corrections 
-        self.ewsudakov = False
-        if 'SDK' in proc_type[2]:
-            proc_type[2].remove('SDK')
-            line = line.replace('SDK', '')
-            self.ewsudakov = True
-            logger.warning('LINE' + line)
 
         # this warning is to remind us that for the moment adding EW sudakov
         # corrections lacks the LO2 contributions unless EW corrections are
