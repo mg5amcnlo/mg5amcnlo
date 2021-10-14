@@ -3352,7 +3352,7 @@ class RunCardLO(RunCard):
         
                 if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
                     logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
-                time.sleep(5)
+                    time.sleep(5)
 
         # check that fixed_fac_scale(1/2) is setting as expected
         # if lpp=2/3/4 -> default is that beam in fixed scale
