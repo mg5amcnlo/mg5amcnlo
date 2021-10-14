@@ -4933,6 +4933,10 @@ This implies that with decay chains:
             if part_name.startswith('!') and part_name.endswith('!'):
                 part_name = part_name[1:-1]
                 is_tagged = True
+            elif part_name.endswith('!') and part_name.count('!') == 2 and part_name[:part_name.find('!')].isdigit():
+                part_name = part_name.replace('!','')
+                is_tagged = True
+#                misc.sprint(part_name)
             else:
                 is_tagged = False
 

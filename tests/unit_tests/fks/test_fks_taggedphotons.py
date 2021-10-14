@@ -27,8 +27,8 @@ import os
 import madgraph.fks.fks_helas_objects as fks_helas
 import copy
 import madgraph.iolibs.save_load_object as save_load_object
-
-
+import madgraph
+import madgraph.various.misc as misc
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.dirname(root_path)
 # root_path is ./tests
@@ -46,10 +46,12 @@ class TestAMCatNLOEWTagPh(unittest.TestCase):
         and FKS partners"""
         cmd_list = [
             'u u~ > a a [real=QED]',
-            'u u~ > !a! !a! [real=QED]',]
+            'u u~ > !a! !a! [real=QED]',
+            'u u~ > !2a!  [real=QED]',
+            'u u~ > 2!a! [real=QED]'] 
 
-        nrealproc_list = [9, 3]
-        fks_j_list = [[1,2,3], [1,2]] # 4 is not there in the first set for symmetry
+        nrealproc_list = [9, 3, 3, 3]
+        fks_j_list = [[1,2,3], [1,2], [1,2], [1,2]] # 4 is not there in the first set for symmetry
 
 
         for cmd, nrealproc, fks_j in \
@@ -61,4 +63,18 @@ class TestAMCatNLOEWTagPh(unittest.TestCase):
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
             self.assertEqual(set([r.fks_infos[0]['j'] for r in fksprocess.real_amps]), set(fks_j))
             
+    def test_invalid_syntax_tag(self):
 
+        cmd = "u u~ > !a! !a!"
+        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+
+        cmd = "u u~ > !z! a [real=QED]"
+        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+
+        cmd = "u u~ > !t! t~ a [real=QED]"
+        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+
+        cmd = "u u~ > !a! a [real=QCD]" # is this valid ? I guess NOT [note this is QCD]
+        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+
+        
