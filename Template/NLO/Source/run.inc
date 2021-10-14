@@ -1,6 +1,6 @@
 c**************************************************************
 c    run.inc 
-c logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
+
 c**************************************************************
 c
 c     Scales

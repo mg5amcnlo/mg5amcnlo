@@ -151,18 +151,12 @@ c
       nndim=ndim
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
-      if(lpp(1) ==1 .and.lpp(2)==1) then
-          if( ( fixed_fac_scale1 .and. fixed_fac_scale2 .and.
-     #         (muF1_over_ref*muF1_ref_fixed) .ne.
-     #         (muF2_over_ref*muF2_ref_fixed) ) .or.
-     #         ( (.not.fixed_fac_scale1 .and..not.fixed_fac_scale2 ) .and.
-     #          muF1_over_ref.ne.muF2_over_ref ).or.
-     #        (fixed_fac_scale1 .and. .not. fixed_fac_scale2 .and.
+      if(abs(lpp(1)) ==1 .and.abs(lpp(2))==1) then ! pp collisions case
+          if( (( fixed_fac_scale1 .and. fixed_fac_scale2) .and. 
      #         (muF1_over_ref*muF1_ref_fixed) .ne.
      #         (muF2_over_ref*muF2_ref_fixed) ).or.
-     #        (fixed_fac_scale2 .and. .not. fixed_fac_scale1 .and.
-     #         (muF1_over_ref*muF1_ref_fixed) .ne.
-     #         (muF2_over_ref*muF2_ref_fixed) ) )then
+     #( (.not.fixed_fac_scale1 .and..not.fixed_fac_scale2 ) .and.
+     #         ( muF1_over_ref.ne.muF2_over_ref )) )then
              write(*,*)'NLO computations require muF1=muF2'
              stop
           endif

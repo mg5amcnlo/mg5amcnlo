@@ -124,9 +124,9 @@ c     saved. 'pdflast' is filled below.
 
       if(iabs(ipart).eq.7.and.ih.gt.1) then
          q2max=xmu*xmu
-         if(ih.eq.3) then       !from the electron
-            pdg2pdf=epa_electron(x,q2max)
-         elseif(ih .eq. 2) then !from a proton without breaking
+         if(abs(ih).eq. 3 .or. abs(ih) .eq. 4) then !from the electron(ih=3)or muon(ih=4)  
+            pdg2pdf=epa_electron(x,q2max,abs(ih))
+         elseif(abs(ih) .eq. 2) then !from a proton without breaking
             pdg2pdf=epa_proton(x,q2max)
          endif 
          pdflast(iporg,i_replace)=pdg2pdf

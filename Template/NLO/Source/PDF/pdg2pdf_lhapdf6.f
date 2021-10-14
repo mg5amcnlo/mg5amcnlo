@@ -37,6 +37,7 @@ C
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
      &     ,i_replace,ii,ipartlast(20),isetlast(20)
       double precision xlast(20),xmulast(20),pdflast(20)
+      double precision epa_proton, epa_electron
       save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
       data ipartlast/20*-99/
@@ -125,14 +126,23 @@ c Calculated a new value: replace the value computed longest ago
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      call evolvepartm(iset,ipart,x,xmu,pdg2pdf)
-      pdg2pdf=pdg2pdf/x
-      pdflast(i_replace)=pdg2pdf
+      if(abs(ih).eq.1) then
+          call evolvepartm(iset,ipart,x,xmu,pdg2pdf)
+          pdg2pdf=pdg2pdf/x
+      else if(abs(ih).eq.3.or.abs(ih).eq.4) then  !from the electron or muon
+            pdg2pdf=epa_electron(x,xmu*xmu, abs(ih))
+      else if(abs(ih).eq.2) then                          ! photon from a proton without breaking
+          pdg2pdf = epa_proton(x,xmu*xmu)  
+      else
+         write (*,*) 'beam type not supported in lhapdf'
+         stop 1
+      endif 
       xlast(i_replace)=x
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih
       imemlast(i_replace)=imem
       isetlast(i_replace)=iset
+      pdflast(i_replace)=pdg2pdf
 c
       return
       end

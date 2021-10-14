@@ -5,25 +5,26 @@ c/*   V.M.Budnev et al., Phys.Rep. 15C (1975) 181          * */
 c/* ********************************************************* */
 c   provided by Tomasz Pierzchala - UCL
 
-      real*8 function epa_electron(x,q2max)
-      integer i
+      real*8 function epa_electron(x,q2max,mode)
+      integer i,mode,imode
       real*8 x,phi_f
-      real*8 xin
+      real*8 xin(3:4)
       real*8 alpha
       real*8 f, q2min,q2max
       real*8 PI
       data PI/3.14159265358979323846/
 
-      data xin/0.511d-3/ !electron mass in GeV
+      data xin/0.511d-3 , 0.105658d0/ !electron & muon mass in GeV
 
       alpha = .0072992701
+      imode = abs(mode)
 
 C     // x = omega/E = (E-E')/E
       if (x.lt.1) then
-         q2min= xin*xin*x*x/(1-x)
+         q2min= xin(imode)*xin(imode)*x*x/(1-x)
          if(q2min.lt.q2max) then 
             f = alpha/2d0/PI*
-     &           (2d0*xin*xin*x*(-1/q2min+1/q2max)+
+     &           (2d0*xin(imode)*xin(imode)*x*(-1/q2min+1/q2max)+
      &           (2-2d0*x+x*x)/x*dlog(q2max/q2min))
             
          else
@@ -35,7 +36,6 @@ C     // x = omega/E = (E-E')/E
 c      write (*,*) x,dsqrt(q2min),dsqrt(q2max),f
       if (f .lt. 0) f = 0
       epa_electron= f
-
       end
 
       real*8 function epa_proton(x,q2max)
@@ -45,6 +45,7 @@ c      write (*,*) x,dsqrt(q2min),dsqrt(q2max),f
       real*8 alpha,qz
       real*8 f, qmi,qma, q2max
       real*8 PI
+      
       data PI/3.14159265358979323846/
 
       data xin/0.938/ ! proton mass in GeV

@@ -322,8 +322,8 @@ c
 c  a "diffractive" photon
 c      
       q2max=xmu*xmu
-      if(ih .eq. 3) then  !from the electron
-          fx(7)=epa_electron(x,q2max)
+      if(abs(ih) .eq. 3.or.abs(ih) .eq. 4) then  !from the electron if ih=3 and muon if ih=4
+          fx(7)=epa_electron(x,q2max,ih)
       elseif(ih .eq. 2) then  !from a proton without breaking
           fx(7)=epa_proton(x,q2max)
       endif      
