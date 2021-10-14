@@ -6383,12 +6383,13 @@ class UFO_model_to_mg4(object):
         #    G.expr = '2*cmath.sqrt(as*pi)'
         #    self.params_indep.insert(0, self.params_dep.pop(index))
         # No need to add it if not defined   
-            
-        if 'aS' not in self.params_ext:
+
+        if 'aS' not in self.params_ext and 'aS' not in self.params_indep:
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
             self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -7351,23 +7352,21 @@ class UFO_model_to_mg4(object):
         data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
         data['mp'] = ''
+        data['check_scale'] = ''
         
         if len(scales) == 1:
             data['scale'] = scales.pop()
-            data['check_scale'] = ''
         else:
             one_scale = scales.pop()
             data['scale'] = one_scale
             for scale in scales:
-                check_scale = """ if (%(1)s!=%(2)s) then
+                check_scale = """ if (MDL__%(1)s__SCALE.ne.MDL__%(2)s__SCALE) then
                 write(*,*) 'ERROR scale %(1)s and %(2)s need to be equal for the running'
                 stop 5
                 endif
                 """
                 data['check_scale'] += check_scale % {'1': one_scale, '2': scale}           
-            
-            
-            raise Exception
+
         # need to compute the matrices
         # carefull some component are proportional to aS
         # need to convert those to G^2
