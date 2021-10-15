@@ -96,6 +96,9 @@ class Systematics(object):
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
+        scalefact = self.banner.get('run_card', 'scalefact')
+        if scalefact != 1:
+            self.orig_dyn = -1
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
         matching_mode = self.banner.get('run_card', 'ickkw')
 

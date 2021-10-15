@@ -3311,8 +3311,8 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
-                                                allowed=[-1,0,1,2,3,4])
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n",
+                                                allowed=[-1,0,1,2,3,4,5,6])
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
@@ -3553,10 +3553,10 @@ class RunCardLO(RunCard):
             self['iseed'] = self['gseed']
         
         #Some parameter need to be fixed when using syscalc
-        if self['use_syst']:
-            if self['scalefact'] != 1.0:
-                logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
-                self['scalefact'] = 1.0
+        #if self['use_syst']:
+        #    if self['scalefact'] != 1.0:
+        #        logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
+        #        self['scalefact'] = 1.0
      
         # CKKW Treatment
         if self['ickkw'] > 0:
@@ -3899,12 +3899,6 @@ class RunCardLO(RunCard):
                         self['lpp2']    = -math.copysign(4,i)
                         self['ebeam1']  = '15k'
                         self['ebeam2']  = '15k'
-            else:
-                self['lpp1'] = 0
-                self['lpp2'] = 0    
-                self['use_syst'] = False   
-                self.display_block.append('beam_pol')  
-                self.display_block.append('ecut')  
 
             if any(i in beam_id for i in [22,23,24,-24,12,-12,14,-14]):
                 self.display_block.append('eva_scale')
