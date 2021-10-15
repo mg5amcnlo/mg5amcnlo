@@ -4564,11 +4564,12 @@ class RunCardNLO(RunCard):
             for leg in proc['legs']:
                 if leg['is_tagged']:
                     tagged_particles.add(leg['id'])
+            min_particle = min(len(proc['legs']), min_particle)
+            max_particle = max(len(proc['legs']), max_particle)
 
         if 22 in tagged_particles:
             self['gamma_is_j'] = False
-            min_particle = min(len(proc['legs']), min_particle)
-            max_particle = max(len(proc['legs']), max_particle)
+
         matching = False
         if min_particle != max_particle:
             #take one of the process with min_particle
