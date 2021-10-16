@@ -225,11 +225,11 @@ c     saved. 'pdflast' is filled below.
 
       if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
          if(iabs(ipart).ne.7.and.
-     &      iabs(ipart).ne.12.and.
-     &      iabs(ipart).ne.14.and.     
+c     &      iabs(ipart).ne.12.and.
+c     &      iabs(ipart).ne.14.and.     
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
-            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W/ve/vm, not for pdg = ',ipart
+            write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
             stop 7142324
          else
 c         write(*,*) 'running eva'
