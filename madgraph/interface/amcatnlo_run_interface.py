@@ -58,6 +58,8 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
 
+__maxint__ = 2**31 - 1
+
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
@@ -2533,9 +2535,12 @@ RESTART = %(mint_mode)s
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
-            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
-                # determine the number of splits needed
-                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job) \
+                    or job['npoints'] >= __maxint__:
+                # determine the number of splits needed; the second condition 
+                # (job['npoints'] >= __maxint__) prevents integer overflow in fortran
+                nsplit = min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+                nsplit*= int(job['npoints'] / __maxint__) + 1
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
@@ -2547,6 +2552,11 @@ RESTART = %(mint_mode)s
                         job_new['niters']=1
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
+
+                    if job_new['npoints'] > __maxint__:
+                        raise aMCatNLOError('Too many point for the job. Fortran will likely crash' + \
+                                        'for integer overflow. %d' % job_new['npoints'])
+
                     jobs_to_collect_new.append(job_new)
                     jobs_to_run_new.append(job_new)
             else:
