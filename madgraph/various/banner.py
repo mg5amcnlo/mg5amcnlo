@@ -4137,7 +4137,6 @@ class RunCardNLO(RunCard):
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
-        #self.add_param('fixed_fac_scale', False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define  fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam") 
         self.add_param("fixed_fac_scale1", False, hidden=True) # added new parameters
         self.add_param("fixed_fac_scale2", False, hidden=True)
@@ -4256,9 +4255,6 @@ class RunCardNLO(RunCard):
                 else:
                     self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = self['fixed_fac_scale']
-#                    if 'muf_ref_fixed' in self.user_set:
-#                        self['muf1_ref_fixed']= self['muf_ref_fixed']
-#                        self['muf2_ref_fixed']= self['muf_ref_fixed']
             elif self['lpp1'] !=0 or self['lpp2']!=0:
                 raise Exception('fixed_fac_scale not defined within your run_card. Plase fix this.')
         if 'muf1_ref_fixed' in self.user_set:
@@ -4332,6 +4328,12 @@ class RunCardNLO(RunCard):
             self['muf1_over_ref']=self['muf_over_ref']
         if self['muf2_over_ref'] == -1.0:
             self['muf2_over_ref']=self['muf_over_ref']
+        if self['muf1_ref_fixed'] != -1.0 and self['muf1_ref_fixed'] == self['muf2_ref_fixed']:
+            self['muf_ref_fixed']=self['muf1_ref_fixed']
+        if self['muf1_ref_fixed'] == -1.0:
+            self['muf1_ref_fixed']=self['muf_ref_fixed']
+        if self['muf2_ref_fixed'] == -1.0:
+            self['muf2_ref_fixed']=self['muf_ref_fixed']    
         # overwrite rw_rscale and rw_fscale when rw_(r/f)scale_(down/up) are explicitly given in the run_card for backward compatibility.
         if (self['rw_rscale_down'] != -1.0 and ['rw_rscale_down'] not in self['rw_rscale']) or\
            (self['rw_rscale_up'] != -1.0 and ['rw_rscale_up'] not in self['rw_rscale']):

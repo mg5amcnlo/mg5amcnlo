@@ -130,7 +130,7 @@ c     be saved
           call evolvepartm(iset,ipart,x,xmu,pdg2pdf)
           pdg2pdf=pdg2pdf/x
       else if(abs(ih).eq.3.or.abs(ih).eq.4) then  !from the electron or muon
-            pdg2pdf=epa_electron(x,xmu*xmu, abs(ih))
+            pdg2pdf=epa_electron(x,xmu*xmu, ih)
       else if(abs(ih).eq.2) then                          ! photon from a proton without breaking
           pdg2pdf = epa_proton(x,xmu*xmu)  
       else

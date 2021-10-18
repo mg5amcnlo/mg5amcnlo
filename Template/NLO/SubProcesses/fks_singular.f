@@ -1589,20 +1589,20 @@ C Secondly, the more advanced filter
       bjx(2,icontr)=xbk(2)
       scales2(1,icontr)=QES2
       scales2(2,icontr)=scale**2
-      if (fixed_fac_scale1.and. .not.fixed_fac_scale2 ) then
-          scales2(3,icontr)=q2fact(2)
-      elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-          scales2(3,icontr)=q2fact(1)
-      elseif(fixed_fac_scale1.and. fixed_fac_scale2) then
-          if(lpp(1).ne.1.and.lpp(2)==1)then
-              scales2(3,icontr)=q2fact(2)
-          elseif(lpp(2).ne.1.and.lpp(1)==1)then
+      if (fixed_fac_scale1.and. .not.fixed_fac_scale2 ) then !"factorisation scale squared used to compute the
+          scales2(3,icontr)=q2fact(2)                        ! weight depends on beam2"
+      elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then !"factorisation scale squared used to compute 
+          scales2(3,icontr)=q2fact(1)                           !the weight depends on beam1"
+      elseif(fixed_fac_scale1.and. fixed_fac_scale2) then !"If both of the factorisation scales are fixed
+          if(abs(lpp(1)).ne.1.and.abs(lpp(2))==1)then      !then check which of the beam is proton beam and 
+              scales2(3,icontr)=q2fact(2)             ! consider that one".
+          elseif(abs(lpp(2)).ne.1.and.abs(lpp(1))==1)then
               scales2(3,icontr)=q2fact(1)
           else
-              scales2(3,icontr)=q2fact(1)
+              scales2(3,icontr)=q2fact(1) !"In pp collisions at fixed fact scale,the choice does not matter" 
           endif
       else
-          scales2(3,icontr)=q2fact(1) 
+          scales2(3,icontr)=q2fact(1) !"In pp collisions at dynamical scale,the choice does not matter also"
       endif
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
@@ -1734,7 +1734,7 @@ c call to separate_flavour_config().
          mu2_q=scales2(1,i)
          mu2_r=scales2(2,i)
          mu2_f=scales2(3,i)
-         if (lpp(1)==1 .and. lpp(2)==1)then
+         if (abs(lpp(1))==1 .and. abs(lpp(2))==1)then
              q2fact(1)=mu2_f
              q2fact(2)=mu2_f
          else    
@@ -2113,7 +2113,7 @@ c factorisation scale variation (require recomputation of the PDFs)
             do kf=1,nint(scalevarF(0))
                if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
-               if (lpp(1)==1 .and. lpp(2)==1)then
+               if (abs(lpp(1))==1 .and. abs(lpp(2))==1)then
                    q2fact(1)=mu2_f(kf) 
                    q2fact(2)=mu2_f(kf)
                else
@@ -2228,7 +2228,7 @@ c soft scale variation
                mu2_r(ks)=scales2(2,i)*scalevarR(ks)**2
                g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
                mu2_f(ks)=scales2(2,i)*scalevarR(ks)**2
-               if (lpp(1)==1 .and. lpp(2)==1)then
+               if (abs(lpp(1))==1 .and. abs(lpp(2))==1)then
                    q2fact(1)=mu2_f(ks) 
                    q2fact(2)=mu2_f(ks)
                else
@@ -2321,7 +2321,7 @@ c allows for better caching of the PDFs
                mu2_q=scales2(1,i)
                mu2_r=scales2(2,i)
                mu2_f=scales2(3,i)
-               if (lpp(1)==1 .and. lpp(2)==1)then
+               if (abs(lpp(1))==1 .and. abs(lpp(2))==1)then
                    q2fact(1)=mu2_f
                    q2fact(2)=mu2_f
                else
@@ -5705,7 +5705,7 @@ c For the MINT folding
       double precision bsv_wgt_mufoqes, bsv_wgt_mufomur
       double precision contr_mufoqes, contr_mufomur
 C to keep track of the various split orders
-      integer iamp
+      integer iamp, bid
       integer orders(nsplitorders)
       double precision amp_split_born(amp_split_size)
       double precision amp_split_bsv(amp_split_size)
@@ -6052,18 +6052,19 @@ c eq.(MadFKS.C.13)
             wgtcpower=0d0
             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
-                    contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $              +ren_group_coeff*wgtcpower)*log(q2fact(2)/QES2)*aso2pi
-     $              *dble(amp_split_cnt(iamp,1,qcd_pos))
+                    bid=2
                 elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-                    contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $              +ren_group_coeff*wgtcpower)*log(q2fact(1)/QES2)*aso2pi
-     $              *dble(amp_split_cnt(iamp,1,qcd_pos))
-                else 
-                   contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $             +ren_group_coeff*wgtcpower)*log(q2fact(2)/QES2)*aso2pi
-     $             *dble(amp_split_cnt(iamp,1,qcd_pos))
+                    bid=1
+                elseif (fixed_fac_scale2.and.fixed_fac_scale1) then
+                    if(abs(lpp(1)).ne.1.and.abs(lpp(2))==1) bid=2
+                    if(abs(lpp(2)).ne.1.and.abs(lpp(1))==1) bid=1
+                    if(abs(lpp(2)).eq.1.and.abs(lpp(1)).eq.1) bid=1 
+                else
+                    bid=1    
                 endif
+            contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $             +ren_group_coeff*wgtcpower)*log(q2fact(bid)/QES2)*aso2pi
+     $             *dble(amp_split_cnt(iamp,1,qcd_pos))    
             amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufoqes
             bsv_wgt_mufoqes=bsv_wgt_mufoqes+contr_mufoqes
          enddo
@@ -6079,18 +6080,20 @@ c  eq.(MadFKS.C.14)
             wgtcpower=0d0
             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
-                    contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $           +ren_group_coeff*wgtcpower)*log(q2fact(2)/scale**2)
-     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
-                elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-                    contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $           +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)
-     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+                    bid=2            !"beam2 factorisation scale has been used
+                elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then 
+                    bid=1            !"beam1 factorisation scale has been used
+                elseif (fixed_fac_scale2.and.fixed_fac_scale1) then
+       !for both fixed factorisation scale in case of  ap or pa collision proton beam should be used  
+                    if(abs(lpp(1)).ne.1.and.abs(lpp(2))==1) bid=2  
+                    if(abs(lpp(2)).ne.1.and.abs(lpp(1))==1) bid=1
+                    if(abs(lpp(2)).eq.1.and.abs(lpp(1)).eq.1) bid=1 ! pp case 
                 else
-                   contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
-     $           +ren_group_coeff*wgtcpower)*log(q2fact(2)/scale**2)
-     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
+                    bid=1    
                 endif 
+            contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0
+     $           +ren_group_coeff*wgtcpower)*log(q2fact(bid)/scale**2)
+     $           *aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
             amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufomur
             bsv_wgt_mufomur=bsv_wgt_mufomur+contr_mufomur
          enddo
@@ -6176,24 +6179,21 @@ C     set charge factors
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
          if (fixed_fac_scale1.and. .not.fixed_fac_scale2) then
-             amp_split_wgtnstmp(1:amp_split_size) =
-     $         amp_split_bsv(1:amp_split_size)
-     $          -amp_split_born(1:amp_split_size)-log(q2fact(2)/QES2)
-     $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
-     $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+             bid=2
          elseif (fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-             amp_split_wgtnstmp(1:amp_split_size) =
-     $         amp_split_bsv(1:amp_split_size)
-     $          -amp_split_born(1:amp_split_size)-log(q2fact(1)/QES2)
-     $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
-     $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
+             bid=1
+         elseif (fixed_fac_scale2.and.fixed_fac_scale1) then
+             if(abs(lpp(1)).ne.1.and.abs(lpp(2))==1) bid=2
+             if(abs(lpp(2)).ne.1.and.abs(lpp(1))==1) bid=1
+             if(abs(lpp(2)).eq.1.and.abs(lpp(1)).eq.1) bid=1 
          else
-             amp_split_wgtnstmp(1:amp_split_size) =
+             bid=1           
+         endif
+         amp_split_wgtnstmp(1:amp_split_size) =
      $         amp_split_bsv(1:amp_split_size)
-     $          -amp_split_born(1:amp_split_size)-log(q2fact(2)/QES2)
+     $          -amp_split_born(1:amp_split_size)-log(q2fact(bid)/QES2)
      $           *amp_split_wgtwnstmpmuf(1:amp_split_size)-log(scale**2
      $           /QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
-         endif
       endif
 
       amp_split(1:amp_split_size)=amp_split_bsv(1:amp_split_size)
@@ -6208,17 +6208,20 @@ c we need the pure NLO terms only
 
          print*,"           "
          write(*,123)((p(i,j),i=0,3),j=1,nexternal)
-         if (lpp(1)==1 .and.lpp(2)==1) then
-             xmu2=q2fact(1)
+         if (abs(lpp(1))==1 .and.abs(lpp(2))==1) then  ! "for pp case factorisation scale does not depend on 
+             bid=1                  ! which beam to compute NLO calculation"            
          else
-             if(fixed_fac_scale1.and. .not.fixed_fac_scale2) then
-                 xmu2=q2fact(2)
-             elseif(fixed_fac_scale2.and. .not.fixed_fac_scale1) then
-                 xmu2=q2fact(1)    
+             if(fixed_fac_scale1.and. .not.fixed_fac_scale2) then ! "beam2 factorisation scale has been used 
+                 bid=2                                            ! for NLO computation"   
+             elseif(fixed_fac_scale2.and. .not.fixed_fac_scale1) then ! "beam1 factorisation scale has been 
+                 bid=1                                                ! used for NLO computation"
              elseif(fixed_fac_scale2.and.fixed_fac_scale1) then
-                 xmu2=q2fact(2)
+                 if(abs(lpp(1)).ne.1 .and.abs(lpp(2))==1)  bid=2  !"at fixed factorisation scale NLO 
+                 if(abs(lpp(2)).ne.1 .and.abs(lpp(1))==1)  bid=1  !computation  depends on proton beam"
              endif    
-         endif    
+         endif 
+         xmu2=q2fact(bid) 
+         write(*,*)'check xmu2 depending on coliision',xmu2  
          call getpoles(p,xmu2,double,single,fksprefact)
          print*,"BORN",born_wgt!/conv
          print*,"DOUBLE",double
@@ -6228,7 +6231,6 @@ c         print*,"LOOP2",(virtcor+born_wgt*4d0/3d0-double*pi**2/6d0)
 c         stop
  123     format(4(1x,d22.16))
       endif
-c      write(*,*)'xmu2 value ',xmu2
  999  continue
       return
       end

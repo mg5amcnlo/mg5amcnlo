@@ -167,8 +167,8 @@ c Only do the reweighting when actually generating the events
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae 
 c at the NLO) In case of pp collision muF1=muF2!
       if(abs(lpp(1))==1 .and. abs(lpp(2))==1)then ! pp collisions cases
-           if( (( fixed_fac_scale1 .and. fixed_fac_scale2) .and.
-     #         (muF1_over_ref*muF1_ref_fixed) .ne.
+           if( (( fixed_fac_scale1 .and. fixed_fac_scale2) .and. !In pp case both of the factorisation scale
+     #         (muF1_over_ref*muF1_ref_fixed) .ne.               !choice should  same either True or False.
      #         (muF2_over_ref*muF2_ref_fixed)) .or. 
      # ((.not.fixed_fac_scale1 .and..not.fixed_fac_scale2 ) .and.
      #         ( muF1_over_ref.ne.muF2_over_ref )))then
