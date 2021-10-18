@@ -4,7 +4,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       MZ+CS: A fix in amcatnlo_run_interface to prevent integer overflows when a
         very high precision is requested.
       MZ+CS: the function pineappl_grid_optimize is called by pineappl_interface,
-        to reduce the size of the grids. PineAPPL v0.4.1 or later is required
+        to reduce the size of the grids. PineAPPL v0.5 or later is required
 
 3.1.2 (??/??/??)
       MZ+CS: Fixes relevant to PineAPPL: 
