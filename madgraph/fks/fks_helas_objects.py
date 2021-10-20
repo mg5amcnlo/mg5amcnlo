@@ -901,6 +901,7 @@ class FKSHelasRealProcess(object): #test written
     contains:
     -- colors
     -- charges
+    -- particle_tags
     -- i/j/ij fks, ij refers to the born leglist
     -- ijglu
     -- need_color_links
@@ -919,6 +920,7 @@ class FKSHelasRealProcess(object): #test written
         if fksrealproc != None:
             self.isfinite = False
             self.colors = fksrealproc.colors
+            self.particle_tags = fksrealproc.particle_tags
             self.charges = fksrealproc.charges
             self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate

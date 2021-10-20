@@ -5,8 +5,12 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer nwgt
       character*(*) weights_info(*)
       integer i,l
-      character*6 cc(2)
-      data cc/'|T@NLO','|T@LO '/
+c      character*6 cc(2)
+c      data cc/'|T@NLO','|T@LO '/
+      character*13 cc(9)
+      data cc/ ' |T@NLO      ',' |T@LO       ',' |T@LO1      '
+     $        ,' |T@LO2      ',' |T@LO3      ',' |T@NLO1     '
+     $        ,' |T@NLO2     ',' |T@NLO3     ',' |T@NLO4     '/
 
 c     Also specific perturbative orders can be directly plotted, adding for examples
 c     the following further entries in the variable data
@@ -18,8 +22,8 @@ c     $        ,' |T@QCD2QED6 ',' |T@QCD0QED8 '
 c     
 c     See also line 376 in this file 
       call HwU_inithist(nwgt,weights_info)
-      do i=1,2
-      l=(i-1)*55
+      do i=1,9
+      l=(i-1)*59
 c transverse momenta
       call HwU_book(l+ 1,'total rate                 '//cc(i),1,0.5d0,1.5d0)
       call HwU_book(l+ 2,'1st charged lepton log pT  '//cc(i),25,-0.2d0,3.8d0)
@@ -76,6 +80,14 @@ c
 c HT
       call HwU_book(l+54,'log HT (partons)           '//cc(i),25,-0.2d0,3.8d0)
       call HwU_book(l+55,'log HT (reconstructed)     '//cc(i),25,-0.2d0,3.8d0)
+
+
+      call HwU_book(l+56,'1st isolated ph log pT     '//cc(i),25,-0.2d0,3.8d0)
+      call HwU_book(l+57,'2nd isolated ph log pT     '//cc(i),25,-0.2d0,3.8d0)
+      call HwU_book(l+58,'3rd isolated ph log pT     '//cc(i),25,-0.2d0,3.8d0)
+
+      call HwU_book(l+59,'3 isolated ph log M        '//cc(i),25,-0.2d0,3.8d0)
+
       enddo
       return
       end
@@ -110,7 +122,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $     ,ptmpmm,ptepve,ptmmvm,ptepemmpmm,ptepvemmvm,ptt,ptat,pttt
      $     ,etmiss,pth(2),pthh,ptv(3),ptjet(3),Mepem,Mmpmm,Mepve,Mmmvm
      $     ,Mepemmpmm,Mepvemmvm,Mtt,Mhh,Mj1j2,Mj1j3,Mj2j3,Mj1j2j3,Mvvv
-     $     ,HTparton,HTreco,p_reco(0:4,nexternal)
+     $     ,HTparton,HTreco,p_reco(0:4,nexternal),ptphiso(nexternal),Mphphph
       integer nQCD,jet(nexternal),njet,itop,iatop,iem,iep,imp,imm,ive
      $     ,ivm,iv1,iv2,iv3,ih1,ih2,il,ipdg_reco(nexternal)
       double precision getptv4,getptv4_2,getptv4_4,getinvm4_2
@@ -119,25 +131,47 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $     ,getinvm4_4,l10
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+
+
+c Photon isolation
+      integer nph,nem,nin,nphiso
+      double precision ptg,chi_gamma_iso,iso_getdrv40
+      double precision Etsum(0:nexternal)
+      real drlist(nexternal)
+      double precision pgamma(0:3,nexternal),pgammaiso(0:3,nexternal),pem(0:3,nexternal)
+      logical alliso,isolated
+c Sort array of results: ismode>0 for real, isway=0 for ascending order
+      integer ismode,isway,izero,isorted(nexternal)
+      parameter (ismode=1)
+      parameter (isway=0)
+      parameter (izero=0)
+      integer get_n_tagged_photons      
+
+
+      logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
+     $     ,is_a_ph(nexternal)
+      REAL*8 pt,eta
+      external pt,eta,chi_gamma_iso,sortzv
+c      integer iph1,iph2,iph3
 c First, try to recombine photons with leptons      
-      if (.not.quarkphreco) then
-         write (*,*) 'quark-photon recombination is turned off. '/
-     $        /'Do need it'
-         stop
-      endif
-      if (.not. lepphreco) then
-         write (*,*) 'lepton-photon recombination is turned off. '
-     $        //'Do need it.'
-         stop
-      endif
+c      if (.not.quarkphreco) then
+c         write (*,*) 'quark-photon recombination is turned off. '/
+c     $        /'Do need it'
+c         stop
+c      endif
+c      if (.not. lepphreco) then
+c         write (*,*) 'lepton-photon recombination is turned off. '
+c     $        //'Do need it.'
+c         stop
+c      endif
       call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
      $                       p, iPDG, p_reco, iPDG_reco)
 
 c Put all (light) QCD partons(+photon) in momentum array for jet clustering.
       nQCD=0
       do j=nincoming+1,nexternal
-         if (abs(ipdg_reco(j)).le.5 .or. ipdg_reco(j).eq.21 .or.
-     $        ipdg_reco(j).eq.22)then
+         if (abs(ipdg_reco(j)).le.5 .or. ipdg_reco(j).eq.21 
+     $      .or.  (ipdg_reco(j).eq.22.and.gamma_is_j)) then
             nQCD=nQCD+1
             do i=0,3
                pQCD(i,nQCD)=p_reco(i,j)
@@ -173,6 +207,161 @@ c
 c
 c******************************************************************************
 
+
+c PHOTON (ISOLATION) CUTS
+c
+c find the photons
+      do i=1,nexternal
+         if (istatus(i).eq.1 .and. ipdg(i).eq.22 .and. .not.gamma_is_j) then
+            is_a_ph(i)=.true.
+         else
+            is_a_ph(i)=.false.
+         endif
+      enddo
+      if (ptgmin.ne.0d0) then
+         nph=0
+         do j=nincoming+1,nexternal
+            if (is_a_ph(j)) then
+               nph=nph+1
+               do i=0,3
+                  pgamma(i,nph)=p(i,j)
+               enddo
+            endif
+         enddo
+         if(nph.eq.0)goto 444
+c         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
+c     $           // ' for mixed QED-QCD corrections'
+c         stop 1
+
+         if(isoEM)then
+            nem=nph
+            do k=1,nem
+               do i=0,3
+                  pem(i,k)=pgamma(i,k)
+               enddo
+            enddo
+            do j=nincoming+1,nexternal
+               if (is_a_lp(j).or.is_a_lm(j)) then
+                  nem=nem+1
+                  do i=0,3
+                     pem(i,nem)=p(i,j)
+                  enddo
+               endif
+            enddo
+         endif
+
+c         alliso=.true.
+         nphiso=0
+
+         j=0
+c         do while(j.lt.nph.and.alliso)
+         do while(j.lt.nph)
+
+c Loop over all photons
+            j=j+1
+
+            ptg=pt(pgamma(0,j))
+            if(ptg.lt.ptgmin)then
+               cycle
+c               return
+            endif
+            if (etagamma.gt.0d0) then
+               if (abs(eta(pgamma(0,j))).gt.etagamma) then
+                  cycle
+c                  return
+               endif
+            endif
+
+c Isolate from hadronic energy
+            do i=1,nQCD
+               drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pQCD(0,i)))
+            enddo
+            call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
+            Etsum(0)=0.d0
+            nin=0
+            do i=1,nQCD
+               if(dble(drlist(isorted(i))).le.R0gamma)then
+                  nin=nin+1
+                  Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
+               endif
+            enddo
+            isolated=.True.
+            do i=1,nin
+c               alliso=alliso .and.
+c     $              Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+c     $              R0gamma,xn,epsgamma,ptg)
+                if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $              R0gamma,xn,epsgamma,ptg)) then
+                    isolated=isolated.and..False.
+                endif
+            enddo
+            if(.not.isolated)cycle
+
+c Isolate from EM energy
+            if(isoEM.and.nem.gt.1)then
+               do i=1,nem
+                  drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pem(0,i)))
+               enddo
+               call sortzv(drlist,isorted,nem,ismode,isway,izero)
+c First of list must be the photon: check this, and drop it
+               if(isorted(1).ne.j.or.drlist(isorted(1)).gt.1.e-4)then
+                  write(*,*)'Error #1 in photon isolation'
+                  write(*,*)j,isorted(1),drlist(isorted(1))
+                  stop
+               endif
+               Etsum(0)=0.d0
+               nin=0
+               do i=2,nem
+                  if(dble(drlist(isorted(i))).le.R0gamma)then
+                     nin=nin+1
+                     Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
+                  endif
+               enddo
+               isolated=.True.
+               do i=1,nin
+c                  alliso=alliso .and.
+c     $               Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+c     $               R0gamma,xn,epsgamma,ptg)
+                if(Etsum(i).gt.chi_gamma_iso(dble(drlist(isorted(i))),
+     $               R0gamma,xn,epsgamma,ptg)) then
+                    isolated=isolated.and..False.
+                endif
+            enddo
+            if(.not.isolated)cycle
+            endif
+c End of loop over photons
+
+         nphiso=nphiso+1
+
+         do i=0,3
+           pgammaiso(i,nphiso)=pgamma(i,j)
+         enddo
+
+
+         enddo
+         if(nphiso.lt.get_n_tagged_photons())then
+            print*,"mismatch with cuts.f"
+            stop
+         endif
+
+
+444     continue
+c End photon isolation
+       endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 c Look for the other physics objects
       itop=0
       iatop=0
@@ -189,7 +378,14 @@ c Look for the other physics objects
       iv3=0
       ih1=0
       ih2=0
+c      iph1=0
+c      iph2=0
+c      iph3=0
+c          print*,"nell'analisi"
       do i=1,nexternal
+c          print*,"idpg di ",i,"=",ipdg(i)
+c          print*,"idpg_reco di ",i,"=",ipdg_reco(i)
+
          if (ipdg_reco(i).eq.6) then
             itop=i
          elseif(ipdg_reco(i).eq.-6) then
@@ -232,8 +428,27 @@ c Look for the other physics objects
                   stop
                endif
             endif
+c         elseif(abs(ipdg_reco(i)).eq.22.and.i.gt.nincoming) then
+c            if (iph1.eq.0) then
+c               iph1=i
+c            else
+c               if (iph2.eq.0) then
+c                  iph2=i
+c               else
+c                  if (iph3.eq.0) then
+c                      iph3=i
+c                  else  
+c                     write (*,*) 'too many photonss'
+c                     stop
+c                  endif
+c               endif
+c            endif
          endif
+
       enddo
+c      print*,itop,iatop
+c      stop
+
       if (itop.ne.0) ptt=getptv4(p_reco(0,itop))
       if (iatop.ne.0) ptat=getptv4(p_reco(0,iatop))
       if (itop.ne.0 .and. iatop.ne.0) then
@@ -318,9 +533,19 @@ c     order the higgs bosons (if there are 2)
             pth(2)=tmp
          endif
       endif
+
+
       if (iv1.ne.0) ptv(1)=getptv4(p_reco(0,iv1))
       if (iv2.ne.0) ptv(2)=getptv4(p_reco(0,iv2))
       if (iv3.ne.0) ptv(3)=getptv4(p_reco(0,iv3))
+      if (iv1.ne.0 .and. iv2.ne.0 .and. iv3.ne.0) then
+         Mvvv=getinvm4_3(p_reco(0,iv1),p_reco(0,iv2),p_reco(0,iv3))
+      endif
+
+      do i=1,nphiso
+         ptphiso(i)=getptv4(pgammaiso(0,i))
+      enddo
+
       if (iv1.ne.0 .and. iv2.ne.0 .and. iv3.ne.0) then
          Mvvv=getinvm4_3(p_reco(0,iv1),p_reco(0,iv2),p_reco(0,iv3))
 c     order the vector bosons (if there are 3)
@@ -341,6 +566,31 @@ c     order the vector bosons (if there are 2)
             ptv(2)=tmp
          endif
       endif
+
+
+
+
+      if (nphiso.eq.3) then
+         Mphphph=getinvm4_3(pgammaiso(0,1),pgammaiso(0,2),pgammaiso(0,3))
+c     order the isolated photons (if there are 3)
+         do i=1,2
+            do j=1,3-i
+               if (ptphiso(j).lt.ptphiso(j+1)) then
+                  tmp=ptphiso(j)
+                  ptphiso(j)=ptphiso(j+1)
+                  ptphiso(j+1)=tmp
+               endif
+            enddo
+         enddo
+      elseif (nphiso.eq.2) then
+c     order the isolated photons (if there are 2)
+         if (ptphiso(1).lt.ptphiso(2)) then
+            tmp=ptphiso(1)
+            ptphiso(1)=ptphiso(2)
+            ptphiso(2)=tmp
+         endif
+      endif
+      
       do i=1,njet
          ptjet(i)=getptv4(pjet(0,i))
       enddo
@@ -369,9 +619,18 @@ c
       enddo
       if (ive.ne.0 .or. ivm.ne.0) HTreco=HTreco+etmiss
          
-      do i=1,2
-         l=(i-1)*55
+      do i=1,9
+         l=(i-1)*59
          if (ibody.ne.3 .and.i.eq.2) cycle
+        if (i.eq. 3.and.orders_tag_plot.ne.204) cycle
+         if (i.eq. 4.and.orders_tag_plot.ne.402) cycle
+         if (i.eq. 5.and.orders_tag_plot.ne.600) cycle
+         if (i.eq. 6.and.orders_tag_plot.ne.206) cycle
+         if (i.eq. 7.and.orders_tag_plot.ne.404) cycle
+         if (i.eq. 8.and.orders_tag_plot.ne.602) cycle
+         if (i.eq. 9.and.orders_tag_plot.ne.800) cycle
+
+
 
 c         How to tag orders (QCD+QED*100)
 c
@@ -493,6 +752,18 @@ c invariant masses
 c HT
          call HwU_fill(l+54,l10(HTparton),wgts)
          call HwU_fill(l+55,l10(HTreco),wgts)
+
+         if (nphiso.ge.1) call HwU_fill(l+56,l10(ptphiso(1)),wgts)
+         if (nphiso.ge.2) call HwU_fill(l+57,l10(ptphiso(2)),wgts)
+         if (nphiso.ge.3) call HwU_fill(l+58,l10(ptphiso(3)),wgts)
+
+         if (nphiso.ge.3) call HwU_fill(l+59,l10(Mphphph),wgts)
+
+
+
+
+
+
       enddo
 
  999  return      
