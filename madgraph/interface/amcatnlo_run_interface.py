@@ -2021,8 +2021,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
-            # gather the various orders tag and write include files
-            self.write_orders_tag_info()
+            # gather the various orders tag and write include files (only needed once)
+            if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat')):
+                self.write_orders_tag_info()
 
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
