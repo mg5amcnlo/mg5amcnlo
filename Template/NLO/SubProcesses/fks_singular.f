@@ -2190,11 +2190,13 @@ c (and nbody_noborn) contributions, use the weights of those instead).
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       integer i,j,ict,iFKS
-      double precision wgt_fks(fks_configs),ran2,target
-     $     ,tmp_scale(fks_configs),showerscale,wgt_sum,wgt_accum
+      double precision wgt_fks(fks_configs),wgt_fks_born(fks_configs)
+     $     ,ran2,target,tmp_scale(fks_configs),showerscale,wgt_sum
+     $     ,wgt_accum
       external ran2
       do iFKS=1,fks_configs
          wgt_fks(iFKS)=0d0
+         wgt_fks_born(iFKS)=0d0
          tmp_scale(iFKS)=-1d0
       enddo
 c Collect the weights that contribute to a given FKS configuration.
@@ -2203,7 +2205,14 @@ c Collect the weights that contribute to a given FKS configuration.
          if (icontr_sum(0,i).eq.0) cycle
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
-            wgt_fks(nFKS(ict)) = wgt_fks(nFKS(ict))+wgts(1,ict)
+            if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
+     $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
+     $           itype(ict).ne.15) then
+               wgt_fks(nFKS(ict)) = wgt_fks(nFKS(ict))+wgts(1,ict)
+            else
+               wgt_fks_born(nFKS(ict)) = 
+     $                 wgt_fks_born(nFKS(ict))+wgts(1,ict)
+            endif
             if (tmp_scale(nFKS(ict)).eq.-1d0) then
                tmp_scale(nFKS(ict))=shower_scale(ict)
 c check that all the shower starting scales are identical for all the
@@ -2219,7 +2228,10 @@ c contribution to a given FKS configuration.
       enddo
 c Check to find the FKS configurations and the corresponding shower
 c starting scale. Pick one randomly based on the weight for that FKS
-c configuration
+c configuration (in the weight, the born and nbody_noborn should not be
+c included since those are always assigned to the FKS configuration
+c corresponding to a soft singularity. Therefore, including them would
+c bias the chosen scale to that configuration.)
       wgt_sum=0d0
       do iFKS=1,fks_configs
          wgt_sum=wgt_sum+abs(wgt_fks(iFKS))
@@ -2236,10 +2248,27 @@ c configuration
      $           ,fks_configs,target,wgt_accum,wgt_sum
             stop 1
          endif
-         showerscale=tmp_scale(iFKS)
       else
-         showerscale=0d0
+c this fold has only born or nbody no-born contributions. Use those
+c instead.
+         wgt_sum=0d0
+         do iFKS=1,fks_configs
+            wgt_sum=wgt_sum+abs(wgt_fks_born(iFKS))
+         enddo
+         if (wgt_sum.eq.0d0) return
+         target=wgt_sum*ran2()
+         wgt_accum=0d0
+         do iFKS=1,fks_configs
+            wgt_accum=wgt_accum+abs(wgt_fks_born(iFKS))
+            if (wgt_accum.gt.target) exit
+         enddo
+         if (iFKS.lt.1 .or. iFKS.gt.fks_configs) then
+            write (*,*) 'ERROR in update_shower_starting scale #4',iFKS
+     $           ,fks_configs,target,wgt_accum,wgt_sum
+            stop 1
+         endif
       endif
+      showerscale=tmp_scale(iFKS)
       return
       end
 
