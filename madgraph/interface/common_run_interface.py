@@ -1181,8 +1181,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return 'reweight_card.dat'
             else:
                 return 'reweight_card.dat'
-        elif len(text) == 1 and text[0].startswith('analyses'):
-            return 'rivet_card.dat' 
         else:
             return 'unknown'
 
@@ -2699,7 +2697,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
 
-    def do_rivet(self, line):
+    def do_rivet(self, line, do_rivet_postprocessing = False):
         """launch rivet on the HepMC output"""
 
         args = self.split_arg(line)
@@ -2715,7 +2713,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
             if no_default:
                 logger.info('No rivet_card detected, so not running Rivet')
-                return
+                return None
 
             files.cp(pjoin(self.me_dir, 'Cards', 'rivet_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
@@ -2723,24 +2721,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
 
-        if rivet_config["run_contur"] and rivet_config["analyses"] == "MC_GENERIC":
-            rivet_config["analyses"] = rivet_config.getConturRA(RunCard=self.run_card)
+        # # Get Rivet analysis list
+        analysis_list = rivet_config.getAnalysisList(RunCard=self.run_card)
+        run_analysis = ""
+        set_env = ""
+        for analysis in analysis_list:
+            run_analysis = "{0},{1}".format(run_analysis, analysis)
+        run_analysis = run_analysis.split(",", 1)[1]
+        if "$CONTUR_" in run_analysis:
+            set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
+            #ATLAS_2016_I1469071 sometimes give segmentation errors and also not so safe due to neutrino truth info. Need to force remove this?
+            set_env = set_env + "{0}=`echo {1} | sed 's/,ATLAS_2016_I1469071//'`\n".format(run_analysis.replace("$",""), run_analysis)
 
+        # # Get weight name (merging scale)
+        py8_card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'))
+        if rivet_config["weight_name"] == "default":
+            rivet_config.setWeightName(RunCard=self.run_card, PY8Card=py8_card) 
 
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
-
-        set_env = "export PATH=$PATH:{0}\n".format(pjoin(rivet_path, 'bin'))#FIXME madgraph rivet paths should go first
-        set_env = set_env + "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{0}:{1}\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
+        set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
         major, minor = sys.version_info[0:2]
-        set_env = set_env + "export PYTHONPATH=$PYTHONPATH:{0}:{1}\n\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+        set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
 
 
         #3 Fetch HepMC files
-        py8_card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card_default.dat'))
-        py8_card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'), setter='user')
-
         py8_output = py8_card["HEPMCoutput:file"]
 
         if py8_output == "auto" or py8_output == "autoremove":
@@ -2753,36 +2760,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             raise MadGraph5Error("HEPMCoutput:file in pythia8_card.dat should be [auto, autoremove, fifo]")
 
-        #FIXME condor 
 
         #4 Write Rivet lines
         shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
 
-        yoda_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_name + ".yoda")
-        run_rivet = "rivet --skip-weights -a " + rivet_config['analyses'] + " -o " + yoda_file + " " + hepmc_file
+        yoda_file = pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda")
+        run_rivet = pjoin(rivet_path, "bin", "rivet") + " --skip-weights -a " + run_analysis + " -o " + yoda_file + " " + hepmc_file
 
         wrapper = open(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh"), "w")
         wrapper.write("#!{0}\n{1}".format(misc.which(shell), set_env))
-        wrapper.write("{0} &> {1}".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
+        wrapper.write(sys.executable + " {0} &> {1}".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
 
-        if py8_output == "autoremove" or py8_output == "fifo": # For FIFO, remove it after it finishes run
-            wrapper.write("\nrm {0}".format(hepmc_file))
+        if py8_output in ["autoremove", "fifo"]: # For FIFO, it also needs to be removed after it finishes run
+            wrapper.write("\nrm {0}\n".format(hepmc_file))
             if rivet_config["postprocessing"]: # FIFO should not run through postprocessing, force single Rivet run
                 rivet_config["postprocessing"] = False
         wrapper.close()
 
-
         #5 decide how to run Rivet
         if rivet_config["postprocessing"]: # postprocessing = collect all HepMC files and run them at once
             return rivet_config
-        else: # return None if not doing postprocessing
-            print ("Running RIVET NOT POSTPROCESSING")
-            print ("Running RIVET NOT POSTPROCESSING")
-            print ("Running RIVET NOT POSTPROCESSING")
-            print ("Running RIVET NOT POSTPROCESSING")
-
-            misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
-            return None
+        else:
+            if not do_rivet_postprocessing: # To prevent running yoda once more in the postprocessor
+                logger.info("Running Rivet with {0}".format(hepmc_file))
+                misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+            return rivet_config
 
 
     def do_madanalysis5_hadron(self, line):
@@ -4581,7 +4583,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     integer_bias = 1 # integer corresponding to the first entry in self.cards
     
     PY8Card_class = banner_mod.PY8Card
-    
+
     def load_default(self):
         """ define all default variable. No load of card here.
             This allow to subclass this class and just change init and still have
@@ -4957,6 +4959,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if not self.get_path('rivet', cards):
             return []
         self.has_rivet = True
+        self.rivet_card = banner_mod.RivetCard(self.paths['rivet'])
+        self.rivet_card_default = banner_mod.RivetCard()
+
+        self.rivet_vars = [k.lower() for k in self.rivet_card.keys()]
 
         return []
 
@@ -5350,6 +5356,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 opts.append('default')
             possibilities['Pythia8 Parameter'] = self.list_completion(text, opts)
                                 
+        if 'rivet_card' in list(allowed.keys()):
+            opts = self.rivet_vars
+            if allowed['rivet_card'] == 'default':
+                opts.append('default')
+            possibilities['Rivet Card'] = self.list_completion(text, opts)
+
         if 'shower_card' in list(allowed.keys()):
             opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
             if allowed['shower_card'] == 'default':
@@ -5563,7 +5575,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Pythia8 card defined.')
                 return
             args[0] = 'pythia8_card'
-            
+
+        if args[0] == "rivet_card":
+            if not self.has_rivet:
+                logger.warning('Invalid Command: No Rivet card defined.')
+                return
+            args[0] = 'rivet_card'
+
         if args[0] == 'delphes_card':
             if not self.has_delphes:
                 logger.warning('Invalid Command: No Delphes card defined.')
@@ -5580,7 +5598,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
-                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
+                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card','rivet_card']:
 
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:BOLD')
@@ -5626,6 +5644,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('Invalid set command: %s (not enough arguments)' % line)
                 return
+
         elif args[0] in ['madspin_card']:
             if args[1] == 'default':
                 logger.info('replace madspin_card.dat by the default card','$MG:BOLD')
@@ -5876,7 +5895,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
-                
+
+        # Rivet Parameter -----------------------------------------------------
+        elif self.has_rivet and (card in ['', 'rivet_card'])\
+             and args[start].lower() in [k.lower() for k in self.rivet_card.keys()]:
+      
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+            if args[start+1] == 'default':
+                value = self.rivet_card_default[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False
+            self.setRivet(args[start], value, default=default)
+            self.rivet_card.write(self.paths['rivet'], self.paths['rivet_default'])
+
         #INVALID --------------------------------------------------------------
         else:      
             logger.warning('invalid set command %s ' % line)
@@ -5951,6 +5987,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:BOLD')
         if default and name.lower() in self.PY8Card.user_set:
             self.PY8Card.user_set.remove(name.lower())
+
+    def setRivet(self, name, value, default):
+        try:
+            self.rivet_card.set(name, value, user=True)
+        except Exception as error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the rivet_card.dat to %s' % (name, value), '$MG:BOLD')
+        if default and name.lower() in self.rivet_card.user_set:
+            self.rivet_card.user_set.remove(name.lower())
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):

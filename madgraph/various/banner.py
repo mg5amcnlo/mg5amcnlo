@@ -1463,7 +1463,7 @@ class ConfigFile(dict):
         
         if lower_name in self.auto_set:
             return 'auto'
-
+        
         return dict.__getitem__(self, name.lower())
 
     
@@ -1487,13 +1487,21 @@ class RivetCard(ConfigFile):
 
     def default_setup(self):
         """initialize the directory to the default value"""
-        self.add_param('analyses', "MC_GENERIC")
+        self.add_param('analysis', [], typelist=str)
         self.add_param('weight_name', "Weight_MERGING=0.000")
-        self.add_param('run_contur', False)
-        self.add_param('draw_heatmap', True)
-        self.add_param('xaxis_heatmap', "XXX")
-        self.add_param('yaxis_heatmap', "YYY")
         self.add_param('postprocessing', False)
+        self.add_param('run_contur', False)
+        self.add_param('draw_plots', False)
+        self.add_param('draw_heatmap', True)
+        self.add_param('xaxis_var', "x")
+        self.add_param('xaxis_relvar', "default")
+        self.add_param('xaxis_label', "default")
+        self.add_param('xaxis_log', False)
+        self.add_param('yaxis_var', "y")
+        self.add_param('yaxis_relvar', "default")
+        self.add_param('yaxis_label', "default")
+        self.add_param('yaxis_log', False)
+        self.add_param('contur_ra', "default")
 
     def read(self, finput):
 
@@ -1517,38 +1525,105 @@ class RivetCard(ConfigFile):
 
             if '=' in line:
                 key, value = line.split('=',1)
-                self[key.strip()] = value
+                if key.strip() in ["xaxis_var", "xaxis_relvar", "xaxis_label", "yaxis_var", "yaxis_relvar", "yaxis_label"]:
+                    value = value.lower()
+                    if value.strip() == "default":
+                        value = ""
+                self[key.strip()] = value.strip()
 
-        if self["analyses"].lower() == "default" or self["analyses"] == "-1":
-            self["analyses"] = "MC_GENERIC"
-        if self["weight_name"].lower() == "default" or self["weight_name"] == "-1":
-            self["weight_name"] = "Weight_MERGING=0.000"
+    def write(self, output_file, template=None):
 
-    def write(self, outputpath):
-        """write the file"""
+        if not template:
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 'rivet_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'rivet_card_default.dat')
 
-        fsock = open(outputpath, 'w')
-        fsock.write(template)
+        text = ""
+        for line in open(template,'r'):
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            elif nline[0].strip() in list(self.keys()):
+                text += '%s\t= %s %s\n' % (nline[0], self[nline[0].strip()], comment)
+            else:
+                logger.info('Adding missing parameter %s to current rivet_card (with default value)' % nline[1].strip())
+                text += line
 
-        for key, value in self.items():
-            fsock.write(" %s = %s \n" % (key, value))
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
 
+        fsock.write(text)
         fsock.close()
 
-    def getConturRA(self, RunCard):
-        if not ((RunCard['lpp1'] == 1) and (RunCard['lpp2'] == 1)):
-            raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
+    def getAnalysisList(self, RunCard):
 
-        ebeamsLHC = [3500, 4000, 6500]
-        if ((int(RunCard['ebeam1']) in ebeamsLHC) and (int(RunCard['ebeam2']) in ebeamsLHC)):
-            if int(RunCard['ebeam1']) == int(RunCard['ebeam2']):
-                ebeam = str(int((int(RunCard['ebeam1']) + int(RunCard['ebeam2']))/1000))
-                return "$CONTUR_RA{0}TeV".format(ebeam)
+        analysis_list = []
+        for this_analysis in self["analysis"]:
+            if this_analysis == "default":
+                if not self["run_contur"]:
+                    analysis_list.append("MC_GENERIC")
+                else:
+                    if not ((RunCard['lpp1'] == 1) and (RunCard['lpp2'] == 1)):
+                        raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
+                    ebeamsLHC = [3500, 4000, 6500]
+                    if ((int(RunCard['ebeam1']) in ebeamsLHC) and (int(RunCard['ebeam2']) in ebeamsLHC)):
+                        if int(RunCard['ebeam1']) == int(RunCard['ebeam2']):
+                            ebeam = str(int((int(RunCard['ebeam1']) + int(RunCard['ebeam2']))/1000))
+                            analysis_list.append("$CONTUR_RA{0}TeV".format(ebeam))
+                            self["contur_ra"] = "{0}TeV".format(ebeam)
+                        else:
+                            raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
+                                                  ebeam1 = {0} and ebeam2 = {1}".format(RunCard['ebeam1'], RunCard['ebeam2']))
+                    else:
+                        raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
             else:
-                raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
-                                      ebeam1 = {0} and ebeam2 = {1}".format(RunCard['ebeam1'], RunCard['ebeam2']))
+                analysis_list.append(this_analysis)
+
+        return analysis_list
+
+    def setWeightName(self, RunCard, PY8Card):
+
+        if self['weight_name'] == "default":
+            if RunCard['ickkw'] == 0:
+                self['weight_name'] = "Weight_MERGING=0.000"
+            else:
+                self['weight_name'] = "Weight_MERGING={0}".str(round(PY8Card['JetMatching:qCut'],3))
+
+    def setRelevantParamCard(self, f_params, f_relparams):
+
+        exec_line = "import math; "
+        for l_param in f_params.readlines():
+            exec_line = exec_line + l_param.strip() + "; "
+            f_relparams.write(l_param.strip()+"\n")
+
+        if self['xaxis_relvar']:
+            xexec_dict = {}
+            xexec_line = exec_line + "xaxis_relvar = " + self['xaxis_relvar']
+            exec(xexec_line, locals(), xexec_dict)
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = "xaxis_relvar"
+            f_relparams.write("{0} = {1}\n".format(self['xaxis_label'], xexec_dict['xaxis_relvar']))
         else:
-            raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = self['xaxis_var']
+
+        if self['yaxis_relvar']:
+            yexec_dict = {}
+            yexec_line = exec_line + "yaxis_relvar = " + self['yaxis_relvar']
+            exec(yexec_line, locals(), yexec_dict)
+            if self['yaxis_label'] == "": 
+                self['yaxis_label'] = "yaxis_relvar"
+            print (yexec_dict.keys())
+            f_relparams.write("{0} = {1}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
+        else:
+            if self['yaxis_label'] == "":
+                self['yaxis_label'] = self['yaxis_var']
 
 class ProcCharacteristic(ConfigFile):
     """A class to handle information which are passed from MadGraph to the madevent

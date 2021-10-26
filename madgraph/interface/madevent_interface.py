@@ -2515,44 +2515,147 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         self.run_generate_events(switch_mode, args)
 
-        if switch_mode['analysis'] == "Rivet":
-            self.postprocessing()
+        self.postprocessing()
 
 
     def postprocessing(self):
 
-        print ("##################################################################################")
-        print ("in post scan")
-        print ("##################################################################################")
+        # Run Rivet postprocessor
+        rivet_config = common_run.CommonRunCmd.do_rivet(self,"", True)
+        if rivet_config:
+            self.do_rivet_postprocessing(rivet_config)
 
-        startRivet = time.time()
-        rivet_config = common_run.CommonRunCmd.do_rivet(self,"")
 
-        # If postprocessing = False in rivet_card.dat, rivet_config returns None
-        if not rivet_config:
+        #END postprocessor ========================================================
+
+    def do_rivet_postprocessing(self, rivet_config):
+
+        run_rivet = rivet_config["postprocessing"] # This can be False if Rivet jobs are already ran
+        run_contur = rivet_config["run_contur"]
+
+        if not (run_rivet or run_contur):
             return
 
         # Check number of Rivet jobs to run 
         run_dirs = misc.glob(pjoin(self.me_dir, 'Events', "run_*"))
         nb_rivet = len(run_dirs)
 
-        # Check run configurations
-        for i_rivet in range(nb_rivet):
-            self.cluster.submit2(pjoin(run_dirs[i_rivet], "run_rivet.sh"), argument=[str(i_rivet)])
+        if run_rivet:
 
-        def wait_monitoring(Idle, Running, Done):
-            if Idle+Running+Done == 0:
-                return
-            logger.info('Rivet analysis jobs: %d Idle, %d Running, %d Done [%s]'\
-                         %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
-        self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
+            # Submit Rivet jobs
+            for i_rivet in range(nb_rivet):
+                self.cluster.submit2(pjoin(run_dirs[i_rivet], "run_rivet.sh"), argument=[str(i_rivet)])
+
+            startRivet = time.time()
+
+            def wait_monitoring(Idle, Running, Done):
+                if Idle+Running+Done == 0:
+                    return
+                logger.info('Rivet analysis jobs: %d Idle, %d Running, %d Done [%s]'\
+                             %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
+            self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
+
+        if run_contur:
+
+            set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
+            rivet_path = self.options['rivet_path']
+            yoda_path = self.options['yoda_path']
+            set_env = set_env + "# RIVET/YODA PATH SETUP\n"
+            set_env = set_env + "export PATH={0}:{1}:$PATH\n"\
+                                             .format(pjoin(rivet_path, 'bin'),\
+                                                     pjoin(yoda_path, 'bin'))
+            set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:{2}:{3}:$LD_LIBRARY_PATH\n"\
+                                                        .format(pjoin(rivet_path, 'lib'),\
+                                                                pjoin(rivet_path, 'lib64'),\
+                                                                pjoin(yoda_path, 'lib'),\
+                                                                pjoin(yoda_path, 'lib64'))
+            major, minor = sys.version_info[0:2]
+            set_env = set_env + "export PYTHONPATH={0}:{1}:{2}:{3}:$PYTHONPATH\n\n"\
+                                                   .format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(yoda_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(yoda_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
+
+            contur_path = self.options['contur_path']
+            set_env = set_env + "# CONTUR PATH SETUP\n"
+            set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor), 'bin'))
+            set_env = set_env + "export PYTHONPATH={0}:$PYTHONPATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor)))
+
+            set_env = set_env + "source {0} &>> contur.log\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
+
+            os.system("mkdir -p {0}".format(pjoin(self.me_dir, 'Analysis', 'contur')))
+
+            if nb_rivet == 1:
+                this_yoda_file = pjoin(run_dirs[0], "rivet_result.yoda")
+                os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda')))
+                contur_cmd = 'contur --wn "{0}" {1}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+            else:
+                # Link yoda and params files inside analysis/contur/scan directory
+                scan_subdirs = []
+                for i_rivet in range(nb_rivet):
+                    this_scan_dir = pjoin(self.me_dir, 'Analysis', 'contur', 'scan', rivet_config["contur_ra"])
+                    os.system("mkdir -p {0}".format(this_scan_dir))
+
+                    this_scan_subdir = pjoin(this_scan_dir, str(i_rivet+1).zfill(4))
+                    scan_subdirs.append(this_scan_subdir)
+                    os.mkdir(this_scan_subdir)
+
+                    this_yoda_file = pjoin(run_dirs[i_rivet], "rivet_result.yoda")
+                    this_param_file = pjoin(run_dirs[i_rivet], "params.dat")
+                    os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(this_scan_subdir, "runpoint_"+str(i_rivet+1).zfill(4)+".yoda")))
+                    os.system("ln -s {0} {1}".format(this_param_file, pjoin(this_scan_subdir, "params.dat")))
+
+                    if rivet_config['xaxis_relvar'] or rivet_config['yaxis_relvar']:
+                        f_params = open(pjoin(run_dirs[i_rivet], "params.dat"))
+                        f_relparams = open(pjoin(run_dirs[i_rivet], "params_replace.dat"), "w")
+                        rivet_config.setRelevantParamCard(f_params=f_params,f_relparams=f_relparams)
+                        f_params.close()
+                        f_relparams.close()
+
+                        files.mv(pjoin(run_dirs[i_rivet], "params_replace.dat"), pjoin(run_dirs[i_rivet], "params.dat"))
+
+                    if rivet_config['draw_plots']:
+
+                        wrapper_single = open(pjoin(this_scan_subdir, "run_contur_single.sh"), "w")
+                        wrapper_single.write(set_env)
+                        wrapper_single.write("cd {0}\n".format(this_scan_subdir))
+                        wrapper_single.write("contur runpoint_"+str(i_rivet+1).zfill(4)+".yoda")
+                        wrapper_single.close()
 
 
-        if not rivet_config["run_contur"]:#FIXME split run contur
-            return
+                if rivet_config['draw_plots']:
+                    for i_rivet in range(nb_rivet):
+                        self.cluster.submit2(pjoin(scan_subdirs[i_rivet], "run_contur_single.sh"), argument=[str(i_rivet)])
 
-        
+                    startContur = time.time()
 
+                    def wait_monitoring(Idle, Running, Done):
+                        if Idle+Running+Done == 0:
+                            return
+                        logger.info('Contur jobs: %d Idle, %d Running, %d Done [%s]'\
+                                     %(Idle, Running, Done, misc.format_time(time.time() - startContur)))
+                    self.cluster.wait(self.me_dir, wait_monitoring)
+    
+
+                contur_cmd = 'contur -g scan --wn "{0}" &>> contur.log\n'.format(rivet_config["weight_name"])
+
+                if rivet_config["draw_heatmap"]:
+                    axis_log = ""
+                    if rivet_config["xaxis_log"]: axis_log = axis_log + " --xlog"
+                    if rivet_config["yaxis_log"]: axis_log = axis_log + " --ylog"
+
+                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} -x {2} -y {3} {4}' \
+                                                        .format(rivet_config["xaxis_label"], rivet_config["yaxis_label"],\
+                                                                rivet_config["xaxis_label"], rivet_config["yaxis_label"],\
+                                                                axis_log)
+
+            wrapper = open(pjoin(self.me_dir, "Analysis", "contur", "run_contur.sh"), "w")
+            wrapper.write(set_env)
+ 
+            wrapper.write('{0}\n'.format(contur_cmd))
+            wrapper.close()
+ 
+            misc.call(["run_contur.sh"], cwd=(pjoin(self.me_dir, "Analysis", "contur")))
 
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling()
@@ -2562,7 +2665,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # Also the single core mode is not supported for loop-induced.
             # We therefore emulate it with multi-core mode with one core
             logger.warning(
-"""Single-core mode not supported for loop-induced processes.
+"""Single-coire mode not supported for loop-induced processes.
 Beware that MG5aMC now changes your runtime options to a multi-core mode with only one active core.""")
             self.do_set('run_mode 2')
             self.do_set('nb_core 1')

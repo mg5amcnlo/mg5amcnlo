@@ -1,0 +1,74 @@
+##################################################################
+#                      Cards to run Rivet                        #
+# -------------------------------------------------------------- #
+#                                                                #
+#                                                                #
+# -------------------------------------------------------------- #
+# Rivet settings ----------------------------------------------- #
+# -------------------------------------------------------------- #
+#
+analysis = [default]
+  # # When "[default]"
+  #  1. Runs only "MC_GENERIC" when 'run_contur=False'
+  #  2. Runs all possible Rivet analyses with the same beam E
+  #     when 'run_contur=True'
+  # # When given as an array
+  #  e.g. 'analysis = [MC_GENERIC, MC_JETS, CMS_2019_I1753680]'
+  #       Runs 3 Rivet analysis written in the list above
+  #
+weight_name = default
+  # # When "default"
+  #  MadGraph-Pythia automatically gives weight names
+  #  e.g. weight_name = 'Weight_MERGING=0.000'
+  #
+postprocessing = True
+  # ! Meaningful only when using scan mode of MadGraph !
+  # # When "False"
+  #  Runs Rivet after one parameter is scanned
+  #  MadEvent->Pythia->Rivet->MadEvent->Pythia->Rivet
+  # # When "True"
+  #  Runs Rivet after all parameters are scanned 
+  #  MadEvent->Pythia->MadEvent->Pythia->Rivet
+  #
+# -------------------------------------------------------------- #
+# Contur settigns ---------------------------------------------- #
+# -------------------------------------------------------------- #
+#
+run_contur = False
+  # Flag to decide Contur run
+  #
+draw_plots = False
+xaxis_log = False
+yaxis_log = False
+  #
+draw_heatmap = True
+  # Meaningful only when using scan mode for >=2 parameters!
+  # Draw heatmap using Contur
+  # 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+xaxis_var = x
+  # type = string
+  # xaxis variable of the heatmap (scanning parameter 1)
+  # e.g. xaxis_var = mzp # mass of Z' in param_card.dat
+xaxis_relvar = default
+  # type = string
+  # When "default" : Same as xaxis_var
+  # Relative parameter defined with reference to 'xaxis_var'
+  # e.g. xaxis_heatmap = [math.log(mzp, 10)] # python library works!
+xaxis_label = default 
+  # type = string
+  # xaxis label of the heatmap 
+  # When "default" : Same as xaxis_var
+  # e.g. xaxis_label = "mass_{Z'}" # latex format works!
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+yaxis_var = y 
+  # type = string
+  # Same as xaxis_var (scanning parameter 2)
+yaxis_relvar = default
+  # type = string
+  # Same as xaxis_heatmap
+yaxis_label = default 
+  # type = string
+  # Same as xaxis_label
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
+
