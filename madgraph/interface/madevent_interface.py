@@ -2521,26 +2521,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def postprocessing(self):
 
         # Run Rivet postprocessor
-        rivet_config = common_run.CommonRunCmd.do_rivet(self,"", True)
-        if rivet_config:
-            self.do_rivet_postprocessing(rivet_config)
+        postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+        postprocess_CONTUR = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_CONTUR'))
+        if postprocess_RIVET or postprocess_CONTUR:
+            self.do_rivet_postprocessing(common_run.CommonRunCmd.do_rivet(self,""), postprocess_RIVET, postprocess_CONTUR)
 
 
         #END postprocessor ========================================================
 
-    def do_rivet_postprocessing(self, rivet_config):
-
-        run_rivet = rivet_config["postprocessing"] # This can be False if Rivet jobs are already ran
-        run_contur = rivet_config["run_contur"]
-
-        if not (run_rivet or run_contur):
-            return
+    def do_rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
 
         # Check number of Rivet jobs to run 
         run_dirs = misc.glob(pjoin(self.me_dir, 'Events', "run_*"))
         nb_rivet = len(run_dirs)
 
-        if run_rivet:
+        if postprocess_RIVET:
 
             # Submit Rivet jobs
             for i_rivet in range(nb_rivet):
@@ -2555,7 +2550,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                              %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
             self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
 
-        if run_contur:
+        if postprocess_CONTUR:
 
             set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
             rivet_path = self.options['rivet_path']

@@ -2697,7 +2697,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
 
-    def do_rivet(self, line, do_rivet_postprocessing = False):
+    def do_rivet(self, line):
         """launch rivet on the HepMC output"""
 
         args = self.split_arg(line)
@@ -2777,14 +2777,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 rivet_config["postprocessing"] = False
         wrapper.close()
 
+        if rivet_config["postprocessing"]:
+            misc.call(['touch'], pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+
+        postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+
         #5 decide how to run Rivet
-        if rivet_config["postprocessing"]: # postprocessing = collect all HepMC files and run them at once
-            return rivet_config
+        if postprocess_RIVET:
+            logger.info("Skipping Rivet for now, passing it to postprocessor")
         else:
-            if not do_rivet_postprocessing: # To prevent running yoda once more in the postprocessor
-                logger.info("Running Rivet with {0}".format(hepmc_file))
-                misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
-            return rivet_config
+            logger.info("Running Rivet with {0}".format(hepmc_file))
+            misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+
+        return rivet_config
 
 
     def do_madanalysis5_hadron(self, line):
