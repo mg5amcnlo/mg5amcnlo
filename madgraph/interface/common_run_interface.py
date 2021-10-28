@@ -6076,6 +6076,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                  logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
+            # check that only quark/gluon/photon are in initial beam if lpp=+-1
+            pdg_in_p = list(range(-6,7))+[21,22]
+            if (self.run_card['lpp1'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
+               or (self.run_card['lpp2'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):
+
+                if 'pythia_card.dat' in self.cards or 'pythia8_card.dat' in self.cards:
+                    logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off')
+                    if 'pythia_card.dat' in self.cards:
+                        os.remove(self.paths['pythia'])
+                        self.cards.remove('pythia_card.dat')
+                    elif 'pythia8_card.dat' in self.cards:
+                        os.remove(self.paths['pythia8'])
+                        self.cards.remove('pythia8_card.dat')
+                else:
+                    logger.info('Remember that Parton-Shower are not yet ready for such proton component definition.', '$MG:BOLD' )
+ 
+                 
         ########################################################################
         #       NLO specific check
         ########################################################################
