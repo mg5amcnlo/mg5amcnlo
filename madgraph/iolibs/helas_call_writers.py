@@ -1724,6 +1724,8 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
 
 
     findcoupling = re.compile('pars->([-]*[\d\w_]+)\s*,')
+    usepointerforvertex = True
+
     def format_coupling(self, call):
         """Format the coupling so any minus signs are put in front"""
 
@@ -1925,10 +1927,15 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                     arg['mass'] = "pars->%(CM)s,"
                 else:
                     arg['mass'] = "pars->%(M)s,pars->%(W)s,"
-            else:        
-                arg['out'] = '&amp[%(out)d]'
-                arg['out2'] = 'amp[%(out)d]'
-                arg['mass'] = ''
+            else:    
+                if self.usepointerforvertex:    
+                    arg['out'] = '&amp[%(out)d]'
+                    arg['out2'] = 'amp[%(out)d]'
+                    arg['mass'] = ''
+                else:
+                    arg['out'] = '&amp[%(out)d]'
+                    arg['out2'] = 'amp[%(out)d]'
+                    arg['mass'] = ''
                 
             call = call % arg
             # Now we have a line correctly formatted
