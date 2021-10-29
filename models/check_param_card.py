@@ -1016,6 +1016,9 @@ class ParamCardIterator(ParamCard):
         if path:
             ff = open(path, 'w')
             path_events = path.rsplit("/", 1)[0]
+            identCard = open(pjoin(path.rsplit("/", 2)[0], "Cards", "ident_card.dat"))
+            identLines = identCard.readlines()
+            identCard.close()
         else:
             ff = StringIO.StringIO()        
         if order:
@@ -1039,7 +1042,20 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
         formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
                                              ('%%-%ie ' % (nbcol))* len(keys))
-      
+
+        ident = {}
+        for identLine in identLines:
+            identLine = identLine.strip()
+            try:
+                identBlock = identLine.split(" ")[0]
+                identPid = identLine.split(" ")[1]
+                identVar = identLine.split(" ")[2].lower()
+                if identVar.startswith("mdl_"):
+                    identVar = identVar.replace("mdl_", "", 1)
+                ident['{0}#{1}'.format(identBlock, identPid)] = identVar
+            except:
+                continue
+
         if not lastline:
             to_print = self.cross
         else:
@@ -1056,7 +1072,7 @@ class ParamCardIterator(ParamCard):
             ff.write(formatting % tuple([name] + bench + data))
             ff_single = open(pjoin(path_events, name, "params.dat"), "w")
             for i_bench in range(0, len(bench)):
-                ff_single.write(self.param_order[i_bench] + " = " + str(bench[i_bench]) +"\n")
+                ff_single.write(ident[self.param_order[i_bench]] + " = " + str(bench[i_bench]) +"\n")
 
         if not path:
             return ff.getvalue()
