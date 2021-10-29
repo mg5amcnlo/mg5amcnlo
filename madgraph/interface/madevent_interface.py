@@ -2525,8 +2525,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         postprocess_CONTUR = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_CONTUR'))
         if postprocess_RIVET or postprocess_CONTUR:
             self.do_rivet_postprocessing(common_run.CommonRunCmd.do_rivet(self,""), postprocess_RIVET, postprocess_CONTUR)
-
-
         #END postprocessor ========================================================
 
     def do_rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
@@ -2609,7 +2607,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
                         files.mv(pjoin(run_dirs[i_rivet], "params_replace.dat"), pjoin(run_dirs[i_rivet], "params.dat"))
 
-                    if rivet_config['draw_plots']:
+                    if rivet_config['draw_rivet_plots']:
 
                         wrapper_single = open(pjoin(this_scan_subdir, "run_contur_single.sh"), "w")
                         wrapper_single.write(set_env)
@@ -2618,7 +2616,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         wrapper_single.close()
 
 
-                if rivet_config['draw_plots']:
+                if rivet_config['draw_rivet_plots']:
                     for i_rivet in range(nb_rivet):
                         self.cluster.submit2(pjoin(scan_subdirs[i_rivet], "run_contur_single.sh"), argument=[str(i_rivet)])
 
@@ -2630,19 +2628,24 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         logger.info('Contur jobs: %d Idle, %d Running, %d Done [%s]'\
                                      %(Idle, Running, Done, misc.format_time(time.time() - startContur)))
                     self.cluster.wait(self.me_dir, wait_monitoring)
-    
 
-                contur_cmd = 'contur -g scan --wn "{0}" &>> contur.log\n'.format(rivet_config["weight_name"])
+                contur_add = ""
+                if not (rivet_config["contur_add"] == "default" or rivet_config["contur_add"]  == None):
+                    contur_add = " " + rivet_config["contur_add"]
 
-                if rivet_config["draw_heatmap"]:
+                contur_cmd = 'contur -g scan --wn "{0}" &>> contur.log\n'.format(rivet_config["weight_name"] + contur_add)
+
+                if rivet_config["draw_contur_heatmap"]:
                     axis_log = ""
                     if rivet_config["xaxis_log"]: axis_log = axis_log + " --xlog"
                     if rivet_config["yaxis_log"]: axis_log = axis_log + " --ylog"
+                    axis_label = ""
+                    if rivet_config["xaxis_label"]: axis_label = axis_label + " -x " + rivet_config["xaxis_label"]
+                    if rivet_config["yaxis_label"]: axis_label = axis_label + " -y " + rivet_config["yaxis_label"]
 
-                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} -x {2} -y {3} {4}' \
-                                                        .format(rivet_config["xaxis_label"], rivet_config["yaxis_label"],\
-                                                                rivet_config["xaxis_label"], rivet_config["yaxis_label"],\
-                                                                axis_log)
+                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} {2} {3}' \
+                                                        .format(rivet_config["xaxis_var"], rivet_config["yaxis_var"],\
+                                                                axis_label, axis_log)
 
             wrapper = open(pjoin(self.me_dir, "Analysis", "contur", "run_contur.sh"), "w")
             wrapper.write(set_env)

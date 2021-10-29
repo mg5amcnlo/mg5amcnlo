@@ -1488,20 +1488,26 @@ class RivetCard(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         self.add_param('analysis', [], typelist=str)
-        self.add_param('weight_name', "Weight_MERGING=0.000")
-        self.add_param('postprocessing', False)
+        self.add_param('run_rivet_later', False)
         self.add_param('run_contur', False)
-        self.add_param('draw_plots', False)
-        self.add_param('draw_heatmap', True)
-        self.add_param('xaxis_var', "x")
+        self.add_param('draw_rivet_plots', False)
+        self.add_param('draw_contur_heatmap', True)
+        self.add_param('xaxis_var', "default")
         self.add_param('xaxis_relvar', "default")
         self.add_param('xaxis_label', "default")
         self.add_param('xaxis_log', False)
-        self.add_param('yaxis_var', "y")
+        self.add_param('yaxis_var', "default")
         self.add_param('yaxis_relvar', "default")
         self.add_param('yaxis_label', "default")
         self.add_param('yaxis_log', False)
+
+        # ================================================================
+        # hidden (users don't really have to touch these most of the time)
         self.add_param('contur_ra', "default")
+        self.add_param('weight_name', "default")
+        self.add_param('rivet_add', 'default')
+        self.add_param('contur_add', 'default')
+        # ================================================================
 
     def read(self, finput):
 
@@ -1525,7 +1531,9 @@ class RivetCard(ConfigFile):
 
             if '=' in line:
                 key, value = line.split('=',1)
-                if key.strip() in ["xaxis_var", "xaxis_relvar", "xaxis_label", "yaxis_var", "yaxis_relvar", "yaxis_label"]:
+                if key.strip() in ["xaxis_var", "xaxis_relvar", "xaxis_label",\
+                                   "yaxis_var", "yaxis_relvar", "yaxis_label",\
+                                   "rivet_add", "contur_add"]:
                     value = value.lower()
                     if value.strip() == "default":
                         value = ""
@@ -1565,9 +1573,13 @@ class RivetCard(ConfigFile):
 
         analysis_list = []
         for this_analysis in self["analysis"]:
-            if this_analysis == "default":
+            if this_analysis == "default" or this_analysis == None or this_analysis == "":
                 if not self["run_contur"]:
-                    analysis_list.append("MC_GENERIC")
+                    analysis_list.append("MC_ELECTRONS")
+                    analysis_list.append("MC_MUONS")
+                    analysis_list.append("MC_TAUS")
+                    analysis_list.append("MC_MET")
+                    analysis_list.append("MC_JETS")
                 else:
                     if not ((RunCard['lpp1'] == 1) and (RunCard['lpp2'] == 1)):
                         raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
@@ -1619,7 +1631,6 @@ class RivetCard(ConfigFile):
             exec(yexec_line, locals(), yexec_dict)
             if self['yaxis_label'] == "": 
                 self['yaxis_label'] = "yaxis_relvar"
-            print (yexec_dict.keys())
             f_relparams.write("{0} = {1}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
         else:
             if self['yaxis_label'] == "":

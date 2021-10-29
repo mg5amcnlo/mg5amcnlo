@@ -2738,6 +2738,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if rivet_config["weight_name"] == "default":
             rivet_config.setWeightName(RunCard=self.run_card, PY8Card=py8_card) 
 
+        rivet_add = ""
+        if not (rivet_config["rivet_add"] == "default" or rivet_config["rivet_add"]  == None):
+            rivet_add = " " + rivet_config["rivet_add"]
+
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
@@ -2765,7 +2769,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
 
         yoda_file = pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda")
-        run_rivet = pjoin(rivet_path, "bin", "rivet") + " --skip-weights -a " + run_analysis + " -o " + yoda_file + " " + hepmc_file
+        run_rivet = pjoin(rivet_path, "bin", "rivet") + " --skip-weights -a " + run_analysis + " -o " + yoda_file + " " + hepmc_file + rivet_add
 
         wrapper = open(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh"), "w")
         wrapper.write("#!{0}\n{1}".format(misc.which(shell), set_env))
@@ -2778,7 +2782,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         wrapper.close()
 
         if rivet_config["postprocessing"]:
-            misc.call(['touch'], pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+            misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_RIVET')])
 
         postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
 
@@ -4964,6 +4968,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if not self.get_path('rivet', cards):
             return []
         self.has_rivet = True
+
+        self.special_shortcut.update({
+                'fast_rivet': ([], ['rivet_card run_rivet_later True', 'rivet_card draw_rivet_plots False', 'pythia8_card HEPMCoutput:file autoremove', 'partonlevel:mpi = off'])
+        })
+        self.special_shortcut_help.update({
+                'fast_rivet' : 'Fastest way to run multiple Rivet runs when scanning. Doesn NOT compress the HepMC files so enough storage should be guaranteed!'
+        })
+
         self.rivet_card = banner_mod.RivetCard(self.paths['rivet'])
         self.rivet_card_default = banner_mod.RivetCard()
 
