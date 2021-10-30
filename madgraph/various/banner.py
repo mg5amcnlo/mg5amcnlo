@@ -3301,8 +3301,8 @@ class RunCardLO(RunCard):
         
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[]))
-        self.add_param("pdlabel1", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(1)")
-        self.add_param("pdlabel2", "none", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
+        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
@@ -4070,6 +4070,7 @@ class RunCardLO(RunCard):
                 cut_class[key] = max(cut_class[key], nb)
             self.cut_class = dict(cut_class)
             self.cut_class[''] = True #avoid empty
+
 
     def write(self, output_file, template=None, python_template=False,
               **opt):
