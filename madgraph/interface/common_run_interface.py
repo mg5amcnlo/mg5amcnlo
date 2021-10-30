@@ -2783,6 +2783,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if rivet_config["postprocessing"]:
             misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_RIVET')])
+        if rivet_config["run_contur"]:
+            misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_CONTUR')])
 
         postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
 
