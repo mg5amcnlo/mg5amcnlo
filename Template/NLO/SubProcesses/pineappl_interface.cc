@@ -399,6 +399,7 @@ extern "C" void appl_term_()
         389379660.0 * appl_common_histokin_.norm_histo);
 
     // Write grid to file
+    pineappl_grid_optimize(grid_obs[nh]);
     pineappl_grid_write(grid_obs[nh], ("grid_obs_" + std::to_string(nh) + "_out.pineappl").c_str());
 
     pineappl_grid_delete(grid_obs[nh]);

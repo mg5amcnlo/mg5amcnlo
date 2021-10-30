@@ -597,7 +597,7 @@ c Main routine for MC counterterms
       logical lzone(nexternal),flagmc,limit,non_limit
 
       double precision emsca_bare,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun,wgt_abs
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -721,6 +721,7 @@ c Initialise
       enddo
       flagmc   = .false.
       wgt      = 0d0
+      wgt_abs  = 0d0
       ztmp     = 0d0
       xitmp    = 0d0
       xjactmp  = 0d0
@@ -1199,27 +1200,23 @@ c check the lines below
         endif
 
         wgt=wgt+xmcxsec(npartner)
+        wgt_abs=wgt_abs+abs(xmcxsec(npartner))
         do iamp=1,amp_split_size
           amp_split_mc(iamp)=amp_split_mc(iamp)+amp_split_xmcxsec(iamp,npartner)
         enddo
-
-        if(xmcxsec(npartner).lt.0d0)then
-           write(*,*)'Fatal error in xmcsubt'
-           write(*,*)npartner,xmcxsec(npartner)
-           stop
-        endif
+       
 c End of loop over colour partners
       enddo
 
 c Assign emsca on statistical basis
-      if(dampMCsubt.and.wgt.gt.1d-30)then
+      if(dampMCsubt.and.wgt_abs.gt.1d-30)then
         rrnd=ran2()
         wgt1=0d0
         jpartner=0
         do npartner=1,ipartners(0)
            if(lzone(npartner).and.jpartner.eq.0)then
-              wgt1=wgt1+xmcxsec(npartner)
-              if(wgt1.ge.rrnd*wgt)then
+              wgt1=wgt1+abs(xmcxsec(npartner))
+              if(wgt1.ge.rrnd*wgt_abs)then
                  jpartner=ipartners(npartner)
                  mpartner=npartner
               endif
@@ -1232,7 +1229,7 @@ c Assign emsca on statistical basis
            emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+      if(dampMCsubt.and.wgt_abs.lt.1d-30)emsca=scalemax
 
 c Additional information for LHE
       if(AddInfoLHE)then

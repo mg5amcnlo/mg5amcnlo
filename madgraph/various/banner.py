@@ -4873,6 +4873,7 @@ class RunCardNLO(RunCard):
         """Rules
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
+          process with tagged photons -> gamma_is_j = false
         """
 
         for block in self.blocks:
@@ -4900,13 +4901,23 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+
+        # check for tagged photons
+        tagged_particles = set()
             
         # Check if need matching
         min_particle = 99
         max_particle = 0
         for proc in proc_def:
+            for leg in proc['legs']:
+                if leg['is_tagged']:
+                    tagged_particles.add(leg['id'])
             min_particle = min(len(proc['legs']), min_particle)
             max_particle = max(len(proc['legs']), max_particle)
+
+        if 22 in tagged_particles:
+            self['gamma_is_j'] = False
+
         matching = False
         if min_particle != max_particle:
             #take one of the process with min_particle

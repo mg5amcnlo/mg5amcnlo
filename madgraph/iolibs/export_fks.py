@@ -627,6 +627,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
 
+        filename = 'a0Gmuconv.inc'
+        startfroma0 = self.write_a0gmuconv_file(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+
+        filename = 'rescale_alpha_tagged.f'
+        self.write_rescale_a0gmu_file(
+                            writers.FortranWriter(filename),
+                            startfroma0, matrix_element)
+
         filename = 'orders.h'
         self.write_orders_c_header_file(
                             writers.CPPWriter(filename),
@@ -1096,6 +1106,23 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
+    def write_a0gmuconv_file(self, writer, matrix_element):
+        """writes an include file with the informations about the 
+        alpha0 < > gmu conversion, to be used when the process has
+        tagged photons
+        """
+
+        bool_dict = {True: '.true.', False: '.false.'}
+        bornproc = matrix_element.born_me['processes'][0]
+        startfromalpha0 = False
+        if any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+            if 'loop_qcd_qed_sm_a0' in bornproc['model'].get('modelpath'):
+                startfromalpha0 = True
+
+        text = 'logical  startfroma0\nparameter (startfroma0=%s)\n' % bool_dict[startfromalpha0]
+        writer.writelines(text)
+        return startfromalpha0
+
     def write_orders_c_header_file(self, writer, amp_split_size, amp_split_size_born):
         """writes the header file including the amp_split_size declaration for amcblast
 	"""
@@ -1103,6 +1130,57 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text+= "#define __amp_split_size_born %d" % amp_split_size_born
 
         writer.writelines(text)
+
+
+    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element):
+        """writes the function that computes the rescaling factor needed in
+        the case of external photons
+        """
+
+        # get the model parameters
+        params = sum([v for v in self.model.get('parameters').values()], [])
+        parnames = [p.name.lower() for p in params]
+
+        bornproc = matrix_element.born_me['processes'][0]
+        # this is to ensure compatibility with standard processes
+        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+            to_check = []
+            expr = '1d0'
+            conv_pol = '0d0'
+            conv_fin = '0d0'
+        
+        elif startfroma0:
+            to_check = ['mdl_aewgmu', 'mdl_aew']
+            base = 'mdl_aewgmu/mdl_aew'
+            exp = 'qed_pow/2d0-ntag'
+            expr = '(%s)**(%s)' % (base, exp)
+            conv_fin = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
+            conv_pol = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
+        else:
+            to_check = ['mdl_aew', 'mdl_aew0']
+            base = 'mdl_aew0/mdl_aew'
+            exp = 'ntag'
+            expr = '(%s)**(%s)' % (base, exp)
+            conv_fin = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
+            conv_pol = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
+
+        replace_dict = {'rescale_fact': expr,
+                        'virtual_a0Gmu_conv_finite': conv_fin,
+                        'virtual_a0Gmu_conv_pole': conv_pol}
+
+        if not all(p in parnames for p in to_check):
+            raise fks_common.FKSProcessError(
+                    'Some parameters needed when there are tagged '+\
+                    'photons cannot be found in the model.\n' +\
+                    'Please load the correct model and restriction ' +\
+                    '(e.g loop_qcd_qed_sm_Gmu-a0 or loop_qcd_qed_sm_a0-Gmu)')
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/rescale_alpha_tagged.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
 
 
 
@@ -2857,6 +2935,7 @@ Parameters              %(params)s\n\
             col_lines = []
             pdg_lines = []
             charge_lines = []
+            tag_lines = []
             fks_j_from_i_lines = []
             split_type_lines = []
             for i, info in enumerate(fks_info_list):
@@ -2870,6 +2949,9 @@ Parameters              %(params)s\n\
                     'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
                     % (i + 1, ', '.join('%19.15fd0' % charg\
                                         for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+                tag_lines.append( \
+                    'DATA (PARTICLE_TAG_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                    % (i + 1, ', '.join(bool_dict[tag] for tag in fksborn.real_processes[info['n_me']-1].particle_tags) ))
                 fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
                                                 i + 1))
                 split_type_lines.append( \
@@ -2884,6 +2966,7 @@ Parameters              %(params)s\n\
             pdgs = [l.get('id') for l in bornproc.get('legs')] + [-21]
             colors = [l.get('color') for l in bornproc.get('legs')] + [8]
             charges = [l.get('charge') for l in bornproc.get('legs')] + [0.]
+            tags = [l.get('is_tagged') for l in bornproc.get('legs')] + [False]
 
             fks_i = len(colors)
             # fist look for a colored legs (set j to 1 otherwise)
@@ -2919,6 +3002,8 @@ Parameters              %(params)s\n\
                             % ', '.join([str(pdg) for pdg in pdgs])]
             charge_lines = ['DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                             % ', '.join('%19.15fd0' % charg for charg in charges)]
+            tag_lines = ['DATA (PARTICLE_TAG_D(1, IPOS), IPOS=1, NEXTERNAL) / %s /' \
+                            %  ', '.join(bool_dict[tag] for tag in tags)]
             fks_j_from_i_lines = ['DATA (FKS_J_FROM_I_D(1, %d, JPOS), JPOS = 0, 1)  / 1, %d /' \
                             % (fks_i, fks_j)]
             split_type_lines = [ \
@@ -2930,6 +3015,7 @@ Parameters              %(params)s\n\
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
         replace_dict['charge_lines'] = '\n'.join(charge_lines)
+        replace_dict['tag_lines'] = '\n'.join(tag_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
         replace_dict['split_type_lines'] = '\n'.join(split_type_lines)
 

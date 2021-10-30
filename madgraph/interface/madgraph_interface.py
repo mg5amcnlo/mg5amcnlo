@@ -93,6 +93,8 @@ import madgraph.various.banner as banner_module
 import madgraph.various.misc as misc
 import madgraph.various.cluster as cluster
 
+import madgraph.fks.fks_tag as fks_tag
+
 import models as ufomodels
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
@@ -4927,6 +4929,21 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            # check if the particle is tagged (!PART!)
+            if part_name.startswith('!') and part_name.endswith('!'):
+                part_name = part_name[1:-1]
+                is_tagged = True
+            elif part_name.endswith('!') and part_name.count('!') == 2 and part_name[:part_name.find('!')].isdigit():
+                part_name = part_name.replace('!','')
+                is_tagged = True
+#                misc.sprint(part_name)
+            else:
+                is_tagged = False
+
+            # check that only final-state particles are tagged
+            if is_tagged and not state:
+                raise self.InvalidCmd("initial particles cannot be tagged")
+
             mylegids = []
             polarization = []
             if '{' in part_name:
@@ -5006,6 +5023,9 @@ This implies that with decay chains:
 
             duplicate =1
             if part_name in self._multiparticles:
+                # multiparticles cannot be tagged
+                if is_tagged:
+                    raise self.InvalidCmd("Multiparticles cannot be tagged")
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
@@ -5036,11 +5056,25 @@ This implies that with decay chains:
 
             if mylegids:
                 for _ in range(duplicate):
-                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state,
-                                                        'polarization': polarization}))
+                    if LoopOption in ['virt','sqrvirt','tree','noborn']:
+                        # check that no tagged particles exist in this mode
+                        if is_tagged:
+                            raise self.InvalidCmd(
+                                "%s mode does not handle tagged particles" % LoopOption)
+
+                        myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                            'state':state,
+                                                            'polarization': polarization}))
+                    else:
+                        myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
+                                                          'state':state,
+                                                          'polarization': polarization,
+                                                          'is_tagged':is_tagged}))
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
+
+        if any(['is_tagged' in l.keys()  and l['is_tagged'] for l in myleglist]):
+            logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
 
         # Apply the keyword 'all' for perturbed coupling orders.
         if perturbation_couplings.lower() in ['all', 'loonly']:

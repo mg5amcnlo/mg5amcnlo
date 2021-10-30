@@ -58,6 +58,8 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
 
+__maxint__ = 2**31 - 1
+
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
@@ -2019,8 +2021,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
-            # gather the various orders tag and write include files
-            self.write_orders_tag_info()
+            # gather the various orders tag and write include files (only needed once)
+            if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat')):
+                self.write_orders_tag_info()
 
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
@@ -2076,7 +2079,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 if fixed_order:
                     lch=len(channels)
                     maxchannels=20    # combine up to 20 channels in a single job
-                    if self.run_card['pineappl']: maxchannels=1
                     njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
                            else int(lch/maxchannels))
                     for nj in range(1,njobs+1):
@@ -2303,8 +2305,7 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
-            if fixed_order and (not self.run_card['pineappl']) \
-               and self.run_card['req_acc_FO'] > 0:
+            if fixed_order and self.run_card['req_acc_FO'] > 0:
                 jobs_to_run_new,jobs_to_collect= \
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -2535,9 +2536,12 @@ RESTART = %(mint_mode)s
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
-            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
-                # determine the number of splits needed
-                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job) \
+                    or job['npoints'] >= __maxint__:
+                # determine the number of splits needed; the second condition 
+                # (job['npoints'] >= __maxint__) prevents integer overflow in fortran
+                nsplit = min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+                nsplit*= int(job['npoints'] / __maxint__) + 1
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
@@ -2549,6 +2553,11 @@ RESTART = %(mint_mode)s
                         job_new['niters']=1
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
+
+                    if job_new['npoints'] > __maxint__:
+                        raise aMCatNLOError('Too many point for the job. Fortran will likely crash' + \
+                                        'for integer overflow. %d' % job_new['npoints'])
+
                     jobs_to_collect_new.append(job_new)
                     jobs_to_run_new.append(job_new)
             else:
