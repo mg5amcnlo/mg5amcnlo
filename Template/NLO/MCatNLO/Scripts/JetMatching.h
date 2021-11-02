@@ -1,5 +1,5 @@
 // JetMatching.h is a part of the PYTHIA event generator.
-// Copyright (C) 2019 Torbjorn Sjostrand.
+// Copyright (C) 2021 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -29,6 +29,7 @@ namespace Pythia8 {
 class HJSlowJet: public SlowJet {
 
  public:
+
   HJSlowJet(int powerIn, double Rin, double pTjetMinIn = 0.,
             double etaMaxIn = 25., int selectIn = 1, int massSetIn = 2,
             SlowJetHook* sjHookPtrIn = 0, bool useFJcoreIn = false,
@@ -36,7 +37,9 @@ class HJSlowJet: public SlowJet {
   SlowJet(powerIn, Rin, pTjetMinIn, etaMaxIn, selectIn, massSetIn,
           sjHookPtrIn, useFJcoreIn, useStandardRin) {}
 
- protected:
+  // Note: The functions below have been made public to ease the generation
+  // of Python bindings.
+  //protected:
 
   void findNext();
 
@@ -91,6 +94,39 @@ public:
     if (slowJet) delete slowJet;
     if (slowJetHard) delete slowJetHard;
     if (hjSlowJet) delete hjSlowJet;
+    // Print error statistics before exiting. Printing code
+    // basically copied from Info class.
+    // Header.
+    cout << "\n *-------  JetMatching Error and Warning Messages Statistics"
+         << "  -----------------------------------------------------* \n"
+         << " |                                                       "
+         << "                                                          | \n"
+         << " |  times   message                                      "
+         << "                                                          | \n"
+         << " |                                                       "
+         << "                                                          | \n";
+
+    // Loop over all messages
+    map<string, int>::iterator messageEntry = messages.begin();
+    if (messageEntry == messages.end())
+      cout << " |      0   no errors or warnings to report              "
+           << "                                                          | \n";
+    while (messageEntry != messages.end()) {
+      // Message printout.
+      string temp = messageEntry->first;
+      int len = temp.length();
+      temp.insert( len, max(0, 102 - len), ' ');
+      cout << " | " << setw(6) << messageEntry->second << "   "
+           << temp << " | \n";
+      ++messageEntry;
+    }
+
+    // Done.
+    cout << " |                                                       "
+         << "                                                          | \n"
+         << " *-------  End JetMatching Error and Warning Messages "
+         << "Statistics  -------------------------------------------------* "
+         << endl;
   }
 
   // Initialisation
@@ -112,10 +148,9 @@ public:
   bool canVetoStep() { return false; }
   bool doVetoStep(int,  int, int, const Event& ) { return false; }
 
-protected:
-
-  // Constants to be changed for debug printout or extra checks.
-  static const bool MATCHINGDEBUG, MATCHINGCHECK;
+  // Note: The functions below have been made public to ease the generation
+  // of Python bindings.
+  //protected:
 
   // Different steps of the matching algorithm.
   virtual void sortIncomingProcess(const Event &)=0;
@@ -124,6 +159,20 @@ protected:
   virtual bool matchPartonsToJets(int)=0;
   virtual int  matchPartonsToJetsLight()=0;
   virtual int  matchPartonsToJetsHeavy()=0;
+
+  // Print a message the first few times. Insert in database.
+  void errorMsg(string messageIn) {
+    // Recover number of times message occured. Also inserts new string.
+    int times = messages[messageIn];
+    ++messages[messageIn];
+    // Print message the first few times.
+    if (times < TIMESTOPRINT) cout << " PYTHIA " << messageIn << endl;
+  }
+
+protected:
+
+  // Constants to be changed for debug printout or extra checks.
+  static const bool MATCHINGDEBUG, MATCHINGCHECK;
 
   enum vetoStatus { NONE, LESS_JETS, MORE_JETS, HARD_JET,
                     UNMATCHED_PARTON, INCLUSIVE_VETO };
@@ -177,6 +226,11 @@ protected:
 
   // Store the minimum eT/pT of matched light jets
   double eTpTlightMin;
+
+  // Map for all error messages.
+  map<string, int> messages;
+  // Number of times the same error message is repeated, unless overridden.
+  static const int TIMESTOPRINT = 1;
 
 };
 
@@ -254,17 +308,9 @@ public:
   bool  getExclusive() { return exclusive; }
   double getPTfirst() { return pTfirstSave; }
 
-protected:
-
-  // Stored values of all inputs necessary to perform the jet matching, as
-  // needed when the veto is applied externally.
-  Event processSubsetSave;
-  Event workEventJetSave;
-  double pTfirstSave;
-
-  // Save if code should apply the veto, or simply store the things necessary
-  // to perform the veto externally.
-  bool performVeto;
+  // Note: The functions below have been made public to ease the generation
+  // of Python bindings.
+  //protected:
 
   // Different steps of the matching algorithm.
   void sortIncomingProcess(const Event &);
@@ -287,6 +333,22 @@ protected:
     nMEpartonsSave.second = nMatch;
   };
 
+  // Function to get the current number of partons in the Born state, as
+  // read from LHE.
+  int npNLO();
+
+private:
+
+  // Stored values of all inputs necessary to perform the jet matching, as
+  // needed when the veto is applied externally.
+  Event processSubsetSave;
+  Event workEventJetSave;
+  double pTfirstSave;
+
+  // Save if code should apply the veto, or simply store the things necessary
+  // to perform the veto externally.
+  bool performVeto;
+
   // Variables.
   vector<int> origTypeIdx[3];
   int    nQmatch;
@@ -300,10 +362,6 @@ protected:
   // Pair of integers giving the number of ME partons read from LHEF and used
   // in the matching (can be different if some partons should not be matched)
   pair<int,int> nMEpartonsSave;
-
-  // Function to get the current number of partons in the Born state, as
-  // read from LHE.
-  int npNLO();
 
 };
 
@@ -498,7 +556,7 @@ inline bool JetMatchingAlpgen::initAfterBeams() {
 
     // No nJet or nJetMax, so default to exclusive mode
     if (nJet < 0 || nJetMax < 0) {
-      infoPtr->errorMsg("Warning in JetMatchingAlpgen:init: "
+      errorMsg("Warning in JetMatchingAlpgen:init: "
           "missing jet multiplicity information; running in exclusive mode");
       exclusive = true;
 
@@ -530,7 +588,7 @@ inline bool JetMatchingAlpgen::initAfterBeams() {
 
   // Check the jetMatch parameter; option 2 only works with SlowJet
   if (jetAlgorithm == 1 && jetMatch == 2) {
-    infoPtr->errorMsg("Warning in JetMatchingAlpgen:init: "
+    errorMsg("Warning in JetMatchingAlpgen:init: "
         "jetMatch = 2 only valid with SlowJet algorithm. "
         "Reverting to jetMatch = 1");
     jetMatch = 1;
@@ -737,7 +795,7 @@ inline void JetMatchingAlpgen::jetAlgorithmInput(const Event &event,
       int lastIdx = workEventJet.size() - 1;
       if (abs(y   - workEventJet[lastIdx].y())   > ZEROTHRESHOLD ||
           abs(phi - workEventJet[lastIdx].phi()) > ZEROTHRESHOLD)
-        infoPtr->errorMsg("Warning in JetMatchingAlpgen:jetAlgorithmInput: "
+        errorMsg("Warning in JetMatchingAlpgen:jetAlgorithmInput: "
             "ghost particle y/phi mismatch");
       }
 
@@ -995,7 +1053,7 @@ inline bool JetMatchingMadgraph::initAfterBeams() {
   bool setMad    = settingsPtr->flag("JetMatching:setMad");
 
   // If Madgraph parameters are present, then parse in MadgraphPar object
-  MadgraphPar par(infoPtr);
+  MadgraphPar par;
   string parStr = infoPtr->header("MGRunCard");
   if (!parStr.empty()) {
     par.parse(parStr);
@@ -1013,20 +1071,20 @@ inline bool JetMatchingMadgraph::initAfterBeams() {
       settingsPtr->parm("JetMatching:clFact",
         clFact = par.getParam("alpsfact"));
       if (par.getParamAsInt("ickkw") == 0)
-        infoPtr->errorMsg("Error in JetMatchingMadgraph:init: "
+        errorMsg("Error in JetMatchingMadgraph:init: "
           "Madgraph file parameters are not set for merging");
 
     // Warn if setMad requested, but one or more parameters not present
     } else {
-       infoPtr->errorMsg("Warning in JetMatchingMadgraph:init: "
+       errorMsg("Warning in JetMatchingMadgraph:init: "
           "Madgraph merging parameters not found");
-       if (!par.haveParam("xqcut")) infoPtr->errorMsg("Warning in "
+       if (!par.haveParam("xqcut")) errorMsg("Warning in "
           "JetMatchingMadgraph:init: No xqcut");
-       if (!par.haveParam("ickkw")) infoPtr->errorMsg("Warning in "
+       if (!par.haveParam("ickkw")) errorMsg("Warning in "
           "JetMatchingMadgraph:init: No ickkw");
-       if (!par.haveParam("maxjetflavor")) infoPtr->errorMsg("Warning in "
+       if (!par.haveParam("maxjetflavor")) errorMsg("Warning in "
           "JetMatchingMadgraph:init: No maxjetflavor");
-       if (!par.haveParam("alpsfact")) infoPtr->errorMsg("Warning in "
+       if (!par.haveParam("alpsfact")) errorMsg("Warning in "
           "JetMatchingMadgraph:init: No alpsfact");
     }
   }
@@ -1069,7 +1127,7 @@ inline bool JetMatchingMadgraph::initAfterBeams() {
 
     // No nJet or nJetMax, so default to exclusive mode
     if (nJetMax < 0) {
-      infoPtr->errorMsg("Warning in JetMatchingMadgraph:init: "
+      errorMsg("Warning in JetMatchingMadgraph:init: "
         "missing jet multiplicity information; running in exclusive mode");
       exclusiveMode = 1;
     }
@@ -1270,7 +1328,7 @@ inline void JetMatchingMadgraph::setDJR( const Event& event) {
 
   // Initialize SlowJetDJR jet algorithm with event
   if (!slowJetDJR->setup(event) ) {
-    infoPtr->errorMsg("Warning in JetMatchingMadgraph:setDJR"
+    errorMsg("Warning in JetMatchingMadgraph:setDJR"
       ": the SlowJet algorithm failed on setup");
     return;
   }
@@ -1338,7 +1396,7 @@ inline void JetMatchingMadgraph::sortIncomingProcess(const Event &event) {
 
     // Initialize SlowJetHard jet algorithm with current working event
     if (!slowJetHard->setup(workEventJet) ) {
-      infoPtr->errorMsg("Warning in JetMatchingMadgraph:sortIncomingProcess"
+      errorMsg("Warning in JetMatchingMadgraph:sortIncomingProcess"
         ": the SlowJet algorithm failed on setup");
       return;
     }
@@ -1609,7 +1667,7 @@ inline int JetMatchingMadgraph::matchPartonsToJetsLight() {
 
   // Initialize SlowJet with current working event
   if (!slowJet->setup(workEventJet) ) {
-    infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+    errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
       "Light: the SlowJet algorithm failed on setup");
     return NONE;
   }
@@ -1683,7 +1741,7 @@ inline int JetMatchingMadgraph::matchPartonsToJetsLight() {
     // provided that all partons are properly matched to hadronic jets.
     // Start by setting up the jet algorithm.
     if (!slowJet->setup(workEventJet) ) {
-      infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+      errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
         "Light: the SlowJet algorithm failed on setup");
       return NONE;
     }
@@ -1781,7 +1839,7 @@ inline int JetMatchingMadgraph::matchPartonsToJetsLight() {
 
       // Setup jet algorithm.
       if ( !slowJet->setup(tempEventJet) ) {
-        infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+        errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
           "Light: the SlowJet algorithm failed on setup");
         return NONE;
       }
@@ -1842,7 +1900,7 @@ inline int JetMatchingMadgraph::matchPartonsToJetsLight() {
     tempEventJet.append( ID_GLUON, 99, 0, 0, 0, 0, 0, 0,
       pIn.px(), pIn.py(), pIn.pz(), pIn.e() );
     if ( !slowJet->setup(tempEventJet) ) {
-      infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+      errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
         "Light: the SlowJet algorithm failed on setup");
       return NONE;
     }
@@ -1912,8 +1970,8 @@ inline int JetMatchingMadgraph::matchPartonsToJetsHeavy() {
   }
 
   if (!hjSlowJet->setup(tempEventJet) ) {
-    infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
-                        "Heavy: the SlowJet algorithm failed on setup");
+    errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+             "Heavy: the SlowJet algorithm failed on setup");
     return NONE;
   }
 
@@ -1994,8 +2052,8 @@ inline int JetMatchingMadgraph::matchPartonsToJetsOther() {
   }
 
   if (!hjSlowJet->setup(tempEventJet) ) {
-    infoPtr->errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
-                        "Heavy: the SlowJet algorithm failed on setup");
+    errorMsg("Warning in JetMatchingMadgraph:matchPartonsToJets"
+             "Heavy: the SlowJet algorithm failed on setup");
     return NONE;
   }
 
