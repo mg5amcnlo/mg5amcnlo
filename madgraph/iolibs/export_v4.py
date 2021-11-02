@@ -613,7 +613,6 @@ class ProcessExporterFortran(VirtualExporter):
                                      pjoin(self.dir_path, 'Source', 'MODEL'))
 
         # add file for EWA 
-        misc.sprint('pass here')
         template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
         fsock = open(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'),'w')
         fsock.write(template % {'MW': 'wmass','MZ':'zmass'})                 
