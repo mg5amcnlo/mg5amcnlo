@@ -5017,7 +5017,8 @@ This implies that with decay chains:
                         if spin in [1,2]:
                             raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
                         elif spin in [3,5] and (mass == "ZERO" or "ZERO" in mass):
-                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for massless boson.')
+                            logger.warning('"0" (longitudinal) polarization are not supported for massless boson. Skip it.')
+                            polarization += [0]
                         else:
                             polarization += [0]
                     elif p.isdigit():
