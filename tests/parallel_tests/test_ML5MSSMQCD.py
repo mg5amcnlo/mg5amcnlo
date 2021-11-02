@@ -15,6 +15,7 @@ _pickle_path = os.path.join(_file_path, 'input_files', 'ML_parallel_saved_runs')
 
 from madgraph import MG5DIR
 from madgraph import MadGraph5Error
+from madgraph.various.misc import misc
 from madgraph.iolibs.files import cp
 #import madgraph.iolibs.save_load_object as save_load_object
 from . import loop_me_comparator
@@ -71,7 +72,7 @@ class ML5MSSMQCDTest(unittest.TestCase):
     def setUp(self):
         """ Copy the model form the test input_files to the default directory."""
         if not os.path.exists(os.path.join(_mg5_path,'models','loop_MSSM')):
-            misc.copytree(os.path.join(_mg5_path,'tests','input_files','loop_MSSM'),
+            shutil.copytree(os.path.join(_mg5_path,'tests','input_files','loop_MSSM'),
                         os.path.join(_mg5_path,'models','loop_MSSM'))
 
     # The tests below probe one quite long process at a time individually, so

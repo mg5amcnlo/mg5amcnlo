@@ -55,6 +55,7 @@ import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
 import madgraph.various.process_checks as process_checks
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph
 import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
@@ -4892,6 +4893,8 @@ c           This is dummy particle used in multiparticle vertices
             # pass to ping-pong strategy for t-channel for 3 ore more T-channel
             #  this is directly related to change in genps.f
             tstrat = self.opt.get('t_strategy', 0)
+            if isinstance(self, madgraph.loop.loop_exporters.LoopInducedExporterMEGroup):
+                tstrat = 2
             tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat, self.model)
             
             # For s_and_t_channels (to be used later) use only first config
