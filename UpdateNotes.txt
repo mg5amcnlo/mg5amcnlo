@@ -12,6 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             (maxchannels is kept the same in both cases)
       RF: Fix for montecarlocounter in case the Born is not strictly positive
            (i.e., only interference contributions).
+      OM: allow the support of latest LUX PDF with lepton content of the proton
+          Note that running PY8 is automatically forbidden in that case.
       ALL: include bug fixing from Long Term Stable version  version (2.9.6) see below
 
 3.2.0 (22/08/21)

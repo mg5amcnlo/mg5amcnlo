@@ -61,13 +61,13 @@ c     instead of stopping the code, as this might accidentally happen.
       else if (iabs(ipart).eq.7) then
          ipart=7
 c     This will be called for any PDG code, but we only support up to 7
-      else if(iabs(ipart).gt.7)then
-         write(*,*) 'PDF not supported for pdg ',ipdg
-         write(*,*) 'For lepton colliders, please set the lpp* '//
-     $    'variables to 0 in the run_card'  
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for pdg ',ipdg
-         stop 1
+c      else if(iabs(ipart).gt.7)then
+c         write(*,*) 'PDF not supported for pdg ',ipdg
+c         write(*,*) 'For lepton colliders, please set the lpp* '//
+c     $    'variables to 0 in the run_card'  
+c         open(unit=26,file='../../../error',status='unknown')
+c         write(26,*) 'Error: PDF not supported for pdg ',ipdg
+c         stop 1
       endif
 
       iporg=ipart
@@ -86,6 +86,9 @@ c     Determine the member of the set (function of lhapdf)
       ireuse = 0
       ii=i_replace
       do i=1,20
+         if (abs(ipart).gt.7)then
+            exit
+         endif
 c     Check if result can be reused since any of last twenty
 c     calls. Start checking with the last call and move back in time
          if (ih.eq.ihlast(ii)) then
@@ -105,7 +108,7 @@ c     calls. Start checking with the last call and move back in time
       enddo
 
 c     Reuse previous result, if possible
-      if (ireuse.gt.0) then
+      if (ireuse.gt.0.and.abs(ipart).le.7) then
          if (pdflast(ipart,ireuse).ne.-99d9) then
             pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))/x
             return 
@@ -120,7 +123,7 @@ c     be saved
       if(ih.eq.1) then
          if (nb_proton(beamid).eq.1.and.nb_neutron(beamid).eq.0) then
             call evolvepart(ipart,x,xmu,pdg2pdf)
-            pdflast(ipart, i_replace)=pdg2pdf
+            if (abs(ipart).le.7)   pdflast(ipart, i_replace)=pdg2pdf
          else
             if (ipart.eq.1.or.ipart.eq.2) then
                call evolvepart(1,x*nb_hadron
