@@ -3453,11 +3453,16 @@ class Process(PhysicsObject):
 
         return len([leg for leg in self.get('legs') if leg.get('state') == False])
 
-    def get_initial_ids(self):
+    def get_initial_ids(self, beamid=0):
         """Gives the pdg codes for initial state particles"""
 
-        return [leg.get('id') for leg in \
+        if beamid == 0:
+            return [leg.get('id') for leg in \
                 [leg for leg in self.get('legs') if leg.get('state') == False]]
+        else:
+            return [leg.get('id') for leg in \
+                [leg for leg in self.get('legs') if leg.get('state') == False and
+                leg.get('number') == beamid]]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""

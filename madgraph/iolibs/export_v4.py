@@ -175,7 +175,7 @@ class ProcessExporterFortran(VirtualExporter):
         self.mgme_dir = MG5DIR
         self.dir_path = dir_path
         self.model = None
-        self.beam_polarization = True
+        self.beam_polarization = [True,True]
         
         self.opt = dict(self.default_opt)
         if opt:
@@ -200,44 +200,31 @@ class ProcessExporterFortran(VirtualExporter):
             for m in matrix_elements:
                 for me in m.get('matrix_elements'):
                     for p in me.get('processes'):
-                        for pid in p.get_initial_ids():
-                            spin = p.get('model').get_particle(pid).get('spin')
-                            if spin != 2:
-                                self.beam_polarization = False
-                                break
-                        else:
-                            continue
-                        break
-                    else:
-                        continue
-                    break
-                else:
-                    continue
-                break
+                        for beamid in [1,2]:
+                            for pid in p.get_initial_ids(beamid):
+                                spin = p.get('model').get_particle(pid).get('spin')
+                                if spin != 2:
+                                    self.beam_polarization[beamid-1] = False
+                                    break
 
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory(\
                                           me_group, fortran_model, group_number)
         else:
              # check handling for the polarization
-            self.beam_polarization = True
+            self.beam_polarization = [True,True]
             for me in matrix_elements.get_matrix_elements():
                 for p in me.get('processes'):
-                    for pid in p.get_initial_ids():
-                        spin = p.get('model').get_particle(pid).get('spin')
-                        if spin != 2:
-                            self.beam_polarization = False
-                            break
-                    else:
-                        continue
-                    break
-                else:
-                    continue
-                break 
-
+                    for beamid in [1,2]:
+                        for pid in p.get_initial_ids(beamid):
+                            spin = p.get('model').get_particle(pid).get('spin')
+                            if spin != 2:
+                                self.beam_polarization[beamid-1] = False
+                                break
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory(\
                                                    me, fortran_model, me_number)    
+
                         
         return calls    
         
@@ -4524,7 +4511,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_temp
 
-        if self.beam_polarization:
+        if self.beam_polarization == [True, True]:
             replace_dict['beam_polarization'] = """
                          DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -4536,6 +4523,16 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             """
         else:
             replace_dict['beam_polarization'] = ""
+            for i in [0,1]:
+                if self.beam_polarization[i]:
+                    replace_dict['beam_polarization'] = """
+                                   ! handling only one beam polarization here. Second beam can be handle via the pdf.
+                                   IF(POL(%(bid)i).NE.1d0.AND.NHEL(%(bid)i,I).EQ.INT(SIGN(1d0,POL(%(bid)i)))) THEN
+                 T=T*ABS(POL(%(bid)i))
+               ELSE IF(POL(%(bid)i).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(%(bid)i)))
+               ENDIF """ % {'bid': i+1}
+
 
 
 
