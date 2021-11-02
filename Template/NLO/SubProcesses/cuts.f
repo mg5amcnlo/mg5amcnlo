@@ -60,7 +60,7 @@ c are filled from the PDG codes (iPDG array) in this function.
      $,is_nextph_iso_reco(nexternal)
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
       logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
-     $        passcuts_jets, passcuts_pdgs 
+     $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
 
       passcuts_user=.true. ! event is okay; otherwise it is changed
 

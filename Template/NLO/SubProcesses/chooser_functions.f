@@ -22,7 +22,10 @@ c MAPCONFIG())
       integer prow(-max_branch:-1,lmaxconfigs)
       common/c_props_inc/prmass,prwidth,prow
       double precision pmass(nexternal)
+      logical firsttime
+      data firsttime /.true./
       include 'configs_and_props_decl.inc'
+      save mapconfig_d,iforest_d,sprop_d,tprid_d,pmass_d,pwidth_d,pow_d
       include "pmass.inc"
 c     
       if (max_branch_used.gt.max_branch) then
@@ -38,8 +41,11 @@ c
 
 C the configurations and propagators infos are read at the first
 C evaluation
+      if (firsttime) then
         call read_configs_and_props_info(mapconfig_d,iforest_d,sprop_d,
      1                                   tprid_d,pmass_d,pwidth_d,pow_d)
+        firsttime = .false.
+      endif
 c
 c Fill the arrays of the c_configs_inc and c_props_inc common
 c blocks. Some of the information might not be available in the
