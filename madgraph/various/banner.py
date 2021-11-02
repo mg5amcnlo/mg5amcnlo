@@ -2337,7 +2337,7 @@ class RunBlock(object):
     def manage_parameters(self, card, written, to_write):
         """manage written/to_write according to the template written"""
 
-        if status(card):
+        if self.status(card):
             used = self.on_fields
         else:
             used = self.off_fields
@@ -2622,7 +2622,7 @@ class RunCard(ConfigFile):
                     else:
                         this_group = this_group[0]
                     text += this_group.get_template(self) % self
-                    this_group.manage_parameters(written, to_write)
+                    this_group.manage_parameters(self, written, to_write)
                     
                 elif len(nline) != 2:
                     text += line

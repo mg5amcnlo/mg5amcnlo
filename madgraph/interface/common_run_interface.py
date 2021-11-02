@@ -4860,7 +4860,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except IOError:
             self.run_card = {}
         try:
-            run_card_def = banner_mod.RunCard(self.paths['run_default'])
+            run_card_def = banner_mod.RunCard(self.paths['run_default'], consistency=False)
         except IOError:
             run_card_def = {}
 
