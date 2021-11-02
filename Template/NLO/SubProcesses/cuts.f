@@ -612,7 +612,6 @@ c
 c CHARGED LEPTON CUTS
 c
 c find the charged leptons (also used in the photon isolation cuts below)
->>>>>>> MERGE-SOURCE
       do i=1,nexternal
          if(istatus(i).eq.1 .and.
      &    (ipdg(i).eq.11 .or. ipdg(i).eq.13 .or. ipdg(i).eq.15)) then
