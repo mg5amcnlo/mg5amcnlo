@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -20,8 +20,8 @@ and call immediately the command line interface scripts"""
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadSpin works only with python 2.6 or later (but not python 3.X).\n\
+if  sys.version_info[1] < 6:
+    sys.exit('MadSpin works only with python 2.7 or with python 3.6 (or later).\n\
                Please upgrate your version of python.')
 
 import os

@@ -4051,7 +4051,7 @@ class RunCardLO(RunCard):
                 for pdg in ids:
                     if pdg == 22:
                         one_proc_cut['a'] +=1
-                    elif abs(pdg) <= self['maxjetflavor']:
+                    elif abs(pdg) <= self['maxjetflavor'] or pdg == 21:
                         one_proc_cut['j'] += 1
                         one_proc_cut['J'] += 1
                     elif abs(pdg) <= 5:

@@ -4954,19 +4954,24 @@ This implies that with decay chains:
                 while True:
                     try:
                         spin = self._curr_model.get_particle(no_dup_name).get('spin')
+                        mass = self._curr_model.get_particle(no_dup_name).get('mass')
                         break
                     except AttributeError:
                         if no_dup_name in self._multiparticles:
                             spins = set([self._curr_model.get_particle(p).get('spin') for p in self._multiparticles[no_dup_name]])
+                            mass = set([self._curr_model.get_particle(p).get('mass') for p in self._multiparticles[no_dup_name]])
+
                             if len(spins) > 1:
                                 raise self.InvalidCmd('Can not use polarised on multi-particles for multi-particles with various spin')
                             else:
                                 spin = spins.pop()
                                 break
+
                         elif no_dup_name[0].isdigit():
                             no_dup_name = no_dup_name[1:]
                         else:
-                            raise
+                            raise self.InvalidCmd('%s is not defined in the model' % no_dup_name)
+
                 if rest:
                     raise self.InvalidCmd('A space is required after the "}" symbol to separate particles')
                 ignore  =False
@@ -5011,6 +5016,8 @@ This implies that with decay chains:
                     elif p in [0,'0']:
                         if spin in [1,2]:
                             raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
+                        elif spin in [3,5] and (mass == "ZERO" or "ZERO" in mass):
+                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for massless boson.')
                         else:
                             polarization += [0]
                     elif p.isdigit():
@@ -8198,7 +8205,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             assert self._curr_exporter.exporter == 'v4'
-            options = {'zerowidth_tchannel': True}
+            options = {'zerowidth_tchannel': self.options['zerowidth_tchannel']}
             if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
                 options['zerowidth_tchannel'] = False
             

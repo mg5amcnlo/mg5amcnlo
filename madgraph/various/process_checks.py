@@ -214,16 +214,19 @@ class MatrixElementEvaluator(object):
             matrix_methods = {}
 
         if self.reuse and "Matrix_%s" % process.shell_string() in globals() and p:
-            if matrix_element not in self.stored_quantities['matrix_elements']:
-                self.stored_quantities['matrix_elements'].append(matrix_element)
-            # Evaluate the matrix element for the momenta p
-            matrix = eval("Matrix_%s()" % process.shell_string(), globals())
-            me_value = matrix.smatrix(p, self.full_model)
-            if output == "m2":
-                return matrix.smatrix(p, self.full_model), matrix.amp2
-            else:
-                m2 = matrix.smatrix(p, self.full_model)
-            return {'m2': m2, output:getattr(matrix, output)}
+            try:
+                if matrix_element not in self.stored_quantities['matrix_elements']:
+                    self.stored_quantities['matrix_elements'].append(matrix_element)
+                # Evaluate the matrix element for the momenta p
+                matrix = eval("Matrix_%s()" % process.shell_string(), globals())
+                me_value = matrix.smatrix(p, self.full_model)
+                if output == "m2":
+                    return matrix.smatrix(p, self.full_model), matrix.amp2
+                else:
+                    m2 = matrix.smatrix(p, self.full_model)
+                return {'m2': m2, output:getattr(matrix, output)}
+            except NameError:
+                pass
 
         if (auth_skipping or self.auth_skipping) and matrix_element in \
                self.stored_quantities['matrix_elements']:
