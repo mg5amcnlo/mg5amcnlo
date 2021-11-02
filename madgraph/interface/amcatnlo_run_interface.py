@@ -3629,22 +3629,25 @@ RESTART = %(mint_mode)s
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
-                stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         if event_norm.lower() == 'sum':
-            p.communicate(input = '1\n'.encode())
+            out, err = p.communicate(input = '1\n'.encode())
         elif event_norm.lower() == 'unity':
-            p.communicate(input = '3\n'.encode())
+            out, err = p.communicate(input = '3\n'.encode())
         elif event_norm.lower() == 'bias':
-            p.communicate(input = '0\n'.encode())
+            out, err = p.communicate(input = '0\n'.encode())
         else:
-            p.communicate(input = '2\n'.encode())
-
+            out, err = p.communicate(input = '2\n'.encode())
+        
+        out = out.decode()
+        data = str(out)
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
-
+        filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
+        
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check collect_events.log')
+                    'The event file has not been created: \n %s' % data)
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
