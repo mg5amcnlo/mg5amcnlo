@@ -118,7 +118,7 @@ class TestMECmdShell(unittest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print("install MadAnalysis")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
@@ -735,7 +735,7 @@ class TestMEfromfile(unittest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
@@ -811,7 +811,7 @@ class TestMEfromfile(unittest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -893,7 +893,7 @@ class TestMEfromfile(unittest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
