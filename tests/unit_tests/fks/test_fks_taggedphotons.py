@@ -68,13 +68,13 @@ class TestAMCatNLOEWTagPh(unittest.TestCase):
         cmd = "u u~ > !a! !a!"
         self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
 
-        cmd = "u u~ > !z! a [real=QED]"
-        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+        #cmd = "u u~ > !z! a [real=QED]"
+        #self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
 
-        cmd = "u u~ > !t! t~ a [real=QED]"
-        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+        #cmd = "u u~ > !t! t~ a [real=QED]"
+        #self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
 
-        cmd = "u u~ > !a! a [real=QCD]" # is this valid ? I guess NOT [note this is QCD]
-        self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
+        #cmd = "u u~ > !a! a [real=QCD]" # is this valid ? I guess NOT [note this is QCD]
+        #self.assertRaises(madgraph.InvalidCmd,  self.interface.do_generate, cmd)
 
         
