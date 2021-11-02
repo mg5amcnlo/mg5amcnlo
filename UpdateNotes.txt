@@ -12,6 +12,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             (maxchannels is kept the same in both cases)
       RF: Fix for montecarlocounter in case the Born is not strictly positive
            (i.e., only interference contributions).
+      RF+IT: Rewritten the clustering code for FxFx. This allows for
+             seperation of QCD and EW jets. Needs special JetMatching.h for
+             Pythia8 (can be found in Template/NLO/MCatNLO/Scripts/JetMatching.h)
 	   
 3.2.0 (22/08/21)
       SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
