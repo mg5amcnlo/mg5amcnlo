@@ -92,6 +92,10 @@ c fks.inc information
       double precision ch_i,ch_j,ch_m
       integer particle_type_born(nexternal-1)
       common /c_particle_type_born/particle_type_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      logical particle_tag_born(nexternal-1)
+      common /c_particle_tag/particle_tag_born
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       integer extra_cnt, isplitorder_born, isplitorder_cnt
@@ -122,6 +126,7 @@ c
             stop
          endif
          particle_type(i)=particle_type_D(nFKSprocess,i)
+         particle_tag(i)=particle_tag_D(nFKSprocess,i)
          particle_charge(i)=particle_charge_D(nFKSprocess,i)
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
          ! is_aorg is true if the particle can induce soft singularities
@@ -136,18 +141,22 @@ c
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)
+            particle_tag_born(i)=particle_tag(i)
          elseif (i.gt.max(i_fks,j_fks)) then
             particle_type_born(i-1)=particle_type(i)
             particle_charge_born(i-1)=particle_charge(i)
+            particle_tag_born(i-1)=particle_tag(i)
          elseif (i.eq.min(i_fks,j_fks)) then
             i_type=particle_type(i_fks)
             j_type=particle_type(j_fks)
             ch_i=particle_charge(i_fks)
             ch_j=particle_charge(j_fks)
+            particle_tag_born(i) = particle_tag(j_fks)
             call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
             particle_type_born(i)=m_type
             particle_charge_born(i)=ch_m
          elseif (i.ne.max(i_fks,j_fks)) then
+            particle_tag_born(i) = particle_tag(i)
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)
          endif

@@ -3,6 +3,7 @@
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
@@ -34,6 +35,7 @@
       integer            this_config
       common/to_mconfigs/this_config
 c     
+      call cpu_time(tBefore)
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -62,6 +64,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)
+      tGenPS=tGenPS+(tAfter-tBefore)
       return
       end
 

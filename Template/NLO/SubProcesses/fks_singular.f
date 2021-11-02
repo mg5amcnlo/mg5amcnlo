@@ -872,10 +872,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
       integer need_matching(nexternal),need_matching_izero(nexternal)
-     &     ,need_matching_cuts(nexternal)
       integer need_matching_S(nexternal),need_matching_H(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
-      common /c_need_matching_cuts/need_matching_cuts
       save need_matching_izero
       double precision shower_S_scale(fks_configs*2)
      &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
@@ -909,7 +907,6 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
             need_matching_S(1:nexternal)=need_matching(1:nexternal)
             need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
-            need_matching_cuts(1:nexternal)=need_matching_izero(1:nexternal)
 c Update shower starting scale to be the scale down to which the MINLO
 c Sudakov factors are included.
             shower_S_scale(nFKSprocess*2-1)=
@@ -943,7 +940,6 @@ c Sudakov factors are included.
          nFxFx_ren_scales_izero=nFxFx_ren_scales
          do i=1,nexternal
             need_matching_izero(i)=need_matching(i)
-            need_matching_cuts(i)=need_matching(i)
          enddo
          do i=0,nexternal
             FxFx_ren_scales_izero(i)=FxFx_ren_scales(i)
@@ -1006,9 +1002,6 @@ c Update shower starting scale
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
 c Restore scales for the n-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_izero
-         do i=1,nexternal
-            need_matching_cuts(i)=need_matching_izero(i)
-         enddo
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_izero(i)
          enddo
@@ -1018,9 +1011,6 @@ c Restore scales for the n-body FxFx terms
       elseif (iterm.eq.-3) then
 c Restore scales for the n+1-body FxFx terms
          nFxFx_ren_scales=nFxFx_ren_scales_mohdr
-         do i=1,nexternal
-            need_matching_cuts(i)=need_matching_H(i)
-         enddo
          do i=0,nexternal
             FxFx_ren_scales(i)=FxFx_ren_scales_mohdr(i)
          enddo
@@ -1031,17 +1021,6 @@ c Restore scales for the n+1-body FxFx terms
          write (*,*) 'ERROR: unknown iterm in set_FxFx_scale',iterm
          stop 1
       endif
-
-c Check the need_matching
-c      do i=1,nexternal
-c      write (*,*) i,need_matching(i),need_matching_S(i)
-c     &,need_matching_H(i),need_matching_izero(i),need_matching_cuts(i)
-c     &,dsqrt(p(1,i)**2+p(2,i)**2)
-c      enddo
-c      write (*,*) 'iterm=',iterm
-c      write (*,*) nFxFx_ren_scales, FxFx_ren_scales(nFxFx_ren_scales)
-c      write (*,*) ' '
-
       call cpu_time(tAfter)
       tFxFx=tFxFx+(tAfter-tBefore)
       return
@@ -1588,6 +1567,12 @@ c        contribution
       integer need_matching_S(nexternal),need_matching_H(nexternal)
       common /c_need_matching/ need_matching_S,need_matching_H
 
+      integer ntagph
+      double precision resc
+      integer get_n_tagged_photons
+      double precision get_rescale_alpha_factor
+      external get_n_tagged_photons get_rescale_alpha_factor
+
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -1651,9 +1636,21 @@ C Secondly, the more advanced filter
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
-      wgt(1,icontr)=wgt1
-      wgt(2,icontr)=wgt2
-      wgt(3,icontr)=wgt3
+
+C here we rescale the contributions by the ratio of alpha's in different
+C schemes; it is needed when there are tagged photons around
+      ntagph = get_n_tagged_photons()
+      if (ntagph.eq.0) then
+        wgt(1,icontr)=wgt1
+        wgt(2,icontr)=wgt2
+        wgt(3,icontr)=wgt3
+      else if (ntagph.gt.0) then
+          resc = get_rescale_alpha_factor(ntagph, orders(qed_pos)) 
+          wgt(1,icontr) = wgt1 * resc
+          wgt(2,icontr) = wgt2 * resc
+          wgt(3,icontr) = wgt3 * resc
+      endif
+
       bjx(1,icontr)=xbk(1)
       bjx(2,icontr)=xbk(2)
       scales2(1,icontr)=QES2
@@ -5548,6 +5545,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision particle_charge(nexternal)
       common /c_charges/particle_charge
       include "run.inc"
@@ -5780,7 +5779,7 @@ C     skip particles which are not photons or charged
                   if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                 cycle
 C     set charge factors
-                  if (pdg_type(i).eq.22) then
+                  if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                      c_used = 0d0
                      gamma_used = gamma_ph
                      gammap_used = gammap_ph
@@ -5929,11 +5928,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
-            call cpu_time(tAfter)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-            tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
                virt_wgt = 0d0
@@ -5961,6 +5958,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             virt_wgt_save=virt_wgt
             amp_split_virt_save(1:amp_split_size)=
      $           amp_split_virt(1:amp_split_size)
+            call cpu_time(tAfter)
+            tOLP=tOLP+(tAfter-tBefore)
          endif
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
@@ -6060,7 +6059,7 @@ C     skip particles which are not photons or charged
                      if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                    cycle
 C     set charge factors
-                     if (pdg_type(i).eq.22) then
+                     if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                         c_used = 0d0
                         gamma_used = gamma_ph
                         gammap_used = gammap_ph
@@ -6389,6 +6388,8 @@ c      include "fks.inc"
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       include 'coupl.inc'
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
@@ -6497,7 +6498,7 @@ c QED Born terms
             if (pdg_type(i).ne.22) then
               contr2=contr2-particle_charge(i)**2
               contr1=contr1-3d0/2d0*particle_charge(i)**2
-            else
+            elseif (.not.particle_tag(i)) then
               contr1=contr1-gamma_ph
             endif
           else
@@ -6695,6 +6696,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision zero
       parameter (zero=0d0)
 
@@ -6839,7 +6842,7 @@ C MZ the test may be removed sooner or later
          do i=nincoming+1,nexternal
             if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
      $           =ngluons_FKS(nFKSprocess)+1
-            if (pdg_type(i).eq.22) nphotons_FKS(nFKSprocess)
+            if (pdg_type(i).eq.22.and..not.particle_tag(i)) nphotons_FKS(nFKSprocess)
      $           =nphotons_FKS(nFKSprocess)+1
          enddo
 

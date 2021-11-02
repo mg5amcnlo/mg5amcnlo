@@ -56,7 +56,8 @@ c (mostly in run.inc, and one  in coupl.inc)
       include "nexternal.inc"
       include "run.inc"
       include "coupl.inc"
-
+      include "timing_variables.inc"
+      
       double precision xp(0:3,nexternal)
       double precision dummy,dummyQES,dummies(2)
       integer i,j
@@ -72,6 +73,7 @@ c put momenta in common block for couplings.f
       logical firsttime
       data firsttime/.true./
 
+      call cpu_time(tBefore)
 c
       if (firsttime) then
         firsttime=.false.
@@ -149,6 +151,9 @@ c Pass momenta to couplings.f
 cc         call setpara('param_card.dat')
       endif
 
+      call cpu_time(tAfter)
+      t_coupl=t_coupl+(tAfter-tBefore)
+      
  200  format(1x,a,2(1x,d12.6),2x,f4.2)
 
       return

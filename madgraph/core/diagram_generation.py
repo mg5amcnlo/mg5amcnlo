@@ -30,6 +30,7 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
+import madgraph.fks.fks_tag as fks_tag
 from madgraph import InvalidCmd, MadGraph5Error
 from six.moves import range
 from six.moves import zip
@@ -1713,6 +1714,15 @@ class MultiProcess(base_objects.PhysicsObject):
                  if leg['state'] == True]
         polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
+
+        # keep track of the 'is_tagged' property of the legs if needed
+        try:
+            fstags = [leg['is_tagged'] for leg in process_definition['legs'] \
+                 if 'is_tagged' in leg.keys() and leg['state'] == True]
+
+        except KeyError:
+            fstags = []
+
         # Generate all combinations for the initial state
         for prod in itertools.product(*isids):
             islegs = [\
@@ -1735,10 +1745,16 @@ class MultiProcess(base_objects.PhysicsObject):
                 red_fsidlist.add(tuple(tag))
                 # Generate leg list for process
                 leg_list = [copy.copy(leg) for leg in islegs]
-                leg_list.extend([\
-                        base_objects.Leg({'id':id, 'state': True, 'polarization': fslegs[i]['polarization']}) \
-                        for i,id  in enumerate(prod)])
                 
+                if not fstags:
+                    leg_list.extend([\
+                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            for id, fsleg in zip(prod, fslegs)])
+                else:
+                    leg_list.extend([\
+                            fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'is_tagged': tag}) \
+                            for id, fsleg, tag in zip(prod, fslegs, fstags)])
+
                 legs = base_objects.LegList(leg_list)
 
                 # Check for crossed processes

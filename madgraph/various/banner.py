@@ -3352,7 +3352,7 @@ class RunCardLO(RunCard):
         
                 if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
                     logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
-                time.sleep(5)
+                    time.sleep(5)
 
         # check that fixed_fac_scale(1/2) is setting as expected
         # if lpp=2/3/4 -> default is that beam in fixed scale
@@ -4528,6 +4528,7 @@ class RunCardNLO(RunCard):
         """Rules
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
+          process with tagged photons -> gamma_is_j = false
         """
 
         # check for beam_id
@@ -4552,13 +4553,23 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+
+        # check for tagged photons
+        tagged_particles = set()
             
         # Check if need matching
         min_particle = 99
         max_particle = 0
         for proc in proc_def:
+            for leg in proc['legs']:
+                if leg['is_tagged']:
+                    tagged_particles.add(leg['id'])
             min_particle = min(len(proc['legs']), min_particle)
             max_particle = max(len(proc['legs']), max_particle)
+
+        if 22 in tagged_particles:
+            self['gamma_is_j'] = False
+
         matching = False
         if min_particle != max_particle:
             #take one of the process with min_particle
