@@ -186,6 +186,6 @@ c         if hel=0 return the number of helicity state possible for that particl
 	  INTEGER NHEL(NEXTERNAL,0:NCOMB)
 	  %(helicity_lines)s
 
-	  get_nhel%(proc_id)s = nhel(ipart, hel)
+	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
 	  return
 	  end

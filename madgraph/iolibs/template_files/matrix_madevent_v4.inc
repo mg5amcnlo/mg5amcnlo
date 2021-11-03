@@ -116,7 +116,7 @@ C ----------
         ENDIF
 	IF (ISUM_HEL.NE.0) then
 !         We set HEL_PICKED to -HEL_PICKED here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
-		  HEL_PICKED = iabs(HEL_PICKED)
+		  HEL_PICKED = -iabs(HEL_PICKED)
 !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
 		  hel_jacobian   = 1.0d0
 		  IF(DS_get_dim_status('Helicity').eq.1) then 
@@ -154,7 +154,7 @@ c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
     ENDIF
-    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.eq.-1)) THEN
+    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.gt.0)) THEN
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB
