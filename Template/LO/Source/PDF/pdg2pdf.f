@@ -77,7 +77,7 @@ c     collider configuration
          return
       endif
 
-      nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
+      nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.
@@ -121,10 +121,10 @@ c       change e/mu/tau = 8/9/10 to 11/13/15
            stop 1
         endif
         do i_ee = 1, n_ee
-          ee_components(i_ee) = compute_eepdf(x,omx_ee(beamid),xmu,i_ee,ipart,ih_local)
+          ee_components(i_ee) = compute_eepdf(x,omx_ee(iabs(beamid)),xmu,i_ee,ipart,ih_local)
 	enddo
         pdg2pdf =  ee_components(1) ! temporary to test pdf load
-c        write(*,*), x, beamid ,omx_ee(beamid),xmu,1,ipart,ih_local,pdg2pdf
+c        write(*,*), x, beamid ,omx_ee(iabs(beamid)),xmu,1,ipart,ih_local,pdg2pdf
         return
       endif
       
@@ -132,7 +132,7 @@ c        write(*,*), x, beamid ,omx_ee(beamid),xmu,1,ipart,ih_local,pdg2pdf
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
-      if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'eva') then
          ipart=ipdg
       else
          ipart=sign(1,ih)*ipdg
@@ -181,8 +181,8 @@ c     Check if result can be reused since any of last two calls
 c     Reuse previous result, if possible
       if (ireuse.gt.0.and.iabs(iporg).lt.8)then
          if (pdflast(iporg,ireuse).ne.-99d9) then
-            pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
-     $                         nb_neutron(beamid))
+            pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(iabs(beamid)),
+     $                         nb_neutron(iabs(beamid)))
             return 
          endif
       endif
@@ -223,14 +223,14 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
       ihlast(ireuse)=ih
 
-      if(pdlabel.eq.'eva'.or.pdsublabel(beamid).eq.'eva') then
+      if(pdlabel.eq.'eva'.or.pdsublabel(iabs(beamid)).eq.'eva') then
          if(iabs(ipart).ne.7.and.
 c     &      iabs(ipart).ne.12.and.
 c     &      iabs(ipart).ne.14.and.     
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
             write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
-            stop 7142324
+            stop 1
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))
@@ -246,7 +246,7 @@ c         write(*,*) 'running eva'
                stop 24
             end select
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
-            fLPol = pol(beamid)        ! see setrun.f for treatment of polbeam*
+            fLPol = pol(iabs(beamid))        ! see setrun.f for treatment of polbeam*
             q2max = xmu*xmu
             ievo = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
@@ -272,18 +272,18 @@ c         write(*,*) 'running eva'
       
       if (pdlabel(1:5) .eq. 'cteq6') then
 C        Be carefull u and d are flipped inside cteq6
-         if (nb_proton(beamid).gt.1.or.nb_neutron(beamid).ne.0)then
+         if (nb_proton(iabs(beamid)).gt.1.or.nb_neutron(iabs(beamid)).ne.0)then
             if (ipart.eq.1.or.ipart.eq.2)then
                pdflast(1,ireuse)=Ctq6Pdf(2,x*nb_hadron,xmu) ! remember u/d flipping in cteq
                pdflast(2,ireuse)=Ctq6Pdf(1,x*nb_hadron,xmu)
-               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))
             else if (ipart.eq.-1.or.ipart.eq.-2)then
                pdflast(-1,ireuse)=Ctq6Pdf(-2,x*nb_hadron,xmu) ! remember u/d flipping in cteq
                pdflast(-2,ireuse)=Ctq6Pdf(-1,x*nb_hadron,xmu)
-               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))
             else
                pdflast(ipart,ireuse)=Ctq6Pdf(ipart,x*nb_hadron,xmu)
-               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))
+               pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))
             endif 
          else
             if(iabs(ipart).ge.1.and.iabs(ipart).le.2)
@@ -293,8 +293,8 @@ C        Be carefull u and d are flipped inside cteq6
          endif
       else
          call pftopdg(iabs(ih),x*nb_hadron,xmu,pdflast(-7,ireuse))
-         pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(beamid),
-     $                         nb_neutron(beamid))
+         pdg2pdf = get_ion_pdf(pdflast(-7, ireuse), iporg, nb_proton(iabs(beamid)),
+     $                         nb_neutron(iabs(beamid)))
       endif      
 
       return

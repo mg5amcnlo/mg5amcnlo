@@ -48,7 +48,7 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       real*8 pol(2),fLPol
       common/to_polarization/pol
 
-      nb_hadron = (nb_proton(beamid)+nb_neutron(beamid))
+      nb_hadron = (nb_proton(iabs(beamid))+nb_neutron(iabs(beamid)))
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.
@@ -70,7 +70,7 @@ c     instead of stopping the code, as this might accidentally happen.
 c     If group_subprocesses is true, then IH=abs(lpp) and ipdg=ipdg*sgn(lpp) in export_v4.
 c     For EVA,  group_subprocesses is false and IH=LPP and ipdg are passed, instead.
 c     If group_subprocesses is false, the following sets ipdg=ipdg*sgn(IH) if not in EVA
-      if(pdsublabel(beamid).eq.'eva') then
+      if(pdsublabel(iabs(beamid)).eq.'eva') then
          ipart=ipdg
       else 
          ipart=ipdg*ih/iabs(ih)
@@ -106,14 +106,14 @@ c         write(26,*) 'Error: PDF not supported for pdg ',ipdg
 c         stop 1
       endif
       
-      if(pdsublabel(beamid).eq.'eva') then
+      if(pdsublabel(iabs(beamid)).eq.'eva') then
          if(iabs(ipart).ne.7.and.
 c     &      iabs(ipart).ne.12.and.
 c     &      iabs(ipart).ne.14.and.     
      &      iabs(ipart).ne.23.and.
      &      iabs(ipart).ne.24 ) then
             write(*,*) 'ERROR: EVA PDF only supported for A/Z/W, not for pdg = ',ipart
-            stop 7142324
+            stop 1
          else
 c         write(*,*) 'running eva'
             select case (iabs(ih))
@@ -129,7 +129,7 @@ c         write(*,*) 'running eva'
                stop 24
             end select
             ppid  = ppid * ih/iabs(ih) ! get sign of parent
-            fLPol = pol(beamid)        ! see setrun.f for treatment of polbeam*
+            fLPol = pol(iabs(beamid))        ! see setrun.f for treatment of polbeam*
 c              q2max = xmu*xmu
             ievo = ievo_eva
             hel      = GET_NHEL(HEL_PICKED, beamid) ! helicity of v
@@ -188,7 +188,7 @@ c     calls. Start checking with the last call and move back in time
 c     Reuse previous result, if possible
       if (ireuse.gt.0.and.abs(ipart).le.7) then
          if (pdflast(ipart,ireuse).ne.-99d9) then
-            pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(beamid), nb_neutron(beamid))/x
+            pdg2pdf = get_ion_pdf(pdflast(-7,ireuse), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))/x
             return 
          endif
       endif
@@ -199,7 +199,7 @@ c Calculated a new value: replace the value computed longest ago
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       if(iabs(ih).eq.1) then
-         if (nb_proton(beamid).eq.1.and.nb_neutron(beamid).eq.0) then
+         if (nb_proton(iabs(beamid)).eq.1.and.nb_neutron(iabs(beamid)).eq.0) then
             call evolvepart(ipart,x,xmu,pdg2pdf)
             if (abs(ipart).le.7)   pdflast(ipart, i_replace)=pdg2pdf
          else
@@ -217,7 +217,7 @@ c     be saved
                call evolvepart(ipart,x*nb_hadron
      &                         ,xmu,pdflast(ipart, i_replace))
             endif 
-            pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(beamid), nb_neutron(beamid))
+            pdg2pdf = get_ion_pdf(pdflast(-7, i_replace), ipart, nb_proton(iabs(beamid)), nb_neutron(iabs(beamid)))
          endif
          pdg2pdf=pdg2pdf/x
       else if(iabs(ih).eq.3.or.iabs(ih).eq.4) then       !from the electron
