@@ -124,11 +124,11 @@ class Systematics(object):
         isEVAxDIS=False
         # eva-on-eva or eva-on-parton
         if self.banner.run_card['pdlabel']=='eva':      
-            if abs(beam1) == 11 or abs(beam1) == 13:
+            if (abs(beam1) == 11 or abs(beam1) == 13) and self.banner.run_card['lpp1'] != 0:
                 self.b1 = beam1
             else:
                 self.b1 = 0
-            if abs(beam2) == 11 or abs(beam2) == 13:
+            if (abs(beam2) == 11 or abs(beam2) == 13) and self.banner.run_card['lpp2'] != 0:
                 self.b2 = beam2
             else:
                 self.b2 = 0
@@ -159,7 +159,6 @@ class Systematics(object):
         # none
         if(self.banner.run_card['pdlabel']=='none'):
             raise SystematicsError('Systematics not supported for pdlabel=none')
-        
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
