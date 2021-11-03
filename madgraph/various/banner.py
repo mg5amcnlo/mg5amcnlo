@@ -3231,9 +3231,12 @@ class FixedfacscaleBlock(RunBlock):
                 dict.__setitem__(card, 'fixed_fac_scale1', card['fixed_fac_scale'])
             if name == 'fixed_fac_scale1' and 'fixed_fac_scale2' not in card.user_set:
                 dict.__setitem__(card, 'fixed_fac_scale2', card['fixed_fac_scale'])   
-      
+
+
     def status(self, card):
-        """return False if template_off to be used, True if template_on to be used"""
+        """return False if template_off to be used, True if template_on to be used
+        inverted mode of display if the block is in card.display_block"""
+
 
         if self.name in card.display_block:
             return False
@@ -3854,8 +3857,8 @@ class RunCardLO(RunCard):
      
 
             # check for possibility of eva
-            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24,12,-12,14,-14])
-            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24,12,-12,14,-14])
+            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24]) #,12,-12,14,-14])
+            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24]) #,12,-12,14,-14])
             if eva_in_b1 and eva_in_b2:
                 self['lpp1'] = -3
                 self['lpp2'] = 3
