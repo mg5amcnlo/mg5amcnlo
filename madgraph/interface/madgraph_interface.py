@@ -5017,7 +5017,9 @@ This implies that with decay chains:
                         if spin in [1,2]:
                             raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
                         elif spin in [3,5] and (mass == "ZERO" or "ZERO" in mass):
-                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for massless boson.')
+                            logger.info('"0" (longitudinal) polarization detected for massless boson.')
+                            polarization += [0] # those mode will be bypass at generation time
+                                                # important to keep it here in presence of multi-particles
                         else:
                             polarization += [0]
                     elif p.isdigit():

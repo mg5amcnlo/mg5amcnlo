@@ -4763,6 +4763,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return itertools.product(*hel_per_part)
 
 
+
+
     def get_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
         state spin only """
@@ -4791,6 +4793,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return hel_per_part
 
+    def get_spin_state(self):
+        """Gives (number of state for each initial particle)"""
+
+        model = self.get('processes')[0].get('model')
+        legs = [leg for leg in self.get('processes')[0].get('legs')]
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  leg.get('id')].get_helicity_states())
+            for leg in legs]
+        
+        if len(hel_per_part) == 1:
+            hel_per_part.append(0)
+            
+        return hel_per_part
 
     def get_beams_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial

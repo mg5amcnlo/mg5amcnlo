@@ -299,11 +299,12 @@ c     Also make sure there's no INF or NAN
 c
 c     Limit S_hat
 c
-c      if (x1*x2*stot .gt. 500**2) then
-c         passcuts=.false.
-c         return
-c      endif
-
+      if (dsqrt_shat.ne.0d0)then
+         if (nincoming.eq.2.and.sumdot(p(0,1),p(0,2),1d0) .lt. dsqrt_shat**2) then
+            passcuts=.false.
+            return
+         endif
+      endif
 C $B$ DESACTIVATE_CUT $E$ !This is a tag for MadWeight
 
       if(debug) write (*,*) '============================='

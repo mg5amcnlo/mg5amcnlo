@@ -1811,7 +1811,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return
                 else:
                     raise self.InvalidCmd('systematics not available for decay processes.')
-                
+        
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception as error:
@@ -1848,7 +1848,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid if onelha != 0]
         except Exception as error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
@@ -4860,7 +4860,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except IOError:
             self.run_card = {}
         try:
-            run_card_def = banner_mod.RunCard(self.paths['run_default'])
+            run_card_def = banner_mod.RunCard(self.paths['run_default'], consistency=False)
         except IOError:
             run_card_def = {}
 
@@ -6042,6 +6042,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception("Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\".")
             
+            # check for nhel if using eva
+            if  self.run_card['pdlabel']  == 'eva' or \
+                self.run_card['pdlabel1'] == 'eva' or \
+                self.run_card['pdlabel2'] == 'eva':
+                logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
+
+                if self.run_card['nhel'] == 0:
+                    logger.warning("EVA mode requies MC sampling by polarization: updating run_card with nhel=1")
+                    self.do_set('run_card nhel 1')
+
             # check the status of small width status from LO
             for param in self.param_card['decay']:
                 width = param.value
