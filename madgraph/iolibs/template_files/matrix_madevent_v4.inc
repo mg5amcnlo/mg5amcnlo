@@ -154,7 +154,7 @@ c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
             WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)  
     ENDIF
-    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.gt.0)) THEN
+    IF (ISUM_HEL .NE. 1.or.(HEL_PICKED.le.0)) THEN
     R=XRAN1(IDUM)*ANS
     SUMHEL=0d0
     DO I=1,NCOMB
