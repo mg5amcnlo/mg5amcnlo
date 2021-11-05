@@ -4,10 +4,14 @@
 
 
 from __future__ import absolute_import
-from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
-from . import particles as P
-from . import CT_couplings as C
-from . import lorentz as L
+
+#from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
+import object_library
+CTVertex = object_library.CTVertex
+all_CTvertices = object_library.all_CTvertices
+import particles as P
+import CT_couplings as C
+import lorentz as L
 
 
 V_1 = CTVertex(name = 'V_1',

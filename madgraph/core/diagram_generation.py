@@ -129,7 +129,6 @@ class DiagramTag(object):
 
     def get_external_numbers(self):
         """Get the order of external particles in this tag"""
-
         return self.tag.get_external_numbers()
 
     def diagram_from_tag(self, model):
@@ -356,6 +355,7 @@ class DiagramTagChainLink(object):
         second entry in the end link tuples)"""
 
         if self.end_link:
+            #misc.sprint(self.links[0][1])
             return [self.links[0][1]]
 
         return sum([l.get_external_numbers() for l in self.links], [])
@@ -645,6 +645,7 @@ class Amplitude(base_objects.PhysicsObject):
             if leg.get('number') == 0:
                 leg.set('number', i + 1)
 
+            
         # Copy leglist from process, so we can flip leg identities
         # without affecting the original process
         leglist = self.copy_leglist(process.get('legs'))
@@ -1674,6 +1675,7 @@ class MultiProcess(base_objects.PhysicsObject):
         generation.  Doing so will risk making it impossible to
         identify processes with identical amplitudes.
         """
+
         assert isinstance(process_definition, base_objects.ProcessDefinition), \
                                     "%s not valid ProcessDefinition object" % \
                                     repr(process_definition)
@@ -1703,7 +1705,7 @@ class MultiProcess(base_objects.PhysicsObject):
         # identifying identical matrix elements already at this stage.
         model = process_definition['model']
         
-        islegs = [leg for leg in process_definition['legs'] \
+        islegs_orig = [leg for leg in process_definition['legs'] \
                  if leg['state'] == False]
         fslegs = [leg for leg in process_definition['legs'] \
                  if leg['state'] == True]        
@@ -1714,6 +1716,8 @@ class MultiProcess(base_objects.PhysicsObject):
                  if leg['state'] == True]
         polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
+
+        masses = {id: model.get_particle(id).get('mass')  for leg in process_definition['legs'] for id in leg['ids']} 
 
         # keep track of the 'is_tagged' property of the legs if needed
         try:
@@ -1727,8 +1731,19 @@ class MultiProcess(base_objects.PhysicsObject):
         for prod in itertools.product(*isids):
             islegs = [\
                     base_objects.Leg({'id':id, 'state': False, 
-                                      'polarization': islegs[i]['polarization']})
+                                      'polarization': islegs_orig[i]['polarization']})
                     for i,id in enumerate(prod)]
+
+            # check for longitudinal photon
+            invalid = False
+            for i, l in enumerate(islegs):
+                if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                    l['polarization'] = [l for l in l['polarization'] if l != 0]
+                    if len(l['polarization']) == 0:
+                        invalid = True
+                        break
+            if invalid:
+                continue
 
             # Generate all combinations for the final state, and make
             # sure to remove double counting
@@ -1756,6 +1771,19 @@ class MultiProcess(base_objects.PhysicsObject):
                             for id, fsleg, tag in zip(prod, fslegs, fstags)])
 
                 legs = base_objects.LegList(leg_list)
+
+
+                # check for longitudinal photon
+                invalid = False
+                for l in legs[len(islegs):]:
+                    if 0 in l['polarization'] and  masses[l['id']] == "ZERO":
+                        l['polarization'] =list(l['polarization'])
+                        l['polarization'].remove(0)
+                        if len(l['polarization']) == 0:
+                            invalid = True
+                            break
+                if invalid:
+                    continue
 
                 # Check for crossed processes
                 sorted_legs = sorted([(l,i+1) for (i,l) in \

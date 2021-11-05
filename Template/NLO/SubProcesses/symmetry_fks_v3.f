@@ -386,4 +386,5 @@ c
             endif
          endif
       enddo
+      close(26)
       end

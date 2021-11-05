@@ -6986,9 +6986,13 @@ class MadLoopInitializer(object):
 
         # Setup parallelization
         if MG_options:
-            mcore = cluster.MultiCore(**MG_options)
+            if interface and  hasattr(interface, 'cluster') and isinstance(interface.cluster, cluster.MultiCore):
+                mcore = interface.cluster
+            else: 
+                mcore = cluster.MultiCore(**MG_options)
         else:
             mcore = cluster.onecore
+
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(
