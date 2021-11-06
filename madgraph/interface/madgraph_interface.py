@@ -6088,6 +6088,7 @@ This implies that with decay chains:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
             # Make sure each otion in add_options appears only once
+            add_options.append('--mg5_path=%s'%MG5DIR)
             add_options = list(set(add_options))
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
