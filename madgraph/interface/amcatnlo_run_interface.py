@@ -3908,7 +3908,7 @@ RESTART = %(mint_mode)s
                 raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. See http://cern.ch/amcatnlo/FxFx_merging.htm")
             f2 = open(py8_plugin).read()
             if f1 != f2:
-                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. Incorrect plugin detected")
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. Incorrect plugin detected. See http://cern.ch/amcatnlo/FxFx_merging.htm")
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
