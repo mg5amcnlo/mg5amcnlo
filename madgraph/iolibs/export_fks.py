@@ -320,38 +320,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 files.cp(model.restrict_card, out_path)
 
 
-
-    #===========================================================================
-    # write_maxparticles_file
-    #===========================================================================
-    def write_maxparticles_file(self, writer, maxparticles):
-        """Write the maxparticles.inc file for MadEvent"""
-
-        lines = "integer max_particles, max_branch\n"
-        lines += "parameter (max_particles=%d) \n" % maxparticles
-        lines += "parameter (max_branch=max_particles-1)"
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
-
-    #===========================================================================
-    # write_maxconfigs_file
-    #===========================================================================
-    def write_maxconfigs_file(self, writer, maxconfigs):
-        """Write the maxconfigs.inc file for MadEvent"""
-
-        lines = "integer lmaxconfigs\n"
-        lines += "parameter (lmaxconfigs=%d)" % maxconfigs
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
-
     #===============================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===============================================================================
@@ -600,9 +568,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               matrix_element,
                               fortran_model)
 
-        filename = 'ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
+        filename = 'maxconfigs.inc'
+        self.write_maxconfigs_file(writers.FortranWriter(filename),
+                max(nconfigs,matrix_element.born_me.get_number_of_amplitudes()))
 
 #write the wrappers for real ME's
         filename_me = 'real_me_chooser.f'
@@ -648,7 +616,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             amp_split_orders)
         self.proc_characteristic['ninitial'] = ninitial
         self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
-    
+        
+        filename = 'maxparticles.inc'
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     nexternal)
+        
         filename = 'pmass.inc'
         try:
             self.write_pmass_file(writers.FortranWriter(filename),
@@ -730,15 +702,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'handling_lhe_events.f',
                      'write_event.f',
                      'fill_MC_mshell.f',
-                     'maxparticles.inc',
-                     'message.inc',
-                     'initcluster.f',
-                     'cluster.inc',
                      'cluster.f',
-                     'reweight.f',
                      'randinit',
-                     'sudakov.inc',
-                     'maxconfigs.inc',
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
@@ -856,18 +821,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = os.path.join(self.dir_path,'Source','MODEL','get_mass_width_fcts.f')
         makeinc = os.path.join(self.dir_path,'Source','MODEL','makeinc.inc')
         self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
-
-#        # Write maxconfigs.inc based on max of ME's/subprocess groups
-
-        filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
-        self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements.get_max_configs())
         
-#        # Write maxparticles.inc based on max of ME's/subprocess groups
-        filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
-        self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements.get_max_particles())
-
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
         
@@ -1661,6 +1615,21 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(lines)
 
 
+    def write_maxparticles_file(self, writer, maxparticles):
+        """Write the maxparticles.inc file for MadEvent"""
+        lines = "integer max_particles, max_branch\n"
+        lines += "parameter (max_particles=%d) \n" % maxparticles
+        lines += "parameter (max_branch=max_particles-1)"
+        writer.writelines(lines)
+
+
+    def write_maxconfigs_file(self, writer, maxconfigs):
+        """Write the maxconfigs.inc file for MadEvent"""
+        lines = "integer lmaxconfigs\n"
+        lines += "parameter (lmaxconfigs=%d)" % maxconfigs
+        writer.writelines(lines)
+
+
     def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
         """writes the genps.inc file
         """
@@ -1886,6 +1855,23 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         if 'sa_symmetry 'not  in self.opt:
             self.opt['sa_symmetry']=False
 
+
+        # Add information relevant for FxFx matching:
+        # Maximum QCD power in all the contributions
+        max_qcd_order = 0
+        for diag in matrix_element.get('diagrams'):
+            orders = diag.calculate_orders()
+            if 'QCD' in orders:
+                max_qcd_order = max(max_qcd_order,orders['QCD'])  
+        max_n_light_final_partons = max(len([1 for id in proc.get_final_ids() 
+        if proc.get('model').get_particle(id).get('mass')=='ZERO' and
+               proc.get('model').get_particle(id).get('color')>1])
+                                    for proc in matrix_element.get('processes'))
+        # Maximum number of final state light jets to be matched
+        self.proc_characteristic['max_n_matched_jets'] = max(
+                               self.proc_characteristic['max_n_matched_jets'],
+                                   min(max_qcd_order,max_n_light_final_partons))   
+
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
@@ -2048,13 +2034,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         filename = 'born_nhel.inc'
         self.write_born_nhel_file(writers.FortranWriter(filename),
                            born_me, nflows, fortran_model)
-
-        filename = 'born_ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename), nconfigs)
-
-        filename = 'ncombs.inc'
-        self.write_ncombs_file(writers.FortranWriter(filename),
-                               born_me, fortran_model)
 
         filename = 'born_coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -2486,6 +2465,7 @@ Parameters              %(params)s\n\
                proc.get('model').get_particle(id).get('color')>1])
                                     for proc in matrix_element.get('processes'))
         # Maximum number of final state light jets to be matched
+        misc.sprint(self.proc_characteristic['max_n_matched_jets'], max_qcd_order,max_n_light_final_partons)
         self.proc_characteristic['max_n_matched_jets'] = max(
                                self.proc_characteristic['max_n_matched_jets'],
                                    min(max_qcd_order,max_n_light_final_partons))    
@@ -3312,7 +3292,6 @@ Parameters              %(params)s\n\
         writer.writelines(lines_P)
 
     
-
     
     #===============================================================================
     # write_dname_file
@@ -3778,42 +3757,6 @@ Parameters              %(params)s\n\
         writer.writelines(file)
 
         return True
-
-    #===============================================================================
-    # write_ncombs_file
-    #===============================================================================
-    def write_ncombs_file(self, writer, matrix_element, fortran_model):
-#        #test written
-        """Write the ncombs.inc file for MadEvent."""
-    
-        # Extract number of external particles
-        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-    
-        # ncomb (used for clustering) is 2^(nexternal)
-        file = "       integer    n_max_cl\n"
-        file = file + "parameter (n_max_cl=%d)" % (2 ** (nexternal+1))
-    
-        # Write the file
-        writer.writelines(file)
-   
-        return True
-    
-    #===========================================================================
-    # write_config_subproc_map_file
-    #===========================================================================
-    def write_config_subproc_map_file(self, writer, s_and_t_channels):
-        """Write a dummy config_subproc.inc file for MadEvent"""
-
-        lines = []
-
-        for iconfig in range(len(s_and_t_channels)):
-            lines.append("DATA CONFSUB(1,%d)/1/" % \
-                         (iconfig + 1))
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
     
     #===========================================================================
     # write_colors_file
@@ -3880,7 +3823,37 @@ c           This is dummy particle used in multiparticle vertices
             """ % model.get_first_non_pdg()
         lines += """else
         write(*,*)'Error: No color given for pdg ',ipdg
-        get_color=0        
+        stop 1
+        return
+        endif
+        end
+        """
+        
+        lines+= """
+        function get_spin(ipdg)
+        implicit none
+        integer get_spin, ipdg
+
+        if(ipdg.eq.%d)then
+        get_spin=%d
+        return
+        """ % (particle_ids[0], model.get_particle(particle_ids[0]).get('spin'))
+
+        for part_id in particle_ids[1:]:
+            lines += """else if(ipdg.eq.%d)then
+            get_spin=%d
+            return
+            """ % (part_id, model.get_particle(part_id).get('spin'))
+        # Dummy particle for multiparticle vertices with pdg given by
+        # first code not in the model
+        lines += """else if(ipdg.eq.%d)then
+c           This is dummy particle used in multiparticle vertices
+            get_spin=-2
+            return
+            """ % model.get_first_non_pdg()
+        lines += """else
+        write(*,*)'Error: No spin given for pdg ',ipdg
+        stop 1
         return
         endif
         end

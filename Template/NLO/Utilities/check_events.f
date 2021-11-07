@@ -47,7 +47,7 @@ c negative number of events
       double precision saved_weight,tmp,wmin,wmax,wlim
       integer ipos,ineg
       character*80 event_file
-      character*140 buff
+      character*1000 buff
       character*6 ch6
       character*5 ch5
       character*3 ch3,event_norm

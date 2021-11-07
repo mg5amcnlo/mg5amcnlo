@@ -35,8 +35,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 initcluster.o cluster.o splitorders_stuff.o 			\
-	 reweight.o get_color.o iproc_map.o				\
+	 cluster.o splitorders_stuff.o 			\
+	 get_color.o iproc_map.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
 
@@ -65,7 +65,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
-	reweight.o get_color.o iproc_map.o chooser_functions.o 		\
+	get_color.o iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
 	weight_lines.o orderstags_glob.o
 
@@ -124,6 +124,7 @@ reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o
 driver_mintMC.o: weight_lines.o mint_module.o
 driver_mintFO.o: weight_lines.o mint_module.o
+chooser_functions.o: weight_lines.o
 setcuts.o: mint_module.o
 genps_fks.o: mint_module.o
 symmetry_fks_v3.o: mint_module.o

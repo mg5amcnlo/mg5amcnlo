@@ -378,6 +378,7 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
+Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
 
 ! 4) Switch on/off the key event-generation steps.
 EOF

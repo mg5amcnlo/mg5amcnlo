@@ -8,7 +8,7 @@
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
      $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
-     $        ,icontr_sum(:,:),orderstag(:),amppos(:)
+     $        ,icontr_sum(:,:),orderstag(:),amppos(:),need_match(:,:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -191,6 +191,10 @@ c unwgt
          allocate(temp2(max_iproc,n_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
          call move_alloc(temp2,unwgt)
+c need_match
+         allocate(itemp2(nexternal,1:n_contr))
+         itemp2(1:nexternal,1:max_contr)=need_match
+         call move_alloc(itemp2,need_match)
 c update maximum
          max_contr=n_contr
       endif
@@ -231,6 +235,7 @@ c update maximum
       allocate(plot_wgts(1,1))
       allocate(shower_scale(1))
       allocate(unwgt(1,1))
+      allocate(need_match(nexternal,1))
       max_contr=1
       max_wgt=1
       max_iproc=1
@@ -273,5 +278,6 @@ c update maximum
       if (allocated(plot_wgts)) deallocate(plot_wgts)
       if (allocated(shower_scale)) deallocate(shower_scale)
       if (allocated(unwgt)) deallocate(unwgt)
+      if (allocated(need_match)) deallocate(need_match)
       return
       end

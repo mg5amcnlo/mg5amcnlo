@@ -3899,6 +3899,17 @@ RESTART = %(mint_mode)s
             # we just need the path to the HepMC libraries
             extrapaths.append(hepmc.split()[1].replace('-L', '')) 
 
+        # check that if FxFx is activated the correct shower plugin is present
+        if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
+            misc.sprint(self.options['pythia8_path'])
+            f1 = open(pjoin(self.me_dir, "MCatNLO","Scripts", "JetMatching.h"), "r").read()
+            py8_plugin = pjoin(self.options['pythia8_path'], "include","Pythia8Plugins","JetMatching.h")
+            if not os.path.exists(py8_plugin):
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. See http://cern.ch/amcatnlo/FxFx_merging.htm")
+            f2 = open(py8_plugin).read()
+            if f1 != f2:
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. Incorrect plugin detected. See http://cern.ch/amcatnlo/FxFx_merging.htm")
+
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
 

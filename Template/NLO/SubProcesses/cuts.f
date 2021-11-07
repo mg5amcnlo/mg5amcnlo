@@ -60,8 +60,7 @@ c are filled from the PDG codes (iPDG array) in this function.
      $,is_nextph_iso_reco(nexternal)
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
       logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
-     $        passcuts_jets, passcuts_pdgs 
-
+     $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
 
       passcuts_user=.true. ! event is okay; otherwise it is changed
 
@@ -101,9 +100,15 @@ C***************************************************************
       if (.not.passcuts_user) return
 
       ! Apply the Jet cuts
-      passcuts_user = passcuts_user .and. 
+      if (ickkw.ne.3) then
+         passcuts_user = passcuts_user .and. 
      $                  passcuts_jets(p_reco,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
-      if (.not.passcuts_user) return
+         if (.not.passcuts_user) return
+      else
+         passcuts_user=passcuts_user .and.
+     $                  passcuts_fxfx(p_reco,pQCD,nQCD)
+         if (.not.passcuts_user) return
+      endif
 
       ! Apply PDG specific cuts
       passcuts_user = passcuts_user .and. 
@@ -413,6 +418,45 @@ c more than the Born).
       end
 
 
+      logical function passcuts_fxfx(p,pQCD,nQCD)
+c In case of FxFx merging, use the lowest clustering scale to apply the cut
+      implicit none
+      include 'nexternal.inc'
+      include 'cuts.inc'
+      double precision p(0:4,nexternal)
+      integer nQCD
+      double precision pQCD(0:3,nexternal)
+      integer NJET,JET(nexternal)
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge,etaj_max
+      double precision PJET(0:3,nexternal)
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),
+     $                 FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
+     $                     FxFx_fac_scale
+      passcuts_fxfx=.true.
+c First apply a numerical stability cut
+c Define jet clustering parameters with a pTmin=1 GeV
+      palg=1.0                  ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+      rfj=1.0                   ! the radius parameter
+      sycut=1.0                 ! minimum transverse momentum
+      etaj_max=1000d0
+c     call FASTJET to get all the jets
+      call amcatnlo_fastjetppgenkt_etamax_timed(
+     $     pQCD,nQCD,rfj,sycut,etaj_max,palg,pjet,njet,jet)
+c Apply the jet cut
+      if (njet .ne. nQCD .and. njet .ne. nQCD-1) then
+         passcuts_fxfx=.false.
+         return
+      endif
+c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
+      if (minval(FxFx_ren_scales(0:nFxFx_ren_scales)).lt.ptj) then
+         passcuts_fxfx=.false.
+         return
+      endif
+      return
+      end
+      
       logical function passcuts_jets(p,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
       implicit none
       include 'nexternal.inc'
@@ -457,9 +501,9 @@ c no possible divergence related to it (e.g. t-channel single top)
          endif
 
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
-         palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
-         rfj=JETRADIUS          ! the radius parameter
-         sycut=PTJ              ! minimum transverse momentum
+           palg=JETALGO         ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
+           rfj=JETRADIUS        ! the radius parameter
+           sycut=ptj            ! minimum transverse momentum
 
 c******************************************************************************
 c     call FASTJET to get all the jets
@@ -479,8 +523,8 @@ c                                            particle in pQCD, which doesn't
 c                                            necessarily correspond to the particle
 c                                            label in the process
 c
-         call amcatnlo_fastjetppgenkt_etamax_timed(
-     $    pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
+           call amcatnlo_fastjetppgenkt_etamax_timed(
+     $          pQCD,nQCD,rfj,sycut,etaj,palg,pjet,njet,jet)
 c
 c******************************************************************************
 
@@ -733,6 +777,7 @@ c Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+
       rwgt=1d0
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
       chybst=cosh(ybst_til_tolab)

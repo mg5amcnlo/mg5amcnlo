@@ -835,11 +835,12 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
+      include 'nFKSconfigs.inc'
       integer iterm,iterm_last_izero,iterm_last_mohdr,i,j
      &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
       double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
      &     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
-     &     ,rewgt_exp_izero,rewgt_exp_mohdr
+     &     ,rewgt_exp_izero,rewgt_exp_mohdr,pthardness
      &     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
      &     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
@@ -863,11 +864,22 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $                     FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
      &     ,p_last_mohdr,iterm_last_izero,iterm_last_mohdr
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
+      integer need_matching(nexternal),need_matching_izero(nexternal)
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
+      save need_matching_izero
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
       call cpu_time(tBefore)
       ktscheme=1
       if (iterm.eq.0) then
@@ -887,12 +899,20 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             endif
          endif
          if (.not.already_set) then
-            if (.not. setclscales(p1_cnt(0,1,0))) then
-               write (*,*) 'ERROR in setclscales izero'
-               stop 1
-            endif
-            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
+            call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
+     $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1),need_matching)
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+            rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
+            need_matching_S(1:nexternal)=need_matching(1:nexternal)
+            need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
+c Update shower starting scale to be the scale down to which the MINLO
+c Sudakov factors are included.
+            shower_S_scale(nFKSprocess*2-1)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            shower_S_scale(nFKSprocess*2)=
+     $           shower_S_scale(nFKSprocess*2-1)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -918,6 +938,9 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             f_sc_MC_S=f_sc_MC_S*rewgt_izero
          endif
          nFxFx_ren_scales_izero=nFxFx_ren_scales
+         do i=1,nexternal
+            need_matching_izero(i)=need_matching(i)
+         enddo
          do i=0,nexternal
             FxFx_ren_scales_izero(i)=FxFx_ren_scales(i)
          enddo
@@ -934,11 +957,25 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             endif
          endif
          if (.not. already_set) then
-            if (.not. setclscales(p)) then
-               write (*,*) 'ERROR in setclscales mohdr'
-               stop 1
-            endif
-            rewgt_mohdr=min(rewgt(p,rewgt_exp_mohdr),1d0)
+            call cluster_and_reweight(nFKSprocess,rewgt_mohdr
+     $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1),need_matching)
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+            rewgt_mohdr=min(rewgt_mohdr,1d0)
+            need_matching_H(1:nexternal)=need_matching(1:nexternal)
+c Update shower starting scale
+            pthardness=ref_H_scale(nFKSprocess*2)-
+     $           shower_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
+     $           +pthardness
+            pthardness=ref_H_scale(nFKSprocess*2-1)-
+     $           shower_H_scale(nFKSprocess*2-1)
+            shower_H_scale(nFKSprocess*2-1)= 
+     $           shower_H_scale(nFKSprocess*2)
+            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
+     $           +pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
@@ -1073,6 +1110,7 @@ c f_* multiplication factors for Born and nbody
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
+      include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real
      $     ,pas(0:3,nexternal)
@@ -1088,8 +1126,16 @@ c f_* multiplication factors for Born and nbody
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      integer            this_config
+      common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
@@ -1130,18 +1176,18 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       else
          xtot=0d0
-         if (mapconfig(0).eq.0) then
+         if (mapconfig(0,0).eq.0) then
             write (*,*) 'Fatal error in compute_prefactor_nbody:'/
      &           /' no Born diagrams ',mapconfig,
      &           '. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
+         do i=1, mapconfig(0,0)
+            xtot=xtot+amp2(mapconfig(i,0))
          enddo
          if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=amp2(mapconfig(this_config,0))/xtot
             enhance=enhance*diagramsymmetryfactor
          else
             enhance=0d0
@@ -1177,18 +1223,18 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
             endif
          else
             xtot=0d0
-            if (mapconfig(0).eq.0) then
+            if (mapconfig(0,0).eq.0) then
                write (*,*) 'Fatal error in compute_prefactor_n1body,'/
      &              /' no Born diagrams ',mapconfig
      &              ,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop 1
             endif
-            do i=1, mapconfig(0)
-               xtot=xtot+amp2(mapconfig(i))
+            do i=1, mapconfig(0,0)
+               xtot=xtot+amp2(mapconfig(i,0))
             enddo
             if (xtot.ne.0d0) then
-               enhance_real=amp2(mapconfig(iconfig))/xtot
+               enhance_real=amp2(mapconfig(this_config,0))/xtot
                enhance_real=enhance_real*diagramsymmetryfactor
             else
                enhance_real=0d0
@@ -1518,6 +1564,8 @@ c        contribution
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
 
       integer ntagph
       double precision resc
@@ -1654,6 +1702,7 @@ c subtr term
             enddo
          enddo
          H_event(icontr)=.true.
+         need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14 .or. type.eq.15)then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
@@ -1664,6 +1713,7 @@ c and MC subtraction terms.
             enddo
          enddo
          H_event(icontr)=.false.
+         need_match(1:nexternal,icontr)=need_matching_S(1:nexternal)
       else
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
@@ -2423,87 +2473,6 @@ c     soft-collinear counter
       return
       end
       
-
-      subroutine set_pdg(ict,iFKS)
-c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
-c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
-c codes of i_fks and j_fks are combined to give the PDG code of the
-c mother and the extra (n+1) parton is given the PDG code of the gluon.
-      use weight_lines
-      implicit none
-      include 'nexternal.inc'
-      include 'fks_info.inc'
-      include 'genps.inc'
-      integer k,ict,iFKS
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     $     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
-      include 'orders.inc'
-      do k=1,nexternal
-         pdg(k,ict)=idup(k,1)
-      enddo
-      do k=1,nexternal
-         if (k.lt.fks_j_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.fks_j_d(iFKS)) then
-            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict)) .and.
-     &           abs(pdg(fks_i_d(iFKS),ict)).ne.21.and.
-     &           abs(pdg(fks_i_d(iFKS),ict)).ne.22) then
-c gluon splitting:  g/a -> ff
-               !!!pdg_uborn(k,ict)=21
-               ! check if any extra cnt is needed
-               if (extra_cnt_d(iFKS).eq.0) then
-                  ! if not, assign photon/gluon depending on split_type
-                  if (split_type_d(iFKS,qcd_pos)) then
-                    pdg_uborn(k,ict)=21
-                  else if (split_type_d(iFKS,qed_pos)) then
-                    pdg_uborn(k,ict)=22
-                  else
-                    write (*,*) 'set_pdg ',
-     &                'ERROR#1 in PDG assigment for underlying Born'
-                    stop 1
-                  endif
-               else
-                  ! if there are extra cnt's, assign the pdg of the
-                  ! mother in the born (according to isplitorder_born_d)
-                  if (isplitorder_born_d(iFKS).eq.qcd_pos) then
-                    pdg_uborn(k,ict)=21
-                  else if (isplitorder_born_d(iFKS).eq.qcd_pos) then
-                    pdg_uborn(k,ict)=22
-                  else
-                    write (*,*) 'set_pdg ',
-     &                'ERROR#2 in PDG assigment for underlying Born'
-                    stop 1
-                  endif
-               endif
-            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21.or.
-     &              abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
-c final state gluon radiation:  X -> Xg
-               pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
-            elseif (pdg(fks_j_d(iFKS),ict).eq.21.or.
-     &              pdg(fks_j_d(iFKS),ict).eq.22) then
-c initial state gluon splitting (gluon is j_fks):  g -> XX
-               pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
-            else
-               write (*,*)
-     &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
-               stop 1
-            endif
-         elseif(k.lt.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.nexternal) then
-            if (split_type_d(iFKS,qcd_pos)) then
-              pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
-            elseif (split_type_d(iFKS,qed_pos)) then
-              pdg_uborn(k,ict)=22  ! give the extra particle a photon PDG code
-            endif
-         elseif(k.ge.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k+1,ict)
-         endif
-      enddo
-      return
-      end
       
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
@@ -3039,6 +3008,8 @@ c PS point that should be written in the event file.
       logical write_granny(fks_configs)
       integer which_is_granny(fks_configs)
       common/write_granny_resonance/which_is_granny,write_granny
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
 
       call cpu_time(tBefore)
       if (icontr.eq.0) return
@@ -3114,6 +3085,7 @@ c soft singularity with the FKS configuration randomly chosen.
          which_is_granny(iFKS_picked)=which_is_granny(i)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
+      need_matching(1:nexternal)=need_match(1:nexternal,icontr_picked)
       call cpu_time(tAfter)
       t_p_unw=t_p_unw+(tAfter-tBefore)
       return
@@ -6662,7 +6634,14 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 
       logical firsttime,firsttime_nFKSprocess(fks_configs)
       data firsttime,firsttime_nFKSprocess/.true.,fks_configs*.true./
@@ -6987,10 +6966,10 @@ c Check to see if this channel needs to be included in the multi-channeling
                endif
                do kchan=1,nchans
                   if (i.eq.iconfigs(kchan)) then
-                     if (mapconfig(iconfigs(kchan)).ne.fac1) then
+                     if (mapconfig(iconfigs(kchan),0).ne.fac1) then
                         write (*,*) 'inconsistency in symfact.dat',i
      $                       ,kchan,iconfigs(kchan)
-     $                       ,mapconfig(iconfigs(kchan)),fac1
+     $                       ,mapconfig(iconfigs(kchan),0),fac1
                         stop
                      endif
                      diagramsymmetryfactor_save(kchan)=dble(fac2)
@@ -7239,3 +7218,122 @@ c     reset the default dynamical_scale_choice
       end
 
       
+
+      subroutine fill_configurations_common
+      implicit none
+      include 'nexternal.inc'
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nFKSconfigs.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      INTEGER NFKSPROCESS,nFKSprocess_save
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      pmass(-nexternal:0,1:lmaxconfigs,0:fks_configs)=0d0
+      pwidth(-nexternal:0,1:lmaxconfigs,0:fks_configs)=0
+      iforest(1:2,-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      sprop(-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      tprid(-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      mapconfig(0:lmaxconfigs,0:fks_configs)=0
+      call fill_configurations_born(iforest(1,-max_branch,1,0),sprop(
+     $     -max_branch,1,0),tprid(-max_branch,1,0),mapconfig(0,0),pmass(
+     $     -nexternal,1,0),pwidth(-nexternal,1,0))
+      nFKSprocess_save=nFKSprocess
+      do nFKSprocess=1,fks_configs
+         call configs_and_props_inc_chooser()
+         call fill_configurations_real(iforest(1,-max_branch,1
+     $        ,nFKSprocess),sprop(-max_branch,1,nFKSprocess),tprid(
+     $        -max_branch,1,nFKSprocess),mapconfig(0,nFKSprocess),pmass(
+     $        -nexternal,1,nFKSprocess),pwidth(-nexternal,1
+     $        ,nFKSprocess))
+      enddo
+      nFKSprocess=nFKSprocess_save
+      return
+      end
+
+      subroutine fill_configurations_born(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include "coupl.inc"
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      include "born_props.inc"
+      do i=1,lmaxconfigsb_used
+         do j=-max_branchb_used,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-max_branchb_used,-1
+            pmass_in(j,i)=pmass(j,i)
+            pwidth_in(j,i)=pwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end
+
+      subroutine fill_configurations_real(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include "genps.inc"
+      include 'nexternal.inc'
+      include "coupl.inc"
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      common/c_configs_inc/iforest,sprop,tprid,mapconfig
+      double precision prmass(-max_branch:nexternal,lmaxconfigs)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)
+      integer prow(-max_branch:-1,lmaxconfigs)
+      common/c_props_inc/prmass,prwidth,prow
+      do i=1,lmaxconfigs
+         do j=-max_branch,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-max_branch,-1
+            pmass_in(j,i)=prmass(j,i)
+            pwidth_in(j,i)=prwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end

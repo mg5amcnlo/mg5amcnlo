@@ -168,7 +168,7 @@ c get info on beam and PDFs
       integer ievent,izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
-      character*140 buff
+      character*1000 buff
       double precision shower_scale
       INTEGER MAXNUP,i
       PARAMETER (MAXNUP=500)
