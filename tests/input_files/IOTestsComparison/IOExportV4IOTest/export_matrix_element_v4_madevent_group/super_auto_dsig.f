@@ -628,3 +628,13 @@ C
       RETURN
       END
 
+
+      INTEGER FUNCTION GET_NHEL(HEL,PARTID)
+      IMPLICIT NONE
+      INTEGER HEL,PARTID
+      WRITE(*,*) 'this type of pdf is not support with'
+     $ //' group_subprocess=True. regenerate process with: set'
+     $ //' group_subprocesses false'
+      STOP 1
+      RETURN
+      END

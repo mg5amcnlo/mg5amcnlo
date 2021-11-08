@@ -2189,7 +2189,6 @@ def make_unique(input, keepordering=None):
 
     if keepordering is None:
         keepordering = madgraph.ordering
-    sprint(keepordering)
     if not keepordering:
         return list(set(input))
     else:

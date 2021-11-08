@@ -237,3 +237,37 @@ C
 
       RETURN
       END
+
+      INTEGER FUNCTION GET_NHEL(HEL, IPART)
+C     if hel>0 return the helicity of particule ipart for the selected
+C      helicity configuration
+C     if hel=0 return the number of helicity state possible for that
+C      particle 
+      IMPLICIT NONE
+      INTEGER HEL,I, IPART
+      INCLUDE 'nexternal.inc'
+      INTEGER ONE_NHEL(NEXTERNAL)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      INTEGER NHEL(NEXTERNAL,0:NCOMB)
+      DATA (NHEL(I,0),I=1,4) / 2, 2, 2, 2/
+      DATA (NHEL(I,   1),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,4) /-1, 1, 1, 1/
+
+      GET_NHEL = NHEL(IPART, IABS(HEL))
+      RETURN
+      END
