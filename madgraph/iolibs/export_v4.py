@@ -1442,7 +1442,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 # the same coefficient (up to a sign), put it in front
                 list_fracs = [abs(coefficient[0][1]) for coefficient in coefs]
                 common_factor = False
-                diff_fracs = list(set(list_fracs))
+                diff_fracs = misc.make_unique(list_fracs)
                 if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                     common_factor = True
                     global_factor = diff_fracs[0]

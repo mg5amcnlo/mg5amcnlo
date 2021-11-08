@@ -2277,9 +2277,33 @@ class PY8SubRun(PY8Card):
         self.add_param("Main:subrun", -1)
         self.add_param("Beams:LHEF", "events.lhe.gz")
 
-
+        
 class RunBlock(object):
+    """ Class for a series of parameter in the run_card that can be either
+        visible or hidden.
+        name: allow to set in the default run_card $name to set where that 
+              block need to be inserted
+        template_on: information to include is block is active
+        template_off: information to include is block is not active
+        on_fields/off_fields: paramater associated to the block
+               can be specify but are otherwise automatically but 
+               otherwise determined from the template.
+       
+        function:
+           status(self,run_card) -> return which template need to be used
+           check_validity(self, runcard)  -> sanity check
+           create_default_for_process(self, run_card, proc_characteristic, 
+                   history, proc_def)       
+           post_set_XXXX(card, value, change_userdefine, raiseerror)
+                   -> fct called when XXXXX is set
+           post_set(card, value, change_userdefine, raiseerror, **opt)
+                   -> fct called when a parameter is changed
+                   -> no access to parameter name 
+                   -> not called if post_set_XXXX is defined
+    """
+                        
 
+    
     def __init__(self, name, template_on, template_off, on_fields=False, off_fields=False):
 
         self.name = name
@@ -2364,6 +2388,7 @@ class RunBlock(object):
 #
 #        if 'pdlabel' in card.user_set:
 #            card.user_set.remove('pdlabel')
+
 
 
 class RunCard(ConfigFile):

@@ -1804,7 +1804,7 @@ class Model(PhysicsObject):
 
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
-                depend = list(set(mass.depend + width.depend))
+                depend = misc.make_unique(mass.depend + width.depend)
                 if len(depend)>1 and 'external' in depend:
                     depend.remove('external')
                 depend = tuple(depend)

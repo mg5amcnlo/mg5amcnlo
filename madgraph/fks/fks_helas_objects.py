@@ -452,12 +452,12 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             helas_list = []
             for meout in memapout:
                 helas_list.extend(meout[2])
-            self['used_lorentz']=list(set(helas_list))        
+            self['used_lorentz']=misc.make_unique(helas_list)       
             
             coupling_list = []
             for meout in memapout:
                 coupling_list.extend([c for l in meout[3] for c in l])
-            self['used_couplings'] = list(set(coupling_list)) 
+            self['used_couplings'] = misc.make_unique(coupling_list)
             
             has_virtuals = False
             for meout in memapout:
@@ -494,7 +494,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             helas_list = []
             for me in self.get('matrix_elements'):
                 helas_list.extend(me.get_used_lorentz())
-            self['used_lorentz'] = list(set(helas_list))
+            self['used_lorentz'] = misc.make_unique(helas_list)
 
         return self['used_lorentz']
 
@@ -507,7 +507,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             coupling_list = []
             for me in self.get('matrix_elements'):
                 coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-            self['used_couplings'] = list(set(coupling_list))
+            self['used_couplings'] = misc.make_unique(coupling_list)
 
         return self['used_couplings']
 
@@ -794,7 +794,7 @@ class FKSHelasProcess(object):
         if self.virt_matrix_element:
             lorentz_list.extend(self.virt_matrix_element.get_used_lorentz())
 
-        return list(set(lorentz_list))
+        return misc.make_unique(lorentz_list)
     
     
     def get_used_couplings(self):

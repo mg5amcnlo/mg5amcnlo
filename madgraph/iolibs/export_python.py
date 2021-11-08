@@ -235,7 +235,7 @@ class ProcessExporterPython(object):
             # the same coefficient (up to a sign), put it in front
             list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
             common_factor = False
-            diff_fracs = list(set(list_fracs))
+            diff_fracs = misc.make_unique(list_fracs)
             if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                 common_factor = True
                 global_factor = diff_fracs[0]
@@ -364,17 +364,17 @@ class ProcessExporterPython(object):
                       matrix_element.get_all_wavefunctions()]
         parameters += [wf.get('width') for wf in \
                        matrix_element.get_all_wavefunctions()]
-        parameters = list(set(parameters))
+        parameters = misc.make_unique(parameters)
         if 'ZERO' in parameters:
             parameters.remove('ZERO')
 
         # Get all couplings used
 
         
-        couplings = list(set([c.replace('-', '') for func \
+        couplings = misc.make_unique([c.replace('-', '') for func \
                               in matrix_element.get_all_wavefunctions() + \
                               matrix_element.get_all_amplitudes() for c in func.get('coupling')
-                              if func.get('mothers') ]))
+                              if func.get('mothers') ])
         
         return "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
