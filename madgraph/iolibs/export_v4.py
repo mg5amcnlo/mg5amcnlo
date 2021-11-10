@@ -38,6 +38,7 @@ import  collections
 
 import aloha
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -68,10 +69,14 @@ from madgraph.iolibs.files import cp, ln, mv
 
 from madgraph import InvalidCmd
 
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 default_compiler= {'fortran': 'gfortran',
                        'f2py': 'f2py',

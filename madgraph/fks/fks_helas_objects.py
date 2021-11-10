@@ -18,6 +18,7 @@ from born"""
 
 
 from __future__ import absolute_import
+import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -44,6 +45,8 @@ from six.moves import zip
 from madgraph import MG5DIR
 pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 
 #functions to be used in the ncores_for_proc_gen mode

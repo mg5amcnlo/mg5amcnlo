@@ -26,12 +26,16 @@ import array
 import math
 import six
 
+import madgraph
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 from six.moves import range
 from functools import reduce
+
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 #===============================================================================
 # ColorBasis

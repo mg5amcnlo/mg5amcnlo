@@ -28,6 +28,7 @@ import copy
 import itertools
 import logging
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import madgraph.fks.fks_tag as fks_tag
@@ -38,6 +39,8 @@ from six.moves import filter
 
 logger = logging.getLogger('madgraph.diagram_generation')
 
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 class NoDiagramException(InvalidCmd): pass
 
@@ -1761,7 +1764,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 # Generate leg list for process
                 leg_list = [copy.copy(leg) for leg in islegs]
                 
-                if not fstags:
+                if not fstags:   
                     leg_list.extend([\
                             base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
                             for id, fsleg in zip(prod, fslegs)])
@@ -1769,6 +1772,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     leg_list.extend([\
                             fks_tag.TagLeg({'id':id, 'state': True, 'polarization': fsleg['polarization'], 'is_tagged': tag}) \
                             for id, fsleg, tag in zip(prod, fslegs, fstags)])
+
 
                 legs = base_objects.LegList(leg_list)
 

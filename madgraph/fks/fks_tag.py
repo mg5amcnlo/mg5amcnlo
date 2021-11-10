@@ -16,7 +16,11 @@
 """Definitions of the objects needed both for MadFKS with tagged particles"""
 
 import madgraph.core.base_objects as MG
+import madgraph
+import madgraph.various.misc as misc
 
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 class MultiTagLeg(MG.MultiLeg):
     """a daughter class of MultiLeg, with the extra possibility of specifying

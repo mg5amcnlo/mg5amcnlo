@@ -25,6 +25,8 @@ import os
 import re
 import six
 StringIO = six
+
+import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
@@ -36,6 +38,9 @@ from functools import reduce
 
 logger = logging.getLogger('madgraph.base_objects')
 pjoin = os.path.join
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 #===============================================================================
 # PhysicsObject
@@ -1315,7 +1320,7 @@ class Model(PhysicsObject):
         # Set coupling hierachy
         hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
         # Special case for only QCD and QED couplings, unless already set
-        if self.get('coupling_orders') == set(['QCD', 'QED']):
+        if set(self.get('coupling_orders')) == set(['QCD', 'QED']):
             hierarchy['QED'] = 2
         return hierarchy
 
@@ -1405,7 +1410,7 @@ class Model(PhysicsObject):
                                           i.get('orders').keys()])])
             # Append the corresponding particles, excluding the
             # particles that have already been added
-            particles.append(set(sum([[p.get_pdg_code() for p in \
+            particles.append(misc.make_unique(sum([[p.get_pdg_code() for p in \
                                       inter.get('particles') if \
                                        p.get_pdg_code() not in sum_particles] \
                                       for inter in interactions[-1]], [])))

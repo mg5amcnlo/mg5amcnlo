@@ -78,7 +78,7 @@ C
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=129)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders
@@ -198,7 +198,7 @@ C
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=129)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders

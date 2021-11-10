@@ -12,11 +12,11 @@
       DATA FKS_I_D / 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 /
       DATA FKS_J_D / 1, 2, 3, 4, 1, 1, 2, 3, 4, 1, 2, 2 /
 
-      DATA NEED_COLOR_LINKS_D / .TRUE., .TRUE., .TRUE., .TRUE.,
-     $  .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.,
-     $  .FALSE. /
-      DATA NEED_CHARGE_LINKS_D / .FALSE., .FALSE., .FALSE., .FALSE.,
+      DATA NEED_COLOR_LINKS_D / .FALSE., .FALSE., .FALSE., .FALSE.,
      $  .FALSE., .TRUE., .TRUE., .TRUE., .TRUE., .FALSE., .FALSE.,
+     $  .FALSE. /
+      DATA NEED_CHARGE_LINKS_D / .TRUE., .TRUE., .TRUE., .TRUE.,
+     $  .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE., .FALSE.,
      $  .FALSE. /
 
       DATA (FKS_J_FROM_I_D(1, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
@@ -45,18 +45,18 @@
 
 
 C     Split type: the order of elements is QCD, QED
-      DATA (SPLIT_TYPE_D (1, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (2, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (3, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (4, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (5, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (6, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
-      DATA (SPLIT_TYPE_D (7, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
-      DATA (SPLIT_TYPE_D (8, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
-      DATA (SPLIT_TYPE_D (9, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
-      DATA (SPLIT_TYPE_D (10, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
-      DATA (SPLIT_TYPE_D (11, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
-      DATA (SPLIT_TYPE_D (12, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (1, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (2, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (3, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (4, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (5, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (6, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (7, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (8, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (9, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (10, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (11, IPOS), IPOS=1, 2) / .FALSE., .TRUE. /
+      DATA (SPLIT_TYPE_D (12, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
 
 C     Extra cnt: if the real emission needs an extra cnt (g/a >
 C      qqbar), then
@@ -72,56 +72,56 @@ C
 C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
       DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 8 /
+     $ -3, 1 /
       DATA (PARTICLE_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 8 /
+     $ -3, 1 /
       DATA (PARTICLE_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 8 /
+     $ -3, 1 /
       DATA (PARTICLE_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 8 /
-      DATA (PARTICLE_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 8, -3, 3, 
+     $ -3, 1 /
+      DATA (PARTICLE_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 1, -3, 3, 
      $ -3, -3 /
       DATA (PARTICLE_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 1 /
+     $ -3, 8 /
       DATA (PARTICLE_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 1 /
+     $ -3, 8 /
       DATA (PARTICLE_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 1 /
+     $ -3, 8 /
       DATA (PARTICLE_TYPE_D(9, IPOS), IPOS=1, NEXTERNAL) / 3, -3, 3, 
-     $ -3, 1 /
-      DATA (PARTICLE_TYPE_D(10, IPOS), IPOS=1, NEXTERNAL) / 1, -3, 3, 
+     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(10, IPOS), IPOS=1, NEXTERNAL) / 8, -3, 3, 
      $ -3, -3 /
-      DATA (PARTICLE_TYPE_D(11, IPOS), IPOS=1, NEXTERNAL) / 3, 8, 3, 
+      DATA (PARTICLE_TYPE_D(11, IPOS), IPOS=1, NEXTERNAL) / 3, 1, 3, 
      $ -3, 3 /
-      DATA (PARTICLE_TYPE_D(12, IPOS), IPOS=1, NEXTERNAL) / 3, 1, 3, 
+      DATA (PARTICLE_TYPE_D(12, IPOS), IPOS=1, NEXTERNAL) / 3, 8, 3, 
      $ -3, 3 /
 
 C     
 C     Particle type according to PDG:
 C     
-      DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
+      DATA (PDG_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
      $  /
-      DATA (PDG_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
+      DATA (PDG_TYPE_D(2, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
      $  /
-      DATA (PDG_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
+      DATA (PDG_TYPE_D(3, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
      $  /
-      DATA (PDG_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
+      DATA (PDG_TYPE_D(4, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
      $  /
-      DATA (PDG_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 21, -2, 6, -6, 
+      DATA (PDG_TYPE_D(5, IPOS), IPOS=1, NEXTERNAL) / 22, -2, 6, -6, 
      $ -2 /
-      DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
+      DATA (PDG_TYPE_D(6, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
      $  /
-      DATA (PDG_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
+      DATA (PDG_TYPE_D(7, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
      $  /
-      DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
+      DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
      $  /
-      DATA (PDG_TYPE_D(9, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 22
+      DATA (PDG_TYPE_D(9, IPOS), IPOS=1, NEXTERNAL) / 2, -2, 6, -6, 21
      $  /
-      DATA (PDG_TYPE_D(10, IPOS), IPOS=1, NEXTERNAL) / 22, -2, 6, -6, 
+      DATA (PDG_TYPE_D(10, IPOS), IPOS=1, NEXTERNAL) / 21, -2, 6, -6, 
      $ -2 /
-      DATA (PDG_TYPE_D(11, IPOS), IPOS=1, NEXTERNAL) / 2, 21, 6, -6, 2
+      DATA (PDG_TYPE_D(11, IPOS), IPOS=1, NEXTERNAL) / 2, 22, 6, -6, 2
      $  /
-      DATA (PDG_TYPE_D(12, IPOS), IPOS=1, NEXTERNAL) / 2, 22, 6, -6, 2
+      DATA (PDG_TYPE_D(12, IPOS), IPOS=1, NEXTERNAL) / 2, 21, 6, -6, 2
      $  /
 
 C     

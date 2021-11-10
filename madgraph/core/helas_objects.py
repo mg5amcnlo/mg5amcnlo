@@ -31,6 +31,7 @@ import math
 
 import aloha
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
@@ -44,6 +45,9 @@ import six
 from six.moves import range
 from six.moves import zip
 from functools import reduce
+
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 #===============================================================================
 # 
@@ -3814,7 +3818,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         last=collections.defaultdict(list)
         for nb, pos in last_lign.items():
             last[pos].append(nb)
-        tag = list(set(list(last.keys())+list(first.keys()))) 
+        tag = misc.make_unique(list(last.keys())+list(first.keys()))
         tag.sort() #lines number where something happen (new in/out) 
 
         # Create the replacement id dictionary
@@ -5029,7 +5033,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if output == str:
             return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
         elif output=="set":
-            return set(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
+            return misc.make_unique(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
 
 
     def get_mirror_processes(self):
@@ -5410,7 +5414,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
             decay_lists = []
             # Loop over unique final state particle ids
-            for fs_id in set(fs_ids):
+            for fs_id in misc.make_unique(fs_ids):
                 # decay_list has the leg numbers and decays for this
                 # fs particle id:
                 # decay_list = [[[n1,d1],[n2,d2]],[[n1,d1'],[n2,d2']],...]
@@ -5507,7 +5511,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
                 
-                for fs_id in set(fs_ids):
+                for fs_id in misc.make_unique(fs_ids):
                     if fs_pols_dict[fs_id]:
                         if hasattr(matrix_element,'ordering_for_pol'):
                             matrix_element.ordering_for_pol[fs_id] = ordered_for_pol

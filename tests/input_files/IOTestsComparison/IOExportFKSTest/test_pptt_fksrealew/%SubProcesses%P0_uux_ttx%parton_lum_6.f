@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u a > t t~ u [ real = QCD QED ] QCD^2<=4 QED^2<=2
-C     Process: c a > t t~ c [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: u g > t t~ u [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: c g > t t~ c [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
 C     ****************************************************            
 C         
@@ -32,7 +32,7 @@ C
 C     
       INTEGER I, ICROSS,LP
       DOUBLE PRECISION U1,C1
-      DOUBLE PRECISION A2
+      DOUBLE PRECISION G2
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
@@ -56,7 +56,7 @@ C
       DOUBLE PRECISION EE_COMP_PROD
       DOUBLE PRECISION DUMMY_COMPONENTS(N_EE)
       DOUBLE PRECISION U1_COMPONENTS(N_EE),C1_COMPONENTS(N_EE)
-      DOUBLE PRECISION A2_COMPONENTS(N_EE)
+      DOUBLE PRECISION G2_COMPONENTS(N_EE)
 
       INTEGER I_EE
 C     
@@ -71,7 +71,7 @@ C     DATA
 C         
 C     
       DATA U1,C1/2*1D0/
-      DATA A2/1*1D0/
+      DATA G2/1*1D0/
       DATA ICROSS/1/
 C     ----------                                                      
 C         
@@ -91,23 +91,23 @@ C
      $    EE_COMPONENTS(1:N_EE)
       ENDIF
       IF (ABS(LPP(2)) .GE. 1) THEN
-        A2=PDG2PDF(LPP(2),7,2,XBK(2),DSQRT(Q2FACT(2)))
+        G2=PDG2PDF(LPP(2),0,2,XBK(2),DSQRT(Q2FACT(2)))
         IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
-     $   .AND.PDLABEL.NE.'none') A2_COMPONENTS(1:N_EE) =
+     $   .AND.PDLABEL.NE.'none') G2_COMPONENTS(1:N_EE) =
      $    EE_COMPONENTS(1:N_EE)
       ENDIF
       PD(0) = 0D0
       IPROC = 0
-      IPROC=IPROC+1  ! u a > t t~ u
-      PD(IPROC) = U1*A2
+      IPROC=IPROC+1  ! u g > t t~ u
+      PD(IPROC) = U1*G2
       IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
      $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
-     $ =EE_COMP_PROD(U1_COMPONENTS,A2_COMPONENTS)
-      IPROC=IPROC+1  ! c a > t t~ c
-      PD(IPROC) = C1*A2
+     $ =EE_COMP_PROD(U1_COMPONENTS,G2_COMPONENTS)
+      IPROC=IPROC+1  ! c g > t t~ c
+      PD(IPROC) = C1*G2
       IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
      $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
-     $ =EE_COMP_PROD(C1_COMPONENTS,A2_COMPONENTS)
+     $ =EE_COMP_PROD(C1_COMPONENTS,G2_COMPONENTS)
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

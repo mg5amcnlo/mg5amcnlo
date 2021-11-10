@@ -354,7 +354,7 @@ C
       PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0*
      $ *2))
       INTEGER NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
@@ -603,7 +603,7 @@ C     3 -> QCDLOOP
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders
@@ -746,7 +746,7 @@ C         Tensor Integral Reduction is used
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders
@@ -891,7 +891,7 @@ C         Tensor Integral Reduction is used
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders
@@ -1038,7 +1038,7 @@ C         Tensor Integral Reduction is used
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders
@@ -1180,7 +1180,7 @@ C         Tensor Integral Reduction is used
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
 C     These are constants related to the split orders

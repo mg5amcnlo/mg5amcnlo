@@ -15,7 +15,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=44, NLOOPGROUPS=26, NCTAMPS=85)
+      PARAMETER (NLOOPS=44, NLOOPGROUPS=28, NCTAMPS=85)
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=129)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
@@ -95,9 +95,9 @@ C      if true.
         GOTO 1001
       ENDIF
 
-C     CutTools call for loop numbers 1,33,36,27,28,29
+C     CutTools call for loop numbers 1,33,36
       CALL ML5_0_LOOP_2(5,8,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,1)
-C     CutTools call for loop numbers 2,30,31,32
+C     CutTools call for loop numbers 2
       CALL ML5_0_LOOP_3(3,4,5,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,2,I_SO,2)
 C     CutTools call for loop numbers 3
@@ -158,16 +158,22 @@ C     CutTools call for loop numbers 25
 C     CutTools call for loop numbers 26
       CALL ML5_0_LOOP_4(1,2,3,4,DCMPLX(MDL_MT),DCMPLX(MDL_MT)
      $ ,DCMPLX(ZERO),DCMPLX(MDL_MT),3,I_SO,22)
+C     CutTools call for loop numbers 27,28,29
+      CALL ML5_0_LOOP_2_3(2,1,2,1,8,DCMPLX(ZERO),DCMPLX(ZERO),1,I_SO
+     $ ,23)
+C     CutTools call for loop numbers 30,31,32
+      CALL ML5_0_LOOP_3_4(1,1,2,3,4,2,1,DCMPLX(MDL_MT),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),1,I_SO,24)
 C     CutTools call for loop numbers 39
-      CALL ML5_0_LOOP_2(5,8,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,23)
+      CALL ML5_0_LOOP_2(5,8,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,25)
 C     CutTools call for loop numbers 40,41
       CALL ML5_0_LOOP_3(1,2,8,DCMPLX(MDL_MB),DCMPLX(MDL_MB)
-     $ ,DCMPLX(MDL_MB),3,I_SO,24)
+     $ ,DCMPLX(MDL_MB),3,I_SO,26)
 C     CutTools call for loop numbers 42
-      CALL ML5_0_LOOP_2(5,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,25)
+      CALL ML5_0_LOOP_2(5,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,27)
 C     CutTools call for loop numbers 43,44
       CALL ML5_0_LOOP_3(1,2,8,DCMPLX(MDL_MT),DCMPLX(MDL_MT)
-     $ ,DCMPLX(MDL_MT),3,I_SO,26)
+     $ ,DCMPLX(MDL_MT),3,I_SO,28)
 C     At this point, all reductions needed for (QCD=6), i.e. of split
 C      order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 5000

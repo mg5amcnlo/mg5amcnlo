@@ -27,6 +27,7 @@ import string
 import copy
 import platform
 
+import madgraph
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.base_objects as base_objects
@@ -58,7 +59,8 @@ pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
-
+if madgraph.ordering:
+    set	= misc.OrderedSet
 
 def make_jpeg_async(args):
     Pdir = args[0]
