@@ -2527,6 +2527,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.do_rivet_postprocessing(common_run.CommonRunCmd.do_rivet(self,""), postprocess_RIVET, postprocess_CONTUR)
         #END postprocessor ========================================================
 
+        if postprocess_RIVET:
+            os.remove(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+        if postprocess_CONTUR:
+            os.remove(pjoin(self.me_dir, 'Events', 'postprocess_CONTUR'))
+
+
     def do_rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
 
         # Check number of Rivet jobs to run 
@@ -4189,11 +4195,17 @@ Beware that this can be dangerous for local multicore runs.""")
         tag = self.run_tag
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
-        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove']:
+        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove', 'autonocompress']:
             if PY8_Card['HEPMCoutput:file'] == 'autoremove':
                 self.to_store.append('nopy8')
             elif 'nopy8' in self.to_store:
                 self.to_store.remove('nopy8')
+
+            if PY8_Card['HEPMCoutput:file'] == 'autonocompress':
+                self.to_store.append('nocompress')
+            elif 'nocompress' in self.to_store:
+                self.to_store.remove('nocompress')
+
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
@@ -5605,6 +5617,9 @@ tar -czf split_$1.tar.gz split_$1
             if os.path.isfile(file_path):
                 if 'nopy8' in self.to_store:
                     os.remove(file_path)
+                elif 'nocompress' in self.to_store:
+                    self.update_status('Storing Pythia8 files of previous run',
+                                                         level='pythia', error=True)
                 else:   
                     self.update_status('Storing Pythia8 files of previous run', 
                                                          level='pythia', error=True)

@@ -2754,15 +2754,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #3 Fetch HepMC files
         py8_output = py8_card["HEPMCoutput:file"]
 
-        if py8_output == "auto" or py8_output == "autoremove":
-            if rivet_config["postprocessing"]:
+        if py8_output == "auto":
+            if rivet_config["run_rivet_later"]:
                 hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc.gz")
             else:
                 hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
+        elif py8_output == "autonocompress":
+            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
+        elif py8_output == "autoremove":
+            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
         elif py8_output == "fifo":
             hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, "PY8.hepmc.fifo")
         else:
-            raise MadGraph5Error("HEPMCoutput:file in pythia8_card.dat should be [auto, autoremove, fifo]")
+            raise MadGraph5Error("HEPMCoutput:file in pythia8_card.dat should be [auto, autoremove, autonocompress, fifo]")
 
 
         #4 Write Rivet lines
@@ -2775,18 +2779,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         wrapper.write("#!{0}\n{1}".format(misc.which(shell), set_env))
         wrapper.write(sys.executable + " {0} &> {1}".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
 
-        if py8_output in ["autoremove", "fifo"]: # For FIFO, it also needs to be removed after it finishes run
+        if py8_output == "fifo":
             wrapper.write("\nrm {0}\n".format(hepmc_file))
-            if rivet_config["postprocessing"]: # FIFO should not run through postprocessing, force single Rivet run
-                rivet_config["postprocessing"] = False
+
+        if py8_output in ["autoremove", "fifo"]: # For FIFO and autoremove should not be postprocessed
+            rivet_config["run_rivet_later"] = False
         wrapper.close()
 
-        if rivet_config["postprocessing"]:
+        if rivet_config["run_rivet_later"]:
             misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_RIVET')])
         if rivet_config["run_contur"]:
             misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_CONTUR')])
 
         postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+
+        os.system("chmod +x {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh")))
 
         #5 decide how to run Rivet
         if postprocess_RIVET:
@@ -4972,10 +4979,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_rivet = True
 
         self.special_shortcut.update({
-                'fast_rivet': ([], ['rivet_card run_rivet_later True', 'rivet_card draw_rivet_plots False', 'pythia8_card HEPMCoutput:file autoremove', 'partonlevel:mpi = off'])
+                'fast_rivet': ([], ['rivet_card run_rivet_later True', 'rivet_card draw_rivet_plots False', 'pythia8_card HEPMCoutput:file autonocompress', 'partonlevel:mpi = off'])
         })
         self.special_shortcut_help.update({
-                'fast_rivet' : 'Fastest way to run multiple Rivet runs when scanning. Doesn NOT compress the HepMC files so enough storage should be guaranteed!'
+                'fast_rivet' : 'Fastest way to run multiple Rivet runs when scanning. Does NOT compress the HepMC files so enough storage should be guaranteed!'
         })
 
         self.rivet_card = banner_mod.RivetCard(self.paths['rivet'])
