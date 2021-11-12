@@ -2196,7 +2196,12 @@ def make_unique(input, keepordering=None):
         return list(dict.fromkeys(input)) 
 
 if six.PY3:
-    class OrderedSet(collections.OrderedDict, collections.MutableSet):
+    try:
+        from collections import MutableSet
+    except ImportError: # this is for python3.10
+        from collections.abc import  MutableSet
+    
+    class OrderedSet(collections.OrderedDict, MutableSet):
 
         def __init__(self, arg=None):
             super( OrderedSet, self).__init__()
