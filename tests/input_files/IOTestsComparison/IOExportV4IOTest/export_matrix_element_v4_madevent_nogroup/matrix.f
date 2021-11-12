@@ -122,14 +122,16 @@ C     ----------
           IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0))
      $      THEN
             T=MATRIX(P ,NHEL(1,I),JC(1))
+
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
      $         )) THEN
-                T=T*ABS(POL(JJ))*NB_SPIN_STATE(JJ)/2D0  ! NB_SPIN_STATE(JJ)/2d0 is added for polarised beam
+                T=T*ABS(POL(JJ))
               ELSE IF(POL(JJ).NE.1D0)THEN
-                T=T*(2D0-ABS(POL(JJ)))*NB_SPIN_STATE(JJ)/2D0
+                T=T*(2D0-ABS(POL(JJ)))
               ENDIF
             ENDDO
+
             IF (ISUM_HEL.NE.0) THEN
               CALL DS_ADD_ENTRY('Helicity',I,T)
             ENDIF
@@ -141,8 +143,8 @@ C     ----------
           CALL RESET_CUMULATIVE_VARIABLE()  ! avoid biais of the initialization
         ENDIF
         IF (ISUM_HEL.NE.0) THEN
-            !         We set HEL_PICKED to -1 here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
-          HEL_PICKED = -1
+            !         We set HEL_PICKED to -HEL_PICKED here so that later on, the call to DS_add_point in dsample.f does not add anything to the grid since it was already done here.
+          HEL_PICKED = -IABS(HEL_PICKED)
             !         For safety, hardset the helicity sampling jacobian to 0.0d0 to make sure it is not .
           HEL_JACOBIAN   = 1.0D0
           IF(DS_GET_DIM_STATUS('Helicity').EQ.1) THEN
@@ -175,6 +177,7 @@ C        in a common block defined in genps.inc.
         I = HEL_PICKED
 
         T=MATRIX(P ,NHEL(1,I),JC(1))
+
         DO JJ=1,NINCOMING
           IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))))
      $      THEN
@@ -183,13 +186,14 @@ C        in a common block defined in genps.inc.
             T=T*(2D0-ABS(POL(JJ)))
           ENDIF
         ENDDO
+
 C       Always one helicity at a time
         ANS = T
 C       Include the Jacobian from helicity sampling
         ANS = ANS * HEL_JACOBIAN
         WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
       ENDIF
-      IF (ISUM_HEL .NE. 1.OR.(HEL_PICKED.EQ.-1)) THEN
+      IF (ISUM_HEL .NE. 1.OR.(HEL_PICKED.LE.0)) THEN
         R=XRAN1(IDUM)*ANS
         SUMHEL=0D0
         DO I=1,NCOMB

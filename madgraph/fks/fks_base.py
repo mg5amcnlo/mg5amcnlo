@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -33,6 +34,8 @@ from six.moves import range
 
 logger = logging.getLogger('madgraph.fks_base')
 
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 class NoBornException(Exception): pass
 
@@ -416,6 +419,7 @@ class FKSRealProcess(object):
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
+        self.particle_tags = [leg['is_tagged'] for leg in leglist]
         if not self.process['perturbation_couplings'] == ['QCD']:
             self.charges = [leg['charge'] for leg in leglist]
         else:
@@ -526,6 +530,13 @@ class FKSProcess(object):
         """return the list of the pdg codes
         of each leg in born_amp"""
         return [leg.get('id') for \
+                    leg in self.born_amp['process']['legs']]                    
+
+
+    def get_is_tagged(self):
+        """return the list of the 'is_tagged' keys
+        of each leg in born_amp"""
+        return [leg.get('is_tagged') for \
                     leg in self.born_amp['process']['legs']]                    
 
 

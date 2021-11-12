@@ -173,3 +173,19 @@ C
 
      return
      end
+
+	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
+c         if hel>0 return the helicity of particule ipart for the selected helicity configuration
+c         if hel=0 return the number of helicity state possible for that particle 
+	  implicit none
+	  integer hel,i, ipart
+	  Include 'nexternal.inc'
+	  integer one_nhel(nexternal)
+	  INTEGER                 NCOMB
+	  PARAMETER (             NCOMB=%(ncomb)d)
+	  INTEGER NHEL(NEXTERNAL,0:NCOMB)
+	  %(helicity_lines)s
+
+	  get_nhel%(proc_id)s = nhel(ipart, iabs(hel))
+	  return
+	  end

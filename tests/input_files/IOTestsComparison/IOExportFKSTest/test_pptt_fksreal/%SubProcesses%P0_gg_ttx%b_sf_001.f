@@ -11,7 +11,7 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: g g > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g g > t t~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     spectators: 1 2 
 
 C     
@@ -92,7 +92,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: g g > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g g > t t~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     spectators: 1 2 
 
 C     
@@ -176,7 +176,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g g > t t~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     spectators: 1 2 
 
 C     

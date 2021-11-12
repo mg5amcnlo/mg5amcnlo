@@ -129,7 +129,10 @@
  %(bwcutoff)s  = bwcutoff
 #***********************************************************************
 # Cuts on the jets. Jet clustering is performed by FastJet.            *
-#  - If gamma_is_j, photons are also clustered                            *
+#  - If gamma_is_j, photons are also clustered with jets.              *
+#    Otherwise, they will be treated as tagged particles and photon    * 
+#    isolation will be applied. Note that photons in the real emission *
+#    will always be clustered with QCD partons.                        *
 #  - When matching to a parton shower, these generation cuts should be *
 #    considerably softer than the analysis cuts.                       *
 #  - More specific cuts can be specified in SubProcesses/cuts.f        *

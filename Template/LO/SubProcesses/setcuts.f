@@ -679,7 +679,7 @@ c     ensure that smin is bigger than mass threshold
       do i=nincoming+1, nexternal
          smin_p = smin_p + pmass(i)
       enddo
-      smin = max(smin, smin_p**2)
+      smin = max(smin, smin_p**2, dsqrt_shat**2)
       write(*,*) "Define smin to", smin
 
 c Check that results are consistent among all the grouped subprocesses

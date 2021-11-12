@@ -144,6 +144,7 @@ c-----
 
       call setrun               !Sets up run parameters
       call setpara('param_card.dat') !Sets up couplings and masses
+      call fill_configurations_common
       call setcuts              !Sets up cuts 
 
 c When doing hadron-hadron collision reduce the effect collision energy.

@@ -37,6 +37,7 @@ C
       REAL*8 misset,missetmax,ptheavy
       REAL*8 ptllmin,ptllmax
       integer maxjetflavor
+      REAl*8 dsqrt_shat
 	
       COMMON /to_min_max_cuts/
      &     PTJmax,PTBmax,PTAmax,PTLmax,
@@ -59,7 +60,7 @@ C
      &     ht2max,ht3max,ht4max,
      &     htjmin,htjmax,ihtmin,ihtmax,
      &     misset,missetmax,ptheavy,
-     &     ptllmin,ptllmax,
+     &     ptllmin,ptllmax,dsqrt_shat,
      &     maxjetflavor
 
 C

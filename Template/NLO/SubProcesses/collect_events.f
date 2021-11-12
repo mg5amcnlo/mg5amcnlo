@@ -233,7 +233,7 @@ c
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      character*140 buff
+      character*1000 buff
       character*10 MonteCarlo,MonteCarlo1, MonteCarlo0
       character*100 path
       integer iseed

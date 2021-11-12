@@ -66,10 +66,10 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c c~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d d~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s s~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u u~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c c~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d d~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s s~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -155,10 +155,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c c~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d d~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s s~ > t t~ [ LOonly = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u u~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c c~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d d~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s s~ > t t~ [ LOonly = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     

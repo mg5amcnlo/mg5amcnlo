@@ -2,15 +2,18 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
-      include "born_conf.inc"
-      integer this_config
-      integer mapconfig_local(0:lmaxconfigs)
-      common/to_mconfigs/mapconfig_local, this_config
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
       integer i,j
       double precision zero
@@ -29,29 +32,22 @@
       common /c_qmass_qwidth/qmass_common,qwidth_common
       double precision xvar(99)
       common /c_vegas_x/xvar
-      include 'coupl.inc'
-      include 'born_props.inc'
+      integer            this_config
+      common/to_mconfigs/this_config
 c     
+      call cpu_time(tBefore)
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
       do i=-max_branch,-1
          do j=1,2
-            itree(j,i)=0
-         enddo
-      enddo
-      do i=-max_branchb_used,-1
-         do j=1,2
-            itree(j,i)=iforest(j,i,iconfig)
+            itree(j,i)=iforest(j,i,iconfig,0)
          enddo
       enddo
 
-      do i =0,lmaxconfigsb_used
-        mapconfig_local(i) = mapconfig(i)
-      enddo
       do i=-nexternal,0
-         qmass(i)=pmass(i,iconfig)
-         qwidth(i)=pwidth(i,iconfig)
+         qmass(i)=pmass(i,iconfig,0)
+         qwidth(i)=pwidth(i,iconfig,0)
          qmass_common(i)=qmass(i)
          qwidth_common(i)=qwidth(i)
       enddo
@@ -68,6 +64,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)
+      tGenPS=tGenPS+(tAfter-tBefore)
       return
       end
 
@@ -2421,14 +2419,14 @@ c Jacobian due to delta() of tau_born
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
-      if (s_mass.gt.smin+tiny) then
+      if (s_mass.gt.smin*(1d0+tiny)) then
          call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
-      elseif(abs(s_mass-smin).lt.tiny) then
+      elseif(abs(s_mass-smin).lt.tiny*smin) then
          call trans_x(7,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
       else
-         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
          jac=-1d0
       endif
       tau=s/stot

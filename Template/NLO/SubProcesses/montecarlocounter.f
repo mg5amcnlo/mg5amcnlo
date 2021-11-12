@@ -3,6 +3,7 @@
       include "genps.inc"
       include 'nexternal.inc'
       include "born_nhel.inc"
+      include 'nFKSconfigs.inc'
 c Nexternal is the number of legs (initial and final) al NLO, while max_bcol
 c is the number of color flows at Born level
       integer i,j,k,l,k0,mothercol(2),i1(2)
@@ -33,7 +34,14 @@ c
       logical is_leading_cflow(max_bcol)
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       include 'born_coloramps.inc'
 c
       ipartners(0)=0
@@ -88,7 +96,7 @@ c consider only leading colour flows
         num_leading_cflows=0
         do i=1,max_bcol
           is_leading_cflow(i)=.false.
-          do j=1,mapconfig(0)
+          do j=1,mapconfig(0,0)
             if(icolamp(i,j,1))then
                is_leading_cflow(i)=.true.
                num_leading_cflows=num_leading_cflows+1
@@ -597,7 +605,7 @@ c Main routine for MC counterterms
       logical lzone(nexternal),flagmc,limit,non_limit
 
       double precision emsca_bare,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun,wgt_abs
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -721,6 +729,7 @@ c Initialise
       enddo
       flagmc   = .false.
       wgt      = 0d0
+      wgt_abs  = 0d0
       ztmp     = 0d0
       xitmp    = 0d0
       xjactmp  = 0d0
@@ -1199,27 +1208,23 @@ c check the lines below
         endif
 
         wgt=wgt+xmcxsec(npartner)
+        wgt_abs=wgt_abs+abs(xmcxsec(npartner))
         do iamp=1,amp_split_size
           amp_split_mc(iamp)=amp_split_mc(iamp)+amp_split_xmcxsec(iamp,npartner)
         enddo
-
-        if(xmcxsec(npartner).lt.0d0)then
-           write(*,*)'Fatal error in xmcsubt'
-           write(*,*)npartner,xmcxsec(npartner)
-           stop
-        endif
+       
 c End of loop over colour partners
       enddo
 
 c Assign emsca on statistical basis
-      if(dampMCsubt.and.wgt.gt.1d-30)then
+      if(dampMCsubt.and.wgt_abs.gt.1d-30)then
         rrnd=ran2()
         wgt1=0d0
         jpartner=0
         do npartner=1,ipartners(0)
            if(lzone(npartner).and.jpartner.eq.0)then
-              wgt1=wgt1+xmcxsec(npartner)
-              if(wgt1.ge.rrnd*wgt)then
+              wgt1=wgt1+abs(xmcxsec(npartner))
+              if(wgt1.ge.rrnd*wgt_abs)then
                  jpartner=ipartners(npartner)
                  mpartner=npartner
               endif
@@ -1232,7 +1237,7 @@ c Assign emsca on statistical basis
            emsca=emscav(mpartner)
         endif
       endif
-      if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+      if(dampMCsubt.and.wgt_abs.lt.1d-30)emsca=scalemax
 
 c Additional information for LHE
       if(AddInfoLHE)then

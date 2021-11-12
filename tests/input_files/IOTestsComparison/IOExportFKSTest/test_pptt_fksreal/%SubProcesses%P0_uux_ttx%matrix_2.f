@@ -9,10 +9,10 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: g u~ > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g c~ > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g d~ > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g s~ > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g u~ > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c~ > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g d~ > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s~ > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -111,10 +111,10 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: g u~ > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g c~ > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g d~ > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g s~ > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g u~ > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c~ > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g d~ > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s~ > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -238,10 +238,10 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g u~ > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g c~ > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g d~ > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g s~ > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g u~ > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c~ > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g d~ > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s~ > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     

@@ -325,12 +325,12 @@ C            component
 
 
 
-      SUBROUTINE ML5_0_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK,
-     $  SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX,
+     $  LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=4)
+      PARAMETER (NLOOPLINE=2)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    NLOOPGROUPS
@@ -343,8 +343,8 @@ C     These are constants related to the split orders
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2, W3, W4
-      COMPLEX*16 M1, M2, M3, M4
+      INTEGER W1, W2
+      COMPLEX*16 M1, M2
 
       INTEGER RANK, LSYMFACT
       INTEGER LOOPNUM, SQUAREDSOINDEX
@@ -354,7 +354,7 @@ C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(4)
+      INTEGER PAIRING(NLOOPLINE),WE(2)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL COMPLEX_MASS,DOING_QP
 C     
@@ -399,12 +399,8 @@ C     Determine it uses qp or not
      $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
-        WE(3)=W3
-        WE(4)=W4
-        M2L(1)=M4**2
+        M2L(1)=M2**2
         M2L(2)=M1**2
-        M2L(3)=M2**2
-        M2L(4)=M3**2
         DO I=1,NLOOPLINE
           PAIRING(I)=1
         ENDDO
@@ -595,12 +591,12 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX,
-     $  LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=2)
+      PARAMETER (NLOOPLINE=4)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    NLOOPGROUPS
@@ -613,8 +609,8 @@ C     These are constants related to the split orders
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2
-      COMPLEX*16 M1, M2
+      INTEGER W1, W2, W3, W4
+      COMPLEX*16 M1, M2, M3, M4
 
       INTEGER RANK, LSYMFACT
       INTEGER LOOPNUM, SQUAREDSOINDEX
@@ -624,7 +620,7 @@ C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(2)
+      INTEGER PAIRING(NLOOPLINE),WE(4)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL COMPLEX_MASS,DOING_QP
 C     
@@ -669,8 +665,12 @@ C     Determine it uses qp or not
      $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
-        M2L(1)=M2**2
+        WE(3)=W3
+        WE(4)=W4
+        M2L(1)=M4**2
         M2L(2)=M1**2
+        M2L(3)=M2**2
+        M2L(4)=M3**2
         DO I=1,NLOOPLINE
           PAIRING(I)=1
         ENDDO

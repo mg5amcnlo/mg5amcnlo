@@ -58,6 +58,8 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
 
+__maxint__ = 2**31 - 1
+
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
@@ -2019,8 +2021,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
-            # gather the various orders tag and write include files
-            self.write_orders_tag_info()
+            # gather the various orders tag and write include files (only needed once)
+            if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat')):
+                self.write_orders_tag_info()
 
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
@@ -2076,7 +2079,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 if fixed_order:
                     lch=len(channels)
                     maxchannels=20    # combine up to 20 channels in a single job
-                    if self.run_card['pineappl']: maxchannels=1
                     njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
                            else int(lch/maxchannels))
                     for nj in range(1,njobs+1):
@@ -2303,8 +2305,7 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
-            if fixed_order and (not self.run_card['pineappl']) \
-               and self.run_card['req_acc_FO'] > 0:
+            if fixed_order and self.run_card['req_acc_FO'] > 0:
                 jobs_to_run_new,jobs_to_collect= \
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -2433,7 +2434,7 @@ RESTART = %(mint_mode)s
                     polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
             to_write=[]
             for rowgrp in zip(*linesoffiles):
-                action=list(set([row.strip().split()[0] for row in rowgrp])) # list(set()) structure to remove duplicants
+                action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
@@ -2535,9 +2536,12 @@ RESTART = %(mint_mode)s
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
-            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
-                # determine the number of splits needed
-                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job) \
+                    or job['npoints'] >= __maxint__:
+                # determine the number of splits needed; the second condition 
+                # (job['npoints'] >= __maxint__) prevents integer overflow in fortran
+                nsplit = min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+                nsplit*= int(job['npoints'] / __maxint__) + 1
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
@@ -2549,6 +2553,11 @@ RESTART = %(mint_mode)s
                         job_new['niters']=1
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
+
+                    if job_new['npoints'] > __maxint__:
+                        raise aMCatNLOError('Too many point for the job. Fortran will likely crash' + \
+                                        'for integer overflow. %d' % job_new['npoints'])
+
                     jobs_to_collect_new.append(job_new)
                     jobs_to_run_new.append(job_new)
             else:
@@ -3753,22 +3762,25 @@ RESTART = %(mint_mode)s
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
-                stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         if event_norm.lower() == 'sum':
-            p.communicate(input = '1\n'.encode())
+            out, err = p.communicate(input = '1\n'.encode())
         elif event_norm.lower() == 'unity':
-            p.communicate(input = '3\n'.encode())
+            out, err = p.communicate(input = '3\n'.encode())
         elif event_norm.lower() == 'bias':
-            p.communicate(input = '0\n'.encode())
+            out, err = p.communicate(input = '0\n'.encode())
         else:
-            p.communicate(input = '2\n'.encode())
-
+            out, err = p.communicate(input = '2\n'.encode())
+        
+        out = out.decode()
+        data = str(out)
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
-
+        filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
+        
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check collect_events.log')
+                    'The event file has not been created: \n %s' % data)
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
@@ -3886,6 +3898,17 @@ RESTART = %(mint_mode)s
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
             extrapaths.append(hepmc.split()[1].replace('-L', '')) 
+
+        # check that if FxFx is activated the correct shower plugin is present
+        if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
+            misc.sprint(self.options['pythia8_path'])
+            f1 = open(pjoin(self.me_dir, "MCatNLO","Scripts", "JetMatching.h"), "r").read()
+            py8_plugin = pjoin(self.options['pythia8_path'], "include","Pythia8Plugins","JetMatching.h")
+            if not os.path.exists(py8_plugin):
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. See http://cern.ch/amcatnlo/FxFx_merging.htm")
+            f2 = open(py8_plugin).read()
+            if f1 != f2:
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. Incorrect plugin detected. See http://cern.ch/amcatnlo/FxFx_merging.htm")
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))

@@ -4,7 +4,7 @@
 
 
 from __future__ import absolute_import
-from .object_library import all_orders, CouplingOrder
+from object_library import all_orders, CouplingOrder
 
 
 DMS = CouplingOrder(name = 'DMS',
