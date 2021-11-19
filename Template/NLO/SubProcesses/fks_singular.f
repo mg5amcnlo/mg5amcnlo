@@ -2604,7 +2604,7 @@ c contribution makes sure that it is added as a new element.
                stop
             endif
             do j=1,iwgt
-               www(j)=plot_wgts(j,i)
+               www(j)=plot_wgts(j,i)/bias_wgt(i)
             enddo
 c call the analysis/histogramming routines
             orders_tag_plot=orderstag(i)
