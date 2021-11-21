@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.7 ()
+     OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
+         Now the first of those to setup a python seed will forbid any future reset of the seed
+	 Frequent reset of the seed when moving to one package to the next was creating
+	 a bias in the effective branching ratio out of madspin (observed only of NLO sample)
+	 see: https://bugs.launchpad.net/mg5amcnlo/+bug/1951120
+	 Thanks Hannes for the information.
+
 2.9.6 (02/11/21)
      OM: Forbid the possibity to ask for massless boson to be longitudinally polarised.
          Asking for those with large multi-particle label could have hide the fact that the code

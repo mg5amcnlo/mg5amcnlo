@@ -2524,7 +2524,9 @@ RESTART = %(mint_mode)s
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
-                random.seed(r)
+                if not hasattr(random, 'mg_seedset'):
+                    random.seed(r)  
+                    random.mg_seedset = r
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0

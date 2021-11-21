@@ -4251,8 +4251,11 @@ This implies that with decay chains:
             # Not necessarily optimal as there could be additional call to
             # random() as the code develops, but at least it will encompass
             # everything in this way.
-            logger_check.info('Setting random seed to %d.'%options['seed'])
-            random.seed(options['seed'])
+            
+            if not hasattr(random, 'mg_seedset'):
+                logger_check.info('Setting random seed to %d.'%options['seed'])
+                random.seed(options['seed'])  
+                random.mg_seedset = options['seed']
         
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run

@@ -5718,10 +5718,14 @@ tar -czf split_$1.tar.gz split_$1
         #set random seed for python part of the code
         if self.run_card['python_seed'] == -2: #-2 means same as run_card
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         elif self.run_card['python_seed'] >= 0:
             import random
-            random.seed(self.run_card['python_seed'])
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
@@ -5961,7 +5965,9 @@ tar -czf split_$1.tar.gz split_$1
             raise MadGraph5Error('Random seed too large ' + str(self.random) + ' > 30081*30081')
         if self.run_card['python_seed'] == -2: 
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.random)  
+                random.mg_seedset = self.random
             
     ############################################################################
     def save_random(self):
@@ -6555,10 +6561,14 @@ class GridPackCmd(MadEventCmd):
 
         if self.run_card['python_seed'] == -2:
             import random
-            random.seed(seed)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(seed)  
+                random.mg_seedset = seed
         elif self.run_card['python_seed'] > 0:
             import random
-            random.seed(self.run_card['python_seed'])            
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']         
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
