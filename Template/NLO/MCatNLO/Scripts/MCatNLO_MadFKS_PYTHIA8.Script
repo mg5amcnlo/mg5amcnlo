@@ -230,23 +230,33 @@ export PYTHIA8LOCATION=$PY8PATH
 
 if [ ! -d $PYTHIA8LOCATION/xmldoc ]
 then
- PY8VER="8.2"
- echo ' USING PYTHIA 8, version >= 8.200'
- chmod +x $PYTHIA8LOCATION/bin/pythia8-config
- read HEPMCINCLIB <<< $($PYTHIA8LOCATION/bin/pythia8-config --hepmc2)
+  if [ -f $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml ]
+  then
+    while read line; do
+    if [[ $line == *"Pythia:versionNumber"*"8.2"* ]]; then PY8VER="8.2" ; echo ' USING PYTHIA 8.2xy' ; fi
+    if [[ $line == *"Pythia:versionNumber"*"8.3"* ]]; then PY8VER="8.3" ; echo ' USING PYTHIA 8.3xy' ; fi
+    done < $PYTHIA8LOCATION/share/Pythia8/xmldoc/Version.xml
+  else
+    echo "Cannot determine Pythia8 version, stopping run"
+    exit -1
+  fi
+  chmod +x $PYTHIA8LOCATION/bin/pythia8-config
+  read HEPMCINCLIB <<< $($PYTHIA8LOCATION/bin/pythia8-config --hepmc2)
 else
- PY8VER="8.1"
- echo ' USING PYTHIA 8, version < 8.200'
+  PY8VER="8.1"
+  echo ' USING PYTHIA 8.1xy'
 fi
 
 if [ "$PY8UTI" != "" ]
 then
  if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc; fi
  if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82.cc $thisdir/Pythia82.cc; fi
+ if [ $PY8VER == "8.3" ]; then cp -rf $thisdir/srcPythia8/Pythia83.cc $thisdir/Pythia83.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile $thisdir/Makefile
 else
  if [ $PY8VER == "8.1" ]; then cp -rf $thisdir/srcPythia8/Pythia8_hep.cc $thisdir/Pythia8.cc; fi
  if [ $PY8VER == "8.2" ]; then cp -rf $thisdir/srcPythia8/Pythia82_hep.cc $thisdir/Pythia82.cc; fi
+ if [ $PY8VER == "8.3" ]; then cp -rf $thisdir/srcPythia8/Pythia83_hep.cc $thisdir/Pythia83.cc; fi
  cp -rf $thisdir/srcPythia8/Makefile_hep $thisdir/Makefile
 fi
 if [ -f $thisdir/Pythia8.exe ]
@@ -256,6 +266,7 @@ fi
 
 if [ $PY8VER == "8.1" ]; then cp -rf $PYTHIA8LOCATION/xmldoc $thisdir; fi
 if [ $PY8VER == "8.2" ]; then cp -rf $PYTHIA8LOCATION/share/Pythia8/xmldoc $thisdir; fi
+if [ $PY8VER == "8.3" ]; then cp -rf $PYTHIA8LOCATION/share/Pythia8/xmldoc $thisdir; fi
 PY8UTIMAKE="PY8UTI="$PY8UTI
 FORFILEMAKE="FORFILE="$PY8UTI
 HEPMCMAKE="HEPMCINCLIB="$HEPMCINCLIB
@@ -263,6 +274,7 @@ LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
 
 if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
 if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
+if [ $PY8VER == "8.3" ]; then make Pythia83 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
 
 cd $thisdir
 if [ ! -f $thisdir/Pythia8.exe ]
@@ -366,6 +378,7 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 ! 3) Beam-parameter settings.
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
+Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
 
 ! 4) Switch on/off the key event-generation steps.
 EOF

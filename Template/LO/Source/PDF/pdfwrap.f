@@ -261,8 +261,8 @@ C
 
 c---------------------------------------------------------------
 c---------------------------------------------------------------
-
-
+      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'iww'.or.pdlabel.eq.'none') then
+            asmz=asmz            
       else
          asmz=0.118d0
 c     do not crash anymore since arbitrary PDF can be added for lepton collision

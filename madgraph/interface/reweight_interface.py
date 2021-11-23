@@ -756,6 +756,8 @@ class ReweightInterface(extended_cmd.Cmd):
             #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
         
         # check if "Auto" is present for a width parameter)
+        if 'block' not in new_card.lower():
+            raise Exception(str(new_card))
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
             if param_card_iterator:

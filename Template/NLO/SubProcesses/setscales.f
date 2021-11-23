@@ -56,7 +56,8 @@ c (mostly in run.inc, and one  in coupl.inc)
       include "nexternal.inc"
       include "run.inc"
       include "coupl.inc"
-
+      include "timing_variables.inc"
+      
       double precision xp(0:3,nexternal)
       double precision dummy,dummyQES,dummies(2)
       integer i,j
@@ -72,6 +73,7 @@ c put momenta in common block for couplings.f
       logical firsttime
       data firsttime/.true./
 
+      call cpu_time(tBefore)
 c
       if (firsttime) then
         firsttime=.false.
@@ -149,6 +151,9 @@ c Pass momenta to couplings.f
 cc         call setpara('param_card.dat')
       endif
 
+      call cpu_time(tAfter)
+      t_coupl=t_coupl+(tAfter-tBefore)
+      
  200  format(1x,a,2(1x,d12.6),2x,f4.2)
 
       return
@@ -244,24 +249,21 @@ c
          temp_scale_id='Mass of decaying particle'
       elseif(ickkw.eq.3)then
 c FxFx merging scale:
-c     Note that nFxFx_ren_scales includes the one scale that corresponds
-c     to the real-emission one (and is zero for the n-body conf.). Skip
-c     that scale here.
          bpower=born_orders(qcd_pos)/2
-         if (bpower.gt.nFxFx_ren_scales-1) then
+         if (bpower.gt.nFxFx_ren_scales) then
 c For processes that have alpha_S to some (non-zero) power at the lowest
 c multiplicity Born, use the transverse mass of that system for those
 c alpha_S
             tmp=FxFx_ren_scales(0)**
-     &           (bpower-(nFxFx_ren_scales-1))
+     &           (bpower-(nFxFx_ren_scales))
          elseif(bpower.eq.0) then
 c lowest multiplicity for processes without QCD use the transverse mass
-c of the colorless system (as returned by setclscales)
+c of the colorless system (as returned by clustering)
             tmp=FxFx_ren_scales(0)
          else
             tmp=1d0
          endif
-         do i=2,nFxFx_ren_scales
+         do i=1,nFxFx_ren_scales
             tmp=tmp*FxFx_ren_scales(i)
          enddo
          tmp=tmp**(1d0/max(dble(bpower),1d0))

@@ -8,17 +8,17 @@ C
 
         G = 2 * DSQRT(AS*PI)  ! for the first init
 
+        MDL_LHV = 1.000000D+00
+
         MDL_CONJG__CKM3X3 = 1.000000D+00
 
         MDL_CONJG__CKM22 = 1.000000D+00
 
-        MDL_LHV = 1.000000D+00
+        MDL_CKM3X3 = 1.000000D+00
 
         MDL_CKM33 = 1.000000D+00
 
         MDL_CKM22 = 1.000000D+00
-
-        MDL_CKM3X3 = 1.000000D+00
 
         MDL_NCOL = 3.000000D+00
 

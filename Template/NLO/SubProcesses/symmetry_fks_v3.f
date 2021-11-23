@@ -102,6 +102,7 @@ c factors. Hence, simply use the first fks_configuration.
       call setcuts               !Sets up cuts 
       call printout
       call run_printout
+      call fill_configurations_common
       iconfig=1
       ichan=1
       iconfigs(1)=iconfig
@@ -385,4 +386,5 @@ c
             endif
          endif
       enddo
+      close(26)
       end

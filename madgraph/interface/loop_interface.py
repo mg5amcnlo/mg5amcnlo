@@ -727,8 +727,8 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             # For a unique output of multiple type of exporter model information
             # are save in memory
             if hasattr(self, 'previous_lorentz'):
-                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                wanted_lorentz = misc.make_unique(self.previous_lorentz + wanted_lorentz)
+                wanted_couplings = misc.make_unique(self.previous_couplings + wanted_couplings)
                 del self.previous_lorentz
                 del self.previous_couplings
             

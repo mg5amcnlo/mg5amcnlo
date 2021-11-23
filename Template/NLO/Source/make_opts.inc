@@ -93,23 +93,17 @@ ifneq ($(lhapdf),)
   endif
   llhapdf = $(shell $(lhapdf) --libs)
   reweight_xsec_events_pdf_dummy=
-  # check if we need to activate c++11 (for lhapdf6.2)
-  ifeq ($(origin CXX),default)
-    ifeq ($lhapdfversion$lhapdfsubversion,62)
-      CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
-    else
-      CXX=$(DEFAULT_CPP_COMPILER)
-    endif
-  endif	     
 else
   alfas_functions=alfas_functions
   llhapdf=
   reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
-  # Set CXX unless it's defined by an environment variable
-  ifeq ($(origin CXX),default)
-    CXX=$(DEFAULT_CPP_COMPILER)
-  endif
 endif
+
+# Set CXX unless it's defined by an environment variable
+ifeq ($(origin CXX),default)
+   CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
+endif
+
 
 # Option PineAPPL
 ifneq ($(pineappl),)

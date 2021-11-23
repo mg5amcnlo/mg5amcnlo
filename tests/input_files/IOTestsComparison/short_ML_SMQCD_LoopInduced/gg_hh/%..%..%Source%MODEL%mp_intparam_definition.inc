@@ -8,17 +8,17 @@ C
 
         MP__G = 2 * SQRT(MP__AS*MP__PI)  ! for the first init
 
+        MP__MDL_LHV = 1.000000E+00_16
+
         MP__MDL_CONJG__CKM3X3 = 1.000000E+00_16
 
         MP__MDL_CONJG__CKM22 = 1.000000E+00_16
 
-        MP__MDL_LHV = 1.000000E+00_16
+        MP__MDL_CKM3X3 = 1.000000E+00_16
 
         MP__MDL_CKM33 = 1.000000E+00_16
 
         MP__MDL_CKM22 = 1.000000E+00_16
-
-        MP__MDL_CKM3X3 = 1.000000E+00_16
 
         MP__MDL_NCOL = 3.000000E+00_16
 

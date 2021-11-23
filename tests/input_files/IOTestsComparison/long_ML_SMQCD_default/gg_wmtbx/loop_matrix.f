@@ -1202,64 +1202,64 @@ C         Amplitude(s) for UVCT diagram with ID 135
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 136
           CALL FFV1_0(W(1,5,H),W(1,7,H),W(1,6,H),GC_5,AMPL(1,238))
-          AMPL(1,238)=AMPL(1,238)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,238)=AMPL(1,238)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 137
           CALL FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(2,239))
           AMPL(2,239)=AMPL(2,239)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 138
           CALL FFV1_0(W(1,8,H),W(1,4,H),W(1,6,H),GC_5,AMPL(1,240))
-          AMPL(1,240)=AMPL(1,240)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,240)=AMPL(1,240)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 139
           CALL FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(2,241))
           AMPL(2,241)=AMPL(2,241)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 140
           CALL FFV2_0(W(1,10,H),W(1,9,H),W(1,3,H),GC_11,AMPL(1,242))
-          AMPL(1,242)=AMPL(1,242)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,242)=AMPL(1,242)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 141
           CALL FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(2,243))
           AMPL(2,243)=AMPL(2,243)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 142
           CALL FFV1_0(W(1,8,H),W(1,9,H),W(1,2,H),GC_5,AMPL(1,244))
-          AMPL(1,244)=AMPL(1,244)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,244)=AMPL(1,244)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 143
           CALL FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(2,245))
           AMPL(2,245)=AMPL(2,245)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 144
           CALL FFV2_0(W(1,11,H),W(1,12,H),W(1,3,H),GC_11,AMPL(1,246))
-          AMPL(1,246)=AMPL(1,246)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,246)=AMPL(1,246)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 145
           CALL FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(2,247))
           AMPL(2,247)=AMPL(2,247)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 146
           CALL FFV1_0(W(1,11,H),W(1,7,H),W(1,2,H),GC_5,AMPL(1,248))
-          AMPL(1,248)=AMPL(1,248)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,248)=AMPL(1,248)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 147
           CALL FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(2,249))
           AMPL(2,249)=AMPL(2,249)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 148
           CALL FFV1_0(W(1,8,H),W(1,12,H),W(1,1,H),GC_5,AMPL(1,250))
-          AMPL(1,250)=AMPL(1,250)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,250)=AMPL(1,250)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
 C         Amplitude(s) for UVCT diagram with ID 149
           CALL FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(2,251))
           AMPL(2,251)=AMPL(2,251)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $     *UVWFCT_B_0_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 150
           CALL FFV1_0(W(1,10,H),W(1,7,H),W(1,1,H),GC_5,AMPL(1,252))
-          AMPL(1,252)=AMPL(1,252)*(1.0D0*UVWFCT_T_0+2.0D0*UVWFCT_G_2
-     $     +2.0D0*UVWFCT_G_1+1.0D0*UVWFCT_B_0)
+          AMPL(1,252)=AMPL(1,252)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2
+     $     +1.0D0*UVWFCT_T_0+1.0D0*UVWFCT_B_0)
  300      CONTINUE
 
 

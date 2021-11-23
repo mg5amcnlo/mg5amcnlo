@@ -798,12 +798,9 @@ class TestFKSProcess(unittest.TestCase):
         #u g > g u
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
         #take the third real of the first leg for this process 2j 21 >2 21 21i
-        if six.PY2:
-            leglist = fksproc.reals[0][2]['leglist']
-            leglist_qed = fksproc_qed.reals[0][0]['leglist']
-        else:
-            leglist = fksproc.reals[0][0]['leglist']
-            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+        leglist = fksproc.reals[0][2]['leglist']
+        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1, 2,\
                                            [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
@@ -925,14 +922,10 @@ class TestFKSProcess(unittest.TestCase):
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
 
         #take the first real for this process 2j 21 >2 21 21i
-        if six.PY2:
-            leglist = fksproc.reals[0][2]['leglist']
-            # 2j 21 > 21 2 22i for QED process
-            leglist_qed = fksproc_qed.reals[0][0]['leglist']
-        else:
-            leglist = fksproc.reals[0][0]['leglist']
-            # 2j 21 > 21 2 22i for QED process
-            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+        leglist = fksproc.reals[0][2]['leglist']
+        # 2j 21 > 21 2 22i for QED process
+        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        
 
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist], [2,21,2,21,21])

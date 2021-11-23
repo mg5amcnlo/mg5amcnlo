@@ -147,7 +147,8 @@ c
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
       INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      character*7 pdsublabel(2)
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
 
       
       integer          lwgt(0:maxconfigs,maxinvar)

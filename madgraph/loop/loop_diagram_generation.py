@@ -1424,7 +1424,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     tagElement[0]).get('pdg_code'))
             searchingKeyA.sort()
             # We do not repeat particles present many times in the loop
-            searchingKeyB=list(set(searchingKeyB))
+            searchingKeyB=misc.make_unique(searchingKeyB)
             searchingKeyB.sort()
             trackingKeyA.sort()
             # I repeat, they are two kinds of keys:

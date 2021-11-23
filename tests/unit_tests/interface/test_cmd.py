@@ -265,6 +265,31 @@ class TestValidCmd(unittest.TestCase):
         proc = cmd._curr_amps[0].get('process').get('legs')
         self.assertEqual(len(proc), 4)
         
+    @test_aloha.set_global()
+    def test_generate_polarised(self):
+        """check that simple syntax goes trough and return expected process"""
+           
+        cmd = self.cmd
+        self.do('import model sm')
+        self.do('define v = z a')
+        self.do('generate v{0} v{0} > w+ w-')
+        self.assertTrue(cmd._curr_amps)
+        self.assertEqual(len(cmd._curr_amps), 1)
+        proc = cmd._curr_amps[0].get('process').get('legs')
+        self.assertEqual(len(proc), 4)
+
+        self.do('generate v v > w+ w-')
+        self.assertEqual(len(cmd._curr_amps), 3)
+
+        try:
+            self.do('generate v a{0} > w+ w-')
+        except madgraph.core.diagram_generation.NoDiagramException:
+            pass # a{0} should crash since a is massless
+        else:
+            raise Exception("photon should not generate diagram when Longitudinally polarised.") 
+        
+        self.do('generate v{0T} v{0} > w+ w-')
+        self.assertEqual(len(cmd._curr_amps), 2)
 
 
 class TestExtendedCmd(unittest.TestCase):
