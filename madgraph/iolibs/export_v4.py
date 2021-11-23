@@ -2694,7 +2694,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
 
         text = open(path).read() % replace_dict
         

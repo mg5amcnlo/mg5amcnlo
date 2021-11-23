@@ -3148,7 +3148,7 @@ template_on = \
  %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
 """
 
-running_block = RunBlock('RUNNING', template_one=template_one, template_off="")
+running_block = RunBlock('RUNNING', template_on=template_on, template_off="")
 
 # Phase-Space Optimization ------------------------------------------------------------------------------------
 template_on = \
@@ -4600,27 +4600,16 @@ template_on = \
 #***********************************************************************
  %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
 """
+running_block_nlo = RunBlock('RUNNING', template_on=template_on, template_off="")
     
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
      
     LO = False
     
-    blocks = [ runblock(name='RUNNING', fields=('fixed_extra_scale','mue_ref_fixed','mue_over_ref'),
-                             template_on=\
-"""#***********************************************************************
-# CONTROL The additional running scale (not QCD)                       *
-#    Such running is NOT include in systematics computation            *
-#***********************************************************************
- %(fixed_extra_scale)s = fixed_extra_scale ! False means dynamical scale 
- %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
- %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
-""",
-            template_off=''), 
-            
-            ]
-    
-    
+    blocks = [running_block_nlo]
+
+        
     def default_setup(self):
         """define the default value"""
         
