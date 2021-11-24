@@ -1857,7 +1857,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             allids, all_pids = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
-            all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [''.join([i.decode(errors='ignore') for i in j]).strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}

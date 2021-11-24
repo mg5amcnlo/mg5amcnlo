@@ -303,7 +303,7 @@ class HEPMC_EventFile(object):
                     self.banner = ''
                     break 
                 if 'b' in mode or self.zip_mode:
-                    line = str(line.decode())
+                    line = str(line.decode(errors='ignore'))
                 self.header += line
         self.start_event = ''
 
@@ -370,7 +370,7 @@ class HEPMC_EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode or self.zip_mode:
-                    line = str(line.decode())
+                    line = str(line.decode(errors='ignore'))
             if line.startswith('E'):
                 self.start_event = line
                 if text:

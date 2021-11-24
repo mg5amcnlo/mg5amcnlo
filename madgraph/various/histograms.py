@@ -1308,7 +1308,7 @@ class HwU(Histogram):
             use_lhapdf=False
             try:
                 lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                               stdout=subprocess.PIPE).stdout.read().decode().strip()
+                                               stdout=subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except:
                 use_lhapdf=False
             else:
@@ -2381,7 +2381,7 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            output.decode()
+            output.decode(errors='ignore')
             if not output:
                 gnuplot_output_list=gnuplot_output_list_v5
             elif float(output.split()[1]) < 5. :
