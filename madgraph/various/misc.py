@@ -789,7 +789,11 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
         # Cannot probe the compiler, assume not clang then
         return False
 
-    output = output.decode()
+    try:
+        output = output.decode()
+    except Exception as error:
+        misc.sprint("error in clang detection \ncompiler: %s\n version output: %s\n error: %s" % (cpp_compiler, output, error))
+        pass
     return 'LLVM' in str(output) or "clang" in str(output)
 
 
@@ -2222,6 +2226,13 @@ if six.PY3:
         def discard(self, elem):
             self.pop(elem, None)
 
+        def pop(self, *args):
+            if args:
+                return super().pop(*args)
+            else:
+                key = next(iter(self))
+                return super().pop(key, None)
+                
         def __le__(self, other):
             return all(e in other for e in self)
 
