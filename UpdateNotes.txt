@@ -2,7 +2,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.3.1 (XX/XX/XX)
       RF: Fix for bug #1928364 related to the new FxFx clustering routines.
-      OM: Fix for bug #1952050 systematics run at NLO that was broken
+      OM: Fix for bug #1952050 systematics/reweighting run at NLO that was broken
           introduced in 3.3.0
 
 3.3.0 (12/11/21)
