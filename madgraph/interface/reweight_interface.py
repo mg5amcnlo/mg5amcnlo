@@ -772,7 +772,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         # Find new tag in the banner and add information if needed
+        logger.info("%s %s",self.banner.keys(), self.output_type )
         if 'initrwgt' in self.banner and self.output_type == 'default': 
+            print(self.banner['initrwgt'])
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
@@ -791,6 +793,7 @@ class ReweightInterface(extended_cmd.Cmd):
                          
                 maxid += 1
                 rewgtid = maxid
+                print(self.options['rwgt_name'], mg_rwgt_info[:])
                 if self.options['rwgt_name']:
                     #ensure that the entry is not already define if so overwrites it
                     for (i, nlotype, diff) in mg_rwgt_info[:]:

@@ -24,6 +24,71 @@ import shutil
 from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
+import itertools
+
+
+class TestEvent(unittest.TestCase):
+
+
+    def test_equiv_sequence(self):
+        """ check the equiv_sequence: staticmethod"""
+
+        l1 = [3,4,5]
+        mapping = {0: "a", 1: "b", 2: "c"}
+        for l2 in itertools.permutations(l1):
+            out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+            if tuple(l1) == l2:
+                self.assertTrue(out)
+            else:
+                self.assertFalse(out)
+
+        l1 = [3,4,5]
+        mapping = {0: "a", 1: "a", 2: "c"}
+        l2 =[4,3,5]
+        out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+        self.assertTrue(out)
+        l2 =[4,5,3]
+        out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+        self.assertFalse(out)        
+
+    
+    def test_get_permutation(self):
+        """ check the static method get_permutation"""
+
+
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAA")
+        self.assertEqual(len(out), 1)
+        
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAB")
+        self.assertEqual(len(out), 3)
+        self.assertIn((3,4,5), out)
+        check = set()
+        for one in out:
+            check.add(one[-1])
+        self.assertEqual(len(check), 3)
+        self.assertEqual(check, set([3,4,5]))
+
+        out = lhe_parser.Event.get_permutation([3,4,5], "ABC")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5), out)
+        self.assertIn((4,3,5), out)
+
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5,6), out)
+        self.assertNotIn((4,3,6,5), out)
+        self.assertIn((4,5,3,6), out)
+
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5,6), out)
+        self.assertIn((4,3,6,5), out)
+        #self.assertIn((4,5,3,6), out)
+
+        #self. 
+        return True
+
+
 
 class TESTLHEParser(unittest.TestCase):
 

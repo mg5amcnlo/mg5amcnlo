@@ -2361,6 +2361,101 @@ class Event(list):
             
         return out
 
+
+    def get_all_momenta(self, get_order, allow_reversed=True):
+        """ same as get_momenta but return all valid permutation of the final state 
+              where identical particle does NOT have the same parent
+        """  
+
+
+        p = self.get_momenta(get_order, allow_reversed)
+
+        data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}}
+        for i, part in enumerate(self):
+            pdg = part.pid
+            try:
+                m1 = part.mother1.event_id
+            except AttributeError:
+                m1 = 0
+            try:
+                m2 = part.mother2.event_id
+            except AttributeError:
+                m2 = 0
+            M = (m1,m2)
+            if pdg in data:
+                if M in data[pdg]:
+                    data[pdg][M].append(i)
+                else:
+                    data[pdg][M] = [i]
+            else:
+                data[pdg] = {M:[i]}
+
+        # check which pdg to permutate
+        # need to permutate pdg code where multiple M are present
+        perms_perid = {}
+        for pdg in data:
+            if len(data[pdg]) == 1:
+                mother = data[pdg].keys()[0]
+                perms_perid[pdg] = [(i,i) for i in data[pdg][mother]]
+            else:
+                positions = []
+                invert = {} #mapping from position to the class
+                for mother in data[pdg]:
+                    for i,val in enumerate(data[pdg][mother]):
+                        invert[len(positions)+i] = mother
+                    positions += data[pdg][mother]
+
+            
+
+    @staticmethod
+    def equiv_sequence(l1,l2, mapping):
+        """check if two sequence are equivalent
+        mapping is a dictionary taking an index and return an identifier.
+        The two list are consider equivalent if the  total content associated to an identifier
+        is the same (up to ordering)
+        so (3,4,5) and (4,3,5) are the same for mapping={0:"a",1:"a",2:"b"}
+        since a is assocated to 3,4 in both case (and b to 5 in each case
+        but (3,4,5) and (3,5,4) are not the same because b has 5 in one case and 4 in the second
+        """
+        content1 = collections.defaultdict(set)
+        content2 = collections.defaultdict(set)
+        for i in range(len(l1)):
+            content1[mapping[i]].add(l1[i])
+            content2[mapping[i]].add(l2[i])
+
+        for key in content1:
+            if content1[key] != content2[key]:
+                return False
+        return True
+
+    @staticmethod
+    def get_permutation(orig, belong):
+        """
+        orig is the position of the various particle to permutate
+        belong is the class to which they belong
+        so for [3,4,5] and ["A", "A" , "b"] the code will return
+        three permutation of orig (like)
+        [3,4,5], [3,5,4], [4,5,3] 
+        """
+
+        import itertools
+
+        assert(len(orig) == len(belong))
+        invert = {}
+        for i in range(len(orig)):
+            invert[i] = belong[i]
+
+        allperms = []
+        for perm in itertools.permutations(orig):
+            if not any(Event.equiv_sequence(perm, prev, invert) for prev in allperms):
+                allperms.append(perm)
+        return allperms
+
+
+
+
+
+
     
     def get_scale(self,type):
         
