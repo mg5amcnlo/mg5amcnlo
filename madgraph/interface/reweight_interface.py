@@ -1246,8 +1246,16 @@ class ReweightInterface(extended_cmd.Cmd):
             moduletag = (base, 2)
         
         module = self.f2pylib[moduletag]
+    
+        if self.keep_ordering:
+            all_p = [event.get_momenta(orig_order)]
+        else:
+            all_p = event.get_all_momenta(orig_order)
+            if len(all_p) >1:
+                if self.helicity_reweighting:
+                    logger.warning("due to ordering ambiguity, we fip off helicity per helicity reweighting.")
+                self.helicity_reweighting = False
 
-        p = event.get_momenta(orig_order)
         # add helicity information
         
         hel_order = event.get_helicity(orig_order)
@@ -1272,49 +1280,62 @@ class ReweightInterface(extended_cmd.Cmd):
                     if to_inc[nb_ext]:
                         pboost += p                    
             new_event.boost(pboost)
-            p = new_event.get_momenta(orig_order)
+            if self.keep_ordering:
+                all_p = [new_event.get_momenta(orig_order)]
+            else:
+                all_p = new_event.get_all_momenta(orig_order)
+            if len(all_p) > 1:
+                logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
         elif (hypp_id == 1 and self.boost_event):
             if self.boost_event is not True:
                 import copy
                 new_event = copy.deepcopy(event)
                 new_event.boost(self.boost_event)
-                p = new_event.get_momenta(orig_order)        
+                if self.keep_ordering:
+                    all_p = [new_event.get_momenta(orig_order)]
+                else:     
+                    all_p = new_event.get_all_momenta(orig_order)        
         elif (hasattr(event[1], 'status') and event[1].status == -1) or \
            (event[1].px == event[1].py == 0.):
+            p = all_p[0]
             pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-            for i,thisp in enumerate(p):
-                p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-            assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+            for p in all_p:
+                for i,thisp in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
         
-        pold = list(p)
-        p = self.invert_momenta(p)
-        pdg = list(orig_order[0])+list(orig_order[1])
-        try:
-            pid = event.ievent
-        except AttributeError:
-            pid = -1
-        if not self.use_eventid:
-            pid = -1
-        
-        if not scale2: 
-            if hasattr(event, 'scale'):
-                scale2 = event.scale**2
-            else:
-                scale2 = 0
-
-        with misc.chdir(Pdir):
-            with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
-                                
-        # for loop we have also the stability status code
-        if isinstance(me_value, tuple):
-            me_value, code = me_value
-            #if code points unstability -> returns 0
-            hundred_value = (code % 1000) //100
-            if hundred_value in [4]:
-                me_value = 0.
+        me_value = 0
+        for p in all_p:
+            pold = list(p)
+            p = self.invert_momenta(p)
+            pdg = list(orig_order[0])+list(orig_order[1])
+            try:
+                pid = event.ievent
+            except AttributeError:
+                pid = -1
+            if not self.use_eventid:
+                pid = -1
             
-        return me_value
+            if not scale2: 
+                if hasattr(event, 'scale'):
+                    scale2 = event.scale**2
+                else:
+                    scale2 = 0
+
+            with misc.chdir(Pdir):
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                    new_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
+                                    
+            # for loop we have also the stability status code
+            if isinstance(me_value, tuple):
+                new_value, code = me_value
+                #if code points unstability -> returns 0
+                hundred_value = (code % 1000) //100
+                if hundred_value in [4]:
+                    new_value = 0.
+            me_value += new_value
+
+        return me_value / len(all_p)
     
     def terminate_fortran_executables(self, new_card_only=False):
         """routine to terminate all fortran executables"""

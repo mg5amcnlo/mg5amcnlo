@@ -1699,12 +1699,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             orig_order = self.all_me[tag]['order']
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
-            p = event.get_momenta(orig_order)
-            p = rwgt_interface.ReweightInterface.invert_momenta(p)
-            if event[0].color1 == 599 and event.aqcd==0:
-                return self.all_f2py[pdir](p, 0.113, 0)
-            else:
-                return self.all_f2py[pdir](p, event.aqcd, 0)
+            all_p = event.get_all_momenta(orig_order)
+            out = 0
+            for p in all_p:
+                p = rwgt_interface.ReweightInterface.invert_momenta(p)
+                if event[0].color1 == 599 and event.aqcd==0:
+                    out += self.all_f2py[pdir](p, 0.113, 0)
+                else:
+                    out += self.all_f2py[pdir](p, event.aqcd, 0)
+            return out/len(all_p)
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))

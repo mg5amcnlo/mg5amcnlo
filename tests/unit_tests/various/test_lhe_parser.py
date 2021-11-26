@@ -86,7 +86,9 @@ class TestEvent(unittest.TestCase):
   
 
     def test_event_property(self):
-        """ """
+        """
+        test Event parsing and the function get_momenta and get_all_momenta
+        """
 
         input = """
     10      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
