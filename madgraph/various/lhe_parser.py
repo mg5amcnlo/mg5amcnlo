@@ -2362,17 +2362,22 @@ class Event(list):
         return out
 
 
-    def get_all_momenta(self, get_order, allow_reversed=True):
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
+              for easier development debug output allow to return internal variable for the unittest to check
         """  
 
 
         p = self.get_momenta(get_order, allow_reversed)
 
-        data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}}
+        nbin = len(get_order[0])
+        final = get_order[1]
+        data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
         for i, part in enumerate(self):
             pdg = part.pid
+            if part.status != 1:
+                continue
             try:
                 m1 = part.mother1.event_id
             except AttributeError:
@@ -2383,27 +2388,49 @@ class Event(list):
                 m2 = 0
             M = (m1,m2)
             if pdg in data:
+                max_prev = max(k+1  for N in data[pdg] for k in data[pdg][N] ) - nbin
                 if M in data[pdg]:
-                    data[pdg][M].append(i)
+                    data[pdg][M].append(nbin+final.index(pdg,max_prev))
                 else:
-                    data[pdg][M] = [i]
+                    data[pdg][M] = [nbin+final.index(pdg, max_prev)]
             else:
-                data[pdg] = {M:[i]}
+                data[pdg] = {M:[nbin+final.index(pdg)]}
+
+        # for unnittest 
+        if debug_output == 1:
+            return data
 
         # check which pdg to permutate
         # need to permutate pdg code where multiple M are present
         perms_perid = {}
         for pdg in data:
             if len(data[pdg]) == 1:
-                mother = data[pdg].keys()[0]
-                perms_perid[pdg] = [(i,i) for i in data[pdg][mother]]
+                mother = list(data[pdg].keys())[0]
+                perms_perid[pdg] = [[(i,i) for i in data[pdg][mother]]]
             else:
                 positions = []
-                invert = {} #mapping from position to the class
+                mapping = [] #mapping from position to the class
                 for mother in data[pdg]:
-                    for i,val in enumerate(data[pdg][mother]):
-                        invert[len(positions)+i] = mother
-                    positions += data[pdg][mother]
+                    for val in data[pdg][mother]:
+                        mapping.append(mother)
+                        positions.append(val)
+                all_perms = Event.get_permutation(positions, mapping)
+                perms_perid[pdg] = [[(pos, positions[i]) for i,pos in enumerate(perm)] for perm in all_perms]
+
+        if debug_output == 2:
+            return perms_perid
+
+        all_perms = []
+        import itertools
+        for i in itertools.product(*perms_perid.values()): 
+            perm_pos = dict(sum(i,[]))
+            new_p = [[0,0,0,0]]*len(p)
+            new_p[:nbin] = p[:nbin]
+            for i,j in perm_pos.items():
+                new_p[i] = p[j] 
+            all_perms.append(new_p)
+
+        return all_perms
 
             
 
