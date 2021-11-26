@@ -2193,7 +2193,10 @@ def make_unique(input, keepordering=None):
     "remove duplicate in a list "
 
     if keepordering is None:
-        keepordering = madgraph.ordering
+        if MADEVENT:
+            keepordering = False
+        else:
+            keepordering = madgraph.ordering
     if not keepordering:
         return list(set(input))
     else:
