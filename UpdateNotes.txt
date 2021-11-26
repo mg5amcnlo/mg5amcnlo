@@ -7,6 +7,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 a bias in the effective branching ratio out of madspin (observed only of NLO sample)
 	 see: https://bugs.launchpad.net/mg5amcnlo/+bug/1951120
 	 Thanks Hannes for the information.
+     RF+PT+SF: Fixed a 10-year-old bug that was there in the importance sampling over the FKS configurations.
+	- Fix to pick one shower scale for the S event at random among the FKS configurations,
+	instead of taking the weighted average.
+	- removed the n-body contributions from the random picking of the showerscale among FKS configurations.
+        Those bugs were leading at an incorect pick of the shower scale. The observed impact is relatively small
+	and occur in the matching region.
 
 2.9.6 (02/11/21)
      OM: Forbid the possibity to ask for massless boson to be longitudinally polarised.
@@ -28,19 +34,19 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 
 2.9.5 (22/08/21)
       OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
-             This was claimed to be using fixed scale computation while in s\
-ome case the scale was dynamical
-             To have full flexibility we introduced two additional (hidden) \
-parameter
-             fixed_fac_scale1 and fixed_fac_scale2 that allow to choose fixe\
-d scale for only one beam.
+             This was claimed to be using fixed scale computation while in
+	     some case the scale was dynamical
+             To have full flexibility we introduced two additional (hidden)
+	     parameter
+             fixed_fac_scale1 and fixed_fac_scale2 that allow to choose
+	     fixed scale for only one beam.
       OM: fix auto-width that was not following	run_mode specification
       OM: fixing missing rwgt_info for reweighting with gridpack mode
       OM: fixing 'check' command with the skip_event mode
       OM: fixing auto-width computation for 3 body decay and identical particle which was sometimes leading to crash
       OM: Fix some potential infinite loop when running with python3
       
-2.9.4(28/05/21)
+2.9.4(30/05/21)
       OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
       OM: Fix an issue for non positive definite matrix-element when using the
           "set group_subprocesses False"  mode of MG5aMc

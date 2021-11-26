@@ -834,7 +834,10 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
-         jac=1d0
+c Also the Born needs to be included in the Importance Sampling over the
+c FKS configurations (for the shower scale) (multiply by
+c 1/proc_map(0,0)*vol1)
+         jac=1d0/(proc_map(0,0)*vol1)
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)

@@ -445,6 +445,7 @@ class MECmdShell(IOTests.IOTestManager):
                         if m_inv_w != 0:
                             self.assertTrue(False, 'two W')
                         m_inv_w = p.mass
+                        misc.sprint(p.mass)
                         self.assertTrue( 80 < m_inv_w < 81)
                     else:
                         self.assertTrue(False, 'not W decaying')
