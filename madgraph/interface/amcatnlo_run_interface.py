@@ -2434,7 +2434,7 @@ RESTART = %(mint_mode)s
                     polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
             to_write=[]
             for rowgrp in zip(*linesoffiles):
-                action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
+                action=misc.make_unique([row.strip().split()[0] for row in rowgrp], keepordering=False) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
