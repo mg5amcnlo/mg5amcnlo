@@ -104,6 +104,8 @@ class MadSpinOptions(banner.ConfigFile):
         
         if value == 'default':
             self.run_card = None
+        elif not value:
+            self.run_card = None
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
         else:
