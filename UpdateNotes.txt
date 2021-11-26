@@ -1,7 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+      OM: change reweighting/spinmode=onshell (from maddspin) to use the average of the matrix-element when it exists an order ambiguity in the matrix element like for the following process:
+      p p > e+ ... z, z > e+ e-
+      where permuting the momenta of the "e+" does not lead to the same
+      matrix-element.
+
+
 3.3.1 (XX/XX/XX)
       RF: Fix for bug #1928364 related to the new FxFx clustering routines.
+
 
 3.3.0 (12/11/21)
       DP+HS+IT+MZ: EW corrections can be computed for tagged photons
