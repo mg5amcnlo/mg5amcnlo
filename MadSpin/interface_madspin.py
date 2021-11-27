@@ -95,8 +95,8 @@ class MadSpinOptions(banner.ConfigFile):
         """ special handling for set seed """
         
         if not hasattr(random, 'mg_seedset'):
-            random.seed(self.run_card['python_seed'])  
-            random.mg_seedset = self.run_card['python_seed']  
+            random.seed(self['seed'])  
+            random.mg_seedset = self['seed']  
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror):
