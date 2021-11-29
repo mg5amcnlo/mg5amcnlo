@@ -94,7 +94,9 @@ class MadSpinOptions(banner.ConfigFile):
     def post_set_seed(self, value, change_userdefine, raiseerror):
         """ special handling for set seed """
         
-        random.seed(value)
+        if not hasattr(random, 'mg_seedset'):
+            random.seed(self['seed'])  
+            random.mg_seedset = self['seed']  
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror):
@@ -102,15 +104,21 @@ class MadSpinOptions(banner.ConfigFile):
         
         if value == 'default':
             self.run_card = None
+        elif not value:
+            self.run_card = None
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
-            
-        args = value.split()
-        if  len(args) >2:
-            if not self.options['run_card']:
-                self.run_card =  banner.RunCardLO()
-                self.run_card.remove_all_cut()
-            self.run_card[args[0]] = ' '.join(args[1:])
+        else:
+            misc.sprint(value)
+            args = value.split()
+            if  len(args) >1:
+                if not hasattr(self, 'run_card'):
+                    misc.sprint("init run_card")
+                    self.run_card =  banner.RunCardLO()
+                    self.run_card.remove_all_cut()
+                self.run_card[args[0]] = ' '.join(args[1:])
+            else:
+                raise Exception("wrong syntax for \"set run_card %s\"" % value)
             
         
     ############################################################################
@@ -1278,6 +1286,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.options["run_card"]:
                     if hasattr(self, 'run_card'):
                         run_card = self.run_card
+                    elif hasattr(self.options, 'run_card'):
+                        run_card = self.options.run_card
                     else:
                         self.run_card = banner.RunCard(self.options["run_card"])
                         run_card = self.run_card 

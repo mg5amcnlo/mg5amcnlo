@@ -3969,7 +3969,7 @@ Beware that this can be dangerous for local multicore runs.""")
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                              cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
-            out = out.decode().replace('\n','')
+            out = out.decode(errors='ignore').replace('\n','')
             PY8_curr_version = out
             # In order to test that the version is correctly formed, we try to cast
             # it to a float
@@ -5718,10 +5718,14 @@ tar -czf split_$1.tar.gz split_$1
         #set random seed for python part of the code
         if self.run_card['python_seed'] == -2: #-2 means same as run_card
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         elif self.run_card['python_seed'] >= 0:
             import random
-            random.seed(self.run_card['python_seed'])
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
@@ -5761,7 +5765,7 @@ tar -czf split_$1.tar.gz split_$1
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode()
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode(errors='ignore')
             if 'VALID' not in str(bias_module_valid).upper() or \
                'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
@@ -5961,7 +5965,9 @@ tar -czf split_$1.tar.gz split_$1
             raise MadGraph5Error('Random seed too large ' + str(self.random) + ' > 30081*30081')
         if self.run_card['python_seed'] == -2: 
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.random)  
+                random.mg_seedset = self.random
             
     ############################################################################
     def save_random(self):
@@ -6555,10 +6561,14 @@ class GridPackCmd(MadEventCmd):
 
         if self.run_card['python_seed'] == -2:
             import random
-            random.seed(seed)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(seed)  
+                random.mg_seedset = seed
         elif self.run_card['python_seed'] > 0:
             import random
-            random.seed(self.run_card['python_seed'])            
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']         
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),

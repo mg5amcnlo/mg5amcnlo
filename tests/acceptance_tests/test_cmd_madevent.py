@@ -752,10 +752,10 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
-                 set event_norm sum
+                 set event_norm average
                  set systematics_program none
                  add_time_of_flight --threshold=4e-14
-                 pythia
+                 pythia8
                  """ %self.run_dir
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
@@ -829,7 +829,7 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
-        pythia=ON
+        shower=pythia8    
         %(path)s/../madspin_card.dat
         set nevents 1000
         set lhaid 10042
@@ -973,8 +973,8 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('hep' in data[0].pythia)
-        self.assertTrue('log' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia or 'hepmc' in data[0].pythia8)
+        self.assertTrue('log' in data[0].pythia or 'log' in data[0].pythia8)
 
     
     def test_decay_width_nlo_model(self):

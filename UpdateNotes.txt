@@ -1,5 +1,20 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+2.9.7 (29/11/21)
+     OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
+         Now the first of those to setup a python seed will forbid any future reset of the seed
+	 Frequent reset of the seed when moving to one package to the next was creating
+	 a bias in the effective branching ratio out of madspin (observed only of NLO sample)
+	 see: https://bugs.launchpad.net/mg5amcnlo/+bug/1951120
+	 Thanks Hannes for the information.
+     RF+PT+SF: Fixed a 10-year-old bug that was there in the importance sampling over the FKS configurations.
+	 - Fix to pick one shower scale for the S event at random among the FKS configurations,
+	   instead of taking the weighted average.
+	 - removed the n-body contributions from the random picking of the showerscale among FKS configurations.
+        Those bugs were leading at an incorect pick of the shower scale. The observed impact is relatively small
+	and occur in the matching region.
+
 2.9.6 (02/11/21)
      OM: Forbid the possibity to ask for massless boson to be longitudinally polarised.
          Asking for those with large multi-particle label could have hide the fact that the code
