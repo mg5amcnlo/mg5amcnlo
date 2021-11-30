@@ -17,7 +17,20 @@ c Wrapper routines for the fixed order analyses
       nwgt=1
       if (.not.allocated(weights_info)) allocate(weights_info(1))
       weights_info(nwgt)="central value               "
+
       if (do_rwgt_scale) then
+      
+      do nn=1,lhaPDFid(0)
+      
+        if (nn.eq.1) then    
+            jmax=1
+        else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+            jmax=3
+        else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+            jmax=1
+        endif
+      
+         if (nn.eq.1) then
          do kk=1,dyn_scale(0)
 c set the weights_info string for scale variations
             if (lscalevar(kk)) then
@@ -56,7 +69,145 @@ c set the weights_info string for scale variations
                endif
             endif
          enddo
+         
+         
+         else
+         
+         do j=1,jmax
+         
+         if (j.eq.1) then
+         
+         do kk=1,dyn_scale(0)
+c set the weights_info string for scale variations
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     nwgt=nwgt+1
+                     allocate(ctemp(nwgt))
+                     ctemp(1:nwgt-1)=weights_info
+                     call move_alloc(ctemp,weights_info)
+                     if (ickkw.ne.-1) then
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a8,f6.3,x,a8,f6.3)')
+     $                     "dyn=",dyn_scale(kk),"muR(AA)=",scalevarR(jj)
+     $                       ,"muF(AA)=",scalevarF(ii)
+                     else
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
+     $                       ,"muH=",scalevarF(ii)
+                     endif
+                  enddo
+               enddo
+            else
+               nwgt=nwgt+1
+               allocate(ctemp(nwgt))
+               ctemp(1:nwgt-1)=weights_info
+               call move_alloc(ctemp,weights_info)
+               if (ickkw.ne.-1) then
+                  write(weights_info(nwgt),'(a4,i4,x,a8,f6.3,x,a8,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muR(AA)=",scalevarR(1)
+     $                 ,"muF(AA)=",scalevarF(1)
+               else
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
+     $                 ,"muH=",scalevarF(1)
+               endif
+            endif
+         enddo
+         
+         else if (j.eq.2) then
+                  
+         do kk=1,dyn_scale(0)
+c set the weights_info string for scale variations
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     nwgt=nwgt+1
+                     allocate(ctemp(nwgt))
+                     ctemp(1:nwgt-1)=weights_info
+                     call move_alloc(ctemp,weights_info)
+                     if (ickkw.ne.-1) then
+                        write(weights_info(nwgt),
+     &                                '(a4,i1,x,a8,f6.3,x,a8,f6.3)')
+     $                     "dyn=",dyn_scale(kk),"muR(pA)=",scalevarR(jj)
+     $                       ,"muF(pA)=",scalevarF(ii)
+                     else
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
+     $                       ,"muH=",scalevarF(ii)
+                     endif
+                  enddo
+               enddo
+            else
+               nwgt=nwgt+1
+               allocate(ctemp(nwgt))
+               ctemp(1:nwgt-1)=weights_info
+               call move_alloc(ctemp,weights_info)
+               if (ickkw.ne.-1) then
+                  write(weights_info(nwgt),'(a4,i1,x,a8,f6.3,x,a8,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muR(pA)=",scalevarR(1)
+     $                 ,"muF(pA)=",scalevarF(1)
+               else
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
+     $                 ,"muH=",scalevarF(1)
+               endif
+            endif
+         enddo
+         
+         else if (j.eq.3) then
+         
+         do kk=1,dyn_scale(0)
+c set the weights_info string for scale variations
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     nwgt=nwgt+1
+                     allocate(ctemp(nwgt))
+                     ctemp(1:nwgt-1)=weights_info
+                     call move_alloc(ctemp,weights_info)
+                     if (ickkw.ne.-1) then
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a8,f6.3,x,a8,f6.3)')
+     $                     "dyn=",dyn_scale(kk),"muR(Ap)=",scalevarR(jj)
+     $                       ,"muF(Ap)=",scalevarF(ii)
+                     else
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
+     $                       ,"muH=",scalevarF(ii)
+                     endif
+                  enddo
+               enddo
+            else
+               nwgt=nwgt+1
+               allocate(ctemp(nwgt))
+               ctemp(1:nwgt-1)=weights_info
+               call move_alloc(ctemp,weights_info)
+               if (ickkw.ne.-1) then
+                  write(weights_info(nwgt),'(a4,i4,x,a8,f6.3,x,a8,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muR(Ap)=",scalevarR(1)
+     $                 ,"muF(Ap)=",scalevarF(1)
+               else
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
+     $                 ,"muH=",scalevarF(1)
+               endif
+            endif
+         enddo
+         
+         endif
+         enddo
+         endif
+         
+      enddo
+         
       endif
+      
+      
+      
       if (do_rwgt_pdf) then
          do nn=1,lhaPDFid(0)
             if (lpdfvar(nn)) then
@@ -88,13 +239,13 @@ c     to "setrun")
 c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                 if (nn.eq.1) then    
-           	jmax=1
-       		else if (nn.ne.1.and.rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
-           	jmax=3
-       		else if (nn.ne.1.and.rpa_choice.eqv..false.) then
-	   	jmax=1
-       		endif
-           !write (3,*) 'first '
+                    jmax=1
+                else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+                    jmax=3
+                else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+                    jmax=1
+                endif
+           
 
            do j=1,jmax
 
