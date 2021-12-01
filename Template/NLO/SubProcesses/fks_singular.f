@@ -2202,10 +2202,12 @@ c factorisation scale variation (require recomputation of the PDFs)
                if (nn.EQ.1) then! ---> central proton PDFs to be stored;
                       xlum(kf) = dlum()
                       
+                      if (rpa_choice.eqv..true.) then
                       do ii=1,IPROC
                         f1_p(kf,i,ii)=PD1(ii)
                         f2_p(kf,i,ii)=PD2(ii)
                       enddo
+                      endif
                       
                     if (separate_flavour_configs .and. ipr(i).ne.0) then
                         if (nincoming.eq.2) then
