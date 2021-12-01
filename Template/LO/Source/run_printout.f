@@ -55,11 +55,18 @@ c
       else
          write(6,*) 'Renormalization scale set on event-by-event basis'
       endif
-      if(fixed_fac_scale) then
+      if(fixed_fac_scale1.and.fixed_fac_scale2) then
          write(6,*) 'Factorization scales  fixed @ ',
-     &   dsqrt(q2fact(1)),dsqrt(q2fact(2)) 
-      else
+     &        dsqrt(q2fact(1)),dsqrt(q2fact(2))
+      else if(.not.fixed_fac_scale1.and..not.fixed_fac_scale2) then
          write(6,*) 'Factorization   scale set on event-by-event basis'
+      else if(fixed_fac_scale1) then
+         write(6,*) 'Factorization scales  fixed for beam1  @ ',
+     &        dsqrt(q2fact(1)),dsqrt(q2fact(2))
+      else
+         write(6,*) 'Factorization scales  fixed for beam2  @ ',
+     &        dsqrt(q2fact(1)),dsqrt(q2fact(2))
+
       endif
    
       write(6,*)  

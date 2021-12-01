@@ -31,6 +31,7 @@ import math
 
 import aloha
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
@@ -44,6 +45,9 @@ import six
 from six.moves import range
 from six.moves import zip
 from functools import reduce
+
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 #===============================================================================
 # 
@@ -3814,7 +3818,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         last=collections.defaultdict(list)
         for nb, pos in last_lign.items():
             last[pos].append(nb)
-        tag = list(set(list(last.keys())+list(first.keys()))) 
+        tag = misc.make_unique(list(last.keys())+list(first.keys()))
         tag.sort() #lines number where something happen (new in/out) 
 
         # Create the replacement id dictionary
@@ -4763,6 +4767,8 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         return itertools.product(*hel_per_part)
 
 
+
+
     def get_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
         state spin only """
@@ -4791,6 +4797,20 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return hel_per_part
 
+    def get_spin_state(self):
+        """Gives (number of state for each initial particle)"""
+
+        model = self.get('processes')[0].get('model')
+        legs = [leg for leg in self.get('processes')[0].get('legs')]
+        hel_per_part = [ len(leg.get('polarization')) if leg.get('polarization') 
+                        else len(model.get('particle_dict')[\
+                                  leg.get('id')].get_helicity_states())
+            for leg in legs]
+        
+        if len(hel_per_part) == 1:
+            hel_per_part.append(0)
+            
+        return hel_per_part
 
     def get_beams_hel_avg_factor(self):
         """ Calculate the denominator factor due to the average over initial
@@ -5013,7 +5033,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if output == str:
             return [ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2]
         elif output=="set":
-            return set(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
+            return misc.make_unique(sum([ [t] if not t.startswith('-') else [t[1:]] for t2 in tmp for t in t2],[]))
 
 
     def get_mirror_processes(self):
@@ -5394,7 +5414,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
             decay_lists = []
             # Loop over unique final state particle ids
-            for fs_id in set(fs_ids):
+            for fs_id in misc.make_unique(fs_ids):
                 # decay_list has the leg numbers and decays for this
                 # fs particle id:
                 # decay_list = [[[n1,d1],[n2,d2]],[[n1,d1'],[n2,d2']],...]
@@ -5431,6 +5451,12 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     ordered_for_pol = False
                 else:
                     ordered_for_pol = True
+
+                # for process like p p > w+{T} w+{0}, w+ > l+ vl you need to forbid to combine the two process
+                # the tag does not handle the breaking of symmetry due to the polarization shift
+                if not ordered_for_pol and combine:
+                    if any(len(pol) for pol in fs_pols_dict.values()):
+                        combine = False
 
                 red_decay_chains = []
 
@@ -5485,7 +5511,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
                 
-                for fs_id in set(fs_ids):
+                for fs_id in misc.make_unique(fs_ids):
                     if fs_pols_dict[fs_id]:
                         if hasattr(matrix_element,'ordering_for_pol'):
                             matrix_element.ordering_for_pol[fs_id] = ordered_for_pol
@@ -5610,7 +5636,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         for me in self.get('matrix_elements'):
             helas_list.extend(me.get_used_lorentz())
                 
-        return list(set(helas_list))
+        return misc.make_unique(helas_list)
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -5621,7 +5647,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         for me in self.get('matrix_elements'):
             coupling_list.extend([c for l in me.get_used_couplings() for c in l])
         
-        return list(set(coupling_list))
+        return misc.make_unique(coupling_list)
     
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""

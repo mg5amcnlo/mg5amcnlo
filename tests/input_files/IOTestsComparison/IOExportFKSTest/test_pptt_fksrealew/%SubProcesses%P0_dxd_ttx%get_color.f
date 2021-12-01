@@ -35,7 +35,49 @@ C       This is dummy particle used in multiparticle vertices
         RETURN
       ELSE
         WRITE(*,*)'Error: No color given for pdg ',IPDG
-        GET_COLOR=0
+        STOP 1
+        RETURN
+      ENDIF
+      END
+
+      FUNCTION GET_SPIN(IPDG)
+      IMPLICIT NONE
+      INTEGER GET_SPIN, IPDG
+
+      IF(IPDG.EQ.-6)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.-3)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.-1)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.1)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.3)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.6)THEN
+        GET_SPIN=2
+        RETURN
+      ELSE IF(IPDG.EQ.21)THEN
+        GET_SPIN=3
+        RETURN
+      ELSE IF(IPDG.EQ.22)THEN
+        GET_SPIN=3
+        RETURN
+      ELSE IF(IPDG.EQ.23)THEN
+        GET_SPIN=3
+        RETURN
+      ELSE IF(IPDG.EQ.7)THEN
+C       This is dummy particle used in multiparticle vertices
+        GET_SPIN=-2
+        RETURN
+      ELSE
+        WRITE(*,*)'Error: No spin given for pdg ',IPDG
+        STOP 1
         RETURN
       ENDIF
       END

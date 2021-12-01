@@ -15,14 +15,14 @@ ifdef lhapdf
     $(error Bad lhadpfversion version 6 is now required)
   else
     ifeq ($(lhapdfsubversion),1) # 6.1.X
-	PDF         = pdfwrap_lhapdf.o pdf_lhapdf6.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o
+	PDF         = pdfwrap_lhapdf.o pdf_lhapdf6.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o ElectroweakFluxDriver.o ElectroweakFlux.o
     else # 6.2.X
         CXXFLAGS+=-std=c++11
-	PDF         = pdfwrap_lhapdf.o pdf_lhapdf62.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o
+	PDF         = pdfwrap_lhapdf.o pdf_lhapdf62.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o ElectroweakFluxDriver.o ElectroweakFlux.o
     endif    
   endif
 else
-  PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o
+  PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o eepdf.o gridpdfaux.o dfint.o kerset.o ElectroweakFluxDriver.o ElectroweakFlux.o
 endif
 
 all: $(LIBDIR)$(LIBRARY)

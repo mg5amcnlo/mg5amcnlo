@@ -724,7 +724,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
             beam_number =2
          endif
          
-         if(n_pdfrw(1).gt.0.and.abs(lpp(1)).eq.1)then
+         if(n_pdfrw(1).gt.0.and.abs(lpp(1)).ne.2)then
             if(2*n_pdfrw(1).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
      $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
@@ -746,7 +746,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          if (flip) then
             beam_number	= 1
          endif
-         if(n_pdfrw(2).gt.0.and.abs(lpp(2)).eq.1)then
+         if(n_pdfrw(2).gt.0.and.abs(lpp(2)).ne.2)then
             if(2*n_pdfrw(2).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
      $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
