@@ -3466,7 +3466,7 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
-                        ranmar_state=external.stdout.readline().decode()
+                        ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
@@ -3513,7 +3513,7 @@ class decay_all_events(object):
 
         external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline().decode())
+            info = int(external.stdout.readline().decode(errors='ignore'))
             nb_output = abs(info)+1
         else:
             info = 1
@@ -3521,10 +3521,10 @@ class decay_all_events(object):
         std = []
         for i in range(nb_output):
             external.stdout.flush()
-            line = external.stdout.readline().decode()
+            line = external.stdout.readline().decode(errors='ignore')
             std.append(line)
         prod_values = ' '.join(std)
-        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
+        #prod_values = ' '.join([external.stdout.readline().decode(errors='ignore') for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)
@@ -4107,7 +4107,7 @@ class decay_all_events(object):
                         misc.sprint(error)
                         raise
                         continue
-                    ranmar_state=external.stdout.readline().decode()
+                    ranmar_state=external.stdout.readline().decode(errors='ignore')
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)

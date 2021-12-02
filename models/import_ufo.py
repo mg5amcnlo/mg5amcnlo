@@ -142,7 +142,7 @@ def import_model_from_db(model_name, local_dir=False):
     data =get_model_db()
     link = None
     for line in data:
-        split = line.decode().split()
+        split = line.decode(errors='ignore').split()
         if model_name == split[0]:
             link = split[1]
             break

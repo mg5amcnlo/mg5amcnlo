@@ -2769,6 +2769,8 @@ class RunCard(ConfigFile):
             return math.copysign(2212, lpp)
         elif lpp in (3,-3):
             return math.copysign(11, lpp)
+        elif lpp in (4,-4):
+            return math.copysign(13, lpp)
         elif lpp == 0:
             #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
             return 0
@@ -3663,7 +3665,7 @@ class RunCardLO(RunCard):
                 for pdg in ids:
                     if pdg == 22:
                         one_proc_cut['a'] +=1
-                    elif abs(pdg) <= self['maxjetflavor']:
+                    elif abs(pdg) <= self['maxjetflavor'] or pdg == 21:
                         one_proc_cut['j'] += 1
                         one_proc_cut['J'] += 1
                     elif abs(pdg) <= 5:

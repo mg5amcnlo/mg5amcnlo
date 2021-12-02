@@ -5436,6 +5436,12 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 else:
                     ordered_for_pol = True
 
+                # for process like p p > w+{T} w+{0}, w+ > l+ vl you need to forbid to combine the two process
+                # the tag does not handle the breaking of symmetry due to the polarization shift
+                if not ordered_for_pol and combine:
+                    if any(len(pol) for pol in fs_pols_dict.values()):
+                        combine = False
+
                 red_decay_chains = []
 
                 for prod in itertools.product(*chains):
