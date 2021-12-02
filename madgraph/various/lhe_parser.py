@@ -255,7 +255,7 @@ class EventFile(object):
                     self.banner = ''
                     break 
                 if 'b' in mode or self.zip_mode:
-                    line = str(line.decode(self.encoding))
+                    line = str(line.decode(self.encoding,errors='ignore'))
                 if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
@@ -331,7 +331,7 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode or self.zip_mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<event' in line:
                 mode = 1
@@ -361,7 +361,7 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<eventgroup' in line:
                 events=[]

@@ -2092,7 +2092,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     command.append('-from_cards')
                 p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
                 while p.poll() is None:
-                    line = p.stdout.readline().decode()
+                    line = p.stdout.readline().decode(errors='ignore')
                     if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
                        not '***********' in line:
                             print(line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:',''))
@@ -4204,14 +4204,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
         lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
-                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
         if lhapdf_version.startswith('5.'):
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
-                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
         else:
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
-                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+                 stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
         
         self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
         # link the static library in lib
@@ -4536,7 +4536,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         try:
             lhapdf_version = \
                     subprocess.Popen([lhapdf_config, '--version'], 
-                        stdout = subprocess.PIPE).stdout.read().decode().strip()
+                        stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
         except OSError as error:
             if error.errno == 2:
                 raise Exception( 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % lhapdf_config)
@@ -4566,11 +4566,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             datadir = os.environ['LHAPDF_DATA_PATH']
         elif lhapdf_version.startswith('5.'):
             datadir = subprocess.Popen([lhapdf_config, '--pdfsets-path'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
         elif lhapdf_version.startswith('6.'):
             datadir = subprocess.Popen([lhapdf_config, '--datadir'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
         
         if ':' in datadir:
             for totry in datadir.split(':'):
@@ -4609,11 +4609,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if lhapdf_version.startswith('5.'):
             libdir = subprocess.Popen([self.options['lhapdf-config'], '--libdir'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
         elif lhapdf_version.startswith('6.'):
             libdir = subprocess.Popen([self.options['lhapdf'], '--libs'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
         return libdir
 
@@ -6226,18 +6226,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 libs , paths = [], []
                 p = misc.subprocess.Popen([executable, '--libs'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
-                libs = [x[2:] for x in stdout.decode().split() if x.startswith('-l') or paths.append(x[2:])]
+                libs = [x[2:] for x in stdout.decode(errors='ignore').split() if x.startswith('-l') or paths.append(x[2:])]
                 
                 # Add additional user-defined compilation flags
                 p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
                 for lib in ['-ldl','-lstdc++','-lc++']:
-                    if lib in stdout.decode():
+                    if lib in stdout.decode(errors='ignore'):
                         libs.append(lib[2:])                    
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC
                 # events, but there is unfortunately no way for now to specify it in the shower_card.
-                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout.decode()
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout.decode(errors='ignore')
                 
                 #3. ensure that those flag are in the shower card
                 for L in paths:

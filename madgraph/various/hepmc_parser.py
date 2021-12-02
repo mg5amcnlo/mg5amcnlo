@@ -269,6 +269,7 @@ class HEPMC_EventFile(object):
             mode ='r'
         self.mode = mode
 
+        self.zip_mode = False
         if not path.endswith(".gz"):
             self.file = open(path, mode, *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
@@ -302,7 +303,7 @@ class HEPMC_EventFile(object):
                     self.banner = ''
                     break 
                 if 'b' in mode or self.zip_mode:
-                    line = str(line.decode())
+                    line = str(line.decode(errors='ignore'))
                 self.header += line
         self.start_event = ''
 
@@ -311,13 +312,13 @@ class HEPMC_EventFile(object):
         return self.file.seek(*args, **opts)
     
     def tell(self):
-        if self.zipmode:
+        if self.zip_mode:
             currpos = self.file.tell()
             if not currpos:
                 currpos = self.size
             return currpos  
         else: 
-            self.file.tell() 
+            return self.file.tell() 
 
     def __iter__(self):
         return self
@@ -369,7 +370,7 @@ class HEPMC_EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode or self.zip_mode:
-                    line = str(line.decode())
+                    line = str(line.decode(errors='ignore'))
             if line.startswith('E'):
                 self.start_event = line
                 if text:
@@ -389,13 +390,13 @@ class HEPMC_EventFile(object):
         if self.zip_mode:
             self.file.seek(-4, 2)
             r = self.file.read()
-            self.file.seek()
+            self.file.seek(0)
             import struct
             return struct.unpack('<I', r)[0]       
         else:
             self.file.seek(0,2)
             pos = self.file.tell()
-            self.file.seek()
+            self.file.seek(0)
             return pos
         
     def write(self, text):

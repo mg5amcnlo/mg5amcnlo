@@ -1,9 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
 3.3.1 (XX/XX/XX)
       RF: Fix for bug #1928364 related to the new FxFx clustering routines.
       OM: Fix for bug #1952050 systematics/reweighting run at NLO that was broken
           introduced in 3.3.0
+      OM: Fix bug related to python 3.10
+      OM: Fix bug when running from the process directory
+      all: include all bug fix from the LTS version (2.9.7)
 
 3.3.0 (12/11/21)
       DP+HS+IT+MZ: EW corrections can be computed for tagged photons
@@ -68,6 +72,20 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
+2.9.7 (29/11/21)
+     OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
+         Now the first of those to setup a python seed will forbid any future reset of the seed
+	 Frequent reset of the seed when moving to one package to the next was creating
+	 a bias in the effective branching ratio out of madspin (observed only of NLO sample)
+	 see: https://bugs.launchpad.net/mg5amcnlo/+bug/1951120
+	 Thanks Hannes for the information.
+     RF+PT+SF: Fixed a 10-year-old bug that was there in the importance sampling over the FKS configurations.
+	 - Fix to pick one shower scale for the S event at random among the FKS configurations,
+	   instead of taking the weighted average.
+	 - removed the n-body contributions from the random picking of the showerscale among FKS configurations.
+        Those bugs were leading at an incorect pick of the shower scale. The observed impact is relatively small
+	and occur in the matching region.
+
 2.9.6 (02/11/21)
      OM: Forbid the possibity to ask for massless boson to be longitudinally polarised.
          Asking for those with large multi-particle label could have hide the fact that the code
@@ -88,7 +106,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 
 2.9.5 (22/08/21)
       OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
-
             This was claimed to be using fixed scale computation while
 	    in some case the scale was dynamical
             To have full flexibility we introduced two additional
@@ -100,7 +117,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: fixing auto-width computation for 3 body decay and identical particle which was sometimes leading to crash
       OM: Fix some potential infinite loop when running with python3
       
-2.9.4(28/05/21)
+2.9.4(30/05/21)
       OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
       OM: Fix an issue for non positive definite matrix-element when using the
           "set group_subprocesses False"  mode of MG5aMc
