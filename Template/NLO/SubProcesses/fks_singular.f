@@ -2817,40 +2817,69 @@ c include it here!
       return
       end
 
+      
       subroutine update_shower_scale_Sevents
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
-c necessarily the same for all of these summed FKS configurations). Take
-c the weighted average over the FKS configurations as the shower scale
-c for the summed contribution.
+c necessarily the same for all of these summed FKS configurations and/or
+c folds).
+      use weight_lines
+      implicit none
+      integer i
+      double precision showerscale
+      logical improved_scale_choice
+      parameter (improved_scale_choice=.true.)
+      if (icontr.eq.0) return
+      if (.not. improved_scale_choice) then
+         call update_shower_scale_Sevents_v1(showerscale)
+      else
+         call update_shower_scale_Sevents_v2(showerscale)
+      endif
+c Overwrite the shower scale for the S-events
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).ne.0) shower_scale(i)= showerscale
+      enddo
+      return
+      end
+
+      subroutine update_shower_scale_Sevents_v1(showerscale)
+c Original way of assigning shower starting scales. This is for backward
+c compatibility. It picks a fold randomly, based on the weight of the
+c fold to the sum over all folds. Within a fold, take the weighted
+c average of shower scales for the FKS configurations.
       use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict
-      double precision tmp_wgt(fks_configs),showerscale(fks_configs)
-     $     ,temp_wgt,shsctemp
-      do i=1,fks_configs
-         tmp_wgt(i)=0d0
-         showerscale(i)=-1d0
+      integer i,j,ict,iFKS
+      double precision tmp_wgt(fks_configs),ran2,target
+     $     ,tmp_scale(fks_configs),showerscale,temp_wgt,shsctemp
+     $     ,temp_wgt_sum
+      external ran2
+      do iFKS=1,fks_configs
+         tmp_wgt(iFKS)=0d0
+         tmp_scale(iFKS)=-1d0
       enddo
-c sum the weights that contribute to a single FKS configuration.
+c sum the weights that contribute to a single FKS configuration for each
+c fold.
       do i=1,icontr
          if (H_event(i)) cycle
          if (icontr_sum(0,i).eq.0) cycle
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
-            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,i)
-            if (showerscale(nFKS(ict)).eq.-1d0) then
-               showerscale(nFKS(ict))=shower_scale(ict)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+
+     $           wgts(1,i)
+            if (tmp_scale(nFKS(ict)).eq.-1d0) then
+               tmp_scale(nFKS(ict))=shower_scale(ict)
 c check that all the shower starting scales are identical for all the
-c contribution to a given FKS configuration.
-            elseif ( abs((showerscale(nFKS(ict))-shower_scale(ict))
-     $                  /(showerscale(nFKS(ict))+shower_scale(ict)))
-     $                                                  .gt. 1d-6 ) then
-               write (*,*) 'ERROR in update_shower_scale_Sevents'
-     $              ,showerscale(nFKS(ict)),shower_scale(ict)
+c contribution to a given FKS configuration and fold.
+            elseif(abs((tmp_scale(nFKS(ict))-shower_scale(ict))
+     $              /(tmp_scale(nFKS(ict))+shower_scale(ict)))
+     $              .gt. 1d-6 ) then
+               write (*,*) 'ERROR in update_shower_scale_Sevents #1'
+     $              ,tmp_scale(nFKS(ict)),shower_scale(ict)
                stop 1
             endif
          enddo
@@ -2859,22 +2888,112 @@ c Compute the weighted average of the shower scale. Weight is given by
 c the ABS cross section to given FKS configuration.
       temp_wgt=0d0
       shsctemp=0d0
-      do i=1,fks_configs
-         temp_wgt=temp_wgt+abs(tmp_wgt(i))
-         shsctemp=shsctemp+abs(tmp_wgt(i))*showerscale(i)
+      do iFKS=1,fks_configs
+         temp_wgt=temp_wgt+abs(tmp_wgt(iFKS))
+         shsctemp=shsctemp+abs(tmp_wgt(iFKS))
+     $              *tmp_scale(iFKS)
       enddo
-      if (temp_wgt.ne.0d0) then
-         shsctemp=shsctemp/temp_wgt
+      if (temp_wgt.eq.0d0) then
+         showerscale=0d0
       else
-         shsctemp=0d0
+         showerscale=shsctemp/temp_wgt
       endif
-c Overwrite the shower scale for the S-events
-      do i=1,icontr
-         if (H_event(i)) cycle
-         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
-      enddo
       return
       end
+
+
+      subroutine update_shower_scale_Sevents_v2(showerscale)
+c Improved way of assigning shower starting scales. Pick an FKS
+c configuration randomly, weighted by its contribution without including
+c the born (and nbody_noborn) contributions. (If there are only born
+c (and nbody_noborn) contributions, use the weights of those instead).
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      integer i,j,ict,iFKS
+      double precision wgt_fks(fks_configs),wgt_fks_born(fks_configs)
+     $     ,ran2,target,tmp_scale(fks_configs),showerscale,wgt_sum
+     $     ,wgt_accum
+      external ran2
+      do iFKS=1,fks_configs
+         wgt_fks(iFKS)=0d0
+         wgt_fks_born(iFKS)=0d0
+         tmp_scale(iFKS)=-1d0
+      enddo
+c Collect the weights that contribute to a given FKS configuration.
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).eq.0) cycle
+         do j=1,icontr_sum(0,i)
+            ict=icontr_sum(j,i)
+            if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
+     $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
+     $           itype(ict).ne.15) then
+               wgt_fks(nFKS(ict)) = wgt_fks(nFKS(ict))+wgts(1,ict)
+            else
+               wgt_fks_born(nFKS(ict)) = 
+     $                 wgt_fks_born(nFKS(ict))+wgts(1,ict)
+            endif
+            if (tmp_scale(nFKS(ict)).eq.-1d0) then
+               tmp_scale(nFKS(ict))=shower_scale(ict)
+c check that all the shower starting scales are identical for all the
+c contribution to a given FKS configuration.
+            elseif(abs((tmp_scale(nFKS(ict))-shower_scale(ict))
+     $              /(tmp_scale(nFKS(ict))+shower_scale(ict)))
+     $              .gt. 1d-6 ) then
+               write (*,*) 'ERROR in update_shower_scale_Sevents #2'
+     $              ,tmp_scale(nFKS(ict)),shower_scale(ict)
+               stop 1
+            endif
+         enddo
+      enddo
+c Check to find the FKS configurations and the corresponding shower
+c starting scale. Pick one randomly based on the weight for that FKS
+c configuration (in the weight, the born and nbody_noborn should not be
+c included since those are always assigned to the FKS configuration
+c corresponding to a soft singularity. Therefore, including them would
+c bias the chosen scale to that configuration.)
+      wgt_sum=0d0
+      do iFKS=1,fks_configs
+         wgt_sum=wgt_sum+abs(wgt_fks(iFKS))
+      enddo
+      if (wgt_sum.ne.0d0) then
+         target=wgt_sum*ran2()
+         wgt_accum=0d0
+         do iFKS=1,fks_configs
+            wgt_accum=wgt_accum+abs(wgt_fks(iFKS))
+            if (wgt_accum.gt.target) exit
+         enddo
+         if (iFKS.lt.1 .or. iFKS.gt.fks_configs) then
+            write (*,*) 'ERROR in update_shower_starting scale #3',iFKS
+     $           ,fks_configs,target,wgt_accum,wgt_sum
+            stop 1
+         endif
+      else
+c this fold has only born or nbody no-born contributions. Use those
+c instead.
+         wgt_sum=0d0
+         do iFKS=1,fks_configs
+            wgt_sum=wgt_sum+abs(wgt_fks_born(iFKS))
+         enddo
+         if (wgt_sum.eq.0d0) return
+         target=wgt_sum*ran2()
+         wgt_accum=0d0
+         do iFKS=1,fks_configs
+            wgt_accum=wgt_accum+abs(wgt_fks_born(iFKS))
+            if (wgt_accum.gt.target) exit
+         enddo
+         if (iFKS.lt.1 .or. iFKS.gt.fks_configs) then
+            write (*,*) 'ERROR in update_shower_starting scale #4',iFKS
+     $           ,fks_configs,target,wgt_accum,wgt_sum
+            stop 1
+         endif
+      endif
+      showerscale=tmp_scale(iFKS)
+      return
+      end
+
 
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)

@@ -2058,7 +2058,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            out = out.decode()
+            out = out.decode(errors='ignore')
             if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
