@@ -62,6 +62,18 @@ logger = logging.getLogger('madgraph.export_fks')
 if madgraph.ordering:
     set	= misc.OrderedSet
 
+# the base to compute the orders_tag
+orderstag_base = 100
+
+def get_orderstag(ords):
+    step = 1
+    tag = 0
+    for o in ords:
+        tag += step*o
+        step *= orderstag_base
+    return tag
+
+
 def make_jpeg_async(args):
     Pdir = args[0]
     old_pos = args[1]
@@ -709,6 +721,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
+                     'orderstag_base.inc',
+                     'orderstags_glob.dat',
                      'polfit.f']
 
         for file in linkfiles:
@@ -737,7 +751,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         gen_infohtml.make_info_html_nlo(self.dir_path)
 
 
-        return calls
+        return calls, amp_split_orders
 
     #===========================================================================
     #  create the run_card 
@@ -810,6 +824,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.proc_characteristic['perturbation_order'] = perturbation_order 
         
         self.create_proc_charac()
+
+        filename = os.path.join(self.dir_path,'SubProcesses','orderstag_base.inc')
+        self.write_orderstag_base_file(writers.FortranWriter(filename))
 
         self.create_run_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
@@ -1059,6 +1076,21 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             text+= "data (amp_split_orders(%d, iaso), iaso=1,nsplitorders) / %s /\n" % \
                 (i + 1, ', '.join(['%d' % o for o in amp_orders]))
 
+        writer.writelines(text)
+
+    def write_orderstag_file(self, splitorders, outdir):
+        outfile = open(os.path.join(outdir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
+        outfile.write('%d\n' % len(splitorders))
+        tags = ['%d' % get_orderstag(ords) for ords in splitorders]
+        outfile.write(' '.join(tags) + '\n')
+        outfile.close()
+
+    def write_orderstag_base_file(self, writer):
+        """write a small include file containing the 'base'
+        to compute the orders_tag"""
+
+        text = "integer orders_tag_base\n"
+        text+= "parameter (orders_tag_base=%d)\n" % orderstag_base
         writer.writelines(text)
 
 

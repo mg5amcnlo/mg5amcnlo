@@ -230,7 +230,7 @@ class TestFKSOutput(unittest.TestCase):
 
         interface = MGCmd.MasterCmd()
         
-        run_cmd('define p3 = d s b d~ s~ b~')
+        run_cmd('define p3 = d s b d~ s~ b~ a')
         run_cmd('set low_mem_multicore_nlo_generation True')
         run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'Z-newway'))
@@ -279,7 +279,7 @@ class TestFKSOutput(unittest.TestCase):
 
         interface = MGCmd.MasterCmd()
         
-        run_cmd('define p3 = d s b d~ s~ b~ a')
+        run_cmd('define p3 = d s b d~ s~ b~')
         run_cmd('set low_mem_multicore_nlo_generation True')
         run_cmd('generate p3 p3 > e+ e- QED^2=4 QCD^2=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'Z-newway'))

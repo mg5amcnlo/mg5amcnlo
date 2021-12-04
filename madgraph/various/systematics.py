@@ -96,9 +96,16 @@ class Systematics(object):
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
-        scalefact = self.banner.get('run_card', 'scalefact')
-        if scalefact != 1:
-            self.orig_dyn = -1
+        if  self.banner.run_card.LO:
+            scalefact = self.banner.get('run_card', 'scalefact')
+            if scalefact != 1:
+                self.orig_dyn = -1
+        else:
+            over1 = self.banner.get('run_card', 'mur_over_ref')
+            over2 = self.banner.get('run_card', 'muf_over_ref')
+            if over1 != 1 or over2 !=1:
+                self.orig_dyn = -1
+
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
         matching_mode = self.banner.get('run_card', 'ickkw')
 
@@ -141,7 +148,7 @@ class Systematics(object):
             isEVA=True
             pdf='0'
         # eva-on-DIS(lhapdf)
-        elif self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf':
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf'):
             if abs(beam1) == 11 or abs(beam1) == 13:
                 self.b1 = beam1
             else:
@@ -149,7 +156,7 @@ class Systematics(object):
             #self.b2 = beam2//2212
             isEVAxDIS=True
         # DIS(lhapdf)-on-eva
-        elif self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva':
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva'):
             if abs(beam2) == 11 or abs(beam2) == 13:
                 self.b2 = beam2
             else:
@@ -1083,7 +1090,7 @@ class Systematics(object):
                 
                 
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
-                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=2):
+                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=1):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
                         misc.sprint(onewgt)
                         misc.sprint(cevent)
