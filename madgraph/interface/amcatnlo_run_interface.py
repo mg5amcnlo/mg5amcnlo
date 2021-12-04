@@ -2023,6 +2023,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             event_norm=self.run_card['event_norm']
             # gather the various orders tag and write include files (only needed once)
             if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat')):
+                raise aMCatNLOError('Error, cannot find orderstag_glob.dat')
                 self.write_orders_tag_info()
 
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
@@ -2681,7 +2682,9 @@ RESTART = %(mint_mode)s
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
-                random.seed(r)
+                if not hasattr(random, 'mg_seedset'):
+                    random.seed(r)  
+                    random.mg_seedset = r
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0
@@ -3003,7 +3006,7 @@ RESTART = %(mint_mode)s
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
 
         while p.poll() is None:
-            line = p.stdout.readline().decode()
+            line = p.stdout.readline().decode(errors='ignore')
             #misc.sprint(type(line))
             if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
                 print(line[:-1])
@@ -3773,7 +3776,7 @@ RESTART = %(mint_mode)s
         else:
             out, err = p.communicate(input = '2\n'.encode())
         
-        out = out.decode()
+        out = out.decode(errors='ignore')
         data = str(out)
         #get filename from collect events
         filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
@@ -3843,7 +3846,7 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 #remove the line break from output (last character)
-                output = output.decode()[:-1]
+                output = output.decode(errors='ignore')[:-1]
                 # add lib/include paths
                 if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
                     logger.warning('Linking FastJet: updating EXTRAPATHS')
@@ -3893,7 +3896,7 @@ RESTART = %(mint_mode)s
         # add the HEPMC path of the pythia8 installation
         if shower == 'PYTHIA8':
             hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
@@ -4611,7 +4614,7 @@ RESTART = %(mint_mode)s
             # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                          stdout = subprocess.PIPE).stdout.read().decode().strip()
+                                          stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             if self.shower_card['pdfcode']==0:
@@ -4634,7 +4637,7 @@ RESTART = %(mint_mode)s
             # set instead.
             try:
                 lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                              stdout = subprocess.PIPE).stdout.read().decode().strip()
+                                              stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
                 self.link_lhapdf(pjoin(self.me_dir, 'lib'))
                 content += 'LHAPDFPATH=%s\n' % lhapdfpath
                 pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -4711,7 +4714,7 @@ RESTART = %(mint_mode)s
         for evt_file in evt_files:
             last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
                     pjoin(self.me_dir, 'SubProcesses', evt_file)], \
-                    stdout = subprocess.PIPE).stdout.read().decode().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweighting. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -4893,7 +4896,7 @@ RESTART = %(mint_mode)s
             try:
                 last_line = subprocess.Popen(
                         ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
-                    stdout = subprocess.PIPE).stdout.read().decode().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except IOError:
                 pass
             if last_line != "</LesHouchesEvents>":
@@ -5240,11 +5243,6 @@ RESTART = %(mint_mode)s
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                        'Please set the path to %s-config by using \n' + \
                        'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
-                ##else:
-                ##    output, _ = p.communicate()
-                ##    if code is 'applgrid' and output < '1.4.63':
-                ##        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                ##                             +' You are using %s',output)
         else:
             self.make_opts_var['pineappl'] = ""
 

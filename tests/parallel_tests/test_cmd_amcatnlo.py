@@ -40,6 +40,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 
+from tests import test_manager
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -562,7 +563,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         
         
-
+    @test_manager.bypass_for_py3
     def test_short_jet_veto_xsec(self):
         """tests the jet-veto cross section at NNLL+NLO"""    
 

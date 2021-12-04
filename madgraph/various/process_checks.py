@@ -832,7 +832,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
             text=output.split('\n')
         elif isinstance(output, bytes):
-            text=output.decode().split('\n')
+            text=output.decode(errors='ignore').split('\n')
         else:
             raise MadGraph5Error('Type for argument output not supported in'+\
                                                           ' parse_check_output: %s' % type(output))
@@ -1268,7 +1268,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         def check_disk_usage(path):
             return subprocess.Popen("du -shc -L "+str(path), \
-                stdout=subprocess.PIPE, shell=True).communicate()[0].decode().split()[-2]
+                stdout=subprocess.PIPE, shell=True).communicate()[0].decode(errors='ignore').split()[-2]
             # The above is compatible with python 2.6, not the neater version below
             # -> need to check if need .decode for python3.7
             #return subprocess.check_output(["du -shc %s"%path],shell=True).\
@@ -1852,7 +1852,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         try:
             #fsock = open('/tmp/log', 'w')
             while True:
-                output = StabChecker.stdout.readline().decode()
+                output = StabChecker.stdout.readline().decode(errors='ignore')
                 #fsock.write(output)
                 if output != '':
                     last_non_empty = output
@@ -1861,16 +1861,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 # Break if the checker has crashed for some reason.
                 ret_code = StabChecker.poll()
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline().decode()
+                    output = StabChecker.stdout.readline().decode(errors='ignore')
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline().decode()
+                    error = StabChecker.stderr.readline().decode(errors='ignore')
                     raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
                                                (ret_code, last_non_empty, error))
                     
             res = ""
             while True:
-                output = StabChecker.stdout.readline().decode()
+                output = StabChecker.stdout.readline().decode(errors='ignore')
                 if output != '':
                     last_non_empty = output
                 if str(output)==' ##TAG#RESULT_STOP#TAG##\n':
@@ -1879,10 +1879,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     res += output
                 ret_code = StabChecker.poll()               
                 if not ret_code is None:
-                    output = StabChecker.stdout.readline().decode()
+                    output = StabChecker.stdout.readline().decode(errors='ignore')
                     if output != '':
                         last_non_empty = output
-                    error = StabChecker.stderr.readline().decode()
+                    error = StabChecker.stderr.readline().decode(errors='ignore')
                     raise MadGraph5Error("The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
                                                (ret_code, last_non_empty, error))
 

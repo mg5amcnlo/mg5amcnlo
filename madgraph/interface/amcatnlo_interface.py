@@ -84,7 +84,7 @@ def generate_directories_fks_async(i):
     me = six.moves.cPickle.load(infile)
     infile.close()      
     
-    calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
+    calls, splitorders = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
 
     nexternal = curr_exporter.proc_characteristic['nexternal']
     ninitial = curr_exporter.proc_characteristic['ninitial']
@@ -98,9 +98,9 @@ def generate_directories_fks_async(i):
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types, splitorders]
     else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -830,6 +830,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         ndiags, cpu_time = generate_matrix_elements(self, group=group_processes)
         calls = 0
+        splitorders = []
 
         path = self._export_dir
 
@@ -854,11 +855,13 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
-                    calls = calls + \
+                    calls_dir, splitorders_dir = \
                             self._curr_exporter.generate_directories_fks(me, 
                             self._curr_helas_model, 
                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                             path,self.options['OLP'])
+                    calls += calls_dir
+                    splitorders += [so for so in splitorders_dir if so not in splitorders]
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
                     self.born_processes_for_olp.append(me.born_me.get('processes')[0])
                     self.born_processes.append(me.born_me.get('processes'))
@@ -921,6 +924,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 for diroutput in diroutputmap:
                     splitting_types = splitting_types.union(set(diroutput[7]))
                     calls = calls + diroutput[0]
+                    splitorders += [so for so in diroutput[8] if so not in splitorders]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
                     if six.PY2:
@@ -955,6 +959,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                 self._curr_matrix_elements.get('initial_states'))
             self._curr_exporter.write_maxproc_files(nmaxpdf, 
                                 os.path.join(path, os.path.pardir, 'SubProcesses'))
+
+            self._curr_exporter.write_orderstag_file(splitorders, self._export_dir)
 
         cpu_time1 = time.time()
 
