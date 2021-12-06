@@ -159,31 +159,44 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
-         save_nFKSprocess=nFKSprocess
-         do nFKSprocess=1,FKS_configs
-            call fks_inc_chooser()
-c For the S-events
-            call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
-     $           ,pmass_tree_S_t,pwidth_tree_S_t)
-c For the H-events
-            call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
-     $           ,pmass_tree_H_t,pwidth_tree_H_t)
-            do j=-max_branch,-1
-               itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
-               itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
-               sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
-               pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
-               pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
-               itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
-               itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
-               sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
-               pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
-               pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+         if (firsttime2) then
+c     For the S-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
+     $              ,pmass_tree_S_t,pwidth_tree_S_t)
+               do j=-max_branch,-1
+                  itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
+                  itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
+                  sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
+                  pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
+                  pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+               enddo
             enddo
-         enddo
-         firsttime=.false.
-         nFKSprocess=save_nFKSprocess
-         call fks_inc_chooser()
+            firsttime2=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
+         if (Hevents) then
+c     For the H-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
+     $              ,pmass_tree_H_t,pwidth_tree_H_t)
+               do j=-max_branch,-1
+                  itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
+                  itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
+                  sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
+                  pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
+                  pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
+               enddo
+            enddo
+            firsttime=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
       endif
 c Copy the saved information to the arrays actually used
       if (Hevents) then
@@ -240,11 +253,6 @@ c Assume helicity summed
       do i=1,nexternal
          jpart(7,i)=9
       enddo
-      if (firsttime2 .and. isum_hel.ne.0) then
-         write (*,*) 'WARNING: for writing the events, no helicity '//
-     &        'info is used even though some info could be available.'
-         firsttime2=.false.
-      endif
 c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 

@@ -211,7 +211,7 @@ class CmdExtended(cmd.Cmd):
                 bzrname,_ = proc.communicate()
                 proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
                 bzrversion,_ = proc.communicate() 
-                bzrname, bzrversion = bzrname.decode().strip(), bzrversion.decode().strip() 
+                bzrname, bzrversion = bzrname.decode(errors='ignore').strip(), bzrversion.decode(errors='ignore').strip() 
                 len_name = len(bzrname)
                 len_version = len(bzrversion)            
                 info_line += "#*         BZR %s %s %s         *\n" % \
@@ -3819,7 +3819,7 @@ This implies that with decay chains:
             data   = import_ufo.get_model_db()
             self._online_model2 = []
             for line in data:
-                model_name, path = line.decode().split()
+                model_name, path = line.decode(errors='ignore').split()
                 if model_name in already_done:
                     continue
                 if model_name.endswith('_v4'):
@@ -4278,8 +4278,11 @@ This implies that with decay chains:
             # Not necessarily optimal as there could be additional call to
             # random() as the code develops, but at least it will encompass
             # everything in this way.
-            logger_check.info('Setting random seed to %d.'%options['seed'])
-            random.seed(options['seed'])
+            
+            if not hasattr(random, 'mg_seedset'):
+                logger_check.info('Setting random seed to %d.'%options['seed'])
+                random.seed(options['seed'])  
+                random.mg_seedset = options['seed']
         
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run
@@ -6049,7 +6052,7 @@ This implies that with decay chains:
                 try:
                     version = misc.Popen(
                            [lhapdf_config,'--version'], stdout=subprocess.PIPE)
-                    lhapdf_version = int(version.stdout.read().decode()[0])
+                    lhapdf_version = int(version.stdout.read().decode(errors='ignore')[0])
                     if lhapdf_version not in [5,6]:
                         raise 
                 except:
@@ -6372,7 +6375,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 raise MadGraph5Error('''Impossible to connect any of us servers.
                 Please check your internet connection or retry later''')
             for wwwline in data:
-                split = wwwline.decode().split()
+                split = wwwline.decode(errors='ignore').split()
                 if len(split)!=2:
                     if '--source' not in line:
                         source = {0:'uiuc',1:'ucl'}[index]
@@ -6521,7 +6524,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # Run the configure script
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
-            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0].decode()
+            cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0].decode(errors='ignore')
 
 
         # For QCDLoop, use autotools.
@@ -6530,7 +6533,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             ld_path = misc.Popen(['./configure', 
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC'],
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
-                                        stdout=subprocess.PIPE).communicate()[0].decode()
+                                        stdout=subprocess.PIPE).communicate()[0].decode(errors='ignore')
 
         # For Delphes edit the makefile to add the proper link to correct library
         if args[0] == 'Delphes3':
@@ -6548,7 +6551,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if name == 'SysCalc':
             if self.options['lhapdf']:
                 ld_path = misc.Popen([self.options['lhapdf'], '--libdir'],
-                                     stdout=subprocess.PIPE).communicate()[0].decode()
+                                     stdout=subprocess.PIPE).communicate()[0].decode(errors='ignore')
                 ld_path = ld_path.replace('\n','')
                 if 'LD_LIBRARY_PATH' not in os.environ:
                     os.environ['LD_LIBRARY_PATH'] = ld_path
@@ -6763,7 +6766,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         def apply_patch(filetext):
             """function to apply the patch"""
-            text = filetext.read().decode()
+            text = filetext.read().decode(errors='ignore')
             
             pattern = re.compile(r'''^=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
             #= = = renamed directory 'Template' => 'Template/LO'
@@ -6998,7 +7001,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         try:
             filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
             signal.alarm(0)
-            text = filetext.read().decode().split('\n')
+            text = filetext.read().decode(errors='ignore').split('\n')
             web_version = int(text[0].strip())
             try:
                 msg_version = int(text[1].strip())
@@ -7844,7 +7847,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
-                output = output.decode()
+                output = output.decode(errors='ignore')
                 res = 0
             except Exception:
                 res = 1
@@ -8849,7 +8852,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                   stdin=subprocess.PIPE,
                                   cwd=pjoin(model_path, 'SMWidth')).communicate()
         pattern = re.compile(r'''  decay\s+(\+?\-?\d+)\s+(\+?\-?\d+\.\d+E\+?\-?\d+)''',re.I)
-        width_list = pattern.findall(output.decode())
+        width_list = pattern.findall(output.decode(errors='ignore'))
         width_dict = {}
         for pid,width in width_list:
             width_dict[int(pid)] = float(width)

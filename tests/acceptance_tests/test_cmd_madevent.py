@@ -786,10 +786,12 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
-                 set event_norm sum
+                 set event_norm average
                  set systematics_program none
                  add_time_of_flight --threshold=4e-14
+                 pythia8
                  """ %self.run_dir
+
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
         if logging.getLogger('madgraph').level <= 20:
@@ -805,7 +807,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout, stderr=stderr)
 
         self.check_parton_output(cross=15.62, error=0.19)
-        #self.check_pythia_output()
+        self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
             misc.gunzip(event)
@@ -856,6 +858,7 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
+        shower=pythia8    
         %(path)s/../madspin_card.dat
         set nevents 1000
         set lhaid 10042
@@ -889,7 +892,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=666, delta_event=40)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
-        #self.check_pythia_output(run_name='run_01_decayed_1')
+        self.check_pythia_output(run_name='run_01_decayed_1')
         
         #check the first decayed events for energy-momentum conservation.
         
@@ -993,8 +996,8 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('hep' in data[0].pythia)
-        self.assertTrue('log' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia or 'hepmc' in data[0].pythia8)
+        self.assertTrue('log' in data[0].pythia or 'log' in data[0].pythia8)
 
     
     def test_decay_width_nlo_model(self):
