@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.8 ()
+     OM: Fix in madspin where onlyhelicity mode was not working anymore
+         also allows to not specify any decay in that mode.
+
 2.9.7 ()
      OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
          Now the first of those to setup a python seed will forbid any future reset of the seed
