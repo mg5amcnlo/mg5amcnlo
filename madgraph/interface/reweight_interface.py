@@ -493,8 +493,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
                     time.sleep(10+i)
                     i+=5
-                    print('wait for pickle')                  
-                print("loading from pickle")
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
@@ -774,7 +772,6 @@ class ReweightInterface(extended_cmd.Cmd):
         # Find new tag in the banner and add information if needed
         logger.info("%s %s",self.banner.keys(), self.output_type )
         if 'initrwgt' in self.banner and self.output_type == 'default': 
-            print(self.banner['initrwgt'])
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
@@ -792,7 +789,6 @@ class ReweightInterface(extended_cmd.Cmd):
                          
                 maxid += 1
                 rewgtid = maxid
-                print(self.options['rwgt_name'], mg_rwgt_info[:])
                 if self.options['rwgt_name']:
                     #ensure that the entry is not already define if so overwrites it
                     for (i, nlotype, diff) in mg_rwgt_info[:]:
