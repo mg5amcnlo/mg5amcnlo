@@ -1426,7 +1426,7 @@ class Model(PhysicsObject):
         return max([inter.get_WEIGHTED_order(self) for inter in \
                         self.get('interactions')])
             
-    def get_running(self, used_parameters):
+    def get_running(self, used_parameters=None):
         """return a list of parameter which needs to be run together.
            check also that at least one requested coupling is dependent of 
            such running 
@@ -1450,9 +1450,10 @@ class Model(PhysicsObject):
                 correlated.append(this_ones)
         
         #filtering
-        for subset in list(correlated): 
-            if not any(n in subset for n in used_parameters):
-                correlated.remove(subset)
+        if used_parameters:
+            for subset in list(correlated): 
+                if not any(n in subset for n in used_parameters):
+                    correlated.remove(subset)
         
         misc.sprint(correlated)
         return correlated   
