@@ -3810,6 +3810,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         }
     jamp_optim = True
     
+
+    def __new__(cls, *args, **opts):
+        """wrapper needed for some plugin"""
+
+        return super(ProcessExporterFortranME, cls).__new__(cls)
+
+
     def __init__(self,  dir_path = "", opt=None):
         
         super(ProcessExporterFortranME, self).__init__(dir_path, opt)
@@ -5681,6 +5688,7 @@ c           This is dummy particle used in multiparticle vertices
 class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
+
 
     matrix_file = "matrix_madevent_group_v4.inc"
     grouped_mode = 'madevent'

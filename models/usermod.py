@@ -966,7 +966,7 @@ from object_library import all_propagators, Propagator
         # + define identify_pid which keep tracks of the pdg_code identified
         identify_pid = {}
         if identify_particles:
-            for new, old in identify_particles.items():
+            for new, old in dict(identify_particles).items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
                 # secure agqinst lower/upper case problem

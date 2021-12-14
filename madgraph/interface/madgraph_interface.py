@@ -5831,6 +5831,8 @@ This implies that with decay chains:
             try:
                 for part in self._multiparticles[key]:
                     self._curr_model.get('particle_dict')[part]
+                if self._curr_model.get_particle(key):
+                    raise Exception
             except Exception:
                 del self._multiparticles[key]
                 defined_multiparticles.remove(key)
@@ -5849,6 +5851,7 @@ This implies that with decay chains:
                 if multipart_name not in self._multiparticles:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
+                
             except self.InvalidCmd as why:
                 logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
