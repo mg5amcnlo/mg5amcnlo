@@ -1373,12 +1373,15 @@ class ConfigFile(dict):
                 raise InvalidCmd("Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value))                
         else:
+            if targettype != UnknownType:
+                value = value.strip()
+                if value.startswith("="):
+                    value = value[1:].strip()
             # We have a string we have to format the attribute from the string
             if targettype == UnknownType:
                 # No formatting
                 pass
             elif targettype == bool:
-                value = value.strip()
                 if value.lower() in ['0', '.false.', 'f', 'false', 'off']:
                     value = False
                 elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
@@ -1386,7 +1389,6 @@ class ConfigFile(dict):
                 else:
                     raise InvalidCmd("%s can not be mapped to True/False for %s" % (repr(value),name))
             elif targettype == str:
-                value = value.strip()
                 if value.startswith('\'') and value.endswith('\''):
                     value = value[1:-1]
                 elif value.startswith('"') and value.endswith('"'):
