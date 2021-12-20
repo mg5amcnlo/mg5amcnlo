@@ -633,8 +633,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if pid in self.final_state:
                     break
         else:
-            logger.info("Nothing to decay ...")
-            return
+            if not self.options['onlyhelicity']:
+                logger.info("Nothing to decay ...")
+                return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
