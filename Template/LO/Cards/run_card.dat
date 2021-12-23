@@ -67,7 +67,7 @@ $ckkw
 #*********************************************************************
    %(nhel)s  = nhel          ! using helicities importance sampling or not.
                              ! 0: sum over helicity, 1: importance sampling
-   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.xxxxx)
+   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.00773)
                              ! 1 is old strategy (using amp square)
 			     ! 2 is new strategy (using only the denominator)
 $psoptim			     
