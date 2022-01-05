@@ -189,19 +189,22 @@ class ProcessExporterFortran(VirtualExporter):
     #===========================================================================
     # process exporter fortran switch between group and not grouped
     #===========================================================================
-    def export_processes(self, matrix_elements, fortran_model):
+    def export_processes(self, matrix_elements, fortran_model, second_exporter=None, second_helas=None):
         """Make the switch between grouped and not grouped output"""
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory(\
-                                          me_group, fortran_model, group_number)
+                                          me_group, fortran_model, group_number,
+                                          second_exporter=second_exporter, second_helas=second_helas
+                                          )
         else:
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory(\
-                                                   me, fortran_model, me_number)    
-                        
+                                                   me, fortran_model, me_number,
+                                                   second_exporter=second_exporter, second_helas=second_helas)    
+
         return calls    
         
 
@@ -5681,7 +5684,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     #===========================================================================
     def generate_subprocess_directory(self, subproc_group,
                                          fortran_model,
-                                         group_number):
+                                         group_number,
+                                         second_exporter=None,
+                                         second_helas=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files."""
@@ -5689,9 +5694,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
                                       "subproc_group object not SubProcessGroup"
         
+
+
         if not self.model:
             self.model = subproc_group.get('matrix_elements')[0].\
                          get('processes')[0].get('model')
+
 
         cwd = os.getcwd()
         path = pjoin(self.dir_path, 'SubProcesses')
@@ -5789,6 +5797,24 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 config_map=subproc_group.get('diagram_maps')[ime],
                                 subproc_number=group_number)
 
+            if second_exporter:
+                process_exporter_cpp = second_exporter.oneprocessclass(matrix_element,second_helas, prefix=ime)
+                misc.sprint(process_exporter_cpp)
+                dirpath = '.'
+                with misc.chdir(dirpath):
+                    logger.info('Creating files in directory %s' % dirpath)
+                    process_exporter_cpp.path = dirpath
+                    # Create the process .h and .cc files
+                    process_exporter_cpp.generate_process_files()
+                    for file in second_exporter.to_link_in_P:
+                        ln('../%s' % file)    
+                # second_exporter.write_matrix_element_madevent(ime,
+                #                 matrix_element,
+                #                 second_helas,
+                #                 proc_id=str(ime+1),
+                #                 config_map=subproc_group.get('diagram_maps')[ime],
+                #                 subproc_number=group_number
+                # )
 
 
             filename = 'auto_dsig%d.f' % (ime+1)

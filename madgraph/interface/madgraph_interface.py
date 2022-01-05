@@ -7973,6 +7973,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             flaglist.append('store_model')
         if '--hel_recycling=False' in args:
             flaglist.append('no_helrecycling')
+        me_exporter = False
+        if any(arg.startswith('--me_exporter=') for arg in args):
+            for arg in args:
+                if arg.startswith('--me_exporter='):
+                    flaglist.append('me_exporter=%s' % arg.split("=",1)[1])
+                    me_exporter = arg.split("=",1)[1]
+                    break
                     
         line_options = dict( (arg[2:].split('=')  if "=" in arg else (arg[2:], True))
                              for arg in args if arg.startswith('--'))
@@ -8043,6 +8050,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             options = {'check': self._export_plugin.check, 'exporter':self._export_plugin.exporter, 'output':self._export_plugin.output}
         else:
             options = config[self._export_format]
+        
+        if me_exporter and me_exporter in config:
+            options['me_exporter'] = config[me_exporter]
+            options['me_exporter']['name'] = me_exporter
+        elif me_exporter:
+            # check for PLUGIN format
+            output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 me_exporter, warning=True, 
+                                                 info='Addition matrix-element will be done with PLUGIN: %(plug)s')
+            options['me_exporter'] = {'check': output_cls.check, 'exporter':output_cls.exporter, 'output':output_cls.output}
+        else:
+            options['me_exporter'] = {}
             
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
@@ -8111,8 +8130,31 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         elif options['exporter'] == 'cpp':
             self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
                                                               cmd_options=line_options)
-        
+
+        if options['me_exporter'] and options['me_exporter']['exporter'] != options['exporter']:
+            misc.sprint('pass here')
+            if options['me_exporter']['exporter'] == 'v4':
+                with misc.TMP_variable(self, '_export_format', options['me_exporter']['name']):
+                    self._me_curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+                                                group_subprocesses=group_processes,
+                                                cmd_options=line_options)
+            elif options['me_exporter']['exporter']  == 'cpp':
+                with misc.TMP_variable(self, '_export_format', options['me_exporter']['name']):
+                    self._me_curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
+                                                                cmd_options=line_options)
+                misc.sprint(self._me_curr_exporter)
+            else:
+                misc.sprint(options['me_exporter'])
+                raise Exception
+        else:
+            self._me_curr_exporter = False
+            
+        misc.sprint(options['me_exporter'])
+        misc.sprint(self._me_curr_exporter)
+
         self._curr_exporter.pass_information_from_cmd(self)
+        if self._me_curr_exporter:
+            self._me_curr_exporter.pass_information_from_cmd(self)
         
         if options['output'] == 'Template':
             self._curr_exporter.copy_template(self._curr_model)
@@ -8162,6 +8204,21 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 options['zerowidth_tchannel'] = False
             
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model, options=options)
+
+        # Define the helas call  writer if a second exporter is needed
+        self._me_curr_helas_model = False
+        if self._me_curr_exporter:
+            misc.sprint("pass here", self._curr_exporter.exporter, self._me_curr_exporter.exporter)
+            if self._curr_exporter.exporter == self._me_curr_exporter.exporter:
+                self._me_curr_helas_model = self._curr_helas_model 
+            else:
+                if self._me_curr_exporter.exporter == 'cpp':       
+                    self._me_curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+                elif self._model_v4_path:
+                    assert self._me_curr_exporter.exporter == 'v4'
+                    self._me_curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
+                else:                    
+                    self._me_curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model, options=options)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
         if version:
@@ -8266,6 +8323,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         calls = 0
 
+
         path = self._export_dir
             
         cpu_time1 = time.time()
@@ -8275,8 +8333,48 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
+            if self._me_curr_exporter:
+                second_exporter = self._me_curr_exporter
+                second_helas = self._me_curr_helas_model
+            else:
+                second_exporter = None
+                second_helas = None
+
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
-                                                         self._curr_helas_model)
+                                                         self._curr_helas_model,
+                                                         second_exporter=second_exporter,
+                                                         second_helas=second_helas
+                                                         )
+            # if self._me_curr_exporter:
+            #     # grouping mode
+            #     if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList) and\
+            #         self._me_curr_exporter.grouped_mode:
+            #         misc.sprint("group mode")
+            #         modify, self._curr_matrix_elements = self._me_curr_exporter.modify_grouping(self._curr_matrix_elements)
+            #         if modify:
+            #             matrix_elements = self._curr_matrix_elements.get_matrix_elements()
+
+            #         for me_number, me in enumerate(self._curr_matrix_elements):
+            #             calls = calls + \
+            #                 self._me_curr_exporter.generate_subprocess_directory(\
+            #                     me, self._me_curr_helas_model, me_number)               
+                
+            #     # ungroup mode
+            #     else:
+            #         misc.sprint("ungroup mode")
+            #         modify, self._curr_matrix_elements = self._me_curr_exporter.modify_grouping(self._curr_matrix_elements)
+            #         misc.sprint(modify, type(self._curr_matrix_elements))
+            #         for nb,me in enumerate(self._curr_matrix_elements[:]):
+            #             new_calls = self._me_curr_exporter.generate_subprocess_directory(\
+            #                         me, self._curr_helas_model, nb)
+            #             if  isinstance(new_calls, int):
+            #                 if new_calls ==0:
+            #                     self._curr_matrix_elements.remove(me)
+            #                 else:
+            #                     calls = calls + new_calls
+
+            misc.sprint("done")
+
             
                 #try:
                 #    cmd.Cmd.onecmd(self, 'history .')

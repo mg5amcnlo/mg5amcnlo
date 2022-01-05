@@ -83,10 +83,12 @@ class OneProcessExporterCPP(object):
         pass
     
     def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
-                 process_number = 0, path = os.getcwd()):
+                 process_number = 0, path = os.getcwd(), prefix=''):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
+
+        misc.sprint("pass here", process_number, prefix, path, os.getcwd())
         if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
             self.matrix_elements = matrix_elements.get('matrix_elements')
         elif isinstance(matrix_elements, helas_objects.HelasMatrixElement):
@@ -2518,6 +2520,7 @@ def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
     opt['output_options'] = cmd_options
     cformat = cmd._export_format
     
+    misc.sprint(cformat)
     if cformat == 'pythia8':
         return ProcessExporterPythia8(cmd._export_dir, opt)
     elif cformat == 'standalone_cpp':
