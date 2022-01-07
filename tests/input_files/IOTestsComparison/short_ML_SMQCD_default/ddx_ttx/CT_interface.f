@@ -152,16 +152,16 @@ C     CALL CTSINIT(THRS,LOOPLIB)
 
       END
 
-      SUBROUTINE ML5_0_LOOP_4_4( LID, W1, W2, W3, W4, M1,MP_M1, M2
-     $ ,MP_M2, M3,MP_M3, M4,MP_M4, C1,MP_C1, C2,MP_C2, C3,MP_C3, C4
-     $ ,MP_C4,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES, STABLE)
+      SUBROUTINE ML5_0_LOOP_2_2( LID, W1, W2, M1,MP_M1, M2,MP_M2, C1
+     $ ,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES,
+     $  STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    MAXLCOUPLINGS
       PARAMETER (MAXLCOUPLINGS=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=4)
+      PARAMETER (NLOOPLINE=2)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    NCOMB
@@ -169,11 +169,11 @@ C     CALL CTSINIT(THRS,LOOPLIB)
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2, W3, W4
-      COMPLEX*16 M1, M2, M3, M4
-      COMPLEX*32 MP_M1, MP_M2, MP_M3, MP_M4
-      COMPLEX*16 C1, C2, C3, C4
-      COMPLEX*32 MP_C1, MP_C2, MP_C3, MP_C4
+      INTEGER W1, W2
+      COMPLEX*16 M1, M2
+      COMPLEX*32 MP_M1, MP_M2
+      COMPLEX*16 C1, C2
+      COMPLEX*32 MP_C1, MP_C2
 
       COMPLEX*16 RES(3)
       INTEGER LID, RANK, LSYMFACT, LMULTIPLIER
@@ -212,24 +212,16 @@ C     ----------
 
       WE(1)=W1
       WE(2)=W2
-      WE(3)=W3
-      WE(4)=W4
-      M2L(1)=M4**2
+      M2L(1)=M2**2
       M2L(2)=M1**2
-      M2L(3)=M2**2
-      M2L(4)=M3**2
-      ML(1)=M4
-      ML(2)=M4
-      MP_ML(1)=MP_M4
-      MP_ML(2)=MP_M4
+      ML(1)=M2
+      ML(2)=M2
+      MP_ML(1)=MP_M2
+      MP_ML(2)=MP_M2
       ML(3)=M1
       MP_ML(3)=MP_M1
       ML(4)=M2
       MP_ML(4)=MP_M2
-      ML(5)=M3
-      MP_ML(5)=MP_M3
-      ML(6)=M4
-      MP_ML(6)=MP_M4
       DO I=1,NLOOPLINE
         PAIRING(I)=1
       ENDDO
@@ -238,10 +230,6 @@ C     ----------
       MP_LC(1)=MP_C1
       LC(2)=C2
       MP_LC(2)=MP_C2
-      LC(3)=C3
-      MP_LC(3)=MP_C3
-      LC(4)=C4
-      MP_LC(4)=MP_C4
       AMPLNUM=AMPLN
       ID=LID
       SYMFACT=LSYMFACT
@@ -362,16 +350,16 @@ C     ----------
 
       END
 
-      SUBROUTINE ML5_0_LOOP_2_2( LID, W1, W2, M1,MP_M1, M2,MP_M2, C1
-     $ ,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES,
-     $  STABLE)
+      SUBROUTINE ML5_0_LOOP_4_4( LID, W1, W2, W3, W4, M1,MP_M1, M2
+     $ ,MP_M2, M3,MP_M3, M4,MP_M4, C1,MP_C1, C2,MP_C2, C3,MP_C3, C4
+     $ ,MP_C4,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES, STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    MAXLCOUPLINGS
       PARAMETER (MAXLCOUPLINGS=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=2)
+      PARAMETER (NLOOPLINE=4)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=6)
       INTEGER    NCOMB
@@ -379,11 +367,11 @@ C     ----------
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2
-      COMPLEX*16 M1, M2
-      COMPLEX*32 MP_M1, MP_M2
-      COMPLEX*16 C1, C2
-      COMPLEX*32 MP_C1, MP_C2
+      INTEGER W1, W2, W3, W4
+      COMPLEX*16 M1, M2, M3, M4
+      COMPLEX*32 MP_M1, MP_M2, MP_M3, MP_M4
+      COMPLEX*16 C1, C2, C3, C4
+      COMPLEX*32 MP_C1, MP_C2, MP_C3, MP_C4
 
       COMPLEX*16 RES(3)
       INTEGER LID, RANK, LSYMFACT, LMULTIPLIER
@@ -422,16 +410,24 @@ C     ----------
 
       WE(1)=W1
       WE(2)=W2
-      M2L(1)=M2**2
+      WE(3)=W3
+      WE(4)=W4
+      M2L(1)=M4**2
       M2L(2)=M1**2
-      ML(1)=M2
-      ML(2)=M2
-      MP_ML(1)=MP_M2
-      MP_ML(2)=MP_M2
+      M2L(3)=M2**2
+      M2L(4)=M3**2
+      ML(1)=M4
+      ML(2)=M4
+      MP_ML(1)=MP_M4
+      MP_ML(2)=MP_M4
       ML(3)=M1
       MP_ML(3)=MP_M1
       ML(4)=M2
       MP_ML(4)=MP_M2
+      ML(5)=M3
+      MP_ML(5)=MP_M3
+      ML(6)=M4
+      MP_ML(6)=MP_M4
       DO I=1,NLOOPLINE
         PAIRING(I)=1
       ENDDO
@@ -440,6 +436,10 @@ C     ----------
       MP_LC(1)=MP_C1
       LC(2)=C2
       MP_LC(2)=MP_C2
+      LC(3)=C3
+      MP_LC(3)=MP_C3
+      LC(4)=C4
+      MP_LC(4)=MP_C4
       AMPLNUM=AMPLN
       ID=LID
       SYMFACT=LSYMFACT

@@ -138,7 +138,7 @@ class TestMECmdRWGT(unittest.TestCase):
         ff.close()
         
         if logger.level <= 10:
-                me_cmd.run_cmd('reweight run_01 --from_cards')
+            me_cmd.run_cmd('reweight run_01 --from_cards')
         else:
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 me_cmd.run_cmd('reweight run_01 --from_cards')

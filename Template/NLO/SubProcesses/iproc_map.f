@@ -7,6 +7,7 @@ c absolute value).
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
+      include 'orders.inc'
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
@@ -25,12 +26,20 @@ c absolute value).
       integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
      $     ,nequal,equal_to(maxproc,fks_configs)
      $     ,equal_to_inverse(maxproc,fks_configs)
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     This is the common block that this subroutine fills
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      
+      !MZ safety stop
+      if (split_type(QCD_pos).and.split_type(QED_pos)) then
+          write(*,*) 'IPROCMAP: NOT IMPLEMENTED'
+          stop
+      endif
 
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
@@ -47,11 +56,12 @@ c to get the unique IPROC's
                if (i.eq.min(j_fks,i_fks)) then
                   if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
 c     gluon splitting
-                     id_current(i,j)=21
-                  elseif(abs(idup(i_fks,j)).eq.21) then
+                    if (split_type(qcd_pos)) id_current(i,j)=21
+                    if (split_type(qed_pos)) id_current(i,j)=22
+                  elseif(abs(idup(i_fks,j)).eq.21.or.idup(i_fks,j).eq.22) then
 c     final state gluon emitted
                      id_current(i,j)=idup(j_fks,j)
-                  elseif(idup(j_fks,j).eq.21) then 
+                  elseif(idup(j_fks,j).eq.21.or.idup(j_fks,j).eq.22) then 
 c     intial state g->qqbar splitting
                      id_current(i,j)=-idup(i_fks,j)
                   else
@@ -194,7 +204,7 @@ c Print the map to the screen
 
 ************************************************************************
 *     The following routine sets up the flavour map that needs to be
-*     feeded to APPLgrid in the initialization stage.
+*     feeded to PineAPPL in the initialization stage.
 ************************************************************************
       subroutine setup_flavourmap
 *
@@ -204,8 +214,8 @@ c Print the map to the screen
       include 'nexternal.inc'
       include 'genps.inc'
       include "leshouche_decl.inc"
-      include "reweight_appl.inc"
-      include "appl_common.inc"
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
 *
       character*200 buffer
       integer procnum,i,l,j,ll,found_a,found_m
@@ -240,8 +250,18 @@ c Print the map to the screen
 *     Read the file using a buffer
       do
          read (71,'(a)',err=100,end=100) buffer ! Jump to line 100 when all lines read
+         write(*,*) buffer
          read (buffer,*) kpdflumi,nproc(kpdflumi),
      1        ((pdgs(i,j,kpdflumi),i=1,2),j=1,nproc(kpdflumi))
+         ! check that the allocated arrays are big enough
+         if (kpdflumi.gt.mxpdflumi) then
+            write(*,*) 'ERROR in iproc_map.f, too many processes'
+            write(*,*) 'increase mxpdflumi and max_nproc' //
+     %                 ' inside appl_comon.inc'
+            write(*,*) 'and __max_nproc__ in pineappl_interface.cc'
+            write(*,*) 'Make sure to assign all variables the same value!'
+            stop 1
+         endif
          appl_nproc(kpdflumi) = nproc(kpdflumi)
       enddo
  100  continue

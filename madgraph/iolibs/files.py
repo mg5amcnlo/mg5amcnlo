@@ -40,8 +40,8 @@ def read_from_file(filename, myfunct, *args, **opt):
             ret_value = myfunct(sock, *args)
         finally:
             sock.close()
-    except IOError as xxx_todo_changeme:
-        (errno, strerror) = xxx_todo_changeme.args
+    except IOError as error:
+        errno, strerror = error.errno, str(error)
         if 'print_error' in opt:
             if not opt['print_error']:
                 return None

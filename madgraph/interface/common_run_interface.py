@@ -175,6 +175,13 @@ class HelpToCmd(object):
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
         logger.info("  (1) Only a succession of 2 body decay are currently allowed")
 
+    def help_add_time_of_flight(self):
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
+        logger.info('   threshold option allows to change the minimal value required to')
+        logger.info('   a non zero value for the particle (default:1e-12s)')
+
 
 
 class CheckValidForCmd(object):
@@ -390,7 +397,45 @@ class CheckValidForCmd(object):
         return filepath               
 
 
-    
+    def check_add_time_of_flight(self, args):
+        """check that the argument are correct"""
+        
+        
+        if len(args) >2:
+            self.help_time_of_flight()
+            raise self.InvalidCmd('Too many arguments')
+        
+        # check if the threshold is define. and keep it's value
+        if args and args[-1].startswith('--threshold='):
+            try:
+                threshold = float(args[-1].split('=')[1])
+            except ValueError:
+                raise self.InvalidCmd('threshold options require a number.')
+            args.remove(args[-1])
+        else:
+            threshold = 1e-12
+            
+        if len(args) == 1 and  os.path.exists(args[0]): 
+                event_path = args[0]
+        else:
+            if len(args) and self.run_name != args[0]:
+                self.set_run_name(args.pop(0))
+            elif not self.run_name:            
+                self.help_add_time_of_flight()
+                raise self.InvalidCmd('Need a run_name to process')  
+            if self.LO:          
+                event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            else:
+                event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+            if not os.path.exists(event_path):
+                event_path = event_path[:-3]
+                if not os.path.exists(event_path):    
+                    raise self.InvalidCmd('No unweighted events associate to this run.')
+
+
+        
+        #reformat the data
+        args[:] = [event_path, threshold]    
     
 
 
@@ -940,19 +985,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
-                no_width = [p for p in ufomodel.all_particles
-                        if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
-                           and p.color != 1 and p.width != zero]
+                if self.proc_characteristics['nlo_mixed_expansion']:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero]
+                else:
+                    no_width = [p for p in ufomodel.all_particles
+                            if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
+                            and p.width != zero and p.color!=1]
+
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
                         continue
                     done.append(abs(part.pdg_code))
-                    param = param_card['decay'].get((part.pdg_code,))
+                    try:
+                        param = param_card['decay'].get((part.pdg_code,))
+                    except KeyError:
+                        continue
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
-                                    % part.name,'$MG:BOLD')
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.''',
+                                     part.name,'$MG:BOLD')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
@@ -1631,6 +1685,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("   Input for weight format")
         logger.info("     The parameter will be interpreted by python using: https://docs.python.org/2/library/stdtypes.html#string-formatting")
         logger.info("     The allowed parameters are 'muf','mur','pdf','dyn','alps','id'") 
+
+        
     def complete_systematics(self, text, line, begidx, endidx):
         """auto completion for the systematics command"""
  
@@ -1755,7 +1811,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return
                 else:
                     raise self.InvalidCmd('systematics not available for decay processes.')
-                
+        
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception as error:
@@ -1792,7 +1848,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Copy all the relevant PDF sets
         try:
-            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid]
+            [self.copy_lhapdf_set([onelha], pdfsets_dir, require_local=False) for onelha in lhaid if onelha != 0]
         except Exception as error:
             logger.debug(str(error))
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
@@ -2328,7 +2384,79 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         del cmd
         return out
         
+    ############################################################################
+    def complete_add_time_of_flight(self, text, line, begidx, endidx):
+        "Complete command"
+       
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1:
+            #return valid run_name
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data + ['--threshold='], line)
+        elif args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        else:
+            return self.list_completion(text, ['--threshold='], line)
+
+    ############################################################################
+    def do_add_time_of_flight(self, line):
+
+        args = self.split_arg(line)
+        #check the validity of the arguments and reformat args
+        self.check_add_time_of_flight(args)
         
+        event_path, threshold = args
+        #gunzip the file
+        if event_path.endswith('.gz'):
+            need_zip = True
+            misc.gunzip(event_path)
+            event_path = event_path[:-3]
+        else:
+            need_zip = False
+            
+        import random
+        try:
+            import madgraph.various.lhe_parser as lhe_parser
+        except:
+            import internal.lhe_parser as lhe_parser 
+            
+        logger.info('Add time of flight information on file %s' % event_path)
+        lhe = lhe_parser.EventFile(event_path)
+        output = open('%s_2vertex.lhe' % event_path, 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+
+        # get the associate param_card
+        begin_param = lhe.banner.find('<slha>')
+        end_param = lhe.banner.find('</slha>')
+        param_card = lhe.banner[begin_param+6:end_param].split('\n')
+        param_card = param_card_mod.ParamCard(param_card)
+
+        cst = 6.58211915e-25 # hbar in GeV s
+        c = 299792458000 # speed of light in mm/s
+        # Loop over all events
+        for event in lhe:
+            for particle in event:
+                id = particle.pid
+                width = param_card['decay'].get((abs(id),)).value
+                if width:
+                    vtim = c * random.expovariate(width/cst)
+                    if vtim > threshold:
+                        particle.vtim = vtim
+            #write this modify event
+            output.write(str(event))
+        output.write('</LesHouchesEvents>\n')
+        output.close()
+        
+        files.mv('%s_2vertex.lhe' % event_path, event_path)
+        
+        if need_zip:
+            misc.gzip(event_path)
+                
 
     ############################################################################ 
     def do_print_results(self, line):
@@ -2384,6 +2512,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """ All action require before any type of run. Typically overloaded by
         daughters if need be."""
         pass
+
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
 
     ############################################################################
     # Start of MadAnalysis5 related function
@@ -3059,7 +3203,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
         nb_init = self.ninitial
-        pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        pat = re.compile(r'''DATA \(IDUP\(ILH|I,\d+\),ILH|I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
             text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
             group = pat.findall(text)
@@ -4050,6 +4194,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return       
 
 
+
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
         """links lhapdf into libdir"""
@@ -4713,7 +4858,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except IOError:
             self.run_card = {}
         try:
-            run_card_def = banner_mod.RunCard(self.paths['run_default'])
+            run_card_def = banner_mod.RunCard(self.paths['run_default'], consistency=False)
         except IOError:
             run_card_def = {}
 
@@ -5895,6 +6040,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                  self.run_card['mass_ion1'] != self.run_card['mass_ion2']):
                 raise Exception("Heavy ion profile for both beam are different but the symmetry used forbids it. \n Please generate your process with \"set group_subprocesses False\".")
             
+            # check for nhel if using eva
+            if  self.run_card['pdlabel']  == 'eva' or \
+                self.run_card['pdlabel1'] == 'eva' or \
+                self.run_card['pdlabel2'] == 'eva':
+                logger.warning("Running with EVA. Updating EW inputs in Source/PDF/ElectroweakFlux.inc to match param_card.")
+
+                if self.run_card['nhel'] == 0:
+                    logger.warning("EVA mode requies MC sampling by polarization: updating run_card with nhel=1")
+                    self.do_set('run_card nhel 1')
+
             # check the status of small width status from LO
             for param in self.param_card['decay']:
                 width = param.value
@@ -5951,7 +6106,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                  logger.debug("keep SDE to %s", self.run_card['SDE_strategy'])
 
-
+            # check that only quark/gluon/photon are in initial beam if lpp=+-1
+            pdg_in_p = list(range(-6,7))+[21,22]
+            if (self.run_card['lpp1'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial1'])) \
+               or (self.run_card['lpp2'] and any(pdg not in pdg_in_p for pdg in proc_charac['pdg_initial2'])):
+                if 'pythia_card.dat' in self.cards or 'pythia8_card.dat' in self.cards:
+                    logger.error('Parton-Shower are not yet ready for such proton component definition. Parton-shower will be switched off')
+                    if 'pythia_card.dat' in self.cards:
+                        os.remove(self.paths['pythia'])
+                        self.cards.remove('pythia_card.dat')
+                    elif 'pythia8_card.dat' in self.cards:
+                        os.remove(self.paths['pythia8'])
+                        self.cards.remove('pythia8_card.dat')
+                else:
+                    logger.info('Remember that Parton-Shower are not yet ready for such proton component definition (HW implementation in progress).', '$MG:BOLD' )
+ 
+                 
         ########################################################################
         #       NLO specific check
         ########################################################################
@@ -6011,8 +6181,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.do_set('shower_card njmax %i' % njmax) 
                     if self.shower_card['njmax'] == 0:
                         raise Exception("Invalid njmax parameter. Can not be set to 0")
+
+
+            #check relation between lepton PDF // dressed lepton collisions // ...
+            if abs(self.run_card['lpp1']) != 1  or  abs(self.run_card['lpp2']) != 1:
+                if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 3:
+                    # this can be dressed lepton or photon-flux
+                    if proc_charac['pdg_initial1'] in [[11],[-11]] and  proc_charac['pdg_initial2'] in [[11],[-11]]:
+                        if self['pdlabel'] not in self.allowed_lep_densities[(-11,11)]:
+                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+                elif abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 4:
+                    # this can be dressed lepton or photon-flux
+                    if proc_charac['pdg_initial1'] in [[13],[-13]] and  proc_charac['pdg_initial2'] in [[13],[-13]]:
+                        if self['pdlabel'] not in self.allowed_lep_densities[(-13,13)]:
+                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])   
+                        
                     
-                
        
         
         # Check the extralibs flag.

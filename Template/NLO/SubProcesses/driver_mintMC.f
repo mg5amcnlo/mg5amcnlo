@@ -3,6 +3,8 @@ c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
+      use mint_module
+      use FKSParams
       implicit none
 C
 C     CONSTANTS
@@ -11,16 +13,13 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      INTEGER    ITMAX,   NCALL
-
-      common/citmax/itmax,ncall
       integer ncall_virt,ncall_novi
       character*4 abrv
       common /to_abrv/ abrv
 C
 C     LOCAL
 C
-      integer i,j,l,l1,l2,ndim,nevts
+      integer i,j,k,l,l1,l2,nndim,nevts
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -30,10 +29,9 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
-      include "mint.inc"
       
 c Vegas stuff
-      common/tosigint/ndim
+      common/tosigint/nndim
 
       real*8 sigintF
       external sigintF
@@ -47,30 +45,17 @@ c Vegas stuff
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
-      common/c_avg_virt/average_virtual,virtual_fraction
+      include 'orders.inc'
 
       double precision weight,event_weight,inv_bias
       character*7 event_norm
       common /event_normalisation/event_norm
-c For MINT:
-      real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
-     $     ,ndimmax,maxchannels),ymax_virt(0:maxchannels),ans(nintegrals
-     $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
-     $     ,0:maxchannels),x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
-      integer ifold(ndimmax) 
-      common /cifold/ifold
-      integer ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      integer ixi_i,iphi_i,iy_ij,vn
       logical putonshell
-      logical only_virt
-      integer imode
-      common /c_imode/imode,only_virt
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision ran2
+      double precision ran2,x(ndimmax)
       external ran2
       
       integer ifile,ievents
@@ -90,14 +75,20 @@ c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
 
-c general MadFKS parameters
-      include "FKSParams.inc"
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      integer                     n_MC_subt_diverge
+      common/counter_subt_diverge/n_MC_subt_diverge
 
 C-----
 C  BEGIN CODE
 C-----  
+c Write the process PID in the log.txt files (i.e., to the screen)
+      write (*,*) getpid()
+
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
@@ -110,9 +101,19 @@ C-----
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
-      average_virtual=0d0
+      min_virt_fraction_mint=min_virt_fraction
+      do i=0,n_ave_virt
+         average_virtual(i,1)=0d0
+      enddo
       virtual_fraction(1)=virt_fraction
-
+      n_ord_virt=amp_split_size
+      n_MC_subt_diverge=0
+      ntot_granny=0
+      derntot=0
+      do i=0,6
+         ncase(i)=0
+      enddo
+      
       ntot=0
       nsun=0
       nsps=0
@@ -132,12 +133,13 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      call initcluster
+      call fill_configurations_common
+      call check_amp_split 
 c     
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,imode,
+      call get_user_params(ncalls0,itmax,
      &     ixi_i,iphi_i,iy_ij,SHsep)
 c Only do the reweighting when actually generating the events
       if (imode.eq.2) then
@@ -161,6 +163,7 @@ c Only do the reweighting when actually generating the events
       ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+      nndim=ndim
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -171,138 +174,46 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
+      write(*,*) "about to integrate ", ndim,ncalls0,itmax,iconfig
       i_momcmp_count=0
       xratmax=0.d0
       unwgt=.false.
+c     Prepare the MINT folding
+      do j=1,ndimmax
+         if (j.le.ndim) then
+            ifold(j)=1
+         else
+            ifold(j)=0
+         endif
+      enddo
+      ifold_energy=ndim-2
+      ifold_yij=ndim-1
+      ifold_phi=ndim
+      ifold(ifold_energy)=ixi_i
+      ifold(ifold_phi)=iphi_i
+      ifold(ifold_yij)=iy_ij
 
 c*************************************************************
 c     setting of the grids
 c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
-         if(imode.eq.0)then
-c initialize grids
-            do j=0,nintervals
-               do i=1,ndimmax
-                  xgrid(j,i,1)=0.d0
-               enddo
-            enddo
-         else
-c to restore grids:
-            open (unit=12, file='mint_grids',status='old')
-            do j=0,nintervals
-               read (12,*) (xgrid(j,i,1),i=1,ndim)
-            enddo
-            do j=1,nintervals_virt
-               read (12,*) (ave_virt(j,i,1),i=1,ndim)
-            enddo
-            read (12,*) (ans(i,1),i=1,nintegrals)
-            read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virtual_fraction(1),average_virtual(1)
-            close (12)
-         endif
-c
          write (*,*) 'imode is ',imode
-         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2,nhits_in_grids)
+         call mint(sigintF)
          call deallocate_weight_lines
-         open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
-         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         close(58)
-         write(*,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
-         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
          close(58)
-c
-c to save grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         do j=0,nintervals
-            write (12,*) (xgrid(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i,1),i=1,ndim)
-         enddo
-         write (12,*) (ans(i,1),i=1,nintegrals)
-         write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virtual_fraction(1),average_virtual(1)
-         close (12)
-
 c*************************************************************
 c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
-c to restore grids:
-         open (unit=12, file='mint_grids',status='old')
-         do j=0,nintervals
-            read (12,*) (xgrid(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i,1),i=1,ndim)
-         enddo
-         read (12,*) (ans(i,1),i=1,nintegrals)
-         read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virtual_fraction(1),average_virtual(1)
-         close (12)
-
-c Prepare the MINT folding
-         do j=1,ndimmax
-            if (j.le.ndim) then
-               ifold(j)=1
-            else
-               ifold(j)=0
-            endif
-         enddo
-         ifold(ifold_energy)=ixi_i
-         ifold(ifold_phi)=iphi_i
-         ifold(ifold_yij)=iy_ij
-         
          write (*,*) 'imode is ',imode
-         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2,nhits_in_grids)
+         call mint(sigintF)
          call deallocate_weight_lines
-         
-c If integrating the virtuals alone, we include the virtuals in
-c ans(1). Therefore, no need to have them in ans(5) and we have to set
-c them to zero.
-         if (only_virt) then
-            ans(3,1)=0d0 ! virtual Xsec
-            ans(5,1)=0d0 ! ABS virtual Xsec
-         endif
-
-         open(unit=58,file='res_1',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
-     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
-         write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         close(58)
-         write(*,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-'
-     $        ,sqrt(unc(1,1)**2+unc(5,1)**2)
-         write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
-c write the results.dat file 
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*)ans(1,1)+ans(5,1), unc(2,1), 0d0, 0, 0, 0, 0, 0d0 ,0d0, ans(2,1) 
+         write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
+     $        ,ans(2,1) 
          close(58)
-
-c to save grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         write (12,*) (xgrid(0,i,1),i=1,ndim)
-         do j=1,nintervals
-            write (12,*) (xgrid(j,i,1),i=1,ndim)
-            write (12,*) (ymax(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            write (12,*) (ave_virt(j,i,1),i=1,ndim)
-         enddo
-         write (12,*) ymax_virt(1)
-         write (12,*) (ifold(i),i=1,ndim)
-         write (12,*) (ans(i,1),i=1,nintegrals)
-         write (12,*) (unc(i,1),i=1,nintegrals)
-         write (12,*) virtual_fraction(1),average_virtual(1)
-         close (12)
-
 c*************************************************************
 c     event generation
 c*************************************************************
@@ -325,28 +236,15 @@ c Mass-shell stuff. This is MC-dependent
      &           'No events needed for this channel...skipping it'
             stop
          endif
-         ncall=nevts ! Update ncall with the number found in 'nevts'
+         ncalls0=nevts ! Update ncall with the number found in 'nevts'
 
-c to restore grids:
-         open (unit=12, file='mint_grids',status='unknown')
-         read (12,*) (xgrid(0,i,1),i=1,ndim)
-         do j=1,nintervals
-            read (12,*) (xgrid(j,i,1),i=1,ndim)
-            read (12,*) (ymax(j,i,1),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            read (12,*) (ave_virt(j,i,1),i=1,ndim)
-         enddo
-         read (12,*) ymax_virt(1)
-         read (12,*) (ifold(i),i=1,ndim)
-         read (12,*) (ans(i,1),i=1,nintegrals)
-         read (12,*) (unc(i,1),i=1,nintegrals)
-         read (12,*) virtual_fraction(1),average_virtual(1)
-         close (12)
+c     to restore grids:
+
+         call read_grids_from_file
 
 c determine how many events for the virtual and how many for the no-virt
-         ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncall)
-         ncall_novi=ncall-ncall_virt
+         ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncalls0)
+         ncall_novi=ncalls0-ncall_virt
 
          write (*,*) "Generating virt :: novi approx.",ncall_virt
      $        ,ncall_novi
@@ -355,13 +253,13 @@ c determine how many events for the virtual and how many for the no-virt
 
 c fill the information for the write_header_init common block
          ifile=lunlhe
-         ievents=ncall
+         ievents=ncalls0
          inter=ans(2,1)
          absint=ans(1,1)+ans(5,1)
          uncer=unc(2,1)
 
          if (event_norm(1:4).ne.'bias') then
-            weight=(ans(1,1)+ans(5,1))/ncall
+            weight=(ans(1,1)+ans(5,1))/ncalls0
          else
             weight=event_weight
          endif
@@ -374,25 +272,25 @@ c fill the information for the write_header_init common block
 
          write (*,*) 'imode is ',imode
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
-         do j=1,ncall
+         call gen(sigintF,0,vn,x)
+         do j=1,ncalls0
             if (abrv(1:4).eq.'born') then
                vn=3
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               call gen(sigintF,1,vn,x)
             else
                if (ran2().lt.ans(5,1)/(ans(1,1)+ans(5,1)) .or. only_virt) then
                   abrv='virt'
                   if (only_virt) then
                      vn=2
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   else
                      vn=1
-                     call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                     call gen(sigintF,1,vn,x)
                   endif
                else
                   abrv='novi'
                   vn=2
-                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+                  call gen(sigintF,1,vn,x)
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
@@ -407,14 +305,7 @@ c Randomly pick the contribution that will be written in the event file
          enddo
          call deallocate_weight_lines
          vn=-1
-         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
-         write (*,*) 'Generation efficiencies:',x(1),x(4)
-c Uncomment the next to lines to print the integral from the PS points
-c trown during event generation. This corresponds only to the cross
-c section if these points are thrown flat, so not using the xmmm() stuff
-c in mint.
-c         write (*,*) 'Integral from novi points computed',x(2),x(3)
-c         write (*,*) 'Integral from virt points computed',x(5),x(6)
+         call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
@@ -456,11 +347,24 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          enddo
       endif
 
+      write (*,*) 'counters for the granny resonances'
+      write (*,*) 'ntot     ',ntot_granny
+      if (ntot_granny.gt.0) then
+         do i=0,6
+            write (*,*) '% icase ',i,' : ',ncase(i)/dble(ntot_granny)
+         enddo
+         write (*,*) 'average,std dev. and max of derivative:',deravg
+     &        ,sqrt(abs(derstd-deravg**2)),dermax
+         write (*,*)
+     &        'and xi_i_fks and y_ij_fks corresponding to max of der.',
+     &        xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      endif
+      write (*,*) 'counter for the diverging MC subtraction',n_MC_subt_diverge
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      $     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write)
+     $     +t_write+t_coupl)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -479,15 +383,16 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncall,tTot
+         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
       else
          write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
-     $        ,unc(2,1),itmax,ncall,tTot
+     $        ,unc(2,1),itmax,ncalls0,tTot
       endif
       close(12)
 
@@ -518,28 +423,29 @@ c timing statistics
       data t_isum/0.0/
       data t_p_unw/0.0/
       data t_write/0.0/
+      data t_coupl/0.0/
       end
 
 
-      subroutine get_user_params(ncall,itmax,
-     &     imode,ixi_i,iphi_i,iy_ij,SHsep)
+      subroutine get_user_params(ncall,nitmax,
+     &     ixi_i,iphi_i,iy_ij,SHsep)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
+      use mint_module
       implicit none
 c
 c     Constants
 c
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'mint.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
 c
 c     Arguments
 c
-      integer ncall,itmax,jconfig
+      integer ncall,nitmax
 c
 c     Local
 c
@@ -548,6 +454,8 @@ c
 c
 c     Global
 c
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -570,11 +478,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c MC counterterm stuff
 c
@@ -591,19 +502,14 @@ c alazi and beazi are the parameters that control gfunazi
 c
 c MINT stuff
 c
-      integer imode,ixi_i,iphi_i,iy_ij
-
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
+      integer ixi_i,iphi_i,iy_ij
 
 c-----
 c  Begin Code
 c-----
-      mint=.true.
-      usexinteg=.false.
       write(*,'(a)') 'Enter number of events and iterations: '
-      read(*,*) ncall,itmax
-      write(*,*) 'Number of events and iterations ',ncall,itmax
+      read(*,*) ncall,nitmax
+      write(*,*) 'Number of events and iterations ',ncall,nitmax
 
       write(*,'(a)') 'Enter desired fractional accuracy: '
       read(*,*) accuracy
@@ -637,7 +543,7 @@ c These should be ignored (but kept for 'historical reasons')
       use_cut=2
 
 
-      write(*,10) 'Suppress amplitude (0 no, 1 yes)? '
+      write(*,*) 'Suppress amplitude (0 no, 1 yes)? '
       read(*,*) i
       if (i .eq. 1) then
          multi_channel = .true.
@@ -647,7 +553,7 @@ c These should be ignored (but kept for 'historical reasons')
          write(*,*) 'Using full amplitude.'
       endif
 
-      write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
+      write(*,*) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (nincoming.eq.1) then
          write (*,*) 'Sum over helicities in the virtuals'/
@@ -663,16 +569,26 @@ c These should be ignored (but kept for 'historical reasons')
       endif
       isum_hel = 0
 
-      write(*,10) 'Enter Configuration Number: '
+      write(*,'(a)') 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
-      do i=1,mapconfig(0)
-         if (iconfig.eq.mapconfig(i)) then
+      if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
+         ini_fin_fks=0
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
+         ini_fin_fks=1
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
+         ini_fin_fks=2
+      else
+         write (*,*) 'ERROR: invalid configuration number',dconfig
+         stop 1
+      endif
+      do i=1,mapconfig(0,0)
+         if (iconfig.eq.mapconfig(i,0)) then
             iconfig=i
             exit
          endif
       enddo
-      write(*,12) 'Running Configuration Number: ',iconfig
+      write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
       nchans=1
       iconfigs(1)=iconfig
       wgt_mult=1d0
@@ -684,7 +600,7 @@ c These should be ignored (but kept for 'historical reasons')
       write (*,*) 'MINT running mode:',imode
       if (imode.eq.2)then
          write (*,*) 'Generating events, doing only one iteration'
-         itmax=1
+         nitmax=1
       endif
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
@@ -718,7 +634,7 @@ c$$$               stop 1
 c$$$            endif
          endif
       endif
-      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
+      if(nbody.and.abrv.ne.'born'.and.abrv.ne.'virt'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
@@ -731,35 +647,29 @@ c$$$            endif
         write (*,*) "Normal integration (Sfunction != 1)"
       endif
 c
-c
-c     Here I want to set up with B.W. we map and which we don't
-c
       lbw(0)=0
- 10   format( a)
- 12   format( a,i4)
       end
-c     change this routine to read the input in a file
-c
-
-
-
 
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
+      use mint_module
       implicit none
-      include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
+      include 'orders.inc'
+      include 'fks_info.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
-      integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
+      integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum
+     $     ,iFKS,sum,iamp
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
@@ -771,31 +681,29 @@ c
       common/ccalculatedBorn/calculatedBorn
       logical              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
-      double precision           virt_wgt_mint,born_wgt_mint
-      common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       logical       nbody
       common/cnbody/nbody
-      integer         ndim
-      common/tosigint/ndim
+      integer         nndim
+      common/tosigint/nndim
       character*4      abrv
       common /to_abrv/ abrv
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      logical               only_virt
-      integer         imode
-      common /c_imode/imode,only_virt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      if (new_point .and. ifl.ne.2) then
+         pass_cuts_check=.false.
+      endif
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
-         call setup_proc_map(sum,proc_map)
+         call setup_proc_map(sum,proc_map,ini_fin_fks)
 c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
@@ -811,8 +719,10 @@ c "npNLO".
       fold=ifl
       if (ifl.eq.0) then
          icontr=0
-         virt_wgt_mint=0d0
-         born_wgt_mint=0d0
+         do iamp=0,amp_split_size
+            virt_wgt_mint(iamp)=0d0
+            born_wgt_mint(iamp)=0d0
+         enddo
          virtual_over_born=0d0
          MCcntcalled=.false.
          wgt_me_real=0d0
@@ -820,7 +730,6 @@ c "npNLO".
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-
 c The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
@@ -834,19 +743,26 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+         if (ini_fin_fks.eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
+         endif
 c Also the Born needs to be included in the Importance Sampling over the
 c FKS configurations (for the shower scale) (multiply by
-c 1/proc_map(0,0)*vol1)
-         jac=1d0/(proc_map(0,0)*vol1)
-         call generate_momenta(ndim,iconfig,jac,x,p)
+c     1/proc_map(0,0)*vol1)
+         jac=jac/(proc_map(0,0)*vol1)
+         call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
-            if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+            pass_cuts_check=.true.
             call set_alphaS(p1_cnt(0,1,0))
+            call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
                call compute_born
             endif
@@ -877,55 +793,44 @@ c for different nFKSprocess.
             gfactsf=1.d0
             gfactcl=1.d0
             MCcntcalled=.false.
-            call generate_momenta(ndim,iconfig,jac,x,p)
+            call generate_momenta(nndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-c check if event or counter-event passes cuts
-            call set_cms_stuff(izero)
-            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-            call set_cms_stuff(mohdr)
-            passcuts_n1body=passcuts(p,rwgt)
-            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
-c Set the shower scales            
+c     Set the shower scales            
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p) ! reset the FxFx scales
+            endif
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(2,p1_cnt(0,1,0))
+            endif
             call set_cms_stuff(mohdr)
             call set_shower_scale_noshape(p,iFKS*2)
-c Compute the n1-body prefactors
-            call compute_prefactors_n1body(vegas_wgt,jac)
-c Include the FxFx Sudakov terms in the prefactors:
-c   CP : counter-event kinematics passes cuts
-c   EP : event kinematics passes cuts
-c   CE : counter-event kinematics exists
-c   EE : event kinematics exists
-c   CC : compute FxFx for counter-events kinematics
-c   EC : compute FxFx for event kinematics
-c
-c     CP  EP  CE  EE | CC  EC
-c     X   X   X   X  | X   X
-c     X       X   X  | X   X
-c         X   X   X  |     X
-c     X       X      | X   X
-c         X       X  |     X
-c
             if (ickkw.eq.3) then
-               call set_FxFx_scale(0,p)
-               if (passcuts_nbody .and. abrv.ne.'real') then
-                  call set_cms_stuff(izero)
-                  call set_FxFx_scale(2,p1_cnt(0,1,0))
-               endif
                if (p(0,1).gt.0d0) then
-                  call set_cms_stuff(mohdr)
                   call set_FxFx_scale(3,p)
                endif
-            endif               
+            endif              
+c Compute the n1-body prefactors
+            call compute_prefactors_n1body(vegas_wgt,jac)
+c check if event or counter-event passes cuts
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             if (passcuts_nbody .and. abrv.ne.'real') then
+               pass_cuts_check=.true.
 c Include the MonteCarlo subtraction terms
                if (ickkw.ne.4) then
                   call set_cms_stuff(mohdr)
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
+                  call include_multichannel_enhance(4)
                   call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
@@ -940,6 +845,7 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_cms_stuff(izero)
                if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
                call set_alphaS(p1_cnt(0,1,0))
+               call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)
                call set_cms_stuff(ione)
@@ -951,9 +857,11 @@ c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
             endif
 c Include the real-emission contribution.
             if (passcuts_n1body) then
+               pass_cuts_check=.true.
                call set_cms_stuff(mohdr)
                if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                call set_alphaS(p)
+               call include_multichannel_enhance(2)
                sudakov_damp=probne
                call compute_real_emission(p,sudakov_damp)
             endif
@@ -984,7 +892,7 @@ c determined which contributions are identical.
       end
 
 
-      subroutine setup_proc_map(sum,proc_map)
+      subroutine setup_proc_map(sum,proc_map,ini_fin_fks)
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
       implicit none
@@ -997,7 +905,7 @@ c summed explicitly and which by MC-ing.
       logical found_ini1,found_ini2,found_fnl
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
-     $     ,j_fks_pdg_proc(fks_configs),i,sum,j
+     $     ,j_fks_pdg_proc(fks_configs),i,sum,j,ini_fin_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       INTEGER              IPROC
@@ -1008,6 +916,8 @@ c summed explicitly and which by MC-ing.
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical need_color_links, need_charge_links
+      common /c_need_links/need_color_links, need_charge_links
       sum=3
       if (ickkw.eq.4) then
          sum=0
@@ -1036,7 +946,9 @@ c First find all the nFKSprocesses that have a soft singularity and put
 c them in the process map
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (abs(PDG_type(i_fks)).eq.21) then
+            if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
+            if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
+            if (need_color_links.or.need_charge_links) then
                proc_map(0,0)=proc_map(0,0)+1
                proc_map(proc_map(0,0),0)=proc_map(proc_map(0,0),0)+1
                proc_map(proc_map(0,0),proc_map(proc_map(0,0),0))
@@ -1052,22 +964,22 @@ c state all gluon
          found_ini2=.false.
          found_fnl=.false.
          do i=1,proc_map(0,0)
-            if (abs(i_fks_pdg_proc(i)).eq.21 .and. j_fks_proc(i).eq.1
-     $           .and. .not.found_ini1) then
+            if ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     &       .and. j_fks_proc(i).eq.1 .and. .not.found_ini1) then
                found_ini1=.true.
-            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
-     $              j_fks_proc(i).eq.1.and. found_ini1) then
+            elseif ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     $       .and. j_fks_proc(i).eq.1.and. found_ini1) then
                write (*,*)'Initial state 1 g->gg already'/
      $              /' found in driver_mintMC'
                write (*,*) i_fks_pdg_proc
                write (*,*) j_fks_pdg_proc
                write (*,*) j_fks_proc
                stop
-            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
-     $              j_fks_proc(i).eq.2.and. .not.found_ini2) then
+            elseif ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     $       .and. j_fks_proc(i).eq.2.and. .not.found_ini2) then
                found_ini2=.true.
-            elseif (abs(i_fks_pdg_proc(i)).eq.21 .and.
-     $              j_fks_proc(i).eq.2.and. found_ini2) then
+            elseif ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     $       .and. j_fks_proc(i).eq.2.and. found_ini2) then
                write (*,*)'Initial state 2 g->gg already'/
      $              /' found in driver_mintMC'
                write (*,*) i_fks_pdg_proc
@@ -1095,11 +1007,13 @@ c singularity and put them together with the corresponding gluon to
 c gluons splitting
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (abs(PDG_type(i_fks)).ne.21) then
+            if (ini_fin_fks.eq.1 .and. j_fks.le.nincoming) cycle
+            if (ini_fin_fks.eq.2 .and. j_fks.gt.nincoming) cycle
+            if (.not.(need_color_links.or.need_charge_links)) then
                if (j_fks.eq.1 .and. found_ini1) then
                   do i=1,proc_map(0,0)
-                     if (abs(i_fks_pdg_proc(i)).eq.21 .and.
-     $                    j_fks_proc(i).eq.1) then
+                     if ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     $                    .and. j_fks_proc(i).eq.1) then
                         proc_map(i,0)=proc_map(i,0)+1
                         proc_map(i,proc_map(i,0))=nFKSprocess
                         exit
@@ -1107,8 +1021,8 @@ c gluons splitting
                   enddo
                elseif (j_fks.eq.2 .and. found_ini2) then
                   do i=1,proc_map(0,0)
-                     if (abs(i_fks_pdg_proc(i)).eq.21 .and.
-     $                    j_fks_proc(i).eq.2) then
+                     if ((abs(i_fks_pdg_proc(i)).eq.21.or.i_fks_pdg_proc(i).eq.22)
+     $                   .and. j_fks_proc(i).eq.2) then
                         proc_map(i,0)=proc_map(i,0)+1
                         proc_map(i,proc_map(i,0))=nFKSprocess
                         exit
@@ -1220,31 +1134,30 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 
       subroutine update_vegas_x(xx,x)
+      use mint_module
       implicit none
-      include 'mint.inc'
       integer i
       double precision xx(ndimmax),x(99),ran2
       external ran2
-      integer         ndim
-      common/tosigint/ndim
-      character*4 abrv
+      integer         nndim
+      common/tosigint/nndim
+      character*4      abrv
       common /to_abrv/ abrv
       do i=1,99
          if (abrv.eq.'born') then
-            if(i.le.ndim-3)then
+            if(i.le.nndim-3)then
                x(i)=xx(i)
-            elseif(i.le.ndim) then
+            elseif(i.le.nndim) then
                x(i)=ran2()      ! Choose them flat when not including real-emision
             else
                x(i)=0.d0
             endif
          else
-            if(i.le.ndim)then
+            if(i.le.nndim)then
                x(i)=xx(i)
             else
                x(i)=0.d0
@@ -1261,46 +1174,74 @@ c     include all quarks (except top quark) and the gluon.
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
-      logical firsttime,foundB(2)
+      integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
+      logical firsttime
       data firsttime /.true./
-      save nFKSprocessBorn,foundB
+      save nFKSprocessBorn
+c
       if (firsttime) then
          firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
          do iFKS=1,fks_configs
-            if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
-               if (fks_j_D(iFKS).le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=iFKS
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=iFKS
-               endif
+            nFKSprocessBorn(iFKS)=0
+            if ( need_color_links_D(iFKS) .or. 
+     &           need_charge_links_D(iFKS) )then
+               nFKSprocessBorn(iFKS)=iFKS
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+c     try to find the process that has the same j_fks but with i_fks a
+c     gluon
+               do iiFKS=1,fks_configs
+                  if ( (need_color_links_D(iiFKS) .or.
+     &                  need_charge_links_D(iiFKS)) .and.
+     &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                     exit
+                  endif
+               enddo
+            endif
+c     try to find the process that has the j_fks initial state if
+c     current j_fks is initial state (and similar for final state j_fks)
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
+                     if ( fks_j_D(iiFKS).le.nincoming .and.
+     &                    fks_j_D(iFKS).le.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     elseif ( fks_j_D(iiFKS).gt.nincoming .and.
+     &                        fks_j_D(iFKS).gt.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     endif
+                  endif
+               enddo
+            endif
+c     If still not found, just pick any one that has a soft singularity
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                  endif
+               enddo
+            endif
+c     if there are no soft singularities at all, just do something trivial
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               nFKSprocessBorn(iFKS)=iFKS
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     $        nFKSprocessBorn
+         write (*,*) 'For the Born we use nFKSprocesses:'
+         write (*,*)  nFKSprocessBorn
       endif
-      if (fks_j_D(nFKS_in).le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(1)
+      if (nFKSprocessBorn(nFKS_in).eq.0) then
+         write(*,*) 'Could not find the correct map to Born '/
+     &        /'FKS configuration for the NLO FKS '/
+     &        /'configuration', nFKS_in
+         stop 1
       else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(2)
+         nFKS_out=nFKSprocessBorn(nFKS_in)
       endif
       return
       end

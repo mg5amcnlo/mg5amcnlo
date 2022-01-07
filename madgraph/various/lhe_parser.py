@@ -2670,7 +2670,7 @@ class OneNLOWeight(object):
             bjks : %(bjks)s
             scales**2, gs: %(scales2)s %(gs)s
             born/real related : %(born_related)s %(real_related)s
-            type / nfks : %(type)s  %(nfks)s
+            type / nfks : %(orderflag)s %(type)s  %(nfks)s
             to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
             ref_wgt :  %(ref_wgt)s""" % self.__dict__
             return out
@@ -2693,6 +2693,7 @@ class OneNLOWeight(object):
             to_add('%.10e', self.real)
             to_add('%i', self.nexternal)
             to_add('%i', self.pdgs)
+            to_add('%i', self.orderflag)
             to_add('%i', self.qcdpower)
             to_add('%.10e', self.bjks)
             to_add('%.10e', self.scales2)
@@ -2709,8 +2710,7 @@ class OneNLOWeight(object):
     def parse(self, text, keep_bias=False):
         """parse the line and create the related object.
            keep bias allow to not systematically correct for the bias in the written information"""
-        #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
-        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
+        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 404 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
         data = text.split()
         # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
@@ -2745,9 +2745,13 @@ class OneNLOWeight(object):
         #    from example: 21 2 -11 12 1 2
         self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
         flag = 6+self.nexternal # new starting point for the position
+        # 5[pre] next integer is the expansion order defined at NLO (from example 404)
+        # New since 3.1.0.
+        self.orderflag = int(data[flag])
         # 5. next integer is the power of g_strong in the matrix elements (as before)
         #    from example: 2
-        self.qcdpower = int(data[flag])
+        self.qcdpower = int(data[flag+1])
+        flag= flag+1
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
         #    from example: 0.52500539D-02 0.30205908D+00 
         self.bjks = [float(f) for f in data[flag+1:flag+3]]

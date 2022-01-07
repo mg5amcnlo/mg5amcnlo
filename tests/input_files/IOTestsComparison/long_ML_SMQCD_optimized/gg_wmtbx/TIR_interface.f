@@ -13,7 +13,7 @@ C
 C     CONSTANTS 
 C     
       INTEGER NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=77)
+      PARAMETER (NLOOPGROUPS=106)
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=0)
@@ -363,7 +363,7 @@ C
       INTEGER QP_NLOOPLIB
       PARAMETER (QP_NLOOPLIB=1)
       INTEGER NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=77)
+      PARAMETER (NLOOPGROUPS=106)
 C     
 C     ARGUMENTS
 C     
@@ -377,7 +377,7 @@ C
 C     This list specifies what loop involve an Higgs effective vertex
 C      so that CutTools limitations can be correctly implemented
       LOGICAL HAS_AN_HEFT_VERTEX(NLOOPGROUPS)
-      DATA (HAS_AN_HEFT_VERTEX(I),I=     1,     9) /.TRUE.,.TRUE.
+      DATA (HAS_AN_HEFT_VERTEX(I),I=     1,     9) /.FALSE.,.FALSE.
      $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
       DATA (HAS_AN_HEFT_VERTEX(I),I=    10,    18) /.FALSE.,.FALSE.
      $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
@@ -393,8 +393,14 @@ C      so that CutTools limitations can be correctly implemented
      $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
       DATA (HAS_AN_HEFT_VERTEX(I),I=    64,    72) /.FALSE.,.FALSE.
      $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
-      DATA (HAS_AN_HEFT_VERTEX(I),I=    73,    77) /.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=    73,    81) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=    82,    90) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=    91,    99) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=   100,   106) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 C     
 C     GLOBAL VARIABLES
 C     

@@ -132,3 +132,23 @@ class FOAnalyseCard(dict):
         else:
             open(card_path, 'w').write(('\n'.join(lines) + '\n'))
 
+
+
+    def update_FO_extrapaths_ajob(self, ajob_path):
+        """adds FO_EXTRAPATHS to the ajob executable
+        """
+        ajob_content = open(ajob_path).read()
+        lines = ajob_content.split('\n')
+
+        ajob_new = ''
+
+        for l in lines:
+            if l.startswith("FO_EXTRAPATHS="):
+                l = "FO_EXTRAPATHS=%s" % ":".join(self['fo_extrapaths'].split())
+            ajob_new += l + '\n'
+
+        ajob_out = open(ajob_path, 'w')
+        ajob_out.write(ajob_new)
+        ajob_out.close()
+
+

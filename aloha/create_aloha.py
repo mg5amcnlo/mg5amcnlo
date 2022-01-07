@@ -282,21 +282,11 @@ in presence of majorana particle/flow violation"""
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
-            if AbstractALOHAModel.lastprint < time.time() - 2:
-                if AbstractALOHAModel.lastprint == 0: 
-                    if self.tag == []:
-                        logger.info('aloha creates routines (starting by %s)' % self.name)
-                    else:
-                        logger.info('aloha creates routines (starting by %s with options %s)'\
-                                % (self.name, ','.join(self.tag)) )
-                else:
-                    if self.tag == []:
-                        logger.info('currently creating  %s' % self.name)
-                    else:
-                        logger.info('currently creating by with options %s'\
-                                % (self.name, ','.join(self.tag)) )
-                    
-                AbstractALOHAModel.lastprint = time.time()
+            if self.tag == []:
+                logger.debug( 'aloha creates %s routines', self.name)
+            else:
+                logger.debug('aloha creates %s set of routines with options: %s' \
+                            % (self.name, ','.join(self.tag)) )
             try:
                 lorentz = self.parse_expression()  
                 self.routine_kernel = lorentz
@@ -804,13 +794,20 @@ class AbstractALOHAModel(dict):
         if hasattr(self, 'cached_interaction_infos'):
             # Now try to recover it
             for info_key in infos:
+                all_done = True
                 try:
                     returned_dict[info] = self.cached_interaction_infos[\
                                          (lorentzname,outgoing,tuple(tag),info)]
                 except KeyError:
                     # Some information has never been computed before, so they
                     # will be computed later.
-                    pass             
+                    all_done = False
+                    pass
+            if all_done:             
+                if isinstance(info, str):
+                    return returned_dict[info]
+                else:
+                    return returned_dict
         elif cached:
             self.cached_interaction_infos = {}
 
@@ -926,6 +923,8 @@ class AbstractALOHAModel(dict):
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
 
+        logger.info('aloha starts to compute helicity amplitudes')
+        start = time.time()
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -1045,8 +1044,8 @@ class AbstractALOHAModel(dict):
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
-                      
-  
+        
+        logger.info("aloha creates %s routines in  %0.3f s", AbstractRoutineBuilder.counter, time.time()-start)
                             
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure

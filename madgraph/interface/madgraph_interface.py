@@ -93,6 +93,8 @@ import madgraph.various.banner as banner_module
 import madgraph.various.misc as misc
 import madgraph.various.cluster as cluster
 
+import madgraph.fks.fks_tag as fks_tag
+
 import models as ufomodels
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
@@ -199,18 +201,29 @@ class CmdExtended(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
 
-        if os.path.exists(pjoin(MG5DIR, '.bzr')) and misc.which('bzr'):
-            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrname,_ = proc.communicate()
-            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
-            bzrversion,_ = proc.communicate() 
-            bzrname, bzrversion = bzrname.decode(errors='ignore').strip(), bzrversion.decode(errors='ignore').strip() 
-            len_name = len(bzrname)
-            len_version = len(bzrversion)            
-            info_line += "#*         BZR %s %s %s         *\n" % \
-                            (bzrname,
-                            (34 - len_name - len_version) * ' ',
-                            bzrversion)
+        if os.path.exists(pjoin(MG5DIR, '.bzr')):
+            try: 
+                proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
+            except OSError:
+                logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
+                info_line += "#*     UNKNOWN DEVELOPMENT VERSION. NOT FOR PRODUCTION      *\n"
+            else:
+                bzrname,_ = proc.communicate()
+                proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
+                bzrversion,_ = proc.communicate() 
+                bzrname, bzrversion = bzrname.decode(errors='ignore').strip(), bzrversion.decode(errors='ignore').strip() 
+                len_name = len(bzrname)
+                len_version = len(bzrversion)            
+                info_line += "#*         BZR %s %s %s         *\n" % \
+                                (bzrname,
+                                (34 - len_name - len_version) * ' ',
+                                bzrversion)
+        elif os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
+            logger_stderr.critical("Note that this is a development version.\nThis version is intended for development/beta testing and NOT for production.\nThis version has not been fully tested (if at all) and might have limited user support (if at all)")
+            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
+            info_line += "\033[1;31m#*          WARNING: UNKNOWN DEVELOPMENT VERSION.           *\033[1;0m\n"
+            info_line += "\033[1;31m#*            WARNING: DO NOT USE FOR PRODUCTION            *\033[1;0m\n"
+            info_line += "\033[1;31m#*%s*\033[1;0m\n" % (' '*58)
 
         # Create a header for the history file.
         # Remember to fill in time at writeout time!
@@ -767,6 +780,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
+        logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
+        logger.info(" > (default False) Do not include real emission with leptons in the initial state.")
         logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
         logger.info(" > Note that pressing tab always stops the timer.")
@@ -807,7 +822,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default: True) [Used ONLY for tree-level output with madevent]")
         logger.info(" > set the width to zero for all T-channel propagator --no impact on complex-mass scheme mode")
         logger.info("auto_convert_model <value>",'$MG:color:GREEN')   
-        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")     
+        logger.info(" > (default: False) If set on True any python2 UFO model will be automatically converted to pyton3 format")   
+        logger.info("nlo_mixed_expansion <value>",'$MG:color:GREEN') 
+        logger.info("deactivates mixed expansion support at NLO, goes back to MG5aMCv2 behavior")
+        logger.info("acknowledged_v3.1_syntax <value>",'$MG:color:GREEN') 
+        logger.info("if set to True allows to use syntax which have change meaning between 3.0 and 3.1 version")
+          
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1471,6 +1491,7 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output',\
                                           'loop_color_flows',\
+                                          'include_lepton_initiated_processes',\
                                           'low_mem_multicore_nlo_generation']:
             args.append('True')
 
@@ -1520,7 +1541,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
             
-        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -1553,8 +1574,8 @@ This will take effect only in a NEW terminal
         if args[0].lower() in ['ewscheme']:
             if not self._curr_model:
                 raise self.InvalidCmd("ewscheme acts on the current model please load one first.")
-            if args[1] not in ['external']:
-                raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
+            if args[1] not in ['external', 'MZ_MW_alpha']:
+                raise self.InvalidCmd('Only valid ewscheme are "external" and "MZ_MW_alpha". To restore default, please re-import the model.')
 
         if args[0] in ['output_dependencies']:
             if args[1] not in MadGraphCmd._output_dependencies_supported:
@@ -2576,12 +2597,13 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
-                           'low_mem_multicore_nlo_generation']:
+                           'include_lepton_initiated_processes',\
+                           'low_mem_multicore_nlo_generation', 'nlo_mixed_expansion']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
             elif args[1].lower() == 'ewscheme':
-                return self.list_completion(text, ["external"])
+                return self.list_completion(text, ["external", "MZ_MW_alpha"])
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
@@ -2908,14 +2930,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
+                    'include_lepton_initiated_processes',
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel',
                     'max_t_for_channel',
                     'zerowidth_tchannel',
                     'default_unset_couplings',
+                    'nlo_mixed_expansion'
                     ]
-    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
+    _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly', 'only']
     _valid_sqso_types = ['==','<=','=','>']
     _valid_amp_so_types = ['=','<=', '==', '>']
     _OLP_supported = ['MadLoop', 'GoSam']
@@ -2953,13 +2977,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'ninja':'./HEPTools/lib',
                        'collier':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
+                       'pineappl':'pineappl',
                        'lhapdf_py2': None,
                        'lhapdf_py3': None,
-                       'applgrid':'applgrid-config',
-                       'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'cluster_local_path': None,
+                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -2967,12 +2991,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'output_dependencies':'external',
                        'crash_on_error':False,
                        'auto_convert_model': False,
+                       'acknowledged_v3.1_syntax': False
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
                           'low_mem_multicore_nlo_generation': False,
                           'complex_mass_scheme': False,
+                          'include_lepton_initiated_processes': False,
                           'gauge':'unitary',
                           'stdout_level':None,
                           'loop_optimized_output':True,
@@ -2981,6 +3007,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'default_unset_couplings': 99, # 99 means infinity
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
+                          'nlo_mixed_expansion':True,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -4748,6 +4775,25 @@ This implies that with decay chains:
         squared_orders = {}
         orders = {}
         constrained_orders = {}
+        
+        # define the various coupling order alias 
+        coupling_alias = {}
+        model_orders = self._curr_model.get('coupling_orders')
+        if 'EW' in model_orders:
+            if 'QED' not in model_orders:
+                coupling_alias['QED'] = 'EW'
+                coupling_alias['QED^2'] = 'EW^2'
+            if 'aEW' not in model_orders:
+                coupling_alias['aEW'] = 'EW^2=2*'
+        elif 'QED' in model_orders:
+            coupling_alias['EW'] = 'QED'
+            coupling_alias['EW^2'] = 'QED^2'
+            if 'aEW' not in model_orders:
+                coupling_alias['aEW'] = 'QED^2=2*'
+        if 'QCD' in model_orders:
+            if 'aS' not in model_orders:
+                coupling_alias['aS'] = 'QCD^2=2*'
+        
         ## The 'split_orders' (i.e. those for which individual matrix element
         ## evalutations must be provided for each corresponding order value) are
         ## defined from the orders specified in between [] and any order for
@@ -4755,19 +4801,35 @@ This implies that with decay chains:
         split_orders = []
         while order_re:
             type = order_re.group('type')
-            if order_re.group('name').endswith('^2'):
+            name =  order_re.group('name')
+            value = int(order_re.group('value'))
+            if name in coupling_alias:
+                old_name,old_value = name,value
+                
+                name = coupling_alias[name]
+                if name.endswith('=2*'):
+                    name = name[:-3]
+                    value *= 2
+                logger.info("change syntax %s=%s to %s=%s to correspond to UFO model convention", 
+                            old_name, old_value, name, value)
+            if name.endswith('^2'):
+                basename = name[:-2]
+                if basename not in list(model_orders) + ['WEIGHTED']:
+                    valid = list(model_orders) +list(coupling_alias.keys()) + ['WEIGHTED']
+                    raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
+
                 if type not in self._valid_sqso_types:
                     raise self.InvalidCmd("Type of squared order "+\
                                  "constraint '%s'"% type+" is not supported.")
                 if type == '=':
-                    name =  order_re.group('name')
-                    value = order_re.group('value')
                     logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
                                        {'n':name, 'v': value})
                     type = "<="
-                squared_orders[order_re.group('name')[:-2]] = \
-                                         (int(order_re.group('value')),type)
+                squared_orders[basename] = (value,type)
             else:
+                if name not in model_orders:
+                    valid = list(model_orders) + list(coupling_alias.keys())
+                    raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
                     raise self.InvalidCmd("Amplitude order constraints can only be of type %s"%\
                     (', '.join(self._valid_amp_so_types))+", not '%s'."%type)
@@ -4789,10 +4851,10 @@ This implies that with decay chains:
                     constrained_orders[name] = (value, type)
                     if name not in squared_orders:
                         squared_orders[name] = (2 * value,'>')
-             
+            
             line = '%s %s' % (order_re.group('before'),order_re.group('after')) 
-            order_re = order_pattern.match(line)          
-        
+            order_re = order_pattern.match(line)   
+                   
         # handle the case where default is not 99 and some coupling defined
         if self.options['default_unset_couplings'] != 99 and \
                                                      (orders or squared_orders): 
@@ -4815,7 +4877,9 @@ This implies that with decay chains:
         # defined with the '>' operato, then this order correspondingly set to 
         # be maximal (99) since there is no way to know, during generation, if 
         # the amplitude being contstructed will be leading or not.
-        if orders=={} and squared_orders!={}:
+        # This only applies when no perturbation couplings are provided, ie
+        # for LO-only generation
+        if orders=={} and squared_orders!={} and not perturbation_couplings:
             for order in squared_orders.keys():
                 if squared_orders[order][0]>=0 and squared_orders[order][1]!='>':
                     orders[order]=squared_orders[order][0]
@@ -4876,6 +4940,21 @@ This implies that with decay chains:
                     raise self.InvalidCmd("No final state particles")
                 state = True
                 continue
+
+            # check if the particle is tagged (!PART!)
+            if part_name.startswith('!') and part_name.endswith('!'):
+                part_name = part_name[1:-1]
+                is_tagged = True
+            elif part_name.endswith('!') and part_name.count('!') == 2 and part_name[:part_name.find('!')].isdigit():
+                part_name = part_name.replace('!','')
+                is_tagged = True
+#                misc.sprint(part_name)
+            else:
+                is_tagged = False
+
+            # check that only final-state particles are tagged
+            if is_tagged and not state:
+                raise self.InvalidCmd("initial particles cannot be tagged")
 
             mylegids = []
             polarization = []
@@ -4950,7 +5029,9 @@ This implies that with decay chains:
                         if spin in [1,2]:
                             raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for scalar/fermion.')
                         elif spin in [3,5] and (mass == "ZERO" or "ZERO" in mass):
-                            raise self.InvalidCmd('"0" (longitudinal) polarization are not supported for massless boson.')
+                            logger.info('"0" (longitudinal) polarization detected for massless boson.')
+                            polarization += [0] # those mode will be bypass at generation time
+                                                # important to keep it here in presence of multi-particles
                         else:
                             polarization += [0]
                     elif p.isdigit():
@@ -4963,6 +5044,9 @@ This implies that with decay chains:
 
             duplicate =1
             if part_name in self._multiparticles:
+                # multiparticles cannot be tagged
+                if is_tagged:
+                    raise self.InvalidCmd("Multiparticles cannot be tagged")
                 if isinstance(self._multiparticles[part_name][0], list):
                     raise self.InvalidCmd("Multiparticle %s is or-multiparticle" % part_name + \
                           " which can be used only for required s-channels")
@@ -4993,11 +5077,25 @@ This implies that with decay chains:
 
             if mylegids:
                 for _ in range(duplicate):
-                    myleglist.append(base_objects.MultiLeg({'ids':mylegids,
-                                                        'state':state,
-                                                        'polarization': polarization}))
+                    if LoopOption in ['virt','sqrvirt','tree','noborn']:
+                        # check that no tagged particles exist in this mode
+                        if is_tagged:
+                            raise self.InvalidCmd(
+                                "%s mode does not handle tagged particles" % LoopOption)
+
+                        myleglist.append(base_objects.MultiLeg({'ids':mylegids,
+                                                            'state':state,
+                                                            'polarization': polarization}))
+                    else:
+                        myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
+                                                          'state':state,
+                                                          'polarization': polarization,
+                                                          'is_tagged':is_tagged}))
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
+
+        if any(['is_tagged' in l.keys()  and l['is_tagged'] for l in myleglist]):
+            logger.warning('The process involves tagged particles. Please consider citing arXiv:2106.02059 if relevant.')
 
         # Apply the keyword 'all' for perturbed coupling orders.
         if perturbation_couplings.lower() in ['all', 'loonly']:
@@ -5769,6 +5867,7 @@ This implies that with decay chains:
                     misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
+        photon = False
         for qcd_container in ['p', 'j']:
             if qcd_container not in self._multiparticles:
                 continue
@@ -5786,8 +5885,18 @@ This implies that with decay chains:
                 multi.append(5)
                 multi.append(-5)
                 scheme = 5
+
+            # check if the photon has to be added to j and p
+            if 'perturbation_couplings' in list(self._curr_model.keys()) and \
+              'QED' in self._curr_model['perturbation_couplings']:
+                if 22 not in multi:
+                    multi.append(22)
+                    photon = True
+            elif 22 in multi:
+                multi.remove(22)
+                photon = False
                 
-        if scheme in [4,5]:
+        if scheme in [4,5] and not photon:
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
@@ -5797,7 +5906,17 @@ This implies that with decay chains:
                                  scheme) 
                                )
             self.history.append("define j = p")
-                
+
+        if photon:
+            logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme, including the photon." % scheme)
+            for container in ['p', 'j']:
+                if container in defined_multiparticles:
+                    defined_multiparticles.remove(container)
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' '.join([str(i) for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
         
         if defined_multiparticles:
             if 'all' in defined_multiparticles:
@@ -5981,7 +6100,9 @@ This implies that with decay chains:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
             # Make sure each otion in add_options appears only once
+            add_options.append('--mg5_path=%s'%MG5DIR)
             add_options = misc.make_unique(add_options)
+
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
@@ -6886,7 +7007,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
             signal.alarm(0)
             text = filetext.read().decode(errors='ignore').split('\n')
             web_version = int(text[0].strip())
@@ -7573,9 +7694,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if log:
                 logger.info('set output information to level: %s' % level)
         elif args[0].lower() == "ewscheme":
-            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+            if args[1] == 'external':
+                logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
                                               (self._curr_model.get('name'), args[1]))
-            logger.info("Importing a model will restore the default scheme")
+            else:
+                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
+            logger.info("Importing a new model will restore the default scheme")
+
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
@@ -7712,6 +7837,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.warning("Turning off option 'loop_color_flows'"+\
                     " since it is not available for non-optimized loop output.")
                 self.do_set('loop_color_flows False',log=False)
+        elif args[0] == "nlo_mixed_expansion":
+            self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1],bool,args[0])
         elif args[0] == 'loop_color_flows':
             if log:
                     logger.info('set loop color flows to %s' % args[1])
@@ -7835,7 +7962,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
         # True/False formatting
-        elif args[0] in ['crash_on_error', 'auto_convert_model']:
+        elif args[0] in ['crash_on_error', 'auto_convert_model', 'acknowledged_v3.1_syntax']:
             try:
                 tmp = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -8752,6 +8879,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             param = param_card['decay'].get((pid,))
             param.value = width
             param.format = 'float'
+            if pid == 25:
+                refs=['hep-ph/9704448','arXiv:1801.09506 [hep-ph]']
+                logger.info(" You are using program 'HDECAY', please cite refs: \033[92m%s\033[0m. " % ', '.join(refs), '$MG:BOLD')
             if pid not in param_card['decay'].decay_table:
                 continue
             del param_card['decay'].decay_table[pid] # reset the BR

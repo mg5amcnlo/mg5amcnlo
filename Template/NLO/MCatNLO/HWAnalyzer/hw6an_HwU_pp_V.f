@@ -27,6 +27,7 @@ C----------------------------------------------------------------------
       SUBROUTINE HWABEG
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
       real * 8 xm0,gam,xmlow,xmupp,bin
@@ -49,7 +50,7 @@ c
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)

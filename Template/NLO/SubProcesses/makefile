@@ -8,7 +8,7 @@ LIBS = $(LIBDIR)libgeneric.a
 READ40=read40.o
 
 # Files to collect all the events in the separate integration channels into a single file
-COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o
+COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o orderstags_glob.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<

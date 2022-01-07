@@ -537,3 +537,11 @@ c
 
       return
       end
+
+      INTEGER FUNCTION GET_NHEL(HEL, IPART)
+      implicit none
+      integer hel
+      integer ipart
+      get_nhel = 99
+      return 
+      end

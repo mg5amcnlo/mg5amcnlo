@@ -8,10 +8,12 @@ CUTTOOLSDIR= ./CutTools/
 IREGIDIR= ./IREGI/src/
 STDHEPDIR= ./StdHEP/
 
-GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o	\
-	  run_printout.o dgauss.o ranmar.o setrun.o
+GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o		\
+	  run_printout.o dgauss.o ranmar.o setrun.o derivative.o	\
+	  zerox64_cernlib.o
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
+.f90.o: ; $(FC) $(FFLAGS) -c $*.f90
 
 all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
     $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc

@@ -23,7 +23,7 @@ c Works with td and HwU for the moment
       integer ione
       parameter (ione=1)
       character*80 event_file
-      character*140 buff
+      character*1000 buff
       character*9 ch1
       logical AddInfoLHE,do_rwgt_scale_loc,do_rwgt_pdf_loc
       logical usexinteg,mint

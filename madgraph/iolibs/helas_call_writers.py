@@ -15,7 +15,7 @@
 """Classes for writing Helas calls. HelasCallWriter is the base class."""
 from __future__ import absolute_import
 import re
-
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.helas_objects as helas_objects
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -25,6 +25,8 @@ import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
 from six.moves import range
+if madgraph.ordering:
+    set	= misc.OrderedSet
 
 class HelasWriterError(Exception):
     """Class for the error of this module """

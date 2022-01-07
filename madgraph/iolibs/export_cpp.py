@@ -1375,7 +1375,6 @@ class OneProcessExporterCPP(object):
                 res = res + ')'
 
             res += ';'
-
             res_list.append(res)
 
         return "\n".join(res_list)
