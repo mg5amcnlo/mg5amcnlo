@@ -14,7 +14,7 @@ c handling_lhe_events.f fill_MC_mshell.f
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       character*80 event_file,fname1,executable,inputfile
-      character*140 buff
+      character*1000 buff
       character*10 MonteCarlo
       character*3 str
       logical back

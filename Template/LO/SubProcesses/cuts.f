@@ -257,22 +257,6 @@ c               call set_ren_scale(P,scale)
 c            endif
 c         endif
          
-c         if(.not.fixed_fac_scale) then
-c            call set_fac_scale(P,q2fact)
-c            if(q2fact(1).eq.0d0.or.q2fact(2).eq.0d0) then
-c               write(6,*) 
-c               write(6,*) '* >>>>>>>>>ERROR<<<<<<<<<<<<<<<<<<<<<<<*'
-c               write(6,*) ' Dynamical renormalization scale choice '
-c               write(6,*) ' selected but user subroutine' 
-c               write(6,*) ' set_fac_scale not edited in file:setpara.f'
-c               write(6,*) ' Switching to a fixed_fac_scale choice'
-c               write(6,*) ' with q2fact(i)=zmass**2'
-c               fixed_fac_scale=.true.
-c               q2fact(1)=91.2d0**2
-c               q2fact(2)=91.2d0**2
-c               write(6,*) 'scales=',q2fact(1),q2fact(2)
-c            endif
-c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
@@ -318,11 +302,12 @@ c     Also make sure there's no INF or NAN
 c
 c     Limit S_hat
 c
-c      if (x1*x2*stot .gt. 500**2) then
-c         passcuts=.false.
-c         return
-c      endif
-
+      if (dsqrt_shat.ne.0d0)then
+         if (nincoming.eq.2.and.sumdot(p(0,1),p(0,2),1d0) .lt. dsqrt_shat**2) then
+            passcuts=.false.
+            return
+         endif
+      endif
 C $B$ DESACTIVATE_CUT $E$ !This is a tag for MadWeight
 
       if(debug) write (*,*) '============================='
@@ -1240,7 +1225,7 @@ C...Set couplings if event passed cuts
          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
       endif
 
-      if(.not.fixed_fac_scale) then
+      if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
          call set_fac_scale(P,q2fact)
       endif
 

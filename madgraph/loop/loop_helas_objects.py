@@ -130,7 +130,7 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
 
         answer=[]
         integer_sum=0
-        for coupl in list(set(self['UVCT_couplings'])):
+        for coupl in misc.make_unique(self['UVCT_couplings']):
             if isinstance(coupl,int):
                 integer_sum+=coupl
             else:
@@ -2368,19 +2368,19 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         else:
             last_relevant_index=4
 
-        return list(set([lamp.get_call_key()[1:last_relevant_index] \
+        return misc.make_unique([lamp.get_call_key()[1:last_relevant_index] \
           for ldiag in self.get_loop_diagrams() for lamp in \
-                                                  ldiag.get_loop_amplitudes()]))
+                                                  ldiag.get_loop_amplitudes()])
 
     def get_used_wl_updates(self):
         """ Returns a list of the necessary updates of the loop wavefunction
         polynomials """
         
-        return list(set([(lwf.get_analytic_info('wavefunction_rank')-\
+        return misc.make_unique([(lwf.get_analytic_info('wavefunction_rank')-\
                                     lwf.get_analytic_info('interaction_rank'), 
                                     lwf.get_analytic_info('interaction_rank')) 
                                 for ldiag in self.get_loop_diagrams() 
-                                for lwf in ldiag.get('loop_wavefunctions')]))
+                                for lwf in ldiag.get('loop_wavefunctions')])
         
     def get_used_couplings(self):
         """Return a list with all couplings used by this

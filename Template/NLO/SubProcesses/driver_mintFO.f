@@ -133,7 +133,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      call initcluster
+      call fill_configurations_common
       call check_amp_split 
 c     
 c     Get user input
@@ -266,7 +266,7 @@ c
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write)
+     $     +t_write+t_coupl)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -285,6 +285,7 @@ c
       write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -326,9 +327,10 @@ c timing statistics
       data t_isum/0.0/
       data t_p_unw/0.0/
       data t_write/0.0/
+      data t_coupl/0.0/
       end
 
-
+      
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use weight_lines
       use extra_weights
@@ -424,10 +426,10 @@ c The nbody contributions
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
+      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
          pass_cuts_check=.true.
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
          call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
@@ -467,13 +469,14 @@ c The n+1-body contributions (including counter terms)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
+         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          call set_cms_stuff(mohdr)
+         if (ickkw.eq.3) call set_FxFx_scale(3,p)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
             pass_cuts_check=.true.
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
@@ -485,7 +488,6 @@ c The n+1-body contributions (including counter terms)
          if (passcuts_n1body) then
             pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
-            if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)
             call include_multichannel_enhance(2)
             call compute_real_emission(p,1d0)
@@ -496,6 +498,10 @@ c The n+1-body contributions (including counter terms)
 c Include PDFs and alpha_S and reweight to include the uncertainties
       if (ickkw.eq.-1) call include_veto_multiplier
       call include_PDF_and_alphas
+
+c Include the bias weight specified in the bias_weight_function
+      call include_bias_wgt
+
       if (doreweight) then
          if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
          if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
@@ -539,7 +545,6 @@ c Finalize PS point
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.false.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
       
@@ -728,7 +733,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c Vegas stuff
 c
@@ -825,8 +837,8 @@ c-----
                   write (*,*) 'ERROR: invalid configuration number',dconfig
                   stop 1
                endif
-               do i=1,mapconfig(0)
-                  if (iconfigs(kchan).eq.mapconfig(i)) then
+               do i=1,mapconfig(0,0)
+                  if (iconfigs(kchan).eq.mapconfig(i,0)) then
                      iconfigs(kchan)=i
                      exit
                   endif

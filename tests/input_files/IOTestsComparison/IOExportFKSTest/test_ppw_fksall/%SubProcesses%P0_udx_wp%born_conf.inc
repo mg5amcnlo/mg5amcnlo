@@ -10,8 +10,8 @@
       LOGICAL GFORCEBW(-MAX_BRANCHB_USED : -1, LMAXCONFIGSB_USED)
 
 C     Here are the congifurations
-C     Process: u d~ > w+ [ all = QED QCD ] QCD^2<=2 QED^2<=2
-C     Process: c s~ > w+ [ all = QED QCD ] QCD^2<=2 QED^2<=2
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     Diagram 1, Amplitude 1
       DATA MAPCONFIG(   1)/   1/
 C     Number of configs

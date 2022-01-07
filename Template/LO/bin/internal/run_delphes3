@@ -30,14 +30,14 @@ then
   then
       gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   else
-      gunzip --stdout $file | $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+      gunzip --stdout $file | $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   fi
 else
   if [ ${file: -4} == ".hep" ]
   then
       $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file
   else
-      $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
+      $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
   fi
 fi
 

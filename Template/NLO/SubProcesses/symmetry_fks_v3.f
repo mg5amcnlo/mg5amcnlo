@@ -102,6 +102,7 @@ c factors. Hence, simply use the first fks_configuration.
       call setcuts               !Sets up cuts 
       call printout
       call run_printout
+      call fill_configurations_common
       iconfig=1
       ichan=1
       iconfigs(1)=iconfig
@@ -125,6 +126,7 @@ c
       new_point=.true.
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
+      call set_cms_stuff(-100)
       do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
      $     .or. p_born(0,1).le.0d0) .and. ntry.lt.10000)
          do j=1,ndim
@@ -133,6 +135,7 @@ c
          new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
+         call set_cms_stuff(-100)
          ntry=ntry+1
       enddo
       write(*,*) 'ntry',ntry
@@ -383,4 +386,5 @@ c
             endif
          endif
       enddo
+      close(26)
       end

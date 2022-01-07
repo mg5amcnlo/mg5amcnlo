@@ -402,6 +402,12 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+C     Common blocks
+ 
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
       integer nb_spin_state(2)
       data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
       common /nb_hel_state/ nb_spin_state
@@ -440,6 +446,18 @@ C ----------
 C     Make sure cuts are evaluated for first subprocess
 C      CUTSDONE=.FALSE.
 C      CUTSPASSED=.FALSE.
+
+	  if(pdlabel.eq.'dressed'.and.DS_get_dim_status('ee_mc').eq.-1)then
+	  	  call DS_register_dimension('ee_mc', 0)
+c		  ! set both mode 1: resonances, 2: no resonances to 50-50
+		  call DS_add_bin('ee_mc', 1)
+		  call DS_add_bin('ee_mc', 2)
+		  call DS_add_entry('ee_mc', 1, 0.5d0, .true.)
+		  call DS_add_entry('ee_mc', 2, 0.5d0, .true.)
+		  call DS_update_grid('ee_mc')
+          endif				      
+
+
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
@@ -529,7 +547,8 @@ C   IMODE.EQ.0, regular run mode
 	  IF(MC_grouped_subproc.and.DS_dim_index(run_grid, 'PDF_convolution',.True.).eq.-1) then
 	    call DS_register_dimension('PDF_convolution', 0, all_grids=.False.)
 	  ENDIF
-	
+
+
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
 C     Turn caching on in dsigproc to avoid too many calls to switchmom
@@ -989,3 +1008,12 @@ C
      %(print_zero_amp)s
      return
      end
+
+
+     integer function get_nhel(hel,partid)
+      implicit none
+      integer hel,partid
+      write(*,*) "this type of pdf is not support with group_subprocess=True. regenerate process with: set group_subprocesses false"
+      stop 1
+      return
+      end

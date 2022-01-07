@@ -255,7 +255,7 @@ class EventFile(object):
                     self.banner = ''
                     break 
                 if 'b' in mode or self.zip_mode:
-                    line = str(line.decode(self.encoding))
+                    line = str(line.decode(self.encoding,errors='ignore'))
                 if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
@@ -331,7 +331,7 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode or self.zip_mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<event' in line:
                 mode = 1
@@ -361,13 +361,13 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<eventgroup' in line:
                 events=[]
                 text = ''
             elif '<event' in line:
-                text = []
+                text = ''
                 mode=1
             elif '</event>' in line:
                 if self.parsing:
@@ -2670,7 +2670,7 @@ class OneNLOWeight(object):
             bjks : %(bjks)s
             scales**2, gs: %(scales2)s %(gs)s
             born/real related : %(born_related)s %(real_related)s
-            type / nfks : %(type)s  %(nfks)s
+            type / nfks : %(orderflag)s %(type)s  %(nfks)s
             to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
             ref_wgt :  %(ref_wgt)s""" % self.__dict__
             return out
@@ -2693,6 +2693,7 @@ class OneNLOWeight(object):
             to_add('%.10e', self.real)
             to_add('%i', self.nexternal)
             to_add('%i', self.pdgs)
+            to_add('%i', self.orderflag)
             to_add('%i', self.qcdpower)
             to_add('%.10e', self.bjks)
             to_add('%.10e', self.scales2)
@@ -2744,12 +2745,12 @@ class OneNLOWeight(object):
         #    from example: 21 2 -11 12 1 2
         self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
         flag = 6+self.nexternal # new starting point for the position
+        # 5[pre] next integer is the expansion order defined at NLO (from example 404)
+        # New since 3.1.0.
+        self.orderflag = int(data[flag])
         # 5. next integer is the power of g_strong in the matrix elements (as before)
         #    from example: 2
-        self.qcdpower = int(data[flag])
-        # 5[bis] next integer is the expansion order defined at NLO (from example 404)
-        # New since 3.1.0.
-        self.orderflag = int(data[flag+1])
+        self.qcdpower = int(data[flag+1])
         flag= flag+1
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
         #    from example: 0.52500539D-02 0.30205908D+00 

@@ -490,7 +490,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return list(set(out))
+            return misc.make_unique(out)
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):

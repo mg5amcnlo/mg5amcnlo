@@ -458,7 +458,7 @@ class FortranWriter(FileWriter):
                 else:
                     if not line.endswith('\n'):
                         line = '%s\n' % line
-                    file.writelines(self, line)
+                    super(FileWriter,self).writelines(line)
             else:
                 removed.append(line)
                 
@@ -495,7 +495,8 @@ class CPPWriter(FileWriter):
                             '^private': standard_indent,
                             '^protected': standard_indent}
     
-    spacing_patterns = [('\s*\"\s*}', '\"'),
+    spacing_patterns = [
+                        ('\s*\"\s*}', '\"'),
                         ('\s*,\s*', ', '),
                         ('\s*-\s*', ' - '),
                         ('([{(,=])\s*-\s*', '\g<1> -'),
@@ -511,7 +512,7 @@ class CPPWriter(FileWriter):
                         ('\s*<\s*', ' < '),
                         ('\s*!\s*', ' !'),
                         ('\s*/\s*', '/'),
-                        ('\s*\*\s*', ' * '),
+                        ('(?<!\(|\*)\s*\*\s*(?!\*)', ' * '),
                         ('\s*-\s+-\s*', '-- '),
                         ('\s*\+\s+\+\s*', '++ '),
                         ('\s*-\s+=\s*', ' -= '),
@@ -536,7 +537,8 @@ class CPPWriter(FileWriter):
                         ('^#include\s*<\s*(.*?)\s*>', '#include <\g<1>>'),
                         ('(\d+\.{0,1}\d*|\.\d+)\s*[eE]\s*([+-]{0,1})\s*(\d+)',
                          '\g<1>e\g<2>\g<3>'),
-                        ('\s+',' ')]
+                        ('\s+',' '),
+                        ('^\s*#','#')]
     spacing_re = dict([(key[0], re.compile(key[0])) for key in \
                        spacing_patterns])
 
@@ -806,6 +808,11 @@ class CPPWriter(FileWriter):
                 # If anything is left of myline, write it recursively
                 res_lines.extend(self.write_line(myline))
             return res_lines
+        
+        if line.startswith("#"):
+            res_lines.append('%s\n' % line)
+            return res_lines
+            
 
         # Write line(s) to file
         res_lines.append("\n".join(self.split_line(myline, \
@@ -898,7 +905,7 @@ class CPPWriter(FileWriter):
         for i in range(len(line_quotes)):
             line += line_quotes[i]
             if len(line_no_quotes) > i + 1:
-                 line += line_no_quotes[i+1]
+                line += line_no_quotes[i+1]
 
         # Add indent
         res_lines = [" " * self.__indent + line]

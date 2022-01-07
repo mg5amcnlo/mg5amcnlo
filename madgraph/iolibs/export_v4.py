@@ -38,6 +38,7 @@ import  collections
 
 import aloha
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -55,6 +56,7 @@ import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
 import madgraph.various.process_checks as process_checks
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph
 import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
@@ -67,10 +69,14 @@ from madgraph.iolibs.files import cp, ln, mv
 
 from madgraph import InvalidCmd
 
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 default_compiler= {'fortran': 'gfortran',
                        'f2py': 'f2py',
@@ -174,7 +180,8 @@ class ProcessExporterFortran(VirtualExporter):
         self.mgme_dir = MG5DIR
         self.dir_path = dir_path
         self.model = None
-
+        self.beam_polarization = [True,True]
+        
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
@@ -194,12 +201,33 @@ class ProcessExporterFortran(VirtualExporter):
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            # check handling for the polarization
+            for m in matrix_elements:
+                for me in m.get('matrix_elements'):
+                    for p in me.get('processes'):
+                        for beamid in [1,2]:
+                            for pid in p.get_initial_ids(beamid):
+                                spin = p.get('model').get_particle(pid).get('spin')
+                                if spin != 2:
+                                    self.beam_polarization[beamid-1] = False
+                                    break
+
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory(\
                                           me_group, fortran_model, group_number,
                                           second_exporter=second_exporter, second_helas=second_helas
                                           )
         else:
+             # check handling for the polarization
+            self.beam_polarization = [True,True]
+            for me in matrix_elements.get_matrix_elements():
+                for p in me.get('processes'):
+                    for beamid in [1,2]:
+                        for pid in p.get_initial_ids(beamid):
+                            spin = p.get('model').get_particle(pid).get('spin')
+                            if spin != 2:
+                                self.beam_polarization[beamid-1] = False
+                                break
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory(\
                                                    me, fortran_model, me_number,
@@ -258,7 +286,7 @@ class ProcessExporterFortran(VirtualExporter):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
@@ -283,7 +311,7 @@ class ProcessExporterFortran(VirtualExporter):
 #                if os.path.isfile(filename):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
-#                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
+#                     misc.copytree(filename, pjoin(self.dir_path,name), True)
             # misc.copytree since dir_path already exists
             misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
@@ -581,6 +609,13 @@ class ProcessExporterFortran(VirtualExporter):
             if os.path.isfile(pjoin(model_path, file)):
                 shutil.copy2(pjoin(model_path, file), \
                                      pjoin(self.dir_path, 'Source', 'MODEL'))
+
+        # add file for EWA 
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock = open(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'),'w')
+        fsock.write(template % {'MW': 'wmass','MZ':'zmass'})                 
+        fsock.close() 
+        ln(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'), self.dir_path + '/Source/PDF')
 
 
     def make_model_symbolic_link(self):
@@ -990,11 +1025,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          for process in matrix_element.get('processes')])
 
 
-    def get_helicity_lines(self, matrix_element,array_name='NHEL'):
+    def get_helicity_lines(self, matrix_element,array_name='NHEL', add_nb_comb=False):
         """Return the Helicity matrix definition lines for this matrix element"""
 
         helicity_line_list = []
-        i = 0
+        i = 0            
+        if add_nb_comb:
+            spins = matrix_element.get_spin_state()
+            spins.insert(0, len(spins))
+            helicity_line_list.append(\
+                ("DATA ("+array_name+"(I,0),I=1,%d) /" + \
+                 ",".join(['%2r'] * (len(spins)-1)) + "/") % tuple(spins))
+            
         for helicities in matrix_element.get_helicity_matrix():
             i = i + 1
             int_list = [i, len(helicities)]
@@ -1410,7 +1452,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 # the same coefficient (up to a sign), put it in front
                 list_fracs = [abs(coefficient[0][1]) for coefficient in coefs]
                 common_factor = False
-                diff_fracs = list(set(list_fracs))
+                diff_fracs = misc.make_unique(list_fracs)
                 if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                     common_factor = True
                     global_factor = diff_fracs[0]
@@ -1461,7 +1503,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             start_time = 0
         
         res_list = []
-        #misc.sprint(len(all_element))  
         
         self.myjamp_count = 0
         for key in all_element:
@@ -1505,8 +1546,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             else:
                 res_list.append(' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb))  
 
-
-#        misc.sprint(new_mat)
         jamp_res = collections.defaultdict(list)
         max_jamp=0
         for (jamp, var), factor in new_mat.items():
@@ -1606,6 +1645,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model = processes[0].get('model')
 
         pdf_definition_lines = ""
+        ee_pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
 
@@ -1629,6 +1669,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
+            if tuple(initial_states) in [([-11],[11]), ([11],[-11]), ([-13],[13]),([13],[-13])]:
+                dressed_lep = True
+            else:
+                dressed_lep = False
+            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n"
+
+   
             # Prepare all variable names
             pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
                               sum(initial_states,[])])
@@ -1659,6 +1706,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
+                ee_pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i] if abs(pdg) in [11,13]]) + \
+                                                 "\n"
 
             # Get PDF data lines for all initial states
             for i in [0,1]:
@@ -1679,15 +1731,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n!LP=SIGN(1,LPP(IB(%d)))\n" \
                                  % (i + 1, i + 1)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
 
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
+
                         data = {'part':pdf_codes[initial_state],
                                 'beam' : i+1,
                                 'pdg': pdgtopdf[initial_state]
@@ -1696,15 +1749,21 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         if vector and subproc_group:
                             template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
                                          "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(%(beam)d, IVEC)))\n"
+                            if dressed_lep:
+                                raise Exception("vector code for lepton pdf not implemented")
                         elif subproc_group:
                             template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
                                          "XBK(IB(%(beam)d)),DSQRT(Q2FACT(%(beam)d)))\n"
                         elif vector:
                             template = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
                                          "ALL_XBK(%(beam)d,IVEC),DSQRT(ALL_Q2FACT(%(beam)d,IVEC)))\n"
+                            if dressed_lep:
+                                raise Exception("vector code for lepton pdf not implemented")
                         else:
                             template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
                                          "XBK(%(beam)d),DSQRT(Q2FACT(%(beam)d)))\n"
+                        if dressed_lep:
+                            template += "IF (PDLABEL.EQ.'dressed') %(part)s%(beam)d_components(1:4) = ee_components(1:4)\n" 
 
                         pdf_lines = pdf_lines + template % data
 
@@ -1727,9 +1786,17 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             pdf_lines = pdf_lines + "1d0*"
                     # Remove last "*" from pdf_lines
                     pdf_lines = pdf_lines[:-1] + "\n"
+                    # this is for the lepton collisions with electron luminosity 
+                    # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                    if dressed_lep:
+                        pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                             tuple(comp_list)
                     pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
+                    
+                    if not dressed_lep:
+                        ee_pdf_definition_lines = ""
             else:
-
                 # Add up PDFs for the different initial state particles
                 pdf_lines += "ENDDO\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
@@ -1749,12 +1816,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_lines = pdf_lines[:-1] + "\n"
                     pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
                     pdf_lines += '\n    ENDDO\n'
-        
-        if vector:
-            return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1]
+        	ee_pdf_definition_lines = ""
 
-        # Remove last line break from the return variables
-        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
+        # Remove last line break from the return variables                
+        if vector:
+            return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1], ee_pdf_definition_lines
+        else:
+            return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
     #===========================================================================
     # write_props_file
@@ -2041,7 +2109,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            out = out.decode()
+            out = out.decode(errors='ignore')
             if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
@@ -3015,9 +3083,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         super(ProcessExporterFortranMW, self).copy_template(model)        
 
         # Add the MW specific file
-        shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
+        misc.copytree(pjoin(MG5DIR,'Template','MadWeight'),
                                pjoin(self.dir_path, 'Source','MadWeight'), True)        
-        shutil.copytree(pjoin(MG5DIR,'madgraph','madweight'),
+        misc.copytree(pjoin(MG5DIR,'madgraph','madweight'),
                         pjoin(self.dir_path, 'bin','internal','madweight'), True) 
         files.mv(pjoin(self.dir_path, 'Source','MadWeight','src','setrun.f'),
                                       pjoin(self.dir_path, 'Source','setrun.f'))
@@ -3036,6 +3104,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             # Probably madweight already called
             pass
         
+        ln(pjoin(self.dir_path, 'Source','PDF','eepdf.inc'),pjoin(self.dir_path, 'Source'))
+
         # Copy the different python file in the Template
         self.copy_python_file()
         # create the appropriate cuts.f
@@ -3064,7 +3134,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -3215,7 +3285,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         #proc_charac
-        self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
+        if hasattr(self, "nlo_mixed_expansion"):
+            self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         self.create_proc_charac()
 
         # Write maxparticles.inc based on max of ME's/subprocess groups
@@ -3568,11 +3639,12 @@ c     channel position
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
 
 
@@ -3921,7 +3993,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -4507,6 +4579,31 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         replace_dict['nb_temp_jamp'] = nb_temp
 
+        if self.beam_polarization == [True, True]:
+            replace_dict['beam_polarization'] = """
+                         DO JJ=1,nincoming
+               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                 T=T*ABS(POL(JJ))
+               ELSE IF(POL(JJ).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(JJ)))
+               ENDIF
+             ENDDO
+            """
+        else:
+            replace_dict['beam_polarization'] = ""
+            for i in [0,1]:
+                if self.beam_polarization[i]:
+                    replace_dict['beam_polarization'] = """
+                                   ! handling only one beam polarization here. Second beam can be handle via the pdf.
+                                   IF(POL(%(bid)i).NE.1d0.AND.NHEL(%(bid)i,I).EQ.INT(SIGN(1d0,POL(%(bid)i)))) THEN
+                 T=T*ABS(POL(%(bid)i))
+               ELSE IF(POL(%(bid)i).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(%(bid)i)))
+               ENDIF """ % {'bid': i+1}
+
+
+
+
         replace_dict['template_file'] = pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
         replace_dict['template_file2'] = pjoin(_file_path, \
@@ -4596,11 +4693,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['dsig_line'] = dsig_line
         replace_dict['conv'] = conv_factor
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines = \
@@ -4628,8 +4726,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
 
-        if not isinstance(self, ProcessExporterFortranMEGroup):
-            ncomb=matrix_element.get_helicity_combinations()
+        # extract and replace ncombinations, helicity lines
+        ncomb=matrix_element.get_helicity_combinations()
+        replace_dict['ncomb']= ncomb
+        helicity_lines = self.get_helicity_lines(matrix_element, add_nb_comb=True)
+        replace_dict['helicity_lines'] = helicity_lines
+        
+        if not isinstance(self, ProcessExporterFortranMEGroup):            
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         else:
             replace_dict['read_write_good_hel'] = ""
@@ -4955,6 +5058,8 @@ c           This is dummy particle used in multiparticle vertices
             # pass to ping-pong strategy for t-channel for 3 ore more T-channel
             #  this is directly related to change in genps.f
             tstrat = self.opt.get('t_strategy', 0)
+            if isinstance(self, madgraph.loop.loop_exporters.LoopInducedExporterMEGroup):
+                tstrat = 2
             tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat, self.model)
             
             # For s_and_t_channels (to be used later) use only first config
@@ -5048,6 +5153,7 @@ c           This is dummy particle used in multiparticle vertices
         # no need to modified anything if 1 or less T-Channel
         #Note that this counts the number of vertex (one more vertex compare to T)
         #ProcessExporterFortranME.ordering +=1
+
         if len(tchannels) < 3 or tstrat == 2 or not model:
             return tchannels, 2
         elif tstrat == 1:
@@ -5186,7 +5292,7 @@ c           This is dummy particle used in multiparticle vertices
             old_vert = tchannels.pop()
                 
             #copy the vertex /leglist to avoid side effects
-            new_vert = base_objects.Vertex(old_vert)
+            new_vert = copy.copy(old_vert)
             new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
             # vertex taken from the bottom we have 
             # (-N+1 X > -N) we need to flip to pass to 
@@ -6495,6 +6601,7 @@ class UFO_model_to_mg4(object):
         self.create_intparam_def(dp=True,mp=False)
         if self.opt['mp']:
             self.create_intparam_def(dp=False,mp=True)
+        self.create_ewa()
         
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
@@ -6663,6 +6770,7 @@ class UFO_model_to_mg4(object):
                     complex_mass.add('CMASS_%s' % one_mass)
             
         if masses:
+            masses = sorted(list(masses))
             fsock.writelines('double precision '+','.join(masses)+'\n')
             fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
             if self.opt['mp']:
@@ -6676,6 +6784,7 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+m for m in masses])+'\n\n')                
 
         if widths:
+            widths = sorted(list(widths))
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
             if self.opt['mp']:
@@ -6871,6 +6980,32 @@ class UFO_model_to_mg4(object):
         self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
         self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
         
+
+    def create_ewa(self):
+        """create electroweakFlux.inc 
+           this file only need the correct name for the mass for the W and Z
+        """
+
+        
+        try:
+            fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
+        except:
+            logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
+            return
+
+        masses = {}
+        for particle in self.model['particles']:
+            if particle.get('pdg_code') == 24:
+                masses['MW'] = particle.get('mass')
+            elif particle.get('pdg_code') == 23:
+                masses['MZ'] =  particle.get('mass')
+            if len(masses) == 2:
+                break
+
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock.write(template % masses)                 
+        fsock.close()
+
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters

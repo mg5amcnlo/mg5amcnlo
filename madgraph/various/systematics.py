@@ -96,6 +96,16 @@ class Systematics(object):
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
+        if  self.banner.run_card.LO:
+            scalefact = self.banner.get('run_card', 'scalefact')
+            if scalefact != 1:
+                self.orig_dyn = -1
+        else:
+            over1 = self.banner.get('run_card', 'mur_over_ref')
+            over2 = self.banner.get('run_card', 'muf_over_ref')
+            if over1 != 1 or over2 !=1:
+                self.orig_dyn = -1
+
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
         matching_mode = self.banner.get('run_card', 'ickkw')
 
@@ -116,6 +126,47 @@ class Systematics(object):
             self.b1 = beam1//2212
             self.b2 = beam2//2212
     
+        # update in case of e/mu beams with eva
+        isEVA=False
+        isEVAxDIS=False
+        # eva-on-eva or eva-on-parton
+        if self.banner.run_card['pdlabel']=='eva':      
+            if (abs(beam1) == 11 or abs(beam1) == 13) and self.banner.run_card['lpp1'] != 0:
+                self.b1 = beam1
+            else:
+                self.b1 = 0
+            if (abs(beam2) == 11 or abs(beam2) == 13) and self.banner.run_card['lpp2'] != 0:
+                self.b2 = beam2
+            else:
+                self.b2 = 0
+            # not actually eva
+            if self.b1==0 and self.b2==0:
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s (%s)' % (self.b1,self.b2) )
+            # eva-on-parton or parton-on-eva
+            elif self.b1==0 or self.b2==0:
+                isEVA=True
+            isEVA=True
+            pdf='0'
+        # eva-on-DIS(lhapdf)
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf'):
+            if abs(beam1) == 11 or abs(beam1) == 13:
+                self.b1 = beam1
+            else:
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b1)
+            #self.b2 = beam2//2212
+            isEVAxDIS=True
+        # DIS(lhapdf)-on-eva
+        elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva'):
+            if abs(beam2) == 11 or abs(beam2) == 13:
+                self.b2 = beam2
+            else:
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
+            #self.b1 = beam1//2212
+            isEVAxDIS=True
+        # none
+        if(self.banner.run_card['pdlabel']=='none'):
+            raise SystematicsError('Systematics not supported for pdlabel=none')
+
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
         self.only_beam = only_beam 
@@ -174,15 +225,16 @@ class Systematics(object):
         if isinstance(lhapdf_config, list):
             lhapdf_config = lhapdf_config[0]
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
-        if not lhapdf:
+        if not lhapdf and not isEVA:
             log('fail to load lhapdf: doe not perform systematics')
             return
-        lhapdf.setVerbosity(0)
+        elif lhapdf:
+            lhapdf.setVerbosity(0)
         self.pdfsets = {}  
         if isinstance(pdf, str):
             pdf = pdf.split(',')
             
-        if isinstance(pdf,list) and isinstance(pdf[0],(str,int)):
+        if isinstance(pdf,list) and isinstance(pdf[0],(str,int)) and not isEVA:
             self.pdf = []
             for data in pdf:
                 if data == 'errorset':
@@ -215,18 +267,24 @@ class Systematics(object):
             self.pdf = pdf
             
         for p in self.pdf:
-            if p.lhapdfID == self.orig_pdf:
+            if isEVA:
+                break
+            elif p.lhapdfID == self.orig_pdf:
                 self.orig_pdf = p
                 break
-        else:
-            self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
-        if not self.b1 == 0 == self.b2: 
-            self.log( "# events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+            else:  
+                self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
+        if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
+            self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+        elif isEVAxDIS:
+            self.log( "# Events generated with EVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+        elif isEVA:
+            self.log( "# Events generated with EVA PDF.")
         # create all the function that need to be called
         self.get_all_fct() # define self.fcts and self.args
         
         # For e+/e- type of collision initialise the running of alps
-        if self.b1 == 0 == self.b2:
+        if self.b1 == 0 == self.b2 or isEVA:
             try:
                 from models.model_reader import Alphas_Runner
             except ImportError:
@@ -357,15 +415,17 @@ class Systematics(object):
             
             if self.is_lo:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
-                    self.log( '# currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# Currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
             else:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
-                    self.log( '# currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# Currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
                     
             self.new_event() #re-init the caching of alphas/pdf
             self.remove_old_wgts(event)
             if self.is_lo:
+#                print(self.args)
                 wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
+#                print(wgts)
             else:
                 wgts = [self.get_nlo_wgt(event, *arg) for arg in self.args]
             
@@ -428,7 +488,11 @@ class Systematics(object):
         for i,arg in enumerate(self.args):
             
             to_print = list(arg)
-            to_print[4] = to_print[4].lhapdfID
+            if self.banner.run_card['pdlabel']=='eva':
+                to_print[4] = 0
+            else:
+                to_print[4] = to_print[4].lhapdfID
+
             to_print.append(all_cross[i])  
             to_report = []  
             stdout.write('%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s\n' % tuple(to_print)) 
@@ -461,7 +525,7 @@ class Systematics(object):
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
-            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1):
+            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1) and self.banner.run_card['pdlabel']!='eva':
                 pdfset = pdf.set()
                 if pdfset.lhapdfID in self.pdfsets:
                     if pdfset.lhapdfID not in pdfs :
@@ -483,7 +547,9 @@ class Systematics(object):
             resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100))
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
-        if self.orig_pdf.lhapdfID in pdfs:
+        if self.banner.run_card['pdlabel']=='eva':
+            resume.write( '# PDF variation not available for EVA.\n')
+        elif self.orig_pdf.lhapdfID in pdfs:
             lhapdfid = self.orig_pdf.lhapdfID
             values = pdfs[lhapdfid]
             pdfset = self.pdfsets[lhapdfid]
@@ -546,7 +612,7 @@ class Systematics(object):
         in_alps = False
         
         text = ''
-        
+
         default = self.args[0]
         for arg in self.args[1:]:
             mur, muf, alps, dyn, pdf = arg[:5]
@@ -569,8 +635,7 @@ class Systematics(object):
                 text += "</weightgroup> # ALPS\n"
                 in_alps=False
             
-            if mur == muf == 1 and dyn==-1 and alps ==1:
-                
+            if mur == muf == 1 and dyn==-1 and alps ==1 and  self.banner.run_card['pdlabel']!='eva':
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET to PDFSET\n"
@@ -594,8 +659,7 @@ class Systematics(object):
                 text += "</weightgroup> PDF \n"
                 in_pdf=False                
                  
-                
-                
+
             tag, info = '',''
             if mur!=1.:
                 tag += 'MUR="%s" ' % mur
@@ -615,7 +679,9 @@ class Systematics(object):
                 tag += 'DYN_SCALE="%s" ' % dyn
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
-            if pdf != self.orig_pdf:
+            if self.banner.run_card['pdlabel']=='eva':
+                tag += 'PDF="%s" ' % 0                
+            elif pdf != self.orig_pdf:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
@@ -694,7 +760,9 @@ class Systematics(object):
                 info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
-            if pdf != self.orig_pdf:
+            if self.banner.run_card['pdlabel']=='eva':
+                info += 'PDF=%s MemberID=%s' % (0,0)
+            elif pdf != self.orig_pdf:
                 info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
 
         return info
@@ -707,7 +775,10 @@ class Systematics(object):
                 tags.append('ALPSFACT="%s" ' % alps)
             if dyn!=-1.:
                 tags.append('DYN_SCALE="%s" ' % dyn)
-            tags.append('PDF="%s" ' % pdf.lhapdfID)
+            if self.banner.run_card['pdlabel']=='eva':
+                tags.append('PDF="%s" ' % 0)
+            else:
+                tags.append('PDF="%s" ' % pdf.lhapdfID)
             return " ".join(tags)
      
 
@@ -751,13 +822,14 @@ class Systematics(object):
         self.args = [default] + [arg for arg in all_args if arg!= default]
 
         # add the default before the pdf scan to have a full grouping
-        pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
-        if pdfplusone:
-            pdfplusone = default[:-1] + [pdfplusone[0]] 
-            index = self.args.index(pdfplusone)
-            self.args.insert(index, default)
+        if self.banner.run_card['pdlabel']!='eva': 
+            pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
+            if pdfplusone:
+                pdfplusone = default[:-1] + [pdfplusone[0]] 
+                index = self.args.index(pdfplusone)
+                self.args.insert(index, default)
 
-        self.log( "#Will Compute %s weights per event." % (len(self.args)-1))
+        self.log( "# Will Compute %s weights per event." % (len(self.args)-1))
         return
     
     def new_event(self):
@@ -862,7 +934,6 @@ class Systematics(object):
         pdf is a lhapdf object!"""
         
         loinfo = event.parse_lo_weight()
-
         if dyn == -1:
             mur = loinfo['ren_scale']
             if self.b1 != 0 and loinfo['pdf_pdg_code1']:
@@ -876,12 +947,17 @@ class Systematics(object):
         else:
             if dyn == 1: 
                 mur = event.get_et_scale(1.)
+#                print(1,mur)
             elif dyn == 2:
                 mur = event.get_ht_scale(1.)
+#                print(2,mur)
             elif dyn == 3:
                 mur = event.get_ht_scale(0.5)
+#                print(3,mur)
             elif dyn == 4:
                 mur = event.get_sqrts_scale(1.)
+#                print(4,mur)
+#            print(mur)
             if math.isnan(mur):
                 return mur
             muf1 = mur
@@ -897,10 +973,8 @@ class Systematics(object):
             else:
                 loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
 
-
-            
         # MUR part
-        if self.b1 == 0 == self.b2:
+        if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
             if loinfo['n_qcd'] != 0:
                 wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
             else:
@@ -909,13 +983,35 @@ class Systematics(object):
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
 
         # MUF/PDF part
-        if self.b1 and muf1:
-            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
+        if self.b1 and muf1 :
+            if self.banner.run_card['pdlabel']=='eva' or \
+               self.banner.run_card['pdlabel1']=='eva':
+                vPol = event[0].helicity
+                vPID = event[0].pid
+                ievo = self.banner.run_card['ievo_eva']
+                if ievo != 0 and len(loinfo['pdf_x1']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
+                xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
+                if abs(vPID) in [7,22,23,24]:
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
+            else:
+                wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
         if self.b2 and muf2: 
-            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
+            if self.banner.run_card['pdlabel']=='eva' or \
+               self.banner.run_card['pdlabel2']=='eva':
+                vPol = event[1].helicity
+                vPID = event[1].pid
+                ievo = self.banner.run_card['ievo_eva']
+                if ievo != 0 and len(loinfo['pdf_x2']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
+                xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
+                if abs(vPID) in [7,22,23,24]:
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
+            else:
+                wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
 
         for scale in loinfo['asrwt']:
-            if self.b1 == 0 == self.b2:
+            if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
                 wgt = self.alpsrunner(Dalps*scale)
             else:
                 wgt *= pdf.alphasQ(Dalps*scale)
@@ -931,6 +1027,7 @@ class Systematics(object):
             wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale, beam=2)
             wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale, beam=2)            
         
+#        print(wgt)
         return wgt
 
     def get_nlo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
@@ -993,7 +1090,7 @@ class Systematics(object):
                 
                 
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
-                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=2):
+                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=1):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
                         misc.sprint(onewgt)
                         misc.sprint(cevent)
@@ -1001,8 +1098,65 @@ class Systematics(object):
                         raise Exception('not enough agreement between stored value and computed one')
                 
         return wgt
-                            
 
+
+    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
+        if abs(vPol) == 1:
+            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
+        elif vPol == 0:
+            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+        else:
+            raise SystematicsError("unknow EVA vPol %s " % vPol)
+
+    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        return 1e0
+
+    def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        if ievo != 0:
+            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
+        if(mufMin<0):
+            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
+        elif(muf < mufMin*1.001):
+            return 0e0
+        else:
+            return math.log(muf/mufMin) 
+
+    def call_eva_get_mufMin_byPID(self, vPID, fPID):
+        return {
+            7:  self.call_eva_get_mf_by_PID(fPID),
+            22: self.call_eva_get_mf_by_PID(fPID),
+            23: self.call_eva_get_mv_by_PID(vPID),
+            24: self.call_eva_get_mv_by_PID(vPID)
+        }.get(abs(vPID),-1)
+
+    def call_eva_get_mf_by_PID(self, fPID):
+        # these must be the same as in ElectroweakFlux.inc
+        return {
+            1:  4.67e-3,
+            2:  2.16e-3,
+            3:  93.0e-3,
+            4:  1.27e0,
+            5:  4.18e0,
+            6:  172.76e0,
+            11: 0.5109989461e-3,
+            13: 105.6583745e-3,
+            15: 1.77686e0
+        }.get(abs(fPID),-1)
+
+    def call_eva_get_mv_by_PID(self, vPID):
+        # these must be the same as in ElectroweakFlux.inc
+         return {
+            7:      0e0,
+            22:     0e0,
+            23:     91.1876e0,
+            24:     80.379e0
+        }.get(abs(vPID),-1)
+       
+        
+
+
+    
 def call_systematics(args, result=sys.stdout, running=True,
                      log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
@@ -1132,13 +1286,3 @@ if __name__ == "__main__":
     if not lhapdf:
             sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf_config=')
     call_systematics(sys_args)
-    
-
-   
-   
-        
-        
-        
-    
-    
-        

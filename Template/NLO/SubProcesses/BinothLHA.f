@@ -8,6 +8,7 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
+      include "../../Source/MODEL/input.inc"
       include 'born_nhel.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
@@ -57,6 +58,7 @@ c statistics for MadLoop
       integer getordpowfromindex_ml5
       integer orders_to_amp_split_pos
       logical, allocatable, save :: keep_order(:)
+      include 'a0Gmuconv.inc'
       include 'orders.inc'
       integer amp_orders(nsplitorders)
       integer split_amp_orders(nsplitorders), iamp
@@ -74,9 +76,16 @@ c statistics for MadLoop
 
       logical updateloop
       common /to_updateloop/updateloop
+
+      integer get_n_tagged_photons
+      external get_n_tagged_photons
+      double precision get_virtual_a0Gmu_conv
+      external get_virtual_a0Gmu_conv 
+      integer ntagph, qed_pow_b
 c masses
       include 'pmass.inc'
       data nbad / 0 /
+
 
       IOErrCounter = 0
 c update the ren_scale for MadLoop and the couplings (should be the
@@ -93,8 +102,7 @@ c Ellis-Sexton scale)
       single  = 0d0
       double  = 0d0
       born_hel_from_virt = 0d0
-C     reset the amp_split array
-      amp_split(1:amp_split_size) = 0d0
+C     reset the various arrays
       amp_split_finite_ML(1:amp_split_size) = 0d0
       amp_split_poles_ML(1:amp_split_size,1) = 0d0
       amp_split_poles_ML(1:amp_split_size,2) = 0d0
@@ -256,6 +264,32 @@ c         firsttime_conversion=.false.
 c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
+
+c======================================================================
+c If there are tagged photon and other particles in the process, 
+C one must use a mixed Gmu-alpha0 renormalisation.
+      ntagph = get_n_tagged_photons() 
+      if (ntagph.ne.0) then
+        do i = 1, AMP_SPLIT_SIZE_BORN 
+          call amp_split_pos_to_orders(i, amp_orders)
+          born_wgt = amp_split(i)
+          ! this is the number of powers of 'e' in the born
+          qed_pow_b = amp_orders(qed_pos)
+          amp_orders(qed_pos) = amp_orders(qed_pos) + 2
+          if (amp_orders(qed_pos).gt.NLO_ORDERS(qed_pos)) cycle
+
+          amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = 
+     $        amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) +
+     $         get_virtual_a0Gmu_conv(qed_pow_b,ntagph,1,born_wgt)
+
+          amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = 
+     $        amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) +
+     $         get_virtual_a0Gmu_conv(qed_pow_b,ntagph,0,born_wgt)
+
+        enddo
+      endif
+c======================================================================
+
 c
 c Check poles for the first PS points when doing MC over helicities, and
 c for all phase-space points when not doing MC over helicities. Skip
@@ -268,7 +302,7 @@ c MadLoop initialization PS points.
          polecheck_passed = .true.
          ! loop over the full result and each of the amp_split
          ! contribution
-         do iamp=0,amp_split_size
+         do iamp=1,amp_split_size
           ! skip 0 contributions in the amp_split array
             if (iamp.ne.0) then
                if (amp_split_poles_FKS(iamp,1).eq.0d0.and.

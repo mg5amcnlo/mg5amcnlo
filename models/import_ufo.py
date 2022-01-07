@@ -142,7 +142,7 @@ def import_model_from_db(model_name, local_dir=False):
     data =get_model_db()
     link = None
     for line in data:
-        split = line.decode().split()
+        split = line.decode(errors='ignore').split()
         if model_name == split[0]:
             link = split[1]
             break
@@ -2528,6 +2528,9 @@ class RestrictModel(model_reader.ModelReader):
                         for use in  re_pat.findall(parameter.expr):
                             used.add(use)
                         
+        if madgraph.ordering:
+            used = sorted(used)
+            
         # modify the object for those which are still used
         for param in used:
             if not param:

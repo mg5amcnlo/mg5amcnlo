@@ -673,7 +673,7 @@ c
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      character*140 buff
+      character*1000 buff
       integer ifile,i,kk,oo
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
@@ -686,6 +686,8 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
       include './run.inc'
       include 'unlops.inc'
       integer n_orderstags
@@ -828,6 +830,9 @@ c
             endif
          endif
       endif
+      if (ickkw.eq.3) then
+         write(ifile,'(a)') trim(adjustl(ptclusstring))
+      endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -854,7 +859,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk,oo
-      character*140 buff
+      character*1000 buff
       character*80 string
       character*12 dummy12
       character*2 dummy2
@@ -867,6 +872,8 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
@@ -976,8 +983,15 @@ c
                read(ifile,'(a)')string
             endif
          endif
+         if (ickkw.eq.3) then
+            read(ifile,'(a)') ptclusstring
+         endif
          read(ifile,'(a)')string
       else
+         if (ickkw.eq.3) then
+            ptclusstring=buff
+            read(ifile,'(a)')buff
+         endif
          string=buff(1:len_trim(buff))
          buff=' '
       endif
@@ -1006,7 +1020,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       integer ifile,i,kk,oo
-      character*140 buff
+      character*1000 buff
       character*80 string
       character*12 dummy12
       character*2 dummy2
@@ -1024,6 +1038,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -1137,8 +1153,15 @@ c
                read(ifile,'(a)')string
             endif
          endif
+         if (ickkw.eq.3) then
+            read(ifile,'(a)') ptclusstring
+         endif
          read(ifile,'(a)')string
       else
+         if (ickkw.eq.3) then
+            ptclusstring=buff
+            read(ifile,'(a)')buff
+         endif
          string=buff(1:len_trim(buff))
          buff=' '
       endif
@@ -1160,6 +1183,7 @@ c
 
       subroutine copy_header(infile,outfile,nevts)
       implicit none
+      include 'run.inc'
       character*200 buff2
       integer nevts,infile,outfile
 c
@@ -1169,11 +1193,13 @@ c
          if(index(buff2,'= nevents').eq.0)
      &        write(outfile,'(a)') trim(buff2)
          if(index(buff2,'= nevents').ne.0) exit
+         if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
       enddo
       write(outfile,*)
      &     nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
+         if(index(buff2,'= ickkw').ne.0) read(buff2,*) ickkw
          write(outfile,'(a)')trim(buff2)
       enddo
 c

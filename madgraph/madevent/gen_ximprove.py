@@ -164,7 +164,7 @@ class gensym(object):
                                  stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(" ".encode())
-            stdout = stdout.decode('ascii')
+            stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
                 # note a continue is not enough here, we have in top to link
@@ -337,7 +337,7 @@ class gensym(object):
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(''.encode())
-            stdout = stdout.decode('ascii')
+            stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)
@@ -1903,6 +1903,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'packet': None, 
                     }
 
+            if self.readonly:
+                basedir = pjoin(os.path.dirname(__file__), '..','..','SubProcesses', info['P_dir'], info['directory'])
+                info['base_directory'] = basedir
 
             jobs.append(info)
           

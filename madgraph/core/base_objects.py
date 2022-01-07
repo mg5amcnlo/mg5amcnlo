@@ -25,6 +25,8 @@ import os
 import re
 import six
 StringIO = six
+
+import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
@@ -36,6 +38,9 @@ from functools import reduce
 
 logger = logging.getLogger('madgraph.base_objects')
 pjoin = os.path.join
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 #===============================================================================
 # PhysicsObject
@@ -1321,7 +1326,7 @@ class Model(PhysicsObject):
         # Set coupling hierachy
         hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
         # Special case for only QCD and QED couplings, unless already set
-        if self.get('coupling_orders') == set(['QCD', 'QED']):
+        if set(self.get('coupling_orders')) == set(['QCD', 'QED']):
             hierarchy['QED'] = 2
         return hierarchy
 
@@ -1411,7 +1416,7 @@ class Model(PhysicsObject):
                                           i.get('orders').keys()])])
             # Append the corresponding particles, excluding the
             # particles that have already been added
-            particles.append(set(sum([[p.get_pdg_code() for p in \
+            particles.append(misc.make_unique(sum([[p.get_pdg_code() for p in \
                                       inter.get('particles') if \
                                        p.get_pdg_code() not in sum_particles] \
                                       for inter in interactions[-1]], [])))
@@ -1663,6 +1668,9 @@ class Model(PhysicsObject):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
+        if isinstance(mode, str) and "_" in mode:
+            mode = set([s.lower() for s in mode.split('_')])
+
         assert mode in ["external",set(['mz','mw','alpha'])]
         
         try:
@@ -1807,7 +1815,7 @@ class Model(PhysicsObject):
 
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
-                depend = list(set(mass.depend + width.depend))
+                depend = misc.make_unique(mass.depend + width.depend)
                 if len(depend)>1 and 'external' in depend:
                     depend.remove('external')
                 depend = tuple(depend)
@@ -2082,6 +2090,7 @@ class Leg(PhysicsObject):
 
         else :
             return False
+
 
     # Make sure sort() sorts lists of legs according to 'number'
     def __lt__(self, other):
@@ -2454,6 +2463,8 @@ class Diagram(PhysicsObject):
         """Returns a nicely formatted string of the diagram content."""
 
         pass_sanity = True
+        removed_index = set()
+
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
@@ -2469,10 +2480,21 @@ class Diagram(PhysicsObject):
                 if __debug__ and len(used_leg) != len(set(used_leg)):
                     pass_sanity = False
                     responsible = id(vert)
+                if __debug__ and any(l['number'] in removed_index for l in vert['legs']):
+                    pass_sanity = False
+                    responsible = id(vert)
                     
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
+                    if __debug__:
+                        if vert['legs'][-1]['number'] != min([l['number'] for l in vert['legs'][:-1]]):
+                            pass_sanity = False
+                            responsible = id(vert)
+                        for l in vert['legs']:
+                            removed_index.add(l['number'])
+                        removed_index.remove(vert['legs'][-1]['number'])
+
                 lastleg = vert['legs'][-1]
                 if lastleg['polarization']:
                     mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
@@ -3092,7 +3114,7 @@ class Process(PhysicsObject):
                     mystr = mystr + 'sqrvirt = '
                 else:
                     mystr = mystr + self['NLO_mode'] + ' = '
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
@@ -3210,7 +3232,7 @@ class Process(PhysicsObject):
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
@@ -3442,11 +3464,16 @@ class Process(PhysicsObject):
 
         return len([leg for leg in self.get('legs') if leg.get('state') == False])
 
-    def get_initial_ids(self):
+    def get_initial_ids(self, beamid=0):
         """Gives the pdg codes for initial state particles"""
 
-        return [leg.get('id') for leg in \
+        if beamid == 0:
+            return [leg.get('id') for leg in \
                 [leg for leg in self.get('legs') if leg.get('state') == False]]
+        else:
+            return [leg.get('id') for leg in \
+                [leg for leg in self.get('legs') if leg.get('state') == False and
+                leg.get('number') == beamid]]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""
