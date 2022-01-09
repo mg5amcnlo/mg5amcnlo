@@ -1809,7 +1809,7 @@ class PY8Card(ConfigFile):
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
         # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
-        self.add_param("HEPMCoutput:file", 'auto')
+        self.add_param("HEPMCoutput:file", 'hepmc.gz')
 
         # Hidden parameters always written out
         # ====================================

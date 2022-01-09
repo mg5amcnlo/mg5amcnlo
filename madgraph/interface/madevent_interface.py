@@ -4195,20 +4195,17 @@ Beware that this can be dangerous for local multicore runs.""")
         tag = self.run_tag
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
-        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove', 'autonocompress']:
-            if PY8_Card['HEPMCoutput:file'] == 'autoremove':
-                self.to_store.append('nopy8')
-            elif 'nopy8' in self.to_store:
-                self.to_store.remove('nopy8')
 
-            if PY8_Card['HEPMCoutput:file'] == 'autonocompress':
-                self.to_store.append('nocompress')
-            elif 'nocompress' in self.to_store:
-                self.to_store.remove('nocompress')
+        # output format : hepmc/fifo
+        if "hepmc" in PY8_Card['HEPMCoutput:file'].lower():
 
-            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
-                                                  '%s_pythia8_events.hepmc'%tag)
+            if ".gz" in PY8_Card['HEPMCoutput:file'].lower():
+                if not 'compressHEPMC' in self.to_store:
+                    self.to_store.append('compressHEPMC')
+
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
+
         elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
             fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
             fifo_path  = None
@@ -5615,16 +5612,10 @@ tar -czf split_$1.tar.gz split_$1
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
             self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
-                if 'nopy8' in self.to_store:
-                    os.remove(file_path)
-                elif 'nocompress' in self.to_store:
-                    self.update_status('Storing Pythia8 files of previous run',
-                                                         level='pythia', error=True)
-                else:   
-                    self.update_status('Storing Pythia8 files of previous run', 
-                                                         level='pythia', error=True)
+                self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
+                if 'compressHEPMC' in self.to_store:
                     misc.gzip(file_path,stdout=file_path)
-    
+
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
         

@@ -2712,7 +2712,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #1 Get Rivet configurations from rivet_card.dat
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
             if no_default:
-                logger.info('No rivet_card detected, so not running Rivet')
+#                logger.info('No rivet_card detected, so not running Rivet')
                 return None
 
             files.cp(pjoin(self.me_dir, 'Cards', 'rivet_card_default.dat'),
@@ -4979,7 +4979,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_rivet = True
 
         self.special_shortcut.update({
-                'fast_rivet': ([], ['rivet_card run_rivet_later True', 'rivet_card draw_rivet_plots False', 'pythia8_card HEPMCoutput:file autonocompress', 'partonlevel:mpi = off'])
+                'fast_rivet': ([], ['rivet_card run_rivet_later True', 'rivet_card draw_rivet_plots False', 'pythia8_card HEPMCoutput:file hepmc', 'partonlevel:mpi = off'])
         })
         self.special_shortcut_help.update({
                 'fast_rivet' : 'Fastest way to run multiple Rivet runs when scanning. Does NOT compress the HepMC files so enough storage should be guaranteed!'
