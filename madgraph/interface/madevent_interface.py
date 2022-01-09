@@ -4199,11 +4199,38 @@ Beware that this can be dangerous for local multicore runs.""")
         # output format : hepmc/fifo
         if "hepmc" in PY8_Card['HEPMCoutput:file'].lower():
 
+            hepmc_specs = PY8_Card['HEPMCoutput:file'].split('@')
+            hepmc_path = None
+            if len(hepmc_specs)<=1:
+                hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+            else:
+                if os.path.isabs(hepmc_specs[1]):
+                    if os.path.exists(hepmc_specs[1]):
+                        os.mkdir(pjoin(hepmc_specs[1], self.run_name))
+                        hepmc_path = pjoin(hepmc_specs[1], self.run_name, '%s_pythia8_events.hepmc'%tag)
+                    else:
+                        logger.warning("%s does not exist, using default output path"%hepmc_specs[1])
+                        hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+                else:
+                    os.mkdir = pjoin(self.me_dir,'Events', self.run_name, hepmc_specs[1])
+                    hepmc_path = pjoin(self.me_dir,'Events', self.run_name, hepmc_specs[1], '%s_pythia8_events.hepmc'%tag)
+                logger.warning('User set the HepMC output path of Pythia8 to %s'%hepmc_path)
+
             if ".gz" in PY8_Card['HEPMCoutput:file'].lower():
                 if not 'compressHEPMC' in self.to_store:
                     self.to_store.append('compressHEPMC')
+            else:
+                if 'compressHEPMC' in self.to_store:
+                    self.to_store.remove('compressHEPMC')
 
-            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+            if "remove" in PY8_Card['HEPMCoutput:file'].lower():
+                if not 'removeHEPMC' in self.to_store:
+                    self.to_store.append('removeHEPMC')
+            else:
+                if 'removeHEPMC' in self.to_store:
+                    self.to_store.remove('removeHEPMC')
+
+            HepMC_event_output=hepmc_path
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
 
         elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
@@ -4236,9 +4263,7 @@ already exists and is not a fifo file."""%fifo_path)
             logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
-            # Normalize the relative path if given as relative by the user.
-            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
-                                                   PY8_Card['HEPMCoutput:file'])
+            raise InvalidCmd("Unknow HEPMCoutput:file setting, hepmc/hepmc.gz/hepmcremove/fifo")
 
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
@@ -5579,9 +5604,7 @@ tar -czf split_$1.tar.gz split_$1
 
         if not self.run_name:
             return
-        
-
-            
+ 
         if not self.to_store:
             return 
         
@@ -5612,6 +5635,9 @@ tar -czf split_$1.tar.gz split_$1
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
             self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
+                if 'removeHEPMC' in self.to_store:
+                    os.remove(file_path)
+
                 self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
                 if 'compressHEPMC' in self.to_store:
                     misc.gzip(file_path,stdout=file_path)
