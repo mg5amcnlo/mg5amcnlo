@@ -15,7 +15,7 @@
 *                  http://amcatnlo.cern.ch                 *
 *                                                          *
 *                   Code download from:                    *
-*             https://launchpad.net/madgraph5              *
+*             https://launchpad.net/mg5amcnlo              *
 *                                                          *
 ************************************************************
 
@@ -32,6 +32,7 @@ Package for the LO cross-section computation and generation of events
 - bash
 - perl 5.8 (or higher)
 - a Fortran 77 compiler (such as g77 or gfortran)
+- a c++ compiler 
 
  * aMC@NLO *
 Package for the NLO cross-section computation (matched to shower) and
@@ -39,6 +40,7 @@ generation of events
 
 - bash
 - gfortran4.6 (or higher)
+- a c++ compiler
 
 On Windows:
 ===========
@@ -49,3 +51,4 @@ In order to run MG5 you need to
 
 Note that most of the output (including madevent/aMCatNLO)
 are not compatible with Windows even with cygwin.
+We do recomend to use unix subsystem.

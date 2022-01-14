@@ -1816,7 +1816,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_lines = pdf_lines[:-1] + "\n"
                     pdf_lines = pdf_lines + "ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))\n"
                     pdf_lines += '\n    ENDDO\n'
-        	ee_pdf_definition_lines = ""
+                    ee_pdf_definition_lines = ""
 
         # Remove last line break from the return variables                
         if vector:
@@ -4701,11 +4701,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Extract pdf lines vectorised code
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=True)
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines
+        #replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Lines that differ between subprocess group and regular
         if proc_id:

@@ -547,12 +547,10 @@ class OneProcessExporterCPP(object):
         pass
     
     def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
-                 process_number = 0, path = os.getcwd(), prefix=''):
+                 process_number = 0, path = os.getcwd()):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
-
-        misc.sprint("pass here", process_number, prefix, path, os.getcwd())
         if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
             self.matrix_elements = matrix_elements.get('matrix_elements')
         elif isinstance(matrix_elements, helas_objects.HelasMatrixElement):

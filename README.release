@@ -39,5 +39,18 @@ To run using the Template bin/newprocess_mg5 script
 ---------------------------------------------------
 Not available anymore (since v2.0.0).
 But you can still run MadGraph5_aMC@NLO by doing the following:
-./bin/mg5_aMC proc_card.dat
 
+$> ./bin/mg5_aMC proc_card.dat
+
+Note that no stdin redirection (<) is used.
+Those are possible but NOT recommended and their usage is not garantee to still work
+in future version of the code.
+
+Example content of the file proc_card.dat is
+import model sm
+generate p p > t t~
+output MYDIR
+#next part is if you want to directly run the code 
+launch MYDIR
+set mt scan:[150,170,190
+set wt auto

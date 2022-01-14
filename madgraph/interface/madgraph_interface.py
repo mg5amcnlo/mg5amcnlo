@@ -8125,6 +8125,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                  me_exporter, warning=True, 
                                                  info='Addition matrix-element will be done with PLUGIN: %(plug)s')
             options['me_exporter'] = {'check': output_cls.check, 'exporter':output_cls.exporter, 'output':output_cls.output}
+            options['me_exporter']['name'] = me_exporter
         else:
             options['me_exporter'] = {}
             
@@ -8203,7 +8204,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     self._me_curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                                 group_subprocesses=group_processes,
                                                 cmd_options=line_options)
-            elif options['me_exporter']['exporter']  == 'cpp':
+            elif options['me_exporter']['exporter']  in ['cpp','gpu']:
                 with misc.TMP_variable(self, '_export_format', options['me_exporter']['name']):
                     self._me_curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
                                                                 cmd_options=line_options)
@@ -8272,7 +8273,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 options = {'zerowidth_tchannel': self.options['zerowidth_tchannel']}
                 if self._curr_amps and self._curr_amps[0].get_ninitial() == 1:
                     options['zerowidth_tchannel'] = False
-            
                 self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model,
                                                                                       options=options)
         else:
