@@ -39,8 +39,9 @@ Package for the NLO cross-section computation (matched to shower) and
 generation of events 
 
 - bash
-- gfortran4.6 (or higher)
+- gfortran4.6 (or higher) compatible with quadruple precision)
 - a c++ compiler
+- other dependencies (for loop) will be installed at run time the first time that you need it.
 
 On Windows:
 ===========
@@ -50,5 +51,15 @@ In order to run MG5 you need to
 2) run $> python ./bin/mg5_aMC
 
 Note that most of the output (including madevent/aMCatNLO)
-are not compatible with Windows even with cygwin.
-We do recomend to use unix subsystem.
+are not compatible with Windows. We do recomend to use unix subsystem.
+The old cygwin was never supported.
+
+For Post-processing/optional package:
+=====================================
+
+From MG5aMC, you can run a lot of post-processing script to plot, shower,
+decay, ... your generated sample. Those tools need to be installed in
+advance via the MG5aMC terminal thanks to the "install" command.
+If some of those packages are already present, you can edit the file
+./input/mg5_configuration.txt to uncomment the associated line and
+indicate the path to the package.

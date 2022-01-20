@@ -8198,25 +8198,27 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                               cmd_options=line_options)
 
         if options['me_exporter'] and options['me_exporter']['exporter'] != options['exporter']:
-            misc.sprint('pass here')
+
             if options['me_exporter']['exporter'] == 'v4':
                 with misc.TMP_variable(self, '_export_format', options['me_exporter']['name']):
                     self._me_curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                                 group_subprocesses=group_processes,
                                                 cmd_options=line_options)
             elif options['me_exporter']['exporter']  in ['cpp','gpu']:
+                # check for PLUGIN format
+                output_cls = misc.from_plugin_import(self.plugin_path, 'new_output',
+                                                 options['me_exporter']['name'], warning=True, 
+                                                 info='Output will be done with PLUGIN: %(plug)s')
+                if output_cls:
+                    self._export_plugin = output_cls
+
+
                 with misc.TMP_variable(self, '_export_format', options['me_exporter']['name']):
                     self._me_curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes,
                                                                 cmd_options=line_options)
-                misc.sprint(self._me_curr_exporter)
-            else:
-                misc.sprint(options['me_exporter'])
-                raise Exception
-        else:
+        else:           
             self._me_curr_exporter = False
             
-        misc.sprint(options['me_exporter'])
-        misc.sprint(self._me_curr_exporter)
 
         self._curr_exporter.pass_information_from_cmd(self)
         if self._me_curr_exporter:
@@ -8262,7 +8264,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # Define the helas call  writer
         if hasattr(self._curr_exporter, 'helas_exporter') and self._curr_exporter.helas_exporter:
             self._curr_helas_model = getattr(helas_call_writers, self._curr_exporter.exporter)(self._curr_model, options=options)
-        if self._curr_exporter.exporter == 'cpp':       
+        elif self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
         elif self._curr_exporter.exporter == 'gpu':       
             self._curr_helas_model = helas_call_writers.GPUFOHelasCallWriter(self._curr_model)
@@ -8285,8 +8287,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self._curr_exporter.exporter == self._me_curr_exporter.exporter:
                 self._me_curr_helas_model = self._curr_helas_model 
             else:
-                if self._me_curr_exporter.exporter == 'cpp':       
+                if hasattr(self._me_curr_exporter, 'helas_exporter') and self._me_curr_exporter.helas_exporter:
+                    self._me_curr_helas_model = getattr(helas_call_writers, self._me_curr_exporter.exporter)(self._curr_model, options=options)
+                elif self._me_curr_exporter.exporter == 'cpp':       
                     self._me_curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+                elif self._me_curr_exporter.exporter == 'gpu':       
+                    self._me_curr_helas_model = helas_call_writers.GPUFOHelasCallWriter(self._curr_model)
                 elif self._model_v4_path:
                     assert self._me_curr_exporter.exporter == 'v4'
                     self._me_curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)

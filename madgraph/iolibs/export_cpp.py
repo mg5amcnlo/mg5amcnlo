@@ -547,7 +547,7 @@ class OneProcessExporterCPP(object):
         pass
     
     def __init__(self, matrix_elements, cpp_helas_call_writer, process_string = "",
-                 process_number = 0, path = os.getcwd()):
+                 process_number = 0, path = os.getcwd(), prefix=""):
         """Initiate with matrix elements, helas call writer, process
         string, path. Generate the process .h and .cc files."""
 
@@ -1413,6 +1413,14 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         files.ln(pjoin(self.path, 'gcheck_sa.cu'), self.path, 'check_sa.cc')
         files.ln(pjoin(self.path, 'gCPPProcess.cu'), self.path, 'CPPProcess.cc')
         
+    def generate_process_files_madevent(self, proc_id, config_map, subproc_number):
+        
+        self.generate_process_files() # temporary ...
+        misc.sprint(proc_id)
+        misc.sprint(config_map)
+        misc.sprint(subproc_number)
+        #raise Exception
+
     def edit_check_sa(self):
         
         template = open(pjoin(self.template_path,'gpu','check_sa.cu'),'r').read()
@@ -2933,8 +2941,9 @@ def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
         return  ProcessExporterGPU(cmd._export_dir, opt)
     elif cformat == 'matchbox_cpp':
         return  ProcessExporterMatchbox(cmd._export_dir, opt)
-    elif cformat == 'plugin':
+    else:
         return cmd._export_plugin(cmd._export_dir, opt)
+
     
 
 

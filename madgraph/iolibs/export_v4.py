@@ -5912,7 +5912,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                     logger.info('Creating files in directory %s' % dirpath)
                     process_exporter_cpp.path = dirpath
                     # Create the process .h and .cc files
-                    process_exporter_cpp.generate_process_files()
+                    process_exporter_cpp.generate_process_files_madevent(proc_id=str(ime+1),
+                                        config_map=subproc_group.get('diagram_maps')[ime], 
+                                        subproc_number=group_number)
                     for file in second_exporter.to_link_in_P:
                         ln('../%s' % file)    
                 # second_exporter.write_matrix_element_madevent(ime,
