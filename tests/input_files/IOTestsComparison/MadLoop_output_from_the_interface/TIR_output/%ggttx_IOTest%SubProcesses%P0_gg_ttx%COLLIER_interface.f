@@ -25,7 +25,7 @@ C
       INTEGER MAXRANK
       PARAMETER (MAXRANK=3)
       INTEGER NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INCLUDE 'loop_max_coefs.inc'
 C     
 C     ARGUMENTS 
@@ -507,7 +507,7 @@ C              complex phase leads to slightly more accurate estimates
 
       INCLUDE 'loop_max_coefs.inc'
       INTEGER NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER MAXRANK
       PARAMETER (MAXRANK=3)
 

@@ -8,7 +8,7 @@
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
      $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
-     $        ,icontr_sum(:,:),orderstag(:)
+     $        ,icontr_sum(:,:),orderstag(:),amppos(:),need_match(:,:)
          double precision, allocatable :: momenta(:,:,:),momenta_m(:,:,:
      $        ,:),wgt(:,:),wgt_ME_tree(:,:),bjx(:,:),scales2(:,:)
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
@@ -119,6 +119,10 @@ c orderstag
          allocate(itemp1(n_contr))
          itemp1(1:max_contr)=orderstag
          call move_alloc(itemp1,orderstag)
+c amppos
+         allocate(itemp1(n_contr))
+         itemp1(1:max_contr)=amppos
+         call move_alloc(itemp1,amppos)
 c parton_pdf
          allocate(itemp3(nexternal,max_iproc,n_contr))
          itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
@@ -187,6 +191,10 @@ c unwgt
          allocate(temp2(max_iproc,n_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
          call move_alloc(temp2,unwgt)
+c need_match
+         allocate(itemp2(nexternal,1:n_contr))
+         itemp2(1:nexternal,1:max_contr)=need_match
+         call move_alloc(itemp2,need_match)
 c update maximum
          max_contr=n_contr
       endif
@@ -209,6 +217,7 @@ c update maximum
       allocate(niproc(1))
       allocate(ipr(1))
       allocate(orderstag(1))
+      allocate(amppos(1))
       allocate(parton_pdf(nexternal,1,1))
       allocate(icontr_sum(0:1,1))
       allocate(momenta(0:3,nexternal,1))
@@ -226,6 +235,7 @@ c update maximum
       allocate(plot_wgts(1,1))
       allocate(shower_scale(1))
       allocate(unwgt(1,1))
+      allocate(need_match(nexternal,1))
       max_contr=1
       max_wgt=1
       max_iproc=1
@@ -250,6 +260,7 @@ c update maximum
       if (allocated(niproc)) deallocate(niproc)
       if (allocated(ipr)) deallocate(ipr)
       if (allocated(orderstag)) deallocate(orderstag)
+      if (allocated(amppos)) deallocate(amppos)
       if (allocated(parton_pdf)) deallocate(parton_pdf)
       if (allocated(icontr_sum)) deallocate(icontr_sum)
       if (allocated(momenta)) deallocate(momenta)
@@ -267,5 +278,6 @@ c update maximum
       if (allocated(plot_wgts)) deallocate(plot_wgts)
       if (allocated(shower_scale)) deallocate(shower_scale)
       if (allocated(unwgt)) deallocate(unwgt)
+      if (allocated(need_match)) deallocate(need_match)
       return
       end

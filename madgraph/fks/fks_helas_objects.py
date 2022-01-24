@@ -18,6 +18,7 @@ from born"""
 
 
 from __future__ import absolute_import
+import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -44,6 +45,8 @@ from six.moves import zip
 from madgraph import MG5DIR
 pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 
 #functions to be used in the ncores_for_proc_gen mode
@@ -314,10 +317,14 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # start the pool instance with a signal instance to catch ctr+c
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
-                pool = multiprocessing.Pool(maxtasksperchild=1)
+            if six.PY3:
+                ctx = multiprocessing.get_context('fork')
             else:
-                pool = multiprocessing.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
+                ctx = multiprocessing
+            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
+                pool = ctx.Pool(maxtasksperchild=1)
+            else:
+                pool = ctx.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             logger.info('Generating real matrix elements...')
@@ -448,12 +455,12 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             helas_list = []
             for meout in memapout:
                 helas_list.extend(meout[2])
-            self['used_lorentz']=list(set(helas_list))        
+            self['used_lorentz']=misc.make_unique(helas_list)       
             
             coupling_list = []
             for meout in memapout:
                 coupling_list.extend([c for l in meout[3] for c in l])
-            self['used_couplings'] = list(set(coupling_list)) 
+            self['used_couplings'] = misc.make_unique(coupling_list)
             
             has_virtuals = False
             for meout in memapout:
@@ -491,7 +498,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             helas_list = []
             for me in self.get('matrix_elements'):
                 helas_list.extend(me.get_used_lorentz())
-            self['used_lorentz'] = list(set(helas_list))
+            self['used_lorentz'] = misc.make_unique(helas_list)
 
         return self['used_lorentz']
 
@@ -504,7 +511,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             coupling_list = []
             for me in self.get('matrix_elements'):
                 coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-            self['used_couplings'] = list(set(coupling_list))
+            self['used_couplings'] = misc.make_unique(coupling_list)
 
         return self['used_couplings']
 
@@ -819,7 +826,7 @@ class FKSHelasProcess(object):
         for sud_me in self.sudakov_matrix_elements:
             lorentz_list.extend(sud_me['matrix_element'].get_used_lorentz())
 
-        return list(set(lorentz_list))
+        return misc.make_unique(lorentz_list)
     
     
     def get_used_couplings(self):
@@ -928,6 +935,7 @@ class FKSHelasRealProcess(object): #test written
     contains:
     -- colors
     -- charges
+    -- particle_tags
     -- i/j/ij fks, ij refers to the born leglist
     -- ijglu
     -- need_color_links
@@ -946,6 +954,7 @@ class FKSHelasRealProcess(object): #test written
         if fksrealproc != None:
             self.isfinite = False
             self.colors = fksrealproc.colors
+            self.particle_tags = fksrealproc.particle_tags
             self.charges = fksrealproc.charges
             self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate

@@ -26,7 +26,7 @@ c  reweight0.inc dbook.inc
       real*8 rndec(10),fk88random
       common/crndec/rndec
       character*80 event_file
-      character*140 buff
+      character*1000 buff
       character*9 ch1
       logical AddInfoLHE
       logical keepevent,rescale,doscale

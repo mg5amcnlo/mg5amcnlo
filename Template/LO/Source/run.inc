@@ -5,11 +5,12 @@ c
 c     Scales
 c
       real*8          scale,scalefact,alpsfact
-      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
-      integer         ickkw,nhmult,asrwgtflavor, dynamical_scale_choice
-      common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
+      logical         fixed_ren_scale,fixed_fac_scale1,fixed_fac_scale2,fixed_couplings,hmult
+      integer         ickkw,nhmult,asrwgtflavor,dynamical_scale_choice,ievo_eva
+      common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale1,fixed_fac_scale2,
      $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor,
      $                dynamical_scale_choice
+      common/to_eva/ievo_eva
 c
 c     Collider
 c
@@ -98,3 +99,8 @@ c
 
        double precision small_width_treatment
        common/narrow_width/small_width_treatment
+
+       double precision tmin_for_channel
+       integer sde_strat ! 1 means standard single diagram enhancement strategy,
+c                          2 means approximation by the denominator of the propagator
+       common/TO_CHANNEL_STRAT/tmin_for_channel, sde_strat

@@ -43,6 +43,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
@@ -62,6 +63,7 @@ C in the LO cross section
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
         wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
@@ -150,8 +152,10 @@ C      gluon in the initial state
         alphasbpow = orders(qcd_pos)/2
         if (niglu.ne.0 .or. alphasbpow.ne.0) then
           ! this contribution will end up with one extra power
-          ! of alpha_s
+          ! of alpha_s. Check that we are including the corresponding
+          ! order in the computation, otherwise skip the contribution
           orders(qcd_pos) = orders(qcd_pos) + 2
+          if (orders(qcd_pos).gt.nlo_orders(qcd_pos)) cycle
 
           amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
      &     alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
@@ -334,15 +338,12 @@ c value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       character*4      abrv
       common /to_abrv/ abrv
+      integer iamp_test
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
-      if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0 .and. abrv.ne.'born') then
-        write(*,*) 'FIX FXFX-MERGING in FKS_EW'
-        stop
-        wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
-      elseif (ickkw.eq.-1) then
+      if (ickkw.eq.-1) then
          if (wgtbpower.ne.0) then
             write (*,*) 'ERROR in VETO XSec: bpower should'/
      $           /' be zero (no QCD partons at the'/
@@ -362,6 +363,7 @@ C to make sure that it cannot be incorrectly understood.
         write(*,*) 'FIX VETOXSEC in FKS_EW'
         stop
       endif
+      iamp_test=0
       do iamp=1, amp_split_size
         if (amp_split_wgtnstmp(iamp).eq.0d0.and.
      $      amp_split_wgtwnstmpmur(iamp).eq.0d0.and.
@@ -372,11 +374,25 @@ C to make sure that it cannot be incorrectly understood.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
         wgt3=amp_split_wgtwnstmpmuf(iamp)*f_nb/g22
         wgt4=amp_split_avv(iamp)*f_nb/g22
+        if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0
+     &       .and. abrv.ne.'born') then
+! This assumes a single Born order, which must always be the case for
+! FxFx. Explicitly check this just to be sure.
+           iamp_test=iamp_test+1
+           if(iamp_test.ne.1) then
+              write (*,*) "There should only be one possible"/
+     $             /" Born order for FxFx"
+              stop 1
+           endif
+           g2=g**(QCD_power-2)
+           wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
+        endif
         call add_wgt(3,orders,wgt1,wgt2,wgt3)
         call add_wgt(15,orders,wgt4,0d0,0d0)
       enddo
@@ -396,6 +412,7 @@ c and not be part of the plots nor computation of the cross section.
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
@@ -440,6 +457,7 @@ c its value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
@@ -503,6 +521,7 @@ c the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
@@ -596,6 +615,7 @@ c to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
@@ -705,6 +725,7 @@ c value to the list of weights using the add_wgt subroutine
         wgtcpower=0d0
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
@@ -810,6 +831,7 @@ c respectively.
                 wgtcpower=0d0
                 if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 orders_tag=get_orders_tag(orders)
+                amp_pos=iamp
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
@@ -931,11 +953,12 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       include 'nexternal.inc'
       include 'run.inc'
       include 'timing_variables.inc'
+      include 'nFKSconfigs.inc'
       integer iterm,iterm_last_izero,iterm_last_mohdr,i,j
      &     ,nfxfx_ren_scales_izero,nfxfx_ren_scales_mohdr
       double precision p(0:3,nexternal),p_last_izero(0:3,nexternal)
      &     ,p_last_mohdr(0:3,nexternal),rewgt,rewgt_izero,rewgt_mohdr
-     &     ,rewgt_exp_izero,rewgt_exp_mohdr
+     &     ,rewgt_exp_izero,rewgt_exp_mohdr,pthardness
      &     ,fxfx_ren_scales_izero(0:nexternal),fxfx_fac_scale_izero(2)
      &     ,fxfx_ren_scales_mohdr(0:nexternal),fxfx_fac_scale_mohdr(2)
       logical setclscales,rewgt_izero_calculated,rewgt_mohdr_calculated
@@ -959,11 +982,22 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      $                     FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+      INTEGER              NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
       save rewgt_mohdr_calculated,rewgt_izero_calculated,p_last_izero
      &     ,p_last_mohdr,iterm_last_izero,iterm_last_mohdr
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
+      integer need_matching(nexternal),need_matching_izero(nexternal)
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
+      save need_matching_izero
+      double precision shower_S_scale(fks_configs*2)
+     &     ,shower_H_scale(fks_configs*2),ref_H_scale(fks_configs*2)
+     &     ,pt_hardness
+      common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
+     &     ,pt_hardness
       call cpu_time(tBefore)
       ktscheme=1
       if (iterm.eq.0) then
@@ -983,12 +1017,20 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             endif
          endif
          if (.not.already_set) then
-            if (.not. setclscales(p1_cnt(0,1,0))) then
-               write (*,*) 'ERROR in setclscales izero'
-               stop 1
-            endif
-            rewgt_izero=min(rewgt(p1_cnt(0,1,0),rewgt_exp_izero),1d0)
+            call cluster_and_reweight(0,rewgt_izero,rewgt_exp_izero
+     $           ,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1),need_matching)
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+            rewgt_izero=min(rewgt_izero,1d0)
             fxfx_exp_rewgt=min(rewgt_exp_izero,0d0)
+            need_matching_S(1:nexternal)=need_matching(1:nexternal)
+            need_matching_izero(1:nexternal)=need_matching_S(1:nexternal)
+c Update shower starting scale to be the scale down to which the MINLO
+c Sudakov factors are included.
+            shower_S_scale(nFKSprocess*2-1)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            shower_S_scale(nFKSprocess*2)=
+     $           shower_S_scale(nFKSprocess*2-1)
          endif
          rewgt_izero_calculated=.true.
          iterm_last_izero=iterm
@@ -1014,6 +1056,9 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
             f_sc_MC_S=f_sc_MC_S*rewgt_izero
          endif
          nFxFx_ren_scales_izero=nFxFx_ren_scales
+         do i=1,nexternal
+            need_matching_izero(i)=need_matching(i)
+         enddo
          do i=0,nexternal
             FxFx_ren_scales_izero(i)=FxFx_ren_scales(i)
          enddo
@@ -1030,11 +1075,25 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             endif
          endif
          if (.not. already_set) then
-            if (.not. setclscales(p)) then
-               write (*,*) 'ERROR in setclscales mohdr'
-               stop 1
-            endif
-            rewgt_mohdr=min(rewgt(p,rewgt_exp_mohdr),1d0)
+            call cluster_and_reweight(nFKSprocess,rewgt_mohdr
+     $           ,rewgt_exp_mohdr,nFxFx_ren_scales,FxFx_ren_scales(0)
+     $           ,fxfx_fac_scale(1),need_matching)
+            fxfx_fac_scale(2)=fxfx_fac_scale(1)
+            rewgt_mohdr=min(rewgt_mohdr,1d0)
+            need_matching_H(1:nexternal)=need_matching(1:nexternal)
+c Update shower starting scale
+            pthardness=ref_H_scale(nFKSprocess*2)-
+     $           shower_H_scale(nFKSprocess*2)
+            shower_H_scale(nFKSprocess*2)=
+     $           minval(FxFx_ren_scales(0:nFxFx_ren_scales))
+            ref_H_scale(nFKSprocess*2)=shower_H_scale(nFKSprocess*2)
+     $           +pthardness
+            pthardness=ref_H_scale(nFKSprocess*2-1)-
+     $           shower_H_scale(nFKSprocess*2-1)
+            shower_H_scale(nFKSprocess*2-1)= 
+     $           shower_H_scale(nFKSprocess*2)
+            ref_H_scale(nFKSprocess*2-1)=shower_H_scale(nFKSprocess*2-1)
+     $           +pthardness
          endif
          rewgt_mohdr_calculated=.true.
          iterm_last_mohdr=iterm
@@ -1098,7 +1157,7 @@ c bpower.
       include 'genps.inc'
       include 'timing_variables.inc'
       double precision pi,vegas_wgt
-      integer i
+      integer i,j
       logical firsttime
       data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
@@ -1120,16 +1179,17 @@ c bpower.
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       logical needrndec
       parameter (needrndec=.false.)
       real*8 ran2
       external ran2
       real*8 rndec(10)
       common/crndec/rndec
-      include "appl_common.inc" 
-      !!!include "orders.inc"
+      include "pineappl_common.inc" 
+      integer orders(nsplitorders)
+C
       call cpu_time(tBefore)
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
@@ -1139,7 +1199,15 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
-         if (iappl.ne.0) appl_amp_split_size = amp_split_size
+         if (pineappl) then 
+         ! PineAPPL stuff
+         appl_amp_split_size = amp_split_size
+           do j=1,amp_split_size
+             call amp_split_pos_to_orders(j, orders)
+             appl_qcdpower(j) = orders(qcd_pos)
+             appl_qedpower(j) = orders(qed_pos)
+           enddo
+         endif
 c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
          firsttime=.false.
@@ -1160,6 +1228,7 @@ c f_* multiplication factors for Born and nbody
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
+      include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real
      $     ,pas(0:3,nexternal)
@@ -1175,8 +1244,16 @@ c f_* multiplication factors for Born and nbody
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-      integer            mapconfig(0:lmaxconfigs), iconfig
-      common/to_mconfigs/mapconfig,                iconfig
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      integer            this_config
+      common/to_mconfigs/this_config
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
@@ -1217,18 +1294,18 @@ c Compute the multi-channel enhancement factor 'enhance'.
          endif
       else
          xtot=0d0
-         if (mapconfig(0).eq.0) then
+         if (mapconfig(0,0).eq.0) then
             write (*,*) 'Fatal error in compute_prefactor_nbody:'/
      &           /' no Born diagrams ',mapconfig,
      &           '. Check bornfromreal.inc'
             write (*,*) 'Is fks_singular compiled correctly?'
             stop 1
          endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
+         do i=1, mapconfig(0,0)
+            xtot=xtot+amp2(mapconfig(i,0))
          enddo
          if (xtot.ne.0d0) then
-            enhance=amp2(mapconfig(iconfig))/xtot
+            enhance=amp2(mapconfig(this_config,0))/xtot
             enhance=enhance*diagramsymmetryfactor
          else
             enhance=0d0
@@ -1264,18 +1341,18 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
             endif
          else
             xtot=0d0
-            if (mapconfig(0).eq.0) then
+            if (mapconfig(0,0).eq.0) then
                write (*,*) 'Fatal error in compute_prefactor_n1body,'/
      &              /' no Born diagrams ',mapconfig
      &              ,'. Check bornfromreal.inc'
                write (*,*) 'Is fks_singular compiled correctly?'
                stop 1
             endif
-            do i=1, mapconfig(0)
-               xtot=xtot+amp2(mapconfig(i))
+            do i=1, mapconfig(0,0)
+               xtot=xtot+amp2(mapconfig(i,0))
             enddo
             if (xtot.ne.0d0) then
-               enhance_real=amp2(mapconfig(iconfig))/xtot
+               enhance_real=amp2(mapconfig(this_config,0))/xtot
                enhance_real=enhance_real*diagramsymmetryfactor
             else
                enhance_real=0d0
@@ -1606,6 +1683,14 @@ c        contribution
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer need_matching_S(nexternal),need_matching_H(nexternal)
+      common /c_need_matching/ need_matching_S,need_matching_H
+
+      integer ntagph
+      double precision resc
+      integer get_n_tagged_photons
+      double precision get_rescale_alpha_factor
+      external get_n_tagged_photons get_rescale_alpha_factor
 
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
@@ -1670,9 +1755,21 @@ C Secondly, the more advanced filter
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
-      wgt(1,icontr)=wgt1
-      wgt(2,icontr)=wgt2
-      wgt(3,icontr)=wgt3
+
+C here we rescale the contributions by the ratio of alpha's in different
+C schemes; it is needed when there are tagged photons around
+      ntagph = get_n_tagged_photons()
+      if (ntagph.eq.0) then
+        wgt(1,icontr)=wgt1
+        wgt(2,icontr)=wgt2
+        wgt(3,icontr)=wgt3
+      else if (ntagph.gt.0) then
+          resc = get_rescale_alpha_factor(ntagph, orders(qed_pos)) 
+          wgt(1,icontr) = wgt1 * resc
+          wgt(2,icontr) = wgt2 * resc
+          wgt(3,icontr) = wgt3 * resc
+      endif
+
       bjx(1,icontr)=xbk(1)
       bjx(2,icontr)=xbk(2)
       scales2(1,icontr)=QES2
@@ -1684,6 +1781,7 @@ C Secondly, the more advanced filter
       qcdpower(icontr)=QCD_power
       cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
+      amppos(icontr)=amp_pos
       ipr(icontr)=0
       call set_pdg(icontr,nFKSprocess)
 
@@ -1723,6 +1821,7 @@ c subtr term
             enddo
          enddo
          H_event(icontr)=.true.
+         need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14 .or. type.eq.15
      $        .or. (type.ge.20 .and. type.le.22)) then
@@ -1734,6 +1833,7 @@ c and MC subtraction terms.
             enddo
          enddo
          H_event(icontr)=.false.
+         need_match(1:nexternal,icontr)=need_matching_S(1:nexternal)
       else
          write (*,*) 'ERROR: unknown type in add_wgt',type
          stop 1
@@ -2384,17 +2484,18 @@ c add the weights to the array
       return
       end
 
-      subroutine fill_applgrid_weights(vegas_wgt)
-c Fills the ApplGrid weights of appl_common.inc. This subroutine assumes
+      subroutine fill_pineappl_weights(vegas_wgt)
+c Fills the FineAPPL weights of pineappl_common.inc. This subroutine assumes
 c that there is an unique PS configuration: at most one Born, one real
 c and one set of counter terms. Among other things, this means that one
 c must do MC over FKS directories.
       use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'appl_common.inc'
+      include 'pineappl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
+      integer orders(nsplitorders)
       integer i,j 
       double precision final_state_rescaling,vegas_wgt
       integer              flavour_map(fks_configs)
@@ -2404,24 +2505,18 @@ c must do MC over FKS directories.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       integer lo_qcd_to_amp_pos, nlo_qcd_to_amp_pos
       integer pos
-      if (icontr.gt.8) then
-         write (*,*) 'ERROR: too many applgrid weights. '/
-     &        /'Should have at most one of each itype.',icontr
-         stop 1
-      endif
-      do j=1,amp_split_size
-        do i=1,4
+      do i=1,4
+        do j=1,amp_split_size
           appl_w0(i,j)=0d0
           appl_wR(i,j)=0d0
           appl_wF(i,j)=0d0
           appl_wB(i,j)=0d0
-          appl_x1(i,j)=0d0
-          appl_x2(i,j)=0d0
-          appl_QES2(i,j)=0d0
-          appl_muR2(i,j)=0d0
-          appl_muF2(i,j)=0d0
-          appl_qcdpower(i,j) = -1
         enddo
+        appl_x1(i)=0d0
+        appl_x2(i)=0d0
+        appl_QES2(i)=0d0
+        appl_muR2(i)=0d0
+        appl_muF2(i)=0d0
         appl_flavmap(i)=0
       enddo
       appl_event_weight = 0d0
@@ -2436,62 +2531,63 @@ c must do MC over FKS directories.
          else
             pos = nlo_qcd_to_amp_pos(qcdpower(i))
          endif
+         ! consistency check
+         if (appl_qcdpower(pos).ne.qcdpower(i)) then
+           write(*,*) 'ERROR in fill_pineappl_weights, QCDpower',
+     %        appl_qcdpower(pos), qcdpower(i)  
+           stop 1
+         endif
 
          if (itype(i).eq.1) then
 c     real
             appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(1,pos)=qcdpower(i)
-            appl_x1(1,pos)=bjx(1,i)
-            appl_x2(1,pos)=bjx(2,i)
+            appl_x1(1)=bjx(1,i)
+            appl_x2(1)=bjx(2,i)
             appl_flavmap(1) = flavour_map(nFKS(i))
-            appl_QES2(1,pos)=scales2(1,i)
-            appl_muR2(1,pos)=scales2(2,i)
-            appl_muF2(1,pos)=scales2(3,i)
+            appl_QES2(1)=scales2(1,i)
+            appl_muR2(1)=scales2(2,i)
+            appl_muF2(1)=scales2(3,i)
          elseif (itype(i).eq.2) then
 c     born
             appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
      &           .or. itype(i).eq.15)then
 c     virtual, soft-virtual or soft-counter
             appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)*final_state_rescaling
             appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)*final_state_rescaling
             appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(2,pos)=qcdpower(i)
-            appl_x1(2,pos)=bjx(1,i)
-            appl_x2(2,pos)=bjx(2,i)
+            appl_x1(2)=bjx(1,i)
+            appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2,pos)=scales2(1,i)
-            appl_muR2(2,pos)=scales2(2,i)
-            appl_muF2(2,pos)=scales2(3,i)
+            appl_QES2(2)=scales2(1,i)
+            appl_muR2(2)=scales2(2,i)
+            appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.5) then
 c     collinear counter            
             appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(3,pos)=qcdpower(i)
-            appl_x1(3,pos)=bjx(1,i)
-            appl_x2(3,pos)=bjx(2,i)
+            appl_x1(3)=bjx(1,i)
+            appl_x2(3)=bjx(2,i)
             appl_flavmap(3) = flavour_map(nFKS(i))
-            appl_QES2(3,pos)=scales2(1,i)
-            appl_muR2(3,pos)=scales2(2,i)
-            appl_muF2(3,pos)=scales2(3,i)
+            appl_QES2(3)=scales2(1,i)
+            appl_muR2(3)=scales2(2,i)
+            appl_muF2(3)=scales2(3,i)
          elseif (itype(i).eq.6) then
 c     soft-collinear counter            
             appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)*final_state_rescaling
             appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)*final_state_rescaling
-            appl_qcdpower(4,pos)=qcdpower(i)
-            appl_x1(4,pos)=bjx(1,i)
-            appl_x2(4,pos)=bjx(2,i)
+            appl_x1(4)=bjx(1,i)
+            appl_x2(4)=bjx(2,i)
             appl_flavmap(4) = flavour_map(nFKS(i))
-            appl_QES2(4,pos)=scales2(1,i)
-            appl_muR2(4,pos)=scales2(2,i)
-            appl_muF2(4,pos)=scales2(3,i)
+            appl_QES2(4)=scales2(1,i)
+            appl_muR2(4)=scales2(2,i)
+            appl_muF2(4)=scales2(3,i)
          else
             write(*,*) 'ERROR in fill_applgrid_weights', itype(i)
             stop 1
@@ -2500,87 +2596,6 @@ c     soft-collinear counter
       return
       end
       
-
-      subroutine set_pdg(ict,iFKS)
-c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
-c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
-c codes of i_fks and j_fks are combined to give the PDG code of the
-c mother and the extra (n+1) parton is given the PDG code of the gluon.
-      use weight_lines
-      implicit none
-      include 'nexternal.inc'
-      include 'fks_info.inc'
-      include 'genps.inc'
-      integer k,ict,iFKS
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     $     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
-      include 'orders.inc'
-      do k=1,nexternal
-         pdg(k,ict)=idup(k,1)
-      enddo
-      do k=1,nexternal
-         if (k.lt.fks_j_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.fks_j_d(iFKS)) then
-            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict)) .and.
-     &           abs(pdg(fks_i_d(iFKS),ict)).ne.21.and.
-     &           abs(pdg(fks_i_d(iFKS),ict)).ne.22) then
-c gluon splitting:  g/a -> ff
-               !!!pdg_uborn(k,ict)=21
-               ! check if any extra cnt is needed
-               if (extra_cnt_d(iFKS).eq.0) then
-                  ! if not, assign photon/gluon depending on split_type
-                  if (split_type_d(iFKS,qcd_pos)) then
-                    pdg_uborn(k,ict)=21
-                  else if (split_type_d(iFKS,qed_pos)) then
-                    pdg_uborn(k,ict)=22
-                  else
-                    write (*,*) 'set_pdg ',
-     &                'ERROR#1 in PDG assigment for underlying Born'
-                    stop 1
-                  endif
-               else
-                  ! if there are extra cnt's, assign the pdg of the
-                  ! mother in the born (according to isplitorder_born_d)
-                  if (isplitorder_born_d(iFKS).eq.qcd_pos) then
-                    pdg_uborn(k,ict)=21
-                  else if (isplitorder_born_d(iFKS).eq.qcd_pos) then
-                    pdg_uborn(k,ict)=22
-                  else
-                    write (*,*) 'set_pdg ',
-     &                'ERROR#2 in PDG assigment for underlying Born'
-                    stop 1
-                  endif
-               endif
-            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21.or.
-     &              abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
-c final state gluon radiation:  X -> Xg
-               pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
-            elseif (pdg(fks_j_d(iFKS),ict).eq.21.or.
-     &              pdg(fks_j_d(iFKS),ict).eq.22) then
-c initial state gluon splitting (gluon is j_fks):  g -> XX
-               pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
-            else
-               write (*,*)
-     &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
-               stop 1
-            endif
-         elseif(k.lt.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k,ict)
-         elseif(k.eq.nexternal) then
-            if (split_type_d(iFKS,qcd_pos)) then
-              pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
-            elseif (split_type_d(iFKS,qed_pos)) then
-              pdg_uborn(k,ict)=22  ! give the extra particle a photon PDG code
-            endif
-         elseif(k.ge.fks_i_d(iFKS)) then
-            pdg_uborn(k,ict)=pdg(k+1,ict)
-         endif
-      enddo
-      return
-      end
       
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
@@ -2639,6 +2654,8 @@ c to greatly reduce the calls to the analysis routines.
       ! stuff for plotting the different splitorders
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+      integer amp_pos_plot
+      common /campposplot/ amp_pos_plot
       save max_weight
       call cpu_time(tBefore)
       if (icontr.eq.0) return
@@ -2649,14 +2666,29 @@ c the momenta are identical.
          do j=1,iwgt
             plot_wgts(j,i)=0d0
          enddo
+         ! The following if lines have been changed with respect to the
+         ! usual (with just 3 plot ids: 20, 11 and 12):
+         !  The kinematics of soft and collinear counterterms may
+         !  be different, for those processes without soft singularities
+         !  from initial(final)-state configurations when the 
+         !  final(initial) confs are integrated (e.g. a a > e+ e-)
+         !  This gives no problem for normal histogramming (and in
+         !  fact plot_id 11 13 and 14 are merged into ibody=2 in
+         !  outfun, but it gives troubles e.g. with applgrid/pineappl. 
+         !  Note that the separation between soft and soft-virtual
+         !  may not be needed in reality
          if (itype(i).eq.2) then
             plot_id(i)=20 ! Born
          elseif(itype(i).eq.1) then
             plot_id(i)=11 ! real-emission
+         elseif(itype(i).eq.5) then
+            plot_id(i)=13 ! collinear counter term
+         elseif(itype(i).eq.6) then
+            plot_id(i)=14 ! soft collinear counter term
          elseif(itype(i).ge.20.and.itype(i).le.22) then
              plot_id(i)=100+itype(i)-20    ! EW sudakov (100-102)
          else
-            plot_id(i)=12 ! soft-virtual and counter terms
+            plot_id(i)=12 ! soft-virtual and soft counter term
          endif
 c Loop over all previous icontr. If the plot_id, PDGs and momenta are
 c equal to a previous icountr, add the current weight to the plot_wgts
@@ -2666,12 +2698,12 @@ c contribution makes sure that it is added as a new element.
          do ii=1,i
             if (orderstag(ii).ne.orderstag(i)) cycle
             if (plot_id(ii).ne.plot_id(i)) cycle
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.pdg_equal(pdg_uborn(1,ii),pdg_uborn(1,i))) cycle
             else
                if (.not.pdg_equal(pdg(1,ii),pdg(1,i))) cycle
             endif
-            if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
+            if (plot_id(i).ne.11) then
                if (.not.momenta_equal_uborn(momenta(0,1,ii),momenta(0,1
      $              ,i),fks_j_d(nFKS(ii)),fks_i_d(nFKS(ii))
      $                 ,fks_j_d(nFKS(i)) ,fks_i_d(nFKS(i)))) cycle
@@ -2697,10 +2729,11 @@ c contribution makes sure that it is added as a new element.
                stop
             endif
             do j=1,iwgt
-               www(j)=plot_wgts(j,i)
+               www(j)=plot_wgts(j,i)/bias_wgt(i)
             enddo
 c call the analysis/histogramming routines
             orders_tag_plot=orderstag(i)
+            amp_pos_plot=amppos(i)
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
@@ -2913,36 +2946,61 @@ c include it here!
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
-c necessarily the same for all of these summed FKS configurations). Take
-c the weighted average over the FKS configurations as the shower scale
-c for the summed contribution.
+c necessarily the same for all of these summed FKS configurations).
+      use weight_lines
+      implicit none
+      integer i
+      double precision showerscale
+      logical improved_scale_choice
+      parameter (improved_scale_choice=.true.)
+      if (icontr.eq.0) return
+      if (.not. improved_scale_choice) then
+         call update_shower_scale_Sevents_v1(showerscale)
+      else
+         call update_shower_scale_Sevents_v2(showerscale)
+      endif
+c Overwrite the shower scale for the S-events
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).ne.0) shower_scale(i)= showerscale
+      enddo
+      return
+      end
+
+      subroutine update_shower_scale_Sevents_v1(showerscale)
+c Original way of assigning shower starting scales. This is for backward
+c compatibility. It picks a fold randomly, based on the weight of the
+c fold to the sum over all folds. Within a fold, take the weighted
+c average of shower scales for the FKS configurations.
       use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      integer i,j,ict
-      double precision tmp_wgt(fks_configs),showerscale(fks_configs)
-     $     ,temp_wgt,shsctemp
-      do i=1,fks_configs
-         tmp_wgt(i)=0d0
-         showerscale(i)=-1d0
+      integer i,j,ict,iFKS
+      double precision tmp_wgt(fks_configs),ran2,target
+     $     ,tmp_scale(fks_configs),showerscale,temp_wgt,shsctemp
+     $     ,temp_wgt_sum
+      external ran2
+      do iFKS=1,fks_configs
+         tmp_wgt(iFKS)=0d0
+         tmp_scale(iFKS)=-1d0
       enddo
-c sum the weights that contribute to a single FKS configuration.
+c sum the weights that contribute to a single FKS configuration
       do i=1,icontr
          if (H_event(i)) cycle
          if (icontr_sum(0,i).eq.0) cycle
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
             tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,i)
-            if (showerscale(nFKS(ict)).eq.-1d0) then
-               showerscale(nFKS(ict))=shower_scale(ict)
+            if (tmp_scale(nFKS(ict)).eq.-1d0) then
+               tmp_scale(nFKS(ict))=shower_scale(ict)
 c check that all the shower starting scales are identical for all the
-c contribution to a given FKS configuration.
-            elseif ( abs((showerscale(nFKS(ict))-shower_scale(ict))
-     $                  /(showerscale(nFKS(ict))+shower_scale(ict)))
-     $                                                  .gt. 1d-6 ) then
-               write (*,*) 'ERROR in update_shower_scale_Sevents'
-     $              ,showerscale(nFKS(ict)),shower_scale(ict)
+c contribution to a given FKS configuration and fold.
+            elseif(abs((tmp_scale(nFKS(ict))-shower_scale(ict))
+     $              /(tmp_scale(nFKS(ict))+shower_scale(ict)))
+     $              .gt. 1d-6 ) then
+               write (*,*) 'ERROR in update_shower_scale_Sevents #1'
+     $              ,tmp_scale(nFKS(ict)),shower_scale(ict)
                stop 1
             endif
          enddo
@@ -2951,22 +3009,112 @@ c Compute the weighted average of the shower scale. Weight is given by
 c the ABS cross section to given FKS configuration.
       temp_wgt=0d0
       shsctemp=0d0
-      do i=1,fks_configs
-         temp_wgt=temp_wgt+abs(tmp_wgt(i))
-         shsctemp=shsctemp+abs(tmp_wgt(i))*showerscale(i)
+      do iFKS=1,fks_configs
+         temp_wgt=temp_wgt+abs(tmp_wgt(iFKS))
+         shsctemp=shsctemp+abs(tmp_wgt(iFKS))
+     $              *tmp_scale(iFKS)
       enddo
-      if (temp_wgt.ne.0d0) then
-         shsctemp=shsctemp/temp_wgt
+      if (temp_wgt.eq.0d0) then
+         showerscale=0d0
       else
-         shsctemp=0d0
+         showerscale=shsctemp/temp_wgt
       endif
-c Overwrite the shower scale for the S-events
-      do i=1,icontr
-         if (H_event(i)) cycle
-         if (icontr_sum(0,i).ne.0) shower_scale(i)=shsctemp
-      enddo
       return
       end
+
+
+      subroutine update_shower_scale_Sevents_v2(showerscale)
+c Improved way of assigning shower starting scales. Pick an FKS
+c configuration randomly, weighted by its contribution without including
+c the born (and nbody_noborn) contributions. (If there are only born
+c (and nbody_noborn) contributions, use the weights of those instead).
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      integer i,j,ict,iFKS
+      double precision wgt_fks(fks_configs),wgt_fks_born(fks_configs)
+     $     ,ran2,target,tmp_scale(fks_configs),showerscale,wgt_sum
+     $     ,wgt_accum
+      external ran2
+      do iFKS=1,fks_configs
+         wgt_fks(iFKS)=0d0
+         wgt_fks_born(iFKS)=0d0
+         tmp_scale(iFKS)=-1d0
+      enddo
+c Collect the weights that contribute to a given FKS configuration.
+      do i=1,icontr
+         if (H_event(i)) cycle
+         if (icontr_sum(0,i).eq.0) cycle
+         do j=1,icontr_sum(0,i)
+            ict=icontr_sum(j,i)
+            if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
+     $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
+     $           itype(ict).ne.15) then
+               wgt_fks(nFKS(ict)) = wgt_fks(nFKS(ict))+wgts(1,ict)
+            else
+               wgt_fks_born(nFKS(ict)) = 
+     $                 wgt_fks_born(nFKS(ict))+wgts(1,ict)
+            endif
+            if (tmp_scale(nFKS(ict)).eq.-1d0) then
+               tmp_scale(nFKS(ict))=shower_scale(ict)
+c check that all the shower starting scales are identical for all the
+c contribution to a given FKS configuration.
+            elseif(abs((tmp_scale(nFKS(ict))-shower_scale(ict))
+     $              /(tmp_scale(nFKS(ict))+shower_scale(ict)))
+     $              .gt. 1d-6 ) then
+               write (*,*) 'ERROR in update_shower_scale_Sevents #2'
+     $              ,tmp_scale(nFKS(ict)),shower_scale(ict)
+               stop 1
+            endif
+         enddo
+      enddo
+c Check to find the FKS configurations and the corresponding shower
+c starting scale. Pick one randomly based on the weight for that FKS
+c configuration (in the weight, the born and nbody_noborn should not be
+c included since those are always assigned to the FKS configuration
+c corresponding to a soft singularity. Therefore, including them would
+c bias the chosen scale to that configuration.)
+      wgt_sum=0d0
+      do iFKS=1,fks_configs
+         wgt_sum=wgt_sum+abs(wgt_fks(iFKS))
+      enddo
+      if (wgt_sum.ne.0d0) then
+         target=wgt_sum*ran2()
+         wgt_accum=0d0
+         do iFKS=1,fks_configs
+            wgt_accum=wgt_accum+abs(wgt_fks(iFKS))
+            if (wgt_accum.gt.target) exit
+         enddo
+         if (iFKS.lt.1 .or. iFKS.gt.fks_configs) then
+            write (*,*) 'ERROR in update_shower_starting scale #3',iFKS
+     $           ,fks_configs,target,wgt_accum,wgt_sum
+            stop 1
+         endif
+      else
+c this fold has only born or nbody no-born contributions. Use those
+c instead.
+         wgt_sum=0d0
+         do iFKS=1,fks_configs
+            wgt_sum=wgt_sum+abs(wgt_fks_born(iFKS))
+         enddo
+         if (wgt_sum.eq.0d0) return
+         target=wgt_sum*ran2()
+         wgt_accum=0d0
+         do iFKS=1,fks_configs
+            wgt_accum=wgt_accum+abs(wgt_fks_born(iFKS))
+            if (wgt_accum.gt.target) exit
+         enddo
+         if (iFKS.lt.1 .or. iFKS.gt.fks_configs) then
+            write (*,*) 'ERROR in update_shower_starting scale #4',iFKS
+     $           ,fks_configs,target,wgt_accum,wgt_sum
+            stop 1
+         endif
+      endif
+      showerscale=tmp_scale(iFKS)
+      return
+      end
+
 
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)
@@ -3100,6 +3248,8 @@ c PS point that should be written in the event file.
       logical write_granny(fks_configs)
       integer which_is_granny(fks_configs)
       common/write_granny_resonance/which_is_granny,write_granny
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
 
       call cpu_time(tBefore)
       if (icontr.eq.0) return
@@ -3175,6 +3325,7 @@ c soft singularity with the FKS configuration randomly chosen.
          which_is_granny(iFKS_picked)=which_is_granny(i)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
+      need_matching(1:nexternal)=need_match(1:nexternal,icontr_picked)
       call cpu_time(tAfter)
       t_p_unw=t_p_unw+(tAfter-tBefore)
       return
@@ -3255,6 +3406,8 @@ c momenta_str array. If not, add it.
             endif
          enddo
          if (.not. Hevents) then
+
+             ! MZ write also orderstag!!
 c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
             ipro=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
@@ -3292,6 +3445,7 @@ c iproc_picked:
      &              //trim(adjustl(procid))
 
                write (str_temp,30)
+     &              orderstag(ict),
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -3343,6 +3497,7 @@ c H-event
      &           //trim(adjustl(procid))
 
             write (str_temp,30)
+     &           orderstag(ict),
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
@@ -3363,7 +3518,7 @@ c H-event
          endif
       enddo
       return
- 30   format(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
@@ -5114,8 +5269,24 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
      #      j_fks.gt.nincoming ) .or.
      #    (xbk(2).gt.1.d0.and.j_fks.eq.1) .or.
      #    (xbk(1).gt.1.d0.and.j_fks.eq.2) )then
-        write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
-        stop
+      ! add an extra check on the bjorken x's (relevant for ee
+      ! collisions)
+         if (xbk(1).gt.1d0)then
+            if(xbk(1)-1d0.lt.1d-12) then
+               xbk(1) = 1d0
+            else
+               write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
+               stop           
+            endif
+         endif
+         if (xbk(2).gt.1d0)then
+            if(xbk(2)-1d0.lt.1d-12) then
+               xbk(2) = 1d0
+            else
+               write(*,*)'Error in get_mc_lum: x_i',xbk(1),xbk(2)
+               stop           
+            endif
+         endif
       endif
       return
       end
@@ -5614,6 +5785,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision particle_charge(nexternal)
       common /c_charges/particle_charge
       include "run.inc"
@@ -5846,7 +6019,7 @@ C     skip particles which are not photons or charged
                   if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                 cycle
 C     set charge factors
-                  if (pdg_type(i).eq.22) then
+                  if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                      c_used = 0d0
                      gamma_used = gamma_ph
                      gammap_used = gammap_ph
@@ -5995,29 +6168,24 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
-            call cpu_time(tAfter)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-            tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-               if (use_poly_virtual) then
-                  virt_wgt=virt_wgt-polyfit(0)*born_wgt
-               else
-                  virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
-               endif
+               virt_wgt = 0d0
                do iamp=1,amp_split_size
                   if (amp_split_virt(iamp).eq.0d0) cycle
                   if (use_poly_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
      $                    polyfit(iamp)
      $                    *amp_split_born_for_virt(iamp)
-               else
-                  amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                 average_virtual(iamp,ichan)
-     $                 *amp_split_born_for_virt(iamp)
+                  else
+                     amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $                    average_virtual(iamp,ichan)
+     $                     *amp_split_born_for_virt(iamp)
                   endif
+                  virt_wgt = virt_wgt + amp_split_virt(iamp)
                enddo
             endif
             if (abrv.ne.'virt') then
@@ -6030,6 +6198,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             virt_wgt_save=virt_wgt
             amp_split_virt_save(1:amp_split_size)=
      $           amp_split_virt(1:amp_split_size)
+            call cpu_time(tAfter)
+            tOLP=tOLP+(tAfter-tBefore)
          endif
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
@@ -6129,7 +6299,7 @@ C     skip particles which are not photons or charged
                      if (particle_charge(i).eq.0d0.and.pdg_type(i).ne.22)
      $                    cycle
 C     set charge factors
-                     if (pdg_type(i).eq.22) then
+                     if (pdg_type(i).eq.22.and..not.particle_tag(i)) then
                         c_used = 0d0
                         gamma_used = gamma_ph
                         gammap_used = gammap_ph
@@ -6458,6 +6628,8 @@ c      include "fks.inc"
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       include 'coupl.inc'
       include 'q_es.inc'
       double precision p(0:3,nexternal),xmu2,double,single
@@ -6566,7 +6738,7 @@ c QED Born terms
             if (pdg_type(i).ne.22) then
               contr2=contr2-particle_charge(i)**2
               contr1=contr1-3d0/2d0*particle_charge(i)**2
-            else
+            elseif (.not.particle_tag(i)) then
               contr1=contr1-gamma_ph
             endif
           else
@@ -6702,7 +6874,14 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
-      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 
       logical firsttime,firsttime_nFKSprocess(fks_configs)
       data firsttime,firsttime_nFKSprocess/.true.,fks_configs*.true./
@@ -6757,6 +6936,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
       common /c_charges/particle_charge
       common /c_charges_born/particle_charge_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
       double precision zero
       parameter (zero=0d0)
 
@@ -6901,7 +7082,7 @@ C MZ the test may be removed sooner or later
          do i=nincoming+1,nexternal
             if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
      $           =ngluons_FKS(nFKSprocess)+1
-            if (pdg_type(i).eq.22) nphotons_FKS(nFKSprocess)
+            if (pdg_type(i).eq.22.and..not.particle_tag(i)) nphotons_FKS(nFKSprocess)
      $           =nphotons_FKS(nFKSprocess)+1
          enddo
 
@@ -7025,10 +7206,10 @@ c Check to see if this channel needs to be included in the multi-channeling
                endif
                do kchan=1,nchans
                   if (i.eq.iconfigs(kchan)) then
-                     if (mapconfig(iconfigs(kchan)).ne.fac1) then
+                     if (mapconfig(iconfigs(kchan),0).ne.fac1) then
                         write (*,*) 'inconsistency in symfact.dat',i
      $                       ,kchan,iconfigs(kchan)
-     $                       ,mapconfig(iconfigs(kchan)),fac1
+     $                       ,mapconfig(iconfigs(kchan),0),fac1
                         stop
                      endif
                      diagramsymmetryfactor_save(kchan)=dble(fac2)
@@ -7277,3 +7458,122 @@ c     reset the default dynamical_scale_choice
       end
 
       
+
+      subroutine fill_configurations_common
+      implicit none
+      include 'nexternal.inc'
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nFKSconfigs.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
+      INTEGER NFKSPROCESS,nFKSprocess_save
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      pmass(-nexternal:0,1:lmaxconfigs,0:fks_configs)=0d0
+      pwidth(-nexternal:0,1:lmaxconfigs,0:fks_configs)=0
+      iforest(1:2,-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      sprop(-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      tprid(-max_branch:-1,1:lmaxconfigs,0:fks_configs)=0
+      mapconfig(0:lmaxconfigs,0:fks_configs)=0
+      call fill_configurations_born(iforest(1,-max_branch,1,0),sprop(
+     $     -max_branch,1,0),tprid(-max_branch,1,0),mapconfig(0,0),pmass(
+     $     -nexternal,1,0),pwidth(-nexternal,1,0))
+      nFKSprocess_save=nFKSprocess
+      do nFKSprocess=1,fks_configs
+         call configs_and_props_inc_chooser()
+         call fill_configurations_real(iforest(1,-max_branch,1
+     $        ,nFKSprocess),sprop(-max_branch,1,nFKSprocess),tprid(
+     $        -max_branch,1,nFKSprocess),mapconfig(0,nFKSprocess),pmass(
+     $        -nexternal,1,nFKSprocess),pwidth(-nexternal,1
+     $        ,nFKSprocess))
+      enddo
+      nFKSprocess=nFKSprocess_save
+      return
+      end
+
+      subroutine fill_configurations_born(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include "coupl.inc"
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      include "born_conf.inc"
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      include "born_props.inc"
+      do i=1,lmaxconfigsb_used
+         do j=-max_branchb_used,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-max_branchb_used,-1
+            pmass_in(j,i)=pmass(j,i)
+            pwidth_in(j,i)=pwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end
+
+      subroutine fill_configurations_real(iforest_in,sprop_in,tprid_in
+     $     ,mapconfig_in,pmass_in,pwidth_in)
+      include "genps.inc"
+      include 'nexternal.inc'
+      include "coupl.inc"
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer i,j,k
+      double precision ZERO
+      parameter (ZERO=0d0)
+      integer iforest_in(2,-max_branch:-1,lmaxconfigs)
+      integer sprop_in(-max_branch:-1,lmaxconfigs)
+      integer tprid_in(-max_branch:-1,lmaxconfigs)
+      integer mapconfig_in(0:lmaxconfigs)
+      double precision pmass_in(-nexternal:0,lmaxconfigs)
+      double precision pwidth_in(-nexternal:0,lmaxconfigs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
+      common/c_configs_inc/iforest,sprop,tprid,mapconfig
+      double precision prmass(-max_branch:nexternal,lmaxconfigs)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)
+      integer prow(-max_branch:-1,lmaxconfigs)
+      common/c_props_inc/prmass,prwidth,prow
+      do i=1,lmaxconfigs
+         do j=-max_branch,-1
+            do k=1,2
+               iforest_in(k,j,i)=iforest(k,j,i)
+            enddo
+            sprop_in(j,i)=sprop(j,i)
+            tprid_in(j,i)=tprid(j,i)
+         enddo
+         mapconfig_in(i)=mapconfig(i)
+         do j=-max_branch,-1
+            pmass_in(j,i)=prmass(j,i)
+            pwidth_in(j,i)=prwidth(j,i)
+         enddo
+      enddo
+      mapconfig_in(0)=mapconfig(0)
+      return
+      end

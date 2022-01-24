@@ -11,6 +11,8 @@ ifdef DEBUG
 endif
 
 STDHEP_DIR = .
+FFLAGS += -std=legacy
+CFLAGS += -Wno-implicit-function-declaration
 
 # The cern libraries are needed to build the Phase and Space executables.
 # There is no point in building the libraries unless the executables will 

@@ -58,6 +58,8 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
 
+__maxint__ = 2**31 - 1
+
 # usefull shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
@@ -1464,6 +1466,8 @@ class AskRunNLO(cmd.ControlSwitch):
 class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCmd):
     """The command line processor of MadGraph"""    
     
+
+    LO = False
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
@@ -1714,7 +1718,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             name = 'fo_lhe_postprocessing'
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
-                        
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1793,7 +1797,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
-        
+            if self.run_card['time_of_flight']>=0:
+                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file, options)
@@ -1890,9 +1896,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not 'only_generation' in list(options.keys()):
             options['only_generation'] = False
 
-        # for second step in applgrid mode, do only the event generation step
-        if mode in ['LO', 'NLO'] and self.run_card['iappl'] == 2 and not options['only_generation']:
-            options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
         self.setup_cluster_or_multicore()
         self.update_random_seed()
@@ -1919,11 +1922,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
-
-            # Re-distribute the grids for the 2nd step of the applgrid
-            # running
-            if self.run_card['iappl'] == 2:
-                self.applgrid_distribute(options,mode_dict[mode],p_dirs)
 
             # create a list of dictionaries "jobs_to_run" with all the
             # jobs that need to be run
@@ -2023,7 +2021,44 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 time.sleep(10)
 
             event_norm=self.run_card['event_norm']
+            # gather the various orders tag and write include files (only needed once)
+            if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat')):
+                raise aMCatNLOError('Error, cannot find orderstag_glob.dat')
+                self.write_orders_tag_info()
+
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def write_orders_tag_info(self):
+        """Collects the informations on the orders_tag variable from the 
+        different channels and writes a file, linked to the P0 dirs
+        """
+        log = pjoin(self.me_dir, 'Events', self.run_name, 'alllogs_0.html')
+        content = open(log).read()
+        taglines = [l for l in content.split('\n') if 'orders_tag_plot=' in l]
+        orderstags = []
+        for l in taglines:
+            tag = int(l.split()[1])
+            if not tag in orderstags:
+                orderstags.append(tag)
+        # now write a fortran include file with all the informations
+        content = '%d\n' % len(orderstags)
+        content+= '%s\n' % ' '.join(['%d' % v for v in orderstags])
+        outfile = open(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
+        outfile.write(content)
+        outfile.close()
+
+        # finally link it into the p dirs
+        p_dirs = [d for d in \
+                open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+
+        for p_dir in p_dirs:
+            if not os.path.isfile(pjoin(self.me_dir, 'SubProcesses', p_dir, 'orderstags_glob.dat')):
+                files.ln(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'),
+                         pjoin(self.me_dir, 'SubProcesses', p_dir))
+
+        return
+
 
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
@@ -2045,7 +2080,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 if fixed_order:
                     lch=len(channels)
                     maxchannels=20    # combine up to 20 channels in a single job
-                    if self.run_card['iappl'] != 0: maxchannels=1
                     njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
                            else int(lch/maxchannels))
                     for nj in range(1,njobs+1):
@@ -2272,8 +2306,7 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
-            if fixed_order and self.run_card['iappl'] == 0 \
-               and self.run_card['req_acc_FO'] > 0:
+            if fixed_order and self.run_card['req_acc_FO'] > 0:
                 jobs_to_run_new,jobs_to_collect= \
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -2402,7 +2435,7 @@ RESTART = %(mint_mode)s
                     polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
             to_write=[]
             for rowgrp in zip(*linesoffiles):
-                action=list(set([row.strip().split()[0] for row in rowgrp])) # list(set()) structure to remove duplicants
+                action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
@@ -2504,9 +2537,12 @@ RESTART = %(mint_mode)s
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
-            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
-                # determine the number of splits needed
-                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job) \
+                    or job['npoints'] >= __maxint__:
+                # determine the number of splits needed; the second condition 
+                # (job['npoints'] >= __maxint__) prevents integer overflow in fortran
+                nsplit = min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+                nsplit*= int(job['npoints'] / __maxint__) + 1
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
@@ -2518,6 +2554,11 @@ RESTART = %(mint_mode)s
                         job_new['niters']=1
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
+
+                    if job_new['npoints'] > __maxint__:
+                        raise aMCatNLOError('Too many point for the job. Fortran will likely crash' + \
+                                        'for integer overflow. %d' % job_new['npoints'])
+
                     jobs_to_collect_new.append(job_new)
                     jobs_to_run_new.append(job_new)
             else:
@@ -2604,10 +2645,8 @@ RESTART = %(mint_mode)s
                     job['mint_mode']=-1
                     # Determine relative required accuracy on the ABS for this job
                     job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
-                    # If already accurate enough, skip the job (except when doing the first
-                    # step for the iappl=2 run: we need to fill all the applgrid grids!)
-                    if (job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0) \
-                       and not (step==-1 and self.run_card['iappl'] == 2):
+                    # If already accurate enough, skip the job
+                    if job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0:
                             continue
                     # Update the number of PS points based on errorABS, ncall and accuracy
                     itmax_fl=job['niters_done']*math.pow(job['errorABS']/
@@ -2643,7 +2682,9 @@ RESTART = %(mint_mode)s
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
-                random.seed(r)
+                if not hasattr(random, 'mg_seedset'):
+                    random.seed(r)  
+                    random.mg_seedset = r
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0
@@ -2965,7 +3006,7 @@ RESTART = %(mint_mode)s
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
 
         while p.poll() is None:
-            line = p.stdout.readline().decode()
+            line = p.stdout.readline().decode(errors='ignore')
             #misc.sprint(type(line))
             if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
                 print(line[:-1])
@@ -2973,83 +3014,30 @@ RESTART = %(mint_mode)s
                 logger.debug(line[:-1])
 
             
-    def applgrid_combine(self,cross,error,jobs):
-        """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
-        logger.debug('Combining APPLgrids \n')
-        applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),
-                                                            'applgrid-combine')
+    def pineappl_combine(self,cross,error,jobs):
+        """Combines the PineAPPL grids in all the SubProcess/P*/all_G*/ directories"""
+        logger.debug('Combining PineAPPL grids \n')
         all_jobs=[]
         for job in jobs:
+            if job['resultABS'] == 0.0:
+                logger.warning('pineappl_combine: Job\n%s\nwill be skipped, as it returned zero cross-section' %
+                        job['dirname'])
+                continue
             all_jobs.append(job['dirname'])
         ngrids=len(all_jobs)
-        nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.root")])
+        nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.pineappl")])
         for obs in range(0,nobs):
-            gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
-            # combine APPLgrids from different channels for observable 'obs'
-            if self.run_card["iappl"] == 1:
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
-            "aMCfast_obs_"+str(obs)+"_starting_grid.root"), '--optimise']+ gdir)
-            elif self.run_card["iappl"] == 2:
+            gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.pineappl") for job in all_jobs]
+            # combine PineAPPL grid from different channels for observable 'obs'
+            if self.run_card["pineappl"]:
                 unc2_inv=pow(cross/error,2)
                 unc2_inv_ngrids=pow(cross/error,2)*ngrids
-                misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",
-                        self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',
-                                  str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
-                for job in all_jobs:
-                    os.remove(pjoin(job,"grid_obs_"+str(obs)+"_in.root"))
-            else:
-                raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
+                misc.call(['pineappl','merge', pjoin(self.me_dir,"Events",
+                        self.run_name,"amcblast_obs_"+str(obs)+".pineappl")]+ gdir)
+
             # after combining, delete the original grids
             for ggdir in gdir:
                 os.remove(ggdir)
-
-        
-    def applgrid_distribute(self,options,mode,p_dirs):
-        """Distributes the APPLgrids ready to be filled by a second run of the code"""
-        # if no appl_start_grid argument given, guess it from the time stamps 
-        # of the starting grid files
-        if not('appl_start_grid' in list(options.keys()) and options['appl_start_grid']):
-            gfiles = misc.glob(pjoin('*', 'aMCfast_obs_0_starting_grid.root'),
-                               pjoin(self.me_dir,'Events')) 
-            
-            time_stamps={}
-            for root_file in gfiles:
-                time_stamps[root_file]=os.path.getmtime(root_file)
-            options['appl_start_grid']= \
-                max(six.iterkeys(time_stamps), key=(lambda key: 
-                                               time_stamps[key])).split('/')[-2]
-            logger.info('No --appl_start_grid option given. '+\
-                    'Guessing that starting_grid from run "%s" should be used.' \
-                            % options['appl_start_grid'])
-
-        if 'appl_start_grid' in list(options.keys()) and options['appl_start_grid']:
-            self.appl_start_grid = options['appl_start_grid']
-            start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
-            # check that this dir exists and at least one grid file is there
-            if not os.path.exists(pjoin(start_grid_dir,
-                                           'aMCfast_obs_0_starting_grid.root')):
-                raise self.InvalidCmd('APPLgrid file not found: %s' % \
-                       pjoin(start_grid_dir,'aMCfast_obs_0_starting_grid.root'))
-            else:
-                all_grids=[pjoin(start_grid_dir,name) for name in os.listdir( \
-                        start_grid_dir) if name.endswith("_starting_grid.root")]
-                nobs =len(all_grids)
-                gstring=" ".join(all_grids)
-        if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
-            raise self.InvalidCmd('No APPLgrid name currently defined.'+
-                                             'Please provide this information.')             
-        #copy the grid to all relevant directories
-        for pdir in p_dirs:
-            g_dirs = [file for file in os.listdir(pjoin(self.me_dir,
-                        "SubProcesses",pdir)) if file.startswith(mode+'_G') and 
-                   os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
-            for g_dir in g_dirs:
-                for grid in all_grids:
-                    obs=grid.split('_')[-3]
-                    files.cp(grid,pjoin(self.me_dir,"SubProcesses",pdir,g_dir,
-                                                    'grid_obs_'+obs+'_in.root'))
-
-
 
 
     def collect_log_files(self, jobs, integration_step):
@@ -3093,12 +3081,11 @@ RESTART = %(mint_mode)s
             files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
         # Collect the plots and put them in the Events/run* folder
         self.combine_plots_FO(folder_name,jobs)
-        # If doing the applgrid-stuff, also combine those grids
-        # and put those in the Events/run* folder
-        if self.run_card['iappl'] != 0:
+        # If PineAPPL is linked, combine the grid to be put inside Events/run_XX
+        if self.run_card['pineappl']:
             cross=self.cross_sect_dict['xsect']
             error=self.cross_sect_dict['errt']
-            self.applgrid_combine(cross,error,jobs)
+            self.pineappl_combine(cross,error,jobs)
 
 
     def setup_cluster_or_multicore(self):
@@ -3112,7 +3099,7 @@ RESTART = %(mint_mode)s
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
-                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                                            info = 'cluster handling will be done with PLUGIN: %(plug)s' )
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
         
@@ -3178,7 +3165,7 @@ RESTART = %(mint_mode)s
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
-        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'elastic photon from e'}
+        lpp = {0:'l', 1:'p', -1:'pbar', 2:'elastic photon from p', 3:'e-', 4:'mu-', -3:'e+', -4:'mu+'}
         if self.ninitial == 1:
             proc_info = '\n      Process %s' % process[:-3]
         else:
@@ -3778,22 +3765,25 @@ RESTART = %(mint_mode)s
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
-                stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         if event_norm.lower() == 'sum':
-            p.communicate(input = '1\n'.encode())
+            out, err = p.communicate(input = '1\n'.encode())
         elif event_norm.lower() == 'unity':
-            p.communicate(input = '3\n'.encode())
+            out, err = p.communicate(input = '3\n'.encode())
         elif event_norm.lower() == 'bias':
-            p.communicate(input = '0\n'.encode())
+            out, err = p.communicate(input = '0\n'.encode())
         else:
-            p.communicate(input = '2\n'.encode())
-
+            out, err = p.communicate(input = '2\n'.encode())
+        
+        out = out.decode(errors='ignore')
+        data = str(out)
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
-
+        filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
+        
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check collect_events.log')
+                    'The event file has not been created: \n %s' % data)
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
@@ -3856,7 +3846,7 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 #remove the line break from output (last character)
-                output = output.decode()[:-1]
+                output = output.decode(errors='ignore')[:-1]
                 # add lib/include paths
                 if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
                     logger.warning('Linking FastJet: updating EXTRAPATHS')
@@ -3906,14 +3896,31 @@ RESTART = %(mint_mode)s
         # add the HEPMC path of the pythia8 installation
         if shower == 'PYTHIA8':
             hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
-                         stdout = subprocess.PIPE).stdout.read().decode().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
             extrapaths.append(hepmc.split()[1].replace('-L', '')) 
 
+        # check that if FxFx is activated the correct shower plugin is present
+        if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
+            misc.sprint(self.options['pythia8_path'])
+            f1 = open(pjoin(self.me_dir, "MCatNLO","Scripts", "JetMatching.h"), "r").read()
+            py8_plugin = pjoin(self.options['pythia8_path'], "include","Pythia8Plugins","JetMatching.h")
+            if not os.path.exists(py8_plugin):
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. See http://cern.ch/amcatnlo/FxFx_merging.htm")
+            f2 = open(py8_plugin).read()
+            if f1 != f2:
+                raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. Incorrect plugin detected. See http://cern.ch/amcatnlo/FxFx_merging.htm")
+
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
+
+        # HwU.f now contains some calls to the PineAPPL functions. One should add the 
+        #  dummy interface to have them linked
+        if "HwU.o" in self.shower_card['analyse'] and \
+          not "pineappl_interface_dummy.o" in self.shower_card['analyse']: 
+            self.shower_card['analyse'] += " pineappl_interface_dummy.o"
 
         # set the PATH for the dynamic libraries
         if sys.platform == 'darwin':
@@ -4273,6 +4280,47 @@ RESTART = %(mint_mode)s
             misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
                                                            cwd=run_dir_path)
             shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        
+        if self.run_card['ickkw'] >0 :
+            if self.run_card['ickkw'] != 3 or shower != 'PYTHIA8':
+                logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+            else:
+                pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
+                
+                pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
+                # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
+                                                         
+                for line in pythia_log:
+                    info = pythiare.search(line)
+                    if not info:
+                        continue
+                    try:
+                        # Pythia cross section in mb, we want pb
+                        sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                        sigma_err = float(info.group('xerr').replace('D','E')) *1e9
+                        Nacc = int(info.group('accepted'))
+                        #Ntry = int(info.group('accepted'))
+                    except:
+                        logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                        break
+                    
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('error_pythia', sigma_err)
+                    self.results.add_detail('shower_dir', os.path.basename(rundir))
+                    logger.info("\nFxFx  Cross-Section:\n"+\
+                                "======================\n"+\
+                                "    %f pb.\n"
+                                "    Number of events after merging: %s\n", sigma_m, Nacc, '$MG:BOLD')
+                    break
+                else:
+                    logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                                    
+                
+            
+            
+            
+            
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
             misc.gzip(f)
@@ -4566,7 +4614,7 @@ RESTART = %(mint_mode)s
             # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                          stdout = subprocess.PIPE).stdout.read().decode().strip()
+                                          stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             if self.shower_card['pdfcode']==0:
@@ -4589,7 +4637,7 @@ RESTART = %(mint_mode)s
             # set instead.
             try:
                 lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                              stdout = subprocess.PIPE).stdout.read().decode().strip()
+                                              stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
                 self.link_lhapdf(pjoin(self.me_dir, 'lib'))
                 content += 'LHAPDFPATH=%s\n' % lhapdfpath
                 pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -4666,7 +4714,7 @@ RESTART = %(mint_mode)s
         for evt_file in evt_files:
             last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
                     pjoin(self.me_dir, 'SubProcesses', evt_file)], \
-                    stdout = subprocess.PIPE).stdout.read().decode().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweighting. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -4848,7 +4896,7 @@ RESTART = %(mint_mode)s
             try:
                 last_line = subprocess.Popen(
                         ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
-                    stdout = subprocess.PIPE).stdout.read().decode().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except IOError:
                 pass
             if last_line != "</LesHouchesEvents>":
@@ -4918,6 +4966,7 @@ RESTART = %(mint_mode)s
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
+            input_files.append(pjoin(cwd, os.path.pardir, 'orderstags_glob.dat'))
             input_files.append(args[0])
             output_files.append('%s.rwgt' % os.path.basename(args[0]))
             output_files.append('reweight_xsec_events.output')
@@ -5131,6 +5180,7 @@ RESTART = %(mint_mode)s
             exe = 'madevent_mintFO'
             tests = ['test_ME']
             self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
+            self.analyse_card.update_FO_extrapaths_ajob(pjoin(self.me_dir, 'SubProcesses', 'ajob_template'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
@@ -5155,25 +5205,37 @@ RESTART = %(mint_mode)s
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf' and \
-                (self.banner.get_detail('run_card', 'lpp1') != 0 or \
-                 self.banner.get_detail('run_card', 'lpp2') != 0):
+                (abs(self.banner.get_detail('run_card', 'lpp1')) not in [0, 3, 4] or \
+                 abs(self.banner.get_detail('run_card', 'lpp2')) not in [0, 3, 4]):
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
+        # this is the case of collision with dressed leptons
+        elif abs(self.banner.get_detail('run_card', 'lpp1')) == \
+             abs(self.banner.get_detail('run_card', 'lpp2')) in [3,4]:
+
+            # force not to use LHAPDF in this case
+            if self.run_card['pdlabel'] == 'lhapdf':
+                raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
+            # copy the files for the chosen density
+            if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
+
+        # bare leptons, or anything else
         else:
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
 
             self.make_opts_var['lhapdf'] = ""
 
-        # read the run_card to find if applgrid is used or not
-        if self.run_card['iappl'] != 0:
-            self.make_opts_var['applgrid'] = 'True'
-            # check versions of applgrid and amcfast
-            for code in ['applgrid','amcfast']:
+        # read the run_card to find if PineAPPL is used or not
+        if self.run_card['pineappl']:
+            self.make_opts_var['pineappl'] = 'True'
+            # check validity of the PineAPPL installation
+            for code in ['pineappl']:
                 try:
                     p = subprocess.Popen([self.options[code], '--version'], \
                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -5181,29 +5243,8 @@ RESTART = %(mint_mode)s
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                        'Please set the path to %s-config by using \n' + \
                        'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
-                else:
-                    output, _ = p.communicate()
-                    output.decode()
-                    if code == 'applgrid' and output < '1.4.63':
-                        raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
-                                             +' You are using %s',output)
-                    if code == 'amcfast' and output < '1.1.1':
-                        raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
-                                             +' You are using %s',output)
-
-            # set-up the Source/make_opts with the correct applgrid-config file
-            appllibs="  APPLLIBS=$(shell %s --ldflags) $(shell %s --ldcflags) \n" \
-                             % (self.options['amcfast'],self.options['applgrid'])
-            text=open(pjoin(self.me_dir,'Source','make_opts'),'r').readlines()
-            text_out=[]
-            for line in text:
-                if line.strip().startswith('APPLLIBS=$'):
-                    line=appllibs
-                text_out.append(line)
-            with open(pjoin(self.me_dir,'Source','make_opts'),'w') as fsock:
-                fsock.writelines(text_out)
         else:
-            self.make_opts_var['applgrid'] = ""
+            self.make_opts_var['pineappl'] = ""
 
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
@@ -5467,7 +5508,7 @@ RESTART = %(mint_mode)s
         ####mode = None # allow to overwrite it due to EW
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
-                              mode=mode, force=force,
+                              mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
                               return_instance=True)
 
@@ -5553,8 +5594,12 @@ RESTART = %(mint_mode)s
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
-            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower']:
-                logger.warning("""You are running with FxFx merging enabled. To be able to merge samples of various multiplicities without double counting, you have to remove some events after showering 'by hand'. Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+            elif self.run_card['ickkw'] == 3 and ((mode in ['aMC@NLO'] and self.run_card['parton_shower'].upper() != 'PYTHIA8') or mode in ['noshower']):
+                logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+    samples of various multiplicities without double counting, you
+    have to remove some events after showering 'by hand'.  Please
+    read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     raise self.InvalidCmd("""FxFx merging does not work with Pythia6's Q-squared ordered showers.""")
                 elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIGPP':
@@ -5623,8 +5668,6 @@ _launch_parser.add_option("-o", "--only_generation", default=False, action='stor
                             "the last available results")
 _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
-_launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
-                            help="For use with APPLgrid only: start from existing grids")
 _launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
                             help="Run the reweight module (reweighting by different model parameters)")
 _launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
@@ -5679,8 +5722,6 @@ _calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='s
                             help="Skip compilation. Ignored if no executable is found")
 _calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
-_calculate_xsect_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
-                            help="For use with APPLgrid only: start from existing grids")
 _calculate_xsect_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from " + \
                             "the last available results")
@@ -5697,9 +5738,10 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
-               'Please update your version of python.')
+
+    if sys.version_info[1] < 7:
+        sys.exit('MadGraph5_aMc@NLO works only with python 2.7 or python3.7 and later.\n'+\
+               'Please upgrade your version of python or specify a compatible version.')
 
     import os
     import optparse

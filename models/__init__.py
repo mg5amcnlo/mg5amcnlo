@@ -26,6 +26,8 @@ logger = logging.getLogger('madgraph.models')
 
 pjoin = os.path.join
 
+class UFOError(Exception): pass
+
 def load_model(name, decay=False):
     
     # avoid final '/' in the path
@@ -43,14 +45,17 @@ def load_model(name, decay=False):
             return sys.modules[model_pos]
         except Exception as error:
             pass
-        for p in os.environ['PYTHONPATH'].split(':'):
-            new_name = os.path.join(p, name)
-            try:
-                return load_model(new_name, decay)
-            except Exception:
-                pass
-            except ImportError:
-                pass
+        if 'PYTHONPATH' in os.environ:
+            for p in os.environ['PYTHONPATH'].split(':'):
+                if not p:
+                    continue
+                new_name = os.path.join(p, name)
+                try:
+                    return load_model(new_name, decay)
+                except Exception:
+                    pass
+                except ImportError:
+                    pass
     elif path_split[-1] in sys.modules:
         model_path = os.path.realpath(os.sep.join(path_split))
         sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
@@ -70,11 +75,7 @@ def load_model(name, decay=False):
         try:
             __import__(path_split[-1])
         except Exception as error:
-            if six.PY3:
-                logger.critical('It is likely that your UFO model is NOT python3 compatible.\n Most common issue with python2/3 compatibility can be solve with the "convert model" command of MG5aMC.')
-                logger.warning('If you want to try that automatic conversion please run:')
-                logger.warning('convert model %s' % '/'.join(path_split))
-            raise
+            raise UFOError(str(error))
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]

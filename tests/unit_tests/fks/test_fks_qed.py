@@ -73,7 +73,7 @@ class TestFKSQED(unittest.TestCase):
                            'perturbation_couplings':['QED'],
                            'decay_chains': MG.ProcessList(),
                            'overall_orders': {},
-                           'born_orders':{'QCD':2, 'QED':0}}
+                           'born_sq_orders':{'QCD':4, 'QED':0}}
 
             TestFKSQED.fksmultiproc_qqqq = \
                     fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
@@ -98,7 +98,7 @@ class TestFKSQED(unittest.TestCase):
                            'decay_chains': MG.ProcessList(),
                            'overall_orders': {},
                            'squared_orders': {'QCD':4, 'QED':2},
-                           'born_orders':{'QCD':2, 'QED':0}}
+                           'born_sq_orders':{'QCD':4, 'QED':0}}
              
             TestFKSQED.fksmultiproc_ppjj = \
                     fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
@@ -124,7 +124,7 @@ class TestFKSQED(unittest.TestCase):
                            'decay_chains': MG.ProcessList(),
                            'overall_orders': {},
                            'squared_orders': {'QCD':0, 'QED':6},
-                           'born_orders':{'QCD':0, 'QED':6}}
+                           'born_sq_orders':{'QCD':0, 'QED':4}}
              
             TestFKSQED.fksmultiproc_uuee_wlepotns = \
                     fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict), {'init_lep_split': True})

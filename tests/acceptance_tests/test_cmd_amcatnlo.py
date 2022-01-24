@@ -135,7 +135,7 @@ class MECmdShell(IOTests.IOTestManager):
     @set_global()
     def test_check_singletop_fastjet(self):
         cmd = os.getcwd()
-        self.generate(['p p > t j QED=2 QCD=0 [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
+        self.generate(['p p > t j QED^2=4 QCD^2=0 [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( '10000 = nevents' in card)
@@ -180,7 +180,7 @@ class MECmdShell(IOTests.IOTestManager):
         #reasons)
         
         cmd = os.getcwd()
-        self.generate(['p p > h w+ > ta+ ta- e+ ve QED=4 QCD=0 [QCD]'], 'sm')
+        self.generate(['p p > h w+ > ta+ ta- e+ ve QED^2=8 QCD^2=0 [QCD]'], 'sm')
         self.assertEqual(cmd, os.getcwd())
 
         #info_html_target = open(os.path.join(cmd, 'tests', 'input_files',
@@ -194,7 +194,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test that an exception is raised when trying to shower with hwpp without
         having set the corresponding pahts"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
@@ -219,7 +219,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test that an exception is raised when trying to shower with py8 without
         having set the corresponding pahts"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
@@ -246,7 +246,7 @@ class MECmdShell(IOTests.IOTestManager):
     def test_split_evt_gen(self):
         """test that the event generation splitting works"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( ' -1 = nevt_job' in card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
@@ -262,6 +262,34 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+
+    def test_gen_evt_onlygen(self):
+        """test that the event generation splitting works"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
+        self.do('generate_events -f')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        # now re-generate with -o
+        self.do('generate_events -of')
+        self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/run_02_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
+
+
 
     def test_madspin_ON_and_onshell_atNLO(self):
 
@@ -463,7 +491,7 @@ class MECmdShell(IOTests.IOTestManager):
         
         if os.path.exists('%s/Cards/proc_card_mg5.dat' % self.path):
             proc_path = '%s/Cards/proc_card_mg5.dat' % self.path
-            if 'p p > e+ ve QED=2 QCD=0 [QCD]' in open(proc_path).read():
+            if 'p p > e+ ve QED^2=4 QCD^2=0 [QCD]' in open(proc_path).read():
                 if files.is_uptodate(proc_path, min_time=self.loadtime):
                     if hasattr(self, 'cmd_line'):
                         self.cmd_line.exec_cmd('quit')
@@ -483,7 +511,7 @@ class MECmdShell(IOTests.IOTestManager):
                     return
 
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD]'], 'loop_sm')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         self.do('quit')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
@@ -589,7 +617,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test the param_card created is correct"""
         
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD]'], 'loop_sm')
+        self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         #change splitevent generation
         card = open('%s/Cards/run_card.dat' % self.path).read()
@@ -700,3 +728,38 @@ class MECmdShell(IOTests.IOTestManager):
         
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.path)
         return result[run_name]
+
+
+    def test_generate_taggedph_nloew(self):
+        """test the param_card created is correct"""
+        
+
+        text = """
+        import model loop_qcd_qed_sm_Gmu-a0
+        generate u u~ > !a! !a! [QED]
+        output %s
+        launch NLO
+        set lepphreco False
+        set quarkphreco False
+        """ % (self.path)
+        
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        
+        
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))

@@ -11,6 +11,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       DOUBLE COMPLEX GRREGLOG
       DOUBLE COMPLEX RECMS
       DOUBLE COMPLEX ARG
+      DOUBLE COMPLEX B0F
+      DOUBLE COMPLEX SQRT_TRAJECTORY
+      DOUBLE COMPLEX LOG_TRAJECTORY
 
 
       COMPLEX*32 MP_COND
@@ -22,5 +25,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMPLEX*32 MP_GRREGLOG
       COMPLEX*32 MP_RECMS
       COMPLEX*32 MP_ARG
+      COMPLEX*32 MP_B0F
+      COMPLEX*32 MP_SQRT_TRAJECTORY
+      COMPLEX*32 MP_LOG_TRAJECTORY
 
 

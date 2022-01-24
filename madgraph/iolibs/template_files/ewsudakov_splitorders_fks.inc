@@ -147,6 +147,8 @@ C
       DATA IC /NMO*1/
       REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP1(%(nb_temp_jamp1)i)
+      COMPLEX*16 TMP_JAMP2(%(nb_temp_jamp2)i)
       real*8 p_save(0:3, nexternal-1), p_resh(0:3, nexternal-1)
       logical pass_reshuffle
 C CCC THIS IS PROBABLY UNNECESSARY, KEEP COMMENTED FOR THE TIME BEING

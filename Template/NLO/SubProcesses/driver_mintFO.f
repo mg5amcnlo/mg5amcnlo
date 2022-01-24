@@ -67,9 +67,9 @@ c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
 
-c applgrid
-      integer iappl
-      common /for_applgrid/ iappl
+c PineAPPL
+      logical pineappl
+      common /for_pineappl/ pineappl
 c stats for granny_is_res
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
@@ -133,7 +133,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      call initcluster
+      call fill_configurations_common
       call check_amp_split 
 c     
 c     Get user input
@@ -160,10 +160,10 @@ c at the NLO)
         stop
       endif
       write(*,*) "about to integrate ", ndim,ncalls0,itmax
-c APPLgrid
-      if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
-      if(iappl.ne.0) then
-         write(6,*) "Initializing aMCfast ..."
+c PineAPPL
+      if (imode.eq.0) pineappl=.False. ! overwrite when starting completely fresh
+      if(pineappl) then
+         write(6,*) "Initializing PineAPPL ..."
 c     Set flavor map, starting from all possible
 c     parton lumi configurations defined in initial_states_map.dat
          call setup_flavourmap
@@ -266,7 +266,7 @@ c
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write+t_ewsud)
+     $     +t_write+t_ewsud+t_coupl)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -286,6 +286,7 @@ c
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in EW_sudakov : ',t_ewsud
+      write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -327,9 +328,10 @@ c timing statistics
       data t_isum/0.0/
       data t_p_unw/0.0/
       data t_write/0.0/
+      data t_coupl/0.0/
       end
 
-
+      
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use weight_lines
       use extra_weights
@@ -366,8 +368,9 @@ c timing statistics
       common/ccalculatedBorn/calculatedBorn
       character*4      abrv
       common /to_abrv/ abrv
-      integer iappl
-      common /for_applgrid/ iappl
+c PineAPPL
+      logical pineappl
+      common /for_pineappl/ pineappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ini_fin_fks_map(0:2,0:fks_configs)
@@ -389,9 +392,9 @@ c timing statistics
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
       endif
-      if (iappl.ne.0 .and. sum) then
-         write (*,*) 'WARNING: applgrid only possible '/
-     &        /'with MC over FKS directories',iappl,sum
+      if (pineappl .and. sum) then
+         write (*,*) 'WARNING: PineAPPL only possible '/
+     &        /'with MC over FKS directories',pineappl,sum
          write (*,*) 'Switching to MC over FKS directories'
          sum=.false.
       endif
@@ -426,10 +429,10 @@ c The nbody contributions
       if (p_born(0,1).lt.0d0) goto 12
       call compute_prefactors_nbody(vegas_wgt)
       call set_cms_stuff(izero)
+      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
       passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
       if (passcuts_nbody) then
          pass_cuts_check=.true.
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          call set_alphaS(p1_cnt(0,1,0))
          call include_multichannel_enhance(1)
          if (abrv(1:2).ne.'vi') then
@@ -471,13 +474,14 @@ c The n+1-body contributions (including counter terms)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
          call set_cms_stuff(izero)
+         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
          call set_cms_stuff(mohdr)
+         if (ickkw.eq.3) call set_FxFx_scale(3,p)
          passcuts_n1body=passcuts(p,rwgt)
          if (passcuts_nbody .and. abrv.ne.'real') then
             pass_cuts_check=.true.
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
@@ -489,7 +493,6 @@ c The n+1-body contributions (including counter terms)
          if (passcuts_n1body) then
             pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
-            if (ickkw.eq.3) call set_FxFx_scale(3,p)
             call set_alphaS(p)
             call include_multichannel_enhance(2)
             call compute_real_emission(p,1d0)
@@ -500,19 +503,23 @@ c The n+1-body contributions (including counter terms)
 c Include PDFs and alpha_S and reweight to include the uncertainties
       if (ickkw.eq.-1) call include_veto_multiplier
       call include_PDF_and_alphas
+
+c Include the bias weight specified in the bias_weight_function
+      call include_bias_wgt
+
       if (doreweight) then
          if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
          if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
          if (do_rwgt_pdf) call reweight_pdf
       endif
       
-      if (iappl.ne.0) then
+      if (pineappl) then
          if (sum) then
-            write (*,*) 'ERROR: applgrid only possible '/
-     &           /'with MC over FKS directories',iappl,sum
+            write (*,*) 'ERROR: PineAPPL only possible '/
+     &           /'with MC over FKS directories',pineappl,sum
             stop 1
          endif
-         call fill_applgrid_weights(vegas_wgt)
+         call fill_pineappl_weights(vegas_wgt)
       endif
 
 c Importance sampling for FKS configurations
@@ -543,7 +550,6 @@ c Finalize PS point
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.false.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
       
@@ -734,7 +740,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c Vegas stuff
 c
@@ -831,8 +844,8 @@ c-----
                   write (*,*) 'ERROR: invalid configuration number',dconfig
                   stop 1
                endif
-               do i=1,mapconfig(0)
-                  if (iconfigs(kchan).eq.mapconfig(i)) then
+               do i=1,mapconfig(0,0)
+                  if (iconfigs(kchan).eq.mapconfig(i,0)) then
                      iconfigs(kchan)=i
                      exit
                   endif

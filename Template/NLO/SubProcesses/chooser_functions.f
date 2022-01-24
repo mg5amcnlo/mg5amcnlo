@@ -8,25 +8,24 @@ c MAPCONFIG())
       double precision ZERO
       parameter (ZERO=0d0)
       include 'maxparticles.inc'
-      include 'ngraphs.inc'
+      include 'maxconfigs.inc'
       integer i,j,k
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      integer iforest(2,-max_branch:-1,n_max_cg)
-      integer sprop(-max_branch:-1,n_max_cg)
-      integer tprid(-max_branch:-1,n_max_cg)
-      integer mapconfig(0:n_max_cg)
+      integer iforest(2,-max_branch:-1,lmaxconfigs)
+      integer sprop(-max_branch:-1,lmaxconfigs)
+      integer tprid(-max_branch:-1,lmaxconfigs)
+      integer mapconfig(0:lmaxconfigs)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      double precision prmass(-max_branch:nexternal,n_max_cg)
-      double precision prwidth(-max_branch:-1,n_max_cg)
-      integer prow(-max_branch:-1,n_max_cg)
+      double precision prmass(-max_branch:nexternal,lmaxconfigs)
+      double precision prwidth(-max_branch:-1,lmaxconfigs)
+      integer prow(-max_branch:-1,lmaxconfigs)
       common/c_props_inc/prmass,prwidth,prow
       double precision pmass(nexternal)
       logical firsttime
       data firsttime /.true./
       include 'configs_and_props_decl.inc'
-      save mapconfig_d, iforest_d, sprop_d, tprid_d, pmass_d, pwidth_d
-     $ , pow_d
+      save mapconfig_d,iforest_d,sprop_d,tprid_d,pmass_d,pwidth_d,pow_d
       include "pmass.inc"
 c     
       if (max_branch_used.gt.max_branch) then
@@ -34,9 +33,9 @@ c
      $        /' increase max_branch',max_branch,max_branch_used
          stop
       endif
-      if (lmaxconfigs_used.gt.n_max_cg) then
+      if (lmaxconfigs_used.gt.lmaxconfigs) then
          write (*,*) 'ERROR in configs_and_propsinc_chooser:'/
-     $        /' increase n_max_cg' ,n_max_cg,lmaxconfigs_used
+     $        /' increase lmaxconfigs' ,lmaxconfigs,lmaxconfigs_used
          stop
       endif
 
@@ -47,7 +46,6 @@ C evaluation
      1                                   tprid_d,pmass_d,pwidth_d,pow_d)
         firsttime = .false.
       endif
-
 c
 c Fill the arrays of the c_configs_inc and c_props_inc common
 c blocks. Some of the information might not be available in the
@@ -100,6 +98,10 @@ c fks.inc information
       double precision ch_i,ch_j,ch_m
       integer particle_type_born(nexternal-1)
       common /c_particle_type_born/particle_type_born
+      logical particle_tag(nexternal)
+      common /c_particle_tag/particle_tag
+      logical particle_tag_born(nexternal-1)
+      common /c_particle_tag/particle_tag_born
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       integer extra_cnt, isplitorder_born, isplitorder_cnt
@@ -130,6 +132,7 @@ c
             stop
          endif
          particle_type(i)=particle_type_D(nFKSprocess,i)
+         particle_tag(i)=particle_tag_D(nFKSprocess,i)
          particle_charge(i)=particle_charge_D(nFKSprocess,i)
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
          ! is_aorg is true if the particle can induce soft singularities
@@ -144,18 +147,22 @@ c
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)
+            particle_tag_born(i)=particle_tag(i)
          elseif (i.gt.max(i_fks,j_fks)) then
             particle_type_born(i-1)=particle_type(i)
             particle_charge_born(i-1)=particle_charge(i)
+            particle_tag_born(i-1)=particle_tag(i)
          elseif (i.eq.min(i_fks,j_fks)) then
             i_type=particle_type(i_fks)
             j_type=particle_type(j_fks)
             ch_i=particle_charge(i_fks)
             ch_j=particle_charge(j_fks)
+            particle_tag_born(i) = particle_tag(j_fks)
             call get_mother_col_charge(i_type,ch_i,j_type,ch_j,m_type,ch_m) 
             particle_type_born(i)=m_type
             particle_charge_born(i)=ch_m
          elseif (i.ne.max(i_fks,j_fks)) then
+            particle_tag_born(i) = particle_tag(i)
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)
          endif
@@ -232,7 +239,13 @@ C read the various information from the configs_and_props_info.dat file
       character *200 buff
       double precision get_mass_from_id, get_width_from_id
       include 'configs_and_props_decl.inc'
-
+      mapconfig_d=0
+      iforest_d=0
+      sprop_d=0
+      tprid_d=0
+      pmass_d=0d0
+      pwidth_d=0d0
+      pow_d=0
       open(unit=78, file='configs_and_props_info.dat', status='old')
       do while (.true.)
         read(78,'(a)',end=999) buff
@@ -437,3 +450,84 @@ C the type and charges of the mother particle
       end
 
 
+
+      subroutine set_pdg(ict,iFKS)
+c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
+c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
+c codes of i_fks and j_fks are combined to give the PDG code of the
+c mother and the extra (n+1) parton is given the PDG code of the gluon.
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'fks_info.inc'
+      include 'genps.inc'
+      integer k,ict,iFKS
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     $     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+      include 'orders.inc'
+      do k=1,nexternal
+         pdg(k,ict)=idup(k,1)
+      enddo
+      do k=1,nexternal
+         if (k.lt.fks_j_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k,ict)
+         elseif(k.eq.fks_j_d(iFKS)) then
+            if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
+     &           abs(pdg(fks_j_d(iFKS),ict)) .and.
+     &           abs(pdg(fks_i_d(iFKS),ict)).ne.21.and.
+     &           abs(pdg(fks_i_d(iFKS),ict)).ne.22) then
+c gluon splitting:  g/a -> ff
+               !!!pdg_uborn(k,ict)=21
+               ! check if any extra cnt is needed
+               if (extra_cnt_d(iFKS).eq.0) then
+                  ! if not, assign photon/gluon depending on split_type
+                  if (split_type_d(iFKS,qcd_pos)) then
+                    pdg_uborn(k,ict)=21
+                  else if (split_type_d(iFKS,qed_pos)) then
+                    pdg_uborn(k,ict)=22
+                  else
+                    write (*,*) 'set_pdg ',
+     &                'ERROR#1 in PDG assigment for underlying Born'
+                    stop 1
+                  endif
+               else
+                  ! if there are extra cnt's, assign the pdg of the
+                  ! mother in the born (according to isplitorder_born_d)
+                  if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                    pdg_uborn(k,ict)=21
+                  else if (isplitorder_born_d(iFKS).eq.qcd_pos) then
+                    pdg_uborn(k,ict)=22
+                  else
+                    write (*,*) 'set_pdg ',
+     &                'ERROR#2 in PDG assigment for underlying Born'
+                    stop 1
+                  endif
+               endif
+            elseif (abs(pdg(fks_i_d(iFKS),ict)).eq.21.or.
+     &              abs(pdg(fks_i_d(iFKS),ict)).eq.22) then
+c final state gluon radiation:  X -> Xg
+               pdg_uborn(k,ict)=pdg(fks_j_d(iFKS),ict)
+            elseif (pdg(fks_j_d(iFKS),ict).eq.21.or.
+     &              pdg(fks_j_d(iFKS),ict).eq.22) then
+c initial state gluon splitting (gluon is j_fks):  g -> XX
+               pdg_uborn(k,ict)=-pdg(fks_i_d(iFKS),ict)
+            else
+               write (*,*)
+     &          'set_pdg ERROR#3 in PDG assigment for underlying Born'
+               stop 1
+            endif
+         elseif(k.lt.fks_i_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k,ict)
+         elseif(k.eq.nexternal) then
+            if (split_type_d(iFKS,qcd_pos)) then
+              pdg_uborn(k,ict)=21  ! give the extra particle a gluon PDG code
+            elseif (split_type_d(iFKS,qed_pos)) then
+              pdg_uborn(k,ict)=22  ! give the extra particle a photon PDG code
+            endif
+         elseif(k.ge.fks_i_d(iFKS)) then
+            pdg_uborn(k,ict)=pdg(k+1,ict)
+         endif
+      enddo
+      return
+      end

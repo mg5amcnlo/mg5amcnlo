@@ -247,7 +247,7 @@ class IOImportV4Test(unittest.TestCase):
         """Test importing the full SM"""
         model_path = 'sm_v4'
         model = import_v4.import_model(model_path)[0]
-        self.assertEqual(model.get('coupling_orders'),
+        self.assertEqual(set(model.get('coupling_orders')),
                          set(['QCD', 'QED']))
         self.assertEqual(model.get('order_hierarchy'),
                          {'QCD': 1, 'QED': 2})

@@ -72,8 +72,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0, 'QCD':4},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 0, 'QCD':6},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QCD'],
@@ -87,8 +86,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 2, 'QCD':2},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 2, 'QCD':4},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QED'],
@@ -102,8 +100,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 0, 'QCD':4},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 0, 'QCD':6},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QCD'],
@@ -117,8 +114,7 @@ class testFKSHelasObjects(unittest.TestCase):
                                'forbidden_s_channels':[],
                                'forbidden_particles':[],
                                'is_decay_chain': False,
-                               'orders': {'QED': 2, 'QCD':2},
-                               'born_orders': {'QED': 0, 'QCD':2},
+                               'born_sq_orders': {'QED': 0, 'QCD':4},
                                'squared_orders': {'QED': 2, 'QCD':4},
                                'sqorders_types':{'QED':'=', 'QCD':'='},
                                'perturbation_couplings' : ['QED'],
@@ -146,8 +142,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg]))
 
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':0},
-                        'orders': {'QED':1,'QCD':2},
+                        'born_sq_orders': {'QED':2,'QCD':0},
                         'squared_orders': {'QED':2,'QCD':2},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -183,8 +178,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg]))
 
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':0},
-                        'orders': {'QED':1,'QCD':2},
+                        'born_sq_orders': {'QED':2,'QCD':0},
                         'squared_orders': {'QED':2,'QCD':2},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -213,8 +207,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([z_leg, z_leg]))
         mymodel = import_ufo.import_model('RS')
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QCD':0, 'QED':2, 'QTD':2},
-                        'orders': {'QCD':2, 'QED':2, 'QTD':2},
+                        'born_sq_orders': {'QCD':0, 'QED':4, 'QTD':4},
                         'squared_orders': {'QCD':2, 'QED':4, 'QTD':4},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -278,8 +271,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([w_leg, j_leg]))
         
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QED':1,'QCD':1},
-                        'orders': {'QED':1,'QCD':3},
+                        'born_sq_orders': {'QED':2,'QCD':2},
                         'squared_orders': {'QED':2,'QCD':4},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -376,8 +368,7 @@ class testFKSHelasObjects(unittest.TestCase):
                     + MG.MultiLegList([t, tx]))
         
         my_process_definition = MG.ProcessDefinition({ \
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'orders': {'QCD':4, 'QED':0},
+                        'born_sq_orders': {'QCD':4, 'QED':0},
                         'squared_orders': {'QCD':6, 'QED':0},
                         'legs': my_multi_leglist,
                         'perturbation_couplings': ['QCD'],
@@ -615,96 +606,95 @@ class testFKSHelasObjects(unittest.TestCase):
         fks1.generate_reals(pdg_list1, real_amp_list1)
         helas_born_proc = fks_helas.FKSHelasProcess(
                                     fks1, me_list, me_id_list)
-        misc.sprint('fix rb links')
         goal = \
                [
                 {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
                  'fks_info': {'i':5, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':True,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 11},
+                               {'born_conf': 1, 'real_conf': 10},
+                               {'born_conf': 2, 'real_conf': 9}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 11},
-                              #             {'born_conf': 1, 'real_conf': 10},
-                              #             {'born_conf': 2, 'real_conf': 9}]}},
                 {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
                  'fks_info': {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 14},
+                               {'born_conf': 1, 'real_conf': 4},
+                               {'born_conf': 2, 'real_conf': 7}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 14},
-                              #             {'born_conf': 1, 'real_conf': 4},
-                              #             {'born_conf': 2, 'real_conf': 7}]}},
                 {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
                  'fks_info': {'i':5, 'j':3, 'ij':3, 'ij_id':2, 'need_color_links':True,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 1},
+                               {'born_conf': 1, 'real_conf': 13},
+                               {'born_conf': 2, 'real_conf': 8}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 1},
-                              #             {'born_conf': 1, 'real_conf': 13},
-                              #             {'born_conf': 2, 'real_conf': 8}]}},
                 {'n_me' : 1, 'pdgs':[2,21,2,21,21], \
                  'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 2},
+                               {'born_conf': 1, 'real_conf': 5},
+                               {'born_conf': 2, 'real_conf': 12}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 2},
-                              #             {'born_conf': 1, 'real_conf': 5},
-                              #             {'born_conf': 2, 'real_conf': 12}]}},
                 {'n_me' : 2, 'pdgs':[21,21,2,-2,21], \
                  'fks_info': {'i':4, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 8},
+                               {'born_conf': 1, 'real_conf': 7},
+                               {'born_conf': 2, 'real_conf': 6}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 8},
-                              #             {'born_conf': 1, 'real_conf': 7},
-                              #             {'born_conf': 2, 'real_conf': 6}]}},
                 {'n_me' : 3, 'pdgs':[2,-1,2,-1,21], \
                  'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 4},
+                               {'born_conf': 1, 'real_conf': 0},
+                               {'born_conf': 2, 'real_conf': 3}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 4},
-                              #             {'born_conf': 1, 'real_conf': 0},
-                              #             {'born_conf': 2, 'real_conf': 3}]}},
                 {'n_me' : 4, 'pdgs':[2,1,2,1,21], \
                  'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 4},
+                               {'born_conf': 1, 'real_conf': 0},
+                               {'born_conf': 2, 'real_conf': 3}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 4},
-                              #             {'born_conf': 1, 'real_conf': 0},
-                              #             {'born_conf': 2, 'real_conf': 3}]}},
                 {'n_me' : 5, 'pdgs':[2,-2,2,-2,21], \
                  'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 8},
+                               {'born_conf': 1, 'real_conf': 3},
+                               {'born_conf': 2, 'real_conf': 6}],
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 8},
-                              #             {'born_conf': 1, 'real_conf': 3},
-                              #             {'born_conf': 2, 'real_conf': 6}]}},
                 {'n_me' : 6, 'pdgs':[2,2,2,2,21], \
                  'fks_info': {'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 9},
+                               {'born_conf': 1, 'real_conf': 0},
+                               {'born_conf': 2, 'real_conf': 7}]
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 9},
-                              #             {'born_conf': 1, 'real_conf': 0},
-                              #             {'born_conf': 2, 'real_conf': 7}]}},
                 {'n_me' : 7, 'pdgs':[2,21,2,1,-1], \
                  'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
+                  'rb_links': [{'born_conf': 0, 'real_conf': 0},
+                               {'born_conf': 1, 'real_conf': 3},
+                               {'born_conf': 2, 'real_conf': 4}]
                             }},
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 0},
-                              #             {'born_conf': 1, 'real_conf': 3},
-                              #             {'born_conf': 2, 'real_conf': 4}]}},
                 {'n_me' : 8, 'pdgs':[2,21,2,2,-2], \
                  'fks_info': {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                  'extra_cnt_index':-1,
-                              #'rb_links': [{'born_conf': 0, 'real_conf': 1},
-                              #             {'born_conf': 1, 'real_conf': 4},
-                              #             {'born_conf': 2, 'real_conf': 8}]}},
+                  'rb_links': [{'born_conf': 0, 'real_conf': 1},
+                               {'born_conf': 1, 'real_conf': 4},
+                               {'born_conf': 2, 'real_conf': 8}],
                             }}
              ]
 

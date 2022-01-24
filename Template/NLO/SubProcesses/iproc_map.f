@@ -26,7 +26,6 @@ c absolute value).
       integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
      $     ,nequal,equal_to(maxproc,fks_configs)
      $     ,equal_to_inverse(maxproc,fks_configs)
-      character*100 buff
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -184,18 +183,18 @@ c Print the map to the screen
      &        write (*,*) '================================'
          if (nFKSprocess.eq.1) write (*,*) 'process combination map '
      &        //'(specified per FKS dir):'
-         write (buff(1:3),'(i3)') nFKSprocess
-         write (buff(4:13),'(a)') ' map     '
+         write (*,'(i3)', advance="no") nFKSprocess
+         write (*,'(a)', advance="no") ' map     '
          do j=1,iproc
-            write (buff(10+4*j:13+4*j),'(i4)') eto(j,nFKSprocess)
+            write (*,'(i4)', advance="no") eto(j,nFKSprocess)
          enddo
-         write (*,'(a)') buff(1:13+4*iproc)
-         write (buff(1:3),'(i3)') nFKSprocess
-         write (buff(4:13),'(a)') ' inv. map'
+         write (*,'(a)') ''
+         write (*,'(i3)', advance="no") nFKSprocess
+         write (*,'(a)', advance="no") ' inv. map'
          do j=1,maxproc_found
-            write (buff(10+4*j:13+4*j),'(i4)') etoi(j,nFKSprocess)
+            write (*,'(i4)', advance="no") etoi(j,nFKSprocess)
          enddo
-         write (*,'(a)') buff(1:13+4*maxproc_found)
+         write (*,'(a)') ''
          if (nFKSprocess.eq.fks_configs) 
      &        write (*,*) '================================'
       enddo
@@ -205,7 +204,7 @@ c Print the map to the screen
 
 ************************************************************************
 *     The following routine sets up the flavour map that needs to be
-*     feeded to APPLgrid in the initialization stage.
+*     feeded to PineAPPL in the initialization stage.
 ************************************************************************
       subroutine setup_flavourmap
 *
@@ -215,8 +214,8 @@ c Print the map to the screen
       include 'nexternal.inc'
       include 'genps.inc'
       include "leshouche_decl.inc"
-      include "reweight_appl.inc"
-      include "appl_common.inc"
+      include "reweight_pineappl.inc"
+      include "pineappl_common.inc"
 *
       character*200 buffer
       integer procnum,i,l,j,ll,found_a,found_m
@@ -251,8 +250,18 @@ c Print the map to the screen
 *     Read the file using a buffer
       do
          read (71,'(a)',err=100,end=100) buffer ! Jump to line 100 when all lines read
+         write(*,*) buffer
          read (buffer,*) kpdflumi,nproc(kpdflumi),
      1        ((pdgs(i,j,kpdflumi),i=1,2),j=1,nproc(kpdflumi))
+         ! check that the allocated arrays are big enough
+         if (kpdflumi.gt.mxpdflumi) then
+            write(*,*) 'ERROR in iproc_map.f, too many processes'
+            write(*,*) 'increase mxpdflumi and max_nproc' //
+     %                 ' inside appl_comon.inc'
+            write(*,*) 'and __max_nproc__ in pineappl_interface.cc'
+            write(*,*) 'Make sure to assign all variables the same value!'
+            stop 1
+         endif
          appl_nproc(kpdflumi) = nproc(kpdflumi)
       enddo
  100  continue

@@ -490,7 +490,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return list(set(out))
+            return misc.make_unique(out)
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
@@ -1633,7 +1633,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def compile(self, *args, **opts):
         """ """
-        
+        import multiprocessing
+        if not self.options['nb_core'] or self.options['nb_core'] == 'None':
+            self.options['nb_core'] = multiprocessing.cpu_count()
         return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):

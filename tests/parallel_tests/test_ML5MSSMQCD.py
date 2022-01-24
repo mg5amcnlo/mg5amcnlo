@@ -15,6 +15,7 @@ _pickle_path = os.path.join(_file_path, 'input_files', 'ML_parallel_saved_runs')
 
 from madgraph import MG5DIR
 from madgraph import MadGraph5Error
+from madgraph.various.misc import misc
 from madgraph.iolibs.files import cp
 #import madgraph.iolibs.save_load_object as save_load_object
 from . import loop_me_comparator

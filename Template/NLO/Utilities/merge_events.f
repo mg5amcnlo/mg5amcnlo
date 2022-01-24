@@ -13,7 +13,7 @@ c merge_events.f handling_lhe_events.f fill_MC_mshell.f
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       character*80 event_file,fname1,executable,inputfile,pref
-      character*140 buff,tmpstr
+      character*1000 buff,tmpstr
       character*10 MonteCarlo,mc
       character*3 str
       integer evts,leftover,loc,loc1,loc2,num_file,sumevt

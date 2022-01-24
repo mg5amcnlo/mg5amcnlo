@@ -9,8 +9,6 @@ set madanalysis_path None --no_save
 set exrootanalysis_path None --no_save
 display options
 generate_events
-pythia
-%(dir_name)s/Cards/pythia_card_default.dat
 %(mg5_path)s/tests/input_files/run_card_matching.dat
 set wt Auto
 done

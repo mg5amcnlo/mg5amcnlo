@@ -2,6 +2,13 @@
 #include <iomanip>
 #include <string>
 
+
+extern "C" {
+    int get_wgts_info_len(void);
+}
+
+const int wgts_info_len_used = 80;
+
 class MyReader {
 
   private:
@@ -16,12 +23,22 @@ class MyReader {
   LHEF::Reader reader;
 
 
-  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[1024][50])) {
+  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[1024][wgts_info_len_used])) {
+
+    // check that wgts_info_len_used > wgts_info_len from the fortran module
+    if (wgts_info_len_used != get_wgts_info_len()) {
+      std::cout << " wgts_info_len_used is different from the corresponding quantity in HwU_wgts_info_len\n"
+                << " Please set wgts_info_len_used in LHEFRead.h to "<< get_wgts_info_len() <<"\n"
+                << " Program stopped.\n";
+      exit(1);
+    }
 
     // Read header of event file
     std::stringstream hss;
     std::string hs;
-    sprintf(cwgtinfo_weights_info[0], "%50s","central value");
+    std::stringstream format_str;
+    format_str <<"%"<<wgts_info_len_used<<"s";
+    sprintf(cwgtinfo_weights_info[0],format_str.str().c_str(),"central value");
     cwgtinfo_nn=1;
     while (true){
       hss << reader.headerBlock;
@@ -37,7 +54,7 @@ class MyReader {
 	  if (hs.find("<weight id") != std::string::npos) {
 	    std::string sRWGT = hs.substr(hs.find("'>")+2,hs.find("</w")-3);
 	    sRWGT = sRWGT.substr(0,sRWGT.find("<"));
-	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],"%50s",sRWGT.c_str());
+	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],format_str.str().c_str(),sRWGT.c_str());
 	    ++cwgtinfo_nn;
 	  }
 	}

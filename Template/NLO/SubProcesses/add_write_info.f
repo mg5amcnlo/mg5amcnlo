@@ -92,8 +92,8 @@ c For the boost to the lab frame
       data (xdir(i),i=1,3) /0,0,1/
 
 c For (n+1)-body this is the configuration mapping
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
 
 c For shifting QCD partons from zero to their mass-shell
       double precision x(99),p(0:3,99)
@@ -119,6 +119,14 @@ c cFKSprocess
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+c pt_clust string
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
+      double precision ptclus
+      CHARACTER temp*600,temp0*7,integ*1,float*18
+      CHARACTER integfour*4      
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
       include 'orders.inc'
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
@@ -151,31 +159,44 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
-         save_nFKSprocess=nFKSprocess
-         do nFKSprocess=1,FKS_configs
-            call fks_inc_chooser()
-c For the S-events
-            call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
-     $           ,pmass_tree_S_t,pwidth_tree_S_t)
-c For the H-events
-            call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
-     $           ,pmass_tree_H_t,pwidth_tree_H_t)
-            do j=-max_branch,-1
-               itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
-               itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
-               sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
-               pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
-               pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
-               itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
-               itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
-               sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
-               pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
-               pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+         if (firsttime2) then
+c     For the S-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
+     $              ,pmass_tree_S_t,pwidth_tree_S_t)
+               do j=-max_branch,-1
+                  itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
+                  itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
+                  sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
+                  pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
+                  pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+               enddo
             enddo
-         enddo
-         firsttime=.false.
-         nFKSprocess=save_nFKSprocess
-         call fks_inc_chooser()
+            firsttime2=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
+         if (Hevents) then
+c     For the H-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
+     $              ,pmass_tree_H_t,pwidth_tree_H_t)
+               do j=-max_branch,-1
+                  itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
+                  itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
+                  sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
+                  pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
+                  pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
+               enddo
+            enddo
+            firsttime=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
       endif
 c Copy the saved information to the arrays actually used
       if (Hevents) then
@@ -232,11 +253,6 @@ c Assume helicity summed
       do i=1,nexternal
          jpart(7,i)=9
       enddo
-      if (firsttime2 .and. isum_hel.ne.0) then
-         write (*,*) 'WARNING: for writing the events, no helicity '//
-     &        'info is used even though some info could be available.'
-         firsttime2=.false.
-      endif
 c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
@@ -581,6 +597,38 @@ c
             pb(j,ito(i))=pb(j,i)
          enddo
       enddo
+
+
+! write the ptclusstring that knows about which partons should be
+! considered in the MLM-like matching
+      if (ickkw.eq.3) then
+         if (nincoming.ne.2) then
+            write (*,*) 'Need to incoming particles with ickkw=3 '/
+     $           /'(add_write_info.f)'
+            stop
+         endif
+         temp0='<scales '
+         temp=''
+         do i=nincoming+1,nexpart
+            integfour=''
+            float=''
+            if (need_matching(i).ne.-1) then
+               ptclus=shower_scale
+            else
+               if (nincoming.ne.2) then
+                  write (*,*) 'need two incoming particles '/
+     $                 /'in add_write_info.f'
+                  stop 1
+               endif
+               ptclus=shower_scale-0.001d0
+            endif
+            Write(float,'(f16.5)') ptclus
+            write(integfour,'(i4)') ito(i)
+            temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
+     $           /'="'//trim(adjustl(float))//'"'
+         enddo
+         ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
+      endif
 c
 c     Set the number of particles that needs to be written in event file
 c
@@ -593,108 +641,51 @@ c
       subroutine set_itree(iconfig,Hevents,itree,sprop_tree,pmass_tree
      &     ,pwidth_tree)
       implicit none
-      integer iconfig
+      integer iconfig,iconf
       logical Hevents
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
-      double precision ZERO
-      parameter (ZERO=0d0)
+      include 'nFKSconfigs.inc'
+      include 'real_from_born_configs.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       integer itree(2,-max_branch:-1)
       integer sprop_tree(-max_branch:-1)
-      include "born_conf.inc"
-      integer i,j,jj
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
+      integer i,j
       double precision pmass_tree(-nexternal:0)
       double precision pwidth_tree(-nexternal:0)
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      include "born_props.inc"
-c
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 c Do not really care about t-channels: loop should just go to
-c nexternal-4, even though there is one more when there are t-channels
-c around
-      do j=-(nexternal-4),-1
-         do i=1,2
-            itree(i,j)=iforest(i,j,iconfig)
-         enddo
-         sprop_tree(j)=sprop(j,iconfig)
-         pmass_tree(j)=pmass(j,iconfig)
-         pwidth_tree(j)=pwidth(j,iconfig)
-      enddo
-c
-c When we are doing H-events, we need to add --when j_fks is final
-c state-- the s-channel branching fks_mother -> j_fks + i_fks.  When
-c j_fks is initial state, we need to add a 'bogus' t-channel splitting
-c to make sure that all the loops stop properly
-c
+c nexternal-3 (or 4), even though there is one more when there are
+c t-channels around
       if (Hevents) then
-c must re-label the external particles to get the correct daughters
-         if (i_fks.le.j_fks) then
-            write (*,*) 'ERROR: i_fks should be greater than j_fks'
-            stop
-         endif
+         iconf=real_from_born_conf(iconfig,nFKSprocess)
+         do j=-(nexternal-3),-1
+            do i=1,2
+               itree(i,j)=iforest(i,j,iconf,nFKSprocess)
+            enddo
+            sprop_tree(j)=sprop(j,iconf,nFKSprocess)
+            pmass_tree(j)=pmass(j,iconf,nFKSprocess)
+            pwidth_tree(j)=pwidth(j,iconf,nFKSprocess)
+         enddo
+      else
          do j=-(nexternal-4),-1
             do i=1,2
-               if ( itree(i,j).ge.i_fks ) then
-                  itree(i,j)=itree(i,j)+1
-               endif
+               itree(i,j)=iforest(i,j,iconfig,0)
             enddo
+            sprop_tree(j)=sprop(j,iconfig,0)
+            pmass_tree(j)=pmass(j,iconfig,0)
+            pwidth_tree(j)=pwidth(j,iconfig,0)
          enddo
-c
-         if (j_fks.gt.nincoming) then
-c we must add an extra s-channel. Easiest is to add it all the way at
-c the beginning. Therefore, relabel everything else first. Use the
-c original ones to make sure we are doing it correctly (and not
-c accidentally overwriting something).
-            do j=-(nexternal-4),-1
-               sprop_tree(j-1)=sprop(j,iconfig)
-               pmass_tree(j-1)=pmass(j,iconfig)
-               pwidth_tree(j-1)=pwidth(j,iconfig)
-               do i=1,2
-                  itree(i,j-1)=iforest(i,j,iconfig)
-c Also update the internal references
-                  if ( itree(i,j-1).lt. 0 ) then
-                     itree(i,j-1)=itree(i,j-1)-1
-                  endif
-               enddo
-            enddo
-c
-c Add the new s-channel
-c
-            itree(1,-1)=i_fks
-            itree(2,-1)=j_fks
-c This will never be an on-shell s-channel. Hence, give it some bogus values:
-            sprop_tree(-1)=0
-            pmass_tree(-1)=0d0
-            pwidth_tree(-1)=0d0
-c
-c We have to make sure that the fks_mother (which is equal to the j_fks
-c label of the Born) is replaced by the new s-channel
-c
-            do j=-(nexternal-3),-2 ! do not include the new s-channel
-               do i=1,2
-                  if ( itree(i,j).eq. j_fks ) then
-                     itree(i,j)=-1 ! reference to the new s-channel
-                  endif
-               enddo
-            enddo
-
-         else
-c j_fks is initial state
-            jj=-(nexternal-3)     ! Just add it at the end
-c setting itree to 1 (or 2) makes sure that the loops over s-channel
-c propagators will exit
-            itree(1,jj)=1
-            itree(2,jj)=1
-            sprop_tree(jj)=0
-            pmass_tree(jj)=0d0
-            pwidth_tree(jj)=0d0
-         endif
       endif
-
       return
       end
 

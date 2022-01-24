@@ -393,12 +393,7 @@ class HelpToCmd(object):
         logger.info("     -r          : Refresh of the existing filters (erasing them if already present).",'$MG:color:BLUE')
         logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
         
-    def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
-        logger.info('-- Add in the lhe files the information')
-        logger.info('   of how long it takes to a particle to decay.')
-        logger.info('   threshold option allows to change the minimal value required to')
-        logger.info('   a non zero value for the particle (default:1e-12s)')
+
 
     def help_calculate_decay_widths(self):
         
@@ -1180,43 +1175,6 @@ class CheckValidForCmd(object):
                     
         return run
 
-    def check_add_time_of_flight(self, args):
-        """check that the argument are correct"""
-        
-        
-        if len(args) >2:
-            self.help_time_of_flight()
-            raise self.InvalidCmd('Too many arguments')
-        
-        # check if the threshold is define. and keep it's value
-        if args and args[-1].startswith('--threshold='):
-            try:
-                threshold = float(args[-1].split('=')[1])
-            except ValueError:
-                raise self.InvalidCmd('threshold options require a number.')
-            args.remove(args[-1])
-        else:
-            threshold = 1e-12
-            
-        if len(args) == 1 and  os.path.exists(args[0]): 
-                event_path = args[0]
-        else:
-            if len(args) and self.run_name != args[0]:
-                self.set_run_name(args.pop(0))
-            elif not self.run_name:            
-                self.help_add_time_of_flight()
-                raise self.InvalidCmd('Need a run_name to process')            
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
-            if not os.path.exists(event_path):
-                event_path = event_path[:-3]
-                if not os.path.exists(event_path):    
-                    raise self.InvalidCmd('No unweighted events associate to this run.')
-
-
-        
-        #reformat the data
-        args[:] = [event_path, threshold]
-
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -1676,23 +1634,6 @@ class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
     
-    def complete_add_time_of_flight(self, text, line, begidx, endidx):
-        "Complete command"
-       
-        args = self.split_arg(line[0:begidx], error=False)
-
-        if len(args) == 1:
-            #return valid run_name
-            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
-            data = [n.rsplit('/',2)[1] for n in data]
-            return  self.list_completion(text, data + ['--threshold='], line)
-        elif args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-        else:
-            return self.list_completion(text, ['--threshold='], line)
-    
     def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
@@ -2058,6 +1999,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
     """The command line processor of Mad Graph"""    
     
+
+    LO = True
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
@@ -2117,6 +2060,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         self.load_results_db()        
         self.results.def_web_mode(self.web)
+
+        self.Gdirs = None
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
@@ -2195,61 +2140,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                           
         return self.options
 
-    ############################################################################
-    def do_add_time_of_flight(self, line):
-
-        args = self.split_arg(line)
-        #check the validity of the arguments and reformat args
-        self.check_add_time_of_flight(args)
-        
-        event_path, threshold = args
-        #gunzip the file
-        if event_path.endswith('.gz'):
-            need_zip = True
-            misc.gunzip(event_path)
-            event_path = event_path[:-3]
-        else:
-            need_zip = False
-            
-        import random
-        try:
-            import madgraph.various.lhe_parser as lhe_parser
-        except:
-            import internal.lhe_parser as lhe_parser 
-            
-        logger.info('Add time of flight information on file %s' % event_path)
-        lhe = lhe_parser.EventFile(event_path)
-        output = open('%s_2vertex.lhe' % event_path, 'w')
-        #write the banner to the output file
-        output.write(lhe.banner)
-
-        # get the associate param_card
-        begin_param = lhe.banner.find('<slha>')
-        end_param = lhe.banner.find('</slha>')
-        param_card = lhe.banner[begin_param+6:end_param].split('\n')
-        param_card = check_param_card.ParamCard(param_card)
-
-        cst = 6.58211915e-25 # hbar in GeV s
-        c = 299792458000 # speed of light in mm/s
-        # Loop over all events
-        for event in lhe:
-            for particle in event:
-                id = particle.pid
-                width = param_card['decay'].get((abs(id),)).value
-                if width:
-                    vtim = c * random.expovariate(width/cst)
-                    if vtim > threshold:
-                        particle.vtim = vtim
-            #write this modify event
-            output.write(str(event))
-        output.write('</LesHouchesEvents>\n')
-        output.close()
-        
-        files.mv('%s_2vertex.lhe' % event_path, event_path)
-        
-        if need_zip:
-            misc.gzip(event_path)
-        
     ############################################################################
     def do_banner_run(self, line): 
         """Make a run from the banner file"""
@@ -2457,6 +2347,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         self.banner = None
         self.Gdirs = None
+        
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2797,6 +2688,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.ask_run_configuration('parton')
         self.banner = None
         self.Gdirs = None
+
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2988,8 +2880,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            misc.gunzip('%s/%s/unweighted_events.lhe.gz' % 
-                                  (pjoin(self.me_dir,'Events'), self.run_name))
+            path = '%s/%s/unweighted_events.lhe.gz' % (pjoin(self.me_dir,'Events'), self.run_name)
+
+            if os.path.exists(path):
+                misc.gunzip(path)
 
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
@@ -3104,7 +2998,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             else:
                 run_card = self.run_card
             self.run_card = run_card
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
@@ -3125,7 +3020,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                             if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
                                 raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
                                                                          mandatory_file,run_card['bias_module']))
-                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                        misc.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
                                                                      os.path.basename(run_card['bias_module'])))
                 
                 #check expected parameters for the module.
@@ -3359,7 +3254,23 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
-            
+
+        if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
+            jobs, P_zero_result = ajobcreator.get_helicity()
+        else:
+            for p in subproc:
+                for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    new_file = f.replace('_orig','_optim')
+                    files.cp(f, f.replace('_orig','_optim'))
+                    f = '%s.o' % f[:-2]
+                    if os.path.exists(f):
+                        files.cp(f, f.replace('_orig','_optim'))
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', p, 'Hel', 'selection'))
+            except Exception as error:
+                logger.debug(error)
+                pass
+                                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -3370,7 +3281,9 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
-                
+            self.get_Gdir()
+            for P in P_zero_result:
+                self.Gdirs[0][pjoin(self.me_dir,'SubProcesses',P)] = []
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
@@ -3422,6 +3335,9 @@ Beware that this can be dangerous for local multicore runs.""")
         self.nb_refine += 1
         args = self.split_arg(line)
         treshold=None
+               
+
+        
         for a in args:
             if a.startswith('--treshold='):
                 treshold = float(a.split('=',1)[1])
@@ -3586,6 +3502,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
+
     
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -3602,7 +3519,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        
+
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
@@ -3615,15 +3532,20 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+
+                if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                    os.remove(pjoin(Gdir, 'events.lhe'))
+                    continue
+
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
                              result.get('axsec')
                              )
-                sum_xsec += result.get('xsec')
-                sum_xerru.append(result.get('xerru'))
-                sum_axsec += result.get('axsec')
-                
+ 
                 if len(AllEvent) >= 80: #perform a partial unweighting
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
@@ -3653,7 +3575,7 @@ Beware that this can be dangerous for local multicore runs.""")
                    
         self.results.add_detail('nb_event', nb_event)
     
-        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
         
         
@@ -3935,7 +3857,7 @@ Beware that this can be dangerous for local multicore runs.""")
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                              cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
-            out = out.decode().replace('\n','')
+            out = out.decode(errors='ignore').replace('\n','')
             PY8_curr_version = out
             # In order to test that the version is correctly formed, we try to cast
             # it to a float
@@ -4057,15 +3979,17 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList, force=True)
+            
 
-            for scale in PY8_Card['SysCalc:qCutList']:
-                if scale<(1.5*self.run_card['xqcut']):
-                    logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
-        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
-        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
-        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
-        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+            if PY8_Card['SysCalc:qCutList']!='auto':
+                for scale in PY8_Card['SysCalc:qCutList']:
+                    if scale<(1.5*self.run_card['xqcut']):
+                        logger.error(
+            'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
+            " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+            "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+            ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+            'It would be better/safer to use a larger qCut or a smaller xqcut.')
                 
             # Specific MLM settings
             # PY8 should not implement the MLM veto since the driver should do it
@@ -4173,10 +4097,12 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
                         PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
-            
-            for scale in PY8_Card['SysCalc:tmsList']:
-                if scale<self.run_card[CKKW_cut]:
-                    logger.error(
+                #else:
+                #    PY8_Card.MadGraphSet('SysCalc:tmsList', [], force=True)
+            if PY8_Card['SysCalc:tmsList']!='auto':
+                for scale in PY8_Card['SysCalc:tmsList']:
+                    if float(scale)<float(self.run_card[CKKW_cut]):
+                        logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
@@ -4372,9 +4298,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                 # Start a parallelization instance (stored in self.cluster)
                 self.configure_run_mode(self.options['run_mode'])
                 if self.options['run_mode']==1:
-                    n_cores = max(self.options['cluster_size'],1)
+                    n_cores = max(int(self.options['cluster_size']),1)
                 elif self.options['run_mode']==2:
-                    n_cores = max(self.cluster.nb_core,1)
+                    n_cores = max(int(self.cluster.nb_core),1)
                 
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
@@ -4432,6 +4358,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 shutil.copy(pythia_main,parallelization_dir)
                 # Add a safe card in parallelization
                 ParallelPY8Card = copy.copy(PY8_Card)
+                assert ParallelPY8Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
+
                 # Normalize the name of the HEPMCouput and lhe input
                 if HepMC_event_output:
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
@@ -5655,6 +5583,13 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
             self.make_opts_var['lhapdf'] = ""
+
+            # this is the case of collision with dressed leptons
+            if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) in [3,4]:
+                # copy the files for the chosen density
+                if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                    self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
+
             
         # set random number
         if self.run_card['iseed'] != 0:
@@ -5662,7 +5597,7 @@ tar -czf split_$1.tar.gz split_$1
             self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
-            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'), template=pjoin(self.me_dir, 'Cards','run_card.dat'))
             time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
             self.configured = time_mod
@@ -5678,16 +5613,20 @@ tar -czf split_$1.tar.gz split_$1
         #set random seed for python part of the code
         if self.run_card['python_seed'] == -2: #-2 means same as run_card
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         elif self.run_card['python_seed'] >= 0:
             import random
-            random.seed(self.run_card['python_seed'])
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
-        self.update_make_opts()
+        self.update_make_opts(self.run_card)
         # reset list of Gdirectory
         self.Gdirs = None
             
@@ -5721,7 +5660,7 @@ tar -czf split_$1.tar.gz split_$1
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode()
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode(errors='ignore')
             if 'VALID' not in str(bias_module_valid).upper() or \
                'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
@@ -5921,7 +5860,9 @@ tar -czf split_$1.tar.gz split_$1
             raise MadGraph5Error('Random seed too large ' + str(self.random) + ' > 30081*30081')
         if self.run_card['python_seed'] == -2: 
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.random)  
+                random.mg_seedset = self.random
             
     ############################################################################
     def save_random(self):
@@ -6515,10 +6456,14 @@ class GridPackCmd(MadEventCmd):
 
         if self.run_card['python_seed'] == -2:
             import random
-            random.seed(seed)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(seed)  
+                random.mg_seedset = seed
         elif self.run_card['python_seed'] > 0:
             import random
-            random.seed(self.run_card['python_seed'])            
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']         
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
@@ -6531,11 +6476,12 @@ class GridPackCmd(MadEventCmd):
         if not self.readonly:
             self.exec_cmd('store_events')
             self.print_results_in_shell(self.results.current)
-            if self.run_card['systematics_program'] == 'systematics':
+            if self.run_card['systematics_program'] == 'systematics' and self.run_card['use_syst']:
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        else:
+        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+            self.options['nb_core']  = 1
             self.exec_cmd('systematics %s --from_card' % 
                           pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
                                                postcmd=False,printcmd=False)
@@ -7050,9 +6996,13 @@ class MadLoopInitializer(object):
 
         # Setup parallelization
         if MG_options:
-            mcore = cluster.MultiCore(**MG_options)
+            if interface and  hasattr(interface, 'cluster') and isinstance(interface.cluster, cluster.MultiCore):
+                mcore = interface.cluster
+            else: 
+                mcore = cluster.MultiCore(**MG_options)
         else:
             mcore = cluster.onecore
+
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(

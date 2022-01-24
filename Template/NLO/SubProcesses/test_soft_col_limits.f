@@ -18,12 +18,12 @@ c*****************************************************************************
       double precision max_fail
       parameter       (max_fail=0.3d0)
       integer i,j,k,n,l,jj,bs_min,bs_max,iconfig_in,nsofttests
-     $     ,ncolltests,nerr,imax,iflag,iret,ntry,fks_conf_number
+     $     ,ncolltests,imax,iflag,iret,ntry,fks_conf_number
      $     ,fks_loop_min,fks_loop_max,fks_loop,ilim
       double precision fxl(15),wfxl(15),limit(15),wlimit(15),lxp(0:3
      $     ,nexternal+1),xp(15,0:3,nexternal+1),p(0:3,nexternal),wgt
      $     ,x(99),fx,totmass,xi_i_fks_fix_save,y_ij_fks_fix_save
-     $     ,fail_frac,pmass(nexternal)
+     $     ,pmass(nexternal)
       double complex wgt1(2)
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -72,6 +72,8 @@ C split orders stuff
       include 'orders.inc'
       integer iamp
       integer orders(nsplitorders)
+      integer nerr(0:amp_split_size)
+      double precision fail_frac(0:amp_split_size)
       double precision fxl_split(15,amp_split_size),wfxl_split(15
      $     ,amp_split_size)
       double precision limit_split(15,amp_split_size), wlimit_split(15
@@ -142,6 +144,7 @@ c-----
 
       call setrun               !Sets up run parameters
       call setpara('param_card.dat') !Sets up couplings and masses
+      call fill_configurations_common
       call setcuts              !Sets up cuts 
 
 c When doing hadron-hadron collision reduce the effect collision energy.
@@ -252,7 +255,7 @@ c
          Hevents=.true.
          softtest=.true.
          colltest=.false.
-         nerr=0
+         nerr(:)=0
          imax=10
          do j=1,nsofttests
             do iamp=1,amp_split_size
@@ -417,6 +420,7 @@ c because otherwise fresh random will be used...
                         call xprintout(6,limit_split(i,iamp),fxl_split(i
      $                       ,iamp))
                      enddo
+                     iflag=0
                      call checkres2(limit_split(1,iamp),fxl_split(1
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
      $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
@@ -442,7 +446,7 @@ c
                iflag=0
                call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
      &              iflag,imax,j,i_fks,j_fks,iret)
-               nerr=nerr+iret
+               nerr(0)=nerr(0)+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
                do iamp=1, amp_split_size
@@ -452,7 +456,7 @@ c
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
      $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
      $                    ,iret)
-                     nerr=nerr+iret
+                     nerr(iamp)=nerr(iamp)+iret
                   endif
                enddo
             endif
@@ -460,12 +464,24 @@ c
          if(nsofttests.gt.10)then
             write(*,*)'Soft tests done for (Born) config',iconfig
             write(*,*)'Failures:',nerr
-            fail_frac= nerr/dble(nsofttests)
-            if (fail_frac.lt.max_fail) then
-               write(*,401) nFKSprocess, fail_frac
-            else
-               write(*,402) nFKSprocess, fail_frac
-            endif
+            do iamp = 0, amp_split_size
+                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
+                if (iamp.ne.0) then
+                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+                   call amp_split_pos_to_orders(iamp,orders)
+                   do i = 1, nsplitorders
+                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
+                   enddo
+                else
+                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
+                endif
+                if (fail_frac(iamp).lt.max_fail) then
+                   write(*,401) nFKSprocess, fail_frac(iamp)
+                else
+                   write(*,402) nFKSprocess, fail_frac(iamp)
+                endif
+            enddo
          endif
 
          write (*,*) ''
@@ -480,7 +496,7 @@ c
          softtest=.false.
          colltest=.true.
 
-         nerr=0
+         nerr(:)=0
          imax=10
          do j=1,ncolltests
             do iamp=1,amp_split_size
@@ -625,6 +641,7 @@ c
                         call xprintout(6,limit_split(i,iamp),fxl_split(i
      $                       ,iamp))
                      enddo
+                     iflag=1
                      call checkres2(limit_split(1,iamp),fxl_split(1
      $                    ,iamp),wlimit_split(1,iamp),wfxl_split(1,iamp)
      $                    ,xp,lxp,iflag,imax,j,i_fks,j_fks
@@ -650,7 +667,7 @@ c
                iflag=1
                call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
      &              iflag,imax,j,i_fks,j_fks,iret)
-               nerr=nerr+iret
+               nerr(0)=nerr(0)+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
                do iamp=1, amp_split_size
@@ -659,7 +676,7 @@ c
                      call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
      &                    wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
      &                    iflag,imax,j,i_fks,j_fks,iret)
-                     nerr=nerr+iret
+                     nerr(iamp)=nerr(iamp)+iret
                   endif
                enddo
             endif
@@ -667,12 +684,24 @@ c
          if(ncolltests.gt.10)then
             write(*,*)'Collinear tests done for (Born) config', iconfig
             write(*,*)'Failures:',nerr
-            fail_frac= nerr/dble(ncolltests)
-            if (fail_frac.lt.max_fail) then
-               write(*,501) nFKSprocess, fail_frac
-            else
-               write(*,502) nFKSprocess, fail_frac
-            endif
+            do iamp = 0, amp_split_size
+                if (iamp.gt.0.and.iamp.le.amp_split_size_born) cycle
+                fail_frac(iamp)= nerr(iamp)/dble(nsofttests)
+                if (iamp.ne.0) then
+                   write(*,fmt="(a,i3,a)",advance="no")'Split-order',iamp,': '
+                   call amp_split_pos_to_orders(iamp,orders)
+                   do i = 1, nsplitorders
+                      write(*,fmt="(a,a,i3,a)",advance="no") ordernames(i), ':',orders(i),'; '
+                   enddo
+                else
+                   write(*,fmt="(a)", advance="no")'Sum of all orders: '
+                endif
+                if (fail_frac(iamp).lt.max_fail) then
+                   write(*,501) nFKSprocess, fail_frac(iamp)
+                else
+                   write(*,502) nFKSprocess, fail_frac(iamp)
+                endif
+            enddo
          endif
          
  123     continue
