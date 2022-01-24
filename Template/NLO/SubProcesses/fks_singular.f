@@ -206,8 +206,10 @@ c   approximation
       common /to_amp_ewsud_xxc/amp_split_ewsud_xxc
       double complex amp_split_ewsud_par(amp_split_size)
       common /to_amp_ewsud_par/amp_split_ewsud_par
-      DOUBLE COMPLEX AMP_SPLIT_EWSUD_QCD(AMP_SPLIT_SIZE)
-      COMMON /TO_AMP_EWSUD_QCD/AMP_SPLIT_EWSUD_QCD
+      double complex amp_split_ewsud_qcd(amp_split_size)
+      common /to_amp_ewsud_qcd/amp_split_ewsud_qcd
+      double complex amp_split_ewsud_parqcd(amp_split_size)
+      common /to_amp_ewsud_parqcd/amp_split_ewsud_parqcd
       ! sudakov mode
       integer sud_mod
       common /to_sud_mod/ sud_mod
@@ -271,7 +273,8 @@ c   approximation
           !!wgtcpower=0d0
           !!if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
           orders_tag=get_orders_tag(orders_qcd)
-          wgt1=amp_split_ewsud_qcd(iamp)
+          wgt1=(amp_split_ewsud_qcd(iamp)+
+     $        amp_split_ewsud_parqcd(iamp))
      $         *f_b/g**(qcd_power)
           wgt1=wgt1*2d0 ! missing factor in the sudakov correction
           ! the type will be 20+the value of the sudakov mode

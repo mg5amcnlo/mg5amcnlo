@@ -106,7 +106,21 @@ c it does not work if set to true, besides particular cases
 
       !! MZ declare all functions as double complex, since some (few)
       !  terms can be imaginary
-      
+
+      double complex function get_imlog(s)
+      implicit none
+      double precision s
+      logical force_imlog_to_zero
+      parameter (force_imlog_to_zero=.false.)
+      double precision pi
+      parameter (pi=3.14159265358979323846d0)
+
+      get_imlog = dcmplx(0d0,0d0)
+      if (s.gt.0d0.and..not.force_imlog_to_zero) get_imlog = dcmplx(0d0,-1d0*pi) 
+
+      return
+      end
+
       
       double complex function get_lsc_diag(pdglist, hels, iflist, invariants)
       implicit none
@@ -227,7 +241,7 @@ c      return
       double complex smallL_a_over_b_sing, bigL_a_over_b_sing
       external smallL_a_over_b_sing, bigL_a_over_b_sing
 
-      double complex smallL_rij_over_s, bigL_rij_over_s     
+      double complex smallL_rij_over_s, bigL_rij_over_s, get_imlog     
 
       get_ssc_c = 0d0
 c exit and do nothing
@@ -238,10 +252,7 @@ c      return
 
       rij = invariants(ileg1,ileg2)
 
-      imlog= CMPLX(0d0,0d0)
-      if(rij.gt.0d0) then
-        imlog= CMPLX(0d0,-1d0*pi)
-      endif
+      imlog = get_imlog(rij)
 
       get_ssc_c = get_ssc_c + 2d0*smallL(s) * (dlog(dabs(rij)/s) + imlog) 
      $    * sdk_tpm(pdglist(ileg1), hels(ileg1), iflist(ileg1), pdgp1)
@@ -296,7 +307,7 @@ c      return
       double complex smallL_a_over_b_sing, bigL_a_over_b_sing
       external smallL_a_over_b_sing, bigL_a_over_b_sing
 
-      double complex smallL_rij_over_s, bigL_rij_over_s
+      double complex smallL_rij_over_s, bigL_rij_over_s, get_imlog
 
       get_ssc_n_diag = 0d0
 c      return
@@ -310,10 +321,7 @@ c exit and do nothing
           if(i.eq.j) cycle
           rij = invariants(i,j)
           ! photon, Lambda = MW
-          imlog= CMPLX(0d0,0d0)
-          if(rij.gt.0d0) then
-            imlog= CMPLX(0d0,-1d0*pi)
-          endif
+          imlog = get_imlog(rij)
 
 c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
 
@@ -388,7 +396,7 @@ c      2d0/3d0*smallLem(0d0) comes from l(MW2,0d0) in the formulas
       double complex smallL_a_over_b_sing, bigL_a_over_b_sing
       external smallL_a_over_b_sing, bigL_a_over_b_sing
 
-      double complex smallL_rij_over_s, bigL_rij_over_s
+      double complex smallL_rij_over_s, bigL_rij_over_s, get_imlog
 
       ! this function corresponds to the case when *one* out of the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
@@ -410,10 +418,7 @@ c not work for H or Chi0 in initial state
      .          Z or H not implemented for the initial state"
             stop
           endif
-          imlog= CMPLX(0d0,0d0)
-          if(invariants(i,ileg).gt.0d0) then
-            imlog= CMPLX(0d0,-1d0*pi)
-          endif
+          imlog = get_imlog(invariants(i,ileg))
 
 ! Multiplied by 1-1000*I only when printed in NonDiag_structure.dat
 
@@ -478,7 +483,7 @@ c not work for H or Chi0 in initial state
       double complex smallL_a_over_b_sing, bigL_a_over_b_sing
       external smallL_a_over_b_sing, bigL_a_over_b_sing
 
-      double complex smallL_rij_over_s, bigL_rij_over_s
+      double complex smallL_rij_over_s, bigL_rij_over_s, get_imlog
 
       ! this function corresponds to the case when both the two particles
       ! that enters the SSC contributions mixes as Chi <--> H (mediated
@@ -491,17 +496,13 @@ c exit and do nothing
       s = invariants(1,2)
 
 c not work for H or Chi0 in initial state
-      imlog= CMPLX(0d0,0d0)
       if (iflist(ileg1).eq.-1.or.iflist(ileg2).eq.-1) then
          print*,"Error: sign imaginary part with longitudinally polarised 
      .        Z or H not implemented for the initial state"
          stop
       endif
 
-      imlog= CMPLX(0d0,0d0)
-      if(invariants(ileg1,ileg2).gt.0d0) then
-        imlog= CMPLX(0d0,-1d0*pi)
-      endif
+      imlog = get_imlog(invariants(ileg1,ileg2))
 
       if (((pdg_old1.eq.25.and.pdg_new1.eq.250).or.
      $     (pdg_old1.eq.250.and.pdg_new1.eq.25)).and.
