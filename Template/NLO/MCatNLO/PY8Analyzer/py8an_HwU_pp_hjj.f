@@ -27,6 +27,7 @@ C----------------------------------------------------------------------
       SUBROUTINE PYABEG(nnn,wwwi)
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      use HwU_wgts_info_len
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
       REAL*8 pi
@@ -45,7 +46,7 @@ c
       data HwUtype/'|T@NOCUT','|T@CUT  '/
       integer nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*50 weights_info(max_weight_shower)
+      character*(wgts_info_len) weights_info(max_weight_shower)
      $     ,wwwi(max_weight_shower)
       character*8 cc(2)
       data cc/'        ','vbfcuts '/

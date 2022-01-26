@@ -120,3 +120,15 @@ class TEST_misc(unittest.TestCase):
         self.assertFalse(eq(1e-7, 0, zero_limit=False))
         self.assertFalse(eq(1e-6, 0, zero_limit=False))          
         self.assertFalse(eq(1e-1, 0, zero_limit=False))         
+
+    def test_ordered_set(self):
+
+        set = misc.OrderedSet
+
+        a = set(['a'])
+        self.assertEqual(a.pop(), 'a')
+        self.assertEqual(len(a), 0)
+
+        a = set(['a', 'b'])
+        self.assertEqual(a.pop(), 'a')
+        self.assertEqual(len(a), 1)

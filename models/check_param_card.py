@@ -127,6 +127,7 @@ class Parameter (object):
         if not precision:
             precision = 6
         
+        self.comment = self.comment.strip()
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,six.string_types):
                 return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
@@ -549,7 +550,7 @@ class ParamCard(dict):
     def create_diff(self, new_card):
         """return a text file allowing to pass from this card to the new one
            via the set command"""
-        
+
         diff = ''
         for blockname, block in self.items():
             for param in block:

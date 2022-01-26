@@ -588,6 +588,7 @@ from object_library import all_propagators, Propagator
                 logger.warning('The particle name \'%s\' is present in both model with different pdg code' % name)
                 logger.warning('The particle coming from the plug-in model will be rename to \'%s%s\'' % (name, self.addon))
                 particle.name = '%s%s' % (name, self.addon)
+                particle.antiname = '%s%s' % (particle.antiname, self.addon)
                 self.particles.append(particle)
                 return
         elif identify:
@@ -965,7 +966,7 @@ from object_library import all_propagators, Propagator
         # + define identify_pid which keep tracks of the pdg_code identified
         identify_pid = {}
         if identify_particles:
-            for new, old in identify_particles.items():
+            for new, old in dict(identify_particles).items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
                 # secure agqinst lower/upper case problem

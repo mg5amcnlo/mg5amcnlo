@@ -89,8 +89,9 @@ c     For each t-channel invarient x(ndim-1), x(ndim-3), .... are used
 c     in place of the cos(theta) variable used in s-channel.
 c     x(ndim), x(ndim-2),.... are the phi angles.
 c**************************************************************************
+      use DiscreteSampler
       implicit none
-c
+c     
 c     Constants
 c
       include 'genps.inc'
@@ -130,8 +131,10 @@ c
       double precision maxwgt
       integer imatch
       save maxwgt
-
+      double precision R        !random value
       integer ninvar
+      double precision tau_m, tau_w, t1, t2
+      double precision get_ee_expo
       
 c
 c     External
@@ -141,6 +144,13 @@ c
 c
 c     Global
 c
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      character*7 pdsublabel(2)
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
+
+      
       integer          lwgt(0:maxconfigs,maxinvar)
       common/to_lwgt/lwgt
 
@@ -159,6 +169,11 @@ c
       double precision   psect(maxconfigs),alpha(maxconfigs)
       common/to_mconfig2/psect            ,alpha
 
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+      
       include 'run.inc'
 
 
@@ -175,6 +190,9 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+      
       save ndim,nfinal,nbranch,nparticles
 
       integer jfig,k
@@ -183,6 +201,9 @@ c
       logical set_cm_rap
       common/to_cm_rap/set_cm_rap,cm_rap      
 
+
+      double precision x1_ee, x2_ee
+      
 c     External function
       double precision SumDot
       external SumDot
@@ -209,6 +230,7 @@ c      write(*,*) 'using iconfig',iconfig
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -231,12 +253,81 @@ c
                cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
                set_cm_rap=.true.
             endif
+c        lpp1=+-3 or +-4 and lpp2 as well
+c        For ISR/beamstrhalung case         
+         else if (pdlabel.eq.'dressed') then
+            if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               call ntuple(R,0.0d0,1.0d0,0,iconfig)
+               ee_jacobian = 1d0
+               call DS_get_point('ee_mc', R , ee_picked, ee_jacobian)
+               sjac = sjac *  ee_jacobian
+            else
+               ee_picked = 1
+            endif
+            
+            if(ee_picked.eq.2) then
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,smin/stot,1d0)               
+               xtau = x(ndim-1)
+               if(nexternal .eq. 3) then
+                  x(ndim-1) = pmass(3)*pmass(3)/stot
+                  sjac=1 / stot !for delta function in d_tau
+               endif
+
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               CALL GENCMS_EE(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+               x(ndim-1) = xtau !Fix for 2->1 process
+c     Set CM rapidity for use in the rap() function
+               cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+               set_cm_rap=.true.
+c           Set shat
+               s(-nbranch) = xbk(1)*xbk(2)*stot
+               x1_ee = Xbk(1)
+               x2_ee =  Xbk(2)
+            else   
+c        ! for dressed ee collisions the generation is different
+c        ! wrt the pp case. In the pp case, tau and y_cm are generated, 
+c        ! while in the ee case x1 and x2 are generated first.
+               call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
+               call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+               call generate_x_ee(x(ndim-1), smin/stot,x1_ee, omx_ee(1), sjac)
+               call generate_x_ee(x(ndim), smin/stot/x1_ee,x2_ee, omx_ee(2), sjac)
+
+               s(-nbranch) =  x1_ee * x2_ee * stot
+               xbk(1)   = x1_ee
+               xbk(2)   = x2_ee
+c        ! now we are done. We must call the following function 
+c        ! in order to (re-)generate tau and ycm
+c        ! from x1 and x2. It also (re-)checks that tau_born 
+c        ! is pysical, and otherwise sets xjac0=-1000
+               call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
+               set_cm_rap=.true.
+            endif
+        ! multiply the jacobian by a multichannel factor if the 
+        ! generation with resonances is also possible
+           if (spole(ndim-1).gt.0d0.and.swidth(ndim-1).gt.0d0) then
+               tau_m = spole(ndim-1)
+               tau_w = swidth(ndim-1)
+               t1 =  (Max(1e-12,1- x1_ee * x2_ee))**(1d0-2*get_ee_expo())
+c               if (dabs(x1_ee * x2_ee-tau_m).lt.5*tau_w)then
+                  t2 =  (1d0/(( x1_ee * x2_ee-tau_m)**2 + tau_m*tau_w))
+c               else
+c                  t2=0d0
+c               endif
+               
+               if (ee_picked.eq.1) then
+                  sjac = sjac * t1 / (t1+t2)
+               else
+                  sjac = sjac * t2 / (t1+t2)
+               endif
+            endif
+
+
          else
-            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
-            xtau = x(ndim-1)
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+           xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
                sjac=1 / stot    !for delta function in d_tau
@@ -1591,7 +1682,74 @@ c      eta = 0d0
       X2 = SQRT(TAU)*EXP(-ETA)
 
       END
+
+      SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)
+C***********************************************************************
+C     PICKS PARTON MOMENTUM FRACTIONS X1 AND X2 BY CHOOSING ETA AND TAU
+C     X(1) --> TAU = X1*X2
+C     X(2) --> one of the bjorken x
+C***********************************************************************
+      IMPLICIT NONE
+
+C     ARGUMENTS
+
+      DOUBLE PRECISION X1,X2,S,SMIN,SJACOBI
+      DOUBLE PRECISION X(2)
+C     global
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+C     FUNCTION
+      double precision get_ee_expo
+      external get_ee_expo
+C     LOCAL
+
+      DOUBLE PRECISION TAU,TAUMIN,TAUMAX
+
+C------------
+C  BEGIN CODE
+C------------
+
+      IF (S .LT. SMIN) THEN
+         PRINT*,'ERROR CMS ENERGY LESS THAN MINIMUM CMS ENERGY',S,SMIN
+         RETURN
+      ENDIF
+
+C     TO FLATTEN BRIET WIGNER POLE AT WMASS WITH WWIDTH USE BELOW:
+C      CALL TRANSPOLE(REAL(WMASS**2/S),REAL(WMASS*WWIDTH/S),
+C     &     X(1),TAU,SJACOBI)
+
+C     IF THERE IS NO S CHANNEL POLE USE BELOW:
+
+      TAUMIN = 0d0 !SMIN/S !keep scale fix
+      TAUMAX = 1D0
+      TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
+      SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
+
+        ! then pick either x1 or x2 and generate it the usual way;
+        ! Note that:
+        ! - setting xmin=sqrt(tau_born) ensures that the largest 
+        !    bjorken x is being generated.
+        ! -  there is a jacobian for x1 x2 -> tau x1(2)
+        ! -  we must include the factor 1/(1-x)^get_ee_expo,
+        !    (x is the bjorken x which is not generated)
+        !    because the compute_eepdf function assumes that
+        !    this is the case in general
+        if (x(2).lt.0.5d0) then
+          call generate_x_ee(x(2)*2d0, dsqrt(tau), x1, omx_ee(1), sjacobi)
+          x2 = tau / x1
+          omx_ee(2) = 1d0 - x2
+          sjacobi = sjacobi / x1 * 2d0  / (1d0-x2)**get_ee_expo()
+        else
+          call generate_x_ee(1d0-2d0*(x(2)-0.5d0), dsqrt(tau), x2, omx_ee(2), sjacobi)
+          x1 = tau / x2
+          omx_ee(1) = 1d0 - x1
+          sjacobi = sjacobi / x2 * 2d0  / (1d0-x1)**get_ee_expo()
+       endif
       
+
+      END
+
 
 C     -----------------------------------------
 C     Subroutine to return momenta in a dedicated frame
@@ -1774,6 +1932,88 @@ c            write(*,*) i, "s, Mass, Width, fact", t, Mass, Width, (((t-Mass)*(t
       enddo
 c      write(*,*) 'final for config', config, get_channel_cut
       return
+      end
+
+
+      subroutine get_y_from_x12(x1, x2, omx, ycm) 
+      implicit none
+      double precision x1, x2, omx(2), tau, ycm
+      double precision ylim
+      double precision tolerance
+      parameter (tolerance=1e-3)
+      double precision y_settozero
+      parameter (y_settozero=1e-12)
+      double precision lx1, lx2
+      double precision ylim0, ycm0
+
+
+      ! ycm=-log(tau)/2 ;  ylim = log(x1/x2)/2
+      if (1d0-x1.gt.tolerance) then
+         lx1 = dlog(x1)
+      else if (omx(1).lt.tolerance**5)then
+         lx1=0d0
+      else
+        lx1 = -omx(1)-omx(1)**2/2d0-omx(1)**3/3d0-omx(1)**4/4d0-omx(1)**5/5d0
+      endif
+      ylim = -0.5d0*lx1
+      ycm = 0.5d0*lx1
+
+      if (1d0-x2.gt.tolerance) then
+         lx2 = dlog(x2)
+      else if (omx(2).lt.tolerance**5)then
+         lx2=0d0         
+      else
+        lx2 = -omx(2)-omx(2)**2/2d0-omx(2)**3/3d0-omx(2)**4/4d0-omx(2)**5/5d0
+      endif
+      ylim = ylim-0.5d0*lx2
+      ycm = ycm-0.5d0*lx2
+
+c      ycmhat = ycm / ylim
+
+      ! this is to prevent numerical inaccuracies
+      ! when botn x->1
+      if (ylim.lt.y_settozero) then
+        ylim = 0d0
+        ycm = 0d0
+      endif
+
+      return 
+      end
+
+      subroutine generate_x_ee(rnd, xmin, x, omx, jac)
+      implicit none
+      ! generates the momentum fraction with importance
+      !  sampling suitable for ee collisions
+      ! rnd is generated uniformly in [0,1], 
+      ! x is generated according to (1 -rnd)^-expo, starting
+      ! from xmin
+      ! jac is the corresponding jacobian
+      ! omx is 1-x, stored to improve numerical accuracy
+      double precision rnd, x, omx, jac, xmin
+      double precision expo
+      double precision get_ee_expo
+      double precision tolerance
+      parameter (tolerance=1.d-5)
+
+      expo = get_ee_expo()
+
+      x = 1d0 - rnd ** (1d0/(1d0-expo))
+      omx = rnd ** (1d0/(1d0-expo))
+      if (x.ge.1d0) then
+        if (x.lt.1d0+tolerance) then
+          x=1d0
+        else
+          write(*,*) 'ERROR in generate_x_ee', rnd, x
+          stop 1
+        endif
+      endif
+      jac = jac/(1d0-expo) 
+      ! then rescale it between xmin and 1
+      x = x * (1d0 - xmin) + xmin
+      omx = omx * (1d0 - xmin)
+      jac = jac * (1d0 - xmin)**(1d0-expo)
+
+      return 
       end
 
 

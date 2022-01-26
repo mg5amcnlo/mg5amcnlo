@@ -261,16 +261,20 @@ C
 
 c---------------------------------------------------------------
 c---------------------------------------------------------------
-
-
+      elseif (pdlabel.eq.'eva'.or.pdlabel.eq.'iww'.or.pdlabel.eq.'none') then
+            asmz=asmz            
       else
-          write(6,*) 'Unimplemented distribution= ',pdlabel
-          write(6,*) 'Implemented are: ',
-     . 'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,',
-     . 'nn23lo,','nn23lo1,','nn23nlo,'
+         asmz=0.118d0
+c     do not crash anymore since arbitrary PDF can be added for lepton collision
+c     and that validity of the pdf is checked at python level anyway          
+c
+c         write(6,*) 'Unimplemented distribution= ',pdlabel
+c          write(6,*) 'Implemented are: ',
+c     . 'cteq6_m,','cteq6_d,','cteq6_l,','cteq6l1,',
+c     . 'nn23lo,','nn23lo1,','nn23nlo,'
 c
 c     make madgraph to stop evaluating
-      stop 1
+c      stop 1
 c	   write(6,*) 'Setting it to default cteq6l1'
 c       pdlabel='cteq6l1'
 c       asmz=0.130d0

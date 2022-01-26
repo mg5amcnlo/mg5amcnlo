@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+import collections
 import contextlib
 import itertools
 import logging
@@ -247,7 +248,7 @@ def get_ninja_quad_prec_support(ninja_lib_path):
             p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
             output, error = p.communicate()
-            return 'TRUE' in output.decode().upper()
+            return 'TRUE' in output.decode(errors='ignore').upper()
         except Exception:
             pass
     
@@ -524,7 +525,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             raise MadGraph5Error(error_msg)
 
         try:
-            out = out.decode('utf-8')
+            out = out.decode('utf-8', errors='ignore')
         except Exception:
             out = str(out)
 
@@ -559,7 +560,7 @@ def get_gfortran_version(compiler='gfortran'):
         p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
-        output = output.decode("utf-8")
+        output = output.decode("utf-8",errors='ignore')
         version_finder=re.compile(r"(?P<version>\d[\d.]*)")
         version = version_finder.search(output).group('version')
         return version
@@ -787,8 +788,8 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
-
-    output = output.decode()
+    output = output.decode(errors='ignore')
+    
     return 'LLVM' in str(output) or "clang" in str(output)
 
 
@@ -953,7 +954,7 @@ def call_stdout(arg, *args, **opt):
         arg[0] = './%s' % arg[0]
         out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
         
-    str_out = out.stdout.read().decode().strip()
+    str_out = out.stdout.read().decode(errors='ignore').strip()
     return str_out
 
 
@@ -1198,7 +1199,7 @@ def gunzip(path, keep=False, stdout=None):
         raise
     else:    
         try:    
-            open(stdout,'w').write(gfile.read().decode())
+            open(stdout,'w').write(gfile.read().decode(errors='ignore'))
         except IOError as error:
             sprint(error)
             # this means that the file is actually not gzip
@@ -1657,7 +1658,7 @@ class ProcessTimer:
     # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                   shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
-    stdout_list = flash.communicate()[0].decode().split('\n')
+    stdout_list = flash.communicate()[0].decode(errors='ignore').split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms
     vms_memory = 0
@@ -1890,7 +1891,7 @@ class EasterEgg(object):
         #1. control if the volume is on or not
         p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
         output, _  = p.communicate()
-        output = output.decode()
+        output = output.decode(errors='ignore')
         #output volume:25, input volume:71, alert volume:100, output muted:true
         info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
         muted = False
@@ -2106,7 +2107,7 @@ def import_python_lhapdf(lhapdfconfig):
     try:
         
         lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().decode().strip()
+                                           stdout=subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
     except:
         use_lhapdf=False
         return False
@@ -2183,6 +2184,91 @@ def wget(http, path, *args, **opt):
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
 
+
+def make_unique(input, keepordering=None):
+    "remove duplicate in a list "
+
+    if keepordering is None:
+        if MADEVENT:
+            keepordering = False
+        else:
+            keepordering = madgraph.ordering
+    if not keepordering:
+        return list(set(input))
+    else:
+        return list(dict.fromkeys(input)) 
+
+if six.PY3:
+    try:
+        from collections import MutableSet
+    except ImportError: # this is for python3.10
+        from collections.abc import  MutableSet
+    
+    class OrderedSet(collections.OrderedDict, MutableSet):
+
+        def __init__(self, arg=None):
+            super( OrderedSet, self).__init__()
+            if arg:
+                self.update(arg)
+
+        def update(self, *args, **kwargs):
+            if kwargs:
+                raise TypeError("update() takes no keyword arguments")
+
+            for s in args:
+                for e in s:
+                    self.add(e)
+
+        def add(self, elem):
+            self[elem] = None
+
+        def discard(self, elem):
+            self.pop(elem, None)
+
+        def pop(self, *args):
+            if args:
+                return super().pop(*args)
+            else:
+                key = next(iter(self))
+                del self[key]
+                return key
+
+        def __le__(self, other):
+            return all(e in other for e in self)
+
+        def __lt__(self, other):
+            return self <= other and self != other
+
+        def __ge__(self, other):
+            return all(e in self for e in other)
+
+        def __gt__(self, other):
+            return self >= other and self != other
+
+        def __repr__(self):
+            return 'OrderedSet([%s])' % (', '.join(map(repr, self.keys())))
+
+        def __str__(self):
+            return '{%s}' % (', '.join(map(repr, self.keys())))
+
+        def __eq__(self, other):
+            try:
+                return set(self) == set(other)
+            except TypeError:
+                return False
+        difference = property(lambda self: self.__sub__)
+        difference_update = property(lambda self: self.__isub__)
+        intersection = property(lambda self: self.__and__)
+        intersection_update = property(lambda self: self.__iand__)
+        issubset = property(lambda self: self.__le__)
+        issuperset = property(lambda self: self.__ge__)
+        symmetric_difference = property(lambda self: self.__xor__)
+        symmetric_difference_update = property(lambda self: self.__ixor__)
+        union = property(lambda self: self.__or__)
+else:
+    OrderedSet = set
+
+
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function (for using python2 type of sort)'
 
@@ -2247,10 +2333,10 @@ the file and returns last line in an internal buffer."""
           line = self.data[0]
           try:
             self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-            self.data = (self.read(self.blksize).decode() + line).split('\n')
+            self.data = (self.read(self.blksize).decode(errors='ignore') + line).split('\n')
           except IOError:  # can't seek before the beginning of the file
             self.seek(0)
-            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode() + line
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode(errors='ignore') + line
             self.data = data.split('\n')
 
         if len(self.data) == 0:
@@ -2273,7 +2359,7 @@ the file and returns last line in an internal buffer."""
         # otherwise, read the whole thing...
         if self.size > self.blksize:
           self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-        self.data = self.read(self.blksize).decode().split('\n')
+        self.data = self.read(self.blksize).decode(errors='ignore').split('\n')
         # strip the last item if it's empty...  a byproduct of the last line having
         # a newline at the end of it
         if not self.data[-1]:

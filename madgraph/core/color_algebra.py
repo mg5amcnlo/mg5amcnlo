@@ -26,6 +26,10 @@ from six.moves import map
 from six.moves import range
 from six.moves import zip
 
+import madgraph
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 #===============================================================================
 # ColorObject
 #===============================================================================
@@ -181,6 +185,10 @@ class ColorOne(ColorObject):
     def __init__(self, *args):
         """Check for no index"""
         
+        if len(args) ==2 and args[0] == 'i' and not args[1]:
+            # py3 pickle wierd output some time...
+            return super(ColorOne, self).__init__()
+            
         assert len(args) == 0 , "ColorOne objects must have no index!"
         
         super(ColorOne, self).__init__()

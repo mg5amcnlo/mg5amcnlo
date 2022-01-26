@@ -161,7 +161,7 @@ class MG4Runner(MERunner):
             raise IOError("Path %s for test already exist" % \
                                     str(os.path.join(mg4_path, temp_dir)))
 
-        shutil.copytree(os.path.join(mg4_path, 'Template'),
+        misc.copytree(os.path.join(mg4_path, 'Template'),
                         os.path.join(mg4_path, temp_dir))
 
         self.temp_dir_name = temp_dir
@@ -558,10 +558,10 @@ class MG5OldRunner(MG5Runner):
 
         devnull = open(os.devnull,'w') 
         if logging.root.level >=20:
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location],
                         stdout=devnull, stderr=devnull)
         else:       
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location])
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location])
                         
         
         # Remove the temporary proc_card

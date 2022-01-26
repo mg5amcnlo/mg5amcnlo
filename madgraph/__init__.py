@@ -54,5 +54,9 @@ ADMIN_DEBUG = False
 if os.path.exists(os.path.join(MG5DIR,'bin', 'create_release.py')):
     if os.path.exists(os.path.join(MG5DIR,'.bzr')):
         ADMIN_DEBUG = True
-    
+
+if __debug__ or ADMIN_DEBUG:
+    ordering = True
+else:
+    ordering = False
         

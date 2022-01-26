@@ -368,6 +368,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
                     
         self.submitted = 0
         self.submitted_ids = []
+        self.id_to_packet = {}
         
     def check_termination(self, job_id):
         """Check the termination of the jobs with job_id and relaunch it if needed."""
@@ -841,6 +842,7 @@ class MultiCore(Cluster):
             self.submitted = six.moves.queue.Queue()
             self.pids = six.moves.queue.Queue()
             self.stoprequest.clear()
+            self.id_to_packet = {}
 
         except KeyboardInterrupt:
             # if one of the node fails -> return that error
@@ -914,7 +916,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
-        output = output.decode()
+        output = output.decode(errors='ignore')
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1001,7 +1003,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        output = output.decode()
+        output = output.decode(errors='ignore')
         pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
@@ -1023,11 +1025,11 @@ class CondorCluster(Cluster):
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
         
-        error = status.stderr.read().decode()
+        error = status.stderr.read().decode(errors='ignore')
         if status.returncode or error:
             raise ClusterManagmentError('condor_q returns error: %s' % error)
 
-        return status.stdout.readline().decode().strip()
+        return status.stdout.readline().decode(errors='ignore').strip()
     
     jobstatus = {'0':'U', '1':'I','2':'R','3':'X','4':'C','5':'H','6':'E'}
     @check_interupt()
@@ -1050,12 +1052,12 @@ class CondorCluster(Cluster):
 
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE)
-            error = status.stderr.read().decode()
+            error = status.stderr.read().decode(errors='ignore')
             if status.returncode or error:
                 raise ClusterManagmentError('condor_q returns error: %s' % error)
 
             for line in status.stdout:
-                id, status = line.decode().strip().split()
+                id, status = line.decode(errors='ignore').strip().split()
                 status = self.jobstatus[status]
                 ongoing.append(id)
                 if status in ['I','U']:
@@ -1143,7 +1145,7 @@ class PBSCluster(Cluster):
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
-        output = a.communicate(text.encode())[0].decode()
+        output = a.communicate(text.encode())[0].decode(errors='ignore')
         id = output.split('.')[0]
         if not id.isdigit() or a.returncode !=0:
             raise ClusterManagmentError('fail to submit to the cluster: \n%s' \
@@ -1161,7 +1163,7 @@ class PBSCluster(Cluster):
                                   stderr=subprocess.STDOUT)
 
         for line in status.stdout:
-            line = line.decode().strip()
+            line = line.decode(errors='ignore').strip()
             if 'cannot connect to server' in line or 'cannot read reply' in line:
                 raise ClusterManagmentError('server disconnected')
             if 'Unknown' in line:
@@ -1192,7 +1194,7 @@ class PBSCluster(Cluster):
 
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
-            line = line.decode()
+            line = line.decode(errors='ignore')
             if 'cannot connect to server' in line or 'cannot read reply' in line:
                 raise ClusterManagmentError('server disconnected')
             if me_dir in line:
@@ -1307,7 +1309,7 @@ class SGECluster(Cluster):
                              stderr=subprocess.STDOUT,
                              stdin=subprocess.PIPE, cwd=cwd)
 
-        output = a.communicate(text.encode())[0].decode()
+        output = a.communicate(text.encode())[0].decode(errors='ignore')
         id = output.split(' ')[2]
         if not id.isdigit():
             raise ClusterManagmentError('fail to submit to the cluster: \n%s' \
@@ -1325,7 +1327,7 @@ class SGECluster(Cluster):
         cmd = 'qstat '
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         for line in status.stdout:
-            line = line.decode()
+            line = line.decode(errors='ignore')
             #print "!==",line
             #line = line.strip()
             #if 'Unknown' in line:
@@ -1353,7 +1355,7 @@ class SGECluster(Cluster):
 
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
-            line = line.decode()
+            line = line.decode(errors='ignore')
             if me_dir in line:
                 id,_,_,_,status = line.split()[:5]
                 if status in self.idle_tag:
@@ -1425,7 +1427,7 @@ class LSFCluster(Cluster):
                                       stderr=subprocess.STDOUT,
                                       stdin=subprocess.PIPE, cwd=cwd)
             
-        output = a.communicate(text.encode())[0].decode()
+        output = a.communicate(text.encode())[0].decode(errors='ignore')
         #Job <nnnn> is submitted to default queue <normal>.
         try:
             id = output.split('>',1)[0].split('<')[1]
@@ -1448,7 +1450,7 @@ class LSFCluster(Cluster):
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
         
         for line in status.stdout:
-            line = line.decode().strip().upper()
+            line = line.decode(errors='ignore').strip().upper()
             if 'JOBID' in line:
                 continue
             elif str(id) not in line:
@@ -1476,7 +1478,7 @@ class LSFCluster(Cluster):
 
         jobstatus = {}
         for line in status.stdout:
-            line = line.decode().strip()
+            line = line.decode(errors='ignore').strip()
             if 'JOBID' in line:
                 continue
             splitline = line.split()
@@ -1555,7 +1557,7 @@ class GECluster(Cluster):
                                      stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
 
-        output = a.communicate()[0].decode()
+        output = a.communicate()[0].decode(errors='ignore')
         #Your job 874511 ("test.sh") has been submitted
         pat = re.compile("Your job (\d*) \(",re.MULTILINE)
         try:
@@ -1577,7 +1579,7 @@ class GECluster(Cluster):
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
         pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
         stat = ''
-        for line in status.stdout.read().decode().split('\n'):
+        for line in status.stdout.read().decode(errors='ignore').split('\n'):
             if not line:
                 continue
             line = line.strip()
@@ -1606,7 +1608,7 @@ class GECluster(Cluster):
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
             pat = re.compile("^(\d+)")
-            for line in status.stdout.read().decode().split('\n'):
+            for line in status.stdout.read().decode(errors='ignore').split('\n'):
                 line = line.strip()
                 try:
                     id = pat.search(line).groups()[0]
@@ -1692,7 +1694,7 @@ class SLURMCluster(Cluster):
                                       stdin=subprocess.PIPE, cwd=cwd)
 
         output = a.communicate()
-        output_arr = output[0].decode().split(' ')
+        output_arr = output[0].decode(errors='ignore').split(' ')
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
@@ -1716,7 +1718,7 @@ class SLURMCluster(Cluster):
                                   stderr=open(os.devnull,'w'))
         
         for line in status.stdout:
-            line = line.decode().strip()
+            line = line.decode(errors='ignore').strip()
             if 'Invalid' in line:
                 return 'F'
             elif line.startswith(str(id)):
@@ -1738,7 +1740,7 @@ class SLURMCluster(Cluster):
         idle, run, fail = 0, 0, 0
         ongoing=[]
         for line in pstatus.stdout:
-            line = line.decode()
+            line = line.decode(errors='ignore')
             if me_dir in line:
                 id, _, _,_ , status,_ = line.split(None,5)
                 ongoing.append(id)
@@ -1878,10 +1880,10 @@ class HTCaaSCluster(Cluster):
             cmd = 'htcaas-job-status -m '+str(id)+ " -s | grep Status "
             status = misc.Popen([cmd], shell=True,stdout=subprocess.PIPE,
                                                          stderr=subprocess.PIPE)
-            error = status.stderr.read().decode()
+            error = status.stderr.read().decode(errors='ignore')
             if status.returncode or error:
                 raise ClusterManagmentError('htcaas-job-submit returns error: %s' % error)
-            status_out= status.stdout.read().decode().strip()
+            status_out= status.stdout.read().decode(errors='ignore').strip()
             status_out= status_out.split(":",1)[1]
             if status_out == 'waiting':
                 status_out='I'
@@ -1912,7 +1914,7 @@ class HTCaaSCluster(Cluster):
 
         for line in status.stdout:
             #ongoing.append(line.split()[0].strip())
-            status2 = line.decode().split()[-1]
+            status2 = line.decode(errors='ignore').split()[-1]
             if status2 != 'null' or line.split()[0].strip() != '0':
                 ongoing.append(line.split()[0].strip())
             logger.debug("["+line.split()[0].strip()+"]"+status2)
@@ -2077,10 +2079,10 @@ class HTCaaS2Cluster(Cluster):
             cmd = 'htcaas-job-status -m '+ str(id) + " -s | grep Status "
             status = misc.Popen([cmd],shell=True,stdout=subprocess.PIPE,
                                                          stderr=subprocess.PIPE)
-            error = status.stderr.read().decode()
+            error = status.stderr.read().decode(errors='ignore')
             if status.returncode or error:
                 raise ClusterManagmentError('htcaas-job-status returns error: %s' % error)
-            status_out= status.stdout.read().decode().strip()
+            status_out= status.stdout.read().decode(errors='ignore').strip()
             status_out= status_out.split(":",1)[1]
             logger.debug("[["+str(id)+"]]"+status_out)
             if status_out == 'waiting':
@@ -2126,7 +2128,7 @@ class HTCaaS2Cluster(Cluster):
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
 
         for line in status.stdout:
-            line = line.decode()
+            line = line.decode(errors='ignore')
             status2 = line.split()[-1]
             if status2 != 'null' or line.split()[0].strip() != '0':
                 ongoing.append(str(line.split()[0].strip())+"-"+str(line.split()[1].strip()))

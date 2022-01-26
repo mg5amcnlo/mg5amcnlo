@@ -715,7 +715,6 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             rw_dir = pjoin(path_me, 'rw_me')
         
-        
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
@@ -737,12 +736,12 @@ class ReweightInterface(extended_cmd.Cmd):
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
+            import madgraph.interface.extended_cmd as extended_cmd
             try:
                 import internal.extended_cmd as extended_internal
                 Shell_internal = extended_internal.CmdShell
             except:
                 Shell_internal = None
-            import madgraph.interface.extended_cmd as extended_cmd
             if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
                 raise Exception("scan are not allowed on the Web")
             # at least one scan parameter found. create an iterator to go trough the cards
@@ -757,6 +756,8 @@ class ReweightInterface(extended_cmd.Cmd):
             #first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
         
         # check if "Auto" is present for a width parameter)
+        if 'block' not in new_card.lower():
+            raise Exception(str(new_card))
         tmp_card = new_card.lower().split('block',1)[1]
         if "auto" in tmp_card: 
             if param_card_iterator:
@@ -776,9 +777,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
-                
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
                     if i:
@@ -874,6 +874,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                        (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
+
 
         logger.info('starts to compute weight for events with the following modification to the param_card:')
         logger.info(card_diff.replace('\n','\nKEEP:'))
@@ -1805,7 +1806,6 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir        
-        
         self.id_to_path = {}
         self.id_to_path_second = {}
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
@@ -1850,7 +1850,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
                 if (self.second_model or self.second_process or self.dedicated_path):
                     break
-
             data = self.id_to_path
             if onedir not in ["rw_me",  "rw_mevirt"]:
                 data = self.id_to_path_second
@@ -1858,9 +1857,8 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             allids, all_pids = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
-            all_prefix = [''.join([i.decode() for i in j]).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [''.join([i.decode(errors='ignore') for i in j]).strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
-
 
             hel_dict={}
             for prefix in prefix_set:
@@ -1965,6 +1963,7 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['rwgt_mode'] = self.rwgt_mode
         to_save['rwgt_name'] = self.options['rwgt_name']
         to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
+        to_save['nb_library'] = self.nb_library
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -1976,10 +1975,16 @@ class ReweightInterface(extended_cmd.Cmd):
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
-        self.options = {'curr_dir': os.path.realpath(os.getcwd()),
-                        'rwgt_name': None}
+        if 'rwgt_info' in self.options:
+            self.options = {'rwgt_info': self.options['rwgt_info']}
+        else: 
+            self.options = {}
+        self.options.update({'curr_dir': os.path.realpath(os.getcwd()),
+                        'rwgt_name': None})
+        
         if keep_name:
             self.options['rwgt_name'] = obj['rwgt_name']
+
         self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
         old_rwgt = obj['rwgt_dir']
            
@@ -2000,6 +2005,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_process = obj['second_process']
         self.second_model = obj['second_model']
         self.has_nlo = obj['has_nlo']
+        self.nb_library = obj['nb_library']
         if not self.rwgt_mode:
             self.rwgt_mode = obj['rwgt_mode']
             logger.info("mode set to %s" % self.rwgt_mode)

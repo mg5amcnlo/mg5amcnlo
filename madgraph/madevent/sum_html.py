@@ -427,6 +427,7 @@ class Combine_results(list, OneResult):
     
     def add_results(self, name, filepath, mfactor=1):
         """read the data in the file"""
+
         try:
             oneresult = OneResult(name)
             oneresult.set_mfactor(mfactor)
@@ -437,7 +438,6 @@ class Combine_results(list, OneResult):
         except Exception:
             logger.critical("Error when reading %s" % filepath)
             raise
-        
     
     def compute_values(self, update_statistics=False):
         """compute the value associate to this combination"""
@@ -717,9 +717,8 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
 
     for Pdir in cmd.get_Pdir():
         P_comb = Combine_results(Pdir)
-        
         if jobs:
-            for job in [j for j in jobs if j['p_dir'] in Pdir]:
+            for job in [j for j in jobs if j['p_dir'] == os.path.basename(Pdir)]:
                     P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
         elif folder_names:

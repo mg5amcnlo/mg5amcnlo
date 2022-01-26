@@ -29,8 +29,8 @@ c
       integer nevents
       character*7 event_norm
       common /event_normalisation/event_norm
-      integer iappl
-      common /for_applgrid/ iappl
+      logical pineappl
+      common /for_pineappl/ pineappl
       integer idum
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
@@ -38,6 +38,7 @@ c jet-rate distance. To be set to 1 for FxFx
       double precision D
       common/to_dj/D
 c Include all the parameters set in the run_card.dat
+
       include 'run_card.inc'
 c Change shower_MC string to upper case
       call to_upper(shower_MC)
@@ -65,6 +66,9 @@ c For backward compatibility
       q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
+
+      call fill_needed_splittings()! this sub is inside fks_singular.f
+
 c check that the event normalization input is reasoble
       buff = event_norm 
       call case_trap2(buff) ! requires a string of length 20 at least
@@ -110,7 +114,7 @@ c Set alphaS(mZ)
           write(*,*) 'The default order of alpha_s running is fixed to '
      &         ,nloop
       endif
-      if (nlo_ps) then
+      if (nlo_ps.or.pineappl) then
 C Fill common block for Les Houches init info
          do i=1,2
             if(lpp(i).eq.1.or.lpp(i).eq.2) then
@@ -121,6 +125,10 @@ C Fill common block for Les Houches init info
                idbmup(i)=11
             elseif(lpp(i).eq.-3) then
                idbmup(i)=-11
+            elseif(lpp(i).eq.4) then
+               idbmup(i)=13
+            elseif(lpp(i).eq.-4) then
+               idbmup(i)=-13               
             elseif(lpp(i).eq.0) then
                open (unit=71,status='old',file='initial_states_map.dat')
                read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
@@ -130,7 +138,8 @@ C Fill common block for Les Houches init info
             endif
             ebmup(i)=ebeam(i)
          enddo
-         call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+         if (abs(lpp(1)).eq.1 .or. abs(lpp(2)).eq.1)
+     $       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
       endif
 c Fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
@@ -155,16 +164,16 @@ C     Convert internal pdf name to LHAPDF number
       character*(*) pdfin
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
-      parameter (npdfs=16)
+      parameter (npdfs=20)
       character*7 pdflabs(npdfs)
       data pdflabs/ 'none', 'mrs02nl', 'mrs02nn', 'cteq4_m', 'cteq4_l',
      $     'cteq4_d', 'cteq5_m', 'cteq5_d', 'cteq5_l', 'cteq5m1',
      $     'cteq6_m', 'cteq6_l', 'cteq6l1', 'nn23lo', 'nn23lo1',
-     $     'nn23nlo'/
+     $     'nn23nlo', 'ct14q00', 'ct14q07', 'ct14q14', 'ct14q21'/
       integer numspdf(npdfs)
       data numspdf/ 00000, 20250, 20270, 19150, 19170, 19160, 19050,
      $     19060, 19070, 19051, 10000, 10041, 10042, 246800, 247000,
-     $     244800/
+     $     244800, 666666, 666666, 666666, 666666/
       if(pdfin.eq."lhapdf") then
          write(*,*)'using LHAPDF'
          do i=1,2

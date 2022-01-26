@@ -47,7 +47,7 @@ C
       INTEGER NBORNAMPS
       PARAMETER (NBORNAMPS=3)
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=44, NLOOPGROUPS=26, NCTAMPS=85)
+      PARAMETER (NLOOPS=44, NLOOPGROUPS=28, NCTAMPS=85)
       INTEGER    NLOOPAMPS
       PARAMETER (NLOOPAMPS=129)
       INTEGER    NCOLORROWS
@@ -655,6 +655,14 @@ C      helicity is asked
         ENDDO
  101    CONTINUE
         CLOSE(1)
+
+        IF (.NOT.USELOOPFILTER) THEN
+          DO J=1,NLOOPGROUPS
+            DO I=1,NSQUAREDSO
+              GOODAMP(I,J)=.TRUE.
+            ENDDO
+          ENDDO
+        ENDIF
 
         IF (HELICITYFILTERLEVEL.EQ.0) THEN
           FOUNDHELFILTER=.TRUE.
@@ -1742,7 +1750,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=26)
+      PARAMETER (NLOOPGROUPS=28)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
 C     
@@ -2082,6 +2090,47 @@ C
      $ //' ML5_0_ML5SOINDEX_FOR_SQUARED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
+
+      END
+
+      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['QCD']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=1, NSQSO=1)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  1) /    6/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 

@@ -1,10 +1,177 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.4(28/05/21)
+3.3.2()
+
+3.3.1 (04/12/21)
+      RF: Fix for bug #1928364 related to the new FxFx clustering routines.
+      OM: Fix for bug #1952050 systematics/reweighting run at NLO that was broken
+          introduced in 3.3.0
+      OM: Fix bug related to python 3.10
+      OM: Fix bug when running from the process directory
+      all: include all bug fix from the LTS version (2.9.7)
+           including important bug on MC@NLO and on madspin
+
+3.3.0 (12/11/21)
+      DP+HS+IT+MZ: EW corrections can be computed for tagged photons
+      OM+RR+AC: Implementation of EWA within MG5aMC (PDF for W/Z boson out of lepton beam)
+      MZ+CS: A fix in amcatnlo_run_interface to prevent integer overflows when a
+        very high precision is requested.
+      MZ+CS: Fixes/improvements relevant to PineAPPL: 
+            - the function pineappl_grid_optimize is called by pineappl_interface,
+              to reduce the size of the grids. PineAPPL v0.5 or later is required
+            - minor fix on the gluon pdg code in pineappl_interface.cc
+            - the integration channels are threated the same way with or without PineAPPL 
+            (maxchannels is kept the same in both cases)
+      RF: Fix for montecarlocounter in case the Born is not strictly positive
+           (i.e., only interference contributions).
+      RF+IT: Rewritten the clustering code for FxFx. This allows for
+             seperation of QCD and EW jets. Needs special JetMatching.h for
+             Pythia8 (can be found in Template/NLO/MCatNLO/Scripts/JetMatching.h)
+      OM: adding a new cut dsqrt_shat to set a minimum center of mass energy cut	   
+      OM: allow the support of latest LUX PDF with lepton content of the proton
+          Note that running PY8 is automatically forbidden in that case.
+      ALL: include bug fixing from Long Term Stable version  version (2.9.6) see below
+      OM+RR: better handling of multiparticles with both photon and massive vector when
+         the user ask for longitudinal polarization. longitudinal photon are automaticlly
+	 discarded. (This overwrite LTS fix that was simply making the code to crash)
+      OM: Fixing a bug introduced in 3.1.0, with the automatic setup of FxFx
+          was broken.
+      OM: Code update to avoid randomness in ordering in code generation (only in debug mode)	  
+         
+
+3.2.0 (22/08/21)
+      SF/OM/MZ/XZ: Implementation (at LO) of ISR and beamstrhalung for e+e- collider
+      BUG FIX (from 2.9.5 long term stable, see below)
+      OM: Fix an infinite loop when running with condor cluster
+          or with other cluster/multi-core when cluster_temp_path
+	  was used.
+      
+3.1.1 (28/05/21)
+      ALL: put a crash for potentially ambiguous syntax with explanation
+           on how to bypass such crash via a new entry in
+	   input/mg5_configuration.txt
+      BUG FIX (from 2.9.4 long term stable)
+
+3.1.0 (30/03/21)
+    ALL: include all changes up to 2.9.3 of the 2.x release
+    ALL: pass to python3 by default
+    MZ+RF+OM: Fix relevant to the case when PDG specific cuts are set in the NLO run_card.
+        The generation of tau was not taking into account the information.
+    DP+HS+MZ: Allow for the computation of NLO EW and complete NLO corrections in the 4FS
+    MZ+SC+ERN+CS: The code can be linked to PineAPPL (arXiv:2008.12789), making it possible
+	 to generate PDF-independent fast-interploation grids including EW corrections.
+	 This supersedes the interface to ApplGrid+aMCFast which was not working in v3
+    MZ: Change syntax meaning in 3.0 series to be consistent with the one of 2.0 series:
+        QCD<=X, QED<=Y apply at the amplitude level (not to the squared amplitude anymore).
+        Squared-amplitude constraints can be imposed by using the usual squared-order 
+        syntax, e.g.:
+	QCD^2<=X, QED^2<=Y (constrained at the diagram squared level).
+    MZ: Different coupling combinations and their scale variations are written in the
+        event file as extra weights
+    OM: Some aliases have been added for the orders constraints:
+            - aEW<=X / aS<=Y is equivalent to QCD^2<=2X / QED^2<=2Y
+            - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
+
+                        ** Long Term Stable Update **
+
+
+2.9.8 ()
+     OM: Fix in madspin where onlyhelicity mode was not working anymore
+         also allows to not specify any decay in that mode.
+
+2.9.7 (29/11/21)
+     OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
+         Now the first of those to setup a python seed will forbid any future reset of the seed
+	 Frequent reset of the seed when moving to one package to the next was creating
+	 a bias in the effective branching ratio out of madspin (observed only of NLO sample)
+	 see: https://bugs.launchpad.net/mg5amcnlo/+bug/1951120
+	 Thanks Hannes for the information.
+     RF+PT+SF: Fixed a 10-year-old bug that was there in the importance sampling over the FKS configurations.
+	 - Fix to pick one shower scale for the S event at random among the FKS configurations,
+	   instead of taking the weighted average.
+	 - removed the n-body contributions from the random picking of the showerscale among FKS configurations.
+        Those bugs were leading at an incorect pick of the shower scale. The observed impact is relatively small
+	and occur in the matching region.
+
+2.9.6 (02/11/21)
+     OM: Forbid the possibity to ask for massless boson to be longitudinally polarised.
+         Asking for those with large multi-particle label could have hide the fact that the code
+	 was returning a non zero cross-section for such request.
+     OM: for process like p p > w+{X} w+{Y}, w+ > l+ vl
+         i.e. process with polarization of  identical particle where the decay involves multi-particles and 
+         where the lepton does not all have the same mass, some of the process were incorrectly discarded.
+     OM: fix an issue for photon initial state with lpp=+-4 where the lhef output was not setting the muon
+         as the correct colliding particles (thanks to Yuunjia Bao) 	  
+     OM: Fixing an issue that madspin was not always using the python executable that was used by the
+         mg5_aMC executable
+     OM+PT: Change the shower script running pythia8 in order to be working with pythia8.3.
+         Running with Pythia8.2 (or lower) is then not possible anymore.
+     OM: Fix issue that some loop-induced processes were not working anymore since 2.9.0
+     OM: Fix the default set of cut present in the default run_card if gluon were present in the final state but no
+         light (or b) quark. The absence of those cuts, in that situation, were leading to hardcoded cut that was
+	 not easy to overwrite by non expert user.
+	 
+2.9.5 (22/08/21)
+      OM+LM: [LO only] Fix the factorization scale dependence for lpp=2/3/4.
+            This was claimed to be using fixed scale computation while
+	    in some case the scale was dynamical
+            To have full flexibility we introduced two additional
+	    (hidden) parameter: "fixed_fac_scale1" and "fixed_fac_scale2"
+	    that allow to choose fixed scale for only one beam.
+      OM: fix auto-width that was not following	run_mode specification
+      OM: fixing missing rwgt_info for reweighting with gridpack mode
+      OM: fixing 'check' command with the skip_event mode
+      OM: fixing auto-width computation for 3 body decay and identical particle which was sometimes leading to crash
+      OM: Fix some potential infinite loop when running with python3
+      
+2.9.4(30/05/21)
       OM: Fix a python3 issue for madSpin when using in a gridpack mode (set ms_dir)
       OM: Fix an issue for non positive definite matrix-element when using the
           "set group_subprocesses False"  mode of MG5aMc
       OM: Fix a speed issue for gridpack in readonly mode where the grid were recomputed 
+
+
+
+                        ** PARRALEL VERSION FOR EW branch **
+
+3.0.3 (06/07/20)
+     include up to 2.7.3
+
+3.0.2
+     include up to 2.7.2
+     MZ: better handling of zeros in color-linked borns 
+     RF: improved the behaviour for integration channels that give zero cross section
+     RF: Rewritten the mint integrator package. Makes for easier extensions.
+     RF: Fixed a problem related to the multi-channel enhancement factor for
+         NLO runs that only appeared in BSM theories (or EFTs)
+     RF: In the virt-tricks, replaced the grids for the virtuals with a
+         polynomial fit, which is more precise and allows for a reduction of
+         the number of calls to the virtual. However, requires to save all the
+         phase-space points for which the virtual has been computed to disk,
+         hence requires more disk space and memory for highly-accurate
+         runs. Can be disabled in the FKS_params.dat card, if disk space
+         and/or memory use needs to be limited.
+
+3.0.1 
+     include up to 2.6.4
+     MZ: Enable shower for QCD-only splittings
+     RF: Fixed a major bug in the code that affected 3.0.0 that affected processes with
+         cuts and --to a lesser extend-- processes with massive final state particles:
+	 the phase-space region where "xi_i_fks != xinorm*xi_i_hat" had the wrong "prefact".
+
+3.0.0 (01/05/18):
+     RF+SF+VH+DP+HS+MZ: Allow for the computation of NLO EW corrections (and more subleading NLO corrections).
+         [Note: when requiring NLO corrections ([QCD], [QED] or [QCD QED]), internally the code always treats this [QCD QED],
+	 and then uses the coupling orders to specify which contributions should be considered. Among other things, this means
+	 that when doing QCD corrections only --contrary to previous versions-- also loop diagrams with non-QCD-charged 
+	 particles will be included (e.g., the pentagons in Higgs production via vector-boson fusion).]
+     HS: inclusion of SMWidth for fast evaluation of NLO accurate widths for all SM particles
+     RF+SF: Resonance-aware phase-space mapping for NLO computations 
+     RF: Reduction of the number of jobs -- results in earlier detection of small integration channels for fNLO
+     OM: remove ./bin/mg5 executable
+
+                             ** Main Branch (version 2.x) Update **
+
 
 2.9.3(25/03/21)
       OM: Fix an issue with t-channel particles for massive initial state where sqrt(S)
@@ -20,8 +187,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         The generation of tau was not taking into account the information.
       OM: fix an issue when running with python3 where the normalization of pythia8 file were wrong
           when pythia8 was run in parralel.
+      OM: fixing more issue  related to MSSM (introduced within 2.9.0)
+      OM: fixing issue with loop-induced processus (introduced within 2.9.0)
       OM: Fix some wrong scale variation at NLO+PS (introduced in 2.9.0)
-      OM: Fix loop-induced which was not working anymore
       OM: Fix an issue with the installation of pythia-pgs
       
 
@@ -167,7 +335,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
                              ** Main Branch  Update **
-			
+
 2.7.3(21/06/20)
       OM: Fixing some bug for read-only LO gridpacks (wrong cross-section and shape when generating events).
           Thanks to Congqiao Li for this
@@ -187,11 +355,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: For Mac only, when running in script mode, MG5aMC will now prevent the computer to go to idle sleep.
           You can prevent this by running with the '-s' option. like ./bin/mg5_aMC -s PATH_TO_CMD
 
+
 2.7.2(17/03/20)
       OM: Fix a Bug in pythia8 running on Ubuntu 18.04.4 machine
       OM: Speed up standalone_cpp code by changing compilation flag
 
-2.7.1(09/03/20)
+2.7.1.2(09/03/20)
       OM: Fixing issue (wrong cross-section and differential cross-section) for
           polarised sample when
 	   1) you have identical polarised particles

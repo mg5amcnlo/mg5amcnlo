@@ -58,6 +58,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       data firsttime/maxdim*.true./
       data realfirsttime/.true./
       character*1 cdum
+      character*3 action
       integer nintervals(maxdim),maxintervals,niint_thisd
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim)
@@ -68,6 +69,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common/to_readgrid/flat_grid                !Tells if grid read from file
       if (this_dim.lt.1.or.this_dim.gt.maxdim) then
          write (*,*) 'Increase maxdim in MC_integer.f',maxdim,this_dim
+         stop 1
       endif
 c Set the number of intervales for all the dimensions to zero the very
 c first time this subroutine is called
@@ -94,7 +96,7 @@ c Read the grid for 'this_dim' from file
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
                read(52,*,end=999,err=999) cdum
             enddo
-            read(52,*,end=999,err=999)
+            read(52,*,end=999,err=999) action,
      &           (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
             do i=this_dim+1,maxdim ! make sure that there are enough lines in this file
                read(52,*,end=999,err=999) cdum
@@ -131,9 +133,6 @@ c Safety
       endif
 c Compute the volume 'vol'
       vol=(grid(iint,this_dim)-grid(iint-1,this_dim))
-c Increase the array that keeps track of the number of times this iint
-c (for 'this_dim') has been picked.
-      ncall(iint,this_dim)=ncall(iint,this_dim)+1
       return
       end
 
@@ -173,6 +172,9 @@ c (for 'this_dim') has been picked.
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
       acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+c Increase the array that keeps track of the number of times this iint
+c (for 'this_dim') has been picked.
+      ncall(iint,this_dim)=ncall(iint,this_dim)+1
       return
       end
 
@@ -265,7 +267,7 @@ c Write grid to a file
       enddo
       open(unit=52,file='grid.MC_integer',status='unknown',err=999)
       do this_dim=1,maxdim
-         write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
+         write(52,*) 'AVE',(grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
 c
@@ -283,12 +285,8 @@ c Give a nice printout of the grids after the current iteration
       enddo
 c
 c Reset the accumulated results because we start new iteration.
-      do this_dim=1,maxdim
-         do i=0,nintervals(this_dim)
-            acc(i,this_dim)=0d0
-            ncall(i,this_dim)=0
-         enddo
-      enddo
+      call empty_MC_integer
+c
       return
  999  write (*,*) 'Cannot open "grid.MC_integer" file'
       stop

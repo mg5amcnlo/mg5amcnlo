@@ -26,11 +26,16 @@ import array
 import math
 import six
 
+import madgraph
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
+import madgraph.various.misc as misc
 from six.moves import range
 from functools import reduce
+
+if madgraph.ordering:
+    set = misc.OrderedSet
 
 #===============================================================================
 # ColorBasis
@@ -209,7 +214,7 @@ class ColorBasis(dict):
                 list_neg.extend([ind for ind in col_obj if ind < 0])
             internal_indices_dict = {}
             # This notation is to remove duplicates
-            for index in list(set(list_neg)):
+            for index in misc.make_unique(list_neg):
                 internal_indices_dict[index] = min_index
                 min_index = min_index - 1
             mod_col_str.replace_indices(internal_indices_dict)
@@ -714,8 +719,8 @@ class ColorMatrix(dict):
         repl_dict = {}
         #list2 = reduce(operator.add,
         #               [list(elem[1]) for elem in struct1])
-        for summed_index in list(set([i for i in list2 \
-                                      if list2.count(i) == 2])):
+        for summed_index in misc.make_unique([i for i in list2 \
+                                      if list2.count(i) == 2]):
             repl_dict[summed_index] = min_index
             min_index -= 1
 

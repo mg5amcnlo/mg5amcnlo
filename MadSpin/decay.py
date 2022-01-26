@@ -178,7 +178,7 @@ class Event:
             part=self.event2mg[item]
             if part>0:
                 particle_line=self.get_particle_line(self.particle[part])
-                if abs(self.particle[part]["istup"]) == 1:
+                if abs(self.particle[part]["istup"]) == 1 or abs(self.particle[part]["istup"]) == 2:
                     if "pt_scale" in self.particle[part]:
                         scales.append(self.particle[part]["pt_scale"])
                     else:
@@ -187,17 +187,16 @@ class Event:
                 particle_line=self.get_particle_line(self.resonance[part])
             line+=particle_line        
         
-        if any(scales):
-            sqrts = self.particle[1]["pt_scale"]
-            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"' 
-                                                        %(i-1,s if s else sqrts)
-                                                       for i,s in enumerate(scales)
-                                                       if i>1])
-        
         if self.diese:
             line += self.diese
         if self.rwgt:
             line += self.rwgt
+        if any(scales):
+            sqrts = self.particle[1]["pt_scale"]
+            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"'
+                                                        %(i+1,s if s else self.scale)
+                                                       for i,s in enumerate(scales)
+                                                       if i>1])
         line+="</event> \n"
         return line
 
@@ -2470,7 +2469,11 @@ class decay_all_events(object):
         #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
         nb_mc_masses=0
         p, p_str=self.curr_event.give_momenta(event_map)
-        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, self.options['frame_id'])
+        try: 
+            frameid = self.options['frame_id']
+        except KeyError:
+            frameid = 6
+        stdin_text=' %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses
@@ -3466,7 +3469,7 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
-                        ranmar_state=external.stdout.readline().decode()
+                        ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
@@ -3513,7 +3516,7 @@ class decay_all_events(object):
 
         external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline().decode())
+            info = int(external.stdout.readline().decode(errors='ignore'))
             nb_output = abs(info)+1
         else:
             info = 1
@@ -3521,10 +3524,10 @@ class decay_all_events(object):
         std = []
         for i in range(nb_output):
             external.stdout.flush()
-            line = external.stdout.readline().decode()
+            line = external.stdout.readline().decode(errors='ignore')
             std.append(line)
         prod_values = ' '.join(std)
-        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
+        #prod_values = ' '.join([external.stdout.readline().decode(errors='ignore') for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)
@@ -4107,7 +4110,7 @@ class decay_all_events(object):
                         misc.sprint(error)
                         raise
                         continue
-                    ranmar_state=external.stdout.readline().decode()
+                    ranmar_state=external.stdout.readline().decode(errors='ignore')
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)

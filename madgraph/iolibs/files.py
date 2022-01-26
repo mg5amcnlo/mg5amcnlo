@@ -40,8 +40,8 @@ def read_from_file(filename, myfunct, *args, **opt):
             ret_value = myfunct(sock, *args)
         finally:
             sock.close()
-    except IOError as xxx_todo_changeme:
-        (errno, strerror) = xxx_todo_changeme.args
+    except IOError as error:
+        errno, strerror = error.errno, str(error)
         if 'print_error' in opt:
             if not opt['print_error']:
                 return None
@@ -152,7 +152,7 @@ def cp(path1, path2, log=True, error=False):
         try: 
             if os.path.exists(path2):
                 path2 = os.path.join(path2, os.path.split(path1)[1])
-            shutil.copytree(path1, path2)
+            misc.copytree(path1, path2)
         except IOError as why:
             if error:
                 raise

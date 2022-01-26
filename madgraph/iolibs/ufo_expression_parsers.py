@@ -29,6 +29,7 @@ from six.moves import input
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
 
+import madgraph
 import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
@@ -37,6 +38,8 @@ import vendor.ply.yacc as yacc
 import models.check_param_card as check_param_card
 
 logger = logging.getLogger('madgraph.ufo_parsers')
+if madgraph.ordering:
+    set	= misc.OrderedSet
 
 # PLY lexer class
 

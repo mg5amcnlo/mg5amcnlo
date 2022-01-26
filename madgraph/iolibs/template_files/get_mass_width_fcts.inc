@@ -3,8 +3,7 @@ IMPLICIT NONE
 INTEGER ID
 INCLUDE 'coupl.inc'
 
-%(iflines_mass)sELSE
-GET_MASS_FROM_ID=0d0
+%(iflines_mass)sGET_MASS_FROM_ID=0d0
 ENDIF
 RETURN
 END
@@ -15,8 +14,7 @@ IMPLICIT NONE
 INTEGER ID
 INCLUDE 'coupl.inc'
 
-%(iflines_width)sELSE
-GET_WIDTH_FROM_ID=0d0
+%(iflines_width)sGET_WIDTH_FROM_ID=0d0
 ENDIF
 RETURN
 END

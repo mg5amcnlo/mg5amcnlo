@@ -127,7 +127,7 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         last_message = int(text[1].strip())
@@ -255,6 +255,10 @@ collier_link = "http://collier.hepforge.org/collier-latest.tar.gz"
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
 ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
+
+# Add the tarball for SMWidth
+swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
+misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print('Fail to create OfflineHEPToolsInstaller')

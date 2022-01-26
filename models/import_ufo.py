@@ -142,7 +142,7 @@ def import_model_from_db(model_name, local_dir=False):
     data =get_model_db()
     link = None
     for line in data:
-        split = line.decode().split()
+        split = line.decode(errors='ignore').split()
         if model_name == split[0]:
             link = split[1]
             break
@@ -799,8 +799,11 @@ class UFOMG5Converter(object):
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
                 return
+            if hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson:
+                return
             elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
-                return      
+                return
+                  
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -1016,7 +1019,7 @@ class UFOMG5Converter(object):
                   the value of the pole. In the current implementation, this is
                   just to see if the pole is zero or not.
             """
-
+            
             if isinstance(CTCoupling.value,dict):
                 if -pole in list(CTCoupling.value.keys()):
                     return CTCoupling.value[-pole], [], 0
@@ -1076,7 +1079,9 @@ class UFOMG5Converter(object):
                     # attribute defined, but it is better to make sure.
                     if hasattr(self.model, 'map_CTcoup_CTparam'):
                         self.model.map_CTcoup_CTparam[couplname] = CTparamNames
+            
 
+                    
             # Finally modify the value of this CTCoupling so that it is no
             # longer a string expression in terms of CTParameters but rather
             # a dictionary with the CTparameters replaced by their _FIN_ and
@@ -1087,6 +1092,13 @@ class UFOMG5Converter(object):
             if new_value:
                 coupl.old_value = coupl.value
                 coupl.value = new_value
+
+        for CTparam in all_CTparameters:
+            if CTparam.name not in self.model.map_CTcoup_CTparam:
+                if not hasattr(self.model, "notused_ct_params"):
+                    self.model.notused_ct_params = [CTparam.name.lower()]
+                else:
+                    self.model.notused_ct_params.append(CTparam.name.lower())
 
     def add_CTinteraction(self, interaction, color_info):
         """ Split this interaction in order to call add_interaction for
@@ -2516,6 +2528,9 @@ class RestrictModel(model_reader.ModelReader):
                         for use in  re_pat.findall(parameter.expr):
                             used.add(use)
                         
+        if madgraph.ordering:
+            used = sorted(used)
+            
         # modify the object for those which are still used
         for param in used:
             if not param:
