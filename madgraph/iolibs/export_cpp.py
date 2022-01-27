@@ -711,7 +711,7 @@ class OneProcessExporterCPP(object):
         misc.sprint(config_map)
         misc.sprint(subproc_number)
         misc.sprint("Done")
-        raise Exception("working fine but not fully implemented so far")
+#        raise Exception("working fine but not fully implemented so far")
 
 
     def get_default_converter(self):
@@ -1057,6 +1057,13 @@ class OneProcessExporterCPP(object):
                       me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
 
+            # temporary
+            replace_dict['madE_var_reset'] = ''
+            replace_dict['madE_caclwfcts_call'] = ''
+            replace_dict['madE_update_answer'] = ''
+
+
+
             # Generate lines for mirror matrix element calculation
             mirror_matrix_lines = ""
 
@@ -1153,6 +1160,7 @@ class OneProcessExporterCPP(object):
                                       self.get_helicity_matrix(matrix_element)
         # Extract denominator
         replace_dict['den_factor'] = matrix_element.get_denominator_factor()
+        
 
         if write:
             file = \
@@ -1426,6 +1434,10 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
     def generate_process_files(self):
         
+        if self.matrix_elements[0].get('has_mirror_process'):
+            self.matrix_elements[0].set('has_mirror_process', False)
+            self.nprocesses/=2
+
         super(OneProcessExporterGPU, self).generate_process_files()
 
         self.edit_check_sa()
