@@ -39,7 +39,7 @@ import madgraph.various.banner as banner_mod
 from madgraph import MadGraph5Error, InvalidCmd, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 
-from madgraph.iolibs.export_v4 import VirtualExporter
+from madgraph.iolibs.export_v4 import VirtualExporter, ProcessExporterFortran
 import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
@@ -542,6 +542,7 @@ class OneProcessExporterCPP(object):
     process_sigmaKin_function_template = 'cpp_process_sigmaKin_function.inc'
     single_process_template = 'cpp_process_matrix.inc'
     cc_ext = 'cc'
+    support_multichannel = False
 
     class ProcessExporterCPPError(Exception):
         pass
@@ -646,6 +647,8 @@ class OneProcessExporterCPP(object):
             self.amplitudes = helas_objects.HelasMatrixElement({\
                 'diagrams': helas_objects.HelasDiagramList([diagram])})
 
+
+            self.include_multi_channel = False
     #===============================================================================
     # Global helper methods
     #===============================================================================
@@ -668,8 +671,10 @@ class OneProcessExporterCPP(object):
         
         
                   
+    @staticmethod
+    def get_multi_channel_dictionary(matrix_element, config_map):
 
-
+        return ProcessExporterFortran.get_multi_channel_dictionary(matrix_element, config_map)
 
     # Methods for generation of process files for C++
     def generate_process_files(self):
@@ -694,6 +699,17 @@ class OneProcessExporterCPP(object):
         logger.info('Created files %(process)s.h and %(process)s.cc in' % \
                     {'process': self.process_class} + \
                     ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+
+    def generate_process_files_madevent(self, proc_id, config_map, subproc_number):
+
+
+        self.include_multi_channel = config_map
+        self.generate_process_files() 
+        misc.sprint(proc_id)
+        misc.sprint(config_map)
+        misc.sprint(subproc_number)
+        misc.sprint("Done")
+        raise Exception("working fine but not fully implemented so far")
 
 
     def get_default_converter(self):
@@ -774,7 +790,7 @@ class OneProcessExporterCPP(object):
             writer.writelines(file)
         else:
             return replace_dict
-        
+
     #===========================================================================
     # Process export helper functions
     #===========================================================================
@@ -1004,6 +1020,9 @@ class OneProcessExporterCPP(object):
 
     def get_sigmaKin_lines(self, color_amplitudes, write=True):
         """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
+
+        if self.include_multi_channel and not self.support_multichannel:
+            raise Exception("This standalone format does not support madevent interface")
 
         
         if self.single_helicities:
@@ -1396,6 +1415,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
     single_process_template = 'gpu/process_matrix.inc'
     cc_ext = 'cu'
+    support_multichannel = True
 
     def __init__(self, *args, **opts):
         
@@ -1413,13 +1433,6 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         files.ln(pjoin(self.path, 'gcheck_sa.cu'), self.path, 'check_sa.cc')
         files.ln(pjoin(self.path, 'gCPPProcess.cu'), self.path, 'CPPProcess.cc')
         
-    def generate_process_files_madevent(self, proc_id, config_map, subproc_number):
-        
-        self.generate_process_files() # temporary ...
-        misc.sprint(proc_id)
-        misc.sprint(config_map)
-        misc.sprint(subproc_number)
-        #raise Exception
 
     def edit_check_sa(self):
         
@@ -1620,11 +1633,23 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             ret_lines.append("cxtype jamp[ncolor];")
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append("using namespace MG5_%s;" % self.model_name)
+            misc.sprint(type(self.helas_call_writer))
+            misc.sprint(self.support_multichannel, self.include_multi_channel)
+
+            multi_channel = None
+            if self.include_multi_channel:
+                if not self.support_multichannel:
+                    raise Exception("link with madevent not supported")
+                multi_channel = self.get_multi_channel_dictionary(self.matrix_elements[0].get('diagrams'), self.include_multi_channel)
+                misc.sprint(multi_channel)
+
             helas_calls = self.helas_call_writer.get_matrix_element_calls(\
                                                     self.matrix_elements[0],
-                                                    color_amplitudes[0]
+                                                    color_amplitudes[0],
+                                                    multi_channel_map = multi_channel
                                                     )
-            logger.debug("only one Matrix-element supported?")
+            assert len(self.matrix_elements) == 1 # how to handle if this is not true?
+
             self.couplings2order = self.helas_call_writer.couplings2order
             self.params2order = self.helas_call_writer.params2order
             nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()

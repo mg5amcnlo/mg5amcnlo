@@ -24,13 +24,14 @@
 
       // Reset the "matrix elements" - running sums of |M|^2 over helicities for the given event
       fptype meHelSum[nprocesses] = { 0 }; // all zeros
+      %(madE_var_reset)s
 
 #ifdef __CUDACC__
       // CUDA - using precomputed good helicities
       for ( int ighel = 0; ighel < cNGoodHel[0]; ighel++ )
       {
         const int ihel = cGoodHel[ighel];
-        calculate_wavefunctions( ihel, allmomenta, meHelSum[0] );
+        calculate_wavefunctions( ihel, allmomenta, meHelSum[0] %(madE_caclwfcts_call)s);
       }
 #else
       // C++ - compute good helicities within this loop
@@ -39,7 +40,7 @@
       {
         if ( sigmakin_itry>maxtry && !sigmakin_goodhel[ihel] ) continue;
         // NB: calculate_wavefunctions ADDS |M|^2 for a given ihel to the running sum of |M|^2 over helicities for the given event
-        calculate_wavefunctions( ihel, allmomenta, meHelSum[0], ievt );
+        calculate_wavefunctions( ihel, allmomenta, meHelSum[0], ievt %(madE_caclwfcts_call)s);
         if ( sigmakin_itry<=maxtry )
         {
           if ( !sigmakin_goodhel[ihel] && meHelSum[0]>meHelSumLast ) sigmakin_goodhel[ihel] = true;
@@ -60,6 +61,7 @@
         allMEs[iproc*nprocesses + ievt] = meHelSum[iproc];
       }
 
+      %(madE_update_answer)s
 #ifndef __CUDACC__
       if ( sigmakin_itry <= maxtry )
         sigmakin_itry++;

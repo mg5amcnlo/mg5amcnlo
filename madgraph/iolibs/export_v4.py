@@ -1214,13 +1214,46 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         return ret_list
 
+    @staticmethod
+    def get_multi_channel_dictionary(diagrams, config_map): 
+        """diagrams should be from matrix_element.get('diagrams')"""
+
+
+        config_to_diag_dict = {}
+        if config_map:
+            # In this case, we need to sum up all amplitudes that have
+            # identical topologies, as given by the config_map (which
+            # gives the topology/config for each of the diagrams
+            # Combine the diagrams with identical topologies
+            for idiag, diag in enumerate(diagrams):
+                if config_map[idiag] == 0:
+                    continue
+                try:
+                    config_to_diag_dict[config_map[idiag]].append(idiag)
+                except KeyError:
+                    config_to_diag_dict[config_map[idiag]] = [idiag]
+        else:
+            # Get minimum legs in a vertex
+            vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+                diagrams if diag.get_vertex_leg_numbers()!=[]]
+            minvert = min(vert_list) if vert_list!=[] else 0
+
+            for idiag, diag in enumerate(diagrams):
+                # Ignore any diagrams with 4-particle vertices.
+                if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
+                    continue
+                config_to_diag_dict[config_map[idiag]] = [idiag]
+
+        return  config_to_diag_dict
+
+
     def get_amp2_lines(self, matrix_element, config_map = [], replace_dict=None):
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         # Get minimum legs in a vertex
         vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
-       matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+                     matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
         minvert = min(vert_list) if vert_list!=[] else 0
 
         ret_lines = []
@@ -1229,20 +1262,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             # identical topologies, as given by the config_map (which
             # gives the topology/config for each of the diagrams
             diagrams = matrix_element.get('diagrams')
-            # Combine the diagrams with identical topologies
-            config_to_diag_dict = {}
-            for idiag, diag in enumerate(matrix_element.get('diagrams')):
-                if config_map[idiag] == 0:
-                    continue
-                try:
-                    config_to_diag_dict[config_map[idiag]].append(idiag)
-                except KeyError:
-                    config_to_diag_dict[config_map[idiag]] = [idiag]
+            config_to_diag_dict = self.get_multi_channel_dictionary(diagrams, config_map)
             # Write out the AMP2s summing squares of amplitudes belonging
             # to eiher the same diagram or different diagrams with
             # identical propagator properties.  Note that we need to use
             # AMP2 number corresponding to the first diagram number used
             # for that AMP2.
+            
             for config in sorted(config_to_diag_dict.keys()):
 
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
