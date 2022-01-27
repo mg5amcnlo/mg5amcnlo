@@ -263,11 +263,13 @@ class UFOModelConverterCPP(object):
                                    "// Model parameters independent of aS\n" + \
                                    self.write_parameters(self.params_indep)
         replace_dict['independent_couplings'] = \
-                                   "// Model parameters dependent on aS\n" + \
-                                   self.write_parameters(self.params_dep)
+                                    "// Model couplings independent of aS\n" + \
+                                    self.write_parameters(self.coups_indep)
+                                  
+                                  
         replace_dict['dependent_parameters'] = \
-                                   "// Model couplings independent of aS\n" + \
-                                   self.write_parameters(self.coups_indep)
+                                    "// Model parameters dependent on aS\n" + \
+                                    self.write_parameters(self.params_dep)
         replace_dict['dependent_couplings'] = \
                                    "// Model couplings dependent on aS\n" + \
                                    self.write_parameters(list(self.coups_dep.values()))
