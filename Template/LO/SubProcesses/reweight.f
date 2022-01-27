@@ -1815,11 +1815,10 @@ c      save firsttime
             if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
          endif
 
-         if(.not.fixed_fac_scale) then
+         if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
             call set_fac_scale(all_p(1,i),q2fact)
          endif
 
-      
          if(.not.setclscales(all_p(1,i) , .false.))then
             all_wgt(i) = 0d0
            return
