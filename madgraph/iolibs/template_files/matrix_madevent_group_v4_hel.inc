@@ -242,6 +242,8 @@ if (first) then
 endif
     AMP(:,:) = (0d0,0d0)
 ${helas_calls}
+
+    JAMP(:,:)  = (0d0,0d0)
     DO K = 1, NCOMB
 ${jamp_lines}
         TS(K) = 0.D0 

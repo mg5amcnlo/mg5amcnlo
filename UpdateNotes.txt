@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.3.2()
+      RF: Fixed a bug in the phase-space generation of MadSpin,
+          relevant for processes with more than 1 t-channel.
 
 3.3.1 (04/12/21)
       RF: Fix for bug #1928364 related to the new FxFx clustering routines.
@@ -72,6 +75,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
+
+2.9.8 ()
+     OM: Fix in madspin where onlyhelicity mode was not working anymore
+         also allows to not specify any decay in that mode.
 
 2.9.7 (29/11/21)
      OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin

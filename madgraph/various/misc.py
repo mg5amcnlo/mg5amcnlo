@@ -2231,8 +2231,9 @@ if six.PY3:
                 return super().pop(*args)
             else:
                 key = next(iter(self))
-                return super().pop(key, None)
-                
+                del self[key]
+                return key
+
         def __le__(self, other):
             return all(e in other for e in self)
 
