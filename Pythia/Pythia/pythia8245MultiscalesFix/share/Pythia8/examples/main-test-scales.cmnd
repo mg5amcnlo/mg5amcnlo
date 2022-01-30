@@ -2,8 +2,7 @@ Main:numberOfEvents = 100000
 
 ! Input file.
 Beams:frameType = 4
-#Beams:LHEF = /home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/test_pp2wj/Events/run_01/events.lhe
-Beams:LHEF = /home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/test_pp2tt/Events/run_01/events.lhe
+Beams:LHEF = pp_2_tt_for_scale_test_events.lhe
 
 Beams:setProductionScalesFromLHEF = on
 
@@ -18,7 +17,7 @@ TimeShower:limitPTmaxGlobal = on
 TimeShower:nMaxGlobalRecoil = 1
 TimeShower:globalRecoilMode = 2
 TimeShower:nMaxGlobalBranch = 1
-TimeShower:nPartonsInBorn = 1
+TimeShower:nPartonsInBorn = 2
 
 BeamRemnants:primordialKT     = off
 TimeShower:QEDshowerByQ       = off
