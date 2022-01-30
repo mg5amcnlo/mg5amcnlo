@@ -641,6 +641,8 @@ double SimpleSpaceShower::pTnext( Event& event, double pTbegAll,
         int ipart=dipEndNow->iColPartner;
         if (ipart==0) ipart= findColPartner( event, dipEndNow->iRadiator,
                                dipEndNow->iRecoiler, iSysNow);
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRecoiler,
+                               dipEndNow->iRadiator, iSysNow);
         userHooksPtr->doCheckScales(dipEndNow->iRadiator,
           ipart, sqrt(pT2begDip) );
       }
@@ -4018,6 +4020,9 @@ int SimpleSpaceShower::findColPartner(Event& event, int iSideA, int iSideB,
   // Check if the parton on the other side is a colour partner.
   if ( (colSideA != 0 && event[iSideB].acol() == colSideA)
     || (acolSideA != 0 && event[iSideB].col() == acolSideA) ) {
+
+    // Change to enable use for non-dipole recoil.
+    iColPartner = iSideB;
 
     // Another possible colour partner among the outgoing partons
     // in the case of a gluon.
