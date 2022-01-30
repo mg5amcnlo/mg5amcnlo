@@ -50,7 +50,7 @@ public:
     name+=oss.str();
     if ( hist.find(name) == hist.end())
       bookHisto(name);
-    hist[name].fill(starting_scale,infoPtr->weight());
+    hist[name].fill(starting_scale,1.);
     return false;
   }
 
@@ -141,7 +141,7 @@ public:
       hname+=scale.first;
       if ( hist.find(hname) == hist.end())
         bookHisto(hname);
-      hist[hname].fill(scale.second,infoPtr->weight());
+      hist[hname].fill(scale.second,1.);
 
       /*// Find the particle for which this scale applies.
       string nameScale = scale.first;
@@ -166,7 +166,7 @@ public:
       string hdiffname="diff_to_particlescale"+hname;
       if ( hist.find(hdiffname) == hist.end())
         bookHisto(hdiffname);
-      hist[hdiffname].fill(scale.second-process[iPos].scale(),infoPtr->weight());*/
+      hist[hdiffname].fill(scale.second-process[iPos].scale(),1.);*/
 
     }
 
