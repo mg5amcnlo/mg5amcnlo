@@ -65,6 +65,11 @@ public:
   virtual double biasSelectionBy(const SigmaProcess* sigmaProcessPtr,
     const PhaseSpace* phaseSpacePtr, bool inEvent);
 
+
+  virtual bool canCheckScales() {return false;}
+  virtual bool doCheckScales(int, int, double) {return false;}
+
+
   // Event weight to compensate for selection weight above.
   virtual double biasedSelectionWeight() {return 1./selBias;}
 

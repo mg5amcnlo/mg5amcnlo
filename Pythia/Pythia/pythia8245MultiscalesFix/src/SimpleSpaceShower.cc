@@ -637,6 +637,14 @@ double SimpleSpaceShower::pTnext( Event& event, double pTbegAll,
       // Stop if m2ColPair is negative.
       if (m2ColPair < 0.) return 0.;
 
+      if (userHooksPtr && userHooksPtr->canCheckScales() ) {
+        int ipart=dipEndNow->iColPartner;
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRadiator,
+                               dipEndNow->iRecoiler, iSysNow);
+        userHooksPtr->doCheckScales(dipEndNow->iRadiator,
+          ipart, sqrt(pT2begDip) );
+      }
+
       // Now do evolution in pT2, for QCD, QED or weak.
       if (pT2begDip > pT2endDip) {
         if (dipEndNow->colType != 0)       pT2nextQCD( pT2begDip, pT2endDip);

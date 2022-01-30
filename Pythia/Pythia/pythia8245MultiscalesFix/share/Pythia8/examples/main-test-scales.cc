@@ -37,7 +37,7 @@ int main(  int, char* argv[] ) {
   Hist tH2("tH2",100,0.0,200.0);
   Hist tS2("tS2",100,0.0,200.0);
 
-  TestHook* testHook = new TestHook(1,&tH, &tS, &tH2, &tS2); // veto after first emission
+  TestHook* testHook = new TestHook(0,&tH, &tS, &tH2, &tS2); // veto after first emission
   pythia.setUserHooksPtr((UserHooks *) testHook);
 
   // Initialise and list settings
@@ -64,6 +64,7 @@ int main(  int, char* argv[] ) {
   pythia.stat();
 
   // Done.
+  testHook->setPrefix(string(argv[3]));
   delete testHook;
 
   tH /= nEvent;

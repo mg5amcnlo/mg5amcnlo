@@ -2117,6 +2117,10 @@ double SimpleTimeShower::pTnext( Event& event, double pTbegAll,
       continue;
     }
 
+    if (userHooksPtr && userHooksPtr->canCheckScales() )
+      userHooksPtr->doCheckScales(dip.iRadiator, dip.iRecoiler,
+        sqrt(pT2begDip));
+
     // Do QCD, QED, weak or HV evolution if it makes sense.
     if (pT2begDip > pT2sel) {
       if      (dip.colType != 0)

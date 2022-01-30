@@ -14,6 +14,46 @@ public:
     isHevent = isSevent = false;
   }
 
+  map<string,Hist> hist;
+
+  void bookHisto(string name) {
+    hist.insert(make_pair(name,Hist(name,100,0.,200.)));
+  }
+
+  string prefix;
+  void setPrefix(string p) {prefix=p;}
+
+  ~TestHook() {
+   
+    ostringstream prefix_oss;
+    prefix_oss.str("");
+    prefix_oss << prefix;
+
+    for (auto h : hist) {
+    ofstream write;
+    write.open(prefix_oss.str()+h.first+".dat");
+    h.second.table(write);
+    write.close();
+    }
+
+  }
+
+  bool canCheckScales() {return true;}
+  bool doCheckScales( int rad, int rec, double starting_scale) {
+    string name;
+    if (isSevent) name+="sevent_";
+    if (isHevent) name+="hevent_";
+    name+="scaleps_";
+    ostringstream oss;
+    oss.str("");
+    oss << rad-2 << "_" << rec-2;
+    name+=oss.str();
+    if ( hist.find(name) == hist.end())
+      bookHisto(name);
+    hist[name].fill(starting_scale,infoPtr->weight());
+    return false;
+  }
+
   bool canVetoISREmission() { return true; }
   bool canVetoFSREmission() { return true; }
 
@@ -91,6 +131,43 @@ public:
         sumscales += it->second;
       }
       weight = sumscales / double(nscales);
+    }
+
+    for (auto scale : infoPtr->scales->attributes) {
+
+      string hname;//="processlevel_lhscales";
+      if (isSevent) hname+="sevent_";
+      if (isHevent) hname+="hevent_";
+      hname+=scale.first;
+      if ( hist.find(hname) == hist.end())
+        bookHisto(hname);
+      hist[hname].fill(scale.second,infoPtr->weight());
+
+      /*// Find the particle for which this scale applies.
+      string nameScale = scale.first;
+      vector <string> pieces;
+      vector <int> ipieces;
+      do {
+        unsigned end = (nameScale.find_first_of("_",0)!=string::npos) ?
+          nameScale.find_first_of("_",0) : nameScale.size();
+        pieces.push_back( nameScale.substr(0,end) );
+        ipieces.push_back(atoi(pieces.back().c_str()));
+        if (end < nameScale.size())
+          nameScale=nameScale.substr(end+1,nameScale.size());
+        else
+          nameScale="";
+      } while (nameScale.size()>0);
+      int iPos = 0;
+      if (ipieces.size()>2 && ipieces[ipieces.size()-2] > 0)
+        iPos = ipieces[ipieces.size()-2];
+      else if (ipieces.size()>1 && ipieces[ipieces.size()-1] > 0)
+        iPos = ipieces[ipieces.size()-1];
+
+      string hdiffname="diff_to_particlescale"+hname;
+      if ( hist.find(hdiffname) == hist.end())
+        bookHisto(hdiffname);
+      hist[hdiffname].fill(scale.second-process[iPos].scale(),infoPtr->weight());*/
+
     }
 
     // No veto here.
