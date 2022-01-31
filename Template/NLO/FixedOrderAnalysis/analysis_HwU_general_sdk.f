@@ -125,6 +125,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $     ,getinvm4_4,l10
       integer orders_tag_plot
       common /corderstagplot/ orders_tag_plot
+      logical is_nextph_iso(nexternal), is_nextph_iso_reco(nexternal)
+
+      is_nextph_iso(:) = .false.
+
 c First, try to recombine photons with leptons      
       if (.not.quarkphreco) then
          write (*,*) 'quark-photon recombination is turned off. '/
@@ -137,7 +141,8 @@ c First, try to recombine photons with leptons
          stop
       endif
       call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
-     $                       p, iPDG, p_reco, iPDG_reco)
+     $                       p, iPDG, is_nextph_iso, 
+     $                       p_reco, iPDG_reco, is_nextph_iso_reco)
 
 c Put all (light) QCD partons(+photon) in momentum array for jet clustering.
       nQCD=0
