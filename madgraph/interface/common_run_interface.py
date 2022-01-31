@@ -985,6 +985,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #raise Exception, "%s %s %s" % (sys.path, os.path.exists(pjoin(self.me_dir,'bin','internal', 'ufomodel')), os.listdir(pjoin(self.me_dir,'bin','internal', 'ufomodel')))
                 import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
+                no_width = []
 
                 if self.proc_characteristics['ew_sudakov']:
                     # if the sudakov approximation is used, force all particle widths to zero
