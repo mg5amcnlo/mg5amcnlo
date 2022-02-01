@@ -145,7 +145,7 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP1(%(nb_temp_jamp1)i)
       COMPLEX*16 TMP_JAMP2(%(nb_temp_jamp2)i)
@@ -201,7 +201,7 @@ C Finally interfere the two sets of color-stripped amplitudes
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
+              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP1(I,N))
           ENDDO
       ENDDO
     ENDDO
