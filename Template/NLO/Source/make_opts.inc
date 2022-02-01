@@ -101,8 +101,10 @@ ifneq ($(lhapdf),)
       CXX=$(DEFAULT_CPP_COMPILER)
     endif
   endif	     
+
 else ifneq ($(epdf),)
-# option ePDF
+# option eMELA/ePDF
+EPDFLIBS=$(shell $(epdf) --ldflags)
 alfas_functions=alfas_functions
 CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
 llhapdf = $(shell $(epdf) --ldflags)
@@ -116,12 +118,6 @@ else
   endif
 endif
 
-# Option ePDF
-ifneq ($(epdf),)
-EPDFLIBS=$(shell $(epdf) --ldflags)
-else
-EPDFLIBS=
-endif
 
 # Option PineAPPL
 ifneq ($(pineappl),)

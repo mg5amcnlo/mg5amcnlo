@@ -169,9 +169,9 @@
 #!  If None: try to find one available on the system
 # fastjet = fastjet-config
 
-#! ePDF-config 
+#! eMELA-config 
 #!  If None: try to find one available on the system
-# ePDF = ePDF-config
+# eMELA = eMELA-config
 
 #! MCatNLO-utilities 
 #!  relative path starting from main directory

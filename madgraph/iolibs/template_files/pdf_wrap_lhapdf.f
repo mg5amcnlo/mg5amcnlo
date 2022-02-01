@@ -29,8 +29,9 @@ c     initialize the pdf set
          call GetOrderAs(nloop)
          nloop=nloop+1  
          asmz=alphasPDF(zmass)
-      else if (pdlabel.eq.'epdf') then
-         call initepdf_gridid(lhaid)
+      else if (pdlabel.eq.'emela') then
+C         call initepdf_gridid(lhaid)
+         CALL INITgridmela_lhaid(LHAID)
          nloop = 2 
          asmz = g**2/16d0/datan(1d0) 
       else

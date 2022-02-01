@@ -5065,15 +5065,15 @@ RESTART = %(mint_mode)s
 
 
     def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
-        """links and copies the libraries/PDFs from ePDF
+        """links and copies the libraries/PDFs from ePDF/eMELA
         pdlabel is in the form epdf:setname
         """
-        logger.info('Using ePDF for leptonic densities')
+        logger.info('Using eMELA for leptonic densities')
 
-        epdflibdir = subprocess.Popen([self.options['ePDF'], '--libdir'],
+        epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode().strip()
 
-        epdfdatadir = subprocess.Popen([self.options['ePDF'], '--data'],
+        epdfdatadir = subprocess.Popen([self.options['eMELA'], '--data'],
                  stdout = subprocess.PIPE).stdout.read().decode().strip()
 
         # update the LHAPDF data path
@@ -5086,10 +5086,10 @@ RESTART = %(mint_mode)s
         pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
         pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
 
-        self.make_opts_var['epdf'] = self.options['ePDF']
+        self.make_opts_var['epdf'] = self.options['eMELA']
 
         # link the static library in lib
-        lib = 'libePDF.a'
+        lib = 'libeMELA.a'
 
         if os.path.exists(pjoin(libdir, lib)):
             files.rm(pjoin(libdir, lib))
@@ -5210,8 +5210,8 @@ RESTART = %(mint_mode)s
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
 
-            elif self.run_card['pdlabel'].startswith('epdf'):
-                # this is if the PDFs from ePDF are employed
+            elif self.run_card['pdlabel'].startswith('emela'):
+                # this is if the PDFs from ePDF/eMELA are employed
                 self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
 
             else:
