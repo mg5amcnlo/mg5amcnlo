@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.3.2()
+      OM: (re)allow --loop_filter=True/... syntax for MC@NLO
       RF: Fixed a bug in the phase-space generation of MadSpin,
           relevant for processes with more than 1 t-channel.
 
