@@ -120,6 +120,9 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
+mint_module.o : FKSParams.mod
+BinothLHA_OLP.o: FKSParams.mod
+BinothLHA.o: FKSParams.mod
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o
 driver_mintMC.o: weight_lines.o mint_module.o
