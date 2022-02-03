@@ -174,7 +174,7 @@ C ePDF specific parameters
       !  1/(1-x)^ps_expo, which is taken into account by the
       !  phase-space parameterization
       !call pdfq(id_epdf,x,omx_ee,xmu,1d0-ps_expo,idbeam_epdf,base,sol,use_grid,call_epdf) 
-      call  elpdf(x,omx_ee,xmu,1d0-ps_expo,call_epdf) 
+      call  elpdfq2(x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
 
 
       return
