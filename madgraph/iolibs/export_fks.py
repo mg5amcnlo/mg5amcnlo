@@ -3171,7 +3171,7 @@ Parameters              %(params)s\n\
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines, nb_temp_jamp = self.get_JAMP_lines_split_order(\
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
