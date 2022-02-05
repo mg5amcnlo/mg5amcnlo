@@ -1780,7 +1780,7 @@ class DecayModel(model_reader.ModelReader):
         # create a process:
         process = base_objects.ProcessDefinition()
         process['model'] = self
-        process['orders'] = interaction['orders']
+        process['orders'] = dict(interaction['orders'])
         for order in self.get('coupling_orders'):
             if order not in interaction['orders']:
                 process['orders'][order] = 0
