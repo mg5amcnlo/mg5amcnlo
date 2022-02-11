@@ -7132,9 +7132,15 @@ class UFO_model_to_mg4(object):
                             logical updateloop
                             common /to_updateloop/updateloop
                             include \'model_functions.inc\'
-                            double precision Gother
+                            double precision Gother""")
+        if not self.opt['mp']:
+            fsock.writelines("""
                             include \'../maxparticles.inc\'
-                            include \'../run.inc\'
+                            include \'../run.inc\'""")
+        else:
+            fsock.writelines("""
+                            include \'../run.inc\'""")
+        fsock.writelines("""
                             double precision alphas 
                             external alphas
                             """)

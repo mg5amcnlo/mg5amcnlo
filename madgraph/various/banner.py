@@ -4647,7 +4647,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param('mue_ref_fixed', 91.118, hidden=True, system=True) # forbid the user to modigy due to incorrect handling of the Ellis-Sexton scale
+        self.add_param('mue_ref_fixed', 91.118, hidden=True) 
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
@@ -4655,7 +4655,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
         self.add_param('muf2_over_ref', -1.0, hidden=True)
-        self.add_param('mue_over_ref', 1.0, hidden=True)
+        self.add_param('mue_over_ref', 1.0, hidden=True, system=True) # forbid the user to modigy due to incorrect handling of the Ellis-Sexton scale
         self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', -1.0, hidden=True)        
