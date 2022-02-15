@@ -4904,6 +4904,7 @@ class RunCardNLO(RunCard):
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
           process with tagged photons -> gamma_is_j = false
+          process without QED splittings -> gamma_is_j = false, recombination = false
         """
 
         for block in self.blocks:
@@ -4947,6 +4948,11 @@ class RunCardNLO(RunCard):
 
         if 22 in tagged_particles:
             self['gamma_is_j'] = False
+
+        if 'QED' not in proc_characteristic['splitting_types']:
+            self['gamma_is_j'] = False
+            self['lepphreco'] = False
+            self['quarkphreco'] = False
 
         matching = False
         if min_particle != max_particle:
