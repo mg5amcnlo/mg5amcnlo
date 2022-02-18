@@ -85,7 +85,7 @@ class MadSpinOptions(banner.ConfigFile):
     ############################################################################
     ##  Special post-processing of the options                                ## 
     ############################################################################
-    def post_set_ms_dir(self, value, change_userdefine, raiseerror):
+    def post_set_ms_dir(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set ms_dir """
         
         self.__setitem__('curr_dir', value, change_userdefine=change_userdefine)
@@ -97,7 +97,7 @@ class MadSpinOptions(banner.ConfigFile):
         random.seed(value)
 
     ############################################################################        
-    def post_set_run_card(self, value, change_userdefine, raiseerror):
+    def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set run_card """
         
         if value == 'default':

@@ -24,7 +24,7 @@ Dependencies :
 
  * MadGraph5_aMC@NLO *
 
-- Python 2.6 (or higher, but not compatible with 3.X)
+- Python 3.7 (or higher, python2.7 is also working for the time being)
 
  * MadEvent *
 Package for the LO cross-section computation and generation of events 

@@ -3,6 +3,7 @@
       INTEGER EXTRA_CNT_D(%(nconfs)d), ISPLITORDER_BORN_D(%(nconfs)d), ISPLITORDER_CNT_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
+      LOGICAL PARTICLE_TAG_D(%(nconfs)d, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
       LOGICAL SPLIT_TYPE_D(%(nconfs)d, %(nsplitorders)d)
       LOGICAL NEED_COLOR_LINKS_D(%(nconfs)d), NEED_CHARGE_LINKS_D(%(nconfs)d)
@@ -40,3 +41,9 @@ C
 C     Particle charge:
 C     charge is set 0. with QCD corrections, which is irrelevant
 %(charge_lines)s
+
+C     
+C     Tagged particles:
+C     
+%(tag_lines)s
+

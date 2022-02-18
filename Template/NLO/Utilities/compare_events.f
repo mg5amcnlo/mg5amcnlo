@@ -21,7 +21,7 @@ c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
       double precision sum_wgt,sum_wgt2,xtmp,ytmp,xmomshifts(4)
       character*80 event_file,event_file2
       character*10 MonteCarlo,MonteCarlo2
-      character*140 buff
+      character*1000 buff
       include "nexternal.inc"
       include "genps.inc"
       integer j,k

@@ -1,9 +1,14 @@
-c/* ********************************************************* */
+c/* ******************************************************** */
 c/*  Equivalent photon approximation structure function.   * */
-c/*   V.M.Budnev et al., Phys.Rep. 15C (1975) 181          * */
-c/*     Improved Weizsaecker-Williams formula              * */
-c/*     http://inspirehep.net/record/359425                * */  
-c/* ********************************************************* */
+c/*   V.M.Budnev, et al., Phys.Rep. 15C (1975) 181         * */
+c/*   https://inspirehep.net/literature/95445              * */
+c/*   For photon from proton (elastic limit, no DGLAP evo) * */
+c/*                                                        * */
+c/*  Improved Weizsaecker-Williams formula                 * */
+c/*   S. Frixione, et al., Phys.Lett.B 319 (1993) 339-345  * */
+c/*   http://inspirehep.net/record/359425                  * */
+c/*   For photon from electron (WW approx) + higher twist  * */
+c/* ******************************************************** */
 c   provided by Tomasz Pierzchala - UCL
 
       real*8 function epa_lepton(x,q2max, mode)

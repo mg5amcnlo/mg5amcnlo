@@ -112,13 +112,6 @@ class TestMECmdShell(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            print("install pythia-pgs")
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print("install MadAnalysis")
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
@@ -188,11 +181,11 @@ class TestMECmdShell(unittest.TestCase):
             if self.debugging:
                 if os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
                     shutil.rmtree(pjoin(MG5DIR,'BackUp_tmp_test'))
-                shutil.copytree(pjoin(MG5DIR,'tmp_test'),
+                misc.copytree(pjoin(MG5DIR,'tmp_test'),
                                 pjoin(MG5DIR,'BackUp_tmp_test'))
         else:
             shutil.rmtree(pjoin(MG5DIR,'tmp_test'))
-            shutil.copytree(pjoin(MG5DIR,'BackUp_tmp_test'),pjoin(MG5DIR,'tmp_test'))
+            misc.copytree(pjoin(MG5DIR,'BackUp_tmp_test'),pjoin(MG5DIR,'tmp_test'))
 
         biased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_01','unweighted_events.lhe.gz'))
         unbiased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_02','unweighted_events.lhe.gz'))
@@ -365,9 +358,14 @@ class TestMECmdShell(unittest.TestCase):
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
 
+        misc.sprint('start')
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
+
+        if not self.cmd_line.options['pythia-pgs_path']:
+            return
+
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
@@ -380,8 +378,8 @@ class TestMECmdShell(unittest.TestCase):
         except:
             pass
         self.do('generate_events -f')     
-        
-        
+
+
         f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
         
@@ -443,7 +441,6 @@ class TestMECmdShell(unittest.TestCase):
         
         val2 = self.cmd_line.results.current['cross']
         err2 = self.cmd_line.results.current['error']        
-        
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
         target = 1310200.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
@@ -488,6 +485,49 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
         
+
+    def test_eva_collision(self):
+        """check that e p > e j gives the correct result"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.02174605
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""
         mg_cmd = MGCmd.MasterCmd()
@@ -730,12 +770,6 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
@@ -755,7 +789,6 @@ class TestMEfromfile(unittest.TestCase):
                  set event_norm sum
                  set systematics_program none
                  add_time_of_flight --threshold=4e-14
-                 pythia
                  """ %self.run_dir
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
@@ -772,7 +805,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout, stderr=stderr)
 
         self.check_parton_output(cross=15.62, error=0.19)
-        self.check_pythia_output()
+        #self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
             misc.gunzip(event)
@@ -806,12 +839,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -829,7 +856,6 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
-        pythia=ON
         %(path)s/../madspin_card.dat
         set nevents 1000
         set lhaid 10042
@@ -863,7 +889,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=666, delta_event=40)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
-        self.check_pythia_output(run_name='run_01_decayed_1')
+        #self.check_pythia_output(run_name='run_01_decayed_1')
         
         #check the first decayed events for energy-momentum conservation.
         
@@ -888,12 +914,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -912,7 +932,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output(cross=4.541638, error=0.035)
     
         self.check_parton_output('run_02', cross=4.41887317, error=0.035)
-        self.check_pythia_output()
+        #self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
         #
         

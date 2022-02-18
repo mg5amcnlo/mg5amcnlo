@@ -33,7 +33,7 @@ C     // x = omega/E = (E-E')/E
       else
          f= 0.
       endif
-c      write (*,*) x,dsqrt(q2min),dsqrt(q2max),f
+      write (*,*) x,dsqrt(q2min),dsqrt(q2max),f
       if (f .lt. 0) f = 0
       epa_electron= f
       end

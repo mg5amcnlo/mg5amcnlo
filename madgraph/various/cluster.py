@@ -368,6 +368,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
                     
         self.submitted = 0
         self.submitted_ids = []
+        self.id_to_packet = {}
         
     def check_termination(self, job_id):
         """Check the termination of the jobs with job_id and relaunch it if needed."""
@@ -841,6 +842,7 @@ class MultiCore(Cluster):
             self.submitted = six.moves.queue.Queue()
             self.pids = six.moves.queue.Queue()
             self.stoprequest.clear()
+            self.id_to_packet = {}
 
         except KeyboardInterrupt:
             # if one of the node fails -> return that error

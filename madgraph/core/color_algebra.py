@@ -26,6 +26,10 @@ from six.moves import map
 from six.moves import range
 from six.moves import zip
 
+import madgraph
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 #===============================================================================
 # ColorObject
 #===============================================================================

@@ -20,7 +20,7 @@ c Compile with makefile_rwgt
       character*10 MonteCarlo
       character*20 parm(20)
       character*80 event_file,fname1
-      character*140 buff
+      character*1000 buff
 c Parameters
       integer    izero
       parameter (izero=0)
@@ -467,12 +467,12 @@ c call the PDFs
                   LP=SIGN(1,LPP(1))
                   pd=pdg(1,i)
                   if (pd.eq.21) pd=0
-                  xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
+                  xlum(kf)=xlum(kf)*PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i)
      &                 ,DSQRT(mu2_f(kf)))
                   LP=SIGN(1,LPP(2))
                   pd=pdg(2,i)
                   if (pd.eq.21) pd=0
-                  xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
+                  xlum(kf)=xlum(kf)*PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i)
      &                 ,DSQRT(mu2_f(kf)))
                enddo
 
@@ -529,12 +529,12 @@ c call the PDFs
                pd=pdg(1,i)
                if (pd.eq.21) pd=0
                xlum=xlum*
-     &            PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i),DSQRT(mu2_f))
+     &            PDG2PDF(LPP(1),pd*LP,-1,bjx(1,i),DSQRT(mu2_f))
                LP=SIGN(1,LPP(2))
                pd=pdg(2,i)
                if (pd.eq.21) pd=0
                xlum=xlum*
-     &             PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i),DSQRT(mu2_f))
+     &             PDG2PDF(LPP(2),pd*LP,-2,bjx(2,i),DSQRT(mu2_f))
 c add the weights to the array
                wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
