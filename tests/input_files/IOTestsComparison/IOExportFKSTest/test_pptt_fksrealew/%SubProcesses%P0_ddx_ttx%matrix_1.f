@@ -9,8 +9,8 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: d d~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
-C     Process: s s~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: d d~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: s s~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
 C     
 C     CONSTANTS
@@ -19,7 +19,7 @@ C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=3)
+      PARAMETER (NSQAMPSO=1)
 C     
 C     ARGUMENTS 
 C     
@@ -109,8 +109,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: d d~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
-C     Process: s s~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: d d~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: s s~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -120,7 +120,7 @@ C
       INTEGER     NCOMB
       PARAMETER ( NCOMB=32)
       INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=3)
+      PARAMETER (NSQAMPSO=1)
 C     
 C     ARGUMENTS 
 C     
@@ -234,19 +234,19 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d d~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
-C     Process: s s~ > t t~ g [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: d d~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: s s~ > t t~ a [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
 C     
       INTEGER    NGRAPHS
-      PARAMETER (NGRAPHS=13)
+      PARAMETER (NGRAPHS=4)
       INTEGER    NWAVEFUNCS, NCOLOR
-      PARAMETER (NWAVEFUNCS=10, NCOLOR=4)
+      PARAMETER (NWAVEFUNCS=7, NCOLOR=2)
       INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=2, NSQAMPSO=3)
+      PARAMETER (NAMPSO=1, NSQAMPSO=1)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
@@ -268,7 +268,7 @@ C
       REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
-      COMPLEX*16 TMP_JAMP(0)
+      COMPLEX*16 TMP_JAMP(3)
 C     
 C     FUNCTION
 C     
@@ -276,22 +276,12 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA (CF(I,  1),I=  1,  4) /1.200000000000000D+01
-     $ ,4.000000000000000D+00,4.000000000000000D+00,0.000000000000000D
-     $ +00/
-C     1 T(2,1) T(5,3,4)
-      DATA (CF(I,  2),I=  1,  4) /4.000000000000000D+00
-     $ ,1.200000000000000D+01,0.000000000000000D+00,4.000000000000000D
-     $ +00/
-C     1 T(2,4) T(5,3,1)
-      DATA (CF(I,  3),I=  1,  4) /4.000000000000000D+00
-     $ ,0.000000000000000D+00,1.200000000000000D+01,4.000000000000000D
-     $ +00/
-C     1 T(3,1) T(5,2,4)
-      DATA (CF(I,  4),I=  1,  4) /0.000000000000000D+00
-     $ ,4.000000000000000D+00,4.000000000000000D+00,1.200000000000000D
-     $ +01/
-C     1 T(3,4) T(5,2,1)
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
+C     1 T(2,1) T(3,4)
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
+C     1 T(2,4) T(3,1)
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -301,61 +291,25 @@ C     ----------
       CALL IXXXXX(P(0,4),MDL_MT,NHEL(4),-1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
       CALL FFV1P0_3(W(1,1),W(1,2),GC_11,ZERO,ZERO,W(1,6))
-      CALL FFV1P0_3(W(1,4),W(1,3),GC_11,ZERO,ZERO,W(1,7))
+      CALL FFV1_1(W(1,3),W(1,5),GC_2,MDL_MT,MDL_WT,W(1,7))
 C     Amplitude(s) for diagram number 1
-      CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_10,AMP(1))
-      CALL FFV1P0_3(W(1,1),W(1,2),GC_1,ZERO,ZERO,W(1,8))
-      CALL FFV1_1(W(1,3),W(1,5),GC_11,MDL_MT,MDL_WT,W(1,9))
+      CALL FFV1_0(W(1,4),W(1,7),W(1,6),GC_11,AMP(1))
+      CALL FFV1_2(W(1,4),W(1,5),GC_2,MDL_MT,MDL_WT,W(1,7))
 C     Amplitude(s) for diagram number 2
-      CALL FFV1_0(W(1,4),W(1,9),W(1,8),GC_2,AMP(2))
+      CALL FFV1_0(W(1,7),W(1,3),W(1,6),GC_11,AMP(2))
+      CALL FFV1_2(W(1,1),W(1,5),GC_1,ZERO,ZERO,W(1,7))
+      CALL FFV1P0_3(W(1,4),W(1,3),GC_11,ZERO,ZERO,W(1,6))
 C     Amplitude(s) for diagram number 3
-      CALL FFV1_0(W(1,4),W(1,9),W(1,6),GC_11,AMP(3))
-      CALL FFV2_3_3(W(1,1),W(1,2),GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,10))
+      CALL FFV1_0(W(1,7),W(1,2),W(1,6),GC_11,AMP(3))
+      CALL FFV1_1(W(1,2),W(1,5),GC_1,ZERO,ZERO,W(1,7))
 C     Amplitude(s) for diagram number 4
-      CALL FFV2_5_0(W(1,4),W(1,9),W(1,10),-GC_50,GC_58,AMP(4))
-      CALL FFV1_2(W(1,4),W(1,5),GC_11,MDL_MT,MDL_WT,W(1,9))
-C     Amplitude(s) for diagram number 5
-      CALL FFV1_0(W(1,9),W(1,3),W(1,8),GC_2,AMP(5))
-C     Amplitude(s) for diagram number 6
-      CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_11,AMP(6))
-C     Amplitude(s) for diagram number 7
-      CALL FFV2_5_0(W(1,9),W(1,3),W(1,10),-GC_50,GC_58,AMP(7))
-      CALL FFV1_2(W(1,1),W(1,5),GC_11,ZERO,ZERO,W(1,9))
-      CALL FFV1P0_3(W(1,4),W(1,3),GC_2,ZERO,ZERO,W(1,10))
-C     Amplitude(s) for diagram number 8
-      CALL FFV1_0(W(1,9),W(1,2),W(1,10),GC_1,AMP(8))
-C     Amplitude(s) for diagram number 9
-      CALL FFV1_0(W(1,9),W(1,2),W(1,7),GC_11,AMP(9))
-      CALL FFV2_5_3(W(1,4),W(1,3),-GC_50,GC_58,MDL_MZ,MDL_WZ,W(1,6))
-C     Amplitude(s) for diagram number 10
-      CALL FFV2_3_0(W(1,9),W(1,2),W(1,6),GC_50,GC_58,AMP(10))
-      CALL FFV1_1(W(1,2),W(1,5),GC_11,ZERO,ZERO,W(1,9))
-C     Amplitude(s) for diagram number 11
-      CALL FFV1_0(W(1,1),W(1,9),W(1,10),GC_1,AMP(11))
-C     Amplitude(s) for diagram number 12
-      CALL FFV1_0(W(1,1),W(1,9),W(1,7),GC_11,AMP(12))
-C     Amplitude(s) for diagram number 13
-      CALL FFV2_3_0(W(1,1),W(1,9),W(1,6),GC_50,GC_58,AMP(13))
-C     JAMPs contributing to orders QCD=3 QED=0
-      JAMP(1,1) = (1.666666666666667D-01)*AMP(3)+(1.666666666666667D
-     $ -01)*AMP(6)
-      JAMP(2,1) = ((0.000000000000000D+00,5.000000000000000D-01))
-     $ *AMP(1)+(-5.000000000000000D-01)*AMP(3)+(-5.000000000000000D-01)
-     $ *AMP(9)
-      JAMP(3,1) = ((0.000000000000000D+00,-5.000000000000000D-01))
-     $ *AMP(1)+(-5.000000000000000D-01)*AMP(6)+(-5.000000000000000D-01)
-     $ *AMP(12)
-      JAMP(4,1) = (1.666666666666667D-01)*AMP(9)+(1.666666666666667D
-     $ -01)*AMP(12)
-C     JAMPs contributing to orders QCD=1 QED=2
-      JAMP(1,2) = (-1.000000000000000D+00)*AMP(2)+(-1.000000000000000D
-     $ +00)*AMP(4)+(-1.000000000000000D+00)*AMP(5)+(
-     $ -1.000000000000000D+00)*AMP(7)
-      JAMP(2,2) = 0D0
-      JAMP(3,2) = 0D0
-      JAMP(4,2) = (-1.000000000000000D+00)*AMP(8)+(-1.000000000000000D
-     $ +00)*AMP(10)+(-1.000000000000000D+00)*AMP(11)+(
-     $ -1.000000000000000D+00)*AMP(13)
+      CALL FFV1_0(W(1,1),W(1,7),W(1,6),GC_11,AMP(4))
+C     JAMPs contributing to orders QCD=2 QED=1
+      TMP_JAMP(2) = AMP(3) +  AMP(4)  ! used 2 times
+      TMP_JAMP(1) = AMP(1) +  AMP(2)  ! used 2 times
+      TMP_JAMP(3) = TMP_JAMP(2) +  TMP_JAMP(1)  ! used 2 times
+      JAMP(1,1) = (1.666666666666667D-01)*TMP_JAMP(3)
+      JAMP(2,1) = (-5.000000000000000D-01)*TMP_JAMP(3)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
@@ -397,7 +351,7 @@ C     CONSTANTS
 C     
       IMPLICIT NONE
       INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=2, NSQAMPSO=3)
+      PARAMETER (NAMPSO=1, NSQAMPSO=1)
       INTEGER NSPLITORDERS
       PARAMETER (NSPLITORDERS=2)
 C     
@@ -409,8 +363,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, SQORDERS(NSPLITORDERS)
       INTEGER AMPSPLITORDERS(NAMPSO,NSPLITORDERS)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    3,    0/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    1,    2/
+      DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    2,    1/
 C     
 C     FUNCTION
 C     
@@ -435,7 +388,7 @@ C     corresponding index in the squared orders canonical ordering.
 C     
       IMPLICIT NONE
       INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=3)
+      PARAMETER (NSQAMPSO=1)
       INTEGER NSPLITORDERS
       PARAMETER (NSPLITORDERS=2)
 C     
@@ -448,9 +401,7 @@ C
       INTEGER I,J
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
 C     the values listed below are for QCD, QED
-      DATA (SQSPLITORDERS(  1,I),I=  1,  2) /    6,    0/
-      DATA (SQSPLITORDERS(  2,I),I=  1,  2) /    4,    2/
-      DATA (SQSPLITORDERS(  3,I),I=  1,  2) /    2,    4/
+      DATA (SQSPLITORDERS(  1,I),I=  1,  2) /    4,    2/
 C     
 C     BEGIN CODE
 C     
@@ -480,7 +431,7 @@ C     in the split-orders output
 C     
       IMPLICIT NONE
       INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=3)
+      PARAMETER (NSQAMPSO=1)
       INTEGER NSPLITORDERS
       PARAMETER (NSPLITORDERS=2)
 C     
@@ -493,9 +444,7 @@ C
       INTEGER I
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
 C     the values listed below are for QCD, QED
-      DATA (SQSPLITORDERS(  1,I),I=  1,  2) /    6,    0/
-      DATA (SQSPLITORDERS(  2,I),I=  1,  2) /    4,    2/
-      DATA (SQSPLITORDERS(  3,I),I=  1,  2) /    2,    4/
+      DATA (SQSPLITORDERS(  1,I),I=  1,  2) /    4,    2/
 C     
 C     BEGIN CODE
 C     
@@ -523,7 +472,7 @@ C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
 C     
       IMPLICIT NONE
       INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=3)
+      PARAMETER (NSQAMPSO=1)
       INTEGER NSQSO
 
       NSQSO=NSQAMPSO

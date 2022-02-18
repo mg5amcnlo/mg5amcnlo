@@ -47,6 +47,13 @@ C
       DATA NFACT/1/
       SAVE NFACT
 C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE '../../Source/PDF/eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+
+      INTEGER I_EE
+C     
 C     EXTERNAL FUNCTIONS
 C     
       LOGICAL PASSCUTS
@@ -68,6 +75,10 @@ C     Keep track of whether cuts already calculated for this event
 
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C     
 C     local
 C     
@@ -106,12 +117,12 @@ C     Continue only if IMODE is 0, 4 or 5
 
       IF (PASSCUTS(PP)) THEN
         IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(ABS(LPP(1)),2*LP, 1,XBK(1),DSQRT(Q2FACT(1)))
+            !LP=SIGN(1,LPP(1))
+          U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
         ENDIF
         IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          UX2=PDG2PDF(ABS(LPP(2)),-2*LP, 2,XBK(2),DSQRT(Q2FACT(2)))
+            !LP=SIGN(1,LPP(2))
+          UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
         ENDIF
         PD(0) = 0D0
         IPROC = 0
@@ -224,5 +235,39 @@ C
 
       SUBROUTINE PRINT_ZERO_AMP()
 
+      RETURN
+      END
+
+      INTEGER FUNCTION GET_NHEL(HEL, IPART)
+C     if hel>0 return the helicity of particule ipart for the selected
+C      helicity configuration
+C     if hel=0 return the number of helicity state possible for that
+C      particle 
+      IMPLICIT NONE
+      INTEGER HEL,I, IPART
+      INCLUDE 'nexternal.inc'
+      INTEGER ONE_NHEL(NEXTERNAL)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=16)
+      INTEGER NHEL(NEXTERNAL,0:NCOMB)
+      DATA (NHEL(I,0),I=1,4) / 2, 2, 2, 2/
+      DATA (NHEL(I,   1),I=1,4) / 1,-1,-1,-1/
+      DATA (NHEL(I,   2),I=1,4) / 1,-1,-1, 1/
+      DATA (NHEL(I,   3),I=1,4) / 1,-1, 1,-1/
+      DATA (NHEL(I,   4),I=1,4) / 1,-1, 1, 1/
+      DATA (NHEL(I,   5),I=1,4) / 1, 1,-1,-1/
+      DATA (NHEL(I,   6),I=1,4) / 1, 1,-1, 1/
+      DATA (NHEL(I,   7),I=1,4) / 1, 1, 1,-1/
+      DATA (NHEL(I,   8),I=1,4) / 1, 1, 1, 1/
+      DATA (NHEL(I,   9),I=1,4) /-1,-1,-1,-1/
+      DATA (NHEL(I,  10),I=1,4) /-1,-1,-1, 1/
+      DATA (NHEL(I,  11),I=1,4) /-1,-1, 1,-1/
+      DATA (NHEL(I,  12),I=1,4) /-1,-1, 1, 1/
+      DATA (NHEL(I,  13),I=1,4) /-1, 1,-1,-1/
+      DATA (NHEL(I,  14),I=1,4) /-1, 1,-1, 1/
+      DATA (NHEL(I,  15),I=1,4) /-1, 1, 1,-1/
+      DATA (NHEL(I,  16),I=1,4) /-1, 1, 1, 1/
+
+      GET_NHEL = NHEL(IPART, IABS(HEL))
       RETURN
       END

@@ -19,7 +19,7 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       integer jwgtinfo,mexternal,iwgtnumpartn
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       character*80 event_file,fname2
-      character*140 buff
+      character*1000 buff
       character*10 MonteCarlo,string
       character*12 str1,str2
       character*9 ch1

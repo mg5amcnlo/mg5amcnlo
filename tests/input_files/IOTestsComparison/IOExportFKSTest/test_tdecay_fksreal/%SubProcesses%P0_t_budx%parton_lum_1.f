@@ -49,6 +49,20 @@ C
       INTEGER IMIRROR
       COMMON/CMIRROR/IMIRROR
 C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE 'eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+
+      INTEGER I_EE
+C     
+C     
+C     
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+C     
 C     DATA                                                            
 C         
 C     

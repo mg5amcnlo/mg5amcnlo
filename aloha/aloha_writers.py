@@ -1609,7 +1609,9 @@ class ALOHAWriterForCPP(WriteALOHA):
         out = StringIO()
 
         if self.routine.contracted:
-            for name,obj in self.routine.contracted.items():
+            keys = sorted(self.routine.contracted.keys())
+            for name in keys:
+                obj = self.routine.contracted[name]
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
         

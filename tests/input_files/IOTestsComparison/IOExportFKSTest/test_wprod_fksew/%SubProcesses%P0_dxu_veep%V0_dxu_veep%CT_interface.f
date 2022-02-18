@@ -593,6 +593,293 @@ C     3 -> QCDLOOP
 
       END
 
+      SUBROUTINE LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX, LOOPNUM)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER    NLOOPLINE
+      PARAMETER (NLOOPLINE=2)
+      INTEGER    NWAVEFUNCS
+      PARAMETER (NWAVEFUNCS=6)
+      INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=25)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     These are constants related to the split orders
+      INTEGER    NSQUAREDSO
+      PARAMETER (NSQUAREDSO=1)
+C     
+C     ARGUMENTS 
+C     
+      INTEGER W1, W2
+      COMPLEX*16 M1, M2
+
+      INTEGER RANK, LSYMFACT
+      INTEGER LOOPNUM, SQUAREDSOINDEX
+C     
+C     LOCAL VARIABLES 
+C     
+      REAL*8 PL(0:3,NLOOPLINE)
+      REAL*16 MP_PL(0:3,NLOOPLINE)
+      COMPLEX*16 M2L(NLOOPLINE)
+      INTEGER PAIRING(NLOOPLINE),WE(2)
+      INTEGER I, J, K, TEMP,I_LIB
+      LOGICAL COMPLEX_MASS,DOING_QP
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'MadLoopParams.inc'
+      INTEGER ID,SQSOINDEX,R
+      COMMON/LOOP/ID,SQSOINDEX,R
+
+      LOGICAL CHECKPHASE, HELDOUBLECHECKED
+      COMMON/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+      INTEGER HELOFFSET
+      INTEGER GOODHEL(NCOMB)
+      LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
+      COMMON/FILTERS/GOODAMP,GOODHEL,HELOFFSET
+
+      COMPLEX*16 LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+      LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
+      COMMON/LOOPRES/LOOPRES,S
+
+
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMMON/W/W
+      COMPLEX*32 MP_W(20,NWAVEFUNCS)
+      COMMON/MP_W/MP_W
+
+      REAL*8 LSCALE
+      INTEGER CTMODE
+      COMMON/CT/LSCALE,CTMODE
+      INTEGER LIBINDEX
+      COMMON/I_LIB/LIBINDEX
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+C     Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
+
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
+        WE(1)=W1
+        WE(2)=W2
+        M2L(1)=M2**2
+        M2L(2)=M1**2
+        DO I=1,NLOOPLINE
+          PAIRING(I)=1
+        ENDDO
+
+        R=RANK
+        ID=LOOPNUM
+        SQSOINDEX=SQUAREDSOINDEX
+        DO I=0,3
+          TEMP=1
+          DO J=1,NLOOPLINE
+            PL(I,J)=0.D0
+            IF (DOING_QP) THEN
+              MP_PL(I,J)=0.0E+0_16
+            ENDIF
+            DO K=TEMP,(TEMP+PAIRING(J)-1)
+              PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+              IF (DOING_QP) THEN
+                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
+              ENDIF
+            ENDDO
+            TEMP=TEMP+PAIRING(J)
+          ENDDO
+        ENDDO
+C       Determine whether the integral is with complex masses or not
+C       since some reduction libraries, e.g.PJFry++ and IREGI, are
+C        still
+C       not able to deal with complex masses
+        COMPLEX_MASS=.FALSE.
+        DO I=1,NLOOPLINE
+          IF(DIMAG(M2L(I)).EQ.0D0)CYCLE
+          IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1D-15)THEN
+            COMPLEX_MASS=.TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+C       Choose the correct loop library
+        CALL CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS,ID
+     $   ,DOING_QP,I_LIB)
+        IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
+C         CutTools is used
+          CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX
+     $     ,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+        ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
+C         Ninja is used
+          IF (.NOT.DOING_QP) THEN
+            CALL NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $       ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          ELSE
+            WRITE(*,*) 'ERROR: Ninja should not be called in quadruple'
+     $       //' precision since the installed version considered does'
+     $       //' not support it.'
+            STOP 9
+          ENDIF
+        ELSE
+C         Tensor Integral Reduction is used 
+          CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L
+     $     ,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
+     $     ,LOOPNUM))
+        ENDIF
+      ELSE
+        LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        LOOPRES(3,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        S(SQUAREDSOINDEX,LOOPNUM)=.TRUE.
+      ENDIF
+      END
+
+      SUBROUTINE LOOP_3(W1, W2, W3, M1, M2, M3,  RANK, SQUAREDSOINDEX,
+     $  LOOPNUM)
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER    NLOOPLINE
+      PARAMETER (NLOOPLINE=3)
+      INTEGER    NWAVEFUNCS
+      PARAMETER (NWAVEFUNCS=6)
+      INTEGER    NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=25)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     These are constants related to the split orders
+      INTEGER    NSQUAREDSO
+      PARAMETER (NSQUAREDSO=1)
+C     
+C     ARGUMENTS 
+C     
+      INTEGER W1, W2, W3
+      COMPLEX*16 M1, M2, M3
+
+      INTEGER RANK, LSYMFACT
+      INTEGER LOOPNUM, SQUAREDSOINDEX
+C     
+C     LOCAL VARIABLES 
+C     
+      REAL*8 PL(0:3,NLOOPLINE)
+      REAL*16 MP_PL(0:3,NLOOPLINE)
+      COMPLEX*16 M2L(NLOOPLINE)
+      INTEGER PAIRING(NLOOPLINE),WE(3)
+      INTEGER I, J, K, TEMP,I_LIB
+      LOGICAL COMPLEX_MASS,DOING_QP
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'MadLoopParams.inc'
+      INTEGER ID,SQSOINDEX,R
+      COMMON/LOOP/ID,SQSOINDEX,R
+
+      LOGICAL CHECKPHASE, HELDOUBLECHECKED
+      COMMON/INIT/CHECKPHASE, HELDOUBLECHECKED
+
+      INTEGER HELOFFSET
+      INTEGER GOODHEL(NCOMB)
+      LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
+      COMMON/FILTERS/GOODAMP,GOODHEL,HELOFFSET
+
+      COMPLEX*16 LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+      LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
+      COMMON/LOOPRES/LOOPRES,S
+
+
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMMON/W/W
+      COMPLEX*32 MP_W(20,NWAVEFUNCS)
+      COMMON/MP_W/MP_W
+
+      REAL*8 LSCALE
+      INTEGER CTMODE
+      COMMON/CT/LSCALE,CTMODE
+      INTEGER LIBINDEX
+      COMMON/I_LIB/LIBINDEX
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+C     Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
+
+      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
+     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
+        WE(1)=W1
+        WE(2)=W2
+        WE(3)=W3
+        M2L(1)=M3**2
+        M2L(2)=M1**2
+        M2L(3)=M2**2
+        DO I=1,NLOOPLINE
+          PAIRING(I)=1
+        ENDDO
+
+        R=RANK
+        ID=LOOPNUM
+        SQSOINDEX=SQUAREDSOINDEX
+        DO I=0,3
+          TEMP=1
+          DO J=1,NLOOPLINE
+            PL(I,J)=0.D0
+            IF (DOING_QP) THEN
+              MP_PL(I,J)=0.0E+0_16
+            ENDIF
+            DO K=TEMP,(TEMP+PAIRING(J)-1)
+              PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+              IF (DOING_QP) THEN
+                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
+              ENDIF
+            ENDDO
+            TEMP=TEMP+PAIRING(J)
+          ENDDO
+        ENDDO
+C       Determine whether the integral is with complex masses or not
+C       since some reduction libraries, e.g.PJFry++ and IREGI, are
+C        still
+C       not able to deal with complex masses
+        COMPLEX_MASS=.FALSE.
+        DO I=1,NLOOPLINE
+          IF(DIMAG(M2L(I)).EQ.0D0)CYCLE
+          IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1D-15)THEN
+            COMPLEX_MASS=.TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+C       Choose the correct loop library
+        CALL CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS,ID
+     $   ,DOING_QP,I_LIB)
+        IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
+C         CutTools is used
+          CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX
+     $     ,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+        ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
+C         Ninja is used
+          IF (.NOT.DOING_QP) THEN
+            CALL NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $       ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          ELSE
+            WRITE(*,*) 'ERROR: Ninja should not be called in quadruple'
+     $       //' precision since the installed version considered does'
+     $       //' not support it.'
+            STOP 9
+          ENDIF
+        ELSE
+C         Tensor Integral Reduction is used 
+          CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L
+     $     ,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
+     $     ,LOOPNUM))
+        ENDIF
+      ELSE
+        LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        LOOPRES(3,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
+        S(SQUAREDSOINDEX,LOOPNUM)=.TRUE.
+      ENDIF
+      END
+
       SUBROUTINE LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK,
      $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
@@ -816,293 +1103,6 @@ C     Determine it uses qp or not
         WE(2)=W2
         M2L(1)=M1**2
         PAIRING(1)=P1
-        R=RANK
-        ID=LOOPNUM
-        SQSOINDEX=SQUAREDSOINDEX
-        DO I=0,3
-          TEMP=1
-          DO J=1,NLOOPLINE
-            PL(I,J)=0.D0
-            IF (DOING_QP) THEN
-              MP_PL(I,J)=0.0E+0_16
-            ENDIF
-            DO K=TEMP,(TEMP+PAIRING(J)-1)
-              PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
-              IF (DOING_QP) THEN
-                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
-              ENDIF
-            ENDDO
-            TEMP=TEMP+PAIRING(J)
-          ENDDO
-        ENDDO
-C       Determine whether the integral is with complex masses or not
-C       since some reduction libraries, e.g.PJFry++ and IREGI, are
-C        still
-C       not able to deal with complex masses
-        COMPLEX_MASS=.FALSE.
-        DO I=1,NLOOPLINE
-          IF(DIMAG(M2L(I)).EQ.0D0)CYCLE
-          IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1D-15)THEN
-            COMPLEX_MASS=.TRUE.
-            EXIT
-          ENDIF
-        ENDDO
-C       Choose the correct loop library
-        CALL CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS,ID
-     $   ,DOING_QP,I_LIB)
-        IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
-C         CutTools is used
-          CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX
-     $     ,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-        ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
-C         Ninja is used
-          IF (.NOT.DOING_QP) THEN
-            CALL NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
-     $       ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-          ELSE
-            WRITE(*,*) 'ERROR: Ninja should not be called in quadruple'
-     $       //' precision since the installed version considered does'
-     $       //' not support it.'
-            STOP 9
-          ENDIF
-        ELSE
-C         Tensor Integral Reduction is used 
-          CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L
-     $     ,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
-        ENDIF
-      ELSE
-        LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        LOOPRES(3,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        S(SQUAREDSOINDEX,LOOPNUM)=.TRUE.
-      ENDIF
-      END
-
-      SUBROUTINE LOOP_3(W1, W2, W3, M1, M2, M3,  RANK, SQUAREDSOINDEX,
-     $  LOOPNUM)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=4)
-      INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=3)
-      INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=6)
-      INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=25)
-      INTEGER    NCOMB
-      PARAMETER (NCOMB=16)
-C     These are constants related to the split orders
-      INTEGER    NSQUAREDSO
-      PARAMETER (NSQUAREDSO=1)
-C     
-C     ARGUMENTS 
-C     
-      INTEGER W1, W2, W3
-      COMPLEX*16 M1, M2, M3
-
-      INTEGER RANK, LSYMFACT
-      INTEGER LOOPNUM, SQUAREDSOINDEX
-C     
-C     LOCAL VARIABLES 
-C     
-      REAL*8 PL(0:3,NLOOPLINE)
-      REAL*16 MP_PL(0:3,NLOOPLINE)
-      COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(3)
-      INTEGER I, J, K, TEMP,I_LIB
-      LOGICAL COMPLEX_MASS,DOING_QP
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'MadLoopParams.inc'
-      INTEGER ID,SQSOINDEX,R
-      COMMON/LOOP/ID,SQSOINDEX,R
-
-      LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      COMMON/INIT/CHECKPHASE, HELDOUBLECHECKED
-
-      INTEGER HELOFFSET
-      INTEGER GOODHEL(NCOMB)
-      LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
-      COMMON/FILTERS/GOODAMP,GOODHEL,HELOFFSET
-
-      COMPLEX*16 LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
-      LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-      COMMON/LOOPRES/LOOPRES,S
-
-
-      COMPLEX*16 W(20,NWAVEFUNCS)
-      COMMON/W/W
-      COMPLEX*32 MP_W(20,NWAVEFUNCS)
-      COMMON/MP_W/MP_W
-
-      REAL*8 LSCALE
-      INTEGER CTMODE
-      COMMON/CT/LSCALE,CTMODE
-      INTEGER LIBINDEX
-      COMMON/I_LIB/LIBINDEX
-
-C     ----------
-C     BEGIN CODE
-C     ----------
-
-C     Determine it uses qp or not
-      DOING_QP = (CTMODE.GE.4)
-
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
-     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
-        WE(1)=W1
-        WE(2)=W2
-        WE(3)=W3
-        M2L(1)=M3**2
-        M2L(2)=M1**2
-        M2L(3)=M2**2
-        DO I=1,NLOOPLINE
-          PAIRING(I)=1
-        ENDDO
-
-        R=RANK
-        ID=LOOPNUM
-        SQSOINDEX=SQUAREDSOINDEX
-        DO I=0,3
-          TEMP=1
-          DO J=1,NLOOPLINE
-            PL(I,J)=0.D0
-            IF (DOING_QP) THEN
-              MP_PL(I,J)=0.0E+0_16
-            ENDIF
-            DO K=TEMP,(TEMP+PAIRING(J)-1)
-              PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
-              IF (DOING_QP) THEN
-                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
-              ENDIF
-            ENDDO
-            TEMP=TEMP+PAIRING(J)
-          ENDDO
-        ENDDO
-C       Determine whether the integral is with complex masses or not
-C       since some reduction libraries, e.g.PJFry++ and IREGI, are
-C        still
-C       not able to deal with complex masses
-        COMPLEX_MASS=.FALSE.
-        DO I=1,NLOOPLINE
-          IF(DIMAG(M2L(I)).EQ.0D0)CYCLE
-          IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1D-15)THEN
-            COMPLEX_MASS=.TRUE.
-            EXIT
-          ENDIF
-        ENDDO
-C       Choose the correct loop library
-        CALL CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS,ID
-     $   ,DOING_QP,I_LIB)
-        IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
-C         CutTools is used
-          CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX
-     $     ,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-        ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
-C         Ninja is used
-          IF (.NOT.DOING_QP) THEN
-            CALL NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
-     $       ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
-          ELSE
-            WRITE(*,*) 'ERROR: Ninja should not be called in quadruple'
-     $       //' precision since the installed version considered does'
-     $       //' not support it.'
-            STOP 9
-          ENDIF
-        ELSE
-C         Tensor Integral Reduction is used 
-          CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L
-     $     ,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
-        ENDIF
-      ELSE
-        LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        LOOPRES(3,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
-        S(SQUAREDSOINDEX,LOOPNUM)=.TRUE.
-      ENDIF
-      END
-
-      SUBROUTINE LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX, LOOPNUM)
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=4)
-      INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=2)
-      INTEGER    NWAVEFUNCS
-      PARAMETER (NWAVEFUNCS=6)
-      INTEGER    NLOOPGROUPS
-      PARAMETER (NLOOPGROUPS=25)
-      INTEGER    NCOMB
-      PARAMETER (NCOMB=16)
-C     These are constants related to the split orders
-      INTEGER    NSQUAREDSO
-      PARAMETER (NSQUAREDSO=1)
-C     
-C     ARGUMENTS 
-C     
-      INTEGER W1, W2
-      COMPLEX*16 M1, M2
-
-      INTEGER RANK, LSYMFACT
-      INTEGER LOOPNUM, SQUAREDSOINDEX
-C     
-C     LOCAL VARIABLES 
-C     
-      REAL*8 PL(0:3,NLOOPLINE)
-      REAL*16 MP_PL(0:3,NLOOPLINE)
-      COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(2)
-      INTEGER I, J, K, TEMP,I_LIB
-      LOGICAL COMPLEX_MASS,DOING_QP
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'MadLoopParams.inc'
-      INTEGER ID,SQSOINDEX,R
-      COMMON/LOOP/ID,SQSOINDEX,R
-
-      LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      COMMON/INIT/CHECKPHASE, HELDOUBLECHECKED
-
-      INTEGER HELOFFSET
-      INTEGER GOODHEL(NCOMB)
-      LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
-      COMMON/FILTERS/GOODAMP,GOODHEL,HELOFFSET
-
-      COMPLEX*16 LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
-      LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-      COMMON/LOOPRES/LOOPRES,S
-
-
-      COMPLEX*16 W(20,NWAVEFUNCS)
-      COMMON/W/W
-      COMPLEX*32 MP_W(20,NWAVEFUNCS)
-      COMMON/MP_W/MP_W
-
-      REAL*8 LSCALE
-      INTEGER CTMODE
-      COMMON/CT/LSCALE,CTMODE
-      INTEGER LIBINDEX
-      COMMON/I_LIB/LIBINDEX
-
-C     ----------
-C     BEGIN CODE
-C     ----------
-
-C     Determine it uses qp or not
-      DOING_QP = (CTMODE.GE.4)
-
-      IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)
-     $ .OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
-        WE(1)=W1
-        WE(2)=W2
-        M2L(1)=M2**2
-        M2L(2)=M1**2
-        DO I=1,NLOOPLINE
-          PAIRING(I)=1
-        ENDDO
-
         R=RANK
         ID=LOOPNUM
         SQSOINDEX=SQUAREDSOINDEX

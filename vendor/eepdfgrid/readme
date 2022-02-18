@@ -1,0 +1,101 @@
+============================
+# This package contains the code to perform coevolution between
+# ISR and beamstrahlung, and generate a grid that can be adopted by Madgraph5_aMC@NLO.
+# Below we give brief explanation about the structure and how to run it.
+============================
+
+# References:
+# Stefano Frixione, Olivier Mattelaer, Marco Zaro and Xiaoran Zhao (arXiv:2108.XXXXX)
+#
+# Contact: xiaoran.zhao@uniroma3.it
+
+****************************
+Requirements:
+****************************
+1. gfortran
+2. Make
+3. Bash if want to run "run.sh"(see below)
+
+****************************
+File structure:
+****************************
+1.gridgen.f: is the program that calls corresponding routine to generate the grid.
+
+2.dfint.f and kerset.f: auxiliary files to perform interpolation based on the values in the grid
+
+3.dgauss.f: the one-dimensional integrator based on Gaussian quadrature 
+
+4.calcpdf_{collider}.f: the calcuculation of the \bar\phi quantity for each collider
+
+5.gridpdfaux_{collider}.f: auxiliary files for each collider
+
+6.calcisr.f: the implementation of ISR function(currently LL in the socalled BETA scheme), which is called by the implementation of "calcpdf.f" for predefined colliders
+
+7.testgrid.f: an auxiliary program which compare the value obtained from the grid with the exact calculation.
+
+8.totlumi.f: an auxiliary program which checks the total integral using the grid.
+
+****************************
+How to run it for one predefined collider:
+****************************
+
+1. Copy the file calcpdf_{collider}.f and gridpdfaux_{collider}.f into calcpdf.f and gridpdfaux.f, respectively
+
+2. Type "make" to compile the code
+
+3. Run "./gridgen", a file called "eepdf.f" will be generated.
+
+4. Copy "gridpdfaux.f" and "eepdf.f" into "Source/PDF/lep_densities/{collider}/" in MadGraph5_aMC@NLO.
+
+An script called "run.sh" is supplied which will run it for all predefined colliders and rename the output "eepdf.f" into "eepdf_{collider}.f".
+
+****************************
+How to add a new collider:
+****************************
+1. Implement a new "calcpdf.f", which contains a function like below:
+
+    real* function eepdf_tilde_calc(x,Q2,n,partonid,beamid)
+
+which calculate the PDF without the (1-x)^p prefactor, i.e. the quantity \bar\phi in Eq.(41) in the note.
+Here x is the energy fraction, Q2 is the square of the factorisation scale Q, n is the index of components, partonid and beamid are the PDG ID of the parton and the beam(currently we only support partonid=beamid=11 for the electons in the electron beam, and partonid=beamid=-11 for the positrons in the positron beam)
+
+2. Implement a new "gridpdfaux.f", which contains the following functions:
+
+2.a The maximal number of components:
+
+    integer function eepdf_n_components(partonid,beamid)
+
+For the case without beamstrahlung, the return value is 1.
+For current implementation of beamstrahlung for predefined colliders, the return value is 4,
+but it is determined from the fit function of the beamstrahlung and can be changed.
+
+2.b The power of (1-x) in the prefactor(i.e. the quantity \kappa in Eq.(41)):
+
+    real*8 function eepdf_tilde_power(Q2,n,partonid,beamid)
+
+2.c An extra factor to flatten the grid:
+
+    real*8 function eepdf_tilde_factor(x,Q2,n,partonid,beamid)
+
+This function was introduced to flatten the grid.
+The quantity \bar\phi which calculated in "calcpdf.f" is split as below:
+    \bar\phi = factor * grid
+where "factor" is the result from the above function "eepdf_tilde_factor",
+and "grid" is the value which is stored and interpolated by the grid.
+The function "eepdf_tilde_factor" can be any analytic or numeric function in principle, but it is desirable to construct a simpler function which is closer to \bar\phi so that the grid interpolation is flat and thus the error from interpolation is lower.
+In current implementation of those predefined colliders, this function always returns 1.
+
+3. Now you can type "make" to compile "gridgen" with the new implemented "gridpdfaux.f" and "calcpdf.f"
+
+4. Then you can type "./gridgen" to generate the new grid, which is stored in "eepdf.f"
+
+5. Copy "gridpdfaux.f" and "eepdf.f" into "Source/PDF/lep_densities/{collider}/" in MadGraph5_aMC@NLO.
+
+****************************
+Note:
+****************************
+1. Due to singular behaviors of the ISR function and beamstrahlung,
+to obtain good precision on performing the one-dimensional coevoluation to obtain \bar\phi,
+in current implementation(i.e. calcpdf_{collider}.f) the integration domain is split into two regions,
+and in each region corresponding variable transformation is performed to flatten the integrand.
+Please refer to the function "Iapq", "Iapqterm1" and "Iapqterm2" in "calcpdf_{collider}.f" for more technical details.

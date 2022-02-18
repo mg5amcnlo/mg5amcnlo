@@ -1001,7 +1001,7 @@ c       choose the permutation (point by point in the ps)
           if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
           call UPDATE_AS_PARAM()
         endif
-        if(.not.fixed_fac_scale) then
+        if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
           call set_fac_scale(momenta(0,1),q2fact)
         endif
          """

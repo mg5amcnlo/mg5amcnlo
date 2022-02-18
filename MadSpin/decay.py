@@ -178,7 +178,7 @@ class Event:
             part=self.event2mg[item]
             if part>0:
                 particle_line=self.get_particle_line(self.particle[part])
-                if abs(self.particle[part]["istup"]) == 1:
+                if abs(self.particle[part]["istup"]) == 1 or abs(self.particle[part]["istup"]) == 2:
                     if "pt_scale" in self.particle[part]:
                         scales.append(self.particle[part]["pt_scale"])
                     else:
@@ -187,17 +187,16 @@ class Event:
                 particle_line=self.get_particle_line(self.resonance[part])
             line+=particle_line        
         
-        if any(scales):
-            sqrts = self.particle[1]["pt_scale"]
-            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"' 
-                                                        %(i-1,s if s else sqrts)
-                                                       for i,s in enumerate(scales)
-                                                       if i>1])
-        
         if self.diese:
             line += self.diese
         if self.rwgt:
             line += self.rwgt
+        if any(scales):
+            sqrts = self.particle[1]["pt_scale"]
+            line += "<scales %s></scales>\n" % ' '.join(['pt_clust_%i=\"%s\"'
+                                                        %(i+1,s if s else self.scale)
+                                                       for i,s in enumerate(scales)
+                                                       if i>1])
         line+="</event> \n"
         return line
 

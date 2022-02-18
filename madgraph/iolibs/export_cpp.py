@@ -835,7 +835,7 @@ class OneProcessExporterCPP(object):
             # the same coefficient (up to a sign), put it in front
             list_fracs = [abs(coefficient[0][1]) for coefficient in coeff_list]
             common_factor = False
-            diff_fracs = list(set(list_fracs))
+            diff_fracs = misc.make_unique(list_fracs)
             if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                 common_factor = True
                 global_factor = diff_fracs[0]
@@ -1272,7 +1272,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                 and final_s_channels[0] != 0:
             singleres = final_s_channels[0]
 
-        resonance_set = list(set([pid for pid in resonance_set]))
+        resonance_set = misc.make_unique([pid for pid in resonance_set])
 
         # schannel is True if all diagrams are pure s-channel and there are
         # no QCD vertices

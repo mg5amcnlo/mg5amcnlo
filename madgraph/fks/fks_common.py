@@ -18,6 +18,7 @@ and MadFKS from born"""
 
 from __future__ import absolute_import
 from __future__ import print_function
+import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -32,7 +33,8 @@ import fractions
 import six
 from six.moves import range
     
-    
+if madgraph.ordering:
+    set = misc.OrderedSet    
     
 class FKSProcessError(Exception):
     """Exception for MadFKS"""
@@ -263,7 +265,6 @@ def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #t
     if dict == {}:
         dict = find_pert_particles_interactions(model, pert)
     splittings = []
-#check that the leg is a qcd leg
 
     if leg.get('id') in dict['pert_particles']:
         part = model.get('particle_dict')[leg.get('id')]
@@ -284,6 +285,13 @@ def find_splittings(leg, model, dict, pert='QCD', include_init_leptons=True): #t
                         nsoft += 1
                 if nsoft >= 1:
                     for split in split_leg(leg, parts, model):
+                        # check if the leg is tagged, that 
+                        # the same particles appear also in the two daughters
+                        if 'is_tagged' in leg.keys() and leg['is_tagged'] and \
+                           leg['id'] != split[0]['id'] and \
+                           leg['id'] != split[1]['id']:
+                            continue
+
                         # add the splitting, but check if there is 
                         # an initial-state lepton if the flag
                         # include_init_leptons is False
@@ -833,6 +841,7 @@ class FKSLeg(MG.Leg):
     -'charge', which gives the charge of the leg
     -'massless', boolean, true if leg is massless
     -'spin' which gives the spin of leg
+    -'is_tagged', boolean, true if leg is tagged in the final state
     -'is_part', boolean, true if leg is an particle
     -'self_antipart', boolean, true if leg is an self-conjugated particle
     """
@@ -846,13 +855,14 @@ class FKSLeg(MG.Leg):
         self['charge'] = 0.
         self['massless'] = True
         self['spin'] = 0
+        self['is_tagged'] = False
         self['is_part'] = True
         self['self_antipart'] = False
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSLeg, self).get_sorted_keys()
-        keys += ['fks', 'color','charge', 'massless', 'spin','is_part','self_antipart']
+        keys += ['fks', 'color','charge', 'massless', 'spin','is_tagged','is_part','self_antipart',]
         return keys
 
     
@@ -868,7 +878,7 @@ class FKSLeg(MG.Leg):
                 six.reraise(self.PhysicsObjectError, "%s is not a valid leg %s flag" % \
                                                  str(value), name)
                                                  
-        if name in ['massless','self_antipart','is_part']:
+        if name in ['massless','is_tagged','self_antipart','is_part']:
             if not isinstance(value, bool):
                 six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
                                                                     str(value), name)
@@ -879,3 +889,4 @@ class FKSLeg(MG.Leg):
         return super(FKSLeg,self).filter(name, value)
     
      
+
