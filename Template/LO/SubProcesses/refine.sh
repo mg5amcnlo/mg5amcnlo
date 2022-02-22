@@ -63,7 +63,8 @@ j=%(directory)s
              then
 		 break
              else
-		 echo $try > fail.log 
+		 echo $try > fail.log
+		 sleep 5
              fi
 	 else
 	     %(Ppath)s/madevent 2>&1 >> log.txt <input_sg.txt | tee -a log.txt;
@@ -73,7 +74,8 @@ j=%(directory)s
 		 rm log.txt
                  break
              else
-                  echo $try > fail.log
+                 echo $try > fail.log
+		 sleep 5
              fi
 	 fi
      done

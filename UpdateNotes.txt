@@ -1,6 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.9.8 (21/02/2022)
+     OM: Fix in madspin where onlyhelicity mode was not working anymore
+         also allows to not specify any decay in that mode.
+     OM: Fix in multi_run mode where some meta-data where incorrectly set within the merged lhef file.
+         This occurs ONLY in presence of non positive definite cross-section. 
+         Only normalization of the cross-section/weight/statistical error could be wrong. Shape are not impacted.
+
 2.9.7 (29/11/21)
      OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin
          Now the first of those to setup a python seed will forbid any future reset of the seed

@@ -22,6 +22,8 @@ import sys
 import time
 
 import tests.unit_tests as unittest
+
+import madgraph.interface.master_interface as Cmd
 import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
@@ -53,6 +55,20 @@ class TestImportUFO(unittest.TestCase):
         """Test that the expansion_order is set"""
         self.assertEqual(self.base_model.get('expansion_order'),
                          {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
+
+class TestImportUFO_fromcmd(unittest.TestCase):
+
+    def test_import_from_cmd(self):
+        """check that a model that defines "j" as a particle is correctly handle"""
+
+        self.cmd = Cmd.MasterCmd()
+        self.cmd.exec_cmd("import model sm") # important to trigger the bug
+        self.assertIn("j", self.cmd._multiparticles)
+
+        path = os.path.join(_file_path, '..', 'input_files', '231_Model_UFO')
+        self.cmd.exec_cmd("import model %s" % path, postcmd=True, precmd=True)
+
+        self.assertNotIn("j", self.cmd._multiparticles) 
 
 class TestNFlav(unittest.TestCase):
     """Test class for the get_nflav function"""

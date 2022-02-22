@@ -41,7 +41,7 @@ class TestMadSpin(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False
+        self.debuging = False 
         if self.debuging:
             self.path = pjoin(MG5DIR, 'MS_TEST')
             if os.path.exists(self.path):
@@ -165,3 +165,67 @@ class TestMadSpin(unittest.TestCase):
             self.assertEqual(muon_in, 1)
         self.assertEqual(nb_dec, 189)
         self.assertEqual(nb_muon, 100)
+
+    def test_madspin_spin_only(self):
+        """ """
+        
+        cwd = os.getcwd()
+        
+        files.cp(pjoin(MG5DIR, 'tests', 'input_files', 'test_spinmode_none.lhe.gz'), self.path)
+
+
+        fsock = open(pjoin(self.path, 'test_hepmc'),'w')
+        text = """
+        import ./test_spinmode_none.lhe.gz
+        set onlyhelicity True
+        launch
+        """
+        
+        fsock.write(text)
+        fsock.close()
+
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        subprocess.call([pjoin(MG5DIR, 'MadSpin', 'madspin'),
+                         pjoin(self.path, 'test_hepmc')],
+                        cwd=pjoin(self.path),
+                        stdout=stdout,stderr=stderr)
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'test_spinmode_none_decayed.lhe.gz')))
+        lhe = lhe_parser.EventFile(pjoin(self.path, 'test_spinmode_none_decayed.lhe.gz'))
+        self.assertEqual(100, len(lhe))
+        
+        nb_dec = 0
+        nb_notdec = 0 
+        nb_muon = 0
+        pol = {0:0, -1:0,1:0}
+        for event in lhe:
+            muon_in = 0
+            self.assertEqual(event.nexternal, len(event))
+            for particle in event:
+                if particle.pdg == 23:
+                    if particle.status == 1:
+                        nb_notdec += 1
+                    else: 
+                        nb_dec += 1
+                if particle.pdg == 13:
+                    nb_muon += 1
+                    muon_in +=1
+                self.assertIn(int(particle.helicity), pol)
+                pol[int(particle.helicity)] +=1
+            self.assertEqual(muon_in, 0)
+        
+        self.assertEqual(nb_notdec, 100)
+        self.assertEqual(nb_dec, 89)
+        self.assertEqual(nb_muon, 0)
+        import math
+        self.assertTrue(abs(pol[1]-pol[-1]) < 2 * math.sqrt(pol[1]))
+        self.assertTrue(pol[0] < pol[-1])
+         
