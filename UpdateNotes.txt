@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.8 ()
+2.9.8 (21/02/2022)
      OM: Fix in madspin where onlyhelicity mode was not working anymore
          also allows to not specify any decay in that mode.
      OM: Fix in multi_run mode where some meta-data where incorrectly set within the merged lhef file.
