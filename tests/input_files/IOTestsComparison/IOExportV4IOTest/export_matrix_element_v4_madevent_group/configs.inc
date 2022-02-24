@@ -23,6 +23,8 @@ C     Diagram 4
       DATA TPRID(-1,4)/21/
       DATA (SPROP(I,-1,4),I=1,2)/0,0/
       DATA (IFOREST(I,-2,4),I=1,2)/-1,4/
+      DATA TPRID(-2,4)/2/
+      DATA (SPROP(I,-2,4),I=1,2)/0,0/
 C     Diagram 5
       DATA MAPCONFIG(5)/5/
       DATA TSTRATEGY(5)/2/
@@ -30,5 +32,7 @@ C     Diagram 5
       DATA TPRID(-1,5)/22/
       DATA (SPROP(I,-1,5),I=1,2)/0,0/
       DATA (IFOREST(I,-2,5),I=1,2)/-1,4/
+      DATA TPRID(-2,5)/2/
+      DATA (SPROP(I,-2,5),I=1,2)/0,0/
 C     Number of configs
       DATA MAPCONFIG(0)/5/
