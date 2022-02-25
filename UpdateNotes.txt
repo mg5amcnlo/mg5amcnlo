@@ -1,6 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.9.9 (25/02/2022)
+     OM: Fix a bug introduced in 2.9.0 for MLM generation in presence of mix EW/QCD process.
+         The bug typically leads to a crash within the systematics.py due to wrong power of alpha_s
+	 The bug might sometimes not lead to a crash but the impact is "limited" to a change in the (various)
+	 scale choice associated to the events. Therefore this is likely to be within scale uncertainty. It can
+	 impact the matching with the parton-shower (but this should be visible within the DJR validation plot). 
+     OM: Fix some wrong zero-result that occur in presence of conflincting breit-wigner.
+     OM: Fix an issue when using "$ X" when X~ can be onshell, the phase-space symmetry factor was wrongly set.
+
 2.9.8 (21/02/2022)
      OM: Fix in madspin where onlyhelicity mode was not working anymore
          also allows to not specify any decay in that mode.
