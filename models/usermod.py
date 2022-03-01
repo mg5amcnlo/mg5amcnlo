@@ -757,6 +757,7 @@ from object_library import all_propagators, Propagator
         same_name = next((p for p in self.couplings if p.name==name), None)
         if same_name:
             coupling.name = '%s%s' % (coupling.name, self.addon)
+            return self.add_coupling(coupling)
         
         if self.old_new:  
             pattern = re.compile(r'\b(%s)\b' % '|'.join(list(self.old_new.keys())))

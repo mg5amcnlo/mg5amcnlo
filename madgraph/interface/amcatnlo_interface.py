@@ -662,7 +662,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
-                       'loop_filter':self._fks_multi_proc['loop_filter']}
+                       'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
 
         fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
