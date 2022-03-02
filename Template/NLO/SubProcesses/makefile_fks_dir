@@ -55,7 +55,7 @@ MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 POLES= $(RUN) check_poles.o BinothLHA.o
 
 # Files for tests
-TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o
+TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o mint_module.o
 
 # Files for gensym
 SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
@@ -98,7 +98,7 @@ test_soft_col_limits: $(TEST)
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
 
-check_poles: $(POLES) $(libmadloop)
+check_poles: $(POLES) $(libmadloop) 
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	strip check_poles
 
@@ -126,12 +126,15 @@ BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o
 driver_mintMC.o: weight_lines.o mint_module.o
-driver_mintFO.o: weight_lines.o mint_module.o
+driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
+cluster.o: weight_lines.o
 setcuts.o: mint_module.o
-genps_fks.o: mint_module.o
+genps_fks.o: mint_module.o FKSParams.o
 symmetry_fks_v3.o: mint_module.o
 test_soft_col_limits.o: mint_module.o
+madfks_plot.o: mint_module.o
+
 
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
