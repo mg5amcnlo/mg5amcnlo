@@ -55,7 +55,7 @@ MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 POLES= $(RUN) check_poles.o BinothLHA.o
 
 # Files for tests
-TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o mint_module.o
+TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o
 
 # Files for gensym
 SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
@@ -93,7 +93,7 @@ gensym: $(SYM)
 	rm fks_singular.o
 	strip gensym
 
-test_soft_col_limits: $(TEST)
+test_soft_col_limits: $(TEST) mint_module.o
 	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
