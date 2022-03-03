@@ -2429,7 +2429,7 @@ c wgts() array to include the weights.
       include 'run.inc'
       include 'timing_variables.inc'
       include 'genps.inc'
-      integer n,izero,i,nn
+      integer n,izero,i,nn,counter
       parameter (izero=0)
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
      &     ,alphas,conv
@@ -2445,48 +2445,39 @@ c wgts() array to include the weights.
       DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
       COMMON /PDFVALUES/ PD1, PD2
 
-      !DOUBLE PRECISION f1_p(0:100,0:MAXPROC),f2_p(0:100,0:MAXPROC),f3_p(0:100,0:MAXPROC)
-      !COMMON /PDFvalues/ f1_p,f2_p,f3_p
-
       double precision, allocatable :: f1_p(:,:),f2_p(:,:)
-
       DOUBLE PRECISION f3(0:MAXPROC)
-      !COMMON /PDFvalues/ f3
 
       DOUBLE PRECISION xlum_mod(1:3)
       parameter (conv=389379660d0)
       integer jmax,j,ii,bb,k
-      
-
-      call cpu_time(tBefore)
       if (icontr.eq.0) return
 
       do nn=1,lhaPDFid(0)
-c Use as external loop the one over the PDF sets and as internal the one
-c over the icontr. This reduces the number of calls to InitPDF and
-c allows for better caching of the PDFs
+      
        if (nn.eq.1) then    
            jmax=1
-       else if (rpa_choice.eqv..true.) then ! additional IF statement for the flag that is inside run_card. We need this because inside run_card we have two PDFs (for proton and nuclei). So we have to force MG5 to read this PDF and construct right collisions.
+       else if (rpa_choice.eqv..true.) then
            jmax=3
        else if (rpa_choice.eqv..false.) then
-	   jmax=1
-       endif
-
-      do j=1,jmax                   !---> nuclear PDFs need 2 additional passes on i to fill pA and Ap weights
+           jmax=1
+       endif                         
 
          do n=0,nmemPDF(nn)
- 
-            iwgt=iwgt+1
+            iwgt=iwgt+jmax
+            counter = iwgt
             call weight_lines_allocated(nexternal,max_contr,iwgt
      $           ,max_iproc)
             call InitPDFm(nn,n)
-
-            if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then
+            
+            if (jmax==3) then
+            iwgt=iwgt-2
+            endif
+            
+            if (nn.EQ.1 .and.n.EQ.0.and.rpa_choice.eqv..true.) then
             allocate(f1_p(icontr,MAXPROC))
             allocate(f2_p(icontr,MAXPROC))
             endif
-
             do i=1,icontr
                nFKSprocess=nFKS(i)
                xbk(1) = bjx(1,i)
@@ -2505,72 +2496,80 @@ c Compute the luminosity
                      xlum=pd(ipr(i))
                   endif
                endif
-
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
 	                    
-               if (nn.EQ.1 .and. n.EQ.0 .and. j==1 .and.rpa_choice.eqv..true.) then! ---> central proton PDFs to be stored;
+               if (nn.EQ.1 .and. n.EQ.0 .and.rpa_choice.eqv..true.) then
                       do ii=1,IPROC
-		        f1_p(i,ii)=PD1(ii)
+                        f1_p(i,ii)=PD1(ii)
                         f2_p(i,ii)=PD2(ii)
                       enddo
-	       endif
-               
+               endif
 c Recompute the strong coupling: alpha_s in the PDF might change
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c add the weights to the array
-
+               do j=1,jmax
+              
               if (j==1) then! pp or AA case
-        
-		 
-               wgts(iwgt,i)= xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+              
+        wgts(iwgt,i)= xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
 
-               wgts(iwgt,i)=wgts(iwgt,i)*
+        wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
 
-
-
               else if (j==2) then! pA case
-           
+                 iwgt=iwgt+1
+                                  
                  f3(0)=0
                  do ii=1,IPROC
-                 f3(ii)=f1_p(i,ii)*PD2(ii)!f3(ii)=PD1(ii)*PD2(ii)!f3(ii)=f1_p(i,ii)*PD2(ii)
+                 f3(ii)=f1_p(i,ii)*PD2(ii)
                  enddo
-		
-		 do bb=1,IPROC
-        	 xlum_mod(2)=xlum_mod(2) + f3(bb)*conv
+
+		         do bb=1,IPROC
+        	     xlum_mod(2)=xlum_mod(2) + f3(bb)*conv
                  enddo
 			
-	       wgts(iwgt,i)=xlum_mod(2) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+        wgts(iwgt,i)=xlum_mod(2) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
-
-               wgts(iwgt,i)=wgts(iwgt,i)*
+     
+        wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
   
               else if (j==3) then! Ap case
-         
+                 iwgt=iwgt+1
+                                                 
                  f3(0)=0
                  do ii=1,IPROC
                  f3(ii)=PD1(ii)*f2_p(i,ii)
                  enddo
 
                  do bb=1,IPROC
-        	 xlum_mod(3) = xlum_mod(3) + f3(bb)*conv
-        	 enddo	
+        	     xlum_mod(3) = xlum_mod(3) + f3(bb)*conv
+        	     enddo	
 
-               wgts(iwgt,i)=xlum_mod(3) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+        wgts(iwgt,i)=xlum_mod(3) * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
 
-
-               wgts(iwgt,i)=wgts(iwgt,i)*
+        wgts(iwgt,i)=wgts(iwgt,i)*
      &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
 
               endif
               enddo ! i loop
-              enddo ! n loop
-              enddo ! j loop 
-              enddo ! nn loop
+              
+              if (jmax.eq.3.and.icontr.gt.1) then
+              iwgt=iwgt-2
+              endif              
+
+            enddo ! n loop
+            
+            if (iwgt.ne.counter) then
+            iwgt=counter
+            endif
+            
+         enddo ! j loop 
+      enddo ! nn loop
+              
       call InitPDFm(1,0)
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
@@ -2579,7 +2578,6 @@ c add the weights to the array
       deallocate(f1_p)
       deallocate(f2_p)
       endif
-      
       return
       end
 
