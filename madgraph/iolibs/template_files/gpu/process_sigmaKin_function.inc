@@ -59,9 +59,10 @@
       // Set the final average |M|^2 for this event in the output array for all events
       for (int iproc = 0; iproc < nprocesses; ++iproc){
         allMEs[iproc*nprocesses + ievt] = meHelSum[iproc];
-      }
-
       %(madE_update_answer)s
+     }
+
+
 #ifndef __CUDACC__
       if ( sigmakin_itry <= maxtry )
         sigmakin_itry++;

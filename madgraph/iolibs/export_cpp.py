@@ -1426,6 +1426,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
     single_process_template = 'gpu/process_matrix.inc'
     cc_ext = 'cu'
     support_multichannel = True
+    multichannel_var = ',fptype& multi_chanel_num, fptype& multi_chanel_denom'
 
     def __init__(self, *args, **opts):
         
@@ -1502,6 +1503,35 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ret_lines = ""
         return ret_lines
     
+    def get_sigmaKin_lines(self, color_amplitudes, write=True):
+        """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
+
+
+
+        replace_dict =  super().get_sigmaKin_lines(color_amplitudes, write=False)
+
+        if self.include_multi_channel:
+            replace_dict['madE_var_reset'] = """
+            fptype multi_chanel_num = 0.;
+            fptype multi_chanel_denom = 0.;
+            """
+            replace_dict['madE_caclwfcts_call'] = '&multi_chanel_num, &multi_chanel_denom'
+            replace_dict['madE_update_answer'] = '   allMEs[iproc*nprocesses + ievt] *= multi_chanel_num/multi_chanel_denom;'
+
+        if write:
+            file = \
+                self.read_template_file(\
+                        self.process_sigmaKin_function_template) %\
+                        replace_dict
+            return file, replace_dict
+        else:
+            return replace_dict
+
+        if not write:
+            return replace_dict, other_replace
+        else:
+            raise Exception
+
 
     @staticmethod
     def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
@@ -1635,10 +1665,14 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
         ret_lines = []
         if self.single_helicities:
             
+            template = "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt\n#endif\n %(multi_channel)s                               )\n{"
             
-            ret_lines.append(
-                "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt\n#endif\n                                )\n{"
-                )
+            if self.include_multi_channel:
+                info = {'multi_channel': self.multichannel_var}  
+            else:
+                infor = {'multi_channel': ''}
+
+            ret_lines.append( template % info)
 
             ret_lines.append(" using namespace MG5_%s;" % self.model_name)
             ret_lines.append("mgDebug( 0, __FUNCTION__ );")
