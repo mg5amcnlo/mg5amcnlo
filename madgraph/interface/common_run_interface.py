@@ -2871,6 +2871,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         set_env = ""
         for analysis in analysis_list:
             run_analysis = "{0},{1}".format(run_analysis, analysis)
+        misc.sprint(analysis_list, run_analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
             set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
