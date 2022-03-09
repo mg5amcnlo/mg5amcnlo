@@ -181,7 +181,7 @@ class gensym(object):
             all_bad_amps_perhel = set()
             
             for line in stdout.splitlines():
-                if "="  not in line or ":" not in line:
+                if "="  not in line and ":" not in line:
                     continue
                 if ' GC_' in line:
                     lsplit = line.split()
