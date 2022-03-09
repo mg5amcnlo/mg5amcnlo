@@ -2012,7 +2012,7 @@ class GPUFOHelasCallWriter(CPPUFOHelasCallWriter):
                 # amp2
                 if id_amp in diag_to_config:
                     res.append("if(channel_id == %i){multi_chanel_num += conj(amp[0])*amp[0];};" % diag_to_config[id_amp])
-                    res.append(" multi_chanel_denom += conj(amp[0])*amp[0];};")
+                    res.append(" multi_chanel_denom += conj(amp[0])*amp[0];")
                 # jamp
                 for njamp, coeff in color[namp].items():
                     res.append("jamp[%s] += %samp[0];" % 
