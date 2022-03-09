@@ -8057,10 +8057,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # for MadEvent with MadLoop decide if we keep the box as channel of 
             #integration or not. Forbid them for matching and for h+j
             if self.options['max_npoint_for_channel']:
-                base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
+                base_objects.Vertex.max_n_loop_for_multichanneling = int(self.options['max_npoint_for_channel'])
             else:
                 base_objects.Vertex.max_n_loop_for_multichanneling = 3 
-            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
+            base_objects.Vertex.max_tpropa = int(self.options['max_t_for_channel'])   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)
