@@ -1670,7 +1670,7 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
             if self.include_multi_channel:
                 info = {'multi_channel': self.multichannel_var}  
             else:
-                infor = {'multi_channel': ''}
+                info = {'multi_channel': ''}
 
             ret_lines.append( template % info)
 
