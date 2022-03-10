@@ -342,7 +342,7 @@ class Banner(dict):
         self['init'] = '\n'.join(all_lines)
 
 
-    def modify_init_cross(self, cross):
+    def modify_init_cross(self, cross, allow_zero=False):
         """modify the init information with the associate cross-section"""
         assert isinstance(cross, dict)
 #        assert "all" in cross
@@ -366,7 +366,10 @@ class Banner(dict):
                 new_data += all_lines[i:]
                 break
             if int(pid) not in cross:
-                raise Exception
+                if allow_zero:
+                    cross[int(pid)] = 0.0 # this is for sub-process with 0 events written in files
+                else:
+                    raise Exception
             pid = int(pid)
             if float(xsec):
                 ratio = cross[pid]/float(xsec)

@@ -498,10 +498,11 @@ class EventFile(object):
                 import madgraph.various.banner as banner_module
             else:
                 import internal.banner as banner_module
+
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
-                banner.modify_init_cross(cross)
+                banner.modify_init_cross(cross, allow_missing=True) # for few event cross might miss input
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
@@ -1150,6 +1151,7 @@ class MultiEventFile(EventFile):
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
         self._configure = True
+
         return all_wgt, sum_cross, total_event
     
     def configure(self):
