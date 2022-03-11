@@ -6476,8 +6476,9 @@ class UFO_model_to_mg4(object):
         try:
             vector_size = self.opt['output_options']['vector_size']
         except KeyError:
-            vector_size = 0
-        self.vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size')
+            vector_size = 1
+        self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
+        
        
     
     def pass_parameter_to_case_insensitive(self):
@@ -6753,7 +6754,7 @@ class UFO_model_to_mg4(object):
                 double precision MU_R, all_mu_r(%(vec_size)i)
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec_size': self.vector_size+1}     
+                """   % {'vec_size': max(1,self.vector_size)}     
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
                 parameter(Nf=%dd0)
@@ -6840,7 +6841,7 @@ class UFO_model_to_mg4(object):
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
-            c_list = ['%s(%s)' %(coupl.name, self.vector_size+1) for coupl in self.coups_dep]
+            c_list = ['%s(%s)' %(coupl.name, max(1,self.vector_size)) for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         

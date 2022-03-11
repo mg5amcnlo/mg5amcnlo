@@ -659,6 +659,7 @@ c
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'run.inc'
+      include 'vector.inc'
 c
 c     Arguments
 c
@@ -887,9 +888,11 @@ c      write(*,*) 'Forwarding random number generator'
 
  103  write(*,*) 'Grid defined OK'
 
-C     sanity check that we have a minimal number of event      
-      if ( MC_GROUPED_SUBPROC )then
+C     sanity check that we have a minimal number of event
+      
+      if ( .not.MC_GROUPED_SUBPROC.or.nb_page.gt.1)then
          events = max(events, maxtries)
+         MC_GROUPED_SUBPROC = .false.
       else 
          events = max(events, 2*maxtries*get_maxsproc())
       endif
