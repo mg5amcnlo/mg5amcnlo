@@ -502,7 +502,7 @@ class EventFile(object):
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
-                banner.modify_init_cross(cross, allow_missing=True) # for few event cross might miss input
+                banner.modify_init_cross(cross, allow_zero=True) # for few event cross might miss input
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
