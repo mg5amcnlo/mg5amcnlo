@@ -2409,17 +2409,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def postprocessing(self):
 
         # Run Rivet postprocessor
-        postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
-        postprocess_CONTUR = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_CONTUR'))
+        cmd_do_rivet = common_run.CommonRunCmd.do_rivet(self,"",True)
+        rivet_config = cmd_do_rivet[0]
+        postprocess_RIVET = cmd_do_rivet[1]
+        postprocess_CONTUR = cmd_do_rivet[2]
         if postprocess_RIVET or postprocess_CONTUR:
-            self.do_rivet_postprocessing(common_run.CommonRunCmd.do_rivet(self,""), postprocess_RIVET, postprocess_CONTUR)
-        #END postprocessor ========================================================
-
-        if postprocess_RIVET:
-            os.remove(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
-        if postprocess_CONTUR:
-            os.remove(pjoin(self.me_dir, 'Events', 'postprocess_CONTUR'))
-
+            self.do_rivet_postprocessing(rivet_config, postprocess_RIVET, postprocess_CONTUR)
 
     def do_rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
 

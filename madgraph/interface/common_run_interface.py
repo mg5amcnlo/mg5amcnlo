@@ -2841,7 +2841,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
 
-    def do_rivet(self, line):
+    def do_rivet(self, line, postprocess=False):
         """launch rivet on the HepMC output"""
 
         args = self.split_arg(line)
@@ -2931,27 +2931,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if py8_output == "fifo":
             wrapper.write("\nrm {0}\n".format(hepmc_file))
 
-        if py8_output in ["autoremove", "fifo"]: # For FIFO and autoremove should not be postprocessed
+        if ("remove" in py8_output) or ("fifo" in py8_output): # For hepmcremove and fifo, should not be postprocessed
             rivet_config["run_rivet_later"] = False
         wrapper.close()
 
-        if rivet_config["run_rivet_later"]:
-            misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_RIVET')])
-        if rivet_config["run_contur"]:
-            misc.call(['touch', pjoin(self.me_dir, 'Events', 'postprocess_CONTUR')])
-
-        postprocess_RIVET = os.path.exists(pjoin(self.me_dir, 'Events', 'postprocess_RIVET'))
+        postprocess_RIVET = rivet_config["run_rivet_later"]
+        postprocess_CONTUR = rivet_config["run_contur"]
 
         os.system("chmod +x {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh")))
 
         #5 decide how to run Rivet
-        if postprocess_RIVET:
+        if postprocess_RIVET and (not postprocess):
             logger.info("Skipping Rivet for now, passing it to postprocessor")
         else:
             logger.info("Running Rivet with {0}".format(hepmc_file))
             misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
 
-        return rivet_config
+        return [rivet_config, postprocess_RIVET, postprocess_CONTUR]
 
 
     def do_madanalysis5_hadron(self, line):
