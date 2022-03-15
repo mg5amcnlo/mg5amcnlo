@@ -2899,20 +2899,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #3 Fetch HepMC files
         py8_output = py8_card["HEPMCoutput:file"]
 
-        if py8_output == "auto":
-            if rivet_config["run_rivet_later"]:
-                hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc.gz")
+        if "@" in py8_output:
+            hepmc_specs = py8_output.split("@")
+            if os.path.isabs(hepmc_specs[1]):
+                hepmc_path = pjoin(hepmc_specs[1], self.run_name)
             else:
-                hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
-        elif py8_output == "autonocompress":
-            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
-        elif py8_output == "autoremove":
-            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, self.run_card['run_tag']+"_pythia8_events.hepmc")
-        elif py8_output == "fifo":
-            hepmc_file = pjoin(self.me_dir, 'Events', self.run_name, "PY8.hepmc.fifo")
+                hepmc_path = pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name)
         else:
-            raise MadGraph5Error("HEPMCoutput:file in pythia8_card.dat should be [auto, autoremove, autonocompress, fifo]")
+            hepmc_path = pjoin(self.me_dir, 'Events', self.run_name)
 
+        if "hepmc" in py8_output:
+            if ".gz" in py8_output:
+                hepmc_file = pjoin(hepmc_path, self.run_card['run_tag']+"_pythia8_events.hepmc.gz")
+            else:
+                hepmc_file = pjoin(hepmc_path, self.run_card['run_tag']+"_pythia8_events.hepmc")
+        elif py8_output == "fifo":
+            hepmc_file = pjoin(hepmc_path, "PY8.hepmc.fifo")
+        else:
+            raise MadGraph5Error("HEPMCoutput:file format unknown")
 
         #4 Write Rivet lines
         shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'

@@ -4088,21 +4088,17 @@ Beware that this can be dangerous for local multicore runs.""")
         if "hepmc" in PY8_Card['HEPMCoutput:file'].lower():
 
             hepmc_specs = PY8_Card['HEPMCoutput:file'].split('@')
-            hepmc_path = None
-            if len(hepmc_specs)<=1:
-                hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
-            else:
+            hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+            if len(hepmc_specs) > 1:
                 if os.path.isabs(hepmc_specs[1]):
                     if os.path.exists(hepmc_specs[1]):
                         os.mkdir(pjoin(hepmc_specs[1], self.run_name))
-                        hepmc_path = pjoin(hepmc_specs[1], self.run_name, '%s_pythia8_events.hepmc'%tag)
+                        self.to_store.append("moveHEPMC@" + pjoin(hepmc_specs[1], self.run_name))
                     else:
                         logger.warning("%s does not exist, using default output path"%hepmc_specs[1])
-                        hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
                 else:
-                    os.mkdir = pjoin(self.me_dir,'Events', self.run_name, hepmc_specs[1])
-                    hepmc_path = pjoin(self.me_dir,'Events', self.run_name, hepmc_specs[1], '%s_pythia8_events.hepmc'%tag)
-                logger.warning('User set the HepMC output path of Pythia8 to %s'%hepmc_path)
+                    self.to_store.append("moveHEPMC@" + pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
+                    os.mkdir(pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
 
             if ".gz" in PY8_Card['HEPMCoutput:file'].lower():
                 if not 'compressHEPMC' in self.to_store:
@@ -5529,6 +5525,16 @@ tar -czf split_$1.tar.gz split_$1
                 self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
                 if 'compressHEPMC' in self.to_store:
                     misc.gzip(file_path,stdout=file_path)
+                    hepmc_fileformat = ".gz"
+
+                moveHEPMC_in_to_store = None
+                for to_store in self.to_store:
+                    if "moveHEPMC" in to_store:
+                        moveHEPMC_in_to_store = to_store
+
+                if not moveHEPMC_in_to_store == None:
+                    move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
+                    os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
 
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
