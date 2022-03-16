@@ -1576,7 +1576,13 @@ class RivetCard(ConfigFile):
         fsock.write(text)
         fsock.close()
 
-    def getAnalysisList(self, RunCard):
+    def getAnalysisList(self, runcard):
+
+        '''
+ This function defines/parses which analysis to run with Rivet
+ If not given and CONTUR is turned off : electrons, muons, taus, met, jets
+                               on : check the beam energy and run all available analyses with same beam E
+        '''
 
         analysis_list = []
         for this_analysis in self["analysis"]:
@@ -1588,17 +1594,17 @@ class RivetCard(ConfigFile):
                     analysis_list.append("MC_MET")
                     analysis_list.append("MC_JETS")
                 else:
-                    if not ((RunCard['lpp1'] == 1) and (RunCard['lpp2'] == 1)):
+                    if not ((runcard['lpp1'] == 1) and (runcard['lpp2'] == 1)):
                         raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
                     ebeamsLHC = [3500, 4000, 6500]
-                    if ((int(RunCard['ebeam1']) in ebeamsLHC) and (int(RunCard['ebeam2']) in ebeamsLHC)):
-                        if int(RunCard['ebeam1']) == int(RunCard['ebeam2']):
-                            ebeam = str(int((int(RunCard['ebeam1']) + int(RunCard['ebeam2']))/1000))
+                    if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
+                        if int(runcard['ebeam1']) == int(runcard['ebeam2']):
+                            ebeam = str(int((int(runcard['ebeam1']) + int(runcard['ebeam2']))/1000))
                             analysis_list.append("$CONTUR_RA{0}TeV".format(ebeam))
                             self["contur_ra"] = "{0}TeV".format(ebeam)
                         else:
                             raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
-                                                  ebeam1 = {0} and ebeam2 = {1}".format(RunCard['ebeam1'], RunCard['ebeam2']))
+                                                  ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
                     else:
                         raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
             else:
@@ -1606,15 +1612,25 @@ class RivetCard(ConfigFile):
 
         return analysis_list
 
-    def setWeightName(self, RunCard, PY8Card):
+    def setWeightName(self, runcard, py8card):
+
+        '''
+      Give weight names in case the jet merging is used to use for Rivet runs
+        '''
 
         if self['weight_name'] == "default":
-            if RunCard['ickkw'] == 0:
-                self['weight_name'] = "Weight_MERGING=0.000"
+            if runcard['ickkw'] == 0:
+                self['weight_name'] = "None"
             else:
-                self['weight_name'] = "Weight_MERGING={0}".str(round(PY8Card['JetMatching:qCut'],3))
+                self['weight_name'] = "Weight_MERGING={0}".str(round(py8card['JetMatching:qCut'],3))
 
     def setRelevantParamCard(self, f_params, f_relparams):
+
+        '''
+    Used for Contur
+    Used for cases when user wants to scan a BSM parameter that is not a value directly modifiable from UFO
+    e.g. Wants to scan the <<square of coupling>> when UFO only has <<coupling>>
+        '''
 
         exec_line = "import math; "
         for l_param in f_params.readlines():

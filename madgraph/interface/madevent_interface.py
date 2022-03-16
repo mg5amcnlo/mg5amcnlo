@@ -2406,6 +2406,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.postprocessing()
 
 
+    # postprocessing : runs after all the event generation has been done
+    # even for the 'scan' mode, madevent->pythia->madevent->pythia->...->POSTPROCESSING
     def postprocessing(self):
 
         # Run Rivet postprocessor
@@ -2470,7 +2472,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             if nb_rivet == 1:
                 this_yoda_file = pjoin(run_dirs[0], "rivet_result.yoda")
                 os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda')))
-                contur_cmd = 'contur --wn "{0}" {1}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+                if not weight_name == "None":
+                    contur_cmd = 'contur --wn "{0}" {1}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+                else:
+                    contur_cmd = 'contur {0}\n'.format(pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
             else:
                 # Link yoda and params files inside analysis/contur/scan directory
                 scan_subdirs = []
@@ -2552,7 +2557,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             # Also the single core mode is not supported for loop-induced.
             # We therefore emulate it with multi-core mode with one core
             logger.warning(
-"""Single-coire mode not supported for loop-induced processes.
+"""Single-core mode not supported for loop-induced processes.
 Beware that MG5aMC now changes your runtime options to a multi-core mode with only one active core.""")
             self.do_set('run_mode 2')
             self.do_set('nb_core 1')
@@ -4079,11 +4084,17 @@ Beware that this can be dangerous for local multicore runs.""")
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
 
-        # output format : hepmc/fifo
-        if "hepmc" in PY8_Card['HEPMCoutput:file'].lower():
+        hepmc_format = PY8_Card['HEPMCoutput:file'].lower()
+        if hepmc_format == "auto":
+            hepmc_format = "hepmc.gz"
 
-            hepmc_specs = PY8_Card['HEPMCoutput:file'].split('@')
+        # output format : hepmc/fifo
+        if hepmc_format.startswith("hepmc"):
+
+            hepmc_specs = hepmc_format.split('@')
             hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+
+            # In case @ is given (output path)
             if len(hepmc_specs) > 1:
                 if os.path.isabs(hepmc_specs[1]):
                     if os.path.exists(hepmc_specs[1]):
@@ -4095,14 +4106,16 @@ Beware that this can be dangerous for local multicore runs.""")
                     self.to_store.append("moveHEPMC@" + pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
                     os.mkdir(pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
 
-            if ".gz" in PY8_Card['HEPMCoutput:file'].lower():
+            # Compress if .gz is given
+            if hepmc_specs[0].endswith(".gz"):
                 if not 'compressHEPMC' in self.to_store:
                     self.to_store.append('compressHEPMC')
             else:
                 if 'compressHEPMC' in self.to_store:
                     self.to_store.remove('compressHEPMC')
 
-            if "remove" in PY8_Card['HEPMCoutput:file'].lower():
+            # Remove if remove is given
+            if hepmc_specs[0].endswith("remove"):
                 if not 'removeHEPMC' in self.to_store:
                     self.to_store.append('removeHEPMC')
             else:
@@ -4112,8 +4125,8 @@ Beware that this can be dangerous for local multicore runs.""")
             HepMC_event_output=hepmc_path
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
 
-        elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
-            fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
+        elif hepmc_format.startswith('fifo'):
+            fifo_specs = hepmc_format.split('@')
             fifo_path  = None
             if len(fifo_specs)<=1:
                 fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8.hepmc.fifo')
@@ -4138,7 +4151,7 @@ already exists and is not a fifo file."""%fifo_path)
                 # Use defaultSet not to overwrite the current userSet status
                 PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
             HepMC_event_output=fifo_path    
-        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null','None']:
+        elif hepmc_format in ['','/dev/null','None']:
             logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:

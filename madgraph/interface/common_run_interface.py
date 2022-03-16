@@ -1174,7 +1174,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
                     '@MG5aMC\s*reconstruction_name', # MA5 hadronique
                     '@MG5aMC', # MA5 hadronique
-                    'Analyses\s*=', # Rivet
+                    'Analysis\s*=', # Rivet
                     ]
         
         
@@ -2866,12 +2866,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
 
         # # Get Rivet analysis list
-        analysis_list = rivet_config.getAnalysisList(RunCard=self.run_card)
+        analysis_list = rivet_config.getAnalysisList(runcard=self.run_card)
         run_analysis = ""
         set_env = ""
         for analysis in analysis_list:
             run_analysis = "{0},{1}".format(run_analysis, analysis)
-        misc.sprint(analysis_list, run_analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
             set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
@@ -2881,7 +2880,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # # Get weight name (merging scale)
         py8_card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'))
         if rivet_config["weight_name"] == "default":
-            rivet_config.setWeightName(RunCard=self.run_card, PY8Card=py8_card) 
+            rivet_config.setWeightName(runcard=self.run_card, py8card=py8_card) 
 
         rivet_add = ""
         if not (rivet_config["rivet_add"] == "default" or rivet_config["rivet_add"]  == None):
@@ -4857,7 +4856,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.paths[card_name] = card
                 
         # go trough the initialisation of each card and detect conflict
-        misc.sprint(self.to_init_card)
         for name in self.to_init_card:
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
             new_conflict = self.all_vars.intersection(new_vars)

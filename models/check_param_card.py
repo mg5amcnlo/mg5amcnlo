@@ -1074,6 +1074,7 @@ class ParamCardIterator(ParamCard):
             ff_single = open(pjoin(path_events, name, "params.dat"), "w")
             for i_bench in range(0, len(bench)):
                 ff_single.write(ident[self.param_order[i_bench]] + " = " + str(bench[i_bench]) +"\n")
+            ff_single.close()
 
         if not path:
             return ff.getvalue()
