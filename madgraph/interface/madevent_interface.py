@@ -2465,7 +2465,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor), 'bin'))
             set_env = set_env + "export PYTHONPATH={0}:$PYTHONPATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor)))
 
-            set_env = set_env + "source {0} &>> contur.log\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
+            set_env = set_env + "source {0} >> contur.log 2>&1\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
 
             os.system("mkdir -p {0}".format(pjoin(self.me_dir, 'Analysis', 'contur')))
 
@@ -2527,7 +2527,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 if not (rivet_config["contur_add"] == "default" or rivet_config["contur_add"]  == None):
                     contur_add = " " + rivet_config["contur_add"]
 
-                contur_cmd = 'contur -g scan --wn "{0}" &>> contur.log\n'.format(rivet_config["weight_name"] + contur_add)
+                contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
 
                 if rivet_config["draw_contur_heatmap"]:
                     axis_log = ""
