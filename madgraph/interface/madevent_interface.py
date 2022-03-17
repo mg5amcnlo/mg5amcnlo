@@ -4087,6 +4087,8 @@ Beware that this can be dangerous for local multicore runs.""")
         hepmc_format = PY8_Card['HEPMCoutput:file'].lower()
         if hepmc_format == "auto":
             hepmc_format = "hepmc.gz"
+        elif hepmc_format == "autoremove":
+            hepmc_format = "hepmcremove"
 
         # output format : hepmc/fifo
         if hepmc_format.startswith("hepmc"):

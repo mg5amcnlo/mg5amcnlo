@@ -20,7 +20,7 @@ set ven3 0.
 set vtan1 0.
 set vtan2 0.
 set vtan3 0.
-set wn1 Auto
+set wn1 0.01
 set wn2 10
 set wn3 10
 set no_parton_cut
