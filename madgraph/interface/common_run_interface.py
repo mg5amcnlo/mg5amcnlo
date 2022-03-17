@@ -2854,6 +2854,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             no_default = False
 
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. '+
+                                                 'Please add this information.')          
+
+        if not hasattr(self, 'run_card'):
+            name = args[0]
+            self.set_run_name(name, tag=None, level='rivet', reload_card=True,
+                        allow_new_tag=True)
+
+
+            self.configure_directory(html_opening =False)
+
+        # Update the banner with the pythia card
+        if not self.banner or len(self.banner) <=1:
+            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+
+        self.run_card = self.banner.get('run_card')
+
+        if not no_default and '-f' not in line:
+
+
+            self.keep_cards(['rivet_card.dat'], ignore=['*'])
+            self.ask_edit_cards(['rivet_card.dat'], 'fixed', plot=False)
 
         #1 Get Rivet configurations from rivet_card.dat
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):

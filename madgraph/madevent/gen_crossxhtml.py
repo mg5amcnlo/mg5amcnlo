@@ -771,10 +771,12 @@ class OneTagResults(dict):
         self.pgs = []
         self.delphes = []
         self.shower = []
+        self.rivet= []
         
         self.level_modes = ['parton', 'pythia', 'pythia8',
                             'pgs', 'delphes','reweight','shower',
-                            'madanalysis5_hadron','madanalysis5_parton']
+                            'madanalysis5_hadron','madanalysis5_parton',
+                            'rivet']
         # data 
         self.status = ''
 
@@ -873,6 +875,12 @@ class OneTagResults(dict):
             if 'ma5_card' not in self.madanalysis5_hadron and \
                misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'history.ma5'),html_path):
                 self.madanalysis5_hadron.append('ma5_card')
+
+        if level in ['rivet','all'] and 'rivet' not in nolevel:
+
+            if 'rivet' not in self.rivet and os.path.exists(pjoin(path, 'rivet_result.yoda')):
+                self.rivet.append('rivet')            
+
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':

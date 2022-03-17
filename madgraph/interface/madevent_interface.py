@@ -2411,14 +2411,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def postprocessing(self):
 
         # Run Rivet postprocessor
-        cmd_do_rivet = common_run.CommonRunCmd.do_rivet(self,"",True)
-        rivet_config = cmd_do_rivet[0]
-        postprocess_RIVET = cmd_do_rivet[1]
-        postprocess_CONTUR = cmd_do_rivet[2]
-        if postprocess_RIVET or postprocess_CONTUR:
-            self.do_rivet_postprocessing(rivet_config, postprocess_RIVET, postprocess_CONTUR)
+        cmd_do_rivet = common_run.CommonRunCmd.do_rivet(self,"--no_default",True)
+        if cmd_do_rivet:
+            rivet_config = cmd_do_rivet[0]
+            postprocess_RIVET = cmd_do_rivet[1]
+            postprocess_CONTUR = cmd_do_rivet[2]
+            if postprocess_RIVET or postprocess_CONTUR:
+                self.rivet_postprocessing(rivet_config, postprocess_RIVET, postprocess_CONTUR)
 
-    def do_rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
+    def rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
 
         # Check number of Rivet jobs to run 
         run_dirs = misc.glob(pjoin(self.me_dir, 'Events', "run_*"))
@@ -5970,7 +5971,7 @@ tar -czf split_$1.tar.gz split_$1
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron', 'rivet']:
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -5980,9 +5981,9 @@ tar -czf split_$1.tar.gz split_$1
     
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton', 'rivet'],
                        'pythia': ['pythia','pgs','delphes','madanalysis5_hadron'],
-                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron', 'rivet'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
