@@ -1174,7 +1174,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
                     '@MG5aMC\s*reconstruction_name', # MA5 hadronique
                     '@MG5aMC', # MA5 hadronique
-                    'Analysis\s*=', # Rivet
+                    'run_rivet_later', # Rivet
                     ]
         
         
@@ -1221,7 +1221,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
         elif 'main:numberofevents' in text:
-            return 'pythia8_card.dat'            
+            return 'pythia8_card.dat'
+        elif 'run_rivet_later' in text:
+            return 'rivet_card.dat'
         elif 'launch' in text:
             # need to separate madspin/reweight.
             # decay/set can be in both...
