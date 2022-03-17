@@ -1025,6 +1025,7 @@ class OneTagResults(dict):
     def get_links(self, level):
         """ Get the links for a given level"""
         
+
         out = ''
         if level == 'parton':
             if 'gridpack' in self.parton:
@@ -1210,6 +1211,10 @@ class OneTagResults(dict):
             
             return out % self
                 
+        if level == 'rivet':
+            if 'rivet' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet_result.yoda\">yoda</a>"
+            return out % self     
     
     
     def get_action(self, ttype, local_dico, runresults):
@@ -1326,7 +1331,7 @@ class OneTagResults(dict):
         nb_line = 0
         self.nb_line = nb_line
         for key in ['parton', 'reweight', 'pythia', 'pythia8', 'pgs', 
-                    'delphes', 'shower', 'madanalysis5_hadron']:
+                    'delphes', 'shower', 'madanalysis5_hadron','rivet']:
             if len(getattr(self, key)):
                 nb_line += 1
         if nb_line ==0 and not os.path.exists(pjoin(self.me_dir, "Events", self["run_name"], "%(run)s_%(tag)s_banner.txt)" % \

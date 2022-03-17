@@ -2869,6 +2869,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             self.configure_directory(html_opening =False)
 
+        self.update_status('running rivet', level='rivet')
+
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
             # Here the level keyword 'pythia' must not be changed to 'pythia8'.
@@ -2974,6 +2976,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             logger.info("Running Rivet with {0}".format(hepmc_file))
             misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+
+
+        self.update_status('rivet command done', level='rivet')
 
         return [rivet_config, postprocess_RIVET, postprocess_CONTUR]
 
