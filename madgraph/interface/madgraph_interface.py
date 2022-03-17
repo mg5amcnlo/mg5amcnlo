@@ -6119,7 +6119,6 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
-            misc.sprint(add_options)
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
@@ -6209,7 +6208,28 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)      
+            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)
+        elif tool == 'contur':
+            to_save = ['contur_path']
+            # check that rivet/yoda are correctly linked:
+            self.options['%s_path' % tool] = pjoin(prefix, tool)
+            if os.path.exists(pjoin(prefix, 'yoda')):
+                self.options['yoda_path'] = pjoin(prefix, 'yoda')
+                to_save.append('yoda_path')
+            if os.path.exists(pjoin(prefix, 'rivet')):
+                self.options['rivet_path'] = pjoin(prefix, 'rivet')
+                to_save.append('rivet_path')
+            self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
+                 printcmd=False, log=False)  
+        elif tool == 'rivet':
+            to_save = ['rivet_path']
+            # check that rivet/yoda are correctly linked:
+            self.options['%s_path' % tool] = pjoin(prefix, tool)
+            if os.path.exists(pjoin(prefix, 'yoda')):
+                self.options['yoda_path'] = pjoin(prefix, 'yoda')
+                to_save.append('yoda_path')
+            self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
+                 printcmd=False, log=False) 
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
@@ -6762,12 +6782,11 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)           
+                self.exec_cmd('save options %s' % opt, printcmd=False)
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options %s' % opt, printcmd=False)
-
-
+                    
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date.
