@@ -6041,8 +6041,8 @@ This implies that with decay chains:
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
-                #else:
-                #    add_options.append('--with_fastjet')
+                elif tool in ['madanalysis5']:
+                    add_options.append('--with_fastjet')
 
         if tool in ['madanalysis5']:
             if self.options['delphes_path'] and os.path.isdir(

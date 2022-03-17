@@ -743,7 +743,7 @@ class TestMEfromfile(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False
+        self.debuging = True
         if self.debuging:
             self.path = pjoin(MG5DIR, 'ACC_TEST')
             if os.path.exists(self.path):
@@ -904,10 +904,7 @@ class TestMEfromfile(unittest.TestCase):
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception as error:
-            pass
+
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -957,7 +954,44 @@ class TestMEfromfile(unittest.TestCase):
             event.check()
         
         
+    def test_contur_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(_file_path,  os.path.pardir, 'tests', 'input_files','rivet_contur_test.cmd')],
+                         cwd=pjoin(self.path),
+                         stdout=stdout,stderr=stdout)
+
         
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'contur.map')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+
+    
+        
+
+        self.check_parton_output(cross=2.275, error=0.035)
+        #self.check_pythia_output()
+        self.assertEqual(cwd, os.getcwd())
+
+
+
         
 
     def load_result(self, run_name):
