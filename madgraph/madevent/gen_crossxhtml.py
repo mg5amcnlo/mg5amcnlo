@@ -878,8 +878,12 @@ class OneTagResults(dict):
 
         if level in ['rivet','all'] and 'rivet' not in nolevel:
 
-            if 'rivet' not in self.rivet and os.path.exists(pjoin(path, 'rivet_result.yoda')):
-                self.rivet.append('rivet')            
+            if 'yoda' not in self.rivet and os.path.exists(pjoin(path, 'rivet_result.yoda')):
+                self.rivet.append('yoda')
+            if 'rivethtml' not in self.rivet and os.path.exists(pjoin(path, 'rivet-plots', 'index.html')):
+                self.rivet.append('rivethtml')
+            if 'contur' not in self.rivet and os.path.exists(pjoin(path, '..','..', 'Analysis','contur','conturPlot','combinedLevels.pdf')):
+                self.rivet.append('contur')                
 
 
         if level in ['shower','all'] and 'shower' not in nolevel \
@@ -1212,8 +1216,13 @@ class OneTagResults(dict):
             return out % self
                 
         if level == 'rivet':
-            if 'rivet' in self.rivet:
+            if 'yoda' in self.rivet:
                 out += " <a href=\"./Events/%(run_name)s/rivet_result.yoda\">yoda</a>"
+            if 'rivethtml' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet-plots/index.html\">rivet plots</a>"
+            if 'contur' in self.rivet:
+                out += " <a href=\"./Analysis/contur/conturPlot/combinedLevels.pdf\">contur1</a>"
+                out += " <a href=\"./Analysis/contur/conturPlot/dominantPools0CLs.pdf\">contur2</a>"
             return out % self     
     
     

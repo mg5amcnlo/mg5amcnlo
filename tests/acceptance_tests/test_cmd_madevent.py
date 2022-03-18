@@ -743,7 +743,7 @@ class TestMEfromfile(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = True
+        self.debuging = False
         if self.debuging:
             self.path = pjoin(MG5DIR, 'ACC_TEST')
             if os.path.exists(self.path):
@@ -982,13 +982,61 @@ class TestMEfromfile(unittest.TestCase):
 
         self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'contur.map')))
         self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'scan_run_[01-12].txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_12',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur',  'conturPlot', 'combinedLevels.pdf')))
 
-    
+
+    def test_rivet_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        cmd = """generate p p > e+ e
+        output %s
+launch
+shower=pythia8
+analysis=off
+set mpi off
+launch -i
+rivet run_01
+set run_contur T
+set draw_rivet_plots T
+                 """ %self.run_dir
+
+        open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'mg5_cmd')],
+                         #cwd=self.path,
+                         stdout=stdout, stderr=stderr)
 
-        self.check_parton_output(cross=2.275, error=0.035)
-        #self.check_pythia_output()
-        self.assertEqual(cwd, os.getcwd())
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots' , 'index.html')))
+
+
 
 
 

@@ -2530,6 +2530,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             wrapper.close()
  
             misc.call(["run_contur.sh"], cwd=(pjoin(self.me_dir, "Analysis", "contur")))
+        self.update_status("postprocessing rivet done", level="rivet")
 
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling()

@@ -2883,6 +2883,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.keep_cards(['rivet_card.dat'], ignore=['*'])
             self.ask_edit_cards(['rivet_card.dat'], 'fixed', plot=False)
 
+
         #1 Get Rivet configurations from rivet_card.dat
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'rivet_card.dat')):
             if no_default:
@@ -2894,6 +2895,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.info('No rivet_card found. Take the default one.')
 
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
+        if not no_default:
+            rivet_config['run_rivet_later'] = False
 
         # # Get Rivet analysis list
         analysis_list = rivet_config.getAnalysisList(runcard=self.run_card)
@@ -2964,6 +2967,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         wrapper.write("#!{0}\n{1}\n".format(misc.which(shell), set_env))
         wrapper.write(sys.executable + " {0} &> {1}\n".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
         if rivet_config['draw_rivet_plots']:
+            self.update_status('start to plot yoda file', level='rivet')
             draw_rivet = "{0} {1} -o {2}".format(pjoin(rivet_path, "bin", "rivet-mkhtml"), pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda"), pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots'))
             wrapper.write(sys.executable + " " + draw_rivet + " &> {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "rivet-plots.log")))
             logger.info("Rivet plots will be stored in {0}".format(pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots')))
@@ -2983,14 +2987,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #5 decide how to run Rivet
         if postprocess: #inside postprocessing functions, no need to run, just need to return rivet configurations
+            self.update_status('rivet done', level='rivet')
             return [rivet_config, postprocess_RIVET, postprocess_CONTUR]
         else:
             if postprocess_RIVET:
                 logger.info("Skipping Rivet for now, passing it to postprocessor")
+                self.update_status('rivet done', level='rivet')
                 return
             else:
                 logger.info("Running Rivet with {0}".format(hepmc_file))
                 misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+                self.update_status('rivet done', level='rivet')
                 return
 
 
