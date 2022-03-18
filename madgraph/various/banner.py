@@ -1511,6 +1511,7 @@ class RivetCard(ConfigFile):
         # ================================================================
         # hidden (users don't really have to touch these most of the time)
         self.add_param('contur_ra', "default")
+        self.add_param('rivet_sqrts', "default")
         self.add_param('weight_name', "default")
         self.add_param('rivet_add', 'default')
         self.add_param('contur_add', 'default')
@@ -1585,7 +1586,12 @@ class RivetCard(ConfigFile):
         '''
 
         analysis_list = []
-        for this_analysis in self["analysis"]:
+        rivet_sqrts = str(int(runcard['ebeam1']) + int(runcard['ebeam2']))
+        self["rivet_sqrts"] = rivet_sqrts
+
+        if len(self["analysis"]) == 1:
+            this_analysis = self["analysis"][0]
+
             if this_analysis == "default" or this_analysis == None or this_analysis == "":
                 if not self["run_contur"]:
                     analysis_list.append("MC_ELECTRONS")
@@ -1597,17 +1603,22 @@ class RivetCard(ConfigFile):
                     if not ((runcard['lpp1'] == 1) and (runcard['lpp2'] == 1)):
                         raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
                     ebeamsLHC = [3500, 4000, 6500]
+
                     if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
                         if int(runcard['ebeam1']) == int(runcard['ebeam2']):
-                            ebeam = str(int((int(runcard['ebeam1']) + int(runcard['ebeam2']))/1000))
-                            analysis_list.append("$CONTUR_RA{0}TeV".format(ebeam))
+                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts)/1000))
                             self["contur_ra"] = "{0}TeV".format(ebeam)
                         else:
                             raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
-                                                  ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
+                                                 ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
                     else:
                         raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
+
             else:
+                analysis_list.append(this_analysis)
+
+        else:
+            for this_analysis in self["analysis"]:
                 analysis_list.append(this_analysis)
 
         return analysis_list

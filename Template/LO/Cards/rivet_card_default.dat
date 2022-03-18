@@ -17,6 +17,10 @@ analysis = [default]
   #  e.g. 'analysis = [MC_GENERIC, MC_JETS, CMS_2019_I1753680]'
   #     Runs 3 Rivet analysis written in the list above
   #
+draw_rivet_plots = False
+  # !! Can be time consuming !!
+  #  Flag to decide drawing Rivet histograms from Yoda files
+  #
 run_rivet_later = True
   # !! Meaningful only when using 'scan' mode of MadGraph !!
   # ! When "False"
@@ -32,10 +36,6 @@ run_rivet_later = True
 # 
 run_contur = False
   # Flag to decide Contur runs
-  #
-draw_rivet_plots = False
-  # !! Can be time consuming !!
-  # Flag to decide drawing Rivet plots from Yoda files
   #
 draw_contur_heatmap = True
   # !! Meaningful only when using scan mode for >=2 parameters !!

@@ -2880,7 +2880,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if not no_default and '-f' not in line:
 
-
             self.keep_cards(['rivet_card.dat'], ignore=['*'])
             self.ask_edit_cards(['rivet_card.dat'], 'fixed', plot=False)
 
@@ -2901,7 +2900,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         run_analysis = ""
         set_env = ""
         for analysis in analysis_list:
-            run_analysis = "{0},{1}".format(run_analysis, analysis)
+            if analysis.startswith("MC_"):
+                run_analysis = "{0},{1}".format(run_analysis, "{0}:ENERGY={1}".format(analysis, rivet_config["rivet_sqrts"]))
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
             set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
@@ -2919,11 +2919,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
+        yoda_path = self.options['yoda_path']
         set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(rivet_path, 'bin'))
+        set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(yoda_path, 'bin'))
         set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(rivet_path, 'lib'), pjoin(rivet_path, 'lib64'))
+        set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:$LD_LIBRARY_PATH\n".format(pjoin(yoda_path, 'lib'), pjoin(yoda_path, 'lib64'))
         major, minor = sys.version_info[0:2]
-        set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+        set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n".format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
+        set_env = set_env + "export PYTHONPATH={0}:{1}:$PYTHONPATH\n".format(pjoin(yoda_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                                           pjoin(yoda_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
 
 
         #3 Fetch HepMC files
@@ -2955,15 +2960,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         run_rivet = pjoin(rivet_path, "bin", "rivet") + " --skip-weights -a " + run_analysis + " -o " + yoda_file + " " + hepmc_file + rivet_add
 
         wrapper = open(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh"), "w")
-        wrapper.write("#!{0}\n{1}".format(misc.which(shell), set_env))
-        wrapper.write(sys.executable + " {0} &> {1}".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
+        wrapper.write("#!{0}\n{1}\n".format(misc.which(shell), set_env))
+        wrapper.write(sys.executable + " {0} &> {1}\n".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
+        if rivet_config['draw_rivet_plots']:
+            draw_rivet = "{0} {1} -o {2}".format(pjoin(rivet_path, "bin", "rivet-mkhtml"), pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda"), pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots'))
+            wrapper.write(sys.executable + " " + draw_rivet + " &> {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "rivet-plots.log")))
+            logger.info("Rivet plots will be stored in {0}".format(pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots')))
+            rivet_config["run_rivet_later"] =True
 
         if py8_output == "fifo":
             wrapper.write("\nrm {0}\n".format(hepmc_file))
+        wrapper.close()
 
         if ("remove" in py8_output) or ("fifo" in py8_output): # For hepmcremove and fifo, should not be postprocessed
             rivet_config["run_rivet_later"] = False
-        wrapper.close()
 
         postprocess_RIVET = rivet_config["run_rivet_later"]
         postprocess_CONTUR = rivet_config["run_contur"]
@@ -2971,16 +2981,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         os.system("chmod +x {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "run_rivet.sh")))
 
         #5 decide how to run Rivet
-        if postprocess_RIVET and (not postprocess):
-            logger.info("Skipping Rivet for now, passing it to postprocessor")
+        if postprocess: #inside postprocessing functions, no need to run, just need to return rivet configurations
+            return [rivet_config, postprocess_RIVET, postprocess_CONTUR]
         else:
-            logger.info("Running Rivet with {0}".format(hepmc_file))
-            misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
-
-
-        self.update_status('rivet command done', level='rivet')
-
-        return [rivet_config, postprocess_RIVET, postprocess_CONTUR]
+            if postprocess_RIVET:
+                logger.info("Skipping Rivet for now, passing it to postprocessor")
+                return
+            else:
+                logger.info("Running Rivet with {0}".format(hepmc_file))
+                misc.call([pjoin('Events', self.run_name, "run_rivet.sh")], cwd=self.me_dir)
+                return
 
 
     def do_madanalysis5_hadron(self, line):

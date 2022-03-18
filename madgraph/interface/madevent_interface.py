@@ -2502,28 +2502,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
                         files.mv(pjoin(run_dirs[i_rivet], "params_replace.dat"), pjoin(run_dirs[i_rivet], "params.dat"))
 
-                    if rivet_config['draw_rivet_plots']:
-
-                        wrapper_single = open(pjoin(this_scan_subdir, "run_contur_single.sh"), "w")
-                        wrapper_single.write(set_env)
-                        wrapper_single.write("cd {0}\n".format(this_scan_subdir))
-                        wrapper_single.write("contur runpoint_"+str(i_rivet+1).zfill(4)+".yoda")
-                        wrapper_single.close()
-
-
-                if rivet_config['draw_rivet_plots']:
-                    for i_rivet in range(nb_rivet):
-                        self.cluster.submit2(pjoin(scan_subdirs[i_rivet], "run_contur_single.sh"), argument=[str(i_rivet)])
-
-                    startContur = time.time()
-
-                    def wait_monitoring(Idle, Running, Done):
-                        if Idle+Running+Done == 0:
-                            return
-                        logger.info('Contur jobs: %d Idle, %d Running, %d Done [%s]'\
-                                     %(Idle, Running, Done, misc.format_time(time.time() - startContur)))
-                    self.cluster.wait(self.me_dir, wait_monitoring)
-
                 contur_add = ""
                 if not (rivet_config["contur_add"] == "default" or rivet_config["contur_add"]  == None):
                     contur_add = " " + rivet_config["contur_add"]
