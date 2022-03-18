@@ -1808,8 +1808,9 @@ C
 c     integer firsttime
 c      data firsttime/.true./
 c      save firsttime
-
-      scale = 0d0
+      if(.not.fixed_ren_scale) then
+         scale = 0d0
+      endif
       do i =1, nb_page
 
          if(.not.fixed_ren_scale) then
@@ -1842,7 +1843,7 @@ c              pp(:)=all_p(:,i)
 
 c      IF (FIRSTTIME) THEN
 c        FIRSTTIME=.FALSE.
-        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
+c        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
 c      ENDIF
 
       enddo

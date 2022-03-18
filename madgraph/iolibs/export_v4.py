@@ -1773,20 +1773,20 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             }
 
                         if vector and subproc_group:
-                            template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
-                                         "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(%(beam)d, IVEC)))\n"
+                            template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
+                                         "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(IB(%(beam)d), IVEC)))\n"
                             if dressed_lep:
                                 raise Exception("vector code for lepton pdf not implemented")
                         elif subproc_group:
-                            template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(IB(%(beam)d))),%(pdg)d*LP, 1," + \
-                                         "XBK(IB(%(beam)d)),DSQRT(Q2FACT(%(beam)d)))\n"
+                            template = "%(part)s%(beam)d=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
+                                         "XBK(IB(%(beam)d)),DSQRT(Q2FACT(IB(%(beam)d))))\n"
                         elif vector:
-                            template = "%(part)s%(beam)d(IVEC)=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
+                            template = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(%(beam)d),%(pdg)d, %(beam)d," + \
                                          "ALL_XBK(%(beam)d,IVEC),DSQRT(ALL_Q2FACT(%(beam)d,IVEC)))\n"
                             if dressed_lep:
                                 raise Exception("vector code for lepton pdf not implemented")
                         else:
-                            template = "%(part)s%(beam)d=PDG2PDF(ABS(LPP(%(beam)d)),%(pdg)d*LP, %(beam)d," + \
+                            template = "%(part)s%(beam)d=PDG2PDF(LPP(%(beam)d),%(pdg)d, %(beam)d," + \
                                          "XBK(%(beam)d),DSQRT(Q2FACT(%(beam)d)))\n"
                         if dressed_lep:
                             template += "IF (PDLABEL.EQ.'dressed') %(part)s%(beam)d_components(1:4) = ee_components(1:4)\n" 
