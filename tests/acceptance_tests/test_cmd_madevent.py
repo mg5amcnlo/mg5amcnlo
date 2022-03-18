@@ -1008,14 +1008,18 @@ class TestMEfromfile(unittest.TestCase):
 
         cmd = """generate p p > e+ e-
         output %s
-launch
+        launch
 shower=pythia8
 analysis=off
 set mpi off
-launch -i
+set mmll 50
+set use_syst False
+set nevents 100
+set HEPMCoutput:file hepmc
+        launch -i
 rivet run_01
-set run_contur T
-set draw_rivet_plots T
+set analysis MC_ZINC
+set draw_rivet_plots True
                  """ %self.run_dir
 
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
