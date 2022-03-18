@@ -509,10 +509,10 @@ class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the funtionality are actually already tested in the child
     # TESTMadLoopParam and are not repeated here.
-    debugging=False
+    
 
     def setUp(self):
-        
+        debugging = unittest.debug
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):

@@ -2836,7 +2836,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         
     def setUp(self):
 
-        self.debugging = False
+        self.debugging = unittest.debug
         # Set up model
 
         mypartlist = base_objects.ParticleList()

@@ -73,7 +73,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -120,9 +120,9 @@ class TestMECmdShell(unittest.TestCase):
             out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
-        if not misc.which('root'):
-            raise Exception('root is require for this test')
-        interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
+        #if not misc.which('root'):
+        #    raise Exception('root is require for this test')
+        #interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
@@ -134,7 +134,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.no_notification()
-        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
+        #self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
         
     
     @staticmethod

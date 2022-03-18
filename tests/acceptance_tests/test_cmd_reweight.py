@@ -62,7 +62,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):

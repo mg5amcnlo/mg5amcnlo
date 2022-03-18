@@ -57,10 +57,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
     
     def setUp(self):
-        
+        self.debugging = unittest.debug
+    
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):
