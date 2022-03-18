@@ -2901,7 +2901,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         set_env = ""
         for analysis in analysis_list:
             if analysis.startswith("MC_"):
-                run_analysis = "{0},{1}".format(run_analysis, "{0}:ENERGY={1}".format(analysis, rivet_config["rivet_sqrts"]))
+                analysis =  "{0}:ENERGY={1}".format(analysis, rivet_config["rivet_sqrts"])
+            run_analysis = "{0},{1}".format(run_analysis, analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
             set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
@@ -2966,7 +2967,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             draw_rivet = "{0} {1} -o {2}".format(pjoin(rivet_path, "bin", "rivet-mkhtml"), pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda"), pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots'))
             wrapper.write(sys.executable + " " + draw_rivet + " &> {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "rivet-plots.log")))
             logger.info("Rivet plots will be stored in {0}".format(pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots')))
-            rivet_config["run_rivet_later"] =True
+#            rivet_config["run_rivet_later"] =True
 
         if py8_output == "fifo":
             wrapper.write("\nrm {0}\n".format(hepmc_file))

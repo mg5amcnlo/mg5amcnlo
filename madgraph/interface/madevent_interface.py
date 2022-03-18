@@ -2506,7 +2506,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 if not (rivet_config["contur_add"] == "default" or rivet_config["contur_add"]  == None):
                     contur_add = " " + rivet_config["contur_add"]
 
-                contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
+                if rivet_config["weight_name"] == "None":
+                    contur_cmd = 'contur -g scan >> contur.log 2>&1\n'
+                else:
+                    contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
 
                 if rivet_config["draw_contur_heatmap"]:
                     axis_log = ""

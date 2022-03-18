@@ -1586,8 +1586,8 @@ class RivetCard(ConfigFile):
         '''
 
         analysis_list = []
-        rivet_sqrts = str(int(runcard['ebeam1']) + int(runcard['ebeam2']))
-        self["rivet_sqrts"] = rivet_sqrts
+        rivet_sqrts = int(runcard['ebeam1']) + int(runcard['ebeam2'])
+        self["rivet_sqrts"] = str(rivet_sqrts)
 
         if len(self["analysis"]) == 1:
             this_analysis = self["analysis"][0]
@@ -1606,8 +1606,8 @@ class RivetCard(ConfigFile):
 
                     if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
                         if int(runcard['ebeam1']) == int(runcard['ebeam2']):
-                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts)/1000))
-                            self["contur_ra"] = "{0}TeV".format(ebeam)
+                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts/1000)))
+                            self["contur_ra"] = "{0}TeV".format(int(rivet_sqrts/1000))
                         else:
                             raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
                                                  ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))

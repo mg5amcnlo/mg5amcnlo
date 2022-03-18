@@ -6,12 +6,12 @@ output heavyNscan
 launch
 shower=pythia8
 analysis=rivet
-set nevents 50
+set nevents 200
 set use_syst False
-set mn1 scan:[10**(i+1) for i in range(0,2)]
+set mn1 scan:[10**(0.5*i+1) for i in range(0,4)]
 set mn2 999999
 set mn3 999999
-set vmun1 scan:[10**(0-0.1*i) for i in range(0,2)]
+set vmun1 scan:[10**(0-0.1*i) for i in range(0,3)]
 set vmun2 0.
 set vmun3 0.
 set ven1 0.

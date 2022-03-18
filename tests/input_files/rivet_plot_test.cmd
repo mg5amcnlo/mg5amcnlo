@@ -9,3 +9,4 @@ set nevents 2000
 set HEPMCoutput:file hepmc
 set analysis MC_ZINC
 set draw_rivet_plots True
+set run_rivet_later False
