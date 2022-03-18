@@ -743,7 +743,7 @@ class TestMEfromfile(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False
+        self.debuging = True
         if self.debuging:
             self.path = pjoin(MG5DIR, 'ACC_TEST')
             if os.path.exists(self.path):
@@ -1006,7 +1006,7 @@ class TestMEfromfile(unittest.TestCase):
         else:
             stdout= None
 
-        cmd = """generate p p > e+ e
+        cmd = """generate p p > e+ e-
         output %s
 launch
 shower=pythia8
@@ -1032,9 +1032,8 @@ set draw_rivet_plots T
                          #cwd=self.path,
                          stdout=stdout, stderr=stderr)
 
-        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
         self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
-        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots' , 'index.html')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots','index.html')))
 
 
 

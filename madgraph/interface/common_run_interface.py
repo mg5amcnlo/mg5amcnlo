@@ -2967,7 +2967,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         wrapper.write("#!{0}\n{1}\n".format(misc.which(shell), set_env))
         wrapper.write(sys.executable + " {0} &> {1}\n".format(run_rivet, pjoin(self.me_dir, 'Events', self.run_name, "rivet.log")))
         if rivet_config['draw_rivet_plots']:
-            self.update_status('start to plot yoda file', level='rivet')
             draw_rivet = "{0} {1} -o {2}".format(pjoin(rivet_path, "bin", "rivet-mkhtml"), pjoin(self.me_dir, 'Events', self.run_name, "rivet_result.yoda"), pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots'))
             wrapper.write(sys.executable + " " + draw_rivet + " &> {0}".format(pjoin(self.me_dir, 'Events', self.run_name, "rivet-plots.log")))
             logger.info("Rivet plots will be stored in {0}".format(pjoin(self.me_dir, 'Events', self.run_name, 'rivet-plots')))
