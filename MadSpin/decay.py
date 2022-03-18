@@ -2469,7 +2469,11 @@ class decay_all_events(object):
         #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
         nb_mc_masses=0
         p, p_str=self.curr_event.give_momenta(event_map)
-        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, self.options['frame_id'])
+        try: 
+            frameid = self.options['frame_id']
+        except KeyError:
+            frameid = 6
+        stdin_text=' %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses

@@ -2,6 +2,7 @@
 
 import argparse
 import atexit
+import os
 import re
 import collections
 from string import Template
@@ -719,17 +720,12 @@ class HelicityRecycler():
         out_file.close()
 
     def write_zero_matrix_element(self):
-        out_file = open(self.output_file, 'w+')
-        self.template_dict['ncomb'] = '0'  
-        self.template_dict['nwavefuncs'] = '0'  
-        self.template_dict['helas_calls'] = ''    
-        with open(self.template_file, 'r') as file:
-            for line in file:
-                s = Template(line)
-                line = s.safe_substitute(self.template_dict)
-                line = '\n'.join([do_multiline(sub_lines) for sub_lines in line.split('\n')])
-                out_file.write(line)
-        out_file.close()
+        try:
+      	    os.remove(self.output_file)
+        except Exception:
+            pass
+        input_file = self.output_file.replace("_optim.f", "_orig.f")
+        os.symlink(input_file, self.output_file)
 
 
     def generate_output_file(self):

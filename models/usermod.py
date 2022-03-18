@@ -757,6 +757,7 @@ from object_library import all_propagators, Propagator
         same_name = next((p for p in self.couplings if p.name==name), None)
         if same_name:
             coupling.name = '%s%s' % (coupling.name, self.addon)
+            return self.add_coupling(coupling)
         
         if self.old_new:  
             pattern = re.compile(r'\b(%s)\b' % '|'.join(list(self.old_new.keys())))
@@ -966,7 +967,7 @@ from object_library import all_propagators, Propagator
         # + define identify_pid which keep tracks of the pdg_code identified
         identify_pid = {}
         if identify_particles:
-            for new, old in identify_particles.items():
+            for new, old in dict(identify_particles).items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
                 # secure agqinst lower/upper case problem

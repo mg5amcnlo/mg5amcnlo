@@ -633,8 +633,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if pid in self.final_state:
                     break
         else:
-            logger.info("Nothing to decay ...")
-            return
+            if not self.options['onlyhelicity']:
+                logger.info("Nothing to decay ...")
+                return
         
 
         model_line = self.banner.get('proc_card', 'full_model_line')
@@ -715,7 +716,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.all_decay = eval(generate_all.all_decay)
         for me in generate_all.all_ME:
             for d in generate_all.all_ME[me]['decays']:
-                d['decay_struct'] = eval(d['decay_struct'])
+                if isinstance(d['decay_struct'], str):
+                    d['decay_struct'] = eval(d['decay_struct'])
 
 
         # Re-create information which are not save in the pickle.

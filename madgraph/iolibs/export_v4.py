@@ -1943,7 +1943,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -3772,7 +3772,7 @@ c     channel position
 #                                  ",".join([str(d) for d in pdgs])))
 #                    lines.append("data tprid(%d,%d)/0/" % \
 #                                 (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append(line+" T "+str(last_leg.get('id')))
 #		    lines.append("data tprid(%d,%d)/%d/" % \
 #                                 (last_leg.get('number'), nconfigs,
@@ -3810,6 +3810,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         }
     jamp_optim = True
     
+
+    def __new__(cls, *args, **opts):
+        """wrapper needed for some plugin"""
+
+        return super(ProcessExporterFortranME, cls).__new__(cls)
+
+
     def __init__(self,  dir_path = "", opt=None):
         
         super(ProcessExporterFortranME, self).__init__(dir_path, opt)
@@ -5031,7 +5038,7 @@ c           This is dummy particle used in multiparticle vertices
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -5681,6 +5688,7 @@ c           This is dummy particle used in multiparticle vertices
 class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
+
 
     matrix_file = "matrix_madevent_group_v4.inc"
     grouped_mode = 'madevent'
