@@ -79,38 +79,17 @@ extern "C" {
     pythia.next();
   }
 
-  void pythia_get_no_emission_prob_( double em_scales[10000],
-				     double em_wgts[10000],
-				     double& startingScale, // 7000 GeV
-				     double& stoppingScale, // 1 GeV
-				     double& mDipole,       // dipole mass
-				     int& id,               // emitter ID
-				     int& type,             // dipole type
-				     double& kernelC,       // C factor in eq. A.18
-				     int& seed) {
-    // Note, the number of em_scales does not need to be returned; it
-    // is assumed that the first negative value for an em_scale is the
-    // end of the list.
-
-    //  RF: we can no longer reset the seed here! Needs to be done somewhere else. Maybe move it to the pythia_init() ?
-    
+  void pythia_get_no_emission_prob_( double& noemProb, double& startingScale,
+    double& stoppingScale, double& mDipole, int& id, int& type, int& seed,
+    double& min_sudakov) {
     // Set random seed.`
     pythia.readString("Random:setSeed = on");
     pythia.settings.mode("Random:seed", seed);
     pythia.rndm.init(seed);
-
     // Set cut-off for Sudakov.
-    
-    // RF: double check that we want to set the *DIRE* Sudakov:Min here!
-    
-    pythia.settings.parm("Dire:Sudakov:Min", stoppingScale);
-
-    // RF: Update the call to pythia here!
-    
+    pythia.settings.parm("Dire:Sudakov:Min", min_sudakov);
     noemProb = pythia.mergingPtr->generateSingleSudakov ( startingScale,
-      stoppingScale, pow(mDipole,2),id, type, pow2(7000.), 0.1);
-
-    
+      stoppingScale, pow(mDipole,2) , id, type, pow2(7000.), 0.1);
   }
 
 
