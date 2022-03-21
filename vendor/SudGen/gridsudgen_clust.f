@@ -44,7 +44,7 @@ c grid nodes and grids
       real*8 st(nnst),xm(nnxm),grids(nnst,nnxm,npart,ntype)
 c
       integer i,j,id,inst,inxm,ipart,itype,i1,i2,ipmap(100)
-      integer ipartlow,ipartupp,itypelow,itypeupp
+      integer ipartlow,ipartupp,itypelow,itypeupp,imasslow,imassupp
       integer ifakegrid
       real*8 stlow,stupp,xmlow,xmupp,alst,q0st,alxm,q0xm,
      # qnodeval
@@ -65,6 +65,7 @@ c$$$      external SUDAKOV FUNCTION
       real*8 mcmass(21)
       logical grid(21)
       character*1 str_itype,str_ipart
+      character*3 str_inxm
       character*50 fname
 c
       do i=1,21
@@ -73,7 +74,7 @@ c
       enddo
       include 'MCmasses_PYTHIA8.inc'
 c
-      call dire_init(mcmass)
+c      call dire_init(mcmass)
       call pythia_init(mcmass)
       open(unit=iunit1,file='sudakov.log',status='unknown')
       open(unit=iunit2,file='sudakov.err',status='unknown')
@@ -97,10 +98,11 @@ c      xlowthrs=0.0001
       read(*,*)ifk88seed
 c      ifk88seed=-1
 
-      write(*,*)'enter itype and ipart'
-      read(*,*)itypelow,ipartlow
+      write(*,*)'enter itype and ipart and dipole mass'
+      read(*,*)itypelow,ipartlow,imasslow
       itypeupp=itypelow
       ipartupp=ipartlow
+      imassupp=imasslow
       if(itypelow.lt.1.or.itypeupp.gt.4.or.ipartlow.lt.1)then
          write(*,*)'wrong itype and/or ipart'
          write(*,*)itypelow,itypeupp,ipartlow
@@ -137,7 +139,8 @@ c          if (ipart .ne. 7) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart
-          do inxm=1,nnxm
+c          do inxm=1,nnxm
+          do inxm=imasslow,imassupp
 c$$$            if (inxm .le. 15) cycle
             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
             do inst=1,nnst
@@ -206,59 +209,62 @@ c st(inst) and stupp
               endif
  112          continue
               grids(inst,inxm,ipart,itype)= restmp
-            enddo
-          enddo
-          write(*,*)'   <---Done ipart= ',ipart
-          write(iunit1,*)'   <---Done ipart= ',ipart
-          write(iunit2,*)'   <---Done ipart= ',ipart
+           enddo
+
 c write to grid files
-          write(str_itype,'(i1)')itype
-          write(str_ipart,'(i1)')ipart
-          fname='grid_'//trim(str_itype)//'_'//trim(str_ipart)//'.txt'
-          open(unit=33,file=fname)
-          write(33,'(a)')
+               write(str_itype,'(i1)')itype
+               write(str_ipart,'(i1)')ipart
+               if (inxm.le.9) then
+                  write(str_inxm,'(a,i1)') '00',inxm
+               elseif (inxm.le.99) then
+                  write(str_inxm,'(a,i2)') '0',inxm
+               else
+                  write(str_inxm,'(i3)')inxm
+               endif
+               fname='grid_'//trim(str_itype)//'_'//trim(str_ipart)//'_'
+     $              //trim(str_inxm)//'.txt'
+               open(unit=33,file=fname)
+               if (inxm.eq.1) then
+                  write(33,'(a)')
      #'      data stv/'
-          i1=nnst/4
-          i2=mod(nnst,4)
-          if(i2.eq.0)i1=i1-1
-          do i=1,i1
-             write(33,'(a,4(d15.8,1h,))')
+                  i1=nnst/4
+                  i2=mod(nnst,4)
+                  if(i2.eq.0)i1=i1-1
+                  do i=1,i1
+                     write(33,'(a,4(d15.8,1h,))')
      #'     #',(st(j),j=1+(i-1)*4,i*4)
-          enddo
-          write(33,'(a,4(d15.8,a))')
+                  enddo
+                  write(33,'(a,4(d15.8,a))')
      #'     #',(st(j),',',j=1+i1*4,nnst-1),st(nnst),'/'
-c     
-          write(33,'(a)')
+c
+                  write(33,'(a)')
      #'      data xmv/'
-          i1=nnxm/4
-          i2=mod(nnxm,4)
-          if(i2.eq.0)i1=i1-1
-          do i=1,i1
-             write(33,'(a,4(d15.8,1h,))')
+                  i1=nnxm/4
+                  i2=mod(nnxm,4)
+                  if(i2.eq.0)i1=i1-1
+                  do i=1,i1
+                     write(33,'(a,4(d15.8,1h,))')
      #'     #',(xm(j),j=1+(i-1)*4,i*4)
-          enddo
-          write(33,'(a,4(d15.8,a))')
+                  enddo
+                  write(33,'(a,4(d15.8,a))')
      #'     #',(xm(j),',',j=1+i1*4,nnxm-1),xm(nnxm),'/'
-c     
-          do inxm=1,nnxm
-             write(33,'(a,i3,a,i3,a)')
+               endif
+c
+               write(33,'(a,i3,a,i3,a)')
      #'      data (gridv(inst,',inxm,'),inst=1,',nnst,')/'
-             i1=nnst/4
-             i2=mod(nnst,4)
-             if(i2.eq.0)i1=i1-1
-             do i=1,i1
-                write(33,'(a,4(d15.8,1h,))')
+               i1=nnst/4
+               i2=mod(nnst,4)
+               if(i2.eq.0)i1=i1-1
+               do i=1,i1
+                  write(33,'(a,4(d15.8,1h,))')
      #'     #',(grids(j,inxm,ipart,itype),j=1+(i-1)*4,i*4)
-             enddo
-             write(33,'(a,4(d15.8,a))')
+               enddo
+               write(33,'(a,4(d15.8,a))')
      #'     #',(grids(j,inxm,ipart,itype),',',j=1+i1*4,nnst-1),
      #        grids(nnst,inxm,ipart,itype),'/'
-          enddo
-          close(33)
-        enddo
-        write(*,*)'<===Done itype= ',itype
-        write(iunit1,*)'<===Done itype= ',itype
-        write(iunit2,*)'<===Done itype= ',itype
+               close(33)
+            enddo
+         enddo
       enddo
 c
       close(iunit1)
