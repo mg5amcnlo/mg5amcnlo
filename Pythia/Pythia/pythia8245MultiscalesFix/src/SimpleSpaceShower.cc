@@ -414,8 +414,48 @@ void SimpleSpaceShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
       int iColPartner = (doDipoleRecoil)
                       ? findColPartner(event, in1, in2, iSys) : 0;
       int idColPartner = (iColPartner != 0) ? event[iColPartner].id() : 0;
-      dipEnd.push_back( SpaceDipoleEnd( iSys, 1, in1, in2, pTmax1,
-        colType1, 0, 0, MEtype, canRadiate2, 0, iColPartner, idColPartner) );
+
+      double pTmaxNow = pTmax1;
+
+      /*// Initial-initial connection
+      iColPartner = findColPartner(event, in1, in2, iSys);
+      if (iColPartner != 0) {
+        string name;
+        name+="scalup_";
+        ostringstream oss; oss.str("");
+        oss << in1-2 << "_" << iColPartner-2;
+        name+=oss.str();
+        if ( infoPtr->scales->attributes.find(name)
+          != infoPtr->scales->attributes.end())
+          pTmaxNow = infoPtr->scales->attributes[name];
+//cout << __LINE__ << " " << in1 << " " << iColPartner << " " << pTmaxNow << endl;
+        idColPartner = event[iColPartner].id();
+        dipEnd.push_back( SpaceDipoleEnd( iSys, 1, in1, in2, pTmaxNow, 
+          colType1, 0, 0, MEtype, canRadiate2, 0, iColPartner,
+          idColPartner) );
+      }
+
+      // Initial-final connection
+      int iColPartner2 = findColPartner(event, in1, 0, iSys);
+      if (iColPartner2 != iColPartner && iColPartner2 != 0) {
+        string name;
+        name+="scalup_";
+        ostringstream oss; oss.str("");
+        oss << in1-2 << "_" << iColPartner2-2;
+        name+=oss.str();
+        if ( infoPtr->scales->attributes.find(name)
+          != infoPtr->scales->attributes.end())
+          pTmaxNow = infoPtr->scales->attributes[name];
+        idColPartner = event[iColPartner2].id();
+//cout << __LINE__ << " " << in1 << " " << iColPartner2 << " " << pTmaxNow << endl;
+        dipEnd.push_back( SpaceDipoleEnd( iSys, 1, in1, in2, pTmaxNow,
+          colType1, 0, 0, MEtype, canRadiate2, 0, iColPartner2,
+          idColPartner) );
+      }*/
+
+      dipEnd.push_back( SpaceDipoleEnd( iSys, 1, in1, in2, pTmaxNow, 
+        colType1, 0, 0, MEtype, canRadiate2, 0, iColPartner,
+        idColPartner) );
     }
     int colType2 = event[in2].colType();
     if (canRadiate2) {
@@ -423,8 +463,49 @@ void SimpleSpaceShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
       int iColPartner = (doDipoleRecoil)
                       ? findColPartner(event, in2, in1, iSys) : 0;
       int idColPartner = (iColPartner != 0) ? event[iColPartner].id() : 0;
-      dipEnd.push_back( SpaceDipoleEnd( iSys, 2, in2, in1, pTmax2,
-        colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner, idColPartner) );
+
+      double pTmaxNow = pTmax2;
+
+      /*// Initial-initial connection
+      iColPartner = findColPartner(event, in2, in1, iSys);
+      if (iColPartner != 0) {
+        string name;
+        name+="scalup_";
+        ostringstream oss; oss.str("");
+        oss << in2-2 << "_" << iColPartner-2;
+        name+=oss.str();
+        if ( infoPtr->scales->attributes.find(name)
+          != infoPtr->scales->attributes.end())
+          pTmaxNow = infoPtr->scales->attributes[name];
+        idColPartner = event[iColPartner].id();
+//cout << __LINE__ << " " << in2 << " " << iColPartner << " " << pTmaxNow << endl;
+        dipEnd.push_back( SpaceDipoleEnd( iSys, 2, in2, in1, pTmaxNow,
+          colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner,
+          idColPartner) );
+      }
+
+      // Initial-final connection
+      int iColPartner2 = findColPartner(event, in2, 0, iSys);
+      if (iColPartner2 != iColPartner && iColPartner2 != 0) {
+        string name;
+        name+="scalup_";
+        ostringstream oss; oss.str("");
+        oss << in2-2 << "_" << iColPartner2-2;
+        name+=oss.str();
+        if ( infoPtr->scales->attributes.find(name)
+          != infoPtr->scales->attributes.end())
+          pTmaxNow = infoPtr->scales->attributes[name];
+        idColPartner = event[iColPartner2].id();
+//cout << __LINE__ << " " << in2 << " " << iColPartner2 << " " << pTmaxNow << endl;
+        dipEnd.push_back( SpaceDipoleEnd( iSys, 2, in2, in1, pTmaxNow,
+          colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner2,
+          idColPartner) );
+      }*/
+
+      dipEnd.push_back( SpaceDipoleEnd( iSys, 2, in2, in1, pTmaxNow,
+          colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner,
+          idColPartner) );
+
     }
   }
 
@@ -592,9 +673,34 @@ double SimpleSpaceShower::pTnext( Event& event, double pTbegAll,
     dipEndNow->pT2 = 0.;
     dipEndNow->pAccept = 1.0;
     double pTbegDip = min( pTbegAll, dipEndNow->pTmax );
+//cout << __LINE__ << " " << dipEndNow->iRadiator << " " << dipEndNow->iColPartner << " " << dipEndNow->pTmax << endl;
+
+      if (userHooksPtr && userHooksPtr->canCheckScales() ) {
+        int ipart=dipEndNow->iColPartner;
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRadiator,
+                               dipEndNow->iRecoiler, iSysNow);
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRecoiler,
+                               dipEndNow->iRadiator, iSysNow);
+        userHooksPtr->doCheckScales(dipEndNow->iRadiator,
+          ipart, dipEndNow->pTmax, "A" );
+      }
+
+
 
     // Check whether dipole end should be allowed to shower.
     double pT2begDip = pow2(pTbegDip);
+
+      if (userHooksPtr && userHooksPtr->canCheckScales() ) {
+        int ipart=dipEndNow->iColPartner;
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRadiator,
+                               dipEndNow->iRecoiler, iSysNow);
+        if (ipart==0) ipart= findColPartner( event, dipEndNow->iRecoiler,
+                               dipEndNow->iRadiator, iSysNow);
+        userHooksPtr->doCheckScales(dipEndNow->iRadiator,
+          ipart, sqrt(pT2begDip), "B" );
+      }
+
+
     if (pT2begDip > pT2sel && ( dipEndNow->colType != 0
       || dipEndNow->chgType != 0 || dipEndNow->weakType != 0) ) {
       double pT2endDip = 0.;
@@ -644,7 +750,7 @@ double SimpleSpaceShower::pTnext( Event& event, double pTbegAll,
         if (ipart==0) ipart= findColPartner( event, dipEndNow->iRecoiler,
                                dipEndNow->iRadiator, iSysNow);
         userHooksPtr->doCheckScales(dipEndNow->iRadiator,
-          ipart, sqrt(pT2begDip) );
+          ipart, sqrt(pT2begDip), "C" );
       }
 
       // Now do evolution in pT2, for QCD, QED or weak.
@@ -1021,6 +1127,9 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
   double enhanceNow = 1.;
   string nameNow = "";
 
+  //double symmetryFactor = (isGluon? 0.5 : 1.0);
+  double symmetryFactor=1.;
+
   // Begin evolution loop towards smaller pT values.
   int    loopTinyPDFdau = 0;
   bool   hasTinyPDFdau  = false;
@@ -1102,14 +1211,16 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         if (doUncertaintiesNow) ++globalLoopTinyPDFdau;
       }
 
+      if (pdfMode==3) zMinAbs=1.-zMaxAbs;
+
       // Integrals of splitting kernels for gluons: g -> g, q -> g.
       if (isGluon) {
-        g2gInt = overFac * HEADROOMG2G * 6.
+        g2gInt = symmetryFactor * overFac * HEADROOMG2G * 6.
           * log(zMaxAbs * (1.-zMinAbs) / (zMinAbs * (1.-zMaxAbs)));
         if (doMEcorrections) g2gInt *= calcMEmax(MEtype, 21, 21);
         // Optionally enhanced branching rate.
         if (canEnhanceET) g2gInt *= userHooksPtr->enhanceFactor("isr:G2GG");
-        q2gInt = overFac * HEADROOMQ2G * (16./3.)
+        q2gInt = symmetryFactor * overFac * HEADROOMQ2G * (16./3.)
           * (1./sqrt(zMinAbs) - 1./sqrt(zMaxAbs));
 
         // When calculating a Sudakov factor (and not a no-emission
@@ -1117,7 +1228,7 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
         // evolution of a gluon. Thus, use the overestimate of g->qq~
         // kernels here, in this case.
         if (pdfMode!=0) {
-          q2gInt = overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
+          q2gInt = symmetryFactor * overFac * HEADROOMG2Q * 0.5 * (zMaxAbs - zMinAbs);
           // There are NF possibilities, for g->qq~ and g->q~q alike.
           q2gInt *= 2.*NF;
         }
@@ -1425,6 +1536,8 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
     // of the energy fraction, regularize with a z "tagging factor".
     // Note that this will give the correct integrals up to power corrections.
     if (pdfMode==1) wt *= z;
+
+    wt *= symmetryFactor;
 
     // Cancel out uncertainty-band extra headroom factors.
     wt /= overFac;
@@ -4022,7 +4135,7 @@ int SimpleSpaceShower::findColPartner(Event& event, int iSideA, int iSideB,
     || (acolSideA != 0 && event[iSideB].col() == acolSideA) ) {
 
     // Change to enable use for non-dipole recoil.
-    iColPartner = iSideB;
+    if (!doDipoleRecoil) return iSideB;
 
     // Another possible colour partner among the outgoing partons
     // in the case of a gluon.
@@ -4041,6 +4154,10 @@ int SimpleSpaceShower::findColPartner(Event& event, int iSideA, int iSideB,
       int iOut = partonSystemsPtr->getOut(iSystem, i);
       if ( (colSideA != 0 && event[iOut].col() == colSideA)
         || (acolSideA != 0 && event[iOut].acol() == acolSideA) ) {
+
+        // Change to enable use for non-dipole recoil.
+        if (!doDipoleRecoil) return iOut;
+
         if (iColPartner == 0) iColPartner = iOut;
         // 50% for each IF in the case of a gluon.
         else if (rndmPtr->flat() < 0.5) iColPartner = iOut;

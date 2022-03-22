@@ -67,7 +67,7 @@ public:
 
 
   virtual bool canCheckScales() {return false;}
-  virtual bool doCheckScales(int, int, double) {return false;}
+  virtual bool doCheckScales(int, int, double, string) {return false;}
 
 
   // Event weight to compensate for selection weight above.

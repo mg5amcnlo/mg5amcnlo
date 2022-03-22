@@ -75,7 +75,7 @@ else
 endif
 
 # HEPMC2.
-main41 main42 main43 main85 main86 main87 main88 main89 Pythia83: $$@.cc\
+main41 main42 main43 main85 main86 main87 main88 main89 Pythia83 main-test-scales: $$@.cc\
 	$(PREFIX_LIB)/libpythia8.a
 ifeq ($(HEPMC2_USE),true)
 	$(CXX) $< -o $@ -I$(HEPMC2_INCLUDE) $(CXX_COMMON)\

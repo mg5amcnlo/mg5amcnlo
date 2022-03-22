@@ -1,10 +1,12 @@
-Main:numberOfEvents = 100000
+Main:numberOfEvents = 1000000
 
 ! Input file.
 Beams:frameType = 4
-Beams:LHEF = pp_2_tt_for_scale_test_events.lhe
+#Beams:LHEF = pp_2_tt_for_scale_test_events.lhe
+Beams:LHEF = /home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/pp_2_tt_for_scale_test/Events/run_03/events.lhe.gz
 
 Beams:setProductionScalesFromLHEF = on
+Beams:strictLHEFscale = on
 
 SpaceShower:pTmaxMatch = 1
 SpaceShower:pTmaxFudge = 1

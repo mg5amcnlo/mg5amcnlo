@@ -7,6 +7,7 @@
 // based on the code found in include/Pythia8Plugins/PowhegHooks.h.
 
 #include "Pythia8/Pythia.h"
+#include "Pythia8Plugins/HepMC2.h"
 using namespace Pythia8;
 #include "TestHooks.h"
 
@@ -29,6 +30,19 @@ int main(  int, char* argv[] ) {
   npartons << argv[2];
   pythia.readString("TimeShower:nPartonsInBorn = " + npartons.str()); 
 
+  // Interface for conversion from Pythia8::Event to HepMC one.
+  HepMC::Pythia8ToHepMC ToHepMC;
+  string filename="flie.hepmc";
+  // Specify file where HepMC events will be stored.
+  HepMC::IO_GenEvent ascii_io(filename.c_str(), std::ios::out);
+  // Switch off warnings for parton-level events.
+  ToHepMC.set_print_inconsistency(false);
+  ToHepMC.set_free_parton_exception(false);
+  // Do not store cross section information, as this will be done manually.
+  ToHepMC.set_store_pdf(false);
+  ToHepMC.set_store_proc(false);
+  ToHepMC.set_store_xsec(false);
+
 
   int nEvent      = pythia.settings.mode("Main:numberOfEvents");
 
@@ -37,7 +51,7 @@ int main(  int, char* argv[] ) {
   Hist tH2("tH2",100,0.0,200.0);
   Hist tS2("tS2",100,0.0,200.0);
 
-  TestHook* testHook = new TestHook(0,&tH, &tS, &tH2, &tS2); // veto after first emission
+  TestHook* testHook = new TestHook(1,&tH, &tS, &tH2, &tS2); // veto after first emission
   pythia.setUserHooksPtr((UserHooks *) testHook);
 
   // Initialise and list settings
@@ -52,12 +66,33 @@ int main(  int, char* argv[] ) {
       // If failure because reached end of file then exit event loop
       if (pythia.info.atEndOfFile()) break;
       // Otherwise count event failure and continue/exit as necessary
-      cout << "Warning: event " << iEvent << " failed" << endl;
+      //cout << "Warning: event " << iEvent << " failed" << endl;
       continue;
     }
     // If nEvent is set, check and exit loop if necessary
     ++iEvent;
     if (nEvent != 0 && iEvent == nEvent) break;
+
+      double evtweight         = pythia.info.weight();
+
+      // Do not print zero-weight events.
+      if ( evtweight == 0. ) continue;
+      // Construct new empty HepMC event.
+      HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+
+      // Set event weight
+      hepmcevt->weights().push_back(evtweight);
+      // Fill HepMC event
+      ToHepMC.fill_next_event( pythia, hepmcevt );
+      // Report cross section to hepmc
+      HepMC::GenCrossSection xsec;
+      xsec.set_cross_section( 1e9, pythia.info.sigmaErr()*1e9 );
+      hepmcevt->set_cross_section( xsec );
+      // Write the HepMC event to file. Done with it.
+      ascii_io << hepmcevt;
+      delete hepmcevt;
+
+
   } // End of event loop.
 
   // Statistics, histograms and veto information
@@ -72,7 +107,7 @@ int main(  int, char* argv[] ) {
   tH2 /= nEvent;
   tS2 /= nEvent;
 
-  ostringstream prefix;
+  /*ostringstream prefix;
   prefix.str("");
   prefix << argv[3];
 
@@ -91,7 +126,7 @@ int main(  int, char* argv[] ) {
 
   write.open(prefix.str()+"_tS.dat");
   tS2.table(write);
-  write.close();
+  write.close();*/
 
 
 

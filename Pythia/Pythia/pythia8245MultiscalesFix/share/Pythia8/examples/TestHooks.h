@@ -17,7 +17,7 @@ public:
   map<string,Hist> hist;
 
   void bookHisto(string name) {
-    hist.insert(make_pair(name,Hist(name,100,0.,200.)));
+    hist.insert(make_pair(name,Hist(name,100,0.,400.)));
   }
 
   string prefix;
@@ -25,7 +25,7 @@ public:
 
   ~TestHook() {
    
-    ostringstream prefix_oss;
+    /*ostringstream prefix_oss;
     prefix_oss.str("");
     prefix_oss << prefix;
 
@@ -34,16 +34,19 @@ public:
     write.open(prefix_oss.str()+h.first+".dat");
     h.second.table(write);
     write.close();
-    }
+    }*/
 
   }
 
   bool canCheckScales() {return true;}
-  bool doCheckScales( int rad, int rec, double starting_scale) {
+  bool doCheckScales( int rad, int rec, double starting_scale,
+    string tag) {
     string name;
     if (isSevent) name+="sevent_";
     if (isHevent) name+="hevent_";
-    name+="scaleps_";
+    name+="scaleps";
+    name+=tag;
+    name+="_";
     ostringstream oss;
     oss.str("");
     oss << rad-2 << "_" << rec-2;
@@ -143,7 +146,7 @@ public:
         bookHisto(hname);
       hist[hname].fill(scale.second,1.);
 
-      /*// Find the particle for which this scale applies.
+      // Find the particle for which this scale applies.
       string nameScale = scale.first;
       vector <string> pieces;
       vector <int> ipieces;
@@ -163,10 +166,16 @@ public:
       else if (ipieces.size()>1 && ipieces[ipieces.size()-1] > 0)
         iPos = ipieces[ipieces.size()-1];
 
-      string hdiffname="diff_to_particlescale"+hname;
+      string hdiffname;
+      if (isSevent) hdiffname+="sevent_";
+      if (isHevent) hdiffname+="hevent_";
+      hdiffname+="scalepart_"+pieces[ipieces.size()-2]+"_"+pieces[ipieces.size()-1];
       if ( hist.find(hdiffname) == hist.end())
         bookHisto(hdiffname);
-      hist[hdiffname].fill(scale.second-process[iPos].scale(),1.);*/
+
+if (process[iPos+2].scale()==0.) {process.list(true,true,10); abort();}
+
+      hist[hdiffname].fill(/*scale.second-*/process[iPos+2].scale(),1.);
 
     }
 

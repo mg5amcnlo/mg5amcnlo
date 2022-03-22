@@ -1,5 +1,7 @@
 # PYTHIA configuration file.
-# Generated on tor 23 dec 2021 12:53:39 CET with the user supplied options:
+# Generated on tis 8 mar 2022 13:05:43 CET with the user supplied options:
+# --prefix=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix
+# --with-hepmc2=/home/prestel/work/2020/HEPMC2
 
 # Install directory prefixes.
 PREFIX_BIN=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/bin
@@ -28,10 +30,10 @@ FASTJET3_INCLUDE=
 FASTJET3_LIB=
 
 # HEPMC2 configuration.
-HEPMC2_USE=false
-HEPMC2_BIN=
-HEPMC2_INCLUDE=
-HEPMC2_LIB=
+HEPMC2_USE=true
+HEPMC2_BIN=/home/prestel/work/2020/HEPMC2/bin
+HEPMC2_INCLUDE=/home/prestel/work/2020/HEPMC2/include
+HEPMC2_LIB=/home/prestel/work/2020/HEPMC2/lib
 
 # HEPMC3 configuration.
 HEPMC3_USE=false

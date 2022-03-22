@@ -2090,7 +2090,19 @@ double SimpleTimeShower::pTnext( Event& event, double pTbegAll,
     // Find maximum evolution scale for dipole.
     dip.m2DipCorr    = pow2(dip.mDip - dip.mRec) - dip.m2Rad;
     double pTbegDip = min( pTbegAll, dip.pTmax );
+
+
+    if (userHooksPtr && userHooksPtr->canCheckScales() )
+      userHooksPtr->doCheckScales(dip.iRadiator, dip.iRecoiler,
+        dip.pTmax, "A");
+
+
+
     double pT2begDip = min( pow2(pTbegDip), 0.25 * dip.m2DipCorr);
+
+    if (userHooksPtr && userHooksPtr->canCheckScales() )
+      userHooksPtr->doCheckScales(dip.iRadiator, dip.iRecoiler,
+        sqrt(pT2begDip), "B");
 
     // For global recoil, always set the starting scale for first emission.
     bool isFirstWimpy = !useLocalRecoilNow && (pTmaxMatch == 1)
@@ -2119,7 +2131,7 @@ double SimpleTimeShower::pTnext( Event& event, double pTbegAll,
 
     if (userHooksPtr && userHooksPtr->canCheckScales() )
       userHooksPtr->doCheckScales(dip.iRadiator, dip.iRecoiler,
-        sqrt(pT2begDip));
+        sqrt(pT2begDip), "C");
 
     // Do QCD, QED, weak or HV evolution if it makes sense.
     if (pT2begDip > pT2sel) {
