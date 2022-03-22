@@ -1,21 +1,22 @@
 # PYTHIA configuration file.
-# Generated on tis 8 mar 2022 13:05:43 CET with the user supplied options:
-# --prefix=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix
-# --with-hepmc2=/home/prestel/work/2020/HEPMC2
+# Generated on Tue Mar 22 15:59:51 CET 2022 with the user supplied options:
+# --prefix=/Users/rikkert/Documents/Physics/MG5_aMC/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix
+# --with-hepmc2=/usr/local/
+# --cxx-common=-ldl -fPIC -lstdc++ --std=c++14
 
 # Install directory prefixes.
-PREFIX_BIN=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/bin
-PREFIX_INCLUDE=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/include
-PREFIX_LIB=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/lib
-PREFIX_SHARE=/home/prestel/work/2020/MG5/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/share/Pythia8
+PREFIX_BIN=/Users/rikkert/Documents/Physics/MG5_aMC/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/bin
+PREFIX_INCLUDE=/Users/rikkert/Documents/Physics/MG5_aMC/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/include
+PREFIX_LIB=/Users/rikkert/Documents/Physics/MG5_aMC/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/lib
+PREFIX_SHARE=/Users/rikkert/Documents/Physics/MG5_aMC/PY8meetsMG5aMC_release/Pythia/Pythia/pythia8245MultiscalesFix/share/Pythia8
 
 # Compilation flags (see ./configure --help for further documentation).
 ENABLE_SHARED=false
 CXX=g++
-CXX_COMMON=-O2  -pedantic -W -Wall -Wshadow -fPIC
-CXX_SHARED=-shared
-CXX_SONAME=-Wl,-soname,
-LIB_SUFFIX=.so
+CXX_COMMON=-ldl -fPIC -lstdc++ --std=c++14
+CXX_SHARED=-dynamiclib
+CXX_SONAME=-Wl,-dylib_install_name,@rpath/
+LIB_SUFFIX=.dylib
 
 # EVTGEN configuration.
 EVTGEN_USE=false
@@ -31,9 +32,9 @@ FASTJET3_LIB=
 
 # HEPMC2 configuration.
 HEPMC2_USE=true
-HEPMC2_BIN=/home/prestel/work/2020/HEPMC2/bin
-HEPMC2_INCLUDE=/home/prestel/work/2020/HEPMC2/include
-HEPMC2_LIB=/home/prestel/work/2020/HEPMC2/lib
+HEPMC2_BIN=/usr/local//bin
+HEPMC2_INCLUDE=/usr/local//include
+HEPMC2_LIB=/usr/local//lib
 
 # HEPMC3 configuration.
 HEPMC3_USE=false

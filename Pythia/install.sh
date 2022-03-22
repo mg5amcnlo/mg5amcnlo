@@ -10,7 +10,7 @@ make distclean
 
 configStr="./configure"
 configStr+=" --prefix=$(pwd)"
-configStr+=" --with-hepmc2=/home/prestel/work/2018/HEPMC2"
+configStr+=" --with-hepmc2=/usr/local/"
 
 echo "$configStr --cxx-common='-ldl -fPIC -lstdc++ --std=c++14'"
 $configStr --cxx-common='-ldl -fPIC -lstdc++ --std=c++14'

@@ -139,12 +139,12 @@ c          if (ipart .ne. 7) cycle
           write(*,*)'   --->Doing ipart=',ipart
           write(iunit1,*)'   --->Doing ipart=',ipart
           write(iunit2,*)'   --->Doing ipart=',ipart
+          do inxm=1,nnxm
+             xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
+          enddo
 c          do inxm=1,nnxm
           do inxm=imasslow,imassupp
-c$$$            if (inxm .le. 15) cycle
-            xm(inxm)=qnodeval(inxm,nnxm,xkxm,base,alxm,q0xm)
             do inst=1,nnst
-c$$$            if (inst .le. 20) cycle
               st(inst)=qnodeval(inst,nnst,xkst,base,alst,q0st)
               infHloop=0
               infLloop=0
