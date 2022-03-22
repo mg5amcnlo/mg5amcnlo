@@ -16,6 +16,12 @@ gridsudgen: gridsudgen.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc
 gridsudcomb: gridsudcomb.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc 
 	gfortran -o gridsudcomb gridsudcomb.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc -I$(PYTHIA8INCLUDE) $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8 $(PYTHIA8FLAGS)
 
+gridsudgen2: gridsudgen2.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc 
+	gfortran -o gridsudgen2 gridsudgen2.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc -I$(PYTHIA8INCLUDE) $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8 $(PYTHIA8FLAGS)
+
+gridsudcomb2: gridsudcomb2.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc 
+	gfortran -o gridsudcomb2 gridsudcomb2.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc -I$(PYTHIA8INCLUDE) $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8 $(PYTHIA8FLAGS)
+
 gridsudgen_sep: gridsudgen_sep.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc 
 	gfortran -o gridsudgen_sep gridsudgen_sep.f dfint.f abend.f kerset.f pythia_interface_for_sudgen.cc -I$(PYTHIA8INCLUDE) $(LDFLAGS) -L$(PYTHIA8LIB) -Wl,-rpath $(PYTHIA8LIB) -lpythia8 $(PYTHIA8FLAGS)
 
