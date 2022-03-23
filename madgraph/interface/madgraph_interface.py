@@ -2934,7 +2934,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'f2py_compiler_py2':None,
                        'f2py_compiler_py3':None,
                        'cpp_compiler':None,
-                       'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
@@ -2972,6 +2971,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'default_unset_couplings': 99, # 99 means infinity
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
+                          'auto_update':7,
                         }
 
     options_madevent = {'automatic_html_opening':True,
