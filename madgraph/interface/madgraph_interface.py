@@ -6459,7 +6459,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # read the __init__.py to check if we need to add a new executable
             pyvers=sys.version[0]
             try:
-                __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
+                __import__('PLUGIN.%s' % name, globals(), locals(), [])
                 plugin = sys.modules['PLUGIN.%s' % name] 
                 new_interface = plugin.new_interface
                 new_output = plugin.new_output
@@ -6467,6 +6467,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
                 maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
             except Exception as error:
+                print(error)
                 if six.PY2:
                     raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
                 elif six.PY3:
