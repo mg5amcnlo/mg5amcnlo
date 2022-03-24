@@ -3416,22 +3416,24 @@ class decay_all_events(object):
         except IOError as error:
             if not first:
                 raise
+            #misc.sprint(error)
             try:
                 external.stdin.close()
             except Exception as  error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stdout.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stderr.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.terminate()
-            except:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
+
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
 
