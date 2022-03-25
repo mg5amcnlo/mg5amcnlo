@@ -497,8 +497,12 @@ class EventFile(object):
             except:
                 import madgraph.various.banner as banner_module
             else:
-                import internal.banner as banner_module
-            if not isinstance(self.banner, banner_module.Banner):
+                try:
+                    import internal.banner as banner_module
+                except:
+                    logger.debug("no banner module found")
+                    banner_module = None
+            if banner_module and not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
                 banner.modify_init_cross(cross)
@@ -506,16 +510,17 @@ class EventFile(object):
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
                 banner = self.banner
-            # modify the lha strategy
-            curr_strategy = banner.get_lha_strategy()
-            if normalization in ['unit', 'sum']:
-                strategy = 3
-            else:
-                strategy = 4
-            if curr_strategy >0: 
-                banner.set_lha_strategy(abs(strategy))
-            else:
-                banner.set_lha_strategy(-1*abs(strategy))
+            if banner_module:
+                # modify the lha strategy
+                curr_strategy = banner.get_lha_strategy()
+                if normalization in ['unit', 'sum']:
+                    strategy = 3
+                else:
+                    strategy = 4
+                if curr_strategy >0: 
+                    banner.set_lha_strategy(abs(strategy))
+                else:
+                    banner.set_lha_strategy(-1*abs(strategy))
                 
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20

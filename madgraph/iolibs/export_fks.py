@@ -534,11 +534,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'fks_info.inc'
         # write_fks_info_list returns a set of the splitting types
+        split_types = self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)
+
+        # update the splitting types
         self.proc_characteristic['splitting_types'] = list(\
                 set(self.proc_characteristic['splitting_types']).union(\
-                    self.write_fks_info_file(writers.FortranWriter(filename), 
-                                 matrix_element, 
-                                 fortran_model)))
+                    split_types))
 
         filename = 'leshouche_info.dat'
         nfksconfs,maxproc,maxflow,nexternal=\
@@ -623,7 +626,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'rescale_alpha_tagged.f'
         self.write_rescale_a0gmu_file(
                             writers.FortranWriter(filename),
-                            startfroma0, matrix_element)
+                            startfroma0, matrix_element, split_types)
 
         filename = 'orders.h'
         self.write_orders_c_header_file(
@@ -1126,9 +1129,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
-    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element):
+    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element, split_types):
         """writes the function that computes the rescaling factor needed in
-        the case of external photons
+        the case of external photons.
+        If split types does not contain [QED] or if there are not tagged photons,
+        dummy informations are filled
         """
 
         # get the model parameters
@@ -1137,7 +1142,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         bornproc = matrix_element.born_me['processes'][0]
         # this is to ensure compatibility with standard processes
-        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']])\
+                or 'QED' not in split_types:
             to_check = []
             expr = '1d0'
             conv_pol = '0d0'

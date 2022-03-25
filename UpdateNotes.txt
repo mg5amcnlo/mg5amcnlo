@@ -1,7 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.3.2()
 
+3.3.2(18/03/22)
+      OM: (re)allow --loop_filter=True/... syntax for MC@NLO
+      RF: Fixed a bug in the phase-space generation of MadSpin,
+          relevant for processes with more than 1 t-channel.
+      MZ: Restored functionalities for processes with external photons and 
+        only QCD corrections
+      all: include all bug fix from the LTS version (2.9.9)
+           including important bug on MLM generation
+	   
 3.3.1 (04/12/21)
       RF: Fix for bug #1928364 related to the new FxFx clustering routines.
       OM: Fix for bug #1952050 systematics/reweighting run at NLO that was broken
@@ -76,8 +84,23 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 2.9.8 ()
+=======
+2.9.9 (25/02/2022)
+     OM: Fix a bug introduced in 2.9.0 for MLM generation in presence of mix EW/QCD process.
+         The bug typically leads to a crash within the systematics.py due to wrong power of alpha_s
+	 The bug might sometimes not lead to a crash but the impact is "limited" to a change in the (various)
+	 scale choice associated to the events. Therefore this is likely to be within scale uncertainty. It can
+	 impact the matching with the parton-shower (but this should be visible within the DJR validation plot). 
+     OM: Fix some wrong zero-result that occur in presence of conflincting breit-wigner.
+     OM: Fix an issue when using "$ X" when X~ can be onshell, the phase-space symmetry factor was wrongly set.
+
+2.9.8 (21/02/2022)
+>>>>>>> MERGE-SOURCE
      OM: Fix in madspin where onlyhelicity mode was not working anymore
          also allows to not specify any decay in that mode.
+     OM: Fix in multi_run mode where some meta-data where incorrectly set within the merged lhef file.
+         This occurs ONLY in presence of non positive definite cross-section. 
+         Only normalization of the cross-section/weight/statistical error could be wrong. Shape are not impacted.
 
 2.9.7 (29/11/21)
      OM: Fix the behavior of python seed for madevent/madwidth/mcatnlo/madspin

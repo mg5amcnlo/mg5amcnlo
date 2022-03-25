@@ -1953,7 +1953,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -3783,7 +3783,7 @@ c     channel position
 #                                  ",".join([str(d) for d in pdgs])))
 #                    lines.append("data tprid(%d,%d)/0/" % \
 #                                 (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append(line+" T "+str(last_leg.get('id')))
 #		    lines.append("data tprid(%d,%d)/%d/" % \
 #                                 (last_leg.get('number'), nconfigs,
@@ -5053,7 +5053,7 @@ c           This is dummy particle used in multiparticle vertices
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))

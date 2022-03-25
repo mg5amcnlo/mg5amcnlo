@@ -62,7 +62,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -77,7 +77,6 @@ class TestMECmdRWGT(unittest.TestCase):
         if self.path != pjoin(MG5DIR, "tmp_test"):
             shutil.rmtree(self.path)
         
-        self.assertFalse(self.debugging)
 
     def get_cmd(self, event=None):
         
