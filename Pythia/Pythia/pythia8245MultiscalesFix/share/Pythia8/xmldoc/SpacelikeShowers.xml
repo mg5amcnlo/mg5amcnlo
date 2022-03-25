@@ -476,7 +476,7 @@ The fixed factorization scale, in GeV, that would be used in the
 evaluation of parton densities if the <code>flag</code> above is on. 
 </parm> 
  
-<modepick name="SpaceShower:pdfMode" default="0" min="0" max="2"> 
+<modepick name="SpaceShower:pdfMode" default="0" min="0" max="3"> 
 This setting should not be touched by non-experts. Deviating 
 from the default setting will only lead to consistent results 
 after explicit external intervention. 
@@ -491,6 +491,10 @@ generation of Sudakov factors according to the momentum sum rule.
 <option value="2">disable the PDF dependence, which leads to the 
 generation of Sudakov factors like option 1, but with a lower cut-off 
 <ei>zMin = 0.5</ei> on the energy-fraction integral. 
+</option> 
+<option value="3">disable the PDF dependence, which leads to the 
+generation of Sudakov factors like option 1, but with a lower cut-off 
+<ei>zMin = 1 -zMax</ei> on the energy-fraction integral. 
 </option> 
 </modepick> 
  
