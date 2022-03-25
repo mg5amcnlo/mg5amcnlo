@@ -94,7 +94,8 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
                         'rwgt_name':None,
-                        "allow_missing_finalstate":False}
+                        "allow_missing_finalstate":False,
+                        "identical_particle_in_prod_and_decay": "average"}
 
         self.events_file = None
         self.processes = {}
@@ -421,6 +422,10 @@ class ReweightInterface(extended_cmd.Cmd):
             pass 
             # this line is meant to be parsed by common_run_interface and change the way this class is called.
             #It has no direct impact on this class.
+        elif args[0] == "identical_particle_in_prod_and_decay":
+            if args[1].lower() not in ['average', 'max', 'crash']:
+                raise Exception("option identical_particle_in_prod_and_decay can only be one of the following ['average', 'max', 'crash']")
+            self.options[args[0]] = args[1].lower()
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -1249,7 +1254,7 @@ class ReweightInterface(extended_cmd.Cmd):
             all_p = event.get_all_momenta(orig_order)
             if len(all_p) >1:
                 if self.helicity_reweighting:
-                    logger.warning("due to ordering ambiguity, we fip off helicity per helicity reweighting.")
+                    logger.warning("due to ordering ambiguity, we flip off helicity per helicity reweighting.")
                 self.helicity_reweighting = False
 
         # add helicity information
@@ -1300,6 +1305,11 @@ class ReweightInterface(extended_cmd.Cmd):
                     p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
                 assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
         
+
+        if self.options['identical_particle_in_prod_and_decay'] == 'crash':
+            if len(all_p) > 1:
+                raise Exception("Ambiguous particle in production and decay. crash as requested by \'identical_particle_in_prod_and_decay\'")
+
         me_value = 0
         for p in all_p:
             pold = list(p)
@@ -1329,9 +1339,18 @@ class ReweightInterface(extended_cmd.Cmd):
                 hundred_value = (code % 1000) //100
                 if hundred_value in [4]:
                     new_value = 0.
-            me_value += new_value
+            if self.options["identical_particle_in_prod_and_decay"] == "average":
+                me_value += new_value
+            elif self.options["identical_particle_in_prod_and_decay"] == "max":
+                if abs(new_value) > abs(me_value):
+                    me_value = new_value
+            else: 
+                raise Exception("not valid option")
 
-        return me_value / len(all_p)
+        if self.options["identical_particle_in_prod_and_decay"] == "average":
+            return me_value / len(all_p)        
+        else:
+            return me_value
     
     def terminate_fortran_executables(self, new_card_only=False):
         """routine to terminate all fortran executables"""
