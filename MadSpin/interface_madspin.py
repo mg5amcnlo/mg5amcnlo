@@ -133,7 +133,7 @@ class MadSpinOptions(banner.ConfigFile):
     ############################################################################
     def post_identical_in_prod_and_decay(self, value, change_userdefine, raiseerror):
         """ special handling for set fixed_order """
-        if value not in ["crash", 'average', 'max']:
+        if value not in ["crash", 'average', 'max', 'first']:
             raise Exception("value %s not supported for this parameter identical_in_prod_and_decay")
 
 class MadSpinInterface(extended_cmd.Cmd):
@@ -1733,6 +1733,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     if abs(out)< abs(new_value):
                         out = new_value
+                if self.options['identical_particle_in_prod_and_decay'] == 'first':
+                    return out
             if self.options['identical_particle_in_prod_and_decay'] == "average":
                 return out/len(all_p)
             else:
