@@ -81,6 +81,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         self.add_param('frame_id', 6)
         self.add_param('global_order_coupling', '')
+        self.add_param('identical_particle_in_prod_and_decay', 'average')
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -129,6 +130,11 @@ class MadSpinOptions(banner.ConfigFile):
             logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
             logger.warning('Not all functionalities of MadSpin handle this mode correctly (only onshell mode so far).')
 
+    ############################################################################
+    def post_identical_in_prod_and_decay(self, value, change_userdefine, raiseerror):
+        """ special handling for set fixed_order """
+        if value not in ["crash", 'average', 'max']:
+            raise Exception("value %s not supported for this parameter identical_in_prod_and_decay")
 
 class MadSpinInterface(extended_cmd.Cmd):
     """Basic interface for madspin"""
@@ -1712,14 +1718,25 @@ class MadSpinInterface(extended_cmd.Cmd):
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
             all_p = event.get_all_momenta(orig_order)
+            if self.options['identical_particle_in_prod_and_decay'] == "crash" and\
+                len(all_p)> 1:
+                raise Exception("Ambiguous particle in production and decay. crash as requested by 'identical_particle_in_prod_and_decay'")
             out = 0
             for p in all_p:
                 p = rwgt_interface.ReweightInterface.invert_momenta(p)
                 if event[0].color1 == 599 and event.aqcd==0:
-                    out += self.all_f2py[pdir](p, 0.113, 0)
+                    new_value = self.all_f2py[pdir](p, 0.113, 0)
                 else:
-                    out += self.all_f2py[pdir](p, event.aqcd, 0)
-            return out/len(all_p)
+                    new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                if self.options['identical_particle_in_prod_and_decay'] == "average":
+                    out += new_value
+                else:
+                    if abs(out)< abs(new_value):
+                        out = new_value
+            if self.options['identical_particle_in_prod_and_decay'] == "average":
+                return out/len(all_p)
+            else:
+                return out
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
