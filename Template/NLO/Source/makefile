@@ -26,9 +26,9 @@ all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
 	rm -f PDF/*.o
 
 
-$(LIBDIR)librunning.$(libext): Running
+$(LIBDIR)librunning.$(libext): RUNNING
 	rm -f $(LIBDIR)librunning.a
-	cd Running; make
+	cd RUNNING; make
 
 $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a

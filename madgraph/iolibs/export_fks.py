@@ -240,7 +240,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_pdf_opendata()
         
         if model["running_elements"]:
-            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+            misc.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
         
         
@@ -4179,7 +4179,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
 
         if model["running_elements"]:
-            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+            shutil.copytree(pjoin(MG5DIR, 'Template',"Running"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
         
         # Return to original PWD

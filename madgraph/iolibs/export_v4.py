@@ -3874,7 +3874,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.copy_python_file()
         
         if model["running_elements"]:
-            shutil.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
         
         
@@ -7504,7 +7504,7 @@ class UFO_model_to_mg4(object):
         text = template % data
         if self.opt['mp']:
             data['mp'] = 'MP_'
-            data['mpinput']="INCLUDE 'MP_input.inc'"
+            data['mpinput']="INCLUDE 'mp_input.inc'"
             data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
                                     for i, name in enumerate(runparams)])
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
