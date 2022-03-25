@@ -2162,15 +2162,12 @@ class RestrictModel(model_reader.ModelReader):
         # check if the model is a running model with running.py and 
         # check that the model is compatible with the restriction
         running_param = self.get_running() 
-        misc.sprint(running_param)
         if running_param:
             tocheck = null_parameters+one_parameters
-            misc.sprint(tocheck)
             for p in  tocheck:
                 for block in running_param:
                     block = ['mdl_%s' % c for c in block]
                     if p in block:
-                        misc.sprint(p, "trigger check")
                         if any((p2 not in tocheck for p2 in block)):
                             not_restricted = [p2 for p2 in block if p2 not in tocheck]
                             raise Exception("Model restriction not compatible with the running of some parameters. \n %s is restricted to zero/one but mix with %s which is/are not."
