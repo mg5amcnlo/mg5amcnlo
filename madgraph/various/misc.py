@@ -466,7 +466,7 @@ def copytree(*args, **opts):
 
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
-    return misc.copytree(*args, **opts)
+    return shutil.copytree(*args, **opts)
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
