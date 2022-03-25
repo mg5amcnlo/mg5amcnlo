@@ -788,6 +788,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
+
     output = output.decode(errors='ignore')
     
     return 'LLVM' in str(output) or "clang" in str(output)
