@@ -2903,7 +2903,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools', 'MadSTR']
+                     'looptools', 'MadSTR', 'RunningCoupling']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -7490,6 +7490,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
 
+
+    def post_install_RunningCoupling(self):
+
+        shutil.move('RunningCoupling', pjoin('Template', 'Running'))
 
     def do_customize_model(self, line):
         """create a restriction card in a interactive way"""
