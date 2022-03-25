@@ -788,6 +788,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
     except Exception as error:
         # Cannot probe the compiler, assume not clang then
         return False
+
     output = output.decode(errors='ignore')
     
     return 'LLVM' in str(output) or "clang" in str(output)
@@ -2112,6 +2113,12 @@ def import_python_lhapdf(lhapdfconfig):
         use_lhapdf=False
         return False
     else:
+        if sys.platform != "darwin":
+            if not os.environ.has_key('LD_LIBRARY_PATH'):
+                os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
+            else:
+                os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
+        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]

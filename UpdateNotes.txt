@@ -1,6 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+3.4.0 (XX/XX/XX)
+      SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
+          at the end of the scan. 
+      OM: change reweighting/spinmode=onshell (from maddspin) to use the average of the matrix-element when it exists an order ambiguity in the matrix element like for the following process:
+      p p > e+ ... z, z > e+ e-
+      where permuting the momenta of the "e+" does not lead to the same
+      matrix-element.
+
+
 3.3.2(18/03/22)
       OM: (re)allow --loop_filter=True/... syntax for MC@NLO
       RF: Fixed a bug in the phase-space generation of MadSpin,
@@ -18,6 +27,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Fix bug when running from the process directory
       all: include all bug fix from the LTS version (2.9.7)
            including important bug on MC@NLO and on madspin
+
 
 3.3.0 (12/11/21)
       DP+HS+IT+MZ: EW corrections can be computed for tagged photons
