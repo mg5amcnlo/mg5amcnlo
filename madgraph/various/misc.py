@@ -466,7 +466,7 @@ def copytree(*args, **opts):
 
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
-    return misc.copytree(*args, **opts)
+    return shutil.copytree(*args, **opts)
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -2231,8 +2231,9 @@ if six.PY3:
                 return super().pop(*args)
             else:
                 key = next(iter(self))
-                return super().pop(key, None)
-                
+                del self[key]
+                return key
+
         def __le__(self, other):
             return all(e in other for e in self)
 

@@ -506,11 +506,15 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_ttx',
                                'check.log')
-        subprocess.call('./check', 
-                        stdout=open(logfile, 'w'), stderr=devnull,
+        p = subprocess.Popen('./check', 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_gg_ttx'), shell=True)
-        log_output = open(logfile, 'r').read()
+        (log_output, err) = p.communicate()
+        log_output = log_output.decode()
+
+        #log_output = open(logfile, 'r').read()
+        #misc.sprint(log_output)
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
@@ -569,11 +573,12 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem',
                                'check.log')
-        subprocess.call('./check', 
-                        stdout=open(logfile, 'w'), stderr=devnull,
+        p = subprocess.Popen('./check', 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_epem_epem'), shell=True)
-        log_output = open(logfile, 'r').read()
+        (log_output, err) = p.communicate()
+        log_output = log_output.decode()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
@@ -690,11 +695,12 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the output of check is correct 
         logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_hgg',
                                'check.log')
-        subprocess.call('./check', 
-                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+        p = subprocess.Popen('./check', 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_gg_hgg'), shell=True)
-        log_output = open(logfile, 'r').read()
+        (log_output, err) = p.communicate()                                         
+        log_output =log_output.decode()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)

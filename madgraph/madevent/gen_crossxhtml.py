@@ -771,10 +771,12 @@ class OneTagResults(dict):
         self.pgs = []
         self.delphes = []
         self.shower = []
+        self.rivet= []
         
         self.level_modes = ['parton', 'pythia', 'pythia8',
                             'pgs', 'delphes','reweight','shower',
-                            'madanalysis5_hadron','madanalysis5_parton']
+                            'madanalysis5_hadron','madanalysis5_parton',
+                            'rivet']
         # data 
         self.status = ''
 
@@ -873,6 +875,16 @@ class OneTagResults(dict):
             if 'ma5_card' not in self.madanalysis5_hadron and \
                misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'history.ma5'),html_path):
                 self.madanalysis5_hadron.append('ma5_card')
+
+        if level in ['rivet','all'] and 'rivet' not in nolevel:
+
+            if 'yoda' not in self.rivet and os.path.exists(pjoin(path, 'rivet_result.yoda')):
+                self.rivet.append('yoda')
+            if 'rivethtml' not in self.rivet and os.path.exists(pjoin(path, 'rivet-plots', 'index.html')):
+                self.rivet.append('rivethtml')
+            if 'contur' not in self.rivet and os.path.exists(pjoin(path, '..','..', 'Analysis','contur','conturPlot','combinedLevels.pdf')):
+                self.rivet.append('contur')                
+
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
@@ -1017,6 +1029,7 @@ class OneTagResults(dict):
     def get_links(self, level):
         """ Get the links for a given level"""
         
+
         out = ''
         if level == 'parton':
             if 'gridpack' in self.parton:
@@ -1202,6 +1215,15 @@ class OneTagResults(dict):
             
             return out % self
                 
+        if level == 'rivet':
+            if 'yoda' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet_result.yoda\">yoda</a>"
+            if 'rivethtml' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet-plots/index.html\">rivet plots</a>"
+            if 'contur' in self.rivet:
+                out += " <a href=\"./Analysis/contur/conturPlot/combinedLevels.pdf\">contur1</a>"
+                out += " <a href=\"./Analysis/contur/conturPlot/dominantPools0CLs.pdf\">contur2</a>"
+            return out % self     
     
     
     def get_action(self, ttype, local_dico, runresults):
@@ -1318,7 +1340,7 @@ class OneTagResults(dict):
         nb_line = 0
         self.nb_line = nb_line
         for key in ['parton', 'reweight', 'pythia', 'pythia8', 'pgs', 
-                    'delphes', 'shower', 'madanalysis5_hadron']:
+                    'delphes', 'shower', 'madanalysis5_hadron','rivet']:
             if len(getattr(self, key)):
                 nb_line += 1
         if nb_line ==0 and not os.path.exists(pjoin(self.me_dir, "Events", self["run_name"], "%(run)s_%(tag)s_banner.txt)" % \

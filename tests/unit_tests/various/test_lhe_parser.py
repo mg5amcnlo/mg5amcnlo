@@ -303,7 +303,7 @@ class TESTLHEParser(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = False
+        debugging = unittest.debug
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_test")
             if os.path.exists(self.path):
