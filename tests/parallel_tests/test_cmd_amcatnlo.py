@@ -56,9 +56,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    
     
     def setUp(self):
+        self.debugging = unittest.debug
         
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
@@ -344,7 +345,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-        self.assertFalse(self.debugging)
     
 
     def test_short_launch_amcatnlo_name(self):

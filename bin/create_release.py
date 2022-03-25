@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -212,19 +212,20 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #create_empty.close()
 
 # 2. Create the automatic documentation in the apidoc directory
-try:
-    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                               'madgraph', 'aloha',
-                               os.path.join('models', '*.py')], cwd = filepath)
-except:
-    logging.error("Error while trying to run epydoc. Do you have it installed?")
-    logging.error("Execution cancelled.")
-    sys.exit()
+#try:
+#    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+#                               'madgraph', 'aloha',
+#                               os.path.join('models', '*.py')], cwd = filepath)
+#except:
+#    logging.error("Error while trying to run epydoc. Do you have it installed?")
+#    logging.error("Execution cancelled.")
+#    sys.exit()
+#
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
 
-if status1:
-    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
-                 status)
-    sys.exit()
 #3. tarring the apidoc directory
 status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 

@@ -426,6 +426,8 @@ C     Amplitude(s) for diagram number 5
       CALL FFV1_2_3(W(1,1),W(1,3),GUZ1,GUZ2,MZ, ZERO,W(1,5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_2_0(W(1,4),W(1,2),W(1,5),GUZ1,GUZ2,AMP(6))
+
+      JAMP(:,:) = (0D0,0D0)
 C     JAMPs contributing to orders ALL_ORDERS=1
       JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(-1.000000000000000D
      $ +00)*AMP(2)+(-1.000000000000000D+00)*AMP(3)+(5.000000000000000D

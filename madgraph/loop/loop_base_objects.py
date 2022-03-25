@@ -1504,7 +1504,8 @@ class DGLoopLeg(base_objects.Leg):
         else:
             super(DGLoopLeg,self).__init__()
             for key in argument.get_sorted_keys():
-                self.set(key,argument[key])
+                if key in self.get_sorted_keys():
+                    self.set(key,argument[key])
 
     def default_setup(self):
        super(DGLoopLeg,self).default_setup()         

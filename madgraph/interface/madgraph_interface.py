@@ -7071,14 +7071,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
+                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -8185,10 +8185,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # for MadEvent with MadLoop decide if we keep the box as channel of 
             #integration or not. Forbid them for matching and for h+j
             if self.options['max_npoint_for_channel']:
-                base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
+                base_objects.Vertex.max_n_loop_for_multichanneling = int(self.options['max_npoint_for_channel'])
             else:
                 base_objects.Vertex.max_n_loop_for_multichanneling = 3 
-            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
+            base_objects.Vertex.max_tpropa = int(self.options['max_t_for_channel'])   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)
