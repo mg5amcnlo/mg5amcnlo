@@ -996,7 +996,51 @@ class ModelTest2(unittest.TestCase):
                 self.assertEqual(param.expr, 'CMASS_mdl_MZ**2')
                 found += 1
         self.assertEqual(found, 2)
+
+#===============================================================================
+# ModelTest
+#===============================================================================
+class ModelTestRunning(unittest.TestCase):
+    """Test class for the Model object from a correct load"""
+    
+    def setUp(self):
+        """ """
+        import madgraph.interface.master_interface as Cmd
+        cmd = Cmd.MasterCmd() 
+        cmd.do_import('model %s/tests/input_files/SMEFTatNLO_running/' % madgraph.MG5DIR)
+        self.model = cmd._curr_model
         
+    def test_get_running(self):
+        """Check that a model can be converted to complex mass scheme"""
+        
+        model = copy.deepcopy(self.model)
+        out = model.get_running()
+        self.assertEqual(len(out),2)
+        if len(out[1]) == 2:
+            out = [out[1],out[0]]
+        self.assertEqual(len(out[0]),2)
+        self.assertEqual(len(out[1]),17)
+        self.assertNotIn(out[0].pop(), out[1])
+
+        # check that filtering is working
+        out = model.get_running(['cQq81', 'cQt8'])
+        self.assertEqual(len(out),1)
+        self.assertEqual(len(out[0]),17)
+        
+        # check that filtering is working
+        out = model.get_running(['aS'])
+        self.assertEqual(len(out),0)
+        
+        # check that filtering is working
+        out = model.get_running(['cQq13', 'cQq81'])
+        self.assertEqual(len(out),2)
+        if len(out[1]) == 2:
+            out = [out[1],out[0]]
+        self.assertEqual(len(out[0]),2)
+        self.assertEqual(len(out[1]),17)
+        self.assertNotIn(out[0].pop(), out[1])
+
+
 #===============================================================================
 # LegTest
 #===============================================================================
