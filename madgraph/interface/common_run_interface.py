@@ -5610,7 +5610,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             possibilities['Delphes Card'] = self.list_completion(text, opts)              
 
         if 'value' in list(allowed.keys()):
-            opts = ['default']
+            opts = ['default', 'scale']
             if 'decay' in args:
                 opts.append('Auto')
                 opts.append('Auto@NLO')
@@ -5655,7 +5655,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
                 if not ids:
                     if tuple([int(i) for i in allowed['block'][1]]) in block:
-                        opts = ['default']
+                        opts = ['default', 'scale']
                         if allowed['block'][0] == 'decay':
                             opts.append('Auto')
                             opts.append('Auto@NLO')
