@@ -5114,6 +5114,9 @@ RESTART = %(mint_mode)s
         for setname in pdfsetname:
             shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
 
+        # finally return the parsed info file
+        return banner_mod.eMELA_info(os.path.join(libdir, 'PDFsets', setname, setname + '.info'), self.me_dir)
+
 
     def copy_lep_densities(self, name, sourcedir):
         """copies the leptonic densities so that they are correctly compiled
@@ -5180,8 +5183,7 @@ RESTART = %(mint_mode)s
         #directory where to compile exe
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
-        # create param_card.inc and run_card.inc
-        self.do_treatcards('', amcatnlo=True, mode=mode)
+
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
@@ -5212,7 +5214,24 @@ RESTART = %(mint_mode)s
 
             elif self.run_card['pdlabel'].startswith('emela'):
                 # this is if the PDFs from ePDF/eMELA are employed
-                self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
+                emela_info = self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
+                # MZ
+                # MZ this is only temporary for the MSbar runs!!!!!!!!!
+                # MZ
+                alpha = self.compile_and_run_printalpha()
+                # find the uv scheme of the model. if a file called 'TOYXS' exists, use msbar
+                if os.path.exists(pjoin(self.me_dir, 'TOYXS')):
+                    uvscheme = 0
+                else:
+                    try:
+                        Gmu = self.banner.get_detail('param_card', 'sminputs', 2)
+                        uvscheme = 2 # Gmu scheme
+                    except KeyError:
+                        uvscheme = 1 # Alpha(mz) scheme
+                # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
+                emela_info.update_epdf_emela_variables(self.banner, uvscheme, alpha)
+                self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
 
             else:
                 # using internal densities: copy the files for the chosen density
@@ -5224,6 +5243,9 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
 
             self.make_opts_var['lhapdf'] = ""
+
+        # create param_card.inc and run_card.inc
+        self.do_treatcards('', amcatnlo=True, mode=mode)
 
         # read the run_card to find if PineAPPL is used or not
         if self.run_card['pineappl']:
@@ -5351,6 +5373,7 @@ RESTART = %(mint_mode)s
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
+            pass
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -5396,6 +5419,25 @@ RESTART = %(mint_mode)s
                 this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
+
+
+    def compile_and_run_printalpha(self):
+        this_dir = os.path.join(self.me_dir, 'SubProcesses')
+
+        input = pjoin(this_dir, 'printalpha.in')
+        infile = open(input, 'w')
+        infile.write('%d %e\n' % (self.run_card['lhaid'][0], self.run_card['ebeam1'] + self.run_card['ebeam2']))
+        infile.close()
+
+        misc.compile(['printalpha'], cwd = this_dir, job_specs = False)
+        misc.call(['./printalpha' ], cwd = this_dir, 
+                    stdin = open(input),
+                    stdout=open(pjoin(this_dir, 'printalpha.log'), 'w'),
+                    close_fds=True)
+
+        output = open(pjoin(this_dir, 'printalpha.log')).read()
+        return float(output.split('ALPHAVALUE')[1])
+
 
 
     def donothing(*args):

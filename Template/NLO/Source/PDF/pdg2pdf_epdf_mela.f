@@ -176,7 +176,9 @@ C ePDF specific parameters
       !call pdfq(id_epdf,x,omx_ee,xmu,1d0-ps_expo,idbeam_epdf,base,sol,use_grid,call_epdf) 
       ! The first argument is 0 to use grids, 1 to evaluate the PDF
       ! (much slower)
-      call  elpdfq2(0,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      !call  elpdfq2(0,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      ! Second argument       1: electron, 0: photon, -1: positron
+      call  elpdfq2(0,1,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
 
 
       return

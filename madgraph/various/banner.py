@@ -68,7 +68,7 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha','initrwgt','mggenerationinfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger','mgshowercard',
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard', 'foanalyse',
                      'ma5card_parton','ma5card_hadron','run_settings']
 
     capitalized_items = {
@@ -124,6 +124,7 @@ class Banner(dict):
       'mgdelphestrigger':'delphes_trigger.dat',
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
+      'foanalyse': 'FO_analyse_card.dat',
       'init': '',
       'mggenerationinfo':'',
       'scalesfunctionalform':'',
@@ -623,7 +624,7 @@ class Banner(dict):
     #convenient alias
     get = get_detail
     
-    def set(self, card, *args):
+    def set(self, tag, *args):
         """modify one of the cards"""
 
         if tag == 'param_card':
@@ -4030,6 +4031,12 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
+        # stuff for lepton collisions 
+        self.add_param('alphascheme', 0)
+        self.add_param('nlep_run', -1)
+        self.add_param('nupq_run', -1)
+        self.add_param('ndnq_run', -1)
+        self.add_param('w_run', 1)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
@@ -4475,6 +4482,146 @@ class MadLoopParam(ConfigFile):
             
         
         
-        
-        
+class eMELA_info(dict): 
+    """ a class for eMELA (LHAPDF-like) info files
+    """
+    path = ''
+
+    def __init__(self, finput, me_dir):
+        """initialise from finput.
+        me_dir is stored to update the cards
+        """
+
+        self.me_dir = me_dir
+        if isinstance(finput, dict):
+            super(eMELA_info, self).__init__(finput)
+        else:
+            self.read(finput)
+
+    def read(self, finput):
+        if isinstance(finput, file): 
+            lines = finput.open().read().split('\n')
+            self.path = finput.name
+        else:
+            lines = open(finput).read().split('\n')
+            self.path = finput
+
+        for l in lines:
+            if not l.strip() or l.startswith('#'):
+                continue
+            k, v = l.split(':', 1) # ignore further occurrences of :
+            try:
+                self[k.strip()] = eval(v)
+            except (NameError, SyntaxError): 
+                self[k.strip()] = v
+
+
+    def update_epdf_emela_variables(self, banner, uvscheme, alpharun):
+        """updates the variables of the cards according to those
+        of the PDF set at hand (self) and the uvscheme employed
+        for the hard matrix-element
+        Uvscheme =0,1,2 for MSbar,a(mz),Gmu
+        Use alpharun for the paramcard only if in the PDFs alpha runs
+        """
+
+        logger.info('Updating variables according to %s' % self.path) 
+        # Flavours in the running of alpha
+        nd, nu, nl = self['eMELA_ActiveFlavoursAlpha']
+        self.log_and_update(banner, 'run_card', 'ndnq_run', nd)
+        self.log_and_update(banner, 'run_card', 'nupq_run', nu)
+        self.log_and_update(banner, 'run_card', 'nlep_run', nl)
+        wrun = self['eMELA_Walpha']
+        self.log_and_update(banner, 'run_card', 'w_run', wrun)
+
+        # alpha ren scheme in the PDFs
+        # 0->MSbar, w running; 1->MSbar, w/o running
+        # 2->alphaMZ; 3->Gmu
+        uvscheme_pdf = self['eMELA_RenormalisationSchemeInt']
+        # in the run card we have
+        #alphascheme ! UV scheme for alpha (not alpha_s!) in the PDFs
+	#	     ! 0: same as the model (no extra term included)
+	#	     ! 1: MSbar, model with alpha(MZ)
+	#            ! 2: MSbar, model with Gmu
+        ## note that -1 and -2 eschange ren scheme in model and in PDFs
+        if [uvscheme_pdf, uvscheme] in [[0,0], [1,0], [2,1], [3,2]]:
+            # no scheme-change factors needed
+            self.log_and_update(banner, 'run_card', 'alphascheme', 0)
+        elif uvscheme_pdf in [0,1] and uvscheme == 1:
+            # MSbar -> a(mz)
+            self.log_and_update(banner, 'run_card', 'alphascheme', 1)
+        elif uvscheme_pdf in [0,1] and uvscheme == 2:
+            # MSbar -> a(mz)
+            self.log_and_update(banner, 'run_card', 'alphascheme', 2)
+        elif uvscheme_pdf == 2 and uvscheme == 0:
+            # a(mz) -> MSbar
+            self.log_and_update(banner, 'run_card', 'alphascheme', -1)
+        elif uvscheme_pdf == 3 and uvscheme == 0:
+            # gmu -> MSbar
+            self.log_and_update(banner, 'run_card', 'alphascheme', -2)
+            raise Exception("Gmu not implemented, skipping")
+        else:
+            logger.warning('Cannot treat the following renormalisation schemes for ME and PDFs: %d, %d' \
+                            % (uvscheme, uvscheme_pdf))
+
+        # if PDFs use MSbar with fixed alpha, set the ren scale fixed to Qref 
+        # also check that the com energy is equal to qref, otherwise print a 
+        # warning
+        if uvscheme_pdf == 1:
+            qref = self['eMELA_AlphaQref']
+            self.log_and_update(banner, 'run_card', 'fixed_ren_scale', 1)
+            self.log_and_update(banner, 'run_card', 'muR_ref_fixed', qref)
+            sqrts = banner.get_detail('run_card', 'ebeam1') + banner.get_detail('run_card', 'ebeam2')
+            if sqrts != qref:
+                logger.warning('Alpha in PDFs has reference scale != sqrts: %e, %e' \
+                                % ( qref, sqrts))
+
+        # reference value of alpha
+        if uvscheme_pdf == 0:
+            aref = alpharun
+        else:
+            aref = self['eMELA_AlphaRef']
+        self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
+
+        # LL / NLL PDF (0/1)
+        pdforder = self['eMELA_PerturbativeOrder']
+        # pdfscheme = 0->MSbar; 1->DIS; 2->eta (leptonic); 3->beta (leptonic) 
+        #    4->mixed (leptonic); 5-> nobeta (leptonic); 6->delta (leptonic)
+        # if LL, use nobeta scheme unless LEGACYLLPDF > 0
+        if pdforder == 0:
+            if self['eMELA_LEGACYLLPDF'] in [-1, 0]:
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 5)
+            elif self['eMELA_LEGACYLLPDF'] == 1: 
+                # mixed
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 4)
+            elif self['eMELA_LEGACYLLPDF'] == 2: 
+                # eta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 2)
+            elif self['eMELA_LEGACYLLPDF'] == 3: 
+                # beta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 3)
+        elif pdforder == 1:
+            # for NLL, use eMELA_FactorisationSchemeInt = 0/1 
+            #  for delta/MSbar
+            if self['eMELA_FactorisationSchemeInt'] == 0:
+                # MSbar
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 0)
+            elif self['eMELA_FactorisationSchemeInt'] == 1:
+                # Delta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 6)
+
+
+
     
+
+    def log_and_update(self, banner, card, par, v):
+        """update the card parameter par to value v
+        and print a log on the screen
+        """
+        logger.info(' Setting %s = %s in the %s' % (par, str(v), card))
+        #banner.set(card, par, v)
+        if card != 'param_card':
+            banner.set(card,par,v)
+        else:
+            xcard = banner.charge_card(card)
+            xcard[par[0]].param_dict[(par[1],)].value = v
+            xcard.write(os.path.join(self.me_dir, 'Cards', '%s.dat' % card))

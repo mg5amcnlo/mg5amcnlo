@@ -22,3 +22,5 @@ collect_events: $(COLLECT_EVENTS) $(LIBS)
 	$(FC) -o collect_events $(COLLECT_EVENTS) $(LINKLIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
 
+printalpha: printalpha.o 
+	$(FC) -o printalpha printalpha.o  $(llhapdf) $(STDLIB)

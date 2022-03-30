@@ -88,3 +88,7 @@ c
       double precision mxxmin4pdg(0:25) 
       logical mxxpart_antipart(1:25) 
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart
+
+C stuff for alpha running in lepton collisions
+      integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+      common/to_alphascheme/alphascheme, nlep_run, nupq_run, ndnq_run, w_run
