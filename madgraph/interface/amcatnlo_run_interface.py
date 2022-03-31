@@ -5086,8 +5086,6 @@ RESTART = %(mint_mode)s
         pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
         pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
 
-        self.make_opts_var['epdf'] = self.options['eMELA']
-
         # link the static library in lib
         lib = 'libeMELA.a'
 
@@ -5214,6 +5212,9 @@ RESTART = %(mint_mode)s
 
             elif self.run_card['pdlabel'].startswith('emela'):
                 # this is if the PDFs from ePDF/eMELA are employed
+                self.make_opts_var['epdf'] = self.options['eMELA']
+                self.update_make_opts()
+
                 emela_info = self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
                 # MZ
                 # MZ this is only temporary for the MSbar runs!!!!!!!!!
