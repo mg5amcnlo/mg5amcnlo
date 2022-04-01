@@ -2130,10 +2130,6 @@ c wgts() array to include the weights.
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       
-      
-      
-      
-      
       DOUBLE PRECISION PD1(0:MAXPROC), PD2(0:MAXPROC)                         
       COMMON /PDFVALUES/ PD1, PD2
 
@@ -2147,7 +2143,6 @@ c wgts() array to include the weights.
       
       parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
-      !open(3,file = "/projet/pth/safronov/MG5/t3.txt", status = "unknown")
       
       do nn=1,lhaPDFid(0)
       
@@ -2296,8 +2291,6 @@ c add the weights to the array
             enddo
          enddo
         enddo
-      !deallocate(f1_p)
-      !deallocate(f2_p)
         enddo
       enddo
       

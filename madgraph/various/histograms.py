@@ -1295,19 +1295,14 @@ class HwU(Histogram):
             scale_position = -2
             
 #################S.A
+
         elif type.upper()=='RPA':
             new_wgt_label = 'delta_pA'
             scale_position = -3
         elif type.upper()=='RAP':
             new_wgt_label = 'delta_Ap'
             scale_position = -4
-            
-        #elif type.upper()=='SCALE_PA':
-            #new_wgt_label = 'delta_mu_R_pA'
-            #scale_position = -5
-        #elif type.upper()=='SCALE_AP':
-            #new_wgt_label = 'delta_mu_R_Ap'
-            #scale_position = -6   
+    
 #################S.A
                         
         elif type.upper()=='MERGING':
@@ -1412,23 +1407,6 @@ class HwU(Histogram):
                 if wgts:
                     wgts_to_consider.append(wgts)
                     label_to_consider.append(pdf_set)
-                    
-                    
-                   
-                    
-        #elif scale_position ==-5 :
-            ##########: advanced scale
-            #dyn_scales=[label[1] for label in self.bins.weight_labels if \
-                        #HwU.get_HwU_wgt_label_type(label)=='scale_adv_pA']
-            # remove doubles in list but keep the order!
-            #dyn_scales=[scale for n,scale in enumerate(dyn_scales) if scale not in dyn_scales[:n]]
-            #for dyn_scale in dyn_scales:
-                #wgts=[label for label in self.bins.weight_labels if \
-                      #HwU.get_HwU_wgt_label_type(label)=='scale_adv_pA' and label[1]==dyn_scale]
-                #if wgts:
-                    #wgts_to_consider.append(wgts)
-                    #label_to_consider.append(dyn_scale)
-                 
 
 ##############S.A
                 
@@ -1543,7 +1521,6 @@ class HwU(Histogram):
                 p=lhapdf.getPDFSet(label)
 
 ###################S.A
-            #a=0
             # Now add the corresponding weight to all Bins
             for bin in self.bins:
 ###################S.A
@@ -1656,13 +1633,6 @@ class HwU(Histogram):
                     bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
                     bin.wgts[new_wgt_labels[1]] = pdf_down
                     bin.wgts[new_wgt_labels[2]] = pdf_up
-                #if type=='ALL_SCALE':
-                    #a = bin.wgts[wgts[0]]    
-                #if type!='PDF' and type!='RPA' and type!='RAP':
-                    #bin.wgts[new_wgt_labels[0]] = a
-                    #bin.wgts[new_wgt_labels[1]] = a                                                  
-                    #bin.wgts[new_wgt_labels[2]] = a
-
 
         # And return the position in self.bins.weight_labels of the first
         # of the two new weight label added.
@@ -2031,13 +2001,10 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:            
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:#'SCALE_PA']:##############S.A
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT','RPA','RAP']:##############S.A
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                     
-##############S.A
-                #if mandatory_attribute=='SCALE_PA':
-                    #wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
 ##############S.A      
 
                 if mandatory_attribute=='PDF':
@@ -2108,10 +2075,6 @@ class HwUList(histograms_PhysicsObjectList):
                 differences.append('mur_muf_scale')
 
                 
-            #if weight['SCALE_PA'] not in [central_pA_scale,-1]:
-                #differences.append('scale_pa')
-                
-                
             if weight['PDF'] not in [central_PDF,-1]:
                 differences.append('pdf')
                 
@@ -2142,7 +2105,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    not weight[property] is None]
             
             # then add PDF, MUR, MUF and MERGING if present            
-            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#,'ALL_SCALE_pA']:#########S.A
+            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING','RPA','RAP']:#########S.A
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
                     ordered_properties.append(property)
@@ -2203,10 +2166,6 @@ class HwUList(histograms_PhysicsObjectList):
                 wgt_label = ('alpsfact',weight['ALPSFACT'])
                 
 ############S.A                
-            #if variations == set(['scale_pa']):
-                #wgt_label = ('scale_pa',weight['SCALE_PA'])
-############S.A               
-
 
             if variations == set(['pdf']):
                 wgt_label = ('pdf',weight['PDF'])    
@@ -2686,7 +2645,7 @@ set key invert
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1,
-          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],#,'scale_pa'],############S.A
+          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact','rpa','rap'],############S.A
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
@@ -2878,13 +2837,7 @@ set key invert
             (mu_var_pos,mu)  = self[0].set_uncertainty(type='all_scale')
         else:
             (mu_var_pos,mu) = (None,[None])
-            
-            
-#########S.A            
-        #if 'scale_pa' in uncertainties: 
-            #(scale_pA_var_pos,scale_pa) = self[0].set_uncertainty(type='SCALE_PA',lhapdfconfig=lhapdfconfig)
-        #else:
-            #(scale_pA_var_pos,scale_pa) = (None,[None])
+
 #########S.A
 
 
@@ -2918,10 +2871,6 @@ set key invert
 
 
             
-#########S.A            
-        #uncertainties_present =  list(uncertainties)
-        #if scale_pA_var_pos is None and 'scale_pa' in uncertainties_present:
-            #uncertainties_present.remove('scale_pa')
 #########S.A
 
 
@@ -2971,13 +2920,6 @@ set key invert
                  ' scale uncertainties. It is required to be able to output them'+\
                  ' together.')
            
-###########S.A           
-            #if (not scale_pA_var_pos is None) and\
-                               #scale_pA_var_pos != histo.set_uncertainty(type='SCALE_PA',\
-                                                                    #lhapdfconfig=lhapdfconfig)[0]:
-               #raise MadGraph5Error('Not all histograms in this group specify'+\
-                 #' scale uncertainties. It is required to be able to output them'+\
-                 #' together.')           
 ###########S.A           
 
             if (not PDF_var_pos is None) and\
@@ -3108,11 +3050,6 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[RAP_var+2])
                 
-        #if not scale_pA_var_pos is None:
-            #for scale_pA_var in scale_pA_var_pos:
-                #wgts_to_consider.append(self[0].bins.weight_labels[scale_pA_var])
-                #wgts_to_consider.append(self[0].bins.weight_labels[scale_pA_var+1])
-                #wgts_to_consider.append(self[0].bins.weight_labels[scale_pA_var+2])  
 #############S.A
                 
                             
@@ -3900,22 +3837,6 @@ plot \\"""
         Energy2=float(word_list[0])
 
         sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
-        #f1 = open('/projet/pth/safronov/MG5/Anton-Process/textpDF1.txt', 'w')
-        #f1.write('\n')
-        #f1.write(str(self[:3]))
-        #f1.write('\n')
-        #f1.write(str(RPA_var))
-        #f1.write('\n')
-        
-        #(ymin, ymax) = HwU.get_y_optimal_range(self[:3],
-                   #labels = wgts_to_consider, scale='LIN')    
-        #(ymin, ymax) = HwU.get_y_optimal_range(self[n_histograms:], 
-               #labels = wgts_to_consider, scale='LIN',Kratio = True)    
-        #f1 = open('/projet/pth/safronov/MG5/Anton-Process/textpDF1.txt', 'w')
-        #f1.write(str(n_histograms))
-        #f1.write('\n')
-        #f1.write(str(len(self)))
-        
         # Add a margin on upper and lower bound.
         #ymax = ymax# + 0.1# * (ymax - ymin)2
         #ymin = ymin# - 0.2# * (ymax - ymin)0.5
@@ -3924,15 +3845,11 @@ plot \\"""
         gnuplot_out.extend(['unset multiplot'])
         gnuplot_out.extend(['set multiplot'])
         gnuplot_out.extend(['set key spacing 0'])
-
-        #replacement_dic['ymin'] = ymin
-        #replacement_dic['ymax'] = ymax
         replacement_dic['origin_x'] = 0.0000e+00
         replacement_dic['origin_y'] = 0.85
         replacement_dic['size_y'] = 1.75000e-01
         replacement_dic['size_x'] = 1.0000e+00
         replacement_dic['mytics'] = 5
-#        replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/10.0)
         replacement_dic['set_ytics'] = 'set ytics auto'
         replacement_dic['set_format_x'] = "set format x"
         replacement_dic['set_yscale'] = "unset logscale y"
@@ -3949,53 +3866,8 @@ plot \\"""
         if s.find("pt")!=-1:
             gnuplot_out.extend(['set xlabel "%s"'%(ptlab)])
 
-
-	#replacement_dic['title'] = self[0].get_HwU_histogram_name(format='human-no_type')
-
-	#print('%.2f'% sqrtS)
-
-	#f1 = open('/projet/pth/safronov/MG5/Anton-Process/textpDF1.txt', 'w')
-	#f2 = open('/projet/pth/safronov/MG5/Anton-Process/textpDF2.txt', 'w')
-
-	#PDF1=pdf[0]
-	#PDF2=pdf[1]
-	#PDFs=[]
-	#PDFs=['','']
-	#for i in range(2):
-	 #if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1:
-		#PDFs[i]='p'
-	 #elif pdf[i].find("D2")!=-1 or pdf[i].find("2_1")!=-1:
-		#PDFs[i]='D'
-	 #elif pdf[i].find("C12")!=-1 or pdf[i].find("12_6")!=-1:
-		#PDFs[i]='C'
-	 #elif pdf[i].find("O16")!=-1 or pdf[i].find("16_8")!=-1:
-		#PDFs[i]='O'
-	 #elif pdf[i].find("Xe131")!=-1 or pdf[i].find("131_54")!=-1:
-		#PDFs[i]='Xe'
-	 #elif pdf[i].find("Au197")!=-1 or pdf[i].find("197_79")!=-1:
-		#PDFs[i]='Au'
-	 #elif pdf[i].find("Pb208")!=-1 or pdf[i].find("208_82")!=-1:
-		#PDFs[i]='Pb'
-	 #else:
-		#PDFs[i]='A'
-	#f1.write(PDFs[0])
-	#f2.write(PDFs[1])
-	#if pdf[0].find("C12")!=-1 or pdf[0].find("12_6")!=-1:
- 	  #PDF1='C'
-	#if pdf[0].find("Pb208")!=-1 or pdf[0].find("208_82")!=-1:
- 	  #PDF1='C'
-	#else:
-	  #f2.write(type(pdf[1]))
-
         replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))
 
-	#f = open('/projet/pth/safronov/MG5/Anton-Process/text1234.txt', 'w')
-	#f.write(pdf[0])
-	#f.close()
-
-#        replacement_dic['set_histo_label'] = \
-#        'set label "%s" font ",9" at graph 0.03, graph 0.13'%ratio_name_long
-#        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
         gnuplot_out.append(subhistogram_header1%replacement_dic)
 
@@ -4006,39 +3878,18 @@ plot \\"""
 	# Some crap to get the colors right I suppose...
         n=-1
         n=n+1
-
-
-
         copy_swap_re = r"perl -pe 's/^\s*(?<x1>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)\s*(?<x2>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)(?<rest>.*)\n/ $+{x1} $+{x2} $+{rest}\n$+{x2} $+{x1} $+{rest}\n/g'"
         # Gnuplot escapes the antislash, so we must esacape then once more O_o.
         # Gnuplot doesn't have raw strings, what a shame...
         copy_swap_re = copy_swap_re.replace('\\','\\\\')
-        # For the ratio, we must divide by the central value
-        #position = '(safe($%d,$3,1.0)-1.0)' if ratio else '%d'
-        #if not band:
-           #return ["'%s' index %d using (($1+$2)/2):%s ls %d title '%s'"\
-              #%(HwU_name,block_position, position%(var_pos),color_index,title),
-                        #"'%s' index %d using (($1+$2)/2):%s ls %d title ''"\
-              #%(HwU_name,block_position, position%(var_pos+1),color_index)]
-        #else:
-           #return [' "<%s %s" index %d using 1:%s:%s with filledcurve ls %d fs transparent solid 0.2 title \'%s\''%\
-            #(copy_swap_re,HwU_name,block_position,
-                       #position%var_pos,position%(var_pos+1),color_index,title)]
-
-
-
-
-
-
-
-
+        
         for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
             n=n+1
             k=n
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
             color_index     = n%self.number_line_colors_defined+1
             # Now add the subhistograms
-###############ANton
+###############A
 
             if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
@@ -4095,40 +3946,24 @@ plot \\"""
         # We can finally add the last subhistograms for the ratios.
         for i, histo in enumerate(self[:n_histograms]):
             if i==0: continue
-            
-        #(ymin, ymax) = HwU.get_y_optimal_range(self[n_histograms:], 
-               #labels = wgts_to_consider, scale='LIN',Kratio = True)    
-        
-        # Add a margin on upper and lower bound.
-        #ymax = 2#ymax + 0.2# * (ymax - ymin)
-        #ymin = 0.5#ymin# - 0.2# * (ymax - ymin)
-        replacement_dic['unset label'] = 'unset label'
-        #f1.write(str(ymin))
-        #f1.write(str(ymax))
-	#gnuplot_out.extend(['unset multiplot'])
-	#gnuplot_out.extend(['set multiplot'])
 
-        #replacement_dic['ymin'] = ymin
-        #replacement_dic['ymax'] = ymax
+        replacement_dic['unset label'] = 'unset label'
+
         replacement_dic['origin_x'] = 0.0000e+00
         replacement_dic['origin_y'] = 0.60
         replacement_dic['size_y'] = 1.75000e-01
         replacement_dic['size_x'] = 1.0000e+00
         replacement_dic['mytics'] = 5
-#        replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/10.0)
+
         replacement_dic['set_ytics'] = 'set ytics auto'
         replacement_dic['set_format_x'] = "set format x"
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
         replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[0],PDFL[1])
-	#gnuplot_out.extend(['set_xlabel "%s"'=self[0].get_HwU_histogram_name(format='human-no_type')])
 
         replacement_dic['set_histo_label'] = \
         'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[1],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[1].replace('_','\\\\_'))#replace('_','\_')
 
-#        replacement_dic['set_histo_label'] = \
-#        'set label "%s" font ",9" at graph 0.03, graph 0.13'%ratio_name_long
-#        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[1])
         gnuplot_out.append(subhistogram_header1%replacement_dic)
 
@@ -4146,7 +3981,7 @@ plot \\"""
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
             color_index     = n%self.number_line_colors_defined+1
             # Now add the subhistograms
-###############ANton
+###############A
 
             if not RPA_var_pos is None:
                 for j,RPA_var in enumerate(RPA_var_pos):
@@ -4158,12 +3993,6 @@ plot \\"""
                         color_index = n%self.number_line_colors_defined+1
                     # Add the central line only if advanced pdf variation                            
                     if j>0 or rpa[j]!='none':
-			#plot_lines.append(
-#"<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' %s index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title ''"\
-		      #%(HwU_name,block_position,RPA_var+4,RPA_var+5,2))
-                        #plot_lines.append(
-#"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{pA} central value LO'"\
-                      #%(HwU_name,block_position+1,RPA_var+3,1))
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
                       %(HwU_name,block_position,RPA_var+4,2))
@@ -4177,10 +4006,6 @@ plot \\"""
                         plot_lines.append(
 ' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
                       %(copy_swap_re,HwU_name,block_position,RPA_var+4,RPA_var+5,2))
-
-                    #uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
-                    #HwU_name, block_position+i, RPA_var+4, color_index+20,'',
-                                        #ratio=True, band='rpa' in use_band)
 
 ###############ANton
         plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
@@ -4214,18 +4039,8 @@ plot \\"""
         # We can finally add the last subhistograms for the ratios.
         for i, histo in enumerate(self[:n_histograms]):
             if i==0: continue
-            
-        #(ymin, ymax) = HwU.get_y_optimal_range(self[n_histograms:], 
-               #labels = wgts_to_consider, scale='LIN',Kratio = True)    
-        
-        # Add a margin on upper and lower bound.
-        #ymax = 2#ymax + 0.2# * (ymax - ymin)
-        #ymin = 0.5#ymin# - 0.2# * (ymax - ymin)
+
         replacement_dic['unset label'] = 'unset label'
-        #f1.write(str(ymin))
-        #f1.write(str(ymax))
-	#gnuplot_out.extend(['unset multiplot'])
-	#gnuplot_out.extend(['set multiplot'])
 
         replacement_dic['ymin'] = ymin
         replacement_dic['ymax'] = ymax
@@ -4234,20 +4049,13 @@ plot \\"""
         replacement_dic['size_y'] = 1.75000e-01
         replacement_dic['size_x'] = 1.0000e+00
         replacement_dic['mytics'] = 5
-#        replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/10.0)
         replacement_dic['set_ytics'] = 'set ytics auto'
         replacement_dic['set_format_x'] = "set format x"
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
         replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[1],PDFL[0])
-	#gnuplot_out.extend(['set_xlabel "%s"'=self[0].get_HwU_histogram_name(format='human-no_type')])
-
         replacement_dic['set_histo_label'] = \
         'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[1],PDFs[0],326,sqrtS, pdf[1].replace('_','\\\_'), pdf[0].replace('_','\\\\_'))#replace('_','\_')
-
-#        replacement_dic['set_histo_label'] = \
-#        'set label "%s" font ",9" at graph 0.03, graph 0.13'%ratio_name_long
-#        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[1],PDFL[0])
         gnuplot_out.append(subhistogram_header1%replacement_dic)
 
@@ -4276,18 +4084,12 @@ plot \\"""
                         color_index = n%self.number_line_colors_defined+1
                     # Add the central line only if advanced pdf variation                            
                     if j>0 or rap[j]!='none':
-			#plot_lines.append(
-#"<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' %s' index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title ''"\
-		      #%(HwU_name,block_position,RAP_var+4,RAP_var+5,3))
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
                       %(HwU_name,block_position+1,RAP_var+4,4))
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
                       %(HwU_name,block_position+1,RAP_var+5,4))
-                    #uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
-                    #HwU_name, block_position+i, RAP_var+4, color_index+20,'',
-                                        #ratio=True, band='rap' in use_band)
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title 'R_{%s%s} central value + PDF uncertainties, LO'"\
                       %(HwU_name,block_position+1,RAP_var+3,3,PDFL[1],PDFL[0]))
@@ -4327,15 +4129,7 @@ plot \\"""
         # We can finally add the last subhistograms for the ratios.
         for i, histo in enumerate(self[:n_histograms]):
             if i==0: continue
-            
-        #(ymin, ymax) = HwU.get_y_optimal_range(self[n_histograms:], 
-               #labels = wgts_to_consider, scale='LIN',Kratio = True)
-        #f1.write(str(ymin))
-        #f1.write(str(ymax))
-        # Add a margin on upper and lower bound.
-        # Add a margin on upper and lower bound.
-        #ymax = 2#ymax + 0.2# * (ymax - ymin)
-        #ymin = 0.5#ymin# - 0.2# * (ymax - ymin)
+
         replacement_dic['unset label'] = 'unset label'
         replacement_dic['ymin'] = ymin
         replacement_dic['ymax'] = ymax
@@ -4344,23 +4138,17 @@ plot \\"""
         replacement_dic['size_y'] = 1.75000e-01
         replacement_dic['size_x'] = 1.0000e+00
         replacement_dic['mytics'] = 5
-#       replacement_dic['set_ytics'] = 'set ytics %f'%((int(10*(ymax-ymin))/10)/10.0)
         replacement_dic['set_ytics'] = 'set ytics auto'
         replacement_dic['set_format_x'] = "set format x"
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
         replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[1],PDFL[0])
-#        replacement_dic['set_histo_label'] = \
-#        'set label "%s" font ",9" at graph 0.03, graph 0.13'%ratio_name_long
-#        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[1],PDFL[0])
 
         replacement_dic['set_histo_label'] = \
         'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[1],PDFs[0],326,sqrtS, pdf[1].replace('_','\\\_'), pdf[0].replace('_','\\\\_'))#replace('_','\_')
 
         gnuplot_out.append(subhistogram_header1%replacement_dic)
-        #replacement_dic['set_histo_label'] = \
-        #'set label "anything" font ",9" at graph 0.03, graph 0.13'
 
         uncertainty_plot_lines = []
         plot_lines = []
@@ -4375,7 +4163,7 @@ plot \\"""
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
             color_index     = n%self.number_line_colors_defined+1
             # Now add the subhistograms
-###############ANton
+###############A
             if not RAP_var_pos is None:
                 for j,RAP_var in enumerate(RAP_var_pos):
                     uncertainty_plot_lines.append({})
@@ -4386,9 +4174,6 @@ plot \\"""
                         color_index = n%self.number_line_colors_defined+1
                     # Add the central line only if advanced pdf variation                            
                     if j>0 or rap[j]!='none':
-			#plot_lines.append(
-#"<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' %s' index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title ''"\
-		      #%(HwU_name,block_position,RAP_var+4,RAP_var+5,3))
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"\
                       %(HwU_name,block_position,RAP_var+4,4))
@@ -4404,7 +4189,7 @@ plot \\"""
                         plot_lines.append(
 ' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 2 title "    " '\
                       %(copy_swap_re,HwU_name,block_position,RAP_var+4,RAP_var+5,4))
-###############ANton
+###############A
         plot_lines.append("1 ls 999 title '', 0.8 ls 999 title '', 1.2 ls 999 title ''")
 
         # Now add the uncertainty lines, those not using a band so that they
