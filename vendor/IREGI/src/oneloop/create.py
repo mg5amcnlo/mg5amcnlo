@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import absolute_import
 import re,string,os,sys,subprocess
 locdir,thisFile = os.path.split(os.path.abspath(sys.argv[0]))
