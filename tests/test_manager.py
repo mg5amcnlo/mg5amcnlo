@@ -43,6 +43,7 @@ import optparse
 import os
 import re
 import unittest
+unittest.debug = False
 import time
 import datetime
 import shutil
