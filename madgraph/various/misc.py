@@ -1751,7 +1751,8 @@ class Notification(object):
         elif sys.platform == 'linux':
             if which('notify-send'):
                 self.working = 'notify-send'
-        #self.working=True
+        else:
+            self.working = False
 
     def __call__(self,subtitle, info_text, userInfo={}):
         
@@ -1760,19 +1761,18 @@ class Notification(object):
         if not self.working:
             return
         elif self.working is True:
-            if sys.platform == 'darwin':
+            try:
+                notification = self.NSUserNotification.alloc().init()
+                notification.setTitle_('MadGraph5_aMC@NLO')
+                notification.setSubtitle_(subtitle)
+                notification.setInformativeText_(info_text)
                 try:
-                    notification = self.NSUserNotification.alloc().init()
-                    notification.setTitle_('MadGraph5_aMC@NLO')
-                    notification.setSubtitle_(subtitle)
-                    notification.setInformativeText_(info_text)
-                    try:
-                        notification.setUserInfo_(userInfo)
-                    except:
-                        pass
-                    self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+                    notification.setUserInfo_(userInfo)
                 except:
                     pass
+                self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+            except:
+                pass
 
 
         elif self.working=='osascript':
