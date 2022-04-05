@@ -1126,7 +1126,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                (output.failures, output.errors, output.skipped)))
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
-        misc.apple_notify("tests finished", str(output))
+        misc.system_notify("tests finished", str(output))
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')
