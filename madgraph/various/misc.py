@@ -1736,6 +1736,7 @@ class Notification(object):
         self.working = True
 
     def load_notification(self):
+        self.init = True
         if sys.platform == 'darwin':
             try:
                 import Foundation
@@ -1747,7 +1748,10 @@ class Notification(object):
                 if which('osascript'):
                     self.working = 'osascript'
                 return
-        self.working=True
+        elif sys.platform == 'linux':
+            if which('notify-send'):
+                self.working = 'notify-send'
+        #self.working=True
 
     def __call__(self,subtitle, info_text, userInfo={}):
         
@@ -1769,11 +1773,6 @@ class Notification(object):
                     self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
                 except:
                     pass
-            elif sys.platform == 'linux':
-                try:
-                    os.system(""" notify-send "MadGraph5_aMC@NLO" "{}" """.format(info_text,subtitle))
-                except:
-                    pass
 
 
         elif self.working=='osascript':
@@ -1783,6 +1782,13 @@ class Notification(object):
               """.format(info_text, subtitle))
             except:
                 pass
+            
+        elif self.working == 'notify-send':
+            try:
+                os.system(""" notify-send "MadGraph5_aMC@NLO" "{}"  &> /dev/null """.format(info_text,subtitle))
+            except:
+                pass
+
 
 
 system_notify = Notification()
