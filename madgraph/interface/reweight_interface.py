@@ -1339,7 +1339,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 hundred_value = (code % 1000) //100
                 if hundred_value in [4]:
                     new_value = 0.
-                misc.sprint(new_value)
             if self.options["identical_particle_in_prod_and_decay"] == "average":
                 me_value += new_value
             elif self.options["identical_particle_in_prod_and_decay"] == "max":
@@ -2003,6 +2002,7 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['rwgt_mode'] = self.rwgt_mode
         to_save['rwgt_name'] = self.options['rwgt_name']
         to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
+        to_save['identical_particle_in_prod_and_decay'] = self.options['identical_particle_in_prod_and_decay']
         to_save['nb_library'] = self.nb_library
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
@@ -2025,7 +2025,9 @@ class ReweightInterface(extended_cmd.Cmd):
         if keep_name:
             self.options['rwgt_name'] = obj['rwgt_name']
 
+
         self.options['allow_missing_finalstate'] = obj['allow_missing_finalstate']
+        self.options['identical_particle_in_prod_and_decay'] = obj['identical_particle_in_prod_and_decay']
         old_rwgt = obj['rwgt_dir']
            
         # path to fortran executable
