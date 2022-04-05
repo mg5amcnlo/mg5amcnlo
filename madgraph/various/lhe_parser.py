@@ -3095,6 +3095,15 @@ class NLO_PARTIALWEIGHT(object):
                 out[position] = (part.E, part.px, part.py, part.pz)
                 
             return out
+
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+            """ same as get_momenta but return all valid permutation of the final state 
+                    where identical particle does NOT have the same parent
+                    for easier development debug output allow to return internal variable for the unittest to check
+            """  
+
+
+            return [self.get_momenta(get_order, allow_reversed)]
             
             
         def get_helicity(self, *args):

@@ -1510,20 +1510,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 stop = self.nice_user_error(error, line)
 
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Invalid Command: %s' % error.__class__.__name__)
 
         except self.ConfigurationError as error:
             stop = self.nice_config_error(error, line)
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Configuration error')
         except Exception as error:
             stop = self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Exception: %s' % error.__class__.__name__)
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()

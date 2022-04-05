@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##### -*- coding: cp1252 -*-
 
 #Extension

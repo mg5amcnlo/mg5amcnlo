@@ -1851,7 +1851,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             param_card_iterator.write_summary(path)
             
         if self.allow_notification_center:    
-            misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
