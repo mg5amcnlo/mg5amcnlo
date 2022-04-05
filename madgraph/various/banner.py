@@ -2814,12 +2814,12 @@ class RunCard(ConfigFile):
                 text = text % data
         else:  
             text = ""
-            for line in open(template,'r'):                  
+            for line in open(template,'r'):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
                 nline = nline.rsplit('=',1)
-                if python_template and nline[0].startswith('$'):
+                if python_template and nline[0].strip().startswith('$'):
                     block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
                     if not this_group:
@@ -5115,7 +5115,7 @@ class RunCardNLO(RunCard):
             else:
                 template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
                 python_template = False
-       
+
         super(RunCardNLO, self).write(output_file, template=template,
                                     python_template=python_template, **opt)
 

@@ -610,7 +610,14 @@ class TestRunCard(unittest.TestCase):
         fsock2 = open(pjoin(self.tmpdir,'run_card_test3'),'w')
         run_card3.write(fsock2)
         fsock2.close()
-        self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
+
+        text1 = open(fsock.name).read()
+        text2 = open(fsock2.name).read()
+        self.assertFalse("$RUNNING" in text1)
+        self.assertFalse("$RUNNING" in text2)
+        text1 = text1.replace('\n \n', '\n')
+        text2 = text2.replace('\n \n', '\n')
+        self.assertEqual(text1, text2)
 
     def test_check_valid_LO(self):
         """ensure that some handling are done correctly"""
