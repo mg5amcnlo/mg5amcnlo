@@ -43,7 +43,8 @@ import optparse
 import os
 import re
 import unittest
-unittest.debug = False
+if not hasattr(unittest, 'debug'):
+    unittest.debug = False
 import time
 import datetime
 import shutil

@@ -1333,12 +1333,13 @@ class ReweightInterface(extended_cmd.Cmd):
                     new_value = module.smatrixhel(pdg, pid, p, event.aqcd, scale2, nhel)
                                     
             # for loop we have also the stability status code
-            if isinstance(me_value, tuple):
-                new_value, code = me_value
+            if isinstance(new_value, tuple):
+                new_value, code = new_value
                 #if code points unstability -> returns 0
                 hundred_value = (code % 1000) //100
                 if hundred_value in [4]:
                     new_value = 0.
+                misc.sprint(new_value)
             if self.options["identical_particle_in_prod_and_decay"] == "average":
                 me_value += new_value
             elif self.options["identical_particle_in_prod_and_decay"] == "max":
