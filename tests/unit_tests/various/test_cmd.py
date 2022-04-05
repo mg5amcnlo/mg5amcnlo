@@ -29,19 +29,34 @@ class TestInstall(unittest.TestCase):
     def test_install_update(self):
         """Check that the install update command point to the official link
         and not to the test one."""
-        check1 = "            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')\n"
-        check2 = "                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))\n" 
         
-        has1, has2 = False, False
+        checklts1 = "http://madgraph.physics.illinois.edu/mg5amc_build_nb"
+        checklts2 = "http://madgraph.physics.illinois.edu/patch/build%s.patch" 
+        check_dev1 = "http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb"
+        check_dev2 = "http://madgraph.phys.ucl.ac.be/patch/build%s.patch" 
+        
+        to_search = [ checklts1 ,  checklts2, check_dev1, check_dev2]
+        found = [False, False, False, False]
         for line in  open(os.path.join(MG5DIR,'madgraph','interface',
                                                       'madgraph_interface.py')):
-            if line == check1:
-                has1 = True
-            elif line ==check2:
-                has2 = True
-        self.assertTrue(has1, "The install update command point through the wrong path")
-        self.assertTrue(has2, "The install update command point through the wrong path")
-        
+            for i,tocheck in enumerate(to_search):
+                if tocheck in line:
+                    found[i] = True
+
+        version = misc.get_pkg_info()['version']
+        if version.startswith('2'): # current LTS
+            self.assertTrue(found[0])
+            self.assertTrue(found[1])
+            self.assertFalse(found[2])
+            self.assertFalse(found[3])
+        else:
+            self.assertFalse(found[0])
+            self.assertFalse(found[1])
+            self.assertTrue(found[2])
+            self.assertTrue(found[3])
+
+
+
         
     def test_configuration_file(self):
         """Check that the configuration file is not modified, if he is present"""

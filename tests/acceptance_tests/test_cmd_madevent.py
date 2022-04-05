@@ -73,7 +73,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -120,9 +120,9 @@ class TestMECmdShell(unittest.TestCase):
             out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
-        if not misc.which('root'):
-            raise Exception('root is require for this test')
-        interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
+        #if not misc.which('root'):
+        #    raise Exception('root is require for this test')
+        #interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
@@ -134,7 +134,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.no_notification()
-        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
+        #self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
         
     
     @staticmethod
@@ -256,7 +256,6 @@ class TestMECmdShell(unittest.TestCase):
         
         self.check_parton_output('run_02_decayed_1', 100)           
         
-        self.assertEqual(self.debugging, False)
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -358,7 +357,6 @@ class TestMECmdShell(unittest.TestCase):
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
 
-        misc.sprint('start')
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
@@ -408,7 +406,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
-        self.assertFalse(self.debugging)
+
         
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
@@ -645,7 +643,6 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(banner3.get('param', 'mass', 24).value, 6.496446e+01)
         self.assertEqual(banner4.get('param', 'mass', 24).value, 7.242341e+01)         
         
-        self.assertFalse(self.debugging)
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
@@ -904,10 +901,7 @@ class TestMEfromfile(unittest.TestCase):
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception as error:
-            pass
+
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -957,7 +951,95 @@ class TestMEfromfile(unittest.TestCase):
             event.check()
         
         
+    def test_contur_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(_file_path,  os.path.pardir, 'tests', 'input_files','rivet_contur_test.cmd')],
+                         cwd=pjoin(self.path),
+                         stdout=stdout,stderr=stdout)
+
         
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'contur.map')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'scan_run_[01-12].txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_12',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur',  'conturPlot', 'combinedLevels.pdf')))
+
+
+    def test_rivet_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        cmd = """generate p p > e+ e-
+        output %s
+        launch
+shower=pythia8
+analysis=off
+set mpi off
+set mmll 50
+set use_syst False
+set nevents 100
+set HEPMCoutput:file hepmc
+        launch -i
+rivet run_01
+set analysis MC_ZINC
+set draw_rivet_plots True
+                 """ %self.run_dir
+
+        open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'mg5_cmd')],
+                         #cwd=self.path,
+                         stdout=stdout, stderr=stderr)
+
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots','index.html')))
+
+
+
+
+
         
 
     def load_result(self, run_name):

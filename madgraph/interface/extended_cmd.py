@@ -2838,7 +2838,7 @@ class ControlSwitch(SmartQuestion):
                 rules = dict([(k, None) for k in self.switch])
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
-                rules = self.check_consistency_with_all(key2)
+                rules = self.check_consistency_with_all(key2, value2)
                         
             for key, replacement in rules.items():
                 if replacement:

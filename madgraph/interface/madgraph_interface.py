@@ -2906,7 +2906,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
+                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -2945,6 +2946,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'madanalysis_path': './MadAnalysis',
                        'madanalysis5_path':'./HEPTools/madanalysis5/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
+                       'rivet_path' : './HEPTools/rivet',
+                       'yoda_path' : './HEPTools/yoda',
+                       'contur_path' : './HEPTools/contur',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
@@ -5831,6 +5835,8 @@ This implies that with decay chains:
             try:
                 for part in self._multiparticles[key]:
                     self._curr_model.get('particle_dict')[part]
+                if self._curr_model.get_particle(key):
+                    raise Exception
             except Exception:
                 del self._multiparticles[key]
                 defined_multiparticles.remove(key)
@@ -5849,6 +5855,7 @@ This implies that with decay chains:
                 if multipart_name not in self._multiparticles:
                     #self.do_define(line)
                     self.exec_cmd('define %s' % line, printcmd=False, precmd=True)
+                
             except self.InvalidCmd as why:
                 logger.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
@@ -6028,15 +6035,16 @@ This implies that with decay chains:
                                '--with_pythia8=%s'%self.options['pythia8_path'])
 
         # Special rules for certain tools
-        if tool=='madanalysis5':
+        if tool in ['madanalysis5', 'rivet']:
             add_options.append('--mg5_path=%s'%MG5DIR)
             if not any(opt.startswith(('--with_fastjet', '--veto_fastjet')) for opt in add_options):
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
-                else:
+                elif tool in ['madanalysis5']:
                     add_options.append('--with_fastjet')
-           
+
+        if tool in ['madanalysis5']:
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
                 add_options.append('--with_delphes3=%s'%\
@@ -6200,7 +6208,28 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)      
+            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)
+        elif tool == 'contur':
+            to_save = ['contur_path']
+            # check that rivet/yoda are correctly linked:
+            self.options['%s_path' % tool] = pjoin(prefix, tool)
+            if os.path.exists(pjoin(prefix, 'yoda')):
+                self.options['yoda_path'] = pjoin(prefix, 'yoda')
+                to_save.append('yoda_path')
+            if os.path.exists(pjoin(prefix, 'rivet')):
+                self.options['rivet_path'] = pjoin(prefix, 'rivet')
+                to_save.append('rivet_path')
+            self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
+                 printcmd=False, log=False)  
+        elif tool == 'rivet':
+            to_save = ['rivet_path']
+            # check that rivet/yoda are correctly linked:
+            self.options['%s_path' % tool] = pjoin(prefix, tool)
+            if os.path.exists(pjoin(prefix, 'yoda')):
+                self.options['yoda_path'] = pjoin(prefix, 'yoda')
+                to_save.append('yoda_path')
+            self.exec_cmd('save options %s %s'  % (config_file,' '.join(to_save)),
+                 printcmd=False, log=False) 
         elif '%s_path' % tool in self.options:
             self.options['%s_path' % tool] = pjoin(prefix, tool)
             self.exec_cmd('save options %s %s_path'  % (config_file,tool), printcmd=False, log=False)      
@@ -6753,12 +6782,11 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options %s' % opt, printcmd=False)           
+                self.exec_cmd('save options %s' % opt, printcmd=False)
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options %s' % opt, printcmd=False)
-
-
+                    
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date.
@@ -7068,14 +7096,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
+                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -8182,10 +8210,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # for MadEvent with MadLoop decide if we keep the box as channel of 
             #integration or not. Forbid them for matching and for h+j
             if self.options['max_npoint_for_channel']:
-                base_objects.Vertex.max_n_loop_for_multichanneling = self.options['max_npoint_for_channel']
+                base_objects.Vertex.max_n_loop_for_multichanneling = int(self.options['max_npoint_for_channel'])
             else:
                 base_objects.Vertex.max_n_loop_for_multichanneling = 3 
-            base_objects.Vertex.max_tpropa = self.options['max_t_for_channel']   
+            base_objects.Vertex.max_tpropa = int(self.options['max_t_for_channel'])   
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes, args)

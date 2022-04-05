@@ -509,10 +509,10 @@ class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the funtionality are actually already tested in the child
     # TESTMadLoopParam and are not repeated here.
-    debugging=False
+    
 
     def setUp(self):
-        
+        self.debugging = unittest.debug
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):
@@ -562,8 +562,6 @@ class TestRunCard(unittest.TestCase):
         self.assertFalse(hasattr(run_card2, 'default'))
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   
               
-  
-        self.assertFalse(self.debugging)
 
     def test_default(self):
       

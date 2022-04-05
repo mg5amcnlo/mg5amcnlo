@@ -1373,12 +1373,15 @@ class ConfigFile(dict):
                 raise InvalidCmd("Wrong input type for %s found %s and expecting %s for value %s" %\
                         (name, type(value), targettype, value))                
         else:
+            if targettype != UnknownType:
+                value = value.strip()
+                if value.startswith("="):
+                    value = value[1:].strip()
             # We have a string we have to format the attribute from the string
             if targettype == UnknownType:
                 # No formatting
                 pass
             elif targettype == bool:
-                value = value.strip()
                 if value.lower() in ['0', '.false.', 'f', 'false', 'off']:
                     value = False
                 elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
@@ -1386,7 +1389,6 @@ class ConfigFile(dict):
                 else:
                     raise InvalidCmd("%s can not be mapped to True/False for %s" % (repr(value),name))
             elif targettype == str:
-                value = value.strip()
                 if value.startswith('\'') and value.endswith('\''):
                     value = value[1:-1]
                 elif value.startswith('"') and value.endswith('"'):
@@ -1469,7 +1471,7 @@ class ConfigFile(dict):
         
         if lower_name in self.auto_set:
             return 'auto'
-
+        
         return dict.__getitem__(self, name.lower())
 
     
@@ -1488,6 +1490,185 @@ class ConfigFile(dict):
         self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
  
 
+class RivetCard(ConfigFile):
+
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        self.add_param('analysis', [], typelist=str)
+        self.add_param('run_rivet_later', False)
+        self.add_param('run_contur', False)
+        self.add_param('draw_rivet_plots', False)
+        self.add_param('draw_contur_heatmap', True)
+        self.add_param('xaxis_var', "default")
+        self.add_param('xaxis_relvar', "default")
+        self.add_param('xaxis_label', "default")
+        self.add_param('xaxis_log', False)
+        self.add_param('yaxis_var', "default")
+        self.add_param('yaxis_relvar', "default")
+        self.add_param('yaxis_label', "default")
+        self.add_param('yaxis_log', False)
+
+        # ================================================================
+        # hidden (users don't really have to touch these most of the time)
+        self.add_param('contur_ra', "default")
+        self.add_param('rivet_sqrts', "default")
+        self.add_param('weight_name', "default")
+        self.add_param('rivet_add', 'default')
+        self.add_param('contur_add', 'default')
+        # ================================================================
+
+    def read(self, finput):
+
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception("No such file %s" % finput)
+
+        for line in finput:
+            if '#' in line:
+                line = line.split('#',1)[0]
+
+            if '!' in line:
+                line = line.split('#',1)[0]
+
+            if not line:
+                continue
+
+            if '=' in line:
+                key, value = line.split('=',1)
+                if key.strip() in ["xaxis_var", "xaxis_relvar", "xaxis_label",\
+                                   "yaxis_var", "yaxis_relvar", "yaxis_label",\
+                                   "rivet_add", "contur_add"]:
+                    value = value.lower()
+                    if value.strip() == "default":
+                        value = ""
+                self[key.strip()] = value.strip()
+
+    def write(self, output_file, template=None):
+
+        if not template:
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 'rivet_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'rivet_card_default.dat')
+
+        text = ""
+        for line in open(template,'r'):
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            elif nline[0].strip() in list(self.keys()):
+                text += '%s\t= %s %s\n' % (nline[0], self[nline[0].strip()], comment)
+            else:
+                logger.info('Adding missing parameter %s to current rivet_card (with default value)' % nline[1].strip())
+                text += line
+
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+
+        fsock.write(text)
+        fsock.close()
+
+    def getAnalysisList(self, runcard):
+
+        '''
+ This function defines/parses which analysis to run with Rivet
+ If not given and CONTUR is turned off : electrons, muons, taus, met, jets
+                               on : check the beam energy and run all available analyses with same beam E
+        '''
+
+        analysis_list = []
+        rivet_sqrts = int(runcard['ebeam1']) + int(runcard['ebeam2'])
+        self["rivet_sqrts"] = str(rivet_sqrts)
+
+        if len(self["analysis"]) == 1:
+            this_analysis = self["analysis"][0]
+
+            if this_analysis == "default" or this_analysis == None or this_analysis == "":
+                if not self["run_contur"]:
+                    analysis_list.append("MC_ELECTRONS")
+                    analysis_list.append("MC_MUONS")
+                    analysis_list.append("MC_TAUS")
+                    analysis_list.append("MC_MET")
+                    analysis_list.append("MC_JETS")
+                else:
+                    if not ((runcard['lpp1'] == 1) and (runcard['lpp2'] == 1)):
+                        raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
+                    ebeamsLHC = [3500, 4000, 6500]
+
+                    if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
+                        if int(runcard['ebeam1']) == int(runcard['ebeam2']):
+                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts/1000)))
+                            self["contur_ra"] = "{0}TeV".format(int(rivet_sqrts/1000))
+                        else:
+                            raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
+                                                 ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
+                    else:
+                        raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
+
+            else:
+                analysis_list.append(this_analysis)
+
+        else:
+            for this_analysis in self["analysis"]:
+                analysis_list.append(this_analysis)
+
+        return analysis_list
+
+    def setWeightName(self, runcard, py8card):
+
+        '''
+      Give weight names in case the jet merging is used to use for Rivet runs
+        '''
+
+        if self['weight_name'] == "default":
+            if runcard['ickkw'] == 0:
+                self['weight_name'] = "None"
+            else:
+                self['weight_name'] = "Weight_MERGING={0}".str(round(py8card['JetMatching:qCut'],3))
+
+    def setRelevantParamCard(self, f_params, f_relparams):
+
+        '''
+    Used for Contur
+    Used for cases when user wants to scan a BSM parameter that is not a value directly modifiable from UFO
+    e.g. Wants to scan the <<square of coupling>> when UFO only has <<coupling>>
+        '''
+
+        exec_line = "import math; "
+        for l_param in f_params.readlines():
+            exec_line = exec_line + l_param.strip() + "; "
+            f_relparams.write(l_param.strip()+"\n")
+
+        if self['xaxis_relvar']:
+            xexec_dict = {}
+            xexec_line = exec_line + "xaxis_relvar = " + self['xaxis_relvar']
+            exec(xexec_line, locals(), xexec_dict)
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = "xaxis_relvar"
+            f_relparams.write("{0} = {1}\n".format(self['xaxis_label'], xexec_dict['xaxis_relvar']))
+        else:
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = self['xaxis_var']
+
+        if self['yaxis_relvar']:
+            yexec_dict = {}
+            yexec_line = exec_line + "yaxis_relvar = " + self['yaxis_relvar']
+            exec(yexec_line, locals(), yexec_dict)
+            if self['yaxis_label'] == "": 
+                self['yaxis_label'] = "yaxis_relvar"
+            f_relparams.write("{0} = {1}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
+        else:
+            if self['yaxis_label'] == "":
+                self['yaxis_label'] = self['yaxis_var']
 
 class ProcCharacteristic(ConfigFile):
     """A class to handle information which are passed from MadGraph to the madevent
@@ -1665,7 +1846,7 @@ class PY8Card(ConfigFile):
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
         # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
-        self.add_param("HEPMCoutput:file", 'auto')
+        self.add_param("HEPMCoutput:file", 'hepmc.gz')
 
         # Hidden parameters always written out
         # ====================================
@@ -3326,11 +3507,11 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        
-        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none','mixed']+\
-                       sum(self.allowed_lep_densities.values(),[]))
-        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(1)")
-        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none'],fortran_name="pdsublabel(2)")
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none','mixed']+\
+                       sum(self.allowed_lep_densities.values(),[])
+        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
+        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
@@ -4902,6 +5083,7 @@ class RunCardNLO(RunCard):
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
           process with tagged photons -> gamma_is_j = false
+          process without QED splittings -> gamma_is_j = false, recombination = false
         """
 
         for block in self.blocks:
@@ -4945,6 +5127,11 @@ class RunCardNLO(RunCard):
 
         if 22 in tagged_particles:
             self['gamma_is_j'] = False
+
+        if 'QED' not in proc_characteristic['splitting_types']:
+            self['gamma_is_j'] = False
+            self['lepphreco'] = False
+            self['quarkphreco'] = False
 
         matching = False
         if min_particle != max_particle:

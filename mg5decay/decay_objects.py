@@ -1780,7 +1780,7 @@ class DecayModel(model_reader.ModelReader):
         # create a process:
         process = base_objects.ProcessDefinition()
         process['model'] = self
-        process['orders'] = interaction['orders']
+        process['orders'] = dict(interaction['orders'])
         for order in self.get('coupling_orders'):
             if order not in interaction['orders']:
                 process['orders'][order] = 0
@@ -3397,16 +3397,16 @@ class Channel(base_objects.Diagram):
             return [self]
         elif len(self['vertices']) == 1:
             return [self]
-        elif len(self['final_legs']) == len(set(l['id'] for l in self['final_legs'])):
+        elif len(self.get_final_legs()) == len(set(l['id'] for l in self.get_final_legs())):
             return [self]
 
         # check if all symetry are already handle:
-        if len(set(l['id'] for l in self['final_legs'] if l['id'] not in ignore)) ==\
-           len([   l['id'] for l in self['final_legs'] if l['id'] not in ignore]):
+        if len(set(l['id'] for l in self.get_final_legs() if l['id'] not in ignore)) ==\
+           len([   l['id'] for l in self.get_final_legs() if l['id'] not in ignore]):
             return [self]
         
         nb_id = collections.defaultdict(int)
-        for l in self['final_legs']:
+        for l in self.get_final_legs():
             nb_id[l['id']] += 1
         
         id_to_handle = [id for id in nb_id if nb_id[id] > 1 and id not in ignore]
@@ -3420,11 +3420,11 @@ class Channel(base_objects.Diagram):
         for new_numbers in itertools.permutations(numbers):
             
             mapping_id = dict([(o,n) for o,n in zip(numbers, new_numbers) if o!=n])        
-
             if not mapping_id:
                 out.append(self)
                 continue
             channel = copy.copy(self)
+            channel['final_legs'] = base_objects.LegList()
             channel['vertices'] = base_objects.VertexList()
                     # (real) DiagramTag
             channel['tag'] = []
@@ -3434,7 +3434,6 @@ class Channel(base_objects.Diagram):
             channel['helas_number'] = None
             # diagram written by IdentifyHelasTag
             channel['std_diagram'] = None
-            
             for l,vertex in enumerate(self['vertices']):
                 new_vertex = copy.copy(vertex)
                 new_vertex['legs'] = base_objects.LegList()
@@ -3454,6 +3453,7 @@ class Channel(base_objects.Diagram):
                     mapping_id[vertex['legs'][-1]['number']] = min_id
 
                 channel['vertices'].append(new_vertex)
+
             out.append(channel)                      
         
         # do the recursion
