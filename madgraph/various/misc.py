@@ -1727,24 +1727,25 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-## Define apple_notify (in a way which is system independent
-class Applenotification(object):
+## Define system_notify (in a way which is system independent
+class Notification(object):
 
     def __init__(self):
         self.init = False
         self.working = True
 
-    def load_notification(self):        
-        try:
-            import Foundation
-            import objc
-            self.NSUserNotification = objc.lookUpClass('NSUserNotification')
-            self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
-        except:
-            self.working=False
-            if which('osascript'):
-                self.working = 'osascript'
-            return
+    def load_notification(self):
+        if sys.platform == 'darwin':
+            try:
+                import Foundation
+                import objc
+                self.NSUserNotification = objc.lookUpClass('NSUserNotification')
+                self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+            except:
+                self.working=False
+                if which('osascript'):
+                    self.working = 'osascript'
+                return
         self.working=True
 
     def __call__(self,subtitle, info_text, userInfo={}):
@@ -1754,18 +1755,25 @@ class Applenotification(object):
         if not self.working:
             return
         elif self.working is True:
-            try:
-                notification = self.NSUserNotification.alloc().init()
-                notification.setTitle_('MadGraph5_aMC@NLO')
-                notification.setSubtitle_(subtitle)
-                notification.setInformativeText_(info_text)
+            if sys.platform == 'darwin':
                 try:
-                    notification.setUserInfo_(userInfo)
+                    notification = self.NSUserNotification.alloc().init()
+                    notification.setTitle_('MadGraph5_aMC@NLO')
+                    notification.setSubtitle_(subtitle)
+                    notification.setInformativeText_(info_text)
+                    try:
+                        notification.setUserInfo_(userInfo)
+                    except:
+                        pass
+                    self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
                 except:
                     pass
-                self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
-            except:
-                pass
+            elif sys.platform == 'linux':
+                try:
+                    os.system(""" notify-send "MadGraph5_aMC@NLO" "{}" """.format(info_text,subtitle))
+                except:
+                    pass
+
 
         elif self.working=='osascript':
             try:
@@ -1774,10 +1782,9 @@ class Applenotification(object):
               """.format(info_text, subtitle))
             except:
                 pass
-        
 
 
-apple_notify = Applenotification()
+system_notify = Notification()
 
 class EasterEgg(object):
     
@@ -1902,7 +1909,7 @@ class EasterEgg(object):
         
         if muted:
             if not EasterEgg.done_notification:
-                apple_notify('On April first','turn up your volume!')
+                system_notify('On April first','turn up your volume!')
                 EasterEgg.done_notification = True
         else:
             os.system('say %s' % msg)

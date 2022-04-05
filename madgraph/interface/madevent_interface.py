@@ -2474,7 +2474,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.store_result()
                         
             if self.allow_notification_center:    
-                misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
