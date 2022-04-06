@@ -24,6 +24,7 @@ import collections
 import cmath
 import glob
 import logging
+import operator
 import optparse
 import os
 import pydoc
@@ -2902,7 +2903,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
-                     'looptools', 'MadSTR']
+                     'looptools', 'MadSTR', 'RunningCoupling']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -3595,13 +3596,7 @@ This implies that with decay chains:
 
         elif args[0] == 'coupling_order':
             hierarchy = list(self._curr_model['order_hierarchy'].items())
-            #self._curr_model.get_order_hierarchy().items()
-            def order(first, second):
-                if first[1] < second[1]:
-                    return -1
-                else:
-                    return 1
-            hierarchy.sort(order)
+            hierarchy.sort(key=operator.itemgetter(1))
             for order in hierarchy:
                 print(' %s : weight = %s' % order)
 
@@ -7495,6 +7490,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             else:
                 raise self.RWError('Could not load processes from file %s' % args[1])
 
+
+    def post_install_RunningCoupling(self):
+
+        shutil.move('RunningCoupling', pjoin('Template', 'Running'))
 
     def do_customize_model(self, line):
         """create a restriction card in a interactive way"""

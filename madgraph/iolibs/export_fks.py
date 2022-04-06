@@ -97,7 +97,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -238,6 +238,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We need to create the correct open_data for the pdf
         self.write_pdf_opendata()
+        
+        if model["running_elements"]:
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"RUNNING")):
+                raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
+                
+            misc.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
+        
         
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
@@ -3985,7 +3994,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -4172,6 +4181,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         self.write_pdf_opendata()
 
 
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         # Return to original PWD
         os.chdir(cwd)
         

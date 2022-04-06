@@ -25,6 +25,7 @@ import logging
 import time
 import tempfile
 import math
+import madgraph
 
 
 logger = logging.getLogger('test_cmd')
@@ -525,6 +526,57 @@ class TestMECmdShell(unittest.TestCase):
         target = 0.02174605
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
+
+
+
+    def test_eft_running(self):
+        """check that  gives the correct result"""
+        
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd('import model %s/tests/input_files/SMEFTatNLO_running' % madgraph.MG5DIR)
+        mg_cmd.run_cmd('generate p p > t t~ NP=2 NP^2==2 QCD=2 QED=0')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        #f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertIn('fixed_extra_scale', run_card.user_set)
+        self.assertIn('mue_ref_fixed', run_card.user_set)
+        self.assertIn('mue_over_ref', run_card.user_set)
+
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 166.36114
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+        
+        # edit run_card -> fix scale
+        run_card['fixed_extra_scale'] = True
+        run_card['mue_ref_fixed'] = 250
+
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        target = 165.7
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+
+
+
+
+
 
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""

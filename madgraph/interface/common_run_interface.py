@@ -2520,7 +2520,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         pdf_path = os.path.join(sourcedir, 'PDF')
         # check that the name is correct, ie that the path exists
         if not os.path.isdir(lep_d_path):
-            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+            raise madgraph.aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
                     'The corresponding directory cannot be found in \n' + \
                     'Source/PDF/lep_densities')
 
@@ -4589,7 +4589,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             wwwpath = "http://lhapdfsets.web.cern.ch/lhapdfsets/current/%s.tar.gz" % filename
             misc.wget(wwwpath, pjoin(pdfsets_dir, '%s.tar.gz' %filename))
             misc.call(['tar', '-xzpvf', '%s.tar.gz' %filename],
-                      cwd=pdfsets_dir)
+                    cwd=pdfsets_dir)
 
             if os.path.exists(pjoin(pdfsets_dir, filename)) or \
                os.path.isdir(pjoin(pdfsets_dir, filename)):
@@ -5594,7 +5594,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             possibilities['Delphes Card'] = self.list_completion(text, opts)              
 
         if 'value' in list(allowed.keys()):
-            opts = ['default']
+            opts = ['default', 'scale']
             if 'decay' in args:
                 opts.append('Auto')
                 opts.append('Auto@NLO')
@@ -5639,7 +5639,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
                 if not ids:
                     if tuple([int(i) for i in allowed['block'][1]]) in block:
-                        opts = ['default']
+                        opts = ['default', 'scale']
                         if allowed['block'][0] == 'decay':
                             opts.append('Auto')
                             opts.append('Auto@NLO')
@@ -5940,6 +5940,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('%s is not part of block "%s" but "%s". please correct.' %
                                     (args[start+1], args[start], bname))
                     return
+            elif args[start+1] == 'scale':
+                self.modified_card.add('param')
+                self.setP(args[start], None, args[-1])
+                return
             else:
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
@@ -6251,9 +6255,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 except ValueError:
                     logger.warning('Invalid input: \'%s\' not valid intput.'% value)
 
-        logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value), '$MG:BOLD')
-        self.param_card[block].param_dict[lhaid].value = value
+        if lhaid:
+            logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
+                        (block, lhaid, value), '$MG:BOLD')
+            self.param_card[block].param_dict[lhaid].value = value
+        else:
+            logger.info('modify param_card information scale of BLOCK %s set to %s' %\
+                        (block, value), '$MG:BOLD')
+            self.param_card[block].scale = value            
     
     def check_card_consistency(self):
         """This is run on quitting the class. Apply here all the self-consistency
@@ -6262,7 +6271,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ########################################################################
         #       LO specific check
         ########################################################################
-        if isinstance(self.run_card,banner_mod.RunCardLO):
+        if self.run_card and isinstance(self.run_card,banner_mod.RunCardLO):
             
             proc_charac = self.mother_interface.proc_characteristics
             if proc_charac['grouped_matrix'] and \
@@ -6327,8 +6336,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
-                
-            # 
+            
+            if 'fix_scale' in proc_charac['limitations']:
+                if not self.run_card['fixed_fac_scale'] or not self.run_card['fixed_ren_scale']:
+                    raise InvalidCmd("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                     "Therefore you can not perform scale running computation.")
+                if self.run_card['ickkw']:
+                    raise InvalidCmd("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                     "Therefore you can not perform MLM merging with this model.")
+                    
+                if self.run_card['lpp1'] !=0 or self.run_card['lpp2'] !=0:
+                    logger.critical("Your model is identified as having not SM running of the strong coupling.\n"+\
+                                    "PLEASE check carefully the value use for alphas in the internal log.")
+
             if not 'sde_strategy' in self.run_card.user_set:
                 if proc_charac['single_color']:
                     self.run_card['SDE_strategy'] = 2
@@ -6358,7 +6378,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #       NLO specific check
         ########################################################################
         # For NLO run forbid any pdg specific cut on massless particle
-        if isinstance(self.run_card,banner_mod.RunCardNLO):
+        if self.run_card and isinstance(self.run_card,banner_mod.RunCardNLO):
             
             try:
                 proc_charac = self.mother_interface.proc_characteristics
@@ -6369,7 +6389,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.run_card['ickkw']:
                     raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
-                            
+            
+            if 'fix_scale' in proc_charac['limitations']:
+                raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
+                                 "Your model does not have a SM like running of the strong coupling.")
+                        
             for pdg in set(list(self.run_card['pt_min_pdg'].keys())+list(self.run_card['pt_max_pdg'].keys())+
                            list(self.run_card['mxx_min_pdg'].keys())): 
                    
@@ -6421,12 +6445,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     # this can be dressed lepton or photon-flux
                     if proc_charac['pdg_initial1'] in [[11],[-11]] and  proc_charac['pdg_initial2'] in [[11],[-11]]:
                         if self['pdlabel'] not in self.allowed_lep_densities[(-11,11)]:
-                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+                            raise banner_mod.InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
                 elif abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) == 4:
                     # this can be dressed lepton or photon-flux
                     if proc_charac['pdg_initial1'] in [[13],[-13]] and  proc_charac['pdg_initial2'] in [[13],[-13]]:
                         if self['pdlabel'] not in self.allowed_lep_densities[(-13,13)]:
-                            raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])   
+                            raise banner_mod.InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])   
                         
                     
        

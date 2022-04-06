@@ -5595,7 +5595,6 @@ RESTART = %(mint_mode)s
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
     read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
-
                 if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
                     raise self.InvalidCmd("""FxFx merging does not work with Pythia6's Q-squared ordered showers.""")
                 elif self.run_card['parton_shower'].upper() != 'HERWIG6' and self.run_card['parton_shower'].upper() != 'PYTHIA8' and self.run_card['parton_shower'].upper() != 'HERWIGPP':

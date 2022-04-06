@@ -335,8 +335,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         #make ../param_card.inc 
         param_card = check_param_card.ParamCard(join('param_card.dat'))
         param_card.write_inc_file(join('../param_card.inc'), join('ident_card.dat'),
-                                   join('param_card.dat'))
-        
+                                   join('param_card.dat')) 
         subprocess.call(['make', 'testprog'], cwd=self.output_path,
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertTrue(os.path.exists(self.give_pos('testprog')))
