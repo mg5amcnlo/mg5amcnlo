@@ -2864,8 +2864,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             self.configure_directory(html_opening =False)
 
-        self.update_status('running rivet', level='rivet')
-
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
             # Here the level keyword 'pythia' must not be changed to 'pythia8'.
@@ -2888,6 +2886,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'rivet_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
             logger.info('No rivet_card found. Take the default one.')
+
+        self.update_status('running rivet', level='rivet')
 
         rivet_config = banner_mod.RivetCard(pjoin(self.me_dir, 'Cards', 'rivet_card.dat'))
         if not no_default:
