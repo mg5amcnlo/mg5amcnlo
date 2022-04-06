@@ -1,5 +1,7 @@
 ##################################################################
+#                                                                #
 #                      Rivet (+Contur) Card                      #
+#                                                                #
 # -------------------------------------------------------------- #
 #                                                                #
 #                                                                #
@@ -44,7 +46,7 @@ draw_contur_heatmap = True
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
 xaxis_var = x
   # ! type = string
-  #  xaxis variable of the heatmap (scanning parameter 1)
+  #  xaxis variable of the heatmap (first scanning parameter)
   #  e.g. xaxis_var = mzp # mass of Z' in param_card.dat
   #
 xaxis_relvar = default
@@ -52,7 +54,7 @@ xaxis_relvar = default
   #  When "default" : Same as xaxis_var
   #  Relative parameter defined with reference to 'xaxis_var'
   #  Necessary when one wants to draw heatmap's xaxis with relative variable
-  #  e.g. xaxis_heatmap = [math.log(mzp, 10)] # python library works!
+  #  e.g. xaxis_relvar = math.log(mzp, 10) # python library works!
   #
 xaxis_label = default 
   # ! type = string
@@ -66,9 +68,9 @@ xaxis_log = False
   #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
 yaxis_var = y 
-  # Same as xaxis_var (scanning parameter 2)
+  # Same as xaxis_var (second scanning parameter)
 yaxis_relvar = default
-  # Same as xaxis_heatmap
+  # Same as xaxis_relvar
 yaxis_label = default 
   # Same as xaxis_label
 yaxis_log = False
