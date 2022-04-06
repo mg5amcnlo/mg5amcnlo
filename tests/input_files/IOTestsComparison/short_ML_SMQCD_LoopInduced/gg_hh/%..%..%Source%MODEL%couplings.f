@@ -38,17 +38,27 @@ C
 
       IMPLICIT NONE
       DOUBLE PRECISION PI, ZERO
-      LOGICAL READLHA
+      LOGICAL READLHA, FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
       LOGICAL UPDATELOOP
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'model_functions.inc'
+      DOUBLE PRECISION GOTHER
+
+      INCLUDE '../run.inc'
+
+      DOUBLE PRECISION ALPHAS
+      EXTERNAL ALPHAS
+
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
       READLHA = .FALSE.
 
       INCLUDE 'intparam_definition.inc'
+
 
 
 C     

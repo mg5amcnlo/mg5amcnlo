@@ -630,6 +630,8 @@ class ParamCard(dict):
         if os.path.exists(input_inc):
             text = open(input_inc).read()
             scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+        else: 
+            scales = []
 
             
         fout = file_writers.FortranWriter(outpath)
