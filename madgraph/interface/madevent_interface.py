@@ -2440,7 +2440,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                              %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
             self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
 
+            self.update_status("postprocessing rivet done", level="rivet")
+
         if postprocess_CONTUR:
+
+            self.update_status("Starting postprocess contur", level="rivet")
 
             set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
             rivet_path = self.options['rivet_path']
@@ -2512,16 +2516,36 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
 
                 if rivet_config["draw_contur_heatmap"]:
+
                     axis_log = ""
-                    if rivet_config["xaxis_log"]: axis_log = axis_log + " --xlog"
-                    if rivet_config["yaxis_log"]: axis_log = axis_log + " --ylog"
+                    if rivet_config["xaxis_log"]:
+                        axis_log = axis_log + " --xlog"
+                    if rivet_config["yaxis_log"]:
+                        axis_log = axis_log + " --ylog"
+
                     axis_label = ""
-                    if rivet_config["xaxis_label"]: axis_label = axis_label + " -x " + rivet_config["xaxis_label"]
-                    if rivet_config["yaxis_label"]: axis_label = axis_label + " -y " + rivet_config["yaxis_label"]
+                    if rivet_config["xaxis_label"]:
+                        axis_label = axis_label + " -x " + rivet_config["xaxis_label"]
+                    if rivet_config["yaxis_label"]:
+                        axis_label = axis_label + " -y " + rivet_config["yaxis_label"]
+
+                    if rivet_config["xaxis_relvar"]:
+                        if rivet_config["xaxis_label"]:
+                            xaxis_var = rivet_config["xaxis_label"]
+                        else:
+                            xaxis_var = "xaxis_relvar"
+                    else:
+                        xaxis_var = rivet_config["xaxis_var"]
+                    if rivet_config["yaxis_relvar"]:
+                        if rivet_config["yaxis_label"]:
+                            yaxis_var = rivet_config["yaxis_label"]
+                        else:
+                            yaxis_var = "yaxis_relvar"
+                    else:
+                        yaxis_var = rivet_config["yaxis_var"]
 
                     contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} {2} {3}' \
-                                                        .format(rivet_config["xaxis_var"], rivet_config["yaxis_var"],\
-                                                                axis_label, axis_log)
+                                                        .format(xaxis_var, yaxis_var,axis_label, axis_log)
 
             wrapper = open(pjoin(self.me_dir, "Analysis", "contur", "run_contur.sh"), "w")
             wrapper.write(set_env)
@@ -2530,7 +2554,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             wrapper.close()
  
             misc.call(["run_contur.sh"], cwd=(pjoin(self.me_dir, "Analysis", "contur")))
-        self.update_status("postprocessing rivet done", level="rivet")
+
+            logger.info("Contur outputs are stored in {0}".format(pjoin(self.me_dir, "Analysis", "contur","conturPlot")))
+            self.update_status("postprocessing contur done", level="rivet")
 
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling()
