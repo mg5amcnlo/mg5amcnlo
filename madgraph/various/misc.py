@@ -2126,7 +2126,7 @@ def import_python_lhapdf(lhapdfconfig):
         return False
     else:
         if sys.platform != "darwin":
-            if not os.environ.has_key('LD_LIBRARY_PATH'):
+            if not 'LD_LIBRARY_PATH' in os.environ:
                 os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
             else:
                 os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
