@@ -39,6 +39,7 @@ import  collections
 import aloha
 
 import madgraph
+import models
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -8578,6 +8579,9 @@ c         segments from -DABS(tiny*Ga) to Ga
             return 'write(*,*) \'%(name)s = \', %(name)s' % {'name': name}
         
         # Write the external parameter
+        # order them in a smart way
+        self.params_ext.sort(key=models.write_param_card.cmp_to_key(models.write_param_card.ParamCardWriter.order_param))
+
         lines = [format(param.name) for param in self.params_ext]       
         fsock.writelines('\n'.join(lines))        
         
