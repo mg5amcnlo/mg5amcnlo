@@ -1775,7 +1775,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         if vector and subproc_group:
                             template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
                                          "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(IB(%(beam)d), IVEC)))\n"
-                            if dressed_lep:
+                            if dressed_lep and self.opt['vector_size']:
                                 raise Exception("vector code for lepton pdf not implemented")
                         elif subproc_group:
                             template = "%(part)s%(beam)d=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
@@ -1803,15 +1803,19 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                     pdf_lines = pdf_lines + "\nPD(IPROC)="
+                    comp_list = []
                     for ibeam in [1, 2]:
                         initial_state = proc.get_initial_pdg(ibeam)
                         if initial_state in list(pdf_codes.keys()):
                             pdf_lines = pdf_lines + "%s%d*" % \
                                         (pdf_codes[initial_state], ibeam)
+                            comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                         else:
                             pdf_lines = pdf_lines + "1d0*"
+                            comp_list.append("DUMMY")
                     # Remove last "*" from pdf_lines
                     pdf_lines = pdf_lines[:-1] + "\n"
+
                     # this is for the lepton collisions with electron luminosity 
                     # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
                     if dressed_lep:
@@ -3914,6 +3918,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['t_strategy'], int, 't_strategy')
 
+        if opt and isinstance(opt['output_options'], dict) and \
+                                       'vector_size' in opt['output_options']:
+            self.opt['vector_size'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['vector_size'], int, 'vector_size')
+        else:
+            self.opt['vector_size'] = 0
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -3922,10 +3933,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         elif '%(W)s' in arg['mass']:
             raise Exception
 
-        misc.sprint('before', call, arg)
         arg['coup'] = re.sub('coup(\d+)\)s','coup\g<1>)s%(vec\g<1>)s', arg['coup'])
 
-        misc.sprint('after',call, arg)
         return call, arg
     
     def copy_template(self, model):
@@ -4735,11 +4744,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
-                  self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=True)
+                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=True)
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines
-        #replace_dict['ee_comp_vars'] = eepdf_vars
+
 
         # Lines that differ between subprocess group and regular
         if proc_id:

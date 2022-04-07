@@ -1793,7 +1793,7 @@ C
       include 'run.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
-#      include 'maxparticles.inc'
+C      include 'maxparticles.inc'
       
       double precision all_p(4*maxdim/3+14,*), all_wgt(*)
       double precision all_q2fact(2,*)

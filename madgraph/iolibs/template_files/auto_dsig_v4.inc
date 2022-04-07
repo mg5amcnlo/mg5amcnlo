@@ -140,7 +140,7 @@ C     Select a flavor combination (need to do here for right sign)
             IPSEL=IPSEL+1
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
-
+	 
          DSIGUU=DSIGUU*REWGT(PP)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
@@ -228,6 +228,13 @@ C
       SAVE NFACT
       double precision RHEL ! random number
       integer channel
+C
+C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
+C     
+      include '../../Source/PDF/eepdf.inc'
+      double precision ee_comp_prod
+%(ee_comp_vars)s
+      integer i_ee      
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -258,7 +265,11 @@ C     jamp2 information
       double precision p_multi(0:3, nexternal, nb_page)
       double precision hel_rand(nb_page)
       integer selected_hel(nb_page)
-     
+      
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL     
 
 c
 c     local
@@ -340,7 +351,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-
+	 call restore_cl_val_to(ivec)
          DSIGUU=DSIGUU*REWGT(P1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
