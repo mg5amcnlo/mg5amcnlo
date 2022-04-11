@@ -1042,13 +1042,15 @@ class AllMatrixElement(dict):
         
         decay_struct = {}
         to_decay = collections.defaultdict(list)
-        
+        orig_decay = collections.defaultdict(list)
         for i, proc in enumerate(me.get('decay_chains')):
             pid =  proc.get('legs')[0].get('id')
             to_decay[pid].append((i,proc))
-                  
-                
+            orig_decay[pid].append((i,proc))
+
         for leg in me.get('legs'):
+            if not leg.get('state'): # initial state particle does not decay ...
+                continue
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay:
