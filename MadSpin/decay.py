@@ -3472,6 +3472,8 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
+                        external.stdin.flush()
+                        external.stdout.flush()
                         ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')
