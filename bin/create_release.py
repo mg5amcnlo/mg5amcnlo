@@ -129,8 +129,12 @@ if rev_nb:
     try:
         filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
+        print(text)
         web_version = int(text[0].strip())
-        last_message = int(text[1].strip())
+        if text[1]:
+            last_message = int(text[1].strip())
+        else:
+            last_message = 99
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
