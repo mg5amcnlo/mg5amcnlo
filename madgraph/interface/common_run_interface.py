@@ -1173,7 +1173,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return 'madspin_card.dat'
             if 'decay' in text:
                 # need to check if this a line like "decay w+" or "set decay"
-                if re.search("(^|;)\s*decay", fulltext):
+                if re.search("(^|;)\s*decay", fulltext, re.M):
                     return 'madspin_card.dat'
                 else:
                     return 'reweight_card.dat'
