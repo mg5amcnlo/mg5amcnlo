@@ -1600,6 +1600,9 @@ class Model(PhysicsObject):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
+        if isinstance(mode, str) and "_" in mode:
+            mode = set([s.lower() for s in mode.split('_')])
+
         assert mode in ["external",set(['mz','mw','alpha'])]
         
         try:

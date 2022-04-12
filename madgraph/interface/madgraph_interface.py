@@ -1550,8 +1550,8 @@ This will take effect only in a NEW terminal
         if args[0].lower() in ['ewscheme']:
             if not self._curr_model:
                 raise self.InvalidCmd("ewscheme acts on the current model please load one first.")
-            if args[1] not in ['external']:
-                raise self.InvalidCmd('Only valid ewscheme is "external". To restore default, please re-import the model.')
+            if args[1] not in ['external', 'MZ_MW_alpha']:
+                raise self.InvalidCmd('Only valid ewscheme are "external" and "MZ_MW_alpha". To restore default, please re-import the model.')
 
         if args[0] in ['output_dependencies']:
             if args[1] not in MadGraphCmd._output_dependencies_supported:
@@ -2573,7 +2573,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, list(self._multiparticles.keys()))
             elif args[1].lower() == 'ewscheme':
-                return self.list_completion(text, ["external"])
+                return self.list_completion(text, ["external", "MZ_MW_alpha"])
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
             elif args[1] == 'OLP':
@@ -7568,9 +7568,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if log:
                 logger.info('set output information to level: %s' % level)
         elif args[0].lower() == "ewscheme":
-            logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
+            if args[1] == 'external':
+                logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
                                               (self._curr_model.get('name'), args[1]))
-            logger.info("Importing a model will restore the default scheme")
+            else:
+                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.",self._curr_model.get('name'), args[1])
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
