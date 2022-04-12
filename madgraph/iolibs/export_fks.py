@@ -1291,11 +1291,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             pass
 
         amp_split_size=len(amp_split_orders)
-
         text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
-        text += 'character*3 ordernames(nsplitorders)\n'
+        text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
         text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
@@ -1315,7 +1314,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
-
+        writer.line_length=132
         writer.writelines(text)
 
         return amp_split_orders, amp_split_size, amp_split_size_born
