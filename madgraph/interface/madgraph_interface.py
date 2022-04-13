@@ -1054,6 +1054,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
         
+        argproc_noopt = [a for a in args[1:] if not (a.startswith('--') and "=" in a)]
+
         if args[-1].startswith('--optimize'):
             if args[2] != '>':
                 raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
@@ -1068,9 +1070,9 @@ class CheckValidForCmd(cmd.CheckCmd):
             if not isinstance(self._curr_model, model_reader.ModelReader):
                 self._curr_model = model_reader.ModelReader(self._curr_model)
             self._curr_model.set_parameters_and_couplings(path)
-            self.check_process_format(' '.join(args[1:-1]))
-        else:
-            self.check_process_format(' '.join(args[1:]))
+        
+        self.check_process_format(' '.join(argproc_noopt))            
+        
     
 
     def check_process_format(self, process):
