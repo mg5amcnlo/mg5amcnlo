@@ -201,7 +201,6 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
@@ -330,7 +329,6 @@ c            true if no errors
 c**************************************************************************
       implicit none
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
@@ -447,7 +445,6 @@ c**************************************************************************
       include 'message.inc'
       include 'genps.inc'
       include 'run.inc'
-      include 'maxconfigs.inc'
 
       integer idij,icgs(0:n_max_cg)
       logical foundbw
@@ -530,7 +527,6 @@ c**************************************************************************
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'message.inc'
-      include 'maxconfigs.inc'
 
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)

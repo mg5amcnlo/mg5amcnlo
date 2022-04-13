@@ -7241,6 +7241,8 @@ class UFO_model_to_mg4(object):
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
         
+
+
         fsock.writelines('\n'.join(\
                     ['call coup%s()' %  (i + 1) for i in range(nb_coup_indep)]))
         
@@ -7282,6 +7284,9 @@ class UFO_model_to_mg4(object):
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
         fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
+
+        if self.vector_size:
+            fsock.writelines("""     ALL_G(VECID) = G   """)
 
         fsock.writelines('\n'.join(\
                     ['call coup%(i)s(%(args)s)' %  {"i": nb_coup_indep + i + 1, "args": 'vecid' if self.vector_size  else ''} \

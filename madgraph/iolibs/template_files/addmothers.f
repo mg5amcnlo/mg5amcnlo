@@ -3,7 +3,6 @@
 
       implicit none
       include 'genps.inc'
-      include 'maxconfigs.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'maxamps.inc'
@@ -46,7 +45,6 @@ c     Variables for combination of color indices (including multipart. vert)
       save prmass,prwidth,pow
       data first_time /.true./
 
-      include '../../Source/vector.inc'
       Double Precision jamp2(0:maxflow, nb_page)
       common/to_jamps/       jamp2
 
