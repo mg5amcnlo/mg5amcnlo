@@ -4580,7 +4580,11 @@ class eMELA_info(dict):
             aref = alpharun
         else:
             aref = self['eMELA_AlphaRef']
-        self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
+        if uvscheme != 2:
+            self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
+        else:
+            logger.info('Gmu scheme: please set gmu by hand in the param_card to a value consistent with the PDFs')
+
 
         # LL / NLL PDF (0/1)
         pdforder = self['eMELA_PerturbativeOrder']
