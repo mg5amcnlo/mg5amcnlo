@@ -2578,13 +2578,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                   ' available when running partonic MadAnalysis5 analysis. The'+
                       ' .lhe output of the selected run is used automatically.')
             input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-            MA5_options['inputs'] = '%s.gz'%input_file
+            MA5_options['inputs'] = ['%s.gz'%input_file]
             if not os.path.exists('%s.gz'%input_file):
                 if os.path.exists(input_file):
                     misc.gzip(input_file, stdout='%s.gz' % input_file)
                 else:
                     logger.warning("LHE event file not found in \n%s\ns"%input_file+
-                                       "Parton-level MA5 analysis will be skipped.")                 
+                                       "Parton-level MA5 analysis will be skipped.")
+            if len(args)>1:
+                for arg in args:
+                    input_file = pjoin(self.me_dir,'Events',arg, 'unweighted_events.lhe')
+                    if '%s.gz'%input_file in MA5_options['inputs']:
+                        continue
+                    if os.path.exists('%s.gz'%input_file):
+                        MA5_options['inputs'].append('%s.gz'%input_file)
+                    elif os.path.exists(input_file):
+                        misc.gzip(input_file, stdout='%s.gz' % input_file)
+                        MA5_options['inputs'].append('%s.gz'%input_file)  
     
         if mode=='hadron':
             # Make sure to store current results (like Pythia8 hep files)
@@ -2704,7 +2714,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Check argument's validity
         args = self.split_arg(line)
-        
         if '--no_default' in args:
             no_default = True
             args.remove('--no_default')
