@@ -1424,7 +1424,8 @@ c
       double precision qMC_a2(nexternal-1,nexternal-1)
       common /to_complete/qMC_a2
       double precision scales_for_HEPEUP(nexternal,nexternal)
-
+      logical force_II_connection
+      parameter(force_II_connection=.true.)
 c
       mcmass=0d0
       masses_to_MC=0d0
@@ -1487,6 +1488,25 @@ c the latter is employed in the computation of Delta
             endif
          enddo
       enddo
+c
+c force IF colour connection to have II scale
+c if a sensible II scale exists
+      if(force_II_connection)then
+         do i=1,2
+            do j=3,nexternal-1
+               if(are_col_conn_S(i,j))then
+                  if(are_col_conn_S(i,3-i))then
+                     SCALUP_tmp_S(i,j) =SCALUP_tmp_S(i,3-i)
+                     SCALUP_tmp_S2(i,j)=SCALUP_tmp_S2(i,3-i)
+                  else
+                     continue
+c if no other available colour connection, we keep the IF scale
+c rather than calculating some new kinematic variable e.g. pT
+                  endif
+               endif
+            enddo
+         enddo
+      endif
 c
 c H-event information.
 c First write ids, mothers and all colours.
@@ -1874,7 +1894,47 @@ c small. Might check at some point using larger values for those).
             endif
          enddo
       enddo
-      
+c
+c force IF colour connection to have II scale
+c if a sensible II scale exists
+      if(force_II_connection)then
+         do i=1,2
+            do j=3,nexternal
+               if(are_col_conn_H(i,j))then
+                  if(are_col_conn_H(i,3-i))then
+                     SCALUP_tmp_H(i,j) =SCALUP_tmp_H(i,3-i)
+                  else
+                     continue
+c if no other available colour connection, we keep the IF scale
+c rather than calculating some new kinematic variable e.g. pT
+                  endif
+               endif
+               if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
+                  if(are_col_conn_S(iRtoB(i),iRtoB(3-i)))then
+                     SCALUP_tmp_H2(iRtoB(i),iRtoB(j))=SCALUP_tmp_H2(iRtoB(i),iRtoB(3-i))
+                  else
+                     continue
+c if no other available colour connection, we keep the IF scale
+c rather than calculating some new kinematic variable e.g. pT
+                  endif
+               endif
+            enddo
+         enddo
+      endif
+ccccccccccccccccccccc
+c
+c     *** WARNING ***
+c
+c     Pythia resets the scale for FI and FF to the min between the
+c     scale t_ij we give it and p_i.p_j/2.
+c     Should we implement this minimisation here as well?
+c     For S events no implementation is needed since we take
+c     scales directly from Pythia. For H event this implementation
+c     shuld be needed only for i_fks and j_fks, as only in that case
+c     we (over)write their scales ourselves, but could be applied to
+c     all FI and FF connections.
+c
+ccccccccccccccccccccc
 c
 c Computation of Delta = wgt_sudakov as the product of Sudakovs between
 c starting scales (SCALUP_tmp_S2) and target scales (SCALUP_tmp_H2).

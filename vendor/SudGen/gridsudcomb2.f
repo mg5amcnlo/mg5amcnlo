@@ -75,7 +75,7 @@ c
       enddo
       include 'MCmasses_PYTHIA8.inc'
 c
-      call dire_init(mcmass)
+c      call dire_init(mcmass)
       call pythia_init(mcmass)
 
       write(*,*)'enter lower and upper bounds of st range'

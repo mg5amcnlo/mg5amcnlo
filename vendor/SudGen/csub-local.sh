@@ -1,11 +1,11 @@
 #!/bin/bash
 # usage:
-#    condor_sub queue nseeds command cmd-arguments
+#    condor_sub queue nmasses command cmd-arguments
 # Important note:
 #  * output needs to be specified in command line, nothing will be
 #    copied over at the end of the run!
 #  * in all command line arguments, "SEED"
-#    is replaced by the corresponding seed
+#    is replaced by the corresponding mass
 #
 # 
 # queue options:
@@ -19,16 +19,16 @@
 #
 
 fn="csub-lxplus.sh"
-fnseed="seeds-condor.txt"
+fnmass="masses-condor.txt"
 fnsubmit="submit-condor.sh"
 
 function general_help {
     echo "condor_sub.sh is a script for submitting jobs with HTCondor
 usage:
-   condor_sub queue nseeds command cmd-arguments
+   condor_sub queue nmasses command cmd-arguments
 Important note:
  * In fnoutput and all command line arguments, SEED
-   is replaced by the corresponding seed numbers.
+   is replaced by the corresponding mass numbers.
  * Output files need to be specified in command line, nothing will be
    copied at the end of the run.
 "
@@ -58,17 +58,17 @@ function validate_queue {
     fi
 }
 
-function write_seeds {
-    nseed=$((10#$1))
-    if ! [ -f seeds-condor.txt ]
+function write_masses {
+    nmass=$((10#$1))
+    if ! [ -f masses-condor.txt ]
     then
-       for ((i=1; i<=nseed; i++)); do
+       for ((i=1; i<=nmass; i++)); do
 	   se=$(printf "%0.${#1}d" $i)
-	   echo $se >> $fnseed
+	   echo $se >> $fnmass
        done
     else
 	echo
-	echo "WARNING: file "$fnseed" already exists, will use this."
+	echo "WARNING: file "$fnmass" already exists, will use this."
 	echo
     fi
      
@@ -93,7 +93,7 @@ arguments = \"${@:3}\"
 getenv = True
 periodic_release =  (NumJobStarts < 10) && ((CurrentTime - EnteredCurrentStatus) > 30)
 +JobFlavour = \"$1\"
-queue argument from $fnseed' | condor_submit" | sed 's/SEED/$(argument)/g' > $fnsubmit
+queue argument from $fnmass' | condor_submit" | sed 's/MASS/$(argument)/g' > $fnsubmit
     chmod +x $fnsubmit
     else
 	echo
@@ -104,21 +104,21 @@ queue argument from $fnseed' | condor_submit" | sed 's/SEED/$(argument)/g' > $fn
 
 if (($# > 2)) ; then
     validate_queue $1
-    write_seeds $2
+    write_masses $2
     cmdline=${@:3}
     cmdlineargs=${@:4}
     exec=$(echo $3 | sed 's/.\///' )
     write_submit $1 $exec $cmdlineargs
-    echo "Creating files "$fnseed", "$fnsetup" and "$fnsubmit"."
+    echo "Creating files "$fnmass", "$fnsetup" and "$fnsubmit"."
     echo "  * start jobs with './"$fnsubmit"'"
     echo "  * use '"$fn" clean' to delete submission files"
 elif [ "$1" == "clean" ] ; then
-    echo "Removing "$fnseed", "$fnsetup" and "$fnsubmit
-    rm $fnseed $fnsetup $fnsubmit
+    echo "Removing "$fnmass", "$fnsetup" and "$fnsubmit
+    rm $fnmass $fnsetup $fnsubmit
     exit
 else
     general_help
     queue_help
-    echo "Arguments required: nseeds queue command"
+    echo "Arguments required: nmasses queue command"
     exit
 fi
