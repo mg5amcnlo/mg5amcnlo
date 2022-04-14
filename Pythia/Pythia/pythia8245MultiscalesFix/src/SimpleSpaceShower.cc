@@ -453,6 +453,9 @@ void SimpleSpaceShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
           idColPartner) );
       }*/
 
+
+      //cout << __FILE__ << __func__ << " starting scale for " << in1 << " " << pTmaxNow << endl; 
+
       dipEnd.push_back( SpaceDipoleEnd( iSys, 1, in1, in2, pTmaxNow, 
         colType1, 0, 0, MEtype, canRadiate2, 0, iColPartner,
         idColPartner) );
@@ -501,6 +504,8 @@ void SimpleSpaceShower::prepare( int iSys, Event& event, bool limitPTmaxIn) {
           colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner2,
           idColPartner) );
       }*/
+
+      //cout << __FILE__ << __func__ << " starting scale for " << in2 << " " << pTmaxNow << endl; 
 
       dipEnd.push_back( SpaceDipoleEnd( iSys, 2, in2, in1, pTmaxNow,
           colType2, 0, 0, MEtype, canRadiate1, 0, iColPartner,
@@ -700,6 +705,8 @@ double SimpleSpaceShower::pTnext( Event& event, double pTbegAll,
           ipart, sqrt(pT2begDip), "B" );
       }
 
+
+    //cout << __FILE__ << __func__ << " starting scale for " << dipEndNow->iRadiator << " " << dipEndNow->iRecoiler << " " << pTbegDip << endl; 
 
     if (pT2begDip > pT2sel && ( dipEndNow->colType != 0
       || dipEndNow->chgType != 0 || dipEndNow->weakType != 0) ) {

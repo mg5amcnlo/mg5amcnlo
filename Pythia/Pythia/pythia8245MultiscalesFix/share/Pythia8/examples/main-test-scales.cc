@@ -32,7 +32,7 @@ int main(  int, char* argv[] ) {
 
   // Interface for conversion from Pythia8::Event to HepMC one.
   HepMC::Pythia8ToHepMC ToHepMC;
-  string filename="flie.hepmc";
+  string filename=string(argv[4]);
   // Specify file where HepMC events will be stored.
   HepMC::IO_GenEvent ascii_io(filename.c_str(), std::ios::out);
   // Switch off warnings for parton-level events.
@@ -54,12 +54,32 @@ int main(  int, char* argv[] ) {
   TestHook* testHook = new TestHook(1,&tH, &tS, &tH2, &tS2); // veto after first emission
   pythia.setUserHooksPtr((UserHooks *) testHook);
 
+  pythia.init();
+  double xs = 0.;
+  int iEvent = 0;
+  while (true) {
+    // Generate the next event
+    if (!pythia.next()) {
+      // If failure because reached end of file then exit event loop
+      if (pythia.info.atEndOfFile()) break;
+      // Otherwise count event failure and continue/exit as necessary
+      //cout << "Warning: event " << iEvent << " failed" << endl;
+      continue;
+    }
+    // If nEvent is set, check and exit loop if necessary
+    ++iEvent;
+    if (nEvent != 0 && iEvent == nEvent) break;
+    double evtweight         = pythia.info.weight();
+
+  } // End of event loop.
+  xs = pythia.info.sigmaGen();
+
   // Initialise and list settings
   pythia.init();
 
   // Begin event loop; generate until nEvent events are processed
   // or end of LHEF file
-  int iEvent = 0;
+  iEvent = 0;
   while (true) {
     // Generate the next event
     if (!pythia.next()) {
@@ -81,12 +101,12 @@ int main(  int, char* argv[] ) {
       HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
 
       // Set event weight
-      hepmcevt->weights().push_back(evtweight);
+      hepmcevt->weights().push_back(evtweight/1e9);
       // Fill HepMC event
       ToHepMC.fill_next_event( pythia, hepmcevt );
       // Report cross section to hepmc
       HepMC::GenCrossSection xsec;
-      xsec.set_cross_section( 1e9, pythia.info.sigmaErr()*1e9 );
+      xsec.set_cross_section( xs*1e9, pythia.info.sigmaErr()*1e9 );
       hepmcevt->set_cross_section( xsec );
       // Write the HepMC event to file. Done with it.
       ascii_io << hepmcevt;

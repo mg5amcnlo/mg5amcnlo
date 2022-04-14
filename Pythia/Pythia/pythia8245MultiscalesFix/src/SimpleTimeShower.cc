@@ -1468,8 +1468,18 @@ void SimpleTimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
     // If requested, force maximal pT to LHEF input value.
     if ( abs(event[iRad].status()) > 20 &&  abs(event[iRad].status()) < 24
       && settingsPtr->flag("Beams:setProductionScalesFromLHEF")
-      && event[iRad].scale() > 0.)
-      pTmax = event[iRad].scale();
+      && event[iRad].scale() > 0.) {
+      //pTmax = event[iRad].scale();
+      double scaleNow = event[iRad].scale();
+      string name="scalup_";
+      ostringstream oss; oss.str("");
+      oss << iRad-2 << "_" << iRec-2;
+      name+=oss.str();
+      if ( infoPtr->scales->attributes.find(name)
+         != infoPtr->scales->attributes.end())
+         scaleNow = infoPtr->scales->attributes[name];
+      pTmax = scaleNow;
+    }
 
     int colType  = (event[iRad].id() == 21) ? 2 * colSign : colSign;
     int isrType  = (event[iRec].isFinal()) ? 0 : event[iRec].mother1();
@@ -2103,6 +2113,9 @@ double SimpleTimeShower::pTnext( Event& event, double pTbegAll,
     if (userHooksPtr && userHooksPtr->canCheckScales() )
       userHooksPtr->doCheckScales(dip.iRadiator, dip.iRecoiler,
         sqrt(pT2begDip), "B");
+
+
+      //cout << __FILE__ << __func__ << " starting scale for " << dip.iRadiator << " " << dip.iRecoiler << " " << sqrt(pT2begDip) << " ( pTbegDip, 0.5 * dip.mDipCorr) = (" << pTbegDip << " " << sqrt(0.25 * dip.m2DipCorr) << ")" << dip.m2Rad << " " << dip.m2Rec  << endl; 
 
     // For global recoil, always set the starting scale for first emission.
     bool isFirstWimpy = !useLocalRecoilNow && (pTmaxMatch == 1)

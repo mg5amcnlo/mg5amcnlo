@@ -111,6 +111,15 @@ public:
 
   bool canVetoProcessLevel() { return true; }
   bool doVetoProcessLevel(Event& process) {
+
+    cout << "\n\n scales read from LHEF" << endl;
+    process.list(true,false,5);
+    for ( map<string,double>::const_iterator
+      it  = infoPtr->scales->attributes.begin();
+      it != infoPtr->scales->attributes.end(); ++it )
+      cout << "scale " << it->first << " " << it->second << endl;
+
+
     // Reset the emission counters.
     nISR = nFSR = 0;
     isHevent = isSevent = false;
