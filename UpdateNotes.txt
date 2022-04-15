@@ -12,7 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       matrix-element.
       CF: include notification when jobs are done in the unix notification center if executable notify-send is present.
           Contribution from Carlo Flore.
-      All: Droping the support for python2.7	  
+      All: Droping the support for python2.7
+      All: include bug fix from Long Term Stable version (2.9.10) see below
 
 3.3.2(18/03/22)
       OM: (re)allow --loop_filter=True/... syntax for MC@NLO
