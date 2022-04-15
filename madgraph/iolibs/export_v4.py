@@ -3874,7 +3874,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.copy_python_file()
         
         if model["running_elements"]:
-            if not os.path.exists(pjoin(MG5DIR, 'Template',"RUNNING")):
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
                 raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
             misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
