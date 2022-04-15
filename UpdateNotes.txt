@@ -97,9 +97,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
+2.9.10()
 
-2.9.8 ()
-=======
 2.9.9 (25/02/2022)
      OM: Fix a bug introduced in 2.9.0 for MLM generation in presence of mix EW/QCD process.
          The bug typically leads to a crash within the systematics.py due to wrong power of alpha_s
@@ -110,7 +109,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: Fix an issue when using "$ X" when X~ can be onshell, the phase-space symmetry factor was wrongly set.
 
 2.9.8 (21/02/2022)
->>>>>>> MERGE-SOURCE
      OM: Fix in madspin where onlyhelicity mode was not working anymore
          also allows to not specify any decay in that mode.
      OM: Fix in multi_run mode where some meta-data where incorrectly set within the merged lhef file.

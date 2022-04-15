@@ -255,6 +255,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+                if self.options['BW_cut'] > 25:
+                    logger.critical("value of bwcutoff set to %s from the input file. This is much too large value for Madspin and the validity of the Narrow-width-Approximation. Please ensure that you overwrite that value via \"set BW_cut X\"  to a smaller value (like X=10)", self.options['BW_cut'])
             
             if isinstance(run_card, banner.RunCardLO):
                 run_card.update_system_parameter_for_include()
@@ -643,6 +645,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 logger.info("Nothing to decay ...")
                 return
         
+        if self.options['BW_cut'] > 100:
+            raise Exception("BW_cut parameter is much too large (>100) for narrow width approximation. Please set it up to a smaller value in your madspin_card.dat")
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 

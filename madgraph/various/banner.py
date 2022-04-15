@@ -342,7 +342,7 @@ class Banner(dict):
         self['init'] = '\n'.join(all_lines)
 
 
-    def modify_init_cross(self, cross):
+    def modify_init_cross(self, cross, allow_zero=False):
         """modify the init information with the associate cross-section"""
         assert isinstance(cross, dict)
 #        assert "all" in cross
@@ -366,7 +366,10 @@ class Banner(dict):
                 new_data += all_lines[i:]
                 break
             if int(pid) not in cross:
-                raise Exception
+                if allow_zero:
+                    cross[int(pid)] = 0.0 # this is for sub-process with 0 events written in files
+                else:
+                    raise Exception
             pid = int(pid)
             if float(xsec):
                 ratio = cross[pid]/float(xsec)
@@ -4658,6 +4661,10 @@ class MadAnalysis5Card(dict):
         def get_import(input, type=None):
             """ Generates the MA5 import commands for that event file. """
             dataset_name = os.path.basename(input).split('.')[0]
+            if dataset_name == "unweighted_events":
+                split = input.split(os.sep)
+                if 'Events' in split:
+                    dataset_name = split[split.index('Events')+1]
             res = ['import %s as %s'%(input, dataset_name)]
             if not type is None:
                 res.append('set %s.type = %s'%(dataset_name, type))
@@ -4680,6 +4687,9 @@ class MadAnalysis5Card(dict):
         inputs_load = []
         for input in inputs:
             inputs_load.extend(get_import(input))
+
+        if len(inputs) > 1:
+            inputs_load.append('set main.stacking_method = superimpose')
         
         submit_command = 'submit %s'%submit_folder+'_%s'
         

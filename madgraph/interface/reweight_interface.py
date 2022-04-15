@@ -1732,7 +1732,9 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             has_nlo = self.create_standalone_tree_directory(data, second)
 
-        
+        if has_nlo and not self.rwgt_mode:
+            self.rwgt_mode = ['NLO']
+
         # 5. create the virtual for NLO reweighting  ---------------------------
         if second and 'virtual_path' in self.dedicated_path:
             files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])

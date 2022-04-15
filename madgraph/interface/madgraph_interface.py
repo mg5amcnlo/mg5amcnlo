@@ -2965,7 +2965,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'f2py_compiler_py2':None,
                        'f2py_compiler_py3':None,
                        'cpp_compiler':None,
-                       'auto_update':7,
                        'cluster_type': 'condor',
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
@@ -3006,6 +3005,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'max_t_for_channel': 99, # means no restrictions
                           'zerowidth_tchannel': True,
                           'nlo_mixed_expansion':True,
+                          'auto_update':7,
                         }
 
     options_madevent = {'automatic_html_opening':True,
@@ -6604,7 +6604,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # read the __init__.py to check if we need to add a new executable
             pyvers=sys.version[0]
             try:
-                __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
+                __import__('PLUGIN.%s' % name, globals(), locals(), [])
                 plugin = sys.modules['PLUGIN.%s' % name] 
                 new_interface = plugin.new_interface
                 new_output = plugin.new_output
@@ -6612,6 +6612,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
                 maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
             except Exception as error:
+                print(error)
                 if six.PY2:
                     raise Exception('Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error))
                 elif six.PY3:
@@ -7719,9 +7720,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
                                               (self._curr_model.get('name'), args[1]))
             else:
-                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
+                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.",self._curr_model.get('name'), args[1])
             logger.info("Importing a new model will restore the default scheme")
-
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
