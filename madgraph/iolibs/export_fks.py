@@ -1295,7 +1295,21 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
         text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
-        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        step = 5
+        if len(split_orders) < step:
+            text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        else:
+            # this file is linked from f77 and f90 so need to be smart about line splitting
+            text += "INTEGER ORDERNAMEINDEX\n"
+            for i in range(1,len(split_orders),step):
+                start = i
+                stop = i+step -1
+                data = ', '.join(['"%3s"' % o for o in split_orders[start-1: stop]])
+                if stop > len(split_orders):
+                    stop = len(split_orders)
+                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
+
+
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
