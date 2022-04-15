@@ -7135,7 +7135,8 @@ class UFO_model_to_mg4(object):
                             common /to_updateloop/updateloop
                             include \'model_functions.inc\'
                             double precision Gother""")
-        if not self.opt['mp']:
+
+        if self.opt['export_format'] in ['madevent', 'madloop_optimized']:
             fsock.writelines("""
                             include \'../maxparticles.inc\'
                             include \'../run.inc\'""")
