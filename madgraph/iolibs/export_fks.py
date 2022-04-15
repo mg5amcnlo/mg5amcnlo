@@ -240,10 +240,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_pdf_opendata()
         
         if model["running_elements"]:
-            if not os.path.exists(pjoin(MG5DIR, 'Template',"RUNNING")):
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
                 raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
                 
-            misc.copytree(pjoin(MG5DIR, 'Template',"RUNNING"), 
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
                             pjoin(self.dir_path,'Source','RUNNING'))
         
         
