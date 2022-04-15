@@ -639,6 +639,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'syscalc_path': './SysCalc',
+                       'rivet_path': None,
+                       'yoda_path': None,
                        'lhapdf': 'lhapdf-config',
                        'lhapdf_py2': None,
                        'lhapdf_py3': None,
