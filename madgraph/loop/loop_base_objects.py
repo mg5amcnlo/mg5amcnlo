@@ -1486,11 +1486,6 @@ class LoopModel(base_objects.Model):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz','perturbation_couplings','conserved_charge']
 
-    def change_electroweak_mode(self, mode):
-
-        if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
-            raise Exception("can not change EW scheme for model handling EW correction")
-        super(LoopModel, self).change_electroweak_mode(mode)
 
 #===============================================================================
 # DGLoopLeg

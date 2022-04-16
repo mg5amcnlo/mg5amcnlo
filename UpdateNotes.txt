@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-3.4.0 (11/04/22)
+3.4.0 (16/04/22)
       SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
           at the end of the scan. (Contribution from Sihyun Jeon)
       OM: Allow to have EFT operator to run for some special UFO model (quite restricted class of running are supported
