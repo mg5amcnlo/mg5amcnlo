@@ -6095,7 +6095,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise InvalidCmd("Your model is identified as not fully supported within MG5aMC.\n" +\
                         "As your process seems to be impacted by the issue,\n" +\
                       "You can NOT run with MLM matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model") 
-                
+            
+            if 'dressed_ee' in  proc_charac['limitations']:
+                if self.run_card['lpp1'] not in [0,1,-1] or self.run_card['lpp1'] not in [0,1,-1]:
+                    raise InvalidCmd("dressed lepton mode is not available for this process (see warning associated to the code generation to understand why)")
             # 
             if not 'sde_strategy' in self.run_card.user_set:
                 if proc_charac['single_color']:

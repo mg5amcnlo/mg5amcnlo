@@ -1777,7 +1777,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             template  = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
                                          "ALL_XBK(IB(%(beam)d),IVEC),DSQRT(ALL_Q2FACT(IB(%(beam)d), IVEC)))\n"
                             if dressed_lep and self.opt['vector_size']:
-                                raise Exception("vector code for lepton pdf not implemented")
+                                logger.warning("vector code for lepton pdf not implemented. We removed the option to run dressed lepton")
+                                self.proc_characteristic['limitations'].append('dressed_ee')
+                                dressed_lep = False
                         elif subproc_group:
                             template = "%(part)s%(beam)d=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
                                          "XBK(IB(%(beam)d)),DSQRT(Q2FACT(IB(%(beam)d))))\n"
