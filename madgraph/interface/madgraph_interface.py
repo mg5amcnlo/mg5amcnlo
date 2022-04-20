@@ -8266,7 +8266,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # Define the helas call  writer
         if hasattr(self._curr_exporter, 'helas_exporter') and self._curr_exporter.helas_exporter:
-            self._curr_helas_model = getattr(helas_call_writers, self._curr_exporter.exporter)(self._curr_model, options=options)
+            self._curr_helas_model = self._curr_exporter.helas_exporter(self._curr_model, options=self.options)
         elif self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
         elif self._curr_exporter.exporter == 'gpu':       
@@ -8291,7 +8291,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self._me_curr_helas_model = self._curr_helas_model 
             else:
                 if hasattr(self._me_curr_exporter, 'helas_exporter') and self._me_curr_exporter.helas_exporter:
-                    self._me_curr_helas_model = getattr(helas_call_writers, self._me_curr_exporter.exporter)(self._curr_model, options=options)
+                    self._me_curr_helas_model = self._me_curr_exporter.helas_exporter(self._curr_model, options=self.options)
                 elif self._me_curr_exporter.exporter == 'cpp':       
                     self._me_curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
                 elif self._me_curr_exporter.exporter == 'gpu':       
