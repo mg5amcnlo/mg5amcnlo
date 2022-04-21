@@ -8286,7 +8286,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # Define the helas call  writer if a second exporter is needed
         self._me_curr_helas_model = False
         if self._me_curr_exporter:
-            misc.sprint("pass here", self._curr_exporter.exporter, self._me_curr_exporter.exporter)
             if self._curr_exporter.exporter == self._me_curr_exporter.exporter:
                 self._me_curr_helas_model = self._curr_helas_model 
             else:
