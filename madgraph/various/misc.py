@@ -1929,20 +1929,22 @@ class EasterEgg(object):
 
 
 def get_older_version(v1, v2):
-    """ return v2  if v1>v2
+    """ return v2 if v1>v2
         return v1 if v1<v2
         return v1 if v1=v2 
-        return v1 if v2 is not in 1.2.3.4.5 format
-        return v2 if v1 is not in 1.2.3.4.5 format
+        return v1 if v2 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
+        return v2 if v1 is not in 1.2.3.4.5 format (treat '<n>_text' as '<n>' if n is an integer)
     """
     
     for a1, a2 in zip_longest(v1, v2, fillvalue=0):
+        if '_' in str(a1) : a1 = str(a1)[:str(a1).index('_')]
+        if '_' in str(a2) : a2 = str(a2)[:str(a2).index('_')]
         try:
-            a1= int(a1)
+            a1 = int(a1)
         except:
             return v2
         try:
-            a2= int(a2)
+            a2 = int(a2)
         except:
             return v1        
         if a1 > a2:
@@ -1976,13 +1978,14 @@ def is_plugin_supported(obj):
         plugin_support[name] = False
         return
     
+    logger.debug("Validating plugin against this version: %s." % '.'.join(str(i) for i in mg5_ver) )
     if get_older_version(min_ver, mg5_ver) == min_ver and \
        get_older_version(mg5_ver, max_ver) == mg5_ver:
         plugin_support[name] = True
         if get_older_version(mg5_ver, val_ver) == val_ver:
-            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+            logger.warning("""Plugin %s has marked as NOT being validated with this version: %s. 
 It has been validated for the last time with version: %s""",
-                                        name, '.'.join(str(i) for i in val_ver))
+			   name, '.'.join(str(i) for i in mg5_ver), '.'.join(str(i) for i in val_ver) )
     else:
         if __debug__:
             logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
