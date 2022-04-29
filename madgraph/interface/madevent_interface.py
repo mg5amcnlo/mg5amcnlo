@@ -2422,7 +2422,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     def rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
 
         # Check number of Rivet jobs to run 
-        run_dirs = misc.glob(pjoin(self.me_dir, 'Events', "run_*"))
+        run_dirs = [pjoin(self.me_dir, 'Events',run_name) 
+                      for run_name in self.postprocessing_dirs]
+
         nb_rivet = len(run_dirs)
 
         if postprocess_RIVET:

@@ -723,6 +723,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # Define self.proc_characteristics
         self.get_characteristics()
+        self.postprocessing_dirs = []
         
         if not  self.proc_characteristics['ninitial']:
             # Get number of initial states
@@ -1038,7 +1039,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
                                   self.ask, first_cmd=first_cmd, from_banner=from_banner,
-                                  banner=banner)
+                                  banner=banner, lhapdf=self.options['lhapdf'])
         
         for c in cards:
             if not os.path.isabs(c):
@@ -1052,7 +1053,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     @staticmethod
     def ask_edit_card_static(cards, mode='fixed', plot=True,
-                             timeout=0, ask=None, **opt):
+                             timeout=0, ask=None, lhapdf=None, **opt):
         if not ask:
             ask = CommonRunCmd.ask
 
@@ -1110,7 +1111,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         while out not in ['0', 'done']:
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
-                              cards=cards, mode=mode, **opt)
+                              cards=cards, mode=mode, 
+                              lhapdf=lhapdf,
+                              **opt)
             if 'return_instance' in opt and opt['return_instance']:
                 out, cmd = out
         if 'return_instance' in opt and opt['return_instance']:
@@ -2999,6 +3002,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if postprocess_RIVET:
                 logger.info("Skipping Rivet for now, passing it to postprocessor")
                 self.update_status('rivet done', level='rivet')
+                self.postprocessing_dirs.append(self.run_name)
                 return
             else:
                 logger.info("Running Rivet with {0}".format(hepmc_file))
@@ -3684,7 +3688,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     the cards afterwards, you can type \"compute_wdiths\".''')
                 
         card = param_card_mod.ParamCard(path)
-        if dependent:   
+        if dependent: 
+              
             AskforEditCard.update_dependent(interface, interface.me_dir, card, path, timer=20)
         
         for param in card['decay']:
@@ -4875,9 +4880,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
      
     
-    def __init__(self, question, cards=[], from_banner=None, banner=None, mode='auto', *args, **opt):
+    def __init__(self, question, cards=[], from_banner=None, banner=None, mode='auto',
+                     lhapdf=None, *args, **opt):
 
-
+        self.lhapdf = lhapdf
         self.load_default()        
         self.define_paths(**opt)
         self.last_editline_pos = 0
@@ -6607,8 +6613,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
             # calling the routine doing the work    
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
-                                   self.paths['param'], timer)
-            
+                                   self.paths['param'], timer, run_card=self.run_card,
+                                   lhapdfconfig=self.lhapdf)
+
         elif args[0] == 'missing':
             self.update_missing()
             return
@@ -6666,7 +6673,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.param_card.write(self.paths['param'])
         
     @staticmethod
-    def update_dependent(mecmd, me_dir, param_card, path ,timer=0):
+    def update_dependent(mecmd, me_dir, param_card, path ,timer=0, run_card=None,
+                    lhapdfconfig=None):
         """static method which can also be called from outside the class
            usefull in presence of scan.
            return if the param_card was updated or not
@@ -6675,8 +6683,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if not param_card:
             return False
 
+
         logger.info('Update the dependent parameter of the param_card.dat')
-        modify = True
+
+
+
+        modify = False
         class TimeOutError(Exception): 
             pass
         def handle_alarm(signum, frame): 
@@ -6687,6 +6699,44 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             log_level=30
         else:
             log_level=20
+
+        if run_card:
+            as_for_pdf = {'cteq6_m': 0.118,
+                          'cteq6_d': 0.118, 
+                          'cteq6_l': 0.118, 
+                          'cteq6l1': 0.129783,
+                          'nn23lo':  0.119,
+                          'nn23lo1': 0.130, 
+                          'nn23nlo': 0.119,
+                          'ct14q00': 0.118,
+                          'ct14q07': 0.118,
+                          'ct14q14': 0.118,
+                          'ct14q21':0.118}
+
+            pdlabel = run_card['pdlabel']
+            if pdlabel == 'mixed':
+                pdlabel1 = run_card['pdlabel1']
+                if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
+                    pdlabel = pdlabel1
+
+            if pdlabel == 'lhapdf':
+                lhapdf = misc.import_python_lhapdf(lhapdfconfig)
+                if lhapdf:
+                    old_value = param_card.get('sminputs').get((3,)).value
+                    lhapdf.setVerbosity(0)
+                    pdf = lhapdf.mkPDF(run_card['lhaid'])
+                    new_value = pdf.alphasQ(91.1876)
+                    param_card.get('sminputs').get((3,)).value = new_value
+                    logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
+                    modify = True
+            elif pdlabel in as_for_pdf:
+                old_value = param_card.get('sminputs').get((3,)).value
+                new_value = as_for_pdf[pdlabel]
+                if old_value != new_value:
+                    param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]
+                    logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  as_for_pdf[pdlabel])
+                    modify = True
+
         # Try to load the model in the limited amount of time allowed
         try:
             model = mecmd.get_model()
@@ -6700,18 +6750,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.debug(str(error))
             logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
             signal.alarm(0)
+            modify=False
         else:
             restrict_card = pjoin(me_dir,'Source','MODEL','param_card_rule.dat')
             if not os.path.exists(restrict_card):
                 restrict_card = None
             #restrict_card = None
             if model:
-                modify = param_card.update_dependent(model, restrict_card, log_level)
-                if modify and path:
-                    param_card.write(path)
+                restrict_modify = param_card.update_dependent(model, restrict_card, log_level)
+                if restrict_modify:
+                    modify = True
             else:
                 logger.warning('missing MG5aMC code. Fail to update dependent parameter. This might create trouble for program like MadSpin/shower/...')
             
+        if modify and path:
+            param_card.write(path)
         if log_level==20:
             logger.info('param_card up to date.')
             

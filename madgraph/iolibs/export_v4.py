@@ -2182,6 +2182,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Additional actions needed for setup of Template
         """
 
+        self.model = model
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
@@ -2215,6 +2216,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
+
+        if model['running_elements']:
+            fsock = open( pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 'r')
+            text = fsock.read()
+            fsock.close()
+            fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
+            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning')
+            text = text.replace('LIBS =', 'LIBS = $(LIBDIR)/librunning.$(libext)')
+            fsock.write(text)
+            fsock.close()
+        else:
+            # Add file in SubProcesses
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
@@ -2225,7 +2240,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     pjoin(self.dir_path, 'Source'))        
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))          
+        self.write_source_makefile(writers.FileWriter(filename),model)          
         
     #===========================================================================
     # export model files
@@ -2275,10 +2290,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """
 
         source_dir = pjoin(self.dir_path, "Source")
-        logger.info("Running make for Helas")
-        misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-        logger.info("Running make for Model")
-        misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for Source directory")
+        misc.compile(cwd=source_dir, mode='fortran')
+        #logger.info("Running make for Model")
+        #misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -2316,7 +2331,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             
         if self.prefix_info: 
             self.write_f2py_splitter()
-            self.write_f2py_makefile()
+            self.write_f2py_makefile(self.model)
             self.write_f2py_check_sa(matrix_elements,
                             pjoin(self.dir_path,'SubProcesses','check_sa.py'))
         else:
@@ -2355,10 +2370,14 @@ CF2PY double precision, intent(in) :: SCALE2
   double precision ANS, ALPHAS, PI,SCALE2
   include 'coupl.inc'
   
-  PI = 3.141592653589793D0
-  G = 2* DSQRT(ALPHAS*PI)
-  CALL UPDATE_AS_PARAM()
-c  if (scale2.ne.0d0) stop 1
+  
+  if (scale2.eq.0)then
+       PI = 3.141592653589793D0
+       G = 2* DSQRT(ALPHAS*PI)
+       CALL UPDATE_AS_PARAM()
+  else
+       CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
+  endif
 
 %(smatrixhel)s
 
@@ -2428,7 +2447,95 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
   RETURN
   END 
  
+
+
+    subroutine set_fixed_extra_scale(new_value)
+    implicit none
+CF2PY logical, intent(in) :: new_value
+    logical new_value
+                logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
   
+        fixed_extra_scale = new_value
+        return 
+        end
+
+    subroutine set_mue_over_ref(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_over_ref = new_value
+        
+    return 
+    end
+
+    subroutine set_mue_ref_fixed(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_ref_fixed = new_value
+        
+    return 
+    end
+
+
+    subroutine set_maxjetflavor(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    maxjetflavor = new_value
+        
+    return 
+    end
+
+
+    subroutine set_asmz(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    asmz = new_value
+    write(*,*) "asmz is set to ", new_value
+        
+    return 
+    end
+
+    subroutine set_nloop(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    nloop = new_value
+     write(*,*) "nloop is set to ", new_value
+        
+    return 
+    end
+
         """
         
         allids = list(self.prefix_info.keys())
@@ -2510,22 +2617,41 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             lha = '_'.join([str(i) for i in p.lhacode])
             params['%s_%s' % (block.upper(), lha)] = name
 
+        if model['running_elements']:
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        add_scale.add(one_element.lhablock)
+            for block in add_scale:
+                if block.upper() == "SMINPUTS":
+                    continue
+                name = block
+                params['%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+                params['mdl__%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+
         return params                      
                                         
         
         
-        
-         
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
         return
     
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         """ """
+        template = pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py')
+        destination = pjoin(self.dir_path, 'SubProcesses', 'makefile')
+
         # Add file in SubProcesses
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+        if model['running_elements']:
+            text = open(template,'r').read()
+            text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning ')
+            text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning ')
+            open(destination, 'w').write(text)
+        else:
+             shutil.copy(template, destination)
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -2684,18 +2810,24 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
     #===========================================================================
     # write_source_makefile
     #===========================================================================
-    def write_source_makefile(self, writer):
+    def write_source_makefile(self, writer, model):
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
+        if model['running_elements']:
+            running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
+            set_of_lib += ' $(LIBDIR)librunning.$(libext) '
+        else:
+            running_line  = '' 
+
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
                        'additional_dependencies':'',
-                       'running': ''} 
+                       'running': running_line} 
 
         text = open(path).read() % replace_dict
         
@@ -6616,10 +6748,28 @@ class UFO_model_to_mg4(object):
                                   'madweight','matchbox','madloop_matchbox', 'plugin']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-        #elif self.opt['export_format'] in []:
-            #pass
         else:
             raise MadGraph5Error('Unknown format')
+
+        if self.opt['export_format'].startswith('standalone'):
+            cp( MG5DIR + '/Template/LO/Source/alfas_functions.f', 
+                self.dir_path)
+            cp( MG5DIR + '/Template/LO/Source/alfas.inc', 
+                self.dir_path)
+
+            fsock = open(pjoin(self.dir_path, '..', 'cuts.inc'),'w')
+            fsock.write('''            
+            logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+            ''')
+
+            if self.model['running_elements']:
+                cp( MG5DIR + '/Template/Running',  pjoin(self.dir_path, '..', 'RUNNING'))
+
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -7134,14 +7284,21 @@ class UFO_model_to_mg4(object):
                             logical updateloop
                             common /to_updateloop/updateloop
                             include \'model_functions.inc\'
-                            double precision Gother""")
+                            double precision Gother
+                            
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
 
         if self.opt['export_format'] in ['madevent', 'madloop_optimized']:
             fsock.writelines("""
                             include \'../maxparticles.inc\'
+                            include \'../cuts.inc\'
                             include \'../run.inc\'""")
         else:
             fsock.writelines("""
+                            include \'../cuts.inc\'
+                            data maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed /5,.false.,1d0,91.188/
                             include \'../run.inc\'""")
         fsock.writelines("""
                             double precision alphas 
@@ -7174,11 +7331,14 @@ class UFO_model_to_mg4(object):
                 fsock.writelines(' Gother = G')
                 
                 if self.MUE:
-                    fsock.writelines(' %s = mue_over_ref*scale' % self.MUE.name)
+                    fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
                 else:
                     misc.sprint('NO MUE')
                     #raise Exception
-                fsock.writelines(' if(mue_over_ref.ne.1d0) Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*scale))')
+                
+                fsock.writelines(' if(mue_over_ref.ne.1d0)then')
+                fsock.writelines('  Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*model_scale))')
+                fsock.writelines(' endif')
                 
                 for i in range(len(running_block)):
                     fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
@@ -7201,15 +7361,41 @@ class UFO_model_to_mg4(object):
                             double precision mu_r2, as2
                             include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
-                            include \'coupl.inc\'""")
+                            include \'coupl.inc\'
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
         fsock.writelines("""
-                            if (mu_r2.gt.0d0) MU_R = mu_r2
+                            if (mu_r2.gt.0d0) MU_R = DSQRT(mu_r2)
+                            model_scale = DSQRT(mu_r2)
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
                             CALL UPDATE_AS_PARAM()
                          """)
         fsock.writelines('''\n return \n end\n''')
+
+        # fsock.writelines("""subroutine update_model_to_scale(scale)
+        #                     ! scale in GeV
+        #                     implicit none
+        #                     double precision scale
+        #                     double precision PI
+        #                     double precision alphas
+        #                     external alphas
+        #                     parameter  (PI=3.141592653589793d0)
+        #                     double precision mu_r2, as2
+        #                     include \'model_functions.inc\'""")
+        # fsock.writelines("""include \'input.inc\'
+        #                     include \'coupl.inc\'
+        #                     """)
+        # fsock.writelines("""
+        #                     AS = ALPHAS(scale)
+        #                     AS2 = AS*AS
+        #                     call update_as_param2(scale**2, AS2)
+        #                  """)
+        # fsock.writelines('''\n return \n end\n''')
+
+
 
         if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
@@ -7265,13 +7451,13 @@ class UFO_model_to_mg4(object):
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
 
-      include '../alfas.inc'
       include 'input.inc'
       %(mpinput)s
 
       include '../cuts.inc'
       INCLUDE 'coupl.inc'
       double precision GMU
+
 
       double complex mat1(%(size)i,%(size)i), mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
       data mat2 /%(mat2)s/
@@ -7323,7 +7509,6 @@ class UFO_model_to_mg4(object):
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
 
-      include '../alfas.inc'
       include '../cuts.inc'
       INCLUDE 'input.inc'
       %(mpinput)s
@@ -7378,7 +7563,7 @@ class UFO_model_to_mg4(object):
       DOUBLE PRECISION PI
       PARAMETER  (PI=3.141592653589793D0)
 
-      include '../alfas.inc'
+       include '../cuts.inc'
       INCLUDE 'input.inc'
       %(mpinput)s
       INCLUDE 'coupl.inc'
@@ -7403,6 +7588,50 @@ class UFO_model_to_mg4(object):
       end
       """
     
+    def get_scales(self):
+
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+
+        return scales
+
+
     def write_one_running_block(self, block_nb, runparams):
                
         runparams = list(runparams)
@@ -8717,7 +8946,10 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
-        
+        if self.opt['export_format'].startswith('standalone'):
+            text += ' alfas_functions.o '
+
+
         nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
         nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
@@ -8774,6 +9006,25 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('ident_card.dat')
      
         external_param = [format(param) for param in self.params_ext]
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b.lower(),
+                     91.188, b, [0])
+                external_param.append(format(param))
+
         fsock.writelines('\n'.join(external_param))
 
     def create_actualize_mp_ext_param_inc(self):
@@ -8829,6 +9080,25 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('param_read.inc', format='fortran')
         res_strings = [format_line(param) \
                           for param in self.params_ext]
+        
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b,
+                     91.188, b, 0)
+                res_strings.append(format_line(param))
         
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        

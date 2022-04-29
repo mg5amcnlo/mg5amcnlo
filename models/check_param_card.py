@@ -561,6 +561,13 @@ class ParamCard(dict):
                     lhacode = ' '.join([str(i) for i in lhacode])
                     diff += 'set param_card %s %s %s # orig: %s\n' % \
                                        (blockname, lhacode , new_value, value)
+            value = block.scale
+            new_value = new_card[blockname].scale
+            if not misc.equal(value, new_value, 6, zero_limit=False):
+                diff += 'set param_card %s scale %s # orig: %s\n' % \
+                                       (blockname , new_value, value)
+
+
         return diff 
 
     
@@ -649,8 +656,16 @@ class ParamCard(dict):
                 try:
                     value = self[block].get(tuple(lhaid)).value
                 except KeyError:
-                    value =defaultcard[block].get(tuple(lhaid)).value
-                    logger.warning('information about \"%s %s" is missing using default value: %s.' %\
+                    if lhaid == [0]:
+                        try:
+                            value = self[block].scale
+                        except KeyError:
+                            value = defaultcard[block].scale
+                            logger.warning('information about scale of \"%s\" is missing using default value: %s.' %\
+                                                          (block, value))
+                    else:
+                        value =defaultcard[block].get(tuple(lhaid)).value
+                        logger.warning('information about \"%s %s" is missing using default value: %s.' %\
                                                           (block, lhaid, value))
             else:
                
