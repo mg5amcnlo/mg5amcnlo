@@ -1353,6 +1353,7 @@ c SCALUP_tmp_H = t_ij scales that determine H-event scales written onto LHE
 c SCALUP_tmp_H2 = t_ij target scales for Delta
       double precision SCALUP_tmp_H2(nexternal,nexternal)
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
+      double precision SCALUP_tmp_H3(nexternal,nexternal)
 
 c Lower and upper limits of fitted st and xm ranges.
 c Require one prior call to pysudakov() to be set,
@@ -1704,6 +1705,11 @@ c Checks
             endif
          enddo
       enddo
+
+
+      call set_SCALUP_tmp_H(are_col_conn_H,iBtoR,iRtoB,xscales2,dzones2
+     $     ,p,SCALUP_tmp_H3)
+      
 c
 c Scales written onto the LHE file for H events.
 c For notational consistency with the case of SCALUP_tmp_S, the array that
@@ -1894,6 +1900,28 @@ c small. Might check at some point using larger values for those).
             endif
          enddo
       enddo
+
+
+      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
+         write (*,*) 'i_fks,j_fks',i_fks,j_fks
+         do i=1,nexternal
+            write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
+         enddo
+         do i=1,nexternal
+            write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
+         enddo
+         do i=1,nexternal-1
+            write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
+         enddo
+         do i=1,nexternal-1
+            write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
+     $           ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
+         enddo
+         
+         stop 
+      endif
+
+      
 c
 c force IF colour connection to have II scale
 c if a sensible II scale exists
@@ -2228,9 +2256,97 @@ c
       return
       end
 
+      
+      subroutine set_SCALUP_tmp_H(are_col_conn_H,iBtoR,iRtoB,xscales2
+     $     ,dzones2,p,SCALUP_tmp_H)
+! Fills the SCALUP_tmp_H (the starting scales for the H-event that will
+! be written in the event file) based on eq.3.39-3.43 of the paper
+! (i.e., the stopping scales of the corresponding S-event as determined
+! by Pythia). In case we are in the deadzone, use a scale based on the
+! dipole mass (using H-event kinematics) instead. WARNING: this
+! subroutine does NOT enforce the scales for the IF dipoles to be
+! overwritten by the II dipoles.
+      implicit none
+      include 'nexternal.inc'
+      logical are_col_conn_H(nexternal,nexternal)
+      logical*1 dzones2(0:99,0:99)
+      double precision xscales2(0:99,0:99)
+      double precision xmasses(0:99,0:99)
+      double precision SCALUP_tmp_H(nexternal,nexternal)
+      double precision p(0:3,nexternal)
+      integer iRtoB(nexternal),iBtoR(nexternal-1)
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer i1,i2,ip,imother
+      double precision t(nexternal,nexternal)
+      double precision sumdot
+      external sumdot
+      do i1=1,nexternal
+         do i2=1,nexternal
+            t(i1,i2)=-1d0
+            if (i1.eq.i2) cycle
+            if (.not.are_col_conn_H(i1,i2)) cycle
+            if ( i1.ne.i_fks .and. i1.ne.j_fks .and.
+     &           i2.ne.i_fks .and. i2.ne.j_fks) then   ! Eq.3.39
+               if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
+                  t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            elseif (i1.ne.i_fks .and. i1.ne.j_fks .and.
+     &              i2.eq.j_fks) then                  ! Eq.3.40
+               imother=iRtoB(j_fks)
+               if (.not. dzones2(iRtoB(i1),imother)) then
+                  t(i1,i2)=xscales2(iRtoB(i1),imother)
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            elseif (i1.ne.i_fks .and. i1.ne.j_fks .and.
+     &              i2.eq.i_fks) then                  ! Eq.3.41
+               imother=iRtoB(j_fks)
+               if (.not. dzones2(iRtoB(i1),imother)) then
+                  t(i1,i2)=xscales2(iRtoB(i1),imother)
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            elseif (i1.eq.i_fks .or. i1.eq.j_fks) then ! Eq.3.42 & Eq.3.43
+               imother=iRtoB(j_fks)
+               do ip=1,nexternal
+                  if (are_col_conn_H(ip,i_fks) .and.
+     $                 iRtoB(ip).ne.imother) then
+                     if (t(i1,i2).ne.-1d0) then
+                        write (*,*) 'ERROR: t(i1,i2) already set',i1,i2
+     $                       ,ip,imother
+                        stop 1
+                     endif
+                     if (.not. dzones2(imother,iRtoB(ip))) then
+                        t(i1,i2)=xscales2(imother,iRtoB(ip)) 
+                     else
+                        t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                     endif
+                  endif
+               enddo
+            else
+               write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
+     $              ,i_fks,j_fks
+               stop 1
+            endif
+         enddo
+      enddo
+      ! check that all have been set
+      do i1=1,nexternal
+         do i2=1,nexternal
+            if (.not.are_col_conn_H(i1,i2)) cycle
+            if (t(i1,i2).eq.-1d0) then
+               write (*,*) 'ERROR, scale still equal to -1',i1,i2
+c$$$               stop 1
+            endif
+         enddo
+      enddo
+      SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
+      end
 
-
-
+      
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt)
       implicit none
