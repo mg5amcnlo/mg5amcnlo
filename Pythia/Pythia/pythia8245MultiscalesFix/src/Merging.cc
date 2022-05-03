@@ -417,8 +417,13 @@ void Merging::getStoppingInfo(double scales [100][100],
 
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
-    masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
+    // In fortran we want scales(radiator,recoiler), hence, we should
+    // take the transpose here, since 2-d arrays are treated
+    // differently in c++ and fortran.
+    //    scales[radSave[i]-posOffest][recSave[i]-posOffest] = stoppingScalesSave[i];
+    //    masses[radSave[i]-posOffest][recSave[i]-posOffest] = mDipSave[i];
+    scales[recSave[i]-posOffest][radSave[i]-posOffest] = stoppingScalesSave[i];
+    masses[recSave[i]-posOffest][radSave[i]-posOffest] = mDipSave[i];
   }
 
 }
@@ -432,7 +437,11 @@ void Merging::getStoppingInfo(double scales [100][100],
 void Merging::getDeadzones(bool dzone [100][100]) {
   int posOffest=2;
   for (unsigned int i=0; i < radSave.size(); ++i){
-    dzone[radSave[i]-posOffest][recSave[i]-posOffest] = isInDeadzone[i];
+    // In fortran we want dzone(radiator,recoiler), hence, we should
+    // take the transpose here, since 2-d arrays are treated
+    // differently in c++ and fortran.
+    //    dzone[radSave[i]-posOffest][recSave[i]-posOffest] = isInDeadzone[i];
+    dzone[recSave[i]-posOffest][radSave[i]-posOffest] = isInDeadzone[i];
   }
 }
 
