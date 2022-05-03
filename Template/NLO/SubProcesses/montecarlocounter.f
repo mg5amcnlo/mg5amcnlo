@@ -1300,7 +1300,7 @@ c  1<=iBtoR(k)<=nexternal,  1<=k<=nexternal-1
       double precision xmcxsec(nexternal),xmcxsec2(max_bcol),probne,wgt
       logical lzone(nexternal)
 
-      integer i,j,k
+      integer i,j,k,i1,i2
 
       double precision p(0:3,nexternal)
 c For the boost to the lab frame
@@ -1707,7 +1707,7 @@ c Checks
       enddo
 
 
-      call set_SCALUP_tmp_H(are_col_conn_H,iBtoR,iRtoB,xscales2,dzones2
+      call set_SCALUP_tmp_H_v2(are_col_conn_H,iBtoR,iRtoB,xscales2,dzones2
      $     ,p,SCALUP_tmp_H3)
       
 c
@@ -1862,62 +1862,61 @@ c generated from the S-event one by the shower (i.e., it is in the dead
 c zone). Use the dipole masses of the n+1-body configuration for the
 c scales. (In anti-collinear+soft configurations these could be
 c small. Might check at some point using larger values for those).
-      do i=1,nexternal-1
-         do j=1,nexternal-1
-            if (.not.are_col_conn_S(i,j)) cycle
-            if (.not.dzones2(i,j)) cycle
+      do i1=1,nexternal-1
+         do i2=1,nexternal-1
+            if (.not.are_col_conn_S(i1,i2)) cycle
+            if (.not.dzones2(i1,i2)) cycle
             ! check that i or j is equal to the mother, and that the
             ! other one is connected to i_fks at the H-event level. This
             ! is then the dipole that emitted i_fks.
-            if ((i.eq.iRtoB(j_fks) .and.
-     $                   are_col_conn_H(iBtoR(j),i_fks)) .or.
-     $          (j.eq.iRtoB(j_fks) .and.
-     $                   are_col_conn_H(i_fks,iBtoR(i)))) then
+            if ((i1.eq.iRtoB(j_fks) .and.
+     $                   are_col_conn_H(iBtoR(i2),i_fks)) .or.
+     $          (i2.eq.iRtoB(j_fks) .and.
+     $                   are_col_conn_H(i_fks,iBtoR(i1)))) then
 ! this is dipole that emitted i_fks
-               if (are_col_conn_H(iBtoR(i),i_fks)) 
-     $              SCALUP_tmp_H(iBtoR(i),i_fks)=
-     $                 sqrt(sumdot(p(0,iBtoR(i)),p(0,i_fks),1d0))
-               if (are_col_conn_H(i_fks,iBtoR(j)))
-     $              SCALUP_tmp_H(i_fks,iBtoR(j))=
-     $              sqrt(sumdot(p(0,i_fks),p(0,iBtoR(j)),1d0))
+               if (are_col_conn_H(iBtoR(i1),i_fks)) 
+     $              SCALUP_tmp_H(iBtoR(i1),i_fks)=
+     $                 sqrt(sumdot(p(0,iBtoR(i1)),p(0,i_fks),1d0))
+               if (are_col_conn_H(i_fks,iBtoR(i2)))
+     $              SCALUP_tmp_H(i_fks,iBtoR(i2))=
+     $              sqrt(sumdot(p(0,i_fks),p(0,iBtoR(i2)),1d0))
                if (isspecial(jflow)) then
                   ! in the special case, there is an extra dipole line
-                  ! that connects i and j
-                  if (.not. are_col_conn_H(iBtoR(i),iBtoR(j))) then
+                  ! that connects i1 and i2
+                  if (.not. are_col_conn_H(iBtoR(i1),iBtoR(i2))) then
                      write (*,*) "ERROR: not connected correctly #13"
                      stop 1
                   endif
-                  SCALUP_tmp_H(iBtoR(i),iBtoR(j))=
-     $                 sqrt(sumdot(p(0,iBtoR(i)),p(0,iBtoR(j)),1d0))
+                  SCALUP_tmp_H(iBtoR(i1),iBtoR(i2))=
+     $                 sqrt(sumdot(p(0,iBtoR(i1)),p(0,iBtoR(i2)),1d0))
                endif
             else
-               if (.not. are_col_conn_H(iBtoR(i),iBtoR(j))) then
+               if (.not. are_col_conn_H(iBtoR(i1),iBtoR(i2))) then
                   write (*,*) "ERROR: not connected correctly #12"
                   stop 1
                endif
-               SCALUP_tmp_H(iBtoR(i),iBtoR(j))=
-     $              sqrt(sumdot(p(0,iBtoR(i)),p(0,iBtoR(j)),1d0))
+               SCALUP_tmp_H(iBtoR(i1),iBtoR(i2))=
+     $              sqrt(sumdot(p(0,iBtoR(i1)),p(0,iBtoR(i2)),1d0))
             endif
          enddo
       enddo
 
-
-      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
-         write (*,*) 'i_fks,j_fks',i_fks,j_fks
-         do i=1,nexternal
-            write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
-         enddo
-         do i=1,nexternal
-            write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
-         enddo
-         do i=1,nexternal-1
-            write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
-         enddo
-         do i=1,nexternal-1
-            write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
-     $           ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
-         enddo
+      write (*,*) 'i_fks,j_fks',i_fks,j_fks
+      do i=1,nexternal
+         write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
+      enddo
+      do i=1,nexternal
+         write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
+      enddo
+      do i=1,nexternal-1
+         write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
+      enddo
+      do i=1,nexternal-1
+         write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
+     $        ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
+      enddo
          
+      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
          stop 
       endif
 
@@ -2256,6 +2255,85 @@ c
       return
       end
 
+      subroutine set_SCALUP_tmp_H_v2(are_col_conn_H,iBtoR,iRtoB,xscales2
+     $     ,dzones2,p,SCALUP_tmp_H)
+      implicit none
+      include 'nexternal.inc'
+      logical are_col_conn_H(nexternal,nexternal)
+      logical*1 dzones2(0:99,0:99)
+      double precision xscales2(0:99,0:99)
+      double precision SCALUP_tmp_H(nexternal,nexternal)
+      double precision p(0:3,nexternal)
+      integer iRtoB(nexternal),iBtoR(nexternal-1)
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer i1,i2,ip,imother,ipbar
+      double precision t(nexternal,nexternal)
+      double precision sumdot
+      external sumdot
+      imother=iRtoB(j_fks)
+      do i1=1,nexternal
+         do i2=1,nexternal
+            t(i1,i2)=-1d0
+            if (.not.are_col_conn_H(i1,i2)) cycle
+            if ( (i1.eq.i_fks .and. i2.eq.j_fks) .or.
+     &           (i1.eq.j_fks .and. i2.eq.i_fks)) then
+               ! find colour connection for i_fks
+               ipbar=0
+               do ip=1,nexternal
+                  if (are_col_conn_H(ip,i_fks) .and.
+     $                 iRtoB(ip).ne.imother) then
+                     ipbar=iRtoB(ip)
+                  endif
+               enddo
+               if (ipbar.eq.0) then
+                  ! if none are found, check the ones for j_fks. This
+                  ! happens only when i_fks is a quark and j_fks is an
+                  ! (incoming) gluon.
+                  do ip=1,nexternal
+                     if (are_col_conn_H(ip,j_fks) .and.
+     $                    iRtoB(ip).ne.imother) then
+                        ipbar=iRtoB(ip)
+                     endif
+                  enddo
+               endif
+               if (i1.eq.i_fks .and. i2.eq.j_fks) then
+                  if (.not. dzones2(ipbar,imother)) then
+                     t(i1,i2)=xscales2(ipbar,imother)
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               else
+                  if (.not. dzones2(imother,ipbar)) then
+                     t(i1,i2)=xscales2(imother,ipbar)
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               endif
+            elseif (i1.eq.i_fks) then
+               if (.not. dzones2(imother,iRtoB(i2))) then
+                  t(i1,i2)=xscales2(imother,iRtoB(i2))
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            elseif (i2.eq.i_fks) then
+               if (.not. dzones2(iRtoB(i1),imother)) then
+                  t(i1,i2)=xscales2(iRtoB(i1),imother)
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            else
+               if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
+                  t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            endif
+         enddo
+      enddo
+      SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
+      end
+      
       
       subroutine set_SCALUP_tmp_H(are_col_conn_H,iBtoR,iRtoB,xscales2
      $     ,dzones2,p,SCALUP_tmp_H)
@@ -2271,7 +2349,6 @@ c
       logical are_col_conn_H(nexternal,nexternal)
       logical*1 dzones2(0:99,0:99)
       double precision xscales2(0:99,0:99)
-      double precision xmasses(0:99,0:99)
       double precision SCALUP_tmp_H(nexternal,nexternal)
       double precision p(0:3,nexternal)
       integer iRtoB(nexternal),iBtoR(nexternal-1)
@@ -2284,7 +2361,6 @@ c
       do i1=1,nexternal
          do i2=1,nexternal
             t(i1,i2)=-1d0
-            if (i1.eq.i2) cycle
             if (.not.are_col_conn_H(i1,i2)) cycle
             if ( i1.ne.i_fks .and. i1.ne.j_fks .and.
      &           i2.ne.i_fks .and. i2.ne.j_fks) then   ! Eq.3.39
@@ -2327,9 +2403,9 @@ c
                   endif
                enddo
             else
-               write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
-     $              ,i_fks,j_fks
-               stop 1
+c$$$               write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
+c$$$     $              ,i_fks,j_fks
+c$$$               stop 1
             endif
          enddo
       enddo
@@ -2338,7 +2414,7 @@ c
          do i2=1,nexternal
             if (.not.are_col_conn_H(i1,i2)) cycle
             if (t(i1,i2).eq.-1d0) then
-               write (*,*) 'ERROR, scale still equal to -1',i1,i2
+c$$$               write (*,*) 'ERROR, scale still equal to -1',i1,i2
 c$$$               stop 1
             endif
          enddo
