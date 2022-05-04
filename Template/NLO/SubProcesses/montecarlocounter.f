@@ -1707,8 +1707,8 @@ c Checks
       enddo
 
 
-      call set_SCALUP_tmp_H_v2(are_col_conn_H,iBtoR,iRtoB,xscales2,dzones2
-     $     ,p,SCALUP_tmp_H3)
+      call set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR,iRtoB
+     $     ,xscales2,dzones2,p,SCALUP_tmp_H3)
       
 c
 c Scales written onto the LHE file for H events.
@@ -2255,167 +2255,149 @@ c
       return
       end
 
-      subroutine set_SCALUP_tmp_H_v2(are_col_conn_H,iBtoR,iRtoB,xscales2
-     $     ,dzones2,p,SCALUP_tmp_H)
+      subroutine set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR
+     $     ,iRtoB,xscales2,dzones2,p,SCALUP_tmp_H)
+! Fills the SCALUP_tmp_H based on the S-event stopping scales. In the
+! MC-picture, all scales for which i_fks and j_fks are emitter are set
+! to a common scale 'pT'. In the ME-picture, a rather more strict
+! relation between the dipoles is followed, and each dipole for which
+! i_fks and j_fks are the emitter can get different values, based on the
+! colour connections of the mother.
+! In case we are in the deadzone, use a scale based on the dipole mass
+! (using H-event kinematics) instead. WARNING: this subroutine does NOT
+! enforce the scales for the IF dipoles to be overwritten by the II
+! dipoles.
       implicit none
       include 'nexternal.inc'
       logical are_col_conn_H(nexternal,nexternal)
+     $     ,are_col_conn_S(nexternal-1,nexternal-1)
       logical*1 dzones2(0:99,0:99)
-      double precision xscales2(0:99,0:99)
-      double precision SCALUP_tmp_H(nexternal,nexternal)
-      double precision p(0:3,nexternal)
+      double precision xscales2(0:99,0:99),SCALUP_tmp_H(nexternal
+     $     ,nexternal),p(0:3,nexternal)
       integer iRtoB(nexternal),iBtoR(nexternal-1)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i1,i2,ip,imother,ipbar
-      double precision t(nexternal,nexternal)
+      double precision t(nexternal,nexternal),pT
       double precision sumdot
       external sumdot
-      imother=iRtoB(j_fks)
-      do i1=1,nexternal
-         do i2=1,nexternal
-            t(i1,i2)=-1d0
-            if (.not.are_col_conn_H(i1,i2)) cycle
-            if ( (i1.eq.i_fks .and. i2.eq.j_fks) .or.
-     &           (i1.eq.j_fks .and. i2.eq.i_fks)) then
-               ! find colour connection for i_fks
-               ipbar=0
-               do ip=1,nexternal
-                  if (are_col_conn_H(ip,i_fks) .and.
-     $                 iRtoB(ip).ne.imother) then
-                     ipbar=iRtoB(ip)
+      logical MCpic
+      parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
+
+      if (MCpicture) then
+         ! Let pT to be the minimum of the stopping scales related to
+         ! the mother.
+         pT=99d99
+         do i2=1,nexternal-1
+            if (are_col_conn_S(iRtoB(j_fks),i2)) then
+               if (.not.dzones2(iRtoB(j_fks),i2))
+     &              pT=min(pT,xscales2(iRtoB(j_fks),i2))
+            endif
+         enddo
+         imother=iRtoB(j_fks)
+         do i1=1,nexternal
+            do i2=1,nexternal
+               t(i1,i2)=-1d0
+               if (.not.are_col_conn_H(i1,i2)) cycle
+               if ( i1.ne.i_fks .and. i1.ne.j_fks .and.
+     &              i2.ne.i_fks .and. i2.ne.j_fks) then
+                  if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
+                     t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
                   endif
-               enddo
-               if (ipbar.eq.0) then
-                  ! if none are found, check the ones for j_fks. This
-                  ! happens only when i_fks is a quark and j_fks is an
-                  ! (incoming) gluon.
+               elseif( i1.ne.i_fks .and. i1.ne.j_fks .and.
+     &                 (i2.eq.j_fks .or. i2.eq.i_fks)) then
+                  if (.not. dzones2(iRtoB(i1),imother)) then
+                     t(i1,i2)=xscales2(iRtoB(i1),imother)
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
+                  if (pT.ne.99d99) then ! at least one is in the life-zone
+                     t(i1,i2)=pt
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               else
+                  write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
+     $                 ,i_fks,j_fks
+                  stop 1
+               endif
+            enddo
+         enddo
+      else ! ME-picture
+         imother=iRtoB(j_fks)
+         do i1=1,nexternal
+            do i2=1,nexternal
+               t(i1,i2)=-1d0
+               if (.not.are_col_conn_H(i1,i2)) cycle
+               if ( (i1.eq.i_fks .and. i2.eq.j_fks) .or.
+     &              (i1.eq.j_fks .and. i2.eq.i_fks)) then
+                  ! find relevant dipole (at S-event level) for the
+                  ! i_fks-j_fks connection. In almost all cases, this
+                  ! should be the connection between the mother and the
+                  ! colour connection of i_fks.
+                  ipbar=0
                   do ip=1,nexternal
-                     if (are_col_conn_H(ip,j_fks) .and.
+                     if (are_col_conn_H(ip,i_fks) .and.
      $                    iRtoB(ip).ne.imother) then
                         ipbar=iRtoB(ip)
                      endif
                   enddo
-               endif
-               if (i1.eq.i_fks .and. i2.eq.j_fks) then
-                  if (.not. dzones2(ipbar,imother)) then
-                     t(i1,i2)=xscales2(ipbar,imother)
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  if (ipbar.eq.0) then
+                     ! if none are found, check the ones for j_fks. This
+                     ! happens only when i_fks is a quark and j_fks is
+                     ! an (incoming) gluon.
+                     do ip=1,nexternal
+                        if (are_col_conn_H(ip,j_fks) .and.
+     $                       iRtoB(ip).ne.imother) then
+                           ipbar=iRtoB(ip)
+                        endif
+                     enddo
                   endif
-               else
-                  if (.not. dzones2(imother,ipbar)) then
-                     t(i1,i2)=xscales2(imother,ipbar)
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
-               endif
-            elseif (i1.eq.i_fks) then
-               if (.not. dzones2(imother,iRtoB(i2))) then
-                  t(i1,i2)=xscales2(imother,iRtoB(i2))
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            elseif (i2.eq.i_fks) then
-               if (.not. dzones2(iRtoB(i1),imother)) then
-                  t(i1,i2)=xscales2(iRtoB(i1),imother)
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            else
-               if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
-                  t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            endif
-         enddo
-      enddo
-      SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
-      end
-      
-      
-      subroutine set_SCALUP_tmp_H(are_col_conn_H,iBtoR,iRtoB,xscales2
-     $     ,dzones2,p,SCALUP_tmp_H)
-! Fills the SCALUP_tmp_H (the starting scales for the H-event that will
-! be written in the event file) based on eq.3.39-3.43 of the paper
-! (i.e., the stopping scales of the corresponding S-event as determined
-! by Pythia). In case we are in the deadzone, use a scale based on the
-! dipole mass (using H-event kinematics) instead. WARNING: this
-! subroutine does NOT enforce the scales for the IF dipoles to be
-! overwritten by the II dipoles.
-      implicit none
-      include 'nexternal.inc'
-      logical are_col_conn_H(nexternal,nexternal)
-      logical*1 dzones2(0:99,0:99)
-      double precision xscales2(0:99,0:99)
-      double precision SCALUP_tmp_H(nexternal,nexternal)
-      double precision p(0:3,nexternal)
-      integer iRtoB(nexternal),iBtoR(nexternal-1)
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      integer i1,i2,ip,imother
-      double precision t(nexternal,nexternal)
-      double precision sumdot
-      external sumdot
-      do i1=1,nexternal
-         do i2=1,nexternal
-            t(i1,i2)=-1d0
-            if (.not.are_col_conn_H(i1,i2)) cycle
-            if ( i1.ne.i_fks .and. i1.ne.j_fks .and.
-     &           i2.ne.i_fks .and. i2.ne.j_fks) then   ! Eq.3.39
-               if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
-                  t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            elseif (i1.ne.i_fks .and. i1.ne.j_fks .and.
-     &              i2.eq.j_fks) then                  ! Eq.3.40
-               imother=iRtoB(j_fks)
-               if (.not. dzones2(iRtoB(i1),imother)) then
-                  t(i1,i2)=xscales2(iRtoB(i1),imother)
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            elseif (i1.ne.i_fks .and. i1.ne.j_fks .and.
-     &              i2.eq.i_fks) then                  ! Eq.3.41
-               imother=iRtoB(j_fks)
-               if (.not. dzones2(iRtoB(i1),imother)) then
-                  t(i1,i2)=xscales2(iRtoB(i1),imother)
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
-            elseif (i1.eq.i_fks .or. i1.eq.j_fks) then ! Eq.3.42 & Eq.3.43
-               imother=iRtoB(j_fks)
-               do ip=1,nexternal
-                  if (are_col_conn_H(ip,i_fks) .and.
-     $                 iRtoB(ip).ne.imother) then
-                     if (t(i1,i2).ne.-1d0) then
-                        write (*,*) 'ERROR: t(i1,i2) already set',i1,i2
-     $                       ,ip,imother
-                        stop 1
+                  if (i1.eq.i_fks .and. i2.eq.j_fks) then
+                     if (.not. dzones2(ipbar,imother)) then
+                        t(i1,i2)=xscales2(ipbar,imother)
+                     else
+                        t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
                      endif
-                     if (.not. dzones2(imother,iRtoB(ip))) then
-                        t(i1,i2)=xscales2(imother,iRtoB(ip)) 
+                  else
+                     if (.not. dzones2(imother,ipbar)) then
+                        t(i1,i2)=xscales2(imother,ipbar)
                      else
                         t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
                      endif
                   endif
-               enddo
-            else
-c$$$               write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
-c$$$     $              ,i_fks,j_fks
-c$$$               stop 1
-            endif
+               elseif (i1.eq.i_fks) then
+                  if (.not. dzones2(imother,iRtoB(i2))) then
+                     t(i1,i2)=xscales2(imother,iRtoB(i2))
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               elseif (i2.eq.i_fks) then
+                  if (.not. dzones2(iRtoB(i1),imother)) then
+                     t(i1,i2)=xscales2(iRtoB(i1),imother)
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               else
+                  if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
+                     t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
+                  else
+                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  endif
+               endif
+            enddo
          enddo
-      enddo
+      endif
       ! check that all have been set
       do i1=1,nexternal
          do i2=1,nexternal
             if (.not.are_col_conn_H(i1,i2)) cycle
             if (t(i1,i2).eq.-1d0) then
-c$$$               write (*,*) 'ERROR, scale still equal to -1',i1,i2
-c$$$               stop 1
+               write (*,*) 'ERROR, scale still equal to -1',i1,i2
+               stop 1
             endif
          enddo
       enddo
