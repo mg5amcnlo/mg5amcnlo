@@ -2281,7 +2281,7 @@ c
       double precision t(nexternal,nexternal),pT
       double precision sumdot
       external sumdot
-      logical MCpic
+      logical MCpicture
       parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
 
       if (MCpicture) then
