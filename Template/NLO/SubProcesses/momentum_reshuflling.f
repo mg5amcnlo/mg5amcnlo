@@ -119,6 +119,8 @@ C-----Local
             ! the only option is to recoil on all FS particles
             call reshuffle_initial_state(p,q,iresh(i),pdg_old(i),pdg_new(i),pass)
           endif
+          ! exit and return if pass = False
+          if (.not.pass) return
         enddo
       endif
 
