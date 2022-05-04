@@ -3198,8 +3198,8 @@ Parameters              %(params)s\n\
 
         sudakov_me = sudakov['matrix_element']
         ibase_me = sudakov['base_amp']
-        pdgs = sudakov['pdgs']
-        legs = sudakov['legs']
+        pdgs = copy.copy(sudakov['pdgs'])
+        legs = copy.copy(sudakov['legs'])
 
         matrix_element = copy.copy(base_me)
         model = matrix_element.get('processes')[0].get('model')
@@ -3325,15 +3325,21 @@ Parameters              %(params)s\n\
 
         # the calls for the momentum reshuffling
         replace_dict['reshuffle_calls'] = 'pass_reshuffle = .true.\n'
-        # the 'sorted' below is to do the reshuffling from the last leg
-        # this ensures that reshuffling of initial-state legs is always done AFTER
-        # the one of FS legs
-        for leg, pdg_old, pdg_new in sorted(zip(legs, pdgs[0], pdgs[1]), reverse=True):
-            # call the reshuffling function only if the masses are different
-            if model['particle_dict'][pdg_old]['mass'] != model['particle_dict'][pdg_new]['mass']:
-                replace_dict['reshuffle_calls'] += "call reshuffle_momenta(p,p_resh,%d,%d,%d,pass_reshuffle)\n" \
-                                                % (leg['number'],pdg_old,pdg_new)
-                replace_dict['reshuffle_calls'] += "p(:,:)=p_resh(:,:)\n"
+
+        pdgs_in, pdgs_out = pdgs
+        # make sure all the lists have lenght = 2. In case, pad with zero's
+        for resh_list in [legs, pdgs_in, pdgs_out]:
+            while len(resh_list) < 2:
+                if resh_list == legs:
+                    resh_list.append({'number':0})
+                else:
+                    resh_list.append(0)
+
+        replace_dict['reshuffle_calls'] += "call reshuffle_momenta(p,p_resh,(/%s/),(/%s/),(/%s/),pass_reshuffle)\n" \
+                                        % (','.join(['%d' % leg['number'] for leg in legs]), 
+                                           ','.join(['%d' % p for p in pdgs_in]),
+                                           ','.join(['%d' % p for p in pdgs_out]))
+        replace_dict['reshuffle_calls'] += "p(:,:)=p_resh(:,:)\n"
     
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_splitorders_fks.inc')).read()

@@ -25,7 +25,7 @@ C-----triangular function
       end
 
 
-      subroutine reshuffle_momenta(p,q,iresh,pdg_old,pdg_new,pass)
+      subroutine reshuffle_momenta_old(p,q,iresh,pdg_old,pdg_new,pass)
 C A wrapper which, based on ihowresh, calls the subroutine for 
 C the initial- or final-state reshuffling
       implicit none 
@@ -59,6 +59,158 @@ C-----Local
 
       return
       end
+
+
+      subroutine reshuffle_momenta(p,q,iresh,pdg_old,pdg_new,pass)
+C A wrapper which, based on ihowresh, calls the subroutine for 
+C the initial- or final-state reshuffling
+      implicit none 
+      include 'nexternal.inc'
+C-----Arguments      
+      double precision p(0:3,nexternal-1), q(0:3,nexternal-1)
+      integer iresh(2), pdg_old(2), pdg_new(2)
+      double precision mass_old, mass_new
+      logical pass
+C-----Local
+      integer i
+      ! the reshuffling strategy
+      integer ihowresh
+      parameter(ihowresh=1) ! 1-> recoil initial, 2-> recoil final
+      ! this is whether to keep the invariant mass constant if two
+      ! FS particles are reshuffled
+      logical reshuffle_two
+      parameter (reshuffle_two=.true.)
+
+      ! consistency check
+      do i = 1, 2 
+        if (iresh(i).eq.0.or.pdg_old(i).eq.0.or.pdg_new(i).eq.0) then
+          if (iresh(i).ne.0.or.pdg_old(i).ne.0.or.pdg_new(i).ne.0) then
+            write(*,*) 'ERROR in reshuffling, inconsistent values',
+     #         i, iresh, pdg_old, pdg_new
+            stop 1
+          endif
+        endif
+      enddo
+
+
+      if (reshuffle_two.and.iresh(1).gt.nincoming.and.iresh(2).gt.nincoming) then
+        call reshuffle_final_two(p,q,iresh,pdg_old,pdg_new,pass)
+      else
+        do i = 2, 1, -1  ! if two particles have to be reshuffled, start
+                         ! from the second one
+          ! skip the case where iresh/pdg_old/pdg_new are zero
+          ! (just check one, consistency has been checked above)
+          if (iresh(i).eq.0) continue
+
+          if (iresh(i).gt.nincoming) then
+            ! for the reshuffling of a final-state particle, 
+            ! two options exist: recoil on all other FS particles,
+            ! or recoil on the initial state
+            if (ihowresh.eq.1) then
+              call reshuffle_initial(p,q,iresh(i),pdg_old(i),pdg_new(i),pass)
+            else if (ihowresh.eq.2) then
+              call reshuffle_final(p,q,iresh(i),pdg_old(i),pdg_new(i),pass)
+            else
+              write(*,*) 'ERROR: reshuffle momenta, wrong option', ihowresh
+              stop 1
+            endif
+          else
+            ! for the reshuffling of an initial statem momentum,
+            ! the only option is to recoil on all FS particles
+            call reshuffle_initial_state(p,q,iresh(i),pdg_old(i),pdg_new(i),pass)
+          endif
+        enddo
+      endif
+
+      return
+      end
+
+
+      subroutine reshuffle_final_two(p,q,iresh,pdg_old,pdg_new,pass)
+************************************************************************
+*     Authors: Marco Zaro                                              *
+*     Given momenta p(nu,nexternal-1) produce q(nu,external-1).        * 
+*     Only in this function, iresh, pdg_old, pdg_new are 2-component   *
+*     arrays, with the informations on the two particles whose mass    *
+*     Is going to be changed.                                          *
+*     Reshuffling is perfomed conserving the invariant mass and total  *
+*     momentum of the two particles. Also the angles in the combined   *
+*     rest frame are preserved. The other momenta are left unchanged   *
+************************************************************************
+      implicit none 
+      include 'nexternal.inc'
+C-----Arguments      
+      double precision p(0:3,nexternal-1), q(0:3,nexternal-1)
+      integer iresh(2), pdg_old(2), pdg_new(2)
+      double precision mass_old(2), mass_new(2)
+      logical pass
+C-----Local variables
+      integer i,j
+      double precision invm2, ptot(0:3)
+      double precision pcom(0:3,2), qcom(0:3,2)
+      double precision pspac2, qspac2
+C-----Functions
+      double precision dot, threedot, lambda_tr, get_mass_from_id
+      external dot, threedot, lambda_tr, get_mass_from_id
+
+      pass = .true.
+      do i = 1, 2
+        mass_old(i) = get_mass_from_id(pdg_old(i))
+        mass_new(i) = get_mass_from_id(pdg_new(i))
+      enddo
+
+      ! do nothing if masses do not change
+      if (mass_old(1).eq.mass_new(1).and.mass_old(2).eq.mass_new(2)) then
+        q(:,:) = p(:,:)
+        return
+      endif
+
+      ! copy the 'ohter' momenta
+      do j = 1, nexternal-1
+        if (j.eq.iresh(1).or.j.eq.iresh(2)) continue
+        q(:,j) = p(:,j)
+      enddo
+
+      ! the total momentum of the two particles
+      ptot(:) = p(:,iresh(1)) + p(:,iresh(2))
+      ! the invariant mass
+      invm2 = dot(ptot,ptot)
+      ! check that the reshuffling can be done
+      if (sqrt(invm2).lt.mass_new(1)+mass_new(2)) then
+        pass = .false.
+        return
+      endif
+
+      ! go in the rest frame of the total momentum and 
+      ! compute the momenta of the two particles in that frame
+      do i = 1,2
+        call invboostx(p(0, iresh(i)), ptot, pcom(0,i))
+      enddo
+      ! the modulus of the spatial momenta for the old momenta
+      pspac2 = threedot(pcom(0,1))
+      ! the modulus of the spatial momenta for the new momenta
+      qspac2 = lambda_tr(invm2,mass_new(1)**2,mass_new(2)**2) / 4d0 / invm2
+      ! now compute the new momenta in the com frame, keeping 
+      ! the same spatial direction as p, and finally boost them back in
+      ! the original frame
+      do i = 1,2
+        do j = 1,3
+          qcom(j,i) = pcom(j,i) * dsqrt(qspac2/pspac2)
+        enddo
+        qcom(0,i) = dsqrt(mass_new(i)**2 + qspac2)
+        call boostx(qcom(0,i), ptot, q(0,iresh(i)))
+      enddo
+
+      ! check the momenta before returning
+      do i = 1,2
+        call check_reshuffled_momenta(p, q, iresh(i), mass_new(i))
+      enddo
+
+      return
+      end
+       
+
+
 
 
       subroutine reshuffle_initial_state(p,q,iresh,pdg_old,pdg_new,pass)
@@ -104,6 +256,12 @@ C---------------
      $     p(:,1), p(:,2)
       endif
       mass_new = get_mass_from_id(pdg_new)
+
+      ! do nothing if masses do not change
+      if (mass_old.eq.mass_new) then
+        q(:,:) = p(:,:)
+        return
+      endif
 
       ! under these assumptions, we go in the frame where the
       ! reshuffled particle with mas = mass_new is on shell
@@ -177,6 +335,12 @@ C---------------
       pass = .true.
       mass_old = get_mass_from_id(pdg_old)
       mass_new = get_mass_from_id(pdg_new)
+
+      ! do nothing if masses do not change
+      if (mass_old.eq.mass_new) then
+        q(:,:) = p(:,:)
+        return
+      endif
 
 C compute the total mass of the FS particles
       totmass = 0d0
@@ -274,6 +438,13 @@ C---------------
       pass = .true.
       mass_old = get_mass_from_id(pdg_old)
       mass_new = get_mass_from_id(pdg_new)
+
+      ! do nothing if masses do not change
+      if (mass_old.eq.mass_new) then
+        q(:,:) = p(:,:)
+        return
+      endif
+
       etot = 0d0
       ztot = 0d0
 
