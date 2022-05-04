@@ -48,6 +48,13 @@ C
       INCLUDE 'model_functions.inc'
       DOUBLE PRECISION GOTHER
 
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE
+
+
+      INCLUDE '../cuts.inc'
+      DATA MAXJETFLAVOR,FIXED_EXTRA_SCALE,MUE_OVER_REF,MUE_REF_FIXED 
+     $ /5,.FALSE.,1D0,91.188/
       INCLUDE '../run.inc'
 
       DOUBLE PRECISION ALPHAS
@@ -78,8 +85,12 @@ C
       INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE
 
-      IF (MU_R2.GT.0D0) MU_R = MU_R2
+
+      IF (MU_R2.GT.0D0) MU_R = DSQRT(MU_R2)
+      MODEL_SCALE = DSQRT(MU_R2)
       G = SQRT(4.0D0*PI*AS2)
       AS = AS2
 

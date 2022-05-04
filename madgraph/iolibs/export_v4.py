@@ -2291,9 +2291,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         source_dir = pjoin(self.dir_path, "Source")
         logger.info("Running make for Source directory")
-        misc.compile(cwd=source_dir, mode='fortran')
-        #logger.info("Running make for Model")
-        #misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        try:
+            misc.compile(cwd=source_dir, mode='fortran')
+        except:
+            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -4174,7 +4176,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
-        if self.opt['hel_recycling']:
+        if 'hel_recycling' in self.opt and self.opt['hel_recycling']:
             filename = pjoin(Ppath, 'matrix_orig.f')
         else:
             filename = pjoin(Ppath, 'matrix.f')
