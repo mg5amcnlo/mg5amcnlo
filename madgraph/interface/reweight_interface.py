@@ -917,21 +917,29 @@ class ReweightInterface(extended_cmd.Cmd):
                     #check for running attribute
                     update_running_info = False
                     if tag == 2:
-                        if  self.model["running_elements"]:
+                        if not self.model:
+                            update_running_info = True
+                        elif  self.model["running_elements"]:
                             update_running_info = True
                     elif self.second_model:
                         if self.second_model["running_elements"]:
                             update_running_info = True
-                    elif  self.model["running_elements"]:
+                    elif  not self.model:
+                        update_running_info = True
+                    elif self.model["running_elements"]:
                         update_running_info = True
                     if update_running_info:
-                        run_card = banner.RunCard(self.banner.get('run_card'))
-                        module.set_fixed_extra_scale(run_card['fixed_extra_scale'])
-                        module.set_mue_over_ref(run_card['mue_over_ref'])
-                        module.set_mue_ref_fixed(run_card['mue_ref_fixed'])
-                        module.set_maxjetflavor(run_card['maxjetflavor'])
-                        module.set_asmz(param_card.get('sminputs').get((3,)).value)
-                        module.set_nloop(2)
+                        try:
+                            run_card = banner.RunCard(self.banner.get('run_card'))
+                            module.set_fixed_extra_scale(run_card['fixed_extra_scale'])
+                            module.set_mue_over_ref(run_card['mue_over_ref'])
+                            module.set_mue_ref_fixed(run_card['mue_ref_fixed'])
+                            module.set_maxjetflavor(run_card['maxjetflavor'])
+                            module.set_asmz(param_card.get('sminputs').get((3,)).value)
+                            module.set_nloop(2)
+                        except Exception:
+                            if self.model:
+                                raise
                     module.update_all_coup()
                         
         return param_card_iterator, tag_name
