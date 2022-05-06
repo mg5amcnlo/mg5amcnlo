@@ -2264,9 +2264,9 @@ c
 ! i_fks and j_fks are the emitter can get different values, based on the
 ! colour connections of the mother.
 ! In case we are in the deadzone, use a scale based on the dipole mass
-! (using H-event kinematics) instead. WARNING: this subroutine does NOT
-! enforce the scales for the IF dipoles to be overwritten by the II
-! dipoles.
+! (using H-event kinematics) instead.
+! WARNING: this subroutine does NOT enforce the scales for the IF
+! dipoles to be overwritten by the II dipoles.
       implicit none
       include 'nexternal.inc'
       logical are_col_conn_H(nexternal,nexternal)
@@ -2277,120 +2277,87 @@ c
       integer iRtoB(nexternal),iBtoR(nexternal-1)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer i1,i2,ip,imother,ipbar
+      integer i1,i2,ip,imother,i1bar,i2bar
       double precision t(nexternal,nexternal),pT
+      integer ipbar
       double precision sumdot
-      external sumdot
+      external sumdot,ipbar
       logical MCpicture
       parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
 
+      t(1:nexternal,1:nexternal)=-1d0
+      imother=iRtoB(j_fks)
       if (MCpicture) then
          ! Let pT to be the minimum of the stopping scales related to
          ! the mother.
          pT=99d99
-         do i2=1,nexternal-1
-            if (are_col_conn_S(iRtoB(j_fks),i2)) then
-               if (.not.dzones2(iRtoB(j_fks),i2))
-     &              pT=min(pT,xscales2(iRtoB(j_fks),i2))
+         do i2bar=1,nexternal-1
+            if (are_col_conn_S(imother,i2bar)) then
+               if (.not.dzones2(imother,i2bar))
+     &              pT=min(pT,xscales2(imother,i2bar))
             endif
          enddo
-         imother=iRtoB(j_fks)
-         do i1=1,nexternal
-            do i2=1,nexternal
-               t(i1,i2)=-1d0
-               if (.not.are_col_conn_H(i1,i2)) cycle
-               if ( i1.ne.i_fks .and. i1.ne.j_fks .and.
-     &              i2.ne.i_fks .and. i2.ne.j_fks) then
-                  if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
-                     t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
-               elseif( i1.ne.i_fks .and. i1.ne.j_fks .and.
-     &                 (i2.eq.j_fks .or. i2.eq.i_fks)) then
-                  if (.not. dzones2(iRtoB(i1),imother)) then
-                     t(i1,i2)=xscales2(iRtoB(i1),imother)
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
-               elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
-                  if (pT.ne.99d99) then ! at least one is in the life-zone
-                     t(i1,i2)=pt
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
+      endif
+      do i1=1,nexternal
+         do i2=1,nexternal
+            if (.not.are_col_conn_H(i1,i2)) cycle
+            ! Find the (i1bar,i2bar) S-event dipole corresponding to
+            ! the (i1,i2) H-event dipole.
+            if (i1.eq.i_fks .and. i2.eq.j_fks) then
+               if (MCpicture) then
+                  i1bar=-99
                else
-                  write (*,*) 'ERROR: unknown indices in tij-loop',i1,i2
-     $                 ,i_fks,j_fks
+                  i1bar=ipbar(are_col_conn_H,imother,iRtoB)
+                  i2bar=imother
+               endif
+            elseif (i1.eq.j_fks .and. i2.eq.i_fks) then
+               if (MCpicture) then
+                  i1bar=-99
+               else
+                  i1bar=imother
+                  i2bar=ipbar(are_col_conn_H,imother,iRtoB)
+               endif
+            elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
+               if (MCpicture) then
+                  i1bar=-99
+               else
+                  i1bar=imother
+                  i2bar=iRtoB(i2)
+               endif
+            elseif (i2.eq.i_fks .or. i2.eq.j_fks) then
+               i1bar=iRtoB(i1)
+               i2bar=imother
+            else ! both i1 and i2 are not equal to i_fks and/or j_fks
+               i1bar=iRtoB(i1)
+               i2bar=iRtoB(i2)
+            endif
+            ! (i1bar,i2bar) dipole found. Set the (i1,i2) dipole
+            ! starting scale based on the (i1bar,i2bar) stopping scale
+            ! (or inv. mass in case of dead zone).
+            if (i1bar.eq.-99) then
+               if (.not. MCpicture) then
+                  write (*,*) 'This should only happen in the MCpicture'
                   stop 1
                endif
-            enddo
-         enddo
-      else ! ME-picture
-         imother=iRtoB(j_fks)
-         do i1=1,nexternal
-            do i2=1,nexternal
-               t(i1,i2)=-1d0
-               if (.not.are_col_conn_H(i1,i2)) cycle
-               if ( (i1.eq.i_fks .and. i2.eq.j_fks) .or.
-     &              (i1.eq.j_fks .and. i2.eq.i_fks)) then
-                  ! find relevant dipole (at S-event level) for the
-                  ! i_fks-j_fks connection. In almost all cases, this
-                  ! should be the connection between the mother and the
-                  ! colour connection of i_fks.
-                  ipbar=0
-                  do ip=1,nexternal
-                     if (are_col_conn_H(ip,i_fks) .and.
-     $                    iRtoB(ip).ne.imother) then
-                        ipbar=iRtoB(ip)
-                     endif
-                  enddo
-                  if (ipbar.eq.0) then
-                     ! if none are found, check the ones for j_fks. This
-                     ! happens only when i_fks is a quark and j_fks is
-                     ! an (incoming) gluon.
-                     do ip=1,nexternal
-                        if (are_col_conn_H(ip,j_fks) .and.
-     $                       iRtoB(ip).ne.imother) then
-                           ipbar=iRtoB(ip)
-                        endif
-                     enddo
-                  endif
-                  if (i1.eq.i_fks .and. i2.eq.j_fks) then
-                     if (.not. dzones2(ipbar,imother)) then
-                        t(i1,i2)=xscales2(ipbar,imother)
-                     else
-                        t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                     endif
-                  else
-                     if (.not. dzones2(imother,ipbar)) then
-                        t(i1,i2)=xscales2(imother,ipbar)
-                     else
-                        t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                     endif
-                  endif
-               elseif (i1.eq.i_fks) then
-                  if (.not. dzones2(imother,iRtoB(i2))) then
-                     t(i1,i2)=xscales2(imother,iRtoB(i2))
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
-               elseif (i2.eq.i_fks) then
-                  if (.not. dzones2(iRtoB(i1),imother)) then
-                     t(i1,i2)=xscales2(iRtoB(i1),imother)
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
+               if (pT.ne.99d99) then ! at least one is in the life zone
+                  t(i1,i2)=pT
                else
-                  if (.not. dzones2(iRtoB(i1),iRtoB(i2))) then
-                     t(i1,i2)=xscales2(iRtoB(i1),iRtoB(i2))
-                  else
-                     t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-                  endif
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
                endif
-            enddo
+            else
+               if (.not.are_col_conn_S(i1bar,i2bar)) then
+                  write (*,*) 'Lines not color connected #2',
+     $                 i1,i2,i1bar,i2bar
+                  stop 1
+               endif
+               if (.not. dzones2(i1bar,i2bar)) then
+                  t(i1,i2)=xscales2(i1bar,i2bar)
+               else
+                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+               endif
+            endif
          enddo
-      endif
+      enddo
       ! check that all have been set
       do i1=1,nexternal
          do i2=1,nexternal
@@ -2404,6 +2371,42 @@ c
       SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
       end
 
+      integer function ipbar(are_col_conn_H,imother,iRtoB)
+      ! ipbar is the colour connection of i_fks (if it exists and is not
+      ! equal to the mother). Otherwise it is the colour connection of
+      ! j_fks. The latter only happens when i_fks is a quark and j_fks
+      ! is an (incoming gluon).
+      implicit none
+      include 'nexternal.inc'
+      logical are_col_conn_H(nexternal,nexternal)
+      integer imother,iRtoB(nexternal)
+      integer ip
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      ipbar=0
+      do ip=1,nexternal
+         if (are_col_conn_H(ip,i_fks) .and. iRtoB(ip).ne.imother) then
+            if (ipbar.ne.0) then
+               write (*,*) 'Too many colour connections #1'
+               stop 1
+            endif
+            ipbar=iRtoB(ip)
+         endif
+      enddo
+      if (ipbar.eq.0) then
+         do ip=1,nexternal
+            if (are_col_conn_H(ip,j_fks) .and. iRtoB(ip).ne.imother)
+     $           then
+               if (ipbar.ne.0) then
+                  write (*,*) 'Too many colour connections #2'
+                  stop 1
+               endif
+               ipbar=iRtoB(ip)
+            endif
+         enddo
+      endif
+      end
+      
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt)
