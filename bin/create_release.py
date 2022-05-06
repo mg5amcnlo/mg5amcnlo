@@ -129,8 +129,12 @@ if rev_nb:
     try:
         filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
+        print(text)
         web_version = int(text[0].strip())
-        last_message = int(text[1].strip())
+        if text[1]:
+            last_message = int(text[1].strip())
+        else:
+            last_message = 99
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
@@ -225,17 +229,21 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
 #                 status)
 #    sys.exit()
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
 
 #3. tarring the apidoc directory
-status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+#status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
-if status2:
-    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
-    sys.exit()
-else:
+#if status2:
+#    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+#                 status)
+#    sys.exit()
+#else:
     # remove the apidoc file.
-    shutil.rmtree(os.path.join(filepath,'apidoc'))
+#    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 4. Download the offline installer and other similar code
 install_str = """

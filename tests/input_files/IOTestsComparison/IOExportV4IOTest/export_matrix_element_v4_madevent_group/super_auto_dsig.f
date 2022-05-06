@@ -635,6 +635,6 @@ C
       WRITE(*,*) 'this type of pdf is not support with'
      $ //' group_subprocess=True. regenerate process with: set'
      $ //' group_subprocesses false'
-      STOP 1
+      STOP 5
       RETURN
       END

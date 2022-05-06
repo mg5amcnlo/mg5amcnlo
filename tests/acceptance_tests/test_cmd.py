@@ -219,6 +219,9 @@ class TestCmdShell1(unittest.TestCase):
                      'auto_convert_model': False,
                      'nlo_mixed_expansion': True,
                      'acknowledged_v3.1_syntax': False,
+                     'contur_path': './HEPTools/contur',
+                     'rivet_path': './HEPTools/rivet',
+                     'yoda_path':'./HEPTools/yoda',
                     }
 
         self.assertEqual(config, expected)

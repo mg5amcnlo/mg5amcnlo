@@ -737,7 +737,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # Make a Template Copy
         if self._export_format in ['NLO']:
-            self._curr_exporter.copy_fkstemplate()
+            self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
         self._done_export = False

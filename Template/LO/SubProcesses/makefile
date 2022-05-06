@@ -28,6 +28,12 @@ LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample
 
 LIBS = $(LIBDIR)libbias.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 
+ifneq ("$(wildcard ../../Source/RUNNING)","")
+    LINKLIBS += -lrunning
+    LIBS += $(LIBDIR)librunning.$(libext) 
+endif
+
+
 # Source files
 
 MATRIX_HEL = $(patsubst %.f,%.o,$(wildcard matrix*_orig.f))
@@ -52,8 +58,8 @@ $(PROG): $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX)
 $(PROG)_forhel: $(PROCESS) auto_dsig.o $(LIBS) $(MATRIX_HEL)
 	$(FC) -o $(PROG)_forhel $(PROCESS) $(MATRIX_HEL) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
-gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
-	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric -lpdf $(llhapdf) $(LDFLAGS)
+gensym: $(SYMMETRY) configs.inc $(LIBS)
+	$(FC) -o gensym $(SYMMETRY) -L../../lib/ $(LINKLIBS) $(LDFLAGS)
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

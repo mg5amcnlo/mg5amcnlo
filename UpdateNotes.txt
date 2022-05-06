@@ -1,6 +1,21 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+
+3.4.0 (06/05/22)
+      SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
+          at the end of the scan. (Contribution from Sihyun Jeon)
+      OM: Allow to have EFT operator to run for some special UFO model (quite restricted class of running are supported
+          -- corresponding to EFT running --) 
+      OM: change reweighting/spinmode=onshell (from maddspin) to use the average of the matrix-element when it exists an order ambiguity in the matrix element like for the following process:
+      p p > e+ ... z, z > e+ e-
+      where permuting the momenta of the "e+" does not lead to the same
+      matrix-element.
+      CF: include notification when jobs are done in the unix notification center if executable notify-send is present.
+          Contribution from Carlo Flore.
+      All: Droping the support for python2.7
+      All: include bug fix from Long Term Stable version (2.9.10) see below
+
 3.3.2(18/03/22)
       OM: (re)allow --loop_filter=True/... syntax for MC@NLO
       RF: Fixed a bug in the phase-space generation of MadSpin,
@@ -18,6 +33,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Fix bug when running from the process directory
       all: include all bug fix from the LTS version (2.9.7)
            including important bug on MC@NLO and on madspin
+
 
 3.3.0 (12/11/21)
       DP+HS+IT+MZ: EW corrections can be computed for tagged photons
@@ -82,9 +98,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
+2.9.10 (06/05/2022)
+     OM: allow model with GC in their name to use helicity recycling
+     OM: Forbid madspin to run with crazy value of BWcut
+     OM: Fixing some IO issue with Madspin that was leading to a lock of the code
+     OM: set a user interface for the set ewscheme option 
+     OM: forbid helicity recycling for model with spin2 and spin3/2 (optimization is not implemented for such case)
 
-2.9.8 ()
-=======
 2.9.9 (25/02/2022)
      OM: Fix a bug introduced in 2.9.0 for MLM generation in presence of mix EW/QCD process.
          The bug typically leads to a crash within the systematics.py due to wrong power of alpha_s
@@ -95,7 +115,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: Fix an issue when using "$ X" when X~ can be onshell, the phase-space symmetry factor was wrongly set.
 
 2.9.8 (21/02/2022)
->>>>>>> MERGE-SOURCE
      OM: Fix in madspin where onlyhelicity mode was not working anymore
          also allows to not specify any decay in that mode.
      OM: Fix in multi_run mode where some meta-data where incorrectly set within the merged lhef file.

@@ -1042,13 +1042,15 @@ class AllMatrixElement(dict):
         
         decay_struct = {}
         to_decay = collections.defaultdict(list)
-        
+        orig_decay = collections.defaultdict(list)
         for i, proc in enumerate(me.get('decay_chains')):
             pid =  proc.get('legs')[0].get('id')
             to_decay[pid].append((i,proc))
-                  
-                
+            orig_decay[pid].append((i,proc))
+
         for leg in me.get('legs'):
+            if not leg.get('state'): # initial state particle does not decay ...
+                continue
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay:
@@ -3415,22 +3417,24 @@ class decay_all_events(object):
         except IOError as error:
             if not first:
                 raise
+            #misc.sprint(error)
             try:
                 external.stdin.close()
             except Exception as  error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stdout.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stderr.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.terminate()
-            except:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
+
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
 
@@ -3469,6 +3473,8 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
+                        external.stdin.flush()
+                        external.stdout.flush()
                         ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')

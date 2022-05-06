@@ -22,7 +22,7 @@ GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 
 # Locally compiled libraries
 
-LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
+LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) 
 
 # Binaries
 
@@ -50,6 +50,8 @@ $(LIBDIR)libbias.$(libext): BIAS/dummy
 	cd BIAS/dummy; make
 
 %(model)s
+
+%(running)s
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(LDFLAGS) -o $@ $^
@@ -113,6 +115,7 @@ clean:
 	cd DHELAS; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
+	if [ -d RUNNING ]; then cd RUNNING; make clean; cd ..; fi
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
 	for i in `ls -d ../SubProcesses/P*`; do cd $$i; make clean; cd -; done;

@@ -1486,6 +1486,7 @@ class LoopModel(base_objects.Model):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz','perturbation_couplings','conserved_charge']
 
+
 #===============================================================================
 # DGLoopLeg
 #===============================================================================
