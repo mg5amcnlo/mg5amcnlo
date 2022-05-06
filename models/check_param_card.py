@@ -644,10 +644,16 @@ class ParamCard(dict):
                     logger.warning('information about \"%s %s" is missing using default value: %s.' %\
                                                           (block, lhaid, value))
             else:
-                value =defaultcard[block].get(tuple(lhaid)).value
+               
                 if block != 'loop':
+                    value =defaultcard[block].get(tuple(lhaid)).value
                     logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
                                    (block, lhaid, value))
+                else:
+                    try:
+                        value =defaultcard[block].get(tuple(lhaid)).value
+                    except Exception:
+                        value = 91.118
             value = str(value).lower()
             #special handling for negative mass -> set width negative
             if block == 'decay':
