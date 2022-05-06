@@ -1253,8 +1253,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             # Mutliply by -1 for those which have an imaginary coefficient.
             ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
                               for coefficient in coeff_list]
-            # Find the common denominator.      
-            commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            # Find the common denominator.
+            if six.PY2:    
+                commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            else:
+                commondenom=abs(reduce(math.gcd, coefs_list).denominator)
             num_list=[(coefficient*commondenom).numerator \
                       for coefficient in coefs_list]
             res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
