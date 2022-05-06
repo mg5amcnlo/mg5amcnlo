@@ -1932,6 +1932,9 @@ class Model(PhysicsObject):
             for coup in list_coup:                
                 coup.expr = pat.sub(replace, coup.expr)
                 
+    def get_all_spin(self):
+        return {p.get('spin') for p in self['particles']}
+
     def add_param(self, new_param, depend_param):
         """add the parameter in the list of parameter in a correct position"""
             

@@ -229,17 +229,21 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
 #                 status)
 #    sys.exit()
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
 
 #3. tarring the apidoc directory
-status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+#status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
-if status2:
-    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
-    sys.exit()
-else:
+#if status2:
+#    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+#                 status)
+#    sys.exit()
+#else:
     # remove the apidoc file.
-    shutil.rmtree(os.path.join(filepath,'apidoc'))
+#    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 4. Download the offline installer and other similar code
 install_str = """

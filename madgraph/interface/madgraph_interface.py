@@ -8058,6 +8058,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             flaglist.append('store_model')
         if '--hel_recycling=False' in args:
             flaglist.append('no_helrecycling')
+
+        #forbid helicity recycling for spin 3/2 and spin 2
+        if any(spin > 3 for spin in self._curr_model.get_all_spin()):
+            flaglist.append('no_helrecycling')
+            args.append('--hel_recycling=False')
                     
         line_options = dict( (arg[2:].split('=')  if "=" in arg else (arg[2:], True))
                              for arg in args if arg.startswith('--'))
