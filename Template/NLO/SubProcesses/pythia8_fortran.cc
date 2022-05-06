@@ -10,6 +10,7 @@ extern "C" {
 
   // set up a global instance of pytia8
   Pythia pythia;
+  pythia.settings.addFlag("aMC@NLO:debugScales",0,true,false,0,100);
   // set up a global instance of LHAup
   //MyLHAupFortran lhareader;
   MyLHAupFortran lhareader(&pythia.settings);
@@ -96,6 +97,7 @@ extern "C" {
     //pythia.readString("merging:doptlundmerging = on");
     pythia.readString("Merging:doMerging = on");
     pythia.readString("Merging:runtimeAMCATNLOInterface = on");
+    pythia.readString("aMC@NLO:debugScales = on");
     pythia.settings.word("Merging:Process", processString);
     //pythia.readString("merging:tms = 1000000");
     pythia.readString("merging:includeWeightInXSection = off");
@@ -110,6 +112,7 @@ extern "C" {
     pythia.readString("Print:quiet = on");
     pythia.readString("Merging:nRequested = 0");
     pythia.readString("Beams:setProductionScalesFromLHEF = off");
+    pythia.readString("Beams:setDipoleShowerStartingScalesFromLHEF = on");
     pythia.readString("Check:abortIfVeto               = on");
     //pythia.readString("Merging:mayRemoveDecayProducts  = on");
 

@@ -1467,17 +1467,22 @@ void SimpleTimeShower::setupQCDdip( int iSys, int i, int colTag, int colSign,
 
     // If requested, force maximal pT to LHEF input value.
     if ( abs(event[iRad].status()) > 20 &&  abs(event[iRad].status()) < 24
-      && settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+      && ( settingsPtr->flag("Beams:setProductionScalesFromLHEF")
+        || settingsPtr->flag("Beams:setDipoleShowerStartingScalesFromLHEF") )
       && event[iRad].scale() > 0.) {
       //pTmax = event[iRad].scale();
       double scaleNow = event[iRad].scale();
-      string name="scalup_";
-      ostringstream oss; oss.str("");
-      oss << iRad-2 << "_" << iRec-2;
-      name+=oss.str();
-      if ( infoPtr->scales->attributes.find(name)
-         != infoPtr->scales->attributes.end())
-         scaleNow = infoPtr->scales->attributes[name];
+      // If the LHEF contains dipole starting scales, extract the relevant
+      // scales from info.
+      if (settingsPtr->flag("Beams:setDipoleShowerStartingScalesFromLHEF") ) {
+        string name="scalup_";
+        ostringstream oss; oss.str("");
+        oss << iRad-2 << "_" << iRec-2;
+        name+=oss.str();
+        if ( infoPtr->scales->attributes.find(name)
+           != infoPtr->scales->attributes.end())
+           scaleNow = infoPtr->scales->attributes[name];
+        }
       pTmax = scaleNow;
     }
 

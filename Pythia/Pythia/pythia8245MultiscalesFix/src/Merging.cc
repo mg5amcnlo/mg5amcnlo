@@ -305,7 +305,8 @@ int Merging::clusterAndStore(Event& process){
       // Function to compute "pythia pT separation" from Particle input
       int type = FullHistory.state[iRad].isFinal() ? 1 : -1;
       int iPartnerForPT = iRec;
-      if (!FullHistory.state[iRad].isFinal())
+      if ( !settingsPtr->flag("aMC@NLO:debugScales")
+        && !FullHistory.state[iRad].isFinal())
         iPartnerForPT = (iRad == 3) ? 4 : 3;
       double t = FullHistory.pTLund(FullHistory.state,
         iRad, emt, iPartnerForPT, type);

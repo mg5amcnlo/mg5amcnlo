@@ -935,7 +935,8 @@ bool Pythia::init() {
     string lhef        = word("Beams:LHEF");
     string lhefHeader  = word("Beams:LHEFheader");
     bool   readHeaders = flag("Beams:readLHEFheaders");
-    bool   setScales   = flag("Beams:setProductionScalesFromLHEF");
+    bool   setScales   = flag("Beams:setProductionScalesFromLHEF")
+                      || flag("Beams:setDipoleShowerStartingScalesFromLHEF");
     bool   skipInit    = flag("Beams:newLHEFsameInit");
     int    nSkipAtInit = mode("Beams:nSkipLHEFatInit");
 

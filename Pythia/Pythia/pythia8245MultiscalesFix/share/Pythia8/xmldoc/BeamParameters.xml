@@ -185,6 +185,19 @@ of particles three and four to 100 GeV and 50 GeV, respectively, provided
 that these particles have status 1. 
 </flag> 
  
+<flag name="Beams:setDipoleShowerStartingScalesFromLHEF" default="off"> 
+If enabled, the parton shower starting scales for emissions of individual
+radiator-recoiler pairs in the final-state showers will be set by
+auxiliary informaton provided in an input Les Houches event. This settings
+relies on the use of LHEF 3.0, and the existence of the <ei>&lt;scales&gt;</ei> tag
+for each event. It is assumed that the <ei>&lt;scales&gt;</ei> tag 
+contains multiple attributes with names <code>scalup_r_s</code>, where <code>r</code>
+gives the position of the radiating particle, and <code>s</code> determines
+the position of the recoiling particle, and where <code>r, s</code> may range from
+zero to the sum of initial and final-state particles. 
+</flag> 
+
+
 <h3>Variable collision energy</h3> 
  
 There are two different machineries that can provide an event-by-event 
