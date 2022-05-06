@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.10 (06/05/2022)
+     OM: allow model with GC in their name to use helicity recycling
+     OM: Forbid madspin to run with crazy value of BWcut
+     OM: Fixing some IO issue with Madspin that was leading to a lock of the code
+     OM: set a user interface for the set ewscheme option 
+     OM: forbid helicity recycling for model with spin2 and spin3/2 (optimization is not implemented for such case)
+
 2.9.9 (25/02/2022)
      OM: Fix a bug introduced in 2.9.0 for MLM generation in presence of mix EW/QCD process.
          The bug typically leads to a crash within the systematics.py due to wrong power of alpha_s
