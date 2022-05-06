@@ -17,9 +17,17 @@ c to the list of weights using the add_wgt subroutine
       common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
      &                            amp_split_6to5f_mur
 
+      ! stuff for the alpha UV-scheme in lepton collisions
+      double precision amp_split_alpha(amp_split_size),
+     &                 amp_split_alpha_muf(amp_split_size),
+     &                 amp_split_alpha_mur(amp_split_size)
+      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
+     &                            amp_split_alpha_mur
+
       double precision wgt_c
       double precision wgt1
       double precision wgt6f1,wgt6f2,wgt6f3
+      double precision wgtal1,wgtal2,wgtal3
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       double precision   xiimax_cnt(-2:2)
@@ -68,6 +76,29 @@ C in the LO cross section
         wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
         wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,orders,wgt6f1,wgt6f2,wgt6f3)
+      enddo
+
+C This is the counterterm for the change of scheme
+C in the UV renormalisation for alpha in (leptonic) PDFs
+C wrt the hard matrix element. Relevant for lepton collisions. 
+C It is called in this function such that if is included
+C in the LO cross section
+      call compute_alpha_cnt()
+      do iamp=1, amp_split_size
+        if (amp_split_alpha(iamp).eq.0d0.and.
+     $      amp_split_alpha_mur(iamp).eq.0d0.and.
+     $      amp_split_alpha_muf(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
+        wgtal1=amp_split_alpha(iamp)*f_b/g**(qcd_power)
+        wgtal2=amp_split_alpha_mur(iamp)*f_b/g**(qcd_power)
+        wgtal3=amp_split_alpha_muf(iamp)*f_b/g**(qcd_power)
+        call add_wgt(2,orders,wgtal1,wgtal2,wgtal3)
       enddo
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
@@ -167,6 +198,165 @@ C      gluon in the initial state
      &    - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)
         endif
       enddo
+
+      return
+      end
+
+
+
+      subroutine compute_alpha_cnt()
+C This is the counterterm for the change of scheme
+C in the UV renormalisation for alpha in (leptonic) PDFs
+C wrt the hard matrix element. Relevant for lepton collisions. 
+C It is called in this function such that if is included
+C in the LO cross section
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc' 
+      include 'q_es.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+      double precision amp_split_alpha(amp_split_size),
+     &                 amp_split_alpha_muf(amp_split_size),
+     &                 amp_split_alpha_mur(amp_split_size)
+      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
+     &                            amp_split_alpha_mur
+      integer orders_to_amp_split_pos
+      integer i, j, k
+      logical firsttime
+      data firsttime /.true./
+      double precision tf, nc, pi
+      parameter (tf=0.5d0)
+      parameter (nc=3d0)
+      parameter (pi=3.1415926535897932385d0)
+      integer alphabpow
+      double precision wgtborn, alpha
+      double precision ch_lep, ch_up, ch_dn
+      parameter (ch_lep=1d0)
+      parameter (ch_up=2d0/3d0)
+      parameter (ch_dn=1d0/3d0)
+      ! the number of families
+      integer n_lep, n_up, n_dn
+      double precision sumcharge, beta0, const
+      double precision w_thresh
+      integer jsign
+
+c     wgt1 : weight of the contribution not multiplying a scale log
+c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
+c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
+
+      ! set everything to 0
+      amp_split_alpha(1:amp_split_size) = 0d0
+      amp_split_alpha_muf(1:amp_split_size) = 0d0
+      amp_split_alpha_mur(1:amp_split_size) = 0d0
+
+      if (firsttime) then
+        write(*,*) 'Parameters related to the different treatment of'
+     ^     // ' alpha in ME and PDFs'
+        write(*,*) 'alphascheme', alphascheme
+        write(*,*) 'nlep_run   ', nlep_run
+        write(*,*) 'nupq_run   ', nupq_run
+        write(*,*) 'ndnq_run   ', ndnq_run
+        write(*,*) 'w_run      ', w_run
+        firsttime = .false.
+      endif
+
+      ! skip if we don't want this piece 
+      if (alphascheme.eq.0) then
+         ! do nothing, assumes same UV scheme in alpha for
+         ! PDF's and model
+         return
+      else if (abs(alphascheme).eq.1) then
+         ! the sign of alphascheme controls the sign of the counterterm.
+         ! negative sign used for testing (in the test process, the
+         ! virtuals are computed in the MSbar scheme, unlike in the
+         ! processes automatically generated by MG5aMC
+         jsign = sign(1,alphascheme)
+         ! compute the born
+         call sborn(p_born,wgtborn)
+         ! assumes alpha(MZ) for model, MSbar for PDFs
+         ! the number of flavours depends on mur.
+         ! here we will treat all leptons as massless, 
+         ! blocking the code if mur < 5 gev
+         if (nlep_run.eq.-1) then
+            n_lep = 3
+         else
+            n_lep = nlep_run
+         endif
+         if (nupq_run.eq.-1) then
+            n_up = 2
+         else
+            n_up = nupq_run
+         endif
+         if (ndnq_run.eq.-1) then
+            n_dn = 3
+         else
+            n_dn = ndnq_run
+         endif
+         sumcharge = n_lep*ch_lep**2 + nc*(n_up*ch_up**2+n_dn*ch_dn**2)
+         if (firsttime) then
+            write(*,*) 'compute_alpha_cnt with nlep, nup, ndn, wrun', 
+     #        n_lep, n_up, n_dn, w_run
+            write(*,*) '  sum_{lep,up,dn} n*q^2*nc ', sumcharge 
+            firsttime=.false.
+          endif
+         ! the factor has the form 
+         ! alpha/3pi* (cons + beta0 log(mur^2/mz^2) * bpow
+         ! where bpow is the power of alpha
+         const = 5d0/3d0 * sumcharge - 
+     #       w_run * (1d0/2d0 + 21d0/4d0 * dlog(mdl_mz**2/mdl_mw**2))
+         ! in practice we have only the case mur > mw or mur<mw
+         if (scale.gt.mdl_mw) then
+            beta0 = sumcharge - 21d0/4d0 * w_run
+            w_thresh = 0d0
+         else if (scale.gt.5d0) then
+            beta0 = sumcharge 
+            w_thresh = - 21d0/4d0 * w_run
+         else
+            ! we hardcode 5d0 instead of MB as in the model the bottom
+            ! is massless
+            write(*,*) 'MUR too low, bottom threshold not implemented'
+            stop 1
+         endif
+         !write(*,*) 'BETA0', beta0
+         !write(*,*) 'BETA0/3pi', beta0/3d0/pi
+         !write(*,*) 'CONST', const
+         !write(*,*) 'CONST/3pi', const/3d0/pi
+         alpha = dble(gal(1))**2/4d0/pi
+         do iamp = 1, amp_split_size
+           if (amp_split(iamp).eq.0d0) cycle
+           call amp_split_pos_to_orders(iamp, orders)
+           alphabpow = orders(qed_pos)/2
+           if (alphabpow.ne.0) then
+             ! this contribution will end up with one extra power
+             ! of alpha
+             orders(qed_pos) = orders(qed_pos) + 2
+             amp_split_alpha_muf(orders_to_amp_split_pos(orders)) = 0d0 
+             amp_split_alpha_mur(orders_to_amp_split_pos(orders)) = 
+     &           - jsign * alpha / 3d0 / pi * alphabpow * amp_split(iamp) *
+     &              beta0
+             amp_split_alpha(orders_to_amp_split_pos(orders)) = 
+     &           - jsign * alpha / 3d0 / pi * alphabpow * amp_split(iamp) * 
+     &            (beta0 * dlog(qes2/mdl_mz**2) + 
+     &             w_thresh * dlog(mdl_mw**2/mdl_mz**2) + const)
+CC             write(*,*) 'AMP_SPLIT_ALPHA',
+CC     &    amp_split_alpha(orders_to_amp_split_pos(orders)) / amp_split(iamp)
+CC             write(*,*) 'AMP_SPLIT_ALPHA / alpha/3pi',
+CC     &    amp_split_alpha(orders_to_amp_split_pos(orders)) / amp_split(iamp)
+CC     &        / (alpha / 3d0 / pi)
+CC             stop
+           endif
+         enddo
+      !else if (alphascheme.eq.2) then
+      else 
+         write(*,*) 'change of scheme factors for gmu not implemented'
+         stop 1
+      endif
 
       return
       end
@@ -4977,6 +5167,9 @@ C keep track of each split orders
       logical use_evpr
       common /to_use_evpr/use_evpr
 
+      logical firsttime_pdf
+      data firsttime_pdf /.true./
+
       ! This is needed for the PDFscheme variable 
       include "../../Source/PDF/pdf.inc"
       ! PDFscheme = : 
@@ -4987,6 +5180,10 @@ C keep track of each split orders
       ! 4 -> mixed (leptonic)
       ! 5 -> nobeta (leptonic)
       ! 6 -> delta (leptonic)
+      if(firsttime_pdf) then
+        write(*,*) 'PDFscheme' , pdfscheme
+        firsttime_pdf = .false.
+      endif
 
       amp_split_collrem_xi(1:amp_split_size) = 0d0
       amp_split_collrem_lxi(1:amp_split_size) = 0d0
