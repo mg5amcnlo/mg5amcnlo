@@ -10,7 +10,6 @@ extern "C" {
 
   // set up a global instance of pytia8
   Pythia pythia;
-  pythia.settings.addFlag("aMC@NLO:debugScales",false);
   // set up a global instance of LHAup
   //MyLHAupFortran lhareader;
   MyLHAupFortran lhareader(&pythia.settings);
@@ -25,6 +24,7 @@ extern "C" {
   // an initialisation function
   void pythia_init_(char input[500]) {
     string cmdFilePath(input);
+    pythia.settings.addFlag("aMC@NLO:debugScales",false);
     // Remove whitespaces
     cout << "--" << input << "--" << endl;
     cout << "--" << cmdFilePath << "--" << endl;
@@ -55,6 +55,7 @@ extern "C" {
   // an initialisation function
   void pythia_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26]) {
     lhareader.setInit();
+    pythia.settings.addFlag("aMC@NLO:debugScales",false);
     // Example of a user hook for storing in the out stream the event after the first emission.
     pythia.setUserHooksPtr(&printFirstEmission);
 
