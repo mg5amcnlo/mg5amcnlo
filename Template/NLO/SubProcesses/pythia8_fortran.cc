@@ -10,7 +10,7 @@ extern "C" {
 
   // set up a global instance of pytia8
   Pythia pythia;
-  pythia.settings.addFlag("aMC@NLO:debugScales",0,true,false,0,100);
+  pythia.settings.addFlag("aMC@NLO:debugScales",false);
   // set up a global instance of LHAup
   //MyLHAupFortran lhareader;
   MyLHAupFortran lhareader(&pythia.settings);
