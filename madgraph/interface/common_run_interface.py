@@ -6719,10 +6719,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
                     pdlabel = pdlabel1
 
-            if pdlabel == 'lhapdf':
+            try:
+                old_value = param_card.get('sminputs').get((3,)).value
+            except KeyError:
+                old_value = None
+
+            if old_value is None:
+                pass
+            elif pdlabel == 'lhapdf':
                 lhapdf = misc.import_python_lhapdf(lhapdfconfig)
                 if lhapdf:
-                    old_value = param_card.get('sminputs').get((3,)).value
                     lhapdf.setVerbosity(0)
                     pdf = lhapdf.mkPDF(run_card['lhaid'])
                     new_value = pdf.alphasQ(91.1876)
@@ -6730,7 +6736,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
                     modify = True
             elif pdlabel in as_for_pdf:
-                old_value = param_card.get('sminputs').get((3,)).value
                 new_value = as_for_pdf[pdlabel]
                 if old_value != new_value:
                     param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]

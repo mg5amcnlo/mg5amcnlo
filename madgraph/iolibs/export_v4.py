@@ -7060,7 +7060,7 @@ class UFO_model_to_mg4(object):
             logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
             return
 
-        masses = {}
+        masses = {'MZ': '0d0', 'MW': '0d0'}
         for particle in self.model['particles']:
             if particle.get('pdg_code') == 24:
                 masses['MW'] = particle.get('mass')
