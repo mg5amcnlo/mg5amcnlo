@@ -1706,7 +1706,6 @@ c Checks
          enddo
       enddo
 
-
       call set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR,iRtoB
      $     ,xscales2,dzones2,p,SCALUP_tmp_H3)
       
@@ -1915,11 +1914,12 @@ c small. Might check at some point using larger values for those).
          write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
      $        ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
       enddo
-         
-      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
-         stop 
-      endif
 
+c$$$      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
+c$$$         write(*,*)'SCALUP_tmp_H != SCALUP_tmp_H3'
+c$$$         stop 
+c$$$      endif
+      SCALUP_tmp_H = SCALUP_tmp_H3
       
 c
 c force IF colour connection to have II scale
@@ -2279,9 +2279,9 @@ c
       common/fks_indices/i_fks,j_fks
       integer i1,i2,ip,imother,i1bar,i2bar
       double precision t(nexternal,nexternal),pT
-      integer ipbar
+      integer ipbar,ipbar2
       double precision sumdot
-      external sumdot,ipbar
+      external sumdot,ipbar,ipbar2
       logical MCpicture
       parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
 
@@ -2308,6 +2308,7 @@ c
                   i1bar=-99
                else
                   i1bar=ipbar(are_col_conn_H,imother,iRtoB)
+c                  i1bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                   i2bar=imother
                endif
             elseif (i1.eq.j_fks .and. i2.eq.i_fks) then
@@ -2316,6 +2317,7 @@ c
                else
                   i1bar=imother
                   i2bar=ipbar(are_col_conn_H,imother,iRtoB)
+c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                endif
             elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
                if (MCpicture) then
@@ -2385,6 +2387,7 @@ c
       common/fks_indices/i_fks,j_fks
       ipbar=0
       do ip=1,nexternal
+         if(ip.eq.i_fks)cycle
          if (are_col_conn_H(ip,i_fks) .and. iRtoB(ip).ne.imother) then
             if (ipbar.ne.0) then
                write (*,*) 'Too many colour connections #1'
@@ -2395,6 +2398,7 @@ c
       enddo
       if (ipbar.eq.0) then
          do ip=1,nexternal
+            if(ip.eq.i_fks)cycle
             if (are_col_conn_H(ip,j_fks) .and. iRtoB(ip).ne.imother)
      $           then
                if (ipbar.ne.0) then
@@ -2407,6 +2411,40 @@ c
       endif
       end
       
+
+      integer function ipbar2(are_col_conn_H,are_col_conn_S,imother,
+     &iBtoR)
+      ! ipbar is the colour connection of i_fks (if it exists and is not
+      ! equal to the mother). Otherwise it is the colour connection of
+      ! j_fks. The latter only happens when i_fks is a quark and j_fks
+      ! is an (incoming gluon).
+      implicit none
+      include 'nexternal.inc'
+      logical are_col_conn_H(nexternal,nexternal)
+      logical are_col_conn_S(nexternal-1,nexternal-1)
+      integer imother,iBtoR(nexternal-1),ipb
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+c
+      ipbar2=0
+      do ipb=1,nexternal-1
+         if (are_col_conn_S(ipb,imother) .and.
+     &       (are_col_conn_H(iBtoR(ipb),i_fks).or.
+     &        are_col_conn_H(iBtoR(ipb),j_fks)) ) then
+            ipbar2=ipb
+         endif
+      enddo
+c
+      if (ipbar2.eq.0) then
+         write(*,*)'pbar not found!'
+         stop 1
+      endif
+c
+      return
+      end
+
+
+
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt)
