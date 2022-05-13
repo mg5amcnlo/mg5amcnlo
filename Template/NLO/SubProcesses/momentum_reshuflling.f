@@ -189,7 +189,7 @@ C-----Functions
         call invboostx(p(0, iresh(i)), ptot, pcom(0,i))
       enddo
       ! the modulus of the spatial momenta for the old momenta
-      pspac2 = threedot(pcom(0,1))
+      pspac2 = threedot(pcom(0,1),pcom(0,1))
       ! the modulus of the spatial momenta for the new momenta
       qspac2 = lambda_tr(invm2,mass_new(1)**2,mass_new(2)**2) / 4d0 / invm2
       ! now compute the new momenta in the com frame, keeping 
