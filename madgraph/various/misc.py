@@ -474,6 +474,7 @@ def copytree(*args, **opts):
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
 
+    print('compiling now',arg)
     if 'nocompile' in opt:
         if opt['nocompile'] == True:
             if not arg:
