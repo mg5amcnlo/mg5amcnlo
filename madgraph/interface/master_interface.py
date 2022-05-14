@@ -464,7 +464,12 @@ class Switcher(object):
         return self.cmd.do_define(self, *args, **opts)
         
     def do_display(self, *args, **opts):
-        return self.cmd.do_display(self, *args, **opts)
+        try:
+            return self.cmd.do_display(self, *args, **opts)
+        except AttributeError as error:
+            if "_fks_multi_proc" in str(error):
+                self.do_switch('MadGraph')
+                return self.cmd.do_display(self, *args, **opts)
         
     def do_exit(self, *args, **opts):
         return self.cmd.do_exit(self, *args, **opts)

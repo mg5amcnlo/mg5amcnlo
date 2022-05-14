@@ -22,16 +22,13 @@ start = time.time()
 and call immediately the command line interface scripts"""
 
 import sys
-if  sys.version_info[1] < 7:
-    if sys.version_info[0] == 2:
-        sys.exit("MadGraph5_aMC@NLO works only with python 2.7 or python 3.7 (and later).\n"+\
-              "  You are currently using Python2.%s. Please use a more recent version of Python." % sys.version_info[1])
-    if sys.version_info[0] == 3:
-        sys.exit("MadGraph5_aMC@NLO works only with python 2.7 or python 3.7 (and later).\n"+\
-              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1] +\
-              "  If you have python2.7 installed you need to run the code as\n"+\
-              "      python27 ./bin/mg5_aMC \n")
-
+if sys.version_info[0] == 2:
+    sys.exit("MadGraph5_aMC@NLO works only with python 3.7 (and later).\n"+\
+             "  You are currently using Python2.%s. Please use a more recent version of Python." % sys.version_info[1])
+elif  sys.version_info[1] < 7:
+    sys.exit("MadGraph5_aMC@NLO works only with python 3.7 (and later).\n"+\
+              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1]) 
+    
 try:
     import six
 except ImportError:

@@ -69,7 +69,8 @@ C     GLOBAL
 C
       include 'run.inc'
       include 'cuts.inc'
-
+      include '../../Source/vector.inc'
+      
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)
       double precision ptlepton(nexternal)
@@ -259,7 +260,9 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            call update_as_param()
+            do i =1, nb_page
+               call update_as_param(i)
+            enddo
          endif
 
 c     Put momenta in the common block to zero to start
@@ -1230,12 +1233,6 @@ c
 c     Here we cluster event and reset factorization and renormalization
 c     scales on an event-by-event basis, as well as check xqcut for jets
 c
-c     Note the following condition is the first line of setclscales
-
-      IF (FIRSTTIME2) THEN
-        FIRSTTIME2=.FALSE.
-        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
-      ENDIF
 
       if(debug) write (*,*) '============================='
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '

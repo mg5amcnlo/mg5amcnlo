@@ -1014,6 +1014,6 @@ C
       implicit none
       integer hel,partid
       write(*,*) "this type of pdf is not support with group_subprocess=True. regenerate process with: set group_subprocesses false"
-      stop 1
+      stop 5
       return
       end

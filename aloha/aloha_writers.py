@@ -2448,7 +2448,7 @@ class WriterFactory(object):
             language = language.lower()
         except AttributeError:
             pass
-        misc.sprint(language)
+
         if isinstance(data.expr, aloha_lib.SplitCoefficient):
             assert language == 'fortran'
             if 'MP' in tags:

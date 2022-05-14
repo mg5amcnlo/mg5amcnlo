@@ -1573,6 +1573,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     output['WF%d'%i]=output['WF%d'%i]+')'
                     
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get_with_flow('coupling')):
             # We do not include the - sign in front of the coupling of loop
             # wavefunctions (only the loop ones, the tree ones are treated normally)
@@ -1585,7 +1586,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             c = output['coup%d'%i]
             if c.startswith('-'):
                 c = c[1:]
-            if 'aS' in self.model.get('coupling_dep')[c]:
+            if coupling_dep and 'aS' in coupling_dep[c]:
                 output['vec%d'%i] = "(ivec)"
             else:
                 output['vec%d'%i] = ""
@@ -3199,13 +3200,14 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     output['WF%d' % i ] = '(1,WE(%d))'%nb                    
                 
         #fixed argument
+        coupling_dep = self.model.get('coupling_dep')
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
             c = output['coup%d'%i]
             if c.startswith('-'):
                 c = c[1:]
 
-            if 'aS' in self.model.get('coupling_dep')[c]:
+            if coupling_dep and 'aS' in coupling_dep[c]:
                 output['vec%d'%i] = "(ivec)"
             else:
                 output['vec%d'%i] = ""

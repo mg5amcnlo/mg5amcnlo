@@ -91,138 +91,7 @@ for(int i=0;i < 1; i++)
 for(int i=0;i < 1; i++)
             jamp2[9][i]=0.;
 
-    // Local variables and constants
-const int ncomb = 32;
-static bool goodhel[ncomb] = {ncomb * false};
-static int ntry = 0, sum_hel = 0, ngood = 0;
-static int igood[ncomb];
-static int jhel;
-double t[nprocesses];
-// Helicities for the process
-static const int helicities[ncomb][nexternal] = {{-1,-1,-1,-1,-1},{-1,-1,-1,-1,1},{-1,-1,-1,1,-1},{-1,-1,-1,1,1},{-1,-1,1,-1,-1},{-1,-1,1,-1,1},{-1,-1,1,1,-1},{-1,-1,1,1,1},{-1,1,-1,-1,-1},{-1,1,-1,-1,1},{-1,1,-1,1,-1},{-1,1,-1,1,1},{-1,1,1,-1,-1},{-1,1,1,-1,1},{-1,1,1,1,-1},{-1,1,1,1,1},{1,-1,-1,-1,-1},{1,-1,-1,-1,1},{1,-1,-1,1,-1},{1,-1,-1,1,1},{1,-1,1,-1,-1},{1,-1,1,-1,1},{1,-1,1,1,-1},{1,-1,1,1,1},{1,1,-1,-1,-1},{1,1,-1,-1,1},{1,1,-1,1,-1},{1,1,-1,1,1},{1,1,1,-1,-1},{1,1,1,-1,1},{1,1,1,1,-1},{1,1,1,1,1}};
-// Denominators: spins, colors and identical particles
-const int denominators[nprocesses] = {96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96};
-
-ntry=ntry+1;
-
-// Reset the matrix elements
-for(int i = 0; i < nprocesses; i++){
-    matrix_element[i] = 0.;
-    t[i] = 0.;
-}
-
-// Define permutation
-int perm[nexternal];
-for(int i = 0; i < nexternal; i++){
-  perm[i]=i;
-}
-
-// For now, call setupForME() here
-id1 = 21;
-id2 = 1;
-if(!setupForME()){
-    return;
-}
-
-if (sum_hel == 0 || ntry < 10){
-// Calculate the matrix element for all helicities
-  for(int ihel = 0; ihel < ncomb; ihel ++){
-    if (goodhel[ihel] || ntry < 2){
-      calculate_wavefunctions(perm, helicities[ihel]);
-      t[0]=matrix_gd_zd_z_ddx();
-t[1]=matrix_gd_zd_z_uux();
-t[2]=matrix_gd_zd_z_ssx();
-t[3]=matrix_gu_zu_z_ddx();
-t[4]=matrix_gu_zu_z_uux();
-t[5]=matrix_gdx_zdx_z_ddx();
-t[6]=matrix_gdx_zdx_z_uux();
-t[7]=matrix_gdx_zdx_z_ssx();
-t[8]=matrix_gux_zux_z_ddx();
-t[9]=matrix_gux_zux_z_uux();
-             // Mirror initial state momenta for mirror process
-                perm[0]=1;
-                perm[1]=0;
-                // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
-                // Mirror back
-                perm[0]=0;
-                perm[1]=1;
-                // Calculate matrix elements
-                t[10]=matrix_gd_zd_z_ddx();
-t[11]=matrix_gd_zd_z_uux();
-t[12]=matrix_gd_zd_z_ssx();
-t[13]=matrix_gu_zu_z_ddx();
-t[14]=matrix_gu_zu_z_uux();
-t[15]=matrix_gdx_zdx_z_ddx();
-t[16]=matrix_gdx_zdx_z_uux();
-t[17]=matrix_gdx_zdx_z_ssx();
-t[18]=matrix_gux_zux_z_ddx();
-t[19]=matrix_gux_zux_z_uux();
-      double tsum = 0;
-      for(int iproc = 0;iproc < nprocesses; iproc++){
-         matrix_element[iproc]+=t[iproc];
-         tsum += t[iproc];
-      }
-      // Store which helicities give non-zero result
-      if (tsum != 0. && !goodhel[ihel]){
-	goodhel[ihel]=true;
-	ngood ++;
-	igood[ngood] = ihel;
-      }
-    }
-  }
-  jhel = 0;
-  sum_hel=min(sum_hel, ngood);
-}
-else              
-{
-// Only use the "good" helicities
-  for(int j=0; j < sum_hel; j++){
-    jhel++;
-    if (jhel >= ngood) jhel=0;
-    double hwgt = double(ngood)/double(sum_hel);
-    int ihel = igood[jhel];
-    calculate_wavefunctions(perm, helicities[ihel]);
-    t[0]=matrix_gd_zd_z_ddx();
-t[1]=matrix_gd_zd_z_uux();
-t[2]=matrix_gd_zd_z_ssx();
-t[3]=matrix_gu_zu_z_ddx();
-t[4]=matrix_gu_zu_z_uux();
-t[5]=matrix_gdx_zdx_z_ddx();
-t[6]=matrix_gdx_zdx_z_uux();
-t[7]=matrix_gdx_zdx_z_ssx();
-t[8]=matrix_gux_zux_z_ddx();
-t[9]=matrix_gux_zux_z_uux();
-             // Mirror initial state momenta for mirror process
-                perm[0]=1;
-                perm[1]=0;
-                // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
-                // Mirror back
-                perm[0]=0;
-                perm[1]=1;
-                // Calculate matrix elements
-                t[10]=matrix_gd_zd_z_ddx();
-t[11]=matrix_gd_zd_z_uux();
-t[12]=matrix_gd_zd_z_ssx();
-t[13]=matrix_gu_zu_z_ddx();
-t[14]=matrix_gu_zu_z_uux();
-t[15]=matrix_gdx_zdx_z_ddx();
-t[16]=matrix_gdx_zdx_z_uux();
-t[17]=matrix_gdx_zdx_z_ssx();
-t[18]=matrix_gux_zux_z_ddx();
-t[19]=matrix_gux_zux_z_uux();
-    for(int iproc = 0;iproc < nprocesses; iproc++){
-      matrix_element[iproc]+=t[iproc]*hwgt;
-    }
-  }
-}
-
-for (int i=0;i < nprocesses; i++)
-    matrix_element[i] /= denominators[i];
-
-
-
+    ('// Local variables and constants\nconst int ncomb = 32;\nstatic bool goodhel[ncomb] = {ncomb * false};\nstatic int ntry = 0, sum_hel = 0, ngood = 0;\nstatic int igood[ncomb];\nstatic int jhel;\ndouble t[nprocesses];\n// Helicities for the process\nstatic const int helicities[ncomb][nexternal] = {{-1,-1,-1,-1,-1},{-1,-1,-1,-1,1},{-1,-1,-1,1,-1},{-1,-1,-1,1,1},{-1,-1,1,-1,-1},{-1,-1,1,-1,1},{-1,-1,1,1,-1},{-1,-1,1,1,1},{-1,1,-1,-1,-1},{-1,1,-1,-1,1},{-1,1,-1,1,-1},{-1,1,-1,1,1},{-1,1,1,-1,-1},{-1,1,1,-1,1},{-1,1,1,1,-1},{-1,1,1,1,1},{1,-1,-1,-1,-1},{1,-1,-1,-1,1},{1,-1,-1,1,-1},{1,-1,-1,1,1},{1,-1,1,-1,-1},{1,-1,1,-1,1},{1,-1,1,1,-1},{1,-1,1,1,1},{1,1,-1,-1,-1},{1,1,-1,-1,1},{1,1,-1,1,-1},{1,1,-1,1,1},{1,1,1,-1,-1},{1,1,1,-1,1},{1,1,1,1,-1},{1,1,1,1,1}};\n// Denominators: spins, colors and identical particles\nconst int denominators[nprocesses] = {96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96};\n\nntry=ntry+1;\n\n// Reset the matrix elements\nfor(int i = 0; i < nprocesses; i++){\n    matrix_element[i] = 0.;\n    t[i] = 0.;\n}\n\n// Define permutation\nint perm[nexternal];\nfor(int i = 0; i < nexternal; i++){\n  perm[i]=i;\n}\n\n// For now, call setupForME() here\nid1 = 21;\nid2 = 1;\nif(!setupForME()){\n    return;\n}\n\nif (sum_hel == 0 || ntry < 10){\n// Calculate the matrix element for all helicities\n  for(int ihel = 0; ihel < ncomb; ihel ++){\n    if (goodhel[ihel] || ntry < 2){\n      calculate_wavefunctions(perm, helicities[ihel]);\n      t[0]=matrix_gd_zd_z_ddx();\nt[1]=matrix_gd_zd_z_uux();\nt[2]=matrix_gd_zd_z_ssx();\nt[3]=matrix_gu_zu_z_ddx();\nt[4]=matrix_gu_zu_z_uux();\nt[5]=matrix_gdx_zdx_z_ddx();\nt[6]=matrix_gdx_zdx_z_uux();\nt[7]=matrix_gdx_zdx_z_ssx();\nt[8]=matrix_gux_zux_z_ddx();\nt[9]=matrix_gux_zux_z_uux();\n             // Mirror initial state momenta for mirror process\n                perm[0]=1;\n                perm[1]=0;\n                // Calculate wavefunctions\n                calculate_wavefunctions(perm, helicities[ihel]);\n                // Mirror back\n                perm[0]=0;\n                perm[1]=1;\n                // Calculate matrix elements\n                t[10]=matrix_gd_zd_z_ddx();\nt[11]=matrix_gd_zd_z_uux();\nt[12]=matrix_gd_zd_z_ssx();\nt[13]=matrix_gu_zu_z_ddx();\nt[14]=matrix_gu_zu_z_uux();\nt[15]=matrix_gdx_zdx_z_ddx();\nt[16]=matrix_gdx_zdx_z_uux();\nt[17]=matrix_gdx_zdx_z_ssx();\nt[18]=matrix_gux_zux_z_ddx();\nt[19]=matrix_gux_zux_z_uux();\n      double tsum = 0;\n      for(int iproc = 0;iproc < nprocesses; iproc++){\n         matrix_element[iproc]+=t[iproc];\n         tsum += t[iproc];\n      }\n      // Store which helicities give non-zero result\n      if (tsum != 0. && !goodhel[ihel]){\n\tgoodhel[ihel]=true;\n\tngood ++;\n\tigood[ngood] = ihel;\n      }\n    }\n  }\n  jhel = 0;\n  sum_hel=min(sum_hel, ngood);\n}\nelse              \n{\n// Only use the "good" helicities\n  for(int j=0; j < sum_hel; j++){\n    jhel++;\n    if (jhel >= ngood) jhel=0;\n    double hwgt = double(ngood)/double(sum_hel);\n    int ihel = igood[jhel];\n    calculate_wavefunctions(perm, helicities[ihel]);\n    t[0]=matrix_gd_zd_z_ddx();\nt[1]=matrix_gd_zd_z_uux();\nt[2]=matrix_gd_zd_z_ssx();\nt[3]=matrix_gu_zu_z_ddx();\nt[4]=matrix_gu_zu_z_uux();\nt[5]=matrix_gdx_zdx_z_ddx();\nt[6]=matrix_gdx_zdx_z_uux();\nt[7]=matrix_gdx_zdx_z_ssx();\nt[8]=matrix_gux_zux_z_ddx();\nt[9]=matrix_gux_zux_z_uux();\n             // Mirror initial state momenta for mirror process\n                perm[0]=1;\n                perm[1]=0;\n                // Calculate wavefunctions\n                calculate_wavefunctions(perm, helicities[ihel]);\n                // Mirror back\n                perm[0]=0;\n                perm[1]=1;\n                // Calculate matrix elements\n                t[10]=matrix_gd_zd_z_ddx();\nt[11]=matrix_gd_zd_z_uux();\nt[12]=matrix_gd_zd_z_ssx();\nt[13]=matrix_gu_zu_z_ddx();\nt[14]=matrix_gu_zu_z_uux();\nt[15]=matrix_gdx_zdx_z_ddx();\nt[16]=matrix_gdx_zdx_z_uux();\nt[17]=matrix_gdx_zdx_z_ssx();\nt[18]=matrix_gux_zux_z_ddx();\nt[19]=matrix_gux_zux_z_uux();\n    for(int iproc = 0;iproc < nprocesses; iproc++){\n      matrix_element[iproc]+=t[iproc]*hwgt;\n    }\n  }\n}\n\nfor (int i=0;i < nprocesses; i++)\n    matrix_element[i] /= denominators[i];\n\n\n', {'ncomb': 32, 'process_class_name': 'Sigma_sm_gd_ddxd', 'id1': 21, 'id2': 1, 'helicity_matrix': 'static const int helicities[ncomb][nexternal] = {{-1,-1,-1,-1,-1},{-1,-1,-1,-1,1},{-1,-1,-1,1,-1},{-1,-1,-1,1,1},{-1,-1,1,-1,-1},{-1,-1,1,-1,1},{-1,-1,1,1,-1},{-1,-1,1,1,1},{-1,1,-1,-1,-1},{-1,1,-1,-1,1},{-1,1,-1,1,-1},{-1,1,-1,1,1},{-1,1,1,-1,-1},{-1,1,1,-1,1},{-1,1,1,1,-1},{-1,1,1,1,1},{1,-1,-1,-1,-1},{1,-1,-1,-1,1},{1,-1,-1,1,-1},{1,-1,-1,1,1},{1,-1,1,-1,-1},{1,-1,1,-1,1},{1,-1,1,1,-1},{1,-1,1,1,1},{1,1,-1,-1,-1},{1,1,-1,-1,1},{1,1,-1,1,-1},{1,1,-1,1,1},{1,1,1,-1,-1},{1,1,1,-1,1},{1,1,1,1,-1},{1,1,1,1,1}};', 'den_factors': '96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96', 'get_matrix_t_lines': 't[0]=matrix_gd_zd_z_ddx();\nt[1]=matrix_gd_zd_z_uux();\nt[2]=matrix_gd_zd_z_ssx();\nt[3]=matrix_gu_zu_z_ddx();\nt[4]=matrix_gu_zu_z_uux();\nt[5]=matrix_gdx_zdx_z_ddx();\nt[6]=matrix_gdx_zdx_z_uux();\nt[7]=matrix_gdx_zdx_z_ssx();\nt[8]=matrix_gux_zux_z_ddx();\nt[9]=matrix_gux_zux_z_uux();', 'madE_var_reset': '', 'madE_caclwfcts_call': '', 'madE_update_answer': '', 'get_mirror_matrix_lines': '             // Mirror initial state momenta for mirror process\n                perm[0]=1;\n                perm[1]=0;\n                // Calculate wavefunctions\n                calculate_wavefunctions(perm, helicities[ihel]);\n                // Mirror back\n                perm[0]=0;\n                perm[1]=1;\n                // Calculate matrix elements\n                t[10]=matrix_gd_zd_z_ddx();\nt[11]=matrix_gd_zd_z_uux();\nt[12]=matrix_gd_zd_z_ssx();\nt[13]=matrix_gu_zu_z_ddx();\nt[14]=matrix_gu_zu_z_uux();\nt[15]=matrix_gdx_zdx_z_ddx();\nt[16]=matrix_gdx_zdx_z_uux();\nt[17]=matrix_gdx_zdx_z_ssx();\nt[18]=matrix_gux_zux_z_ddx();\nt[19]=matrix_gux_zux_z_uux();', 'nproc': 20, 'nb_amp': 18, 'nexternal': 4})
 }
 
 //--------------------------------------------------------------------------
@@ -694,7 +563,7 @@ FFV1_2_0(w[10],w[12],w[8],pars->GUZ1,pars->GUZ2,amp[17]);
 
 }
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -709,22 +578,22 @@ jamp[0]=-amp[0]-amp[1];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[0][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -739,22 +608,22 @@ jamp[0]=-amp[2]-amp[3];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[1][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ssx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -769,22 +638,22 @@ jamp[0]=-amp[0]-amp[1];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[2][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gu_zu_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -799,22 +668,22 @@ jamp[0]=-amp[4]-amp[5];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[3][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gu_zu_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -829,22 +698,22 @@ jamp[0]=-amp[6]-amp[7];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[4][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -859,22 +728,22 @@ jamp[0]=+amp[8]+amp[9];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[5][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -889,22 +758,22 @@ jamp[0]=+amp[10]+amp[11];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[6][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ssx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -919,22 +788,22 @@ jamp[0]=+amp[12]+amp[13];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[7][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gux_zux_z_ddx() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -949,22 +818,22 @@ jamp[0]=+amp[14]+amp[15];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[8][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }
 
 double Sigma_sm_gd_ddxd::matrix_gux_zux_z_uux() { 
-int i, j;
+
 // Local variables
 const int ngraphs = 2;
 const int ncolor = 1;
@@ -979,15 +848,15 @@ jamp[0]=+amp[16]+amp[17];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
-for(i=0;i < ncolor; i++){
+for(int i=0;i < ncolor; i++){
   ztemp = 0.;
-  for(j = 0; j < ncolor; j++)
+  for(int j = 0; j < ncolor; j++)
     ztemp = ztemp + cf[i][j]*jamp[j];
   matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
 }
 
 // Store the leading color flows for choice of color
-for(i=0;i < ncolor; i++)
+for(int i=0;i < ncolor; i++)
     jamp2[9][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;

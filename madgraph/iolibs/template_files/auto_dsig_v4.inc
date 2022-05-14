@@ -123,8 +123,8 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
-c        CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
-         stop 1 ! why is this called?
+         CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
+
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
 		      DSIG%(proc_id)s = DSIGUU*CONV

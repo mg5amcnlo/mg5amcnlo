@@ -509,10 +509,10 @@ class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the funtionality are actually already tested in the child
     # TESTMadLoopParam and are not repeated here.
-    debugging=False
+    
 
     def setUp(self):
-        
+        self.debugging = unittest.debug
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):
@@ -562,8 +562,6 @@ class TestRunCard(unittest.TestCase):
         self.assertFalse(hasattr(run_card2, 'default'))
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   
               
-  
-        self.assertFalse(self.debugging)
 
     def test_default(self):
       
@@ -612,7 +610,14 @@ class TestRunCard(unittest.TestCase):
         fsock2 = open(pjoin(self.tmpdir,'run_card_test3'),'w')
         run_card3.write(fsock2)
         fsock2.close()
-        self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
+
+        text1 = open(fsock.name).read()
+        text2 = open(fsock2.name).read()
+        self.assertFalse("$RUNNING" in text1)
+        self.assertFalse("$RUNNING" in text2)
+        text1 = text1.replace('\n \n', '\n')
+        text2 = text2.replace('\n \n', '\n')
+        self.assertEqual(text1, text2)
 
     def test_check_valid_LO(self):
         """ensure that some handling are done correctly"""
