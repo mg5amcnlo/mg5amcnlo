@@ -787,11 +787,9 @@ class FKSHelasProcess(object):
         {n_me, pdgs, fks_info}, where n_me is the number of real_matrix_element the configuration
         belongs to"""
         info_list = []
-        misc.sprint(self.real_processes)
         for n, real in enumerate(self.real_processes):
             pdgs = [l['id'] for l in real.matrix_element.get_base_amplitude()['process']['legs']]
             for info in real.fks_infos:
-                misc.sprint({'n_me' : n + 1,'pdgs' : pdgs, 'fks_info' : info})
                 info_list.append({'n_me' : n + 1,'pdgs' : pdgs, 'fks_info' : info})
         return info_list
         
