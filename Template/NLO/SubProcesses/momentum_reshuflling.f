@@ -204,9 +204,7 @@ C-----Functions
       enddo
 
       ! check the momenta before returning
-      do i = 1,2
-        call check_reshuffled_momenta(p, q, iresh(i), mass_new(i))
-      enddo
+      call check_reshuffled_momenta_two(p, q, iresh, mass_new)
 
       return
       end
@@ -523,6 +521,72 @@ C--------mass shell conditions
             stop
           endif
         endif
+      enddo
+
+C--------momentum conservation
+      do i = 0,3
+        a = 0d0
+        b = 0d0
+        do j = 1, nexternal-1
+          b = max(b, dabs(q(i,j)))
+          if (j.le.nincoming) then
+            a = a - q(i,j)
+          else
+            a = a + q(i,j)
+          endif
+        enddo
+        if (dabs(a)/b.gt.1d-6) then
+          write(*,*) 'ERROR IN CHECK_RESHUFFLED_MOMENTA: MOM. CONS',
+     $      i, dabs(a), b
+          do j = 1, nexternal-1
+            write(*,*) q(0,j), q(1,j), q(2,j), q(3,j), dsqrt(dot(q(0,j), q(0,j)))
+          enddo
+          stop
+        endif
+      enddo
+
+      return
+      end
+
+
+      subroutine check_reshuffled_momenta_two(p, q, iresh, mass_new)
+      ! performs some consistency checks on the momenta
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal-1), q(0:3,nexternal-1)
+      integer iresh(1:2)
+      double precision mass_new(1:2)
+      double precision a, b
+      integer i, j
+      double precision dot
+
+      if (nincoming.ne.2) then
+        write(*,*) 'ERROR IN OS_CHECK_MOMENTA:, nincoming != 2 not'//
+     $   ' implemented', nincoming
+        stop
+      endif
+
+      do j =1,2
+      do i = 1, nexternal-1
+C--------mass shell conditions
+        if (findloc(iresh,i,dim = 1) .eq. 0) then
+          if (dabs(dot(q(0,i),q(0,i))-dot(p(0,i),p(0,i)))
+     $     .gt. 1d-3 * max(dot(p(0,i),p(0,i)), p(0,i)**2)) then
+            write(*,*) 'ERROR IN CHECK_RESHUFFLED_MOMENTA: NOT ON SHELL', i
+            write(*,*) 'MSQ before', dot(p(0,i),p(0,i))
+            write(*,*) 'MSQ after ', dot(q(0,i),q(0,i))
+            stop
+          endif
+        else
+          if (dabs(dot(q(0,i),q(0,i))-mass_new(findloc(iresh,i,dim = 1))**2)
+     $     .gt. 1d-3 * max(dot(q(0,i),q(0,i)), q(0,i)**2)) then
+            write(*,*) 'ERROR IN CHECK_RESHUFFLED_MOMENTA: NOT ON SHELL', i
+            write(*,*) 'MSQ (iresh)', mass_new(j)**2
+            write(*,*) 'MSQ after ', dot(q(0,i),q(0,i))
+            stop
+          endif
+        endif
+      enddo
       enddo
 
 C--------momentum conservation
