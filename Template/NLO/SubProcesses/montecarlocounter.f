@@ -1900,21 +1900,21 @@ c small. Might check at some point using larger values for those).
          enddo
       enddo
 
-      write (*,*) 'i_fks,j_fks',i_fks,j_fks
-      do i=1,nexternal
-         write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
-      enddo
-      do i=1,nexternal
-         write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
-      enddo
-      do i=1,nexternal-1
-         write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
-      enddo
-      do i=1,nexternal-1
-         write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
-     $        ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
-      enddo
-
+c$$$      write (*,*) 'i_fks,j_fks',i_fks,j_fks
+c$$$      do i=1,nexternal
+c$$$         write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
+c$$$      enddo
+c$$$      do i=1,nexternal
+c$$$         write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
+c$$$      enddo
+c$$$      do i=1,nexternal-1
+c$$$         write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
+c$$$      enddo
+c$$$      do i=1,nexternal-1
+c$$$         write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
+c$$$     $        ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
+c$$$      enddo
+c$$$
 c$$$      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
 c$$$         write(*,*)'SCALUP_tmp_H != SCALUP_tmp_H3'
 c$$$         stop 
@@ -4583,7 +4583,7 @@ c
          do j=i+1,nexternal-1
             ref_sc_a(i,j)=sqrt( max(0d0,(p(0,i)+p(0,j))**2-(p(1,i)+p(1,j))**2
      &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
-            ref_sc_a(i,j)=ref_sc_a(i,j)/2d0
+c$$$            ref_sc_a(i,j)=ref_sc_a(i,j)/2d0
 c$$$            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
 c$$$            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
             ref_sc_a(j,i)=ref_sc_a(i,j)
