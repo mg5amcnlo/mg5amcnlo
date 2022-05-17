@@ -7790,7 +7790,7 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
   // When calling History from within aMC@NLO, don't be too zealous about
   // checking the color configuration, since aMC@NLO can pass
   // subleading flows to History. Thus, already return here.
-  if (mergingHooksPtr->doRuntimeAMCATNLOInterface()) return allowed;
+  // if (mergingHooksPtr->doRuntimeAMCATNLOInterface()) return allowed;
 
   // No problems with gluino radiation
   // Save all hard process candidates
@@ -7857,6 +7857,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
   // If there are no ambiguities in qqbar pairs, return
   if (nInQuarkFlav + nOutQuarkFlav == 0)
     return allowed;
+
+  if (!allowed) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
+  }
 
   // Save all quarks and gluons that will not change colour
   vector<int> gluon;
@@ -7934,8 +7938,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
         if (anticolours[i] != 0)
           allMatched = false;
 
-      if (allMatched)
+      if (allMatched) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
 
       // Now add the colours of the hard process, and check if all
       // colours match.
@@ -7986,8 +7992,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
         if (anticolours[i] != 0)
           allMatched = false;
 
-      if (allMatched && nNotInHard > 0)
+      if (allMatched && nNotInHard > 0) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
 
   }
 
@@ -8000,8 +8008,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
     for(int i=0; i < int(gluon.size()); ++i) {
       if (!event[gluon[i]].isFinal()
         && event[gluon[i]].col()  == radBeforeCol
-        && event[gluon[i]].acol() == radBeforeAcl)
+        && event[gluon[i]].acol() == radBeforeAcl) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
 
     // Easiest problem 2:
@@ -8009,8 +8019,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
     for(int i=0; i < int(gluon.size()); ++i) {
       if (event[gluon[i]].isFinal()
         && event[gluon[i]].col()  == radBeforeAcl
-        && event[gluon[i]].acol() == radBeforeCol)
+        && event[gluon[i]].acol() == radBeforeCol) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
 
     // Easiest problem 3:
@@ -8022,8 +8034,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
 
       // This clustering is allowed if there is no colour in the
       // initial state
-      if (nInitialPartons > 0)
+      if (nInitialPartons > 0) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
 
     // Next-to-easiest problem 1:
@@ -8101,8 +8115,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
       // If no "recovery clustering" is possible, reject clustering
       if (!clusPossible
         && (!isColSingIn1 || !isFlavSingIn1
-         || !isColSingIn2 || !isFlavSingIn2))
+         || !isColSingIn2 || !isFlavSingIn2)){
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
 
     // Next-to-easiest problem 2:
@@ -8173,8 +8189,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
       // If all final quarks are of identical flavour,
       // no possible clustering should be discriminated.
       // Otherwise, disallow
-      if (!isFullColSing || !isFullFlavSing)
+      if (!isFullColSing || !isFullFlavSing) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
   }
 
@@ -8187,18 +8205,20 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
     for(int i=0; i < int(gluon.size()); ++i) {
       if (event[gluon[i]].isFinal()
         && event[gluon[i]].col()  == radBeforeCol
-        && event[gluon[i]].acol() == radBeforeAcl)
+        && event[gluon[i]].acol() == radBeforeAcl) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
-    }
+}    }
 
     // Easiest problem 2:
     // RECLUSTERED INITIAL STATE GLUON MATCHES INITIAL STATE GLUON
     for(int i=0; i < int(gluon.size()); ++i) {
       if (event[gluon[i]].status() == -21
         && event[gluon[i]].acol()  == radBeforeCol
-        && event[gluon[i]].col() == radBeforeAcl)
+        && event[gluon[i]].col() == radBeforeAcl) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
-    }
+}    }
 
     // Next-to-easiest problem 1:
     // RECLUSTERED INITIAL STATE GLUON MATCHES FINAL STATE Q-QBAR PAIR
@@ -8267,8 +8287,10 @@ bool History::allowedClustering( int rad, int emt, int rec, int partner,
       // If no "recovery clustering" is possible, reject clustering
       if (!clusPossible
         && (!isColSingIn1 || !isFlavSingIn1
-         || !isColSingIn2 || !isFlavSingIn2))
+         || !isColSingIn2 || !isFlavSingIn2)) {
+    cout << " exit at line " << __LINE__ << endl; cout << " old event" << endl; state.list(); cout << " clustered event " << endl; event.list(); abort();
         return false;
+}
     }
 
   }
