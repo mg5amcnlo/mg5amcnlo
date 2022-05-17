@@ -469,8 +469,11 @@ bool LHA3FromPythia8::setEvent(int) {
   // Spin info for the particle entries in this event given as the
   // cosine of the angle between the spin vector of a particle and the
   // 3-momentum of the decaying particle, specified in the lab frame.
+  vector<int> iSkip;
   hepeup.IDUP.push_back(event[in1].id());
+  iSkip.push_back(in1);
   hepeup.IDUP.push_back(event[in2].id());
+  iSkip.push_back(in2);
   hepeup.ISTUP.push_back(-1);
   hepeup.ISTUP.push_back(-1);
   hepeup.MOTHUP.push_back(make_pair(0,0));
@@ -503,7 +506,9 @@ bool LHA3FromPythia8::setEvent(int) {
   // Attach resonances
   for ( int j = 0; j < int(evolvedResonances.size()); ++j) {
     int i = evolvedResonances[j];
+    if (find(iSkip.begin(), iSkip.end(), i) != iSkip.end()) continue;
     hepeup.IDUP.push_back(event[i].id());
+    iSkip.push_back(i);
     hepeup.ISTUP.push_back(2);
     hepeup.MOTHUP.push_back(make_pair(1,2));
     hepeup.ICOLUP.push_back(make_pair(event[i].col(),event[i].acol()));
@@ -521,7 +526,6 @@ bool LHA3FromPythia8::setEvent(int) {
   }
 
   // Loop through event and attach remaining decays
-  vector<int> iSkip;
   int iDec = 0;
   do {
 
@@ -537,7 +541,9 @@ bool LHA3FromPythia8::setEvent(int) {
      // Attach daughters.
      for ( int k = iD1; k <= iD2; ++k ) {
        Particle partNow = event[k];
+       if (find(iSkip.begin(), iSkip.end(), k) != iSkip.end()) continue;
        hepeup.IDUP.push_back(partNow.id());
+       iSkip.push_back(k);
        hepeup.MOTHUP.push_back(make_pair(iDec,iDec));
        hepeup.ICOLUP.push_back(make_pair(partNow.col(),partNow.acol()));
        p.push_back(partNow.px());
@@ -555,8 +561,6 @@ bool LHA3FromPythia8::setEvent(int) {
          hepeup.ISTUP.push_back(2);
        } else
          hepeup.ISTUP.push_back(1);
-
-       iSkip.push_back(k);
      }
 
      // End of loop over all entries.
@@ -573,12 +577,10 @@ bool LHA3FromPythia8::setEvent(int) {
             && i <= evolvedDecayProducts[j].second);
     }
     if (skip) continue;
-    for ( int j = 0; j < int(iSkip.size()); ++j) {
-      skip = ( i == iSkip[j] );
-    }
-    if (skip) continue;
+    if (find(iSkip.begin(), iSkip.end(), i) != iSkip.end()) continue;
 
     hepeup.IDUP.push_back(event[i].id());
+    iSkip.push_back(i);
     hepeup.ISTUP.push_back(1);
     hepeup.MOTHUP.push_back(make_pair(1,2));
     hepeup.ICOLUP.push_back(make_pair(event[i].col(),event[i].acol()));
