@@ -185,7 +185,9 @@ c               all_wgt(i) = all_wgt(i)*fx
                   cycle
                endif
                ivec=0
-c               call dsig(all_p,all_fx, all_wgt,0) !Evaluate function
+               if (nb_page.le.1) then
+                  all_fx(1) = dsig(all_p, all_wgt,0)
+               else
                do i=1, nb_page
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
@@ -211,6 +213,7 @@ c                     stop 1
 c                  endif
 c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                enddo
+               endif
                do I=1, nb_page
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo

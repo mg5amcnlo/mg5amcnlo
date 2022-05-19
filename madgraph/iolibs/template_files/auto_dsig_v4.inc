@@ -77,11 +77,16 @@ C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
       INTEGER       LHAID
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      include 'vector.inc'
+C     jamp2 information
+      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
+      COMMON/TO_JAMPS/       JAMP2
+
 c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-
+      integer channel
 C  
 C DATA
 C  
@@ -123,7 +128,9 @@ C     Continue only if IMODE is 0, 4 or 5
          else
            P1 = PP
          endif
-         CALL SMATRIX%(proc_id)s(P1,DSIGUU,1)
+
+	 channel = %(get_channel)s
+         CALL SMATRIX%(proc_id)s(P1,0,channel,DSIGUU,JAMP2(0,1),1)
 
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
