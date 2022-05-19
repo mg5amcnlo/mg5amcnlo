@@ -2673,6 +2673,8 @@ class RunCard(ConfigFile):
                     for line in open(pjoin(check_dir, name, 'info')):
                         if 'identity:' in line:
                             identity = tuple([int(x) for x in line.split(':',1)[1].split(',')])
+            else:
+                continue
 
             if identity not in cls.allowed_lep_densities:
                 cls.allowed_lep_densities[identity] = [name]
