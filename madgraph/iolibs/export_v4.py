@@ -1757,10 +1757,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
                 if vector:
-                    pdf_data_lines += "DATA " + \
+                    pdf_data_lines_vec += "DATA " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
                                                  for pdg in initial_states[i]]) + \
-                                                 "/(%d*nb_page)*1D0/" % len(initial_states[i]) + \
+                                                 "/%s/" % ','.join(['nb_page*1D0']* len(initial_states[i])) + \
                                                  "\n"
 
 
@@ -1863,6 +1863,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Remove last line break from the return variables                
         if vector:
+            misc.sprint(pdf_data_lines[:-1])
             return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1], ee_pdf_definition_lines
         else:
             return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
