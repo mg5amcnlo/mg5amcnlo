@@ -50,7 +50,7 @@ C     TODO: MOVE THIS AS A COMMON BLOCK?
       COMMON /TO_SYMCONF/ SYMCONF
 
 
-      DOUBLE PRECISION XDUM, XSDUM
+      DOUBLE PRECISION XDUM, XSDUM, DUM
 
       INTEGER LMAPPED
 
@@ -87,7 +87,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
                 XSDUM =  DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB
-     $           ,1D0,4)
+     $           ,DUM,4)
                 SELPROC(IMIRROR,IPROC,J)= SELPROC(IMIRROR,IPROC,J) +
      $            XSDUM
                 IF(MC_GROUPED_SUBPROC) THEN
@@ -299,10 +299,10 @@ C      entries to the grid for the MC over helicity configuration
       IPROC_GLOBAL = IPROC
       ICONFIG = ICONF
 
-C     set the running scale (MLM not working)
+C     set the running scale 
 C     and update the couplings accordingly
-      CALL UPDATE_SCALE_COUPLING(ALL_P, ALL_WGT, ALL_Q2FACT, NB_PAGE)
-
+      CALL UPDATE_SCALE_COUPLING_VEC(ALL_P, ALL_WGT, ALL_Q2FACT,
+     $  NB_PAGE)
 
       IF(GROUPED_MC_GRID_STATUS.EQ.0) THEN
 C       If we were in the initialization phase of the grid for MC over
@@ -459,6 +459,7 @@ C      and to 0 to reset the cache.
       DATA LAST_ICONF/-1/
       COMMON/TO_LAST_ICONF/LAST_ICONF
 
+      DOUBLE PRECISION DUM
       LOGICAL INIT_MODE
       COMMON /TO_DETERMINE_ZERO_HEL/INIT_MODE
 C     ----------
@@ -588,7 +589,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
                 SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR
-     $           ,SYMCONF,CONFSUB,1D0,4)
+     $           ,SYMCONF,CONFSUB,DUM,4)
                 IF(MC_GROUPED_SUBPROC) THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
                   CALL DS_ADD_ENTRY('PDF_convolution',LMAPPED
@@ -614,6 +615,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       IF(SUMPROB.EQ.0.0D0) THEN
         RETURN
       ENDIF
+
 
 C     Perform the selection
       CALL RANMAR(R)
@@ -701,6 +703,7 @@ C      all, then we pick a point based on PDF only.
 
         IF(IPROC.EQ.0) RETURN
 
+
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
         WGT=WGT*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
@@ -723,6 +726,7 @@ C        not to add again an entry in the grid for this PS point at
 C        the call DSIGPROC just below.
         ALLOW_HELICITY_GRID_ENTRIES = .FALSE.
       ENDIF
+
 C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
 C     Reset ALLOW_HELICITY_GRID_ENTRIES
@@ -771,6 +775,7 @@ C     ****************************************************
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INCLUDE 'vector.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -851,9 +856,20 @@ C       Flip CM_RAP (to get rapidity right)
 
       DSIGPROC=0D0
 
+C     not needed anymore ... can be removed ... set for debugging only
+C        
       IF (.NOT.PASSCUTS(P1)) THEN
         STOP 1
       ENDIF
+C     set the running scale 
+C     and update the couplings accordingly
+      IF (NB_PAGE.LE.1) THEN
+        CALL UPDATE_SCALE_COUPLING(PP, WGT)
+      ENDIF
+
+
+
+
       IF (IMODE.EQ.0D0.AND.NB_PASS_CUTS.LT.2**12)THEN
         NB_PASS_CUTS = NB_PASS_CUTS + 1
       ENDIF

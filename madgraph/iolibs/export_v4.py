@@ -1863,7 +1863,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Remove last line break from the return variables                
         if vector:
-            misc.sprint(pdf_data_lines[:-1])
             return pdf_definition_lines_vec[:-1], pdf_data_lines_vec[:-1], pdf_lines[:-1], ee_pdf_definition_lines
         else:
             return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
@@ -6642,6 +6641,8 @@ class UFO_model_to_mg4(object):
         except KeyError:
             vector_size = 1
         self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
+        if self.opt['mp']:
+            self.vector_size = 0
         self.scales = []
         self.MUE = None # extra parameter loop #2 which is running
         
@@ -6958,16 +6959,17 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """double precision G, all_G(%(vec_size)i)
+        header = """double precision G, all_G%(vec)s
                 common/strong/ G, all_G
                  
                 double complex gal(2)
                 common/weak/ gal
                 
-                double precision MU_R, all_mu_r(%(vec_size)i)
+                double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec_size': max(1,self.vector_size)}     
+                """   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
+
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
                 parameter(Nf=%dd0)
@@ -7434,6 +7436,7 @@ class UFO_model_to_mg4(object):
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
+            
         fsock.writelines("""logical updateloop
                             common /to_updateloop/updateloop
                             include \'input.inc\'

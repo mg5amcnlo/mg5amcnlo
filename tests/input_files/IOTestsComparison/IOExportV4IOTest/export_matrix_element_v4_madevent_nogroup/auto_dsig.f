@@ -80,11 +80,16 @@ C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
       INTEGER       LHAID
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      INCLUDE 'vector.inc'
+C     jamp2 information
+      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
+      COMMON/TO_JAMPS/       JAMP2
+
 C     
 C     local
 C     
       DOUBLE PRECISION P1(0:3, NEXTERNAL)
-
+      INTEGER CHANNEL
 C     
 C     DATA
 C     
@@ -140,8 +145,10 @@ C     Continue only if IMODE is 0, 4 or 5
         ELSE
           P1 = PP
         ENDIF
-C       CALL SMATRIX(P1,DSIGUU,1)
-        STOP 1  ! why is this called?
+
+        CHANNEL = MAPCONFIG(ICONFIG)
+        CALL SMATRIX(P1,0,CHANNEL,DSIGUU,JAMP2(0,1),1)
+
         IF (IMODE.EQ.5) THEN
           IF (DSIGUU.LT.1D199) THEN
             DSIG = DSIGUU*CONV
@@ -286,8 +293,8 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,ITYPE,LP,IPROC
-      DOUBLE PRECISION U1(NB_PAGE)
-      DOUBLE PRECISION UX2(NB_PAGE)
+      DOUBLE PRECISION U1
+      DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION ALL_PD(0:MAXPROC, NB_PAGE)
       DOUBLE PRECISION DSIGUU,R,RCONF
@@ -348,7 +355,8 @@ C
 C     
 C     DATA
 C     
-
+      DATA U1/1*1D0/
+      DATA UX2/1*1D0/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -363,26 +371,19 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.AND.IMODE.NE.5) RETURN
 
       IF (PASSCUTS(PP)) THEN
-        DO IVEC=1,NB_PAGE
-          IF (ABS(LPP(1)) .GE. 1) THEN
-              !LP=SIGN(1,LPP(1))
-            U1(IVEC)=PDG2PDF(LPP(1),2, 1,ALL_XBK(1,IVEC)
-     $       ,DSQRT(ALL_Q2FACT(1,IVEC)))
-          ENDIF
-          IF (ABS(LPP(2)) .GE. 1) THEN
-              !LP=SIGN(1,LPP(2))
-            UX2(IVEC)=PDG2PDF(LPP(2),-2, 2,ALL_XBK(2,IVEC)
-     $       ,DSQRT(ALL_Q2FACT(2,IVEC)))
-          ENDIF
-        ENDDO
-        ALL_PD(0,:) = 0D0
+        IF (ABS(LPP(1)) .GE. 1) THEN
+            !LP=SIGN(1,LPP(1))
+          U1=PDG2PDF(LPP(1),2, 1,XBK(1),DSQRT(Q2FACT(1)))
+        ENDIF
+        IF (ABS(LPP(2)) .GE. 1) THEN
+            !LP=SIGN(1,LPP(2))
+          UX2=PDG2PDF(LPP(2),-2, 2,XBK(2),DSQRT(Q2FACT(2)))
+        ENDIF
+        PD(0) = 0D0
         IPROC = 0
         IPROC=IPROC+1  ! u u~ > g g
-        DO IVEC=1, NB_PAGE
-          ALL_PD(IPROC,IVEC)=U1(IVEC)*UX2(IVEC)
-          ALL_PD(0,IVEC)=ALL_PD(0,IVEC)+DABS(ALL_PD(IPROC,IVEC))
-
-        ENDDO
+        PD(IPROC)=U1*UX2
+        PD(0)=PD(0)+DABS(PD(IPROC))
 
 
         IF (IMODE.EQ.4)THEN
