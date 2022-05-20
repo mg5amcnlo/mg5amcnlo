@@ -1777,8 +1777,34 @@ c            s_rwfact=0d0
 
       return
       end
+
+      subroutine update_scale_coupling(p, wgt)
+      implicit none
+
+C
+C     PARAMETERS
+C
+      real*8 PI
+      parameter( PI = 3.14159265358979323846d0 )
       
-      subroutine update_scale_coupling(all_p, all_wgt,all_q2fact, nb_page)
+      include 'genps.inc'
+      include 'run.inc'
+      include 'nexternal.inc'
+      include 'coupl.inc'
+C      include 'maxparticles.inc'
+      
+      double precision all_p(4*maxdim/3+14,1), all_wgt(1)
+      double precision p(4*maxdim/3+14), wgt
+      double precision all_q2fact(2,1)
+      all_p(:,1) = p(:)
+      all_wgt(1) = wgt
+      call update_scale_coupling_vec(all_p, all_wgt,all_q2fact, 1)
+      wgt = all_wgt(1)
+      return
+      end
+
+      
+      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, nb_page)
       implicit none
 
 C

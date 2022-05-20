@@ -293,9 +293,9 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
        IPROC_GLOBAL = IPROC
        ICONFIG = ICONF
 
-c     set the running scale (MLM not working)
+c     set the running scale 
 c     and update the couplings accordingly
-      call update_scale_coupling(all_p, all_wgt, all_q2fact, nb_page)
+      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, nb_page)
 
 
       IF(grouped_MC_grid_status.eq.0) then
@@ -682,6 +682,8 @@ C     Redo clustering to ensure consistent with final IPROC
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
         ALLOW_HELICITY_GRID_ENTRIES = .False.
       endif
+
+      call update_scale_coupling(pp, wgt)	
 C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
 c     Reset ALLOW_HELICITY_GRID_ENTRIES
