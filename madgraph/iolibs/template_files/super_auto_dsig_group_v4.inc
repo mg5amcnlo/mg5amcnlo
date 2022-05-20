@@ -297,7 +297,6 @@ c     set the running scale
 c     and update the couplings accordingly
       call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, nb_page)
 
-
       IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
       	  ALLOW_HELICITY_GRID_ENTRIES = .False.
@@ -728,6 +727,7 @@ C     ****************************************************
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      include 'vector.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -811,7 +811,9 @@ c    not needed anymore ... can be removed ... set for debugging only
      endif
 c     set the running scale 
 c     and update the couplings accordingly
-      call update_scale_coupling(pp, wgt)	
+      if (nb_page.le.1) then
+      call update_scale_coupling(pp, wgt)
+      endif
 
 
 
