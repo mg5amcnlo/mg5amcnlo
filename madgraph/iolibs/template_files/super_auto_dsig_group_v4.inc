@@ -50,7 +50,7 @@ c     TODO: MOVE THIS AS A COMMON BLOCK?
       COMMON /TO_SYMCONF/ SYMCONF
 
 
-      DOUBLE PRECISION XDUM, XSDUM
+      DOUBLE PRECISION XDUM, XSDUM, DUM
 
       INTEGER LMAPPED
 
@@ -85,7 +85,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
             DO IMIRROR=1,2
               IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C               Calculate PDF weight for all subprocesses
-		XSDUM =  DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,1D0,4)
+		XSDUM =  DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,DUM,4)
                  SELPROC(IMIRROR,IPROC,J)= SELPROC(IMIRROR,IPROC,J) + XSDUM
                 IF(MC_GROUPED_SUBPROC) THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -436,6 +436,7 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
 
+	  double precision DUM
       logical init_mode
       common /to_determine_zero_hel/init_mode
 C ----------
@@ -559,7 +560,7 @@ C     Turn caching on in dsigproc to avoid too many calls to switchmom
                DO IMIRROR=1,2
                   IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C                 Calculate PDF weight for all subprocesses
-                     SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,1d0,4)
+                     SELPROC(IMIRROR,IPROC,J)=DSIGPROC(PP,J,IPROC,IMIRROR,SYMCONF,CONFSUB,DUM,4)
                      IF(MC_grouped_subproc) then
 					   call map_3_to_1(J,IPROC,IMIRROR,MAXSPROC,2,Lmapped)
 					   call DS_add_entry('PDF_convolution',Lmapped,SELPROC(IMIRROR,IPROC,J),.True.)
@@ -584,6 +585,7 @@ c     Cannot make a selection with all PDFs to zero, so we return now
 	  IF(SUMPROB.eq.0.0d0) then
 	    RETURN
 	  endif
+	  
 
 C     Perform the selection
       CALL RANMAR(R)
@@ -664,6 +666,7 @@ c     If we are still initializing the grid or simply not using one at all, then
 
       IF(IPROC.EQ.0) RETURN
 
+
 C     Update weigth w.r.t SELPROC normalized to selection probability
 
       WGT=WGT*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
@@ -683,7 +686,6 @@ C       If we were in the initialization phase of the grid for MC over grouped p
         ALLOW_HELICITY_GRID_ENTRIES = .False.
       endif
 
-      call update_scale_coupling(pp, wgt)	
 C     Call DSIGPROC to calculate sigma for process
       DSIG=DSIGPROC(PP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,WGT,IMODE)
 c     Reset ALLOW_HELICITY_GRID_ENTRIES
@@ -803,9 +805,17 @@ C       Flip CM_RAP (to get rapidity right)
 
       DSIGPROC=0D0
 
-      IF (.not.PASSCUTS(P1)) THEN
-      stop 1
-      endif
+c    not needed anymore ... can be removed ... set for debugging only   
+     IF (.not.PASSCUTS(P1)) THEN
+        stop 1
+     endif
+c     set the running scale 
+c     and update the couplings accordingly
+      call update_scale_coupling(pp, wgt)	
+
+
+
+
       if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
