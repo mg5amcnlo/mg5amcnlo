@@ -90,12 +90,12 @@ C     dressed leptons
           ipart = ipdg
         endif
 
-        ! MZ Kill the photon
-        if (abs(ipart).ne.11) then
-            pdg2pdf=0d0
-            ee_components(:)=0d0
-            return
-        endif
+        !!! MZ Kill the photon
+        !!if (abs(ipart).ne.11) then
+        !!    pdg2pdf=0d0
+        !!    ee_components(:)=0d0
+        !!    return
+        !!endif
 
         pdg2pdf = 0d0
         do i_ee = 1, n_ee 
@@ -149,10 +149,10 @@ C ePDF specific parameters
       sol = 0 ! 0: numerical+matching, 1: only numerical                   
       use_grid = .true.
 
-      if (id.eq.7) then
-        call_epdf = 0d0
-        return
-      endif
+      !!if (id.eq.7) then
+      !!  call_epdf = 0d0
+      !!  return
+      !!endif
 
       xmu2=xmu**2
 
@@ -163,10 +163,20 @@ C ePDF specific parameters
       endif
 
       if (id.eq.idbeam.and.abs(id).eq.11) then
+          ! e+ in e+ / e- in e-
+          id_epdf = 1
+      else if (id.eq.7) then
+          ! photon in e+/e-
           id_epdf = 0
-          idbeam_epdf = 0
       else
-          write(*,*) 'CALL EPDF not implemented', id, idbeam
+          ! this is tipically the case of e+ in e-, quarks in e-, etc
+          ! for which we will return zero
+          id_epdf = -1
+      endif
+
+      if (id_epdf.eq.-1) then
+          call_epdf = 0d0
+          return
       endif
 
       ps_expo = get_ee_expo()
@@ -178,8 +188,8 @@ C ePDF specific parameters
       ! (much slower)
       !call  elpdfq2(0,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
       ! Second argument       1: electron, 0: photon, -1: positron
-      call  elpdfq2(0,1,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
-
+      !call  elpdfq2(0,1,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      call  elpdfq2(0,id_epdf,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
 
       return
       end
@@ -226,9 +236,13 @@ C ePDF specific parameters
       save beams
 
       if (firsttime) then
+        ! read till the end, because if photons are present,
+        ! they will be put before leptons
         open (unit=71,status='old',file='initial_states_map.dat')
-        read (71,*)idum,idum,beams(1),beams(2)
-        close (71)
+        do while (.true.) 
+          read (71,*,end=66)idum,idum,beams(1),beams(2)
+        enddo
+ 66     close (71)
         firsttime = .false.
       endif
 

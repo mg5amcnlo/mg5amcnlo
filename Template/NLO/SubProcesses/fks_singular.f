@@ -4416,6 +4416,10 @@ c
      $         (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg / egam
           xkk(1)=vcf*(1+x**2)
           xkk(2)=ch1**2*(1+x**2)
+        elseif((abs(col1).eq.8.and.col2.eq.3) .or. 
+     $         (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq / game
+          xkk(1)=vcf*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
+          xkk(2)=ch1**2*(1-x)*(1+(1-x)**2)/x*(2*dlog(x)+1)
         else
           xkk(:) = 0d0
         endif
