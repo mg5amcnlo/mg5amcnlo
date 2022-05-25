@@ -2068,8 +2068,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 ##########    START MULTI-CORE HANDLING #############
                 if not isinstance(self.cluster, cluster.MultiCore):
                     mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+                    newcluster = True
                 else:
                     mycluster = self.cluster
+                    newcluster = False
                 
                 new_args=list(args)
                 self.check_decay_events(new_args) 
@@ -2145,6 +2147,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if key == 'orig' or key.isdigit():
                         continue
                     logger.info('%s : %s pb' % (key, cross_sections[key]))
+                    
+                if newcluster:
+                    mycluster.remove()     
                 return
             ##########    END MULTI-CORE HANDLING #############
                               
@@ -3292,9 +3297,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
         if run_mode in [0, 2]:
-            if not( hasattr(self, 'cluster')
-                    and isinstance(self.cluster, cluster.MultiCore) 
-                    and self.cluster.nb_core == nb_core):
+            if not (hasattr(self, 'cluster') and isinstance(self.cluster, cluster.MultiCore)):                
                 self.cluster = cluster.MultiCore(**self.options)
                 self.cluster.nb_core = nb_core
         #cluster_temp_path=self.options['cluster_temp_path'],
@@ -3488,6 +3491,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     def do_quit(self, line):
         """Not in help: exit """
+        if hasattr(self, 'cluster') and isinstance(self.cluster, cluster.MultiCore):      
+            self.cluster.remove()
 
         if not self.force_run:
             try:

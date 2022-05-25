@@ -611,9 +611,6 @@ class MultiCore(Cluster):
         self.done_pid_queue = six.moves.queue.Queue()
         self.fail_msg = None
 
-        # starting the worker node
-        for _ in range(self.nb_core):
-            self.start_demon()
 
         
     def start_demon(self):
@@ -629,7 +626,7 @@ class MultiCore(Cluster):
         import six.moves._thread
         while not self.stoprequest.isSet():
             try:
-                args = self.queue.get()
+                args = self.queue.get(timeout=10)
                 tag, exe, arg, opt = args
                 try:
                     # check for executable case
@@ -694,6 +691,13 @@ class MultiCore(Cluster):
                log=None, required_output=[], nb_submit=0):
         """submit a job on multicore machine"""
         
+        # open threads if needed   
+        self.stoprequest.clear()     
+        if len(self.demons) < self.nb_core:
+            nthreads = self.nb_core - len(self.demons) 
+            for _ in range(nthreads):
+                self.start_demon()
+        
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
     
@@ -742,7 +746,9 @@ class MultiCore(Cluster):
                 continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
-            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
+            
+        self.demons.clear()               
 
 
     def wait(self, me_dir, update_status, update_first=None):
