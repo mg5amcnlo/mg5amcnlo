@@ -1870,6 +1870,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             # We are done.
             self.finalise_run_FO(folder_names[mode],jobs_to_collect)
             self.update_status('Run complete', level='parton', update_results=True)
+            if hasattr(self, 'cluster') and isinstance(self.cluster, cluster.MultiCore):
+                self.cluster.remove()
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
@@ -2983,8 +2985,10 @@ RESTART = %(mint_mode)s
                 logger.warning('Impossible to detect the number of cores => Using One.\n'+
                         'Use set nb_core X in order to set this number and be able to'+
                         'run in multicore.')
-
-            self.cluster = cluster.MultiCore(**self.options)
+                
+            if not (hasattr(self, 'cluster') and isinstance(self.cluster, cluster.MultiCore)):                
+                self.cluster = cluster.MultiCore(**self.options)
+                self.cluster.nb_core = self.nb_core
 
 
     def clean_previous_results(self,options,p_dirs,folder_name):
@@ -4177,7 +4181,10 @@ RESTART = %(mint_mode)s
             logger.info(message)
         if warning:
             logger.warning(warning)
-
+            
+        if hasattr(self, 'cluster') and isinstance(self.cluster, cluster.MultiCore):
+            self.cluster.remove()
+            
         self.update_status('Run complete', level='shower', update_results=True)
 
     ############################################################################
@@ -5241,11 +5248,11 @@ RESTART = %(mint_mode)s
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
-        except Exception as error:
-            logger.warning("Fail to compile the Subprocesses")
+            compile_cluster.remove()
+        except Exception as  error:
+            logger.warning("Compilation of the Subprocesses failed")
             if __debug__:
                 raise
-            compile_cluster.remove()
             self.do_quit('')
 
         logger.info('Checking test output:')
