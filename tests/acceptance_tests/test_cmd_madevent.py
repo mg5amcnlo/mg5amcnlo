@@ -25,6 +25,7 @@ import logging
 import time
 import tempfile
 import math
+import madgraph
 
 
 logger = logging.getLogger('test_cmd')
@@ -73,7 +74,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -120,9 +121,9 @@ class TestMECmdShell(unittest.TestCase):
             out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
-        if not misc.which('root'):
-            raise Exception('root is require for this test')
-        interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
+        #if not misc.which('root'):
+        #    raise Exception('root is require for this test')
+        #interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
@@ -134,7 +135,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.no_notification()
-        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
+        #self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
         
     
     @staticmethod
@@ -256,7 +257,6 @@ class TestMECmdShell(unittest.TestCase):
         
         self.check_parton_output('run_02_decayed_1', 100)           
         
-        self.assertEqual(self.debugging, False)
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -358,7 +358,6 @@ class TestMECmdShell(unittest.TestCase):
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
 
-        misc.sprint('start')
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
@@ -408,7 +407,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
-        self.assertFalse(self.debugging)
+
         
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
@@ -528,6 +527,57 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
+
+
+    def test_eft_running(self):
+        """check that  gives the correct result"""
+        
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd('import model %s/tests/input_files/SMEFTatNLO_running' % madgraph.MG5DIR)
+        mg_cmd.run_cmd('generate p p > t t~ NP=2 NP^2==2 QCD=2 QED=0')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        #f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertIn('fixed_extra_scale', run_card.user_set)
+        self.assertIn('mue_ref_fixed', run_card.user_set)
+        self.assertIn('mue_over_ref', run_card.user_set)
+
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 166.36114
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+        
+        # edit run_card -> fix scale
+        run_card['fixed_extra_scale'] = True
+        run_card['mue_ref_fixed'] = 250
+
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        target = 165.7
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+
+
+
+
+
+
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""
         mg_cmd = MGCmd.MasterCmd()
@@ -645,7 +695,6 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(banner3.get('param', 'mass', 24).value, 6.496446e+01)
         self.assertEqual(banner4.get('param', 'mass', 24).value, 7.242341e+01)         
         
-        self.assertFalse(self.debugging)
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
@@ -786,10 +835,12 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
-                 set event_norm sum
+                 set event_norm average
                  set systematics_program none
                  add_time_of_flight --threshold=4e-14
+                 pythia8
                  """ %self.run_dir
+
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
         if logging.getLogger('madgraph').level <= 20:
@@ -805,7 +856,7 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout, stderr=stderr)
 
         self.check_parton_output(cross=15.62, error=0.19)
-        #self.check_pythia_output()
+        self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
             misc.gunzip(event)
@@ -856,6 +907,7 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
+        shower=pythia8    
         %(path)s/../madspin_card.dat
         set nevents 1000
         set lhaid 10042
@@ -889,7 +941,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=666, delta_event=40)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
-        #self.check_pythia_output(run_name='run_01_decayed_1')
+        self.check_pythia_output(run_name='run_01_decayed_1')
         
         #check the first decayed events for energy-momentum conservation.
         
@@ -901,10 +953,7 @@ class TestMEfromfile(unittest.TestCase):
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception as error:
-            pass
+
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -954,7 +1003,95 @@ class TestMEfromfile(unittest.TestCase):
             event.check()
         
         
+    def test_contur_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(_file_path,  os.path.pardir, 'tests', 'input_files','rivet_contur_test.cmd')],
+                         cwd=pjoin(self.path),
+                         stdout=stdout,stderr=stdout)
+
         
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'contur.map')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'scan_run_[01-12].txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_12',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur',  'conturPlot', 'combinedLevels.pdf')))
+
+
+    def test_rivet_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        cmd = """generate p p > e+ e-
+        output %s
+        launch
+shower=pythia8
+analysis=off
+set mpi off
+set mmll 50
+set use_syst False
+set nevents 100
+set HEPMCoutput:file hepmc
+        launch -i
+rivet run_01
+set analysis MC_ZINC
+set draw_rivet_plots True
+                 """ %self.run_dir
+
+        open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'mg5_cmd')],
+                         #cwd=self.path,
+                         stdout=stdout, stderr=stderr)
+
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots','index.html')))
+
+
+
+
+
         
 
     def load_result(self, run_name):
@@ -993,8 +1130,8 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('hep' in data[0].pythia)
-        self.assertTrue('log' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia or 'hepmc' in data[0].pythia8)
+        self.assertTrue('log' in data[0].pythia or 'log' in data[0].pythia8)
 
     
     def test_decay_width_nlo_model(self):

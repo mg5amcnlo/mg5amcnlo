@@ -81,6 +81,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         self.add_param('frame_id', 6)
         self.add_param('global_order_coupling', '')
+        self.add_param('identical_particle_in_prod_and_decay', 'average')
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
@@ -94,7 +95,9 @@ class MadSpinOptions(banner.ConfigFile):
     def post_set_seed(self, value, change_userdefine, raiseerror):
         """ special handling for set seed """
         
-        random.seed(value)
+        if not hasattr(random, 'mg_seedset'):
+            random.seed(self['seed'])  
+            random.mg_seedset = self['seed']  
 
     ############################################################################        
     def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
@@ -102,15 +105,21 @@ class MadSpinOptions(banner.ConfigFile):
         
         if value == 'default':
             self.run_card = None
+        elif not value:
+            self.run_card = None
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
-            
-        args = value.split()
-        if  len(args) >2:
-            if not self.options['run_card']:
-                self.run_card =  banner.RunCardLO()
-                self.run_card.remove_all_cut()
-            self.run_card[args[0]] = ' '.join(args[1:])
+        else:
+            misc.sprint(value)
+            args = value.split()
+            if  len(args) >1:
+                if not hasattr(self, 'run_card'):
+                    misc.sprint("init run_card")
+                    self.run_card =  banner.RunCardLO()
+                    self.run_card.remove_all_cut()
+                self.run_card[args[0]] = ' '.join(args[1:])
+            else:
+                raise Exception("wrong syntax for \"set run_card %s\"" % value)
             
         
     ############################################################################
@@ -121,6 +130,11 @@ class MadSpinOptions(banner.ConfigFile):
             logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
             logger.warning('Not all functionalities of MadSpin handle this mode correctly (only onshell mode so far).')
 
+    ############################################################################
+    def post_identical_in_prod_and_decay(self, value, change_userdefine, raiseerror):
+        """ special handling for set fixed_order """
+        if value not in ["crash", 'average', 'max', 'first']:
+            raise Exception("value %s not supported for this parameter identical_in_prod_and_decay")
 
 class MadSpinInterface(extended_cmd.Cmd):
     """Basic interface for madspin"""
@@ -241,6 +255,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+                if self.options['BW_cut'] > 25:
+                    logger.critical("value of bwcutoff set to %s from the input file. This is much too large value for Madspin and the validity of the Narrow-width-Approximation. Please ensure that you overwrite that value via \"set BW_cut X\"  to a smaller value (like X=10)", self.options['BW_cut'])
             
             if isinstance(run_card, banner.RunCardLO):
                 run_card.update_system_parameter_for_include()
@@ -625,9 +641,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if pid in self.final_state:
                     break
         else:
-            logger.info("Nothing to decay ...")
-            return
+            if not self.options['onlyhelicity']:
+                logger.info("Nothing to decay ...")
+                return
         
+        if self.options['BW_cut'] > 100:
+            raise Exception("BW_cut parameter is much too large (>100) for narrow width approximation. Please set it up to a smaller value in your madspin_card.dat")
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
@@ -707,7 +726,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.all_decay = eval(generate_all.all_decay)
         for me in generate_all.all_ME:
             for d in generate_all.all_ME[me]['decays']:
-                d['decay_struct'] = eval(d['decay_struct'])
+                if isinstance(d['decay_struct'], str):
+                    d['decay_struct'] = eval(d['decay_struct'])
 
 
         # Re-create information which are not save in the pickle.
@@ -1278,6 +1298,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.options["run_card"]:
                     if hasattr(self, 'run_card'):
                         run_card = self.run_card
+                    elif hasattr(self.options, 'run_card'):
+                        run_card = self.options.run_card
                     else:
                         self.run_card = banner.RunCard(self.options["run_card"])
                         run_card = self.run_card 
@@ -1699,12 +1721,28 @@ class MadSpinInterface(extended_cmd.Cmd):
             orig_order = self.all_me[tag]['order']
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
-            p = event.get_momenta(orig_order)
-            p = rwgt_interface.ReweightInterface.invert_momenta(p)
-            if event[0].color1 == 599 and event.aqcd==0:
-                return self.all_f2py[pdir](p, 0.113, 0)
+            all_p = event.get_all_momenta(orig_order)
+            if self.options['identical_particle_in_prod_and_decay'] == "crash" and\
+                len(all_p)> 1:
+                raise Exception("Ambiguous particle in production and decay. crash as requested by 'identical_particle_in_prod_and_decay'")
+            out = 0
+            for p in all_p:
+                p = rwgt_interface.ReweightInterface.invert_momenta(p)
+                if event[0].color1 == 599 and event.aqcd==0:
+                    new_value = self.all_f2py[pdir](p, 0.113, 0)
+                else:
+                    new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                if self.options['identical_particle_in_prod_and_decay'] == "average":
+                    out += new_value
+                else:
+                    if abs(out)< abs(new_value):
+                        out = new_value
+                if self.options['identical_particle_in_prod_and_decay'] == 'first':
+                    return out
+            if self.options['identical_particle_in_prod_and_decay'] == "average":
+                return out/len(all_p)
             else:
-                return self.all_f2py[pdir](p, event.aqcd, 0)
+                return out
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))

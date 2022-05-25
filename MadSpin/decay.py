@@ -1042,13 +1042,15 @@ class AllMatrixElement(dict):
         
         decay_struct = {}
         to_decay = collections.defaultdict(list)
-        
+        orig_decay = collections.defaultdict(list)
         for i, proc in enumerate(me.get('decay_chains')):
             pid =  proc.get('legs')[0].get('id')
             to_decay[pid].append((i,proc))
-                  
-                
+            orig_decay[pid].append((i,proc))
+
         for leg in me.get('legs'):
+            if not leg.get('state'): # initial state particle does not decay ...
+                continue
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay:
@@ -2469,7 +2471,11 @@ class decay_all_events(object):
         #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
         nb_mc_masses=0
         p, p_str=self.curr_event.give_momenta(event_map)
-        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, self.options['frame_id'])
+        try: 
+            frameid = self.options['frame_id']
+        except KeyError:
+            frameid = 6
+        stdin_text=' %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses
@@ -3411,22 +3417,24 @@ class decay_all_events(object):
         except IOError as error:
             if not first:
                 raise
+            #misc.sprint(error)
             try:
                 external.stdin.close()
             except Exception as  error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stdout.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stderr.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.terminate()
-            except:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
+
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
 
@@ -3465,7 +3473,9 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
-                        ranmar_state=external.stdout.readline().decode()
+                        external.stdin.flush()
+                        external.stdout.flush()
+                        ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
@@ -3512,7 +3522,7 @@ class decay_all_events(object):
 
         external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline().decode())
+            info = int(external.stdout.readline().decode(errors='ignore'))
             nb_output = abs(info)+1
         else:
             info = 1
@@ -3520,10 +3530,10 @@ class decay_all_events(object):
         std = []
         for i in range(nb_output):
             external.stdout.flush()
-            line = external.stdout.readline().decode()
+            line = external.stdout.readline().decode(errors='ignore')
             std.append(line)
         prod_values = ' '.join(std)
-        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
+        #prod_values = ' '.join([external.stdout.readline().decode(errors='ignore') for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)
@@ -4106,7 +4116,7 @@ class decay_all_events(object):
                         misc.sprint(error)
                         raise
                         continue
-                    ranmar_state=external.stdout.readline().decode()
+                    ranmar_state=external.stdout.readline().decode(errors='ignore')
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)

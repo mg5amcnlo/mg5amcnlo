@@ -84,7 +84,7 @@ def generate_directories_fks_async(i):
     me = six.moves.cPickle.load(infile)
     infile.close()      
     
-    calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
+    calls, splitorders = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
 
     nexternal = curr_exporter.proc_characteristic['nexternal']
     ninitial = curr_exporter.proc_characteristic['ninitial']
@@ -98,9 +98,9 @@ def generate_directories_fks_async(i):
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types, splitorders]
     else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types]
+        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -452,8 +452,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         elif args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with process or model")
         else:
+            if any ([a.startswith("--loop_filter=") for a in args]):
+                for a in args:
+                    if a.startswith("--loop_filter="):
+                        self._fks_multi_proc['loop_filter'] = a.split('=',1)[1]
+                        args.remove(a)
+                        break
+
             line = ' '.join(args[1:])
-            
+
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
@@ -654,13 +661,15 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
-                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion']}
+                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
+                       'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
 
         fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
             self._fks_multi_proc.add(fksproc)
         except AttributeError: 
             self._fks_multi_proc = fksproc
+            self._fks_multi_proc['loop_filter'] = fks_options['loop_filter']
 
         if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
             base = {}
@@ -728,7 +737,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # Make a Template Copy
         if self._export_format in ['NLO']:
-            self._curr_exporter.copy_fkstemplate()
+            self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -830,6 +839,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         ndiags, cpu_time = generate_matrix_elements(self, group=group_processes)
         calls = 0
+        splitorders = []
 
         path = self._export_dir
 
@@ -854,11 +864,13 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
-                    calls = calls + \
+                    calls_dir, splitorders_dir = \
                             self._curr_exporter.generate_directories_fks(me, 
                             self._curr_helas_model, 
                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                             path,self.options['OLP'])
+                    calls += calls_dir
+                    splitorders += [so for so in splitorders_dir if so not in splitorders]
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
                     self.born_processes_for_olp.append(me.born_me.get('processes')[0])
                     self.born_processes.append(me.born_me.get('processes'))
@@ -921,6 +933,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 for diroutput in diroutputmap:
                     splitting_types = splitting_types.union(set(diroutput[7]))
                     calls = calls + diroutput[0]
+                    splitorders += [so for so in diroutput[8] if so not in splitorders]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
                     if six.PY2:
@@ -955,6 +968,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                 self._curr_matrix_elements.get('initial_states'))
             self._curr_exporter.write_maxproc_files(nmaxpdf, 
                                 os.path.join(path, os.path.pardir, 'SubProcesses'))
+
+            self._curr_exporter.write_orderstag_file(splitorders, self._export_dir)
 
         cpu_time1 = time.time()
 

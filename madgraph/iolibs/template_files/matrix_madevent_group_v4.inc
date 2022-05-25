@@ -339,6 +339,8 @@ endif
 
 
 %(helas_calls)s
+
+JAMP(:,:) = (0d0,0d0) 
 %(jamp_lines)s
 
     if(init_mode)then

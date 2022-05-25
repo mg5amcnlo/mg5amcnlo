@@ -500,6 +500,10 @@ c The n+1-body contributions (including counter terms)
 c Include PDFs and alpha_S and reweight to include the uncertainties
       if (ickkw.eq.-1) call include_veto_multiplier
       call include_PDF_and_alphas
+
+c Include the bias weight specified in the bias_weight_function
+      call include_bias_wgt
+
       if (doreweight) then
          if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
          if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL

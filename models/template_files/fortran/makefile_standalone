@@ -35,3 +35,14 @@ $(LIBDIR)$(LIBRARY): $(MODEL)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 
+couplings.f: ../maxparticles.inc ../run.inc ../cuts.inc
+
+../maxparticles.inc:
+	touch ../maxparticles.inc
+
+../run.inc:
+	touch ../run.inc
+
+../cuts.inc:
+	echo "        logical fixed_extra_scale\n        integer maxjetflavor\n        double precision mue_ref_fixed, mue_over_ref\n" > ../cuts.inc
+	

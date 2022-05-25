@@ -1533,8 +1533,7 @@ c of the t-channel line.
             m(ibranch-1)=m2_tchan(ibranch)
          else
             ivar=ivar+1
-            m(ibranch-1)=dsqrt((smax-smin)*
-     &        x(ivar))
+            m(ibranch-1)=dsqrt((smax-smin)*x(ivar) + smin)
             m2_tchan(ibranch)=m(ibranch-1)
             xjac0 = xjac0*(smax-smin)
          endif

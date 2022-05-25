@@ -248,7 +248,7 @@ def get_ninja_quad_prec_support(ninja_lib_path):
             p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
                                                          stderr=subprocess.PIPE)
             output, error = p.communicate()
-            return 'TRUE' in output.decode().upper()
+            return 'TRUE' in output.decode(errors='ignore').upper()
         except Exception:
             pass
     
@@ -466,7 +466,7 @@ def copytree(*args, **opts):
 
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
-    return misc.copytree(*args, **opts)
+    return shutil.copytree(*args, **opts)
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -525,7 +525,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             raise MadGraph5Error(error_msg)
 
         try:
-            out = out.decode('utf-8')
+            out = out.decode('utf-8', errors='ignore')
         except Exception:
             out = str(out)
 
@@ -560,7 +560,7 @@ def get_gfortran_version(compiler='gfortran'):
         p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
-        output = output.decode("utf-8")
+        output = output.decode("utf-8",errors='ignore')
         version_finder=re.compile(r"(?P<version>\d[\d.]*)")
         version = version_finder.search(output).group('version')
         return version
@@ -789,7 +789,8 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
         # Cannot probe the compiler, assume not clang then
         return False
 
-    output = output.decode()
+    output = output.decode(errors='ignore')
+    
     return 'LLVM' in str(output) or "clang" in str(output)
 
 
@@ -954,7 +955,7 @@ def call_stdout(arg, *args, **opt):
         arg[0] = './%s' % arg[0]
         out = subprocess.call(arg, *args,  stdout=subprocess.PIPE, **opt)
         
-    str_out = out.stdout.read().decode().strip()
+    str_out = out.stdout.read().decode(errors='ignore').strip()
     return str_out
 
 
@@ -1199,7 +1200,7 @@ def gunzip(path, keep=False, stdout=None):
         raise
     else:    
         try:    
-            open(stdout,'w').write(gfile.read().decode())
+            open(stdout,'w').write(gfile.read().decode(errors='ignore'))
         except IOError as error:
             sprint(error)
             # this means that the file is actually not gzip
@@ -1658,7 +1659,7 @@ class ProcessTimer:
     # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
                   shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
-    stdout_list = flash.communicate()[0].decode().split('\n')
+    stdout_list = flash.communicate()[0].decode(errors='ignore').split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms
     vms_memory = 0
@@ -1727,25 +1728,31 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-## Define apple_notify (in a way which is system independent
-class Applenotification(object):
+## Define system_notify (in a way which is system independent
+class Notification(object):
 
     def __init__(self):
         self.init = False
         self.working = True
 
-    def load_notification(self):        
-        try:
-            import Foundation
-            import objc
-            self.NSUserNotification = objc.lookUpClass('NSUserNotification')
-            self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
-        except:
-            self.working=False
-            if which('osascript'):
-                self.working = 'osascript'
-            return
-        self.working=True
+    def load_notification(self):
+        self.init = True
+        self.working = False
+        if sys.platform == 'darwin':
+            try:
+                import Foundation
+                import objc
+                self.NSUserNotification = objc.lookUpClass('NSUserNotification')
+                self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+                self.working = "Foundation"
+            except:
+                if which('osascript'):
+                    self.working = 'osascript'
+                return
+        elif sys.platform == 'linux':
+            if which('notify-send'):
+                self.working = 'notify-send'
+            
 
     def __call__(self,subtitle, info_text, userInfo={}):
         
@@ -1753,7 +1760,7 @@ class Applenotification(object):
             self.load_notification()
         if not self.working:
             return
-        elif self.working is True:
+        elif self.working == "Foundation":
             try:
                 notification = self.NSUserNotification.alloc().init()
                 notification.setTitle_('MadGraph5_aMC@NLO')
@@ -1766,7 +1773,7 @@ class Applenotification(object):
                 self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
             except:
                 pass
-
+            
         elif self.working=='osascript':
             try:
                 os.system("""
@@ -1774,10 +1781,16 @@ class Applenotification(object):
               """.format(info_text, subtitle))
             except:
                 pass
-        
+
+        elif self.working == 'notify-send':
+            try:
+                os.system(""" notify-send "MadGraph5_aMC@NLO" "{}"  &> /dev/null """.format(info_text,subtitle))
+            except:
+                pass
 
 
-apple_notify = Applenotification()
+
+system_notify = Notification()
 
 class EasterEgg(object):
     
@@ -1891,7 +1904,7 @@ class EasterEgg(object):
         #1. control if the volume is on or not
         p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
         output, _  = p.communicate()
-        output = output.decode()
+        output = output.decode(errors='ignore')
         #output volume:25, input volume:71, alert volume:100, output muted:true
         info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
         muted = False
@@ -1902,7 +1915,7 @@ class EasterEgg(object):
         
         if muted:
             if not EasterEgg.done_notification:
-                apple_notify('On April first','turn up your volume!')
+                system_notify('On April first','turn up your volume!')
                 EasterEgg.done_notification = True
         else:
             os.system('say %s' % msg)
@@ -2107,11 +2120,17 @@ def import_python_lhapdf(lhapdfconfig):
     try:
         
         lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().decode().strip()
+                                           stdout=subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
     except:
         use_lhapdf=False
         return False
     else:
+        if sys.platform != "darwin":
+            if not 'LD_LIBRARY_PATH' in os.environ:
+                os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
+            else:
+                os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
+        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
@@ -2189,14 +2208,22 @@ def make_unique(input, keepordering=None):
     "remove duplicate in a list "
 
     if keepordering is None:
-        keepordering = madgraph.ordering
+        if MADEVENT:
+            keepordering = False
+        else:
+            keepordering = madgraph.ordering
     if not keepordering:
         return list(set(input))
     else:
         return list(dict.fromkeys(input)) 
 
 if six.PY3:
-    class OrderedSet(collections.OrderedDict, collections.MutableSet):
+    try:
+        from collections import MutableSet
+    except ImportError: # this is for python3.10
+        from collections.abc import  MutableSet
+    
+    class OrderedSet(collections.OrderedDict, MutableSet):
 
         def __init__(self, arg=None):
             super( OrderedSet, self).__init__()
@@ -2216,6 +2243,14 @@ if six.PY3:
 
         def discard(self, elem):
             self.pop(elem, None)
+
+        def pop(self, *args):
+            if args:
+                return super().pop(*args)
+            else:
+                key = next(iter(self))
+                del self[key]
+                return key
 
         def __le__(self, other):
             return all(e in other for e in self)
@@ -2317,10 +2352,10 @@ the file and returns last line in an internal buffer."""
           line = self.data[0]
           try:
             self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-            self.data = (self.read(self.blksize).decode() + line).split('\n')
+            self.data = (self.read(self.blksize).decode(errors='ignore') + line).split('\n')
           except IOError:  # can't seek before the beginning of the file
             self.seek(0)
-            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode() + line
+            data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode(errors='ignore') + line
             self.data = data.split('\n')
 
         if len(self.data) == 0:
@@ -2343,7 +2378,7 @@ the file and returns last line in an internal buffer."""
         # otherwise, read the whole thing...
         if self.size > self.blksize:
           self.seek(-self.blksize * self.blkcount, 2) # read from end of file
-        self.data = self.read(self.blksize).decode().split('\n')
+        self.data = self.read(self.blksize).decode(errors='ignore').split('\n')
         # strip the last item if it's empty...  a byproduct of the last line having
         # a newline at the end of it
         if not self.data[-1]:

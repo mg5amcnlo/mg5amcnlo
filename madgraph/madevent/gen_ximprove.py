@@ -164,7 +164,7 @@ class gensym(object):
                                  stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(" ".encode())
-            stdout = stdout.decode('ascii')
+            stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
                 # note a continue is not enough here, we have in top to link
@@ -181,7 +181,9 @@ class gensym(object):
             all_bad_amps_perhel = set()
             
             for line in stdout.splitlines():
-                if 'GC_' in line:
+                if "="  not in line and ":" not in line:
+                    continue
+                if ' GC_' in line:
                     lsplit = line.split()
                     if float(lsplit[2]) ==0 == float(lsplit[3]):
                         zero_gc.append(lsplit[0])
@@ -337,7 +339,7 @@ class gensym(object):
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(''.encode())
-            stdout = stdout.decode('ascii')
+            stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)

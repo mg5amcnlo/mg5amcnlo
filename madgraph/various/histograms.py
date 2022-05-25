@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 ################################################################################
 #
 # Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
@@ -1308,7 +1308,7 @@ class HwU(Histogram):
             use_lhapdf=False
             try:
                 lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                               stdout=subprocess.PIPE).stdout.read().decode().strip()
+                                               stdout=subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except:
                 use_lhapdf=False
             else:
@@ -2404,12 +2404,10 @@ set key invert
             gnuplot_output_list=gnuplot_output_list_v5
         else:
             output, _ = p.communicate()
-            output.decode()
-            try:
-                version = float(output.split()[1])
-            except:
-                version = 5
-            if version < 5. :
+            output.decode(errors='ignore')
+            if not output:
+                gnuplot_output_list=gnuplot_output_list_v5
+            elif float(output.split()[1]) < 5. :
                 gnuplot_output_list=gnuplot_output_list_v4
             else:
                 gnuplot_output_list=gnuplot_output_list_v5
