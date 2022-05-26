@@ -7103,10 +7103,8 @@ class MadLoopInitializer(object):
         if MG_options:
             if interface and  hasattr(interface, 'cluster') and isinstance(interface.cluster, cluster.MultiCore):
                 mcore = interface.cluster
-                newcluster = False
             else: 
                 mcore = cluster.MultiCore(**MG_options)
-                newcluster = True
         else:
             mcore = cluster.onecore
 
@@ -7170,9 +7168,6 @@ class MadLoopInitializer(object):
                   '%d PS points (%s), in %.3g(compil.) + %.3g(init.) secs.'%(
                   abs(init['nPS']),'DP' if init['nPS']>0 else 'QP',
                   init['Process_compilation'],init['Initialization']))
-                  
-        if newcluster:
-            mcore.remove()           
         
         logger.info('MadLoop initialization finished.')        
 

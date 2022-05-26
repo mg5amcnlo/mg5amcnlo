@@ -603,6 +603,12 @@ class MultiCore(Cluster):
             self.nb_core = args[0]
         else:
             self.nb_core = 1
+        # flag controlling if one keep the thread open or not after a wait()
+        if 'keep_thread' in opt:
+            self.keep_thread = opt['keep_thread']
+        else:
+            self.keep_thread = False
+
         self.update_fct = None
         
         self.lock = threading.Event() # allow nice lock of the main thread
@@ -694,9 +700,7 @@ class MultiCore(Cluster):
         # open threads if needed   
         self.stoprequest.clear()     
         if len(self.demons) < self.nb_core:
-            nthreads = self.nb_core - len(self.demons) 
-            for _ in range(nthreads):
-                self.start_demon()
+            self.start_demon()
         
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
@@ -850,6 +854,7 @@ class MultiCore(Cluster):
             self.stoprequest.clear()
             self.id_to_packet = {}
 
+
         except KeyboardInterrupt:
             # if one of the node fails -> return that error
             if isinstance(self.fail_msg, Exception):
@@ -860,6 +865,10 @@ class MultiCore(Cluster):
                 six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
             # else return orignal error
             raise 
+
+        if not self.keep_thread:
+            self.stoprequest.set()
+            self.demons.clear()
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
