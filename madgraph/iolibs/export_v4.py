@@ -7053,7 +7053,6 @@ class UFO_model_to_mg4(object):
            this file only need the correct name for the mass for the W and Z
         """
 
-        
         try:
             fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
         except:
@@ -7061,12 +7060,15 @@ class UFO_model_to_mg4(object):
             return
 
         masses = {'MZ': '0d0', 'MW': '0d0'}
+        count = 0
         for particle in self.model['particles']:
             if particle.get('pdg_code') == 24:
                 masses['MW'] = particle.get('mass')
+                count += 1
             elif particle.get('pdg_code') == 23:
                 masses['MZ'] =  particle.get('mass')
-            if len(masses) == 2:
+                count += 1
+            if count == 2:
                 break
 
         template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
