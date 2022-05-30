@@ -637,7 +637,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 for i in range(1,4):
                     P = "P%s" % (self.outgoing)
                     value = ["1d-30", "0d0", "1d-15"]
-                    out.write("  IF (DABS(%(P)s(0))*1e-10.gt.DABS(%(P)s(%(i)s))) %(P)s(%(i)s)=%(val)s\n"
+                    out.write("  IF (ABS(%(P)s(0))*1e-10.gt.ABS(%(P)s(%(i)s))) %(P)s(%(i)s)=%(val)s\n"
                               % {"P": P, "i":i, 'val':value[i-1]})
             i = self.outgoing -1
             if self.declaration.is_used('Tnorm%s' % (i+1)):
