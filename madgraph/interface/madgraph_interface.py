@@ -7496,7 +7496,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
     def post_install_RunningCoupling(self):
 
-        shutil.move('RunningCoupling', pjoin('Template', 'Running'))
+        shutil.move(pjoin(MG5DIR,'RunningCoupling'), pjoin(MG5DIR,'Template', 'Running'))
 
     def do_customize_model(self, line):
         """create a restriction card in a interactive way"""
