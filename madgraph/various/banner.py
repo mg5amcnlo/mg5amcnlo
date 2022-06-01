@@ -4830,7 +4830,9 @@ class RunCardNLO(RunCard):
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
-        self.add_param('fixed_fac_scale', False)
+        self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define  fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam") 
+        self.add_param("fixed_fac_scale1", False, hidden=True) # added new parameters
+        self.add_param("fixed_fac_scale2", False, hidden=True)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
