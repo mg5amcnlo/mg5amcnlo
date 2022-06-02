@@ -7,13 +7,12 @@ c     Scales
 c
       real*8          scale,scalefact,ellissextonfact,alpsfact, mue_ref_fixed, mue_over_ref
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult, fixed_extra_scale,
-      $                fixed_fac_scale1,fixed_fac_scale2
+     $                fixed_fac_scale1,fixed_fac_scale2
       integer         ickkw,nhmult,dynamical_scale_choice
       common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
      $                fixed_fac_scale1,fixed_fac_scale2,fixed_couplings,ickkw,nhmult,hmult,
      $                mue_ref_fixed, mue_over_ref, fixed_extra_scale, 
-     $                fixed_fac_scale,fixed_couplings,
-     $                dynamical_scale_choice
+     $                fixed_fac_scale,dynamical_scale_choice
 
 c
 c New stuff for scales (NLO)
