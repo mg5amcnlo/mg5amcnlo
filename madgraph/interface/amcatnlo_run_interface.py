@@ -2983,8 +2983,12 @@ RESTART = %(mint_mode)s
                 logger.warning('Impossible to detect the number of cores => Using One.\n'+
                         'Use set nb_core X in order to set this number and be able to'+
                         'run in multicore.')
+            if not (hasattr(self, 'cluster') or not isinstance(self.cluster, cluster.MultiCore)):                
+                self.cluster = cluster.MultiCore(**self.options)
+                self.cluster.nb_core = self.nb_core
+            else:
+                self.cluster.nb_core = self.nb_core
 
-            self.cluster = cluster.MultiCore(**self.options)
 
 
     def clean_previous_results(self,options,p_dirs,folder_name):
