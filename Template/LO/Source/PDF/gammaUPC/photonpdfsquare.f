@@ -18,7 +18,11 @@ c
 C
 C     Include
 C
-      include '../pdf.inc'
+C      include '../pdf.inc'
+      character*7 pdlabel,epa_label
+      character*7 pdsublabel(2)
+      integer lhaid
+      common/to_pdf/lhaid,pdlabel,epa_label,pdsublabel
       double precision xx1,xx2
 
       integer nb_proton(2), nb_neutron(2) 
