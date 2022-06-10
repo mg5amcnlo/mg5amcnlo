@@ -41,7 +41,7 @@ $frame
 # PDF CHOICE: this automatically fixes alpha_s and its evol.         *
 # pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
 #          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
-#          eva=Effective W/Z/A Approx.       [21yy.zzzzz]            *
+#          eva=Effective W/Z/A Approx.       [2111.02442]            *
 #          edff=EDFF in gamma-UPC            [22yy.zzzzz]            *
 #          chff=ChFF in gamma-UPC            [22yy.zzzzz]            *
 #          none=No PDF, same as lhapdf with lppx=0                   *
