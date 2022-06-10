@@ -19,10 +19,12 @@ C
 C     Include
 C
 C      include '../pdf.inc'
+C     Common block
       character*7 pdlabel,epa_label
       character*7 pdsublabel(2)
       integer lhaid
       common/to_pdf/lhaid,pdlabel,epa_label,pdsublabel
+
       double precision xx1,xx2
 
       integer nb_proton(2), nb_neutron(2) 
@@ -139,7 +141,7 @@ c     saved. 'pdflast' is filled below.
 
 c     write(*,*) 'running gamma-UPC'
 
-      IF(nb_hadron(1).eq.1.and.nb_hadron(1).eq.1)THEN
+      IF(nb_hadron(1).eq.1.and.nb_hadron(2).eq.1)THEN
          pdflast(ireuse)=PhotonPhotonFlux_pp(xx1,xx2)
       ELSEIF((nb_hadron(1).eq.1.and.nb_hadron(2).gt.1).or.
      $        (nb_hadron(2).eq.1.and.nb_hadron(1).gt.1))THEN
