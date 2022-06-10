@@ -1,5 +1,5 @@
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
-C ****************************************************
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE, ICONF)
+C ************************************************************
 C
 %(info_lines)s
 C
@@ -13,6 +13,9 @@ C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
+C             iconf: channel of integration under consideration
+C                    used for the amp2(multi-channel) / color assignment
+C                    note: not unique for a G directory (due to sym. channel)
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -32,7 +35,7 @@ C
 C ARGUMENTS 
 C  
       DOUBLE PRECISION PP(0:3,NEXTERNAL), WGT
-      INTEGER IMODE
+      INTEGER IMODE, ICONF
 C  
 C LOCAL VARIABLES 
 C  
@@ -41,7 +44,7 @@ C
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION DSIGUU,R,RCONF
 
-      INTEGER LUN,ICONF,IFACT,NFACT
+      INTEGER LUN,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
 C
@@ -86,7 +89,6 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-      integer channel
 C  
 C DATA
 C  
@@ -129,8 +131,7 @@ C     Continue only if IMODE is 0, 4 or 5
            P1 = PP
          endif
 
-	 channel = %(get_channel)s
-         CALL SMATRIX%(proc_id)s(P1,0,channel,DSIGUU,JAMP2(0,1),1)
+         CALL SMATRIX%(proc_id)s(P1,0,iconf,DSIGUU,JAMP2(0,1),1)
 
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -178,7 +179,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT,IMODE, ALL_OUT)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT,IMODE,ICONF, ALL_OUT)
 C ****************************************************
 C
 %(info_lines)s
@@ -193,6 +194,10 @@ C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
+C             iconf: channel of integration under consideration
+C                    used for the amp2(multi-channel) / color assignment
+C                    note: not unique for a G directory (due to sym. channel)
+C                    note: unique over the current vector 
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -217,7 +222,7 @@ C
       DOUBLE PRECISION ALL_XBK(2,NB_PAGE)
       DOUBLE PRECISION ALL_Q2FACT(2,NB_PAGE)
       DOUBLE PRECISION ALL_CM_RAP(NB_PAGE)
-      INTEGER IMODE
+      INTEGER IMODE, ICONF
       DOUBLE PRECISION ALL_OUT(NB_PAGE)
 C ----------
 C BEGIN CODE
@@ -230,11 +235,10 @@ C
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION ALL_PD(0:MAXPROC, NB_PAGE) 
       DOUBLE PRECISION DSIGUU,R,RCONF
-      INTEGER LUN,ICONF,IFACT,NFACT
+      INTEGER LUN, IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
       double precision RHEL ! random number
-      integer channel
 C
 C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
 C     
@@ -293,7 +297,7 @@ C BEGIN CODE
 C ----------
       %(cutsdone)s
       IF(IMODE.EQ.1)THEN
-	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE)
+	NFACT = DSIG%(proc_id)s(all_pp(0,1,1), all_wgt(1), IMODE, ICONF)
 	RETURN
       ENDIF	   
 
@@ -323,12 +327,11 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
 	 CALL RANMAR(hel_rand(IVEC))
 c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
-	 channel = %(get_channel)s
 
 c	 do IVEC=1, NB_PAGE
-c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), ICONF, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 c	 enddo 
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, ALL_OUT , selected_hel, jamp2)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONF , ALL_OUT , selected_hel, jamp2)
 
 
 	 DO IVEC=1,NB_PAGE
@@ -399,7 +402,7 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, out , selected_hel, jamp2_multi)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONF, out , selected_hel, jamp2_multi)
 
      USE OMP_LIB
 
@@ -408,7 +411,7 @@ C
      include 'maxamps.inc'
      double precision p_multi(0:3, nexternal, NB_PAGE)
      double precision hel_rand(nb_page)
-     integer channel
+     integer ICONF
      double precision out(nb_page)
      integer selected_hel(nb_page)
      double precision jamp2_multi(0:MAXFLOW, nb_page)
@@ -421,7 +424,7 @@ C
       DO IVEC=1, NB_PAGE
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
-     &				 channel,
+     &				 ICONF,
      &				 out(IVEC),
 c     &				 selected_hel(IVEC),
      &				 jamp2_multi(0,IVEC),

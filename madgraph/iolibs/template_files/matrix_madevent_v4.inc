@@ -56,7 +56,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-    DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
+    DOUBLE PRECISION AMP2(LMAXCONFIGS), JAMP2(0:MAXFLOW)
     COMMON/TO_AMPS/  AMP2,       JAMP2
     
     CHARACTER*101        HEL_BUFF
@@ -84,7 +84,7 @@ C ----------
     ENDDO
      
     IF (multi_channel) THEN
-        DO I=1,NDIAGS
+        DO I=1,LMAXCONFIGS
             AMP2(I)=0D0
         ENDDO
         JAMP2(0)=%(ncolor)d
@@ -169,7 +169,7 @@ c           Include the Jacobian from helicity sampling
     ENDIF
     IF (MULTI_CHANNEL) THEN
         XTOT=0D0
-        DO I=1,NDIAGS
+        DO I=1,LMAXCONFIGS
             XTOT=XTOT+AMP2(I)
         ENDDO
         IF (XTOT.NE.0D0) THEN
@@ -240,7 +240,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-    Double Precision amp2(maxamps), jamp2(0:maxflow)
+    Double Precision amp2(LMAXCONFIGS), jamp2(0:maxflow)
     common/to_amps/  amp2,       jamp2
     include 'coupl.inc'
 
