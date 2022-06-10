@@ -8,7 +8,7 @@ include ../../make_opts
 
 EXE=test
 
-photonflux=tbessk.o tbessj.o nielsen_generalized_polylog.o ElasticPhotonPhotonFlux.o OpticalGlauber_Geometry.o nintlib.o interpolation.o
+photonflux=tbessk.o tbessj.o nielsen_generalized_polylog.o ElasticPhotonPhotonFlux.o OpticalGlauber_Geometry.o nintlib.o interpolation.o photonpdfsquare.o
 
 all: $(LIBDIR)$(LIBRARY)
 
@@ -22,6 +22,9 @@ test.o: test.f90 ElasticPhotonPhotonFlux.mod OpticalGlauber_Geometry.mod
 	$(FC) $(FFLAGS) -c $<
 
 ElasticPhotonPhotonFlux.o ElasticPhotonPhotonFlux.mod: ElasticPhotonPhotonFlux.f90 OpticalGlauber_Geometry.mod nintlib.mod interpolation.mod
+	$(FC) $(FFLAGS) -c $<
+
+photonpdfsquare.o : photonpdfsquare.f ElasticPhotonPhotonFlux.mod
 	$(FC) $(FFLAGS) -c $<
 
 tbessk.o: tbessk.f90

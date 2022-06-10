@@ -22,6 +22,8 @@ MODULE ElasticPhotonPhotonFlux
   REAL(KIND(1d0)),PARAMETER,PRIVATE::GeVm12fm=0.1973d0 ! GeV-1 to fm
   INTEGER,PARAMETER,PRIVATE::SUB_FACTOR=2
   LOGICAL,PRIVATE,SAVE::print_banner=.FALSE.
+  INTEGER,PRIVATE,SAVE::nuclearA_beam1,nuclearA_beam2,nuclearZ_beam1,nuclearZ_beam2
+  REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam
 CONTAINS
   FUNCTION PNOHAD_pp(bx,by,b0)
     ! the probability of no hardonic interaction at impact b=(bx,by)
@@ -999,6 +1001,8 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
+       include "nuclearAZ.inc"
+       include "ebeam.inc"
        gamma1_common=ebeam(1)/mproton
        gamma2_common=ebeam(2)/mproton
        IF(alphaem_elasticphoton.LT.0d0)THEN
@@ -1319,6 +1323,8 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
+       include "nuclearAZ.inc"
+       include "ebeam.inc"
        IF(nuclearA_beam1.NE.0)THEN
           gamma1_common=ebeam(2)/mproton
           gamma2_common=ebeam(1)/mN
@@ -1655,6 +1661,8 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
+       include "nuclearAZ.inc"
+       include "ebeam.inc"
        IF(nuclearA_beam1.NE.0)THEN
           gamma1_common=ebeam(2)/mproton
           gamma2_common=ebeam(1)/mN
@@ -2018,6 +2026,8 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
+       include "nuclearAZ.inc"
+       include "ebeam.inc"
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
           STOP
@@ -2347,6 +2357,8 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
+       include "nuclearAZ.inc"
+       include "ebeam.inc"
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
           STOP
@@ -2537,6 +2549,7 @@ CONTAINS
     INTEGER::collision_type_common,profile_type_common
     COMMON/Lgammagamma_UPC_com/collision_type_common,profile_type_common,&
          tau_common
+    include "ebeam.inc"
     s=4d0*ebeam(1)*ebeam(2)
     tau_common=scale**2/s
     collision_type_common=icoll
@@ -2618,6 +2631,7 @@ CONTAINS
        include "banner.inc"
        print_banner=.TRUE.
     ENDIF
+    include "ebeam.inc"
     s=4d0*ebeam(1)*ebeam(2)
     dLgammagammadW_UPC=2d0*scale/s
     dLgammagammadW_UPC=dLgammagammadW_UPC*&
