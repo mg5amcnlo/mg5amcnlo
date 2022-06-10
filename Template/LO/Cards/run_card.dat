@@ -27,7 +27,8 @@
   %(iseed)s   = iseed   ! rnd seed (0=assigned automatically=default))
 #*********************************************************************
 # Collider type and energy                                           *
-# lpp: 0=No PDF, 1=proton, -1=antiproton, 2=elastic photon of proton,*
+# lpp: 0=No PDF, 1=proton, -1=antiproton,                            *
+#                2=elastic photon of proton/ion beam                 *
 #             +/-3=PDF of electron/positron beam                     *
 #             +/-4=PDF of muon/antimuon beam                         *
 #*********************************************************************
