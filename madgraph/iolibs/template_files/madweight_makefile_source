@@ -41,7 +41,9 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make
 $(LIBDIR)libpdf.$(libext): PDF
-	cd PDF; make	
+	cd PDF; make
+$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
+	cd PDF/gammaUPC; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
@@ -59,10 +61,10 @@ $(BINDIR)sum_html: sum_html.o
 	$(FC) $(FFLAGS) -o $@ $^
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
 	$(FC) $(FFLAGS) -o $@ $^
-$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext)
-	$(FC) $(FFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(lhapdf)
-$(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
-	$(FC) $(FFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(lhapdf)
+$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext)
+	$(FC) $(FFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf -lgammaUPC $(lhapdf)
+$(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libcernlib.$(libext)
+	$(FC) $(FFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lgammaUPC -lcernlib $(lhapdf)
 $(BINDIR)combine_runs: combine_runs.o rw_events.o
 	$(FC) $(FFLAGS) -o $@ $^
 

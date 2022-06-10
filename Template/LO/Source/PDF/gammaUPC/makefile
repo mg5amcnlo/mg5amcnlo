@@ -22,8 +22,7 @@ test.o: test.f90 ElasticPhotonPhotonFlux.mod OpticalGlauber_Geometry.mod
 	$(FC) $(FFLAGS) -c $<
 
 ElasticPhotonPhotonFlux.o ElasticPhotonPhotonFlux.mod: ElasticPhotonPhotonFlux.f90 OpticalGlauber_Geometry.mod nintlib.mod interpolation.mod
-	@($(FC) $(FFLAGS) -c $<)
-	@(cp ElasticPhotonPhotonFlux.mod $(LIBDIR))
+	$(FC) $(FFLAGS) -c $<
 
 tbessk.o: tbessk.f90
 	$(FC) $(FFLAGS) -c $<
@@ -44,7 +43,7 @@ nintlib.o nintlib.mod: nintlib.f90
 	$(FC) $(FFLAGS) -c $<
 
 clean_all:
-	$(RM) *.o *~ $(BIN)$(EXE) *.mod $(LIBDIR)$(LIBRARY) $(LIBDIR)ElasticPhotonPhotonFlux.mod
+	$(RM) *.o *~ $(BIN)$(EXE) *.mod $(LIBDIR)$(LIBRARY)
 
 clean:
-	$(RM) *.o *~ *.mod $(BIN)$(EXE) $(LIBDIR)$(LIBRARY) $(LIBDIR)ElasticPhotonPhotonFlux.mod
+	$(RM) *.o *~ *.mod $(BIN)$(EXE) $(LIBDIR)$(LIBRARY)

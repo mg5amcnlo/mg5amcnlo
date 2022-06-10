@@ -688,6 +688,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
@@ -3354,6 +3355,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for gammaUPC")
+        misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
         misc.compile(arg=['../lib/libcernlib.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for GENERIC")
@@ -3665,7 +3668,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 

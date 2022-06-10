@@ -42,7 +42,9 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make
 $(LIBDIR)libpdf.$(libext): PDF
-	cd PDF; make	
+	cd PDF; make
+$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
+	cd PDF/gammaUPC; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make
 # The bias library is here the dummy by default; compilation of other ones specified in the run_card will be done by MG5aMC directly.
@@ -55,10 +57,10 @@ $(LIBDIR)libbias.$(libext): BIAS/dummy
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(LDFLAGS) -o $@ $^
-#$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc $(LIBDIR)libbias.$(libext)
-#			 $(FC) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS) -lbias
-$(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
-	$(FC) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf) $(LDFLAGS)
+#$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) run_card.inc $(LIBDIR)libbias.$(libext)
+#			 $(FC) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf -lgammaUPC $(llhapdf) $(LDFLAGS) -lbias
+$(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libcernlib.$(libext)
+	$(FC) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lgammaUPC -lcernlib $(llhapdf) $(LDFLAGS)
 
 # Dependencies
 
@@ -79,6 +81,7 @@ run_card.inc: ../Cards/run_card.dat
 clean4pdf:
 	rm -f ../lib/libpdf.$(libext)
 	rm -f ../lib/libgeneric.$(libext)
+	rm -f ../lib/libgammaUPC.$(libext)
 
 cleanCT:
 	cd $(CUTTOOLSDIR); make clean; cd ..
@@ -112,6 +115,7 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..
+	cd PDF/gammaUPC; make clean; cd ../../
 	cd DHELAS; make clean; cd ..
 	cd CERNLIB; make clean; cd ..
 	cd MODEL; make clean; cd ..
