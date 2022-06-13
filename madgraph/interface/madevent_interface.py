@@ -3523,9 +3523,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all']:
-            my_env = os.environ
-            my_env["PATH"] = os.path.join(self.me_dir, 'Source','PDF','gammaUPC')+":"+my_env["PATH"]
-            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'),env=my_env)
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
     ############################################################################      
@@ -5879,9 +5877,7 @@ tar -czf split_$1.tar.gz split_$1
         
         # Compile
         for name in [ 'all']:#, '../bin/internal/combine_events']:
-            my_env = os.environ
-            my_env["PATH"] = os.path.join(self.me_dir, 'Source','PDF','gammaUPC')+":"+my_env["PATH"]
-            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'),env=my_env)
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         bias_name = os.path.basename(self.run_card['bias_module'])
         if bias_name.lower()=='none':

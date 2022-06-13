@@ -39,21 +39,21 @@ $(LIBDIR)libdsample.$(libext): $(DSAMPLE)
 $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libdhelas.$(libext): DHELAS
-	cd DHELAS; make
+	cd DHELAS; make; cd ..
 $(LIBDIR)libpdf.$(libext): PDF
-	cd PDF; make
+	cd PDF; make; cd ..
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-	cd PDF/gammaUPC; make	
+	cd PDF/gammaUPC; make; cd ../../	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
-	cd CERNLIB; make	
+	cd CERNLIB; make; cd ..	
 $(LIBDIR)libmodel.$(libext): MODEL
-	cd MODEL; make	
+	cd MODEL; make; cd ..	
 $(LIBDIR)libblocks.$(libext): MadWeight/blocks
-	cd MadWeight/blocks; make	
+	cd MadWeight/blocks; make; cd ../../	
 $(LIBDIR)libtools.$(libext): MadWeight/tools
-	cd MadWeight/tools; make	
+	cd MadWeight/tools; make; cd ../../	
 $(LIBDIR)libTF.$(libext): MadWeight/transfer_function/transfer_function.o MadWeight/transfer_function/nb_tf.inc 
-	cd MadWeight/transfer_function; make
+	cd MadWeight/transfer_function; make; cd ../../
 
 # Binaries
 

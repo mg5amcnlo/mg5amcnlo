@@ -40,16 +40,16 @@ $(LIBDIR)libdsample.$(libext): $(DSAMPLE)
 $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libdhelas.$(libext): DHELAS
-	cd DHELAS; make
+	cd DHELAS; make; cd ..
 $(LIBDIR)libpdf.$(libext): PDF
-	cd PDF; make
+	cd PDF; make; cd ..
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-	cd PDF/gammaUPC; make	
+	cd PDF/gammaUPC; make; cd ../../	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
-	cd CERNLIB; make
+	cd CERNLIB; make; cd ..
 # The bias library is here the dummy by default; compilation of other ones specified in the run_card will be done by MG5aMC directly.
 $(LIBDIR)libbias.$(libext): BIAS/dummy
-	cd BIAS/dummy; make
+	cd BIAS/dummy; make; cd ../../
 
 %(model)s
 
