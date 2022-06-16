@@ -1280,7 +1280,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for config in sorted(config_to_diag_dict.keys()):
 
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
-                       {"num": (config_to_diag_dict[config][0] + 1)}
+                       {"num": (config)}
 
                 amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
@@ -6330,10 +6330,10 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             data = {"num": iproc + 1,
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()}
             call_dsig_proc_lines.append(\
-                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE, ICONF) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ICONF, ALL_OUT) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)

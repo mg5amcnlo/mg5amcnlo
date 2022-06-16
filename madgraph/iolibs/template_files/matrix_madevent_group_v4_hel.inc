@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, ICONF, ANS, JAMP2, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, ICONFIG, ANS, JAMP2, IVEC)
 C 
 %(info_lines)s
 C 
@@ -8,7 +8,7 @@ C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
 c INPUT:
-C   ICONF, channel of integration under consideration
+C   ICONFIG, channel of integration under consideration
 C        related by symmetry to the G directory (but not always that value)
 C  
 %(process_lines)s
@@ -33,7 +33,7 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
-    INTEGER ICONF, IVEC
+    INTEGER ICONFIG, IVEC
 C  
 C LOCAL VARIABLES 
 C  
@@ -77,7 +77,7 @@ c      	      	      	   2 means approximation by the	denominator of the propaga
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
-%(define_iconfigs_lines)s
+
 ${helicity_lines}
 %(den_factor_line)s
 
@@ -144,7 +144,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
 
         ENDDO
         IF (XTOT.NE.0D0) THEN
-	   ANS=ANS*AMP2(ICONF)/XTOT
+	   ANS=ANS*AMP2(ICONFIG)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
 	        stop 1

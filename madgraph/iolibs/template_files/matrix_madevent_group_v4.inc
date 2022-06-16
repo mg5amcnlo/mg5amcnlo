@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, ICONF, ANS, JAMP2, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, ICONFIG, ANS, JAMP2, IVEC)
 C 
 %(info_lines)s
 C 
@@ -9,7 +9,7 @@ c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
 c  INPUT
 c
-c  ICONF channel of integration under-consideration
+c  ICONFIG channel of integration under-consideration
 c  correspond to the G directory up to symmetry between the channel (so not unique)
 c
 c  IVEC position of that specific event in the vectorization page
@@ -38,7 +38,7 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
     double precision RHEL ! random number for selecting helicity
-    integer iconf ! channel to keep for the multi-channel
+    integer iconfig  ! channel to keep for the multi-channel
     integer ivec ! for using the correct coupling
 c
 c global (due to reading writting) 
@@ -104,7 +104,7 @@ c      	      	      	   2 means approximation by the	denominator of the propaga
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
-%(define_iconfigs_lines)s
+
     DATA XTRY, XREJ /0,0/
     DATA NGOOD /0,0/
     DATA ISHEL/0,0/
@@ -234,7 +234,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
 	    endif	
         ENDDO
         IF (XTOT.NE.0D0) THEN
-		ANS=ANS*AMP2(ICONF)/XTOT
+		ANS=ANS*AMP2(ICONFIG)/XTOT
         ELSE IF(ANS.ne.0d0) THEN
 	     IF(NB_FAIL.ge.10)then
 			write(*,*) "Problem in the multi-channeling. All amp2 are zero but not the total matrix-element"
