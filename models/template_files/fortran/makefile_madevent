@@ -13,6 +13,7 @@ else
 endif
 
 include makeinc.inc
+FFLAGS+=-I..
 
 LIBDIR=../../lib/
 LIBRARY=libmodel.$(libext)

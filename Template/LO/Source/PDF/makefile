@@ -9,6 +9,7 @@ LIBRARY	      = libpdf.$(libext)
 LIBDIR        = ../../lib/
 
 include ../make_opts
+FFLAGS+=-I..
 
 ifdef lhapdf
   ifeq ($(lhapdfversion),5)

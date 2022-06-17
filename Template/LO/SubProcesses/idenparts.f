@@ -31,6 +31,7 @@ c
 c
 c     Global
 c
+      include 'vector.inc'
       include 'coupl.inc'                     !Mass and width info
       double precision stot
       common/to_stot/stot
