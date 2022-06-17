@@ -1,5 +1,5 @@
 DOUBLE PRECISION FUNCTION DSIG%(proc_id)s(PP,WGT,IMODE)
-C ****************************************************
+C ************************************************************
 C
 %(info_lines)s
 C
@@ -13,6 +13,10 @@ C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
+C     Important input passed via common
+C             iconfig: channel of integration under consideration
+C                    used for the amp2(multi-channel) / color assignment
+C                    note: not unique for a G directory (due to sym. channel)
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -86,7 +90,6 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-      integer channel
 C  
 C DATA
 C  
@@ -118,6 +121,11 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+
+## if(ungroup_mode){
+    CALL UPDATE_SCALE_COUPLING(PP, WGT)
+##} 
+
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -129,8 +137,7 @@ C     Continue only if IMODE is 0, 4 or 5
            P1 = PP
          endif
 
-	 channel = %(get_channel)s
-         CALL SMATRIX%(proc_id)s(P1,0,channel,DSIGUU,JAMP2(0,1),1)
+         CALL SMATRIX%(proc_id)s(P1,0,iconfig,DSIGUU,JAMP2(0,1),1)
 
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -178,6 +185,7 @@ C
 
 ## }
 
+## if(vectorize_code) {
 DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT,IMODE, ALL_OUT)
 C ****************************************************
 C
@@ -193,6 +201,11 @@ C             imode 0 run, 1 init, 2 reweight,
 C                   3 finalize, 4 only PDFs,
 C                   5 squared amplitude only (never
 C                     generate events)
+C     Important input via common block  
+C             iconfig: channel of integration under consideration
+C                    used for the amp2(multi-channel) / color assignment
+C                    note: not unique for a G directory (due to sym. channel)
+C                    note: unique over the current vector 
 C     Output:
 C             Amplitude squared and summed
 C ****************************************************
@@ -234,7 +247,6 @@ C
       DATA NFACT/1/
       SAVE NFACT
       double precision RHEL ! random number
-      integer channel
 C
 C     STUFF FOR DRESSED EE COLLISIONS --even if not supported for now--
 C     
@@ -321,14 +333,13 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
            p_multi(:,:,IVEC) = ALL_PP(:,:,IVEC)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
-c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+c         CALL SMATRIX%(proc_id)s(P1, RHEL, ICONFIG, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
-	 channel = %(get_channel)s
 
 c	 do IVEC=1, NB_PAGE
-c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), ICONFIG, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 c	 enddo 
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, ALL_OUT , selected_hel, jamp2)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONFIG , ALL_OUT , selected_hel, jamp2)
 
 
 	 DO IVEC=1,NB_PAGE
@@ -382,14 +393,7 @@ C       Call UNWGT to unweight and store events
 	ENDDO
 %(passcuts_end)s
       END
-## if(read_write_good_hel) {
-C
-C     Functionality to handling grid
-C
-%(read_write_good_hel)s
-
 ## }
-
 
 
 
@@ -398,17 +402,25 @@ C
      return
      end
 
-
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, out , selected_hel, jamp2_multi)
-
-     USE OMP_LIB
+## if(vectorize_code) {
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONFIG, out , selected_hel, jamp2_multi)
+c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    input:
+c      p_multi: a list of momenta (nb of momenta nb_page)
+c      hel_rand: a list of random number (will be used to pick helicity)
+c      ICONFIG: channel of integration selected
+c      out: list of amplitude square (times multi-channel factor)
+c      selected_hel: list of selected helicity -> not used in practise. 
+c      jamp2_multi: return the list of jamp2 -> need to be changed to follow helicity setup
+c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c     USE OMP_LIB comment openmp port for the moment
 
      include 'nexternal.inc'
      include '../../Source/vector.inc'
      include 'maxamps.inc'
      double precision p_multi(0:3, nexternal, NB_PAGE)
      double precision hel_rand(nb_page)
-     integer channel
+     integer ICONFIG
      double precision out(nb_page)
      integer selected_hel(nb_page)
      double precision jamp2_multi(0:MAXFLOW, nb_page)
@@ -416,22 +428,24 @@ C
      integer ivec
 
 
-!$OMP PARALLEL
-!$OMP DO
+c !$OMP PARALLEL
+c !$OMP DO
       DO IVEC=1, NB_PAGE
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
-     &				 channel,
+     &				 ICONFIG,
      &				 out(IVEC),
 c     &				 selected_hel(IVEC),
      &				 jamp2_multi(0,IVEC),
      &				 IVEC
      &				 )
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
+c !$OMP END DO
+c !$OMP END PARALLEL
      return
      end
+
+## }
 
 	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
 c         if hel>0 return the helicity of particule ipart for the selected helicity configuration

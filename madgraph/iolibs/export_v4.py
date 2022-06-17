@@ -1280,7 +1280,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for config in sorted(config_to_diag_dict.keys()):
 
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
-                       {"num": (config_to_diag_dict[config][0] + 1)}
+                       {"num": (config)}
 
                 amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
@@ -1297,13 +1297,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 #line += " * get_channel_cut(p, %s) " % (config)
                 ret_lines.append(line)
         else:
-            for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            idiag = 0
+            for diag in matrix_element.get('diagrams'):
                 # Ignore any diagrams with 4-particle vertices.
                 if diag.get_vertex_leg_numbers()!=[] and max(diag.get_vertex_leg_numbers()) > minvert:
                     continue
+                idiag += 1
                 # Now write out the expression for AMP2, meaning the sum of
                 # squared amplitudes belonging to the same diagram
-                line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag + 1)}
+                line = "AMP2(%(num)d)=AMP2(%(num)d)+" % {"num": (idiag)}
                 line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
                                   {"num": a.get('number')} for a in \
                                   diag.get('amplitudes')])
@@ -4626,7 +4628,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':'',
-                        'set_amp2_line': 'ANS=ANS*AMP2(MAPCONFIG(ICONFIG))/XTOT'}
+                        'set_amp2_line': 'ANS=ANS*AMP2(ICONFIG)/XTOT'}
  
  
         # Extract helas calls
@@ -4929,13 +4931,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         helicity_lines = self.get_helicity_lines(matrix_element, add_nb_comb=True)
         replace_dict['helicity_lines'] = helicity_lines
         
+        context = {'read_write_good_hel':True, 'vectorize_code': False}
         if not isinstance(self, ProcessExporterFortranMEGroup):            
-            replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
+            replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)  
+            context['ungroup_mode'] = True            
         else:
             replace_dict['read_write_good_hel'] = ""
-        
-        context = {'read_write_good_hel':True}
-        
+            context['vectorize_code'] =  True
+            context['ungroup_mode'] = True  
+                
+
+
+
         if writer:
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
