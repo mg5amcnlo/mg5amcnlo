@@ -2923,9 +2923,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
-                          'matrix', 'standalone_rw', 'madweight'] 
+                          'matrix', 'standalone_rw'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
-                                            'matchbox_cpp', 'matchbox',
+                                            'matchbox_cpp',
                                             'standalone_gpu']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
