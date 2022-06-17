@@ -1799,6 +1799,7 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
+      include 'vector.inc'
       include 'coupl.inc'
 c     include 'run.inc'
 
