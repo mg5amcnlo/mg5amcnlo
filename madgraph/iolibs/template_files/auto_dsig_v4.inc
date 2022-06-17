@@ -121,6 +121,11 @@ C     Continue only if IMODE is 0, 4 or 5
       IF(IMODE.NE.0.AND.IMODE.NE.4.and.IMODE.NE.5) RETURN
 
 %(passcuts_begin)s
+
+## if(ungroup_mode){
+    CALL UPDATE_SCALE_COUPLING(PP, WGT)
+##} 
+
 %(pdf_lines)s
          IF (IMODE.EQ.4)THEN
             DSIG%(proc_id)s = PD(0)
@@ -180,6 +185,7 @@ C
 
 ## }
 
+## if(vectorize_code) {
 DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT,IMODE, ALL_OUT)
 C ****************************************************
 C
@@ -387,14 +393,7 @@ C       Call UNWGT to unweight and store events
 	ENDDO
 %(passcuts_end)s
       END
-## if(read_write_good_hel) {
-C
-C     Functionality to handling grid
-C
-%(read_write_good_hel)s
-
 ## }
-
 
 
 
@@ -403,7 +402,7 @@ C
      return
      end
 
-
+## if(vectorize_code) {
      SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONFIG, out , selected_hel, jamp2_multi)
 c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    input:
@@ -445,6 +444,8 @@ c !$OMP END DO
 c !$OMP END PARALLEL
      return
      end
+
+## }
 
 	integer FUNCTION GET_NHEL%(proc_id)s(hel, ipart)
 c         if hel>0 return the helicity of particule ipart for the selected helicity configuration

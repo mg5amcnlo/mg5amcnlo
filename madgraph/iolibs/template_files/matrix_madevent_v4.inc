@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
+SUBROUTINE SMATRIX%(proc_id)s(P, DUM0, ICONFIG, ANS, JAMP2V, DUM1)
 C  
 %(info_lines)s
 C 
@@ -11,7 +11,7 @@ C
 %(process_lines)s
 C  
     use DiscreteSampler
-    IMPLICIT NONE
+    IMPLICIT NONE    
 C  
 C CONSTANTS
 C  
@@ -31,6 +31,13 @@ C
 C ARGUMENTS 
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
+    !not used DUM0: (suppose to be random number for selecting helicity)
+    !not used DUM1 (suppose to be event position in vector size)
+    INTEGER DUM0, DUM1
+    ! channel of integration (for selecting the multi-channel weight)
+    INTEGER ICONFIG
+    ! vectorised form for jamp2 -> even if only one member
+    Double precision jamp2v(0:maxflow,1)
 c
 c global (due to reading writting)
 c 
@@ -68,7 +75,6 @@ C
     INTEGER          ISUM_HEL
     LOGICAL                    MULTI_CHANNEL
     COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
-%(define_iconfigs_lines)s
     DATA IDUM /-1/
     DATA XTRY, XREJ, NGOOD /0,0,0/
     SAVE YFRAC, IGOOD, JHEL
@@ -180,6 +186,7 @@ c           Include the Jacobian from helicity sampling
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+    JAMP2V(:,1) = JAMP2
     END
  
  
@@ -201,6 +208,7 @@ C
     include 'genps.inc'
     include 'nexternal.inc'
     include 'maxamps.inc'
+    include 'maxconfigs.inc'
     INTEGER    NWAVEFUNCS,     NCOLOR
     PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
     REAL*8     ZERO
@@ -212,6 +220,8 @@ C
 	LOGICAL CHOSEN_SO_CONFIGS(NSQAMPSO)
 	DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
 	SAVE CHOSEN_SO_CONFIGS
+    INTEGER IVEC	
+    PARAMETER (IVEC=1)
 C  
 C ARGUMENTS 
 C  
