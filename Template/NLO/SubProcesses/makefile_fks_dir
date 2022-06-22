@@ -124,9 +124,9 @@ libMadLoop.a:
 
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o
-driver_mintMC.o: weight_lines.o
+driver_mintMC.o: weight_lines.o pythia8_control.inc pythia8_control_setup.inc
 driver_mintFO.o: weight_lines.o
-
+pythia8_wrapper.o: pythia8_fortran.o LHAFortran_aMCatNLO.h
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym
