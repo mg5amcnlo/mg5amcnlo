@@ -322,7 +322,7 @@ c********************************************************************
       REAL*8 ZERO
       PARAMETER (ZERO=0D0)
 
-      integer npart, i, j, proc_code, iscale(nexternal)
+      integer npart, i, j, proc_code, iscale(maxpup_out)
       logical firsttime
       data firsttime/.true./
 
