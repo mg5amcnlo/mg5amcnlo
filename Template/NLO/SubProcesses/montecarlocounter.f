@@ -360,6 +360,10 @@ c
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       common/cisspecial/isspecial
+!     common block used to make the (scalar) reference scale partner
+!     dependent in case of delta
+      integer cur_part
+      common /to_ref_scale/cur_part
       first_MCcnt_call=.true.
       is_pt_hard=.false.
       xmcxsec=0d0
@@ -367,6 +371,7 @@ c
       MCsec=0d0
       sumMCsec=0d0
       do npartner=1,ipartners(0)
+         if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
      $        ,bornbars,bornbarstilde,npartner)
@@ -445,6 +450,10 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!     common block used to make the (scalar) reference scale partner
+!     dependent in case of delta
+      integer cur_part
+      common /to_ref_scale/cur_part
 c -- call to MC counterterm functions
       first_MCcnt_call=.true.
       is_pt_hard=.false.
@@ -453,6 +462,7 @@ c -- call to MC counterterm functions
       MCsec=0d0
       sumMCsec=0d0
       do npartner=1,ipartners(0)
+         if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
      $        ,bornbars,bornbarstilde,npartner)
@@ -1936,6 +1946,7 @@ c if no other available colour connection, we keep the IF scale
 c rather than calculating some new kinematic variable e.g. pT
                   endif
                endif
+               if (iRtoB(j).eq.-1) cycle ! prevent out-of-bounds
                if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
                   if(are_col_conn_S(iRtoB(i),iRtoB(3-i)))then
                      SCALUP_tmp_H2(iRtoB(i),iRtoB(j))=SCALUP_tmp_H2(iRtoB(i),iRtoB(3-i))
@@ -4539,32 +4550,57 @@ c
       return
       end
 
+      block data reference_scale
+!     common block used to make the (scalar) reference scale partner
+!     dependent in case of delta. [Set it to -1 by default: in case of
+!     the non-delta running, it never gets updated so that it remains
+!     equal to -1, and the normal code will be used].
+      integer cur_part
+      common /to_ref_scale/cur_part
+      data cur_part/-1/
+      end
 
+      
       subroutine assign_ref_scale(p,xii,sh,ref_sc)
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
-      integer i_scale,i
+      integer i_scale,i,fks_father
       parameter(i_scale=1)
-
+      double precision ref_sc_a(nexternal,nexternal)
+!     common block used to make the (scalar) reference scale partner
+!     dependent in case of delta
+      integer cur_part
+      common /to_ref_scale/cur_part
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       ref_sc=0d0
-      if(i_scale.eq.0)then
+      if (cur_part.eq.-1) then ! this is non-delta (or no MC subtr. needed)
+         if(i_scale.eq.0)then
 c Born-level CM energy squared
-         ref_sc=dsqrt(max(0d0,(1-xii)*sh))
-      elseif(i_scale.eq.1)then
+            ref_sc=dsqrt(max(0d0,(1-xii)*sh))
+         elseif(i_scale.eq.1)then
 c Sum of final-state transverse masses
-         do i=3,nexternal-1
-            ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
-         enddo
-         ref_sc=ref_sc/2d0
-      else
-         write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
-         stop
-      endif
+            do i=3,nexternal-1
+               ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
+            enddo
+            ref_sc=ref_sc/2d0
+         else
+            write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
+            stop
+         endif
 c Safety threshold for the reference scale
-      ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
-
+         ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
+      else
+! in the case of mc@nlo-delta, make the scalar reference scale equal to
+! the corresponding element of the ref scale array, i.e., the fks-father
+! and the partner. (The cur_part is set by the loop over the colour
+! partners in the compute_xmcsubt_complete subroutine).
+         call assign_ref_scale_array(p,xii,sh,ref_sc_a)
+         fks_father=min(i_fks,j_fks)
+         ref_sc=ref_sc_a(fks_father,cur_part)
+      endif
       return
       end
 
@@ -4577,15 +4613,12 @@ c Safety threshold for the reference scale
       double precision ref_sc_a(nexternal,nexternal)
       double precision ref_sc
       integer i,j
+      double precision sumdot
+      external sumdot
 c
-      call assign_ref_scale(p,xii,sh,ref_sc)
       do i=1,nexternal-2
          do j=i+1,nexternal-1
-            ref_sc_a(i,j)=sqrt( max(0d0,(p(0,i)+p(0,j))**2-(p(1,i)+p(1,j))**2
-     &                                 -(p(2,i)+p(2,j))**2-(p(3,i)+p(3,j))**2) )
-c$$$            ref_sc_a(i,j)=ref_sc_a(i,j)/2d0
-c$$$            ref_sc_a(i,j)=min(ref_sc,ref_sc_a(i,j))
-c$$$            ref_sc_a(i,j)=max(ref_sc_a(i,j),scaleMClow+scaleMCdelta)
+            ref_sc_a(i,j)=sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0)))
             ref_sc_a(j,i)=ref_sc_a(i,j)
          enddo
       enddo

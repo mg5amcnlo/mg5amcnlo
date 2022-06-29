@@ -3109,6 +3109,10 @@ c
       common/c_SCALUP_tmp/SCALUP_tmp_S,SCALUP_tmp_H
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
+!     common block used to make the (scalar) reference scale partner
+!     dependent in case of delta
+      integer cur_part
+      common /to_ref_scale/cur_part
 
 c
       if (.not.dampMCsubt) then
@@ -3156,6 +3160,7 @@ c
          ! Else: set emsca and scaleminmax, and include them in the
          ! shower scale (if momenta are defined, else don't use shape)
          if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
+            cur_part=-1
             call set_cms_stuff(mohdr)
             call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
             if (mcatnlo_delta)
