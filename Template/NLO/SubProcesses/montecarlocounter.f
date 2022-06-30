@@ -4569,6 +4569,8 @@ c
       integer i_scale,i,fks_father
       parameter(i_scale=1)
       double precision ref_sc_a(nexternal,nexternal)
+      double precision sumdot
+      external sumdot
 !     common block used to make the (scalar) reference scale partner
 !     dependent in case of delta
       integer cur_part
@@ -4592,6 +4594,9 @@ c Sum of final-state transverse masses
          endif
 c Safety threshold for the reference scale
          ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
+      elseif (cur_part.eq.0) then
+! use born level s-hat
+         ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
       else
 ! in the case of mc@nlo-delta, make the scalar reference scale equal to
 ! the corresponding element of the ref scale array, i.e., the fks-father

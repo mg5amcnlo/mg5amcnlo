@@ -3160,7 +3160,7 @@ c
          ! Else: set emsca and scaleminmax, and include them in the
          ! shower scale (if momenta are defined, else don't use shape)
          if (abrv.ne.'born' .and. ickkw.ne.4 .and. p(0,1).ne.-99d0) then
-            cur_part=-1
+            if (mcatnlo_delta) cur_part=0 ! use s-hat as reference scale.
             call set_cms_stuff(mohdr)
             call assign_emsca(p,xi_i_fks_ev,y_ij_fks_ev)
             if (mcatnlo_delta)
