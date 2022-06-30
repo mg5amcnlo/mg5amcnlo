@@ -1804,10 +1804,95 @@ class GridpackCard(ConfigFile):
             
         fsock.write(text)
         fsock.close()
+############################################LM####################################################################        
+class PY8Block(object):
+   
+    def __init__(self, name,template_on,template_off,on_fields=False, off_fields=False):
         
+        self.name = name
+        self.template_on = template_on
+        self.template_off = template_off
+        if on_fields:
+            self.on_fields = on_fields
+        else:
+            self.on_fields = self.find_fields_from_template(self.template_on)
+        if off_fields:
+            self.off_fields = off_fields
+        else:
+            self.off_fields = self.find_fields_from_template(self.template_off)
+
+    @property
+    def fields(self):
+        return self.on_fields + self.off_fields
+
+    @staticmethod
+    def find_fields_from_template(template):
+        return re.findall(r"^\s*%\((.*)\)s\s*=\s*\1", template, re.M)
+
+    def get_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_on
+        else:
+            return self.template_off
+
+    def get_unused_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_off
+        else:
+            return self.template_on        
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used"""
+
+        if self.name in card.display_block:
+            return True
+
+        if any(f in card.user_set for f in self.off_fields):
+            return False
+
+        if any(f in card.user_set for f in self.on_fields):
+            return True
+
+        return False
+
+
+    def manage_parameters(self, card, written, to_write):
+        """manage written/to_write according to the template written"""
+
+        if self.status(card):
+            used = self.on_fields
+        else:
+            used = self.off_fields
+
+        for name in used:
+            written.add(name)
+            if name in to_write:
+                to_write.remove(name)
+    
+    def check_validity(self, PY8card):
+        """run self consistency check here --avoid to use PY8card[''] = xxx here since it can trigger post_set function"""
+        return
+
+#    def create_default_for_process(self, pythia8_card, proc_characteristic, history, proc_def):
+#        return          
 class PY8Card(ConfigFile):
     """ Implements the Pythia8 card."""
+    blocks = []
+    @classmethod
+    def fill_post_set_from_blocks(cls):
+        """set the post_set function for any parameter defined in a run_block"""
 
+        if not cls.parameter_in_block and cls.blocks:
+            for block in cls.blocks:
+                for parameter in block.fields:
+                    if hasattr(block, 'post_set_%s' % parameter):
+                        setattr(cls, 'post_set_%s' % parameter, getattr(block, 'post_set_%s' % parameter))
+                    elif hasattr(block, 'post_set'):
+                        setattr(cls, 'post_set_%s' % parameter, block.post_set)
+                    cls.parameter_in_block[parameter] = block   
+                  
     def add_default_subruns(self, type):
         """ Placeholder function to allow overwriting in the PY8SubRun daughter.
         The initialization of the self.subruns attribute should of course not
@@ -1825,6 +1910,7 @@ class PY8Card(ConfigFile):
             if not(hasattr(self,'subruns')):
                 first_subrun = PY8SubRun(subrun_id=0)
                 self.subruns = dict([(first_subrun['Main:subrun'],first_subrun)])
+
 
     def default_setup(self):
         """ Sets up the list of available PY8 parameters."""
@@ -1849,8 +1935,15 @@ class PY8Card(ConfigFile):
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
         # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
-        self.add_param("HEPMCoutput:file", 'hepmc.gz')
-
+#        self.add_param("HEPMCoutput:file", 'hepmc.gz')
+        self.add_param("SpaceShower:dipoleRecoil" ,"off")    #for DIS
+#        self.add_param("PDF:lepton" ,"on")                  #for DIS
+#        self.add_param("TimeShower:QEDshowerByL " ,"on")    #for DIS
+#        if ((lpp1 == 0)  and (lpp2 ==1)):
+#            logger.warning('In case of DIS shower please switch on SpaceShower:dipoleRecoil and switch off #PDF:lepton ,TimeShower:QEDshowerByL')
+#        elif ((lpp2 == 0) and (lpp1 ==1)):
+#            logger.warning('In case of DIS shower please switch on SpaceShower:dipoleRecoil and switch off #PDF:lepton ,TimeShower:QEDshowerByL')
+           
         # Hidden parameters always written out
         # ====================================
         self.add_param("Beams:frameType", 4,
@@ -2183,6 +2276,11 @@ class PY8Card(ConfigFile):
                 last_pos = tmpl.tell()
                 line     = tmpl.readline()
                 continue
+            elif line.strip().startswith('$'):
+                block_name = line.strip()
+                this_group = [b for b in self.blocks if b.name == block_name]
+                if not this_group:
+                    logger.debug("block %s not defined", block_name)        
             # Read parameter
             try:
                 param_entry, value_entry = line.split('=')
@@ -2426,10 +2524,48 @@ class PY8Card(ConfigFile):
             # proceed to next line
             last_pos = finput.tell()
             line     = finput.readline()
+###################################################################################################
+###  Define various template subpart for the LO pythia8_card
+################################################################################################
+
+# DIS - space shower option ------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Essential  variable for the DIS shower at LO  
+##Space shower                              
+#*********************************************************************
+SpaceShower:dipoleRecoil =  %(SpaceShower:dipoleRecoil)s  ! Dipole recoil must be switched on in case of DIS
+"""
+template_off = "# To see space shower option (only for DIS): type \"update space_shower\""
+
+space_shower_block = PY8Block('space_shower', template_on=template_on, template_off=template_off)
+
+#DIS - Time shower option ---------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Essential  variable for the DIS shower at LO  
+##Time shower                              
+#*********************************************************************
+TimeShower:QEDshowerByL =  %(TimeShower:QEDshowerByL)s  ! If Dipole recoil switched on in case of DIS then QEDshower from leptons  should be switched off
+"""
+template_off = "# To see time shower option: type \"update time_shower\""
+
+time_shower_block = PY8Block('time_shower', template_on=template_on, template_off=template_off)
+
+#DIS - lepton pdf option ---------------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Essential  variable for the DIS shower at LO  
+##lepton pdf                              
+#*********************************************************************
+PDF:lepton =  %(PDF:lepton)s  ! If Dipole recoil switched on in case of DIS lepton pdf  should be switched off
+"""
+template_off = "# To see lepton pdf option: type \"update lepton_pdf\""
+lepton_pdf_block = PY8Block('lepton_pdf', template_on=template_on, template_off=template_off)          
 
 class PY8SubRun(PY8Card):
+#    blocks = [space_shower_block,time_shower_block,lepton_pdf_block]    
     """ Class to characterize a specific PY8 card subrun section. """
-
     def add_default_subruns(self, type):
         """ Overloading of the homonym function called in the __init__ of PY8Card.
         The initialization of the self.subruns attribute should of course not
@@ -2446,7 +2582,7 @@ class PY8SubRun(PY8Card):
 
         super(PY8SubRun, self).__init__(*args, **opts)
         self['Main:subrun']=subrunID
-
+    blocks = [space_shower_block,time_shower_block,lepton_pdf_block] 
     def default_setup(self):
         """Sets up the list of available PY8SubRun parameters."""
         
@@ -2460,8 +2596,14 @@ class PY8SubRun(PY8Card):
         # Now add Main:subrun and Beams:LHEF. They are not hidden.
         self.add_param("Main:subrun", -1)
         self.add_param("Beams:LHEF", "events.lhe.gz")
-
-        
+#        self.add_param("SpaceShower:dipoleRecoil" ,True, hidden=True, always_write_to_card=False, comment="Allow dipole recoil to be on for DIS")
+#        if self[lpp1 ]== 0  and self[lpp2] ==1:
+#            self.add_param("TimeShower:QEDshowerByL" ,True, hidden=True, always_write_to_card=False, comment="forbid to do radiation of leptons in FSR for DIS") 
+#        elif self[lpp2 ]== 0  and self[lpp1] ==1:
+#            self.add_param("TimeShower:QEDshowerByL" ,True, hidden=True, always_write_to_card=False, comment="forbid to do radiation of leptons in FSR for DIS")
+#        else:
+#        self.add_param("TimeShower:QEDshowerByL", True, hidden=True, always_write_to_card=False, comment="Allow leptons to radiate photons for FSR, i.e. branchings l -> l gamma")
+#        self.add_param("PDF:lepton " ,True, hidden=True, always_write_to_card=False, comment="forbid lepton pdf for DIS")        
 class RunBlock(object):
     """ Class for a series of parameter in the run_card that can be either
         visible or hidden.
@@ -3378,6 +3520,10 @@ class PDLabelBlock(RunBlock):
                     dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
                 elif card['pdlabel2'] == 'none':
                     dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                elif card['pdlabel1'] == 'iww':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel2']) # for photo production case 
+                elif card['pdlabel2'] == 'iww':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel1']) # for photo production case      
                 else:
                     dict.__setitem__(card, 'pdlabel', 'mixed')
         else:

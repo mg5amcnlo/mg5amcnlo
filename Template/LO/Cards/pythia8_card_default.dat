@@ -85,3 +85,7 @@ SysCalc:fullCutVariation = off
 ! often irrelevant for phenomenology and very slow. You can turn this 
 ! feature off by uncommenting the line below if so desired.
 !partonlevel:mpi = off
+!In order to work with DIS, please update the Space shower, Time shower & lepton pdf
+$space_shower
+$time_shower
+$lepton_pdf

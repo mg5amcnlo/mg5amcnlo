@@ -260,13 +260,21 @@ C  the fill_plot subroutine of fks_singular.f
          write(*,*)'Error in outfun: unknown itype',itype
          stop
       endif
-c Boost the momenta to the lab frame: 
+c Boost the momenta to the hadronic CM frame: 
       chybst=cosh(ybst_til_tolab)
       shybst=sinh(ybst_til_tolab)
       chybstmo=chybst-1.d0
       do i=1,nexternal
          call boostwdir2(chybst,shybst,chybstmo,xd,pp(0,i),pplab(0,i))
       enddo    
+c boost the momenta to the lab frame from Hadronic CM frame :
+      ybst_til_tolab = 0.5*log((ebeam(2))/(ebeam(1))) ! boost function 
+      chybst=cosh(ybst_til_tolab)
+      shybst=sinh(ybst_til_tolab)
+      chybstmo=chybst-1.d0
+      do i=1,nexternal
+         call boostwdir2(chybst,shybst,chybstmo,xd,pplab(0,i),pplab(0,i))
+      enddo     
 c Fill the arrays (momenta, status and PDG):
       do i=1,nexternal
          if (i.le.nincoming) then
