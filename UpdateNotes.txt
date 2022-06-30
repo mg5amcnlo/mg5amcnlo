@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+3.4.1 (XX/YY/22)
+      MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
 
 3.4.0 (06/05/22)
       SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
