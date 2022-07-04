@@ -15,8 +15,11 @@
 
 """Testing modules for FKS_process class"""
 
+from __future__ import absolute_import
 import sys
 import os
+from six.moves import range
+from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -26,6 +29,7 @@ import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
@@ -423,7 +427,7 @@ class TestFKSProcess(unittest.TestCase):
                       'orders':{'QCD':1}}))
     
     
-    expected_qcd_inter.sort()
+    expected_qcd_inter.sort(key=lambda o: o['id'])
 
     expected_qed_inter = MG.InteractionList()
             
@@ -471,7 +475,7 @@ class TestFKSProcess(unittest.TestCase):
                               'couplings':{(0, 0):'ATT'},
                               'orders':{'QED':1}}))
             
-    expected_qed_inter.sort()
+    expected_qed_inter.sort(key=lambda o:o['id'])
         
     mymodel = MG.Model()
     mymodel.set('particles', mypartlist)
@@ -863,8 +867,9 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),11)
-        for real, fks_info in zip(myfks.real_amps, target_fks_infos):
-            self.assertEqual(real.fks_infos, fks_info)
+        for real in myfks.real_amps:
+            self.assertIn(real.fks_infos, target_fks_infos)
+
 
     def test_FKSProcess_aguux_qed(self):
         """tests that for a g > u u~ all the relevant QED splittings are there"""

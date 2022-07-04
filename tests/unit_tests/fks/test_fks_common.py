@@ -15,8 +15,12 @@
 
 """Testing modules for fks_common functions and classes"""
 
+from __future__ import absolute_import
 import sys
+import operator
 import os
+from six.moves import range
+from six.moves import zip
 pjoin = os.path.join
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
@@ -28,10 +32,12 @@ import madgraph.core.color_algebra as color
 import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import copy
 import array
 import fractions
+import operator
 
 class TestFKSCommon(unittest.TestCase):
     """ a class to test FKS common functions and classes"""
@@ -348,7 +354,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'GQQ'},
                               'orders':{'QCD':1}}))
             
-            expected_qcd_inter.sort()
+            expected_qcd_inter.sort(key=operator.itemgetter('id'))
             
             expected_qed_inter = MG.InteractionList()
             
@@ -396,7 +402,7 @@ class TestFKSCommon(unittest.TestCase):
                               'couplings':{(0, 0):'ATT'},
                               'orders':{'QED':1}}))
             
-            expected_qed_inter.sort()
+            expected_qed_inter.sort(key=operator.itemgetter('id'))
             
             model = MG.Model()
             model.set('particles', mypartlist)
@@ -2167,20 +2173,21 @@ class TestFKSCommon(unittest.TestCase):
         to the perturbative expansion are correctly extracted from the model"""
         # QCD
         dict = fks_common.find_pert_particles_interactions(self.model, 'QCD')
-        res_int = self.expected_qcd_inter
+        res_int = sorted(self.expected_qcd_inter, key=operator.itemgetter('id'))
         res_part = [-6,-2,-1,1,2,6,21]
         res_soft = [-2,-1,1,2,21]
+
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
         # QED
         dict = fks_common.find_pert_particles_interactions(self.model, 'QED')
-        res_int = self.expected_qed_inter
+        res_int = sorted(self.expected_qed_inter, key=operator.itemgetter('id'))
         res_part = [-11,-6,-2,-1,1,2,6,11,22]
         res_soft = [-11,-2,-1,1,2,11,22]
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
-        self.assertEqual(dict['interactions'], res_int)
+        self.assertEqual(sorted(dict['interactions'], key=operator.itemgetter('id')), res_int)
 
 
     def test_find_pert_particles_interactionsi_mssm(self):

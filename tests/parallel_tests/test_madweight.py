@@ -17,6 +17,8 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import datetime
 import glob
 import itertools
@@ -28,6 +30,7 @@ import subprocess
 import sys
 import time
 import unittest
+from six.moves import map
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -43,7 +46,7 @@ import madgraph.interface.master_interface as cmd_interface
 import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error, MG5DIR
-import me_comparator
+from . import me_comparator
 
 class TestMadWeight(unittest.TestCase):
     """A couple of points in order to ensure the MW is working fine."""
@@ -57,10 +60,10 @@ class TestMadWeight(unittest.TestCase):
             if not len(split) in [4,5]:
                 continue
             if len(split) ==4:
-                event_nb, card_nb, weight, error = map(float, split)
+                event_nb, card_nb, weight, error = list(map(float, split))
                 tf_set = 1.
             else:
-                event_nb, card_nb, tf_set, weight, error = map(float, split)
+                event_nb, card_nb, tf_set, weight, error = list(map(float, split))
             
             solution[(event_nb,card_nb,tf_set)] = (weight,error)
         return solution
@@ -70,7 +73,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """set automatic_html_opening False --no-save
@@ -99,13 +102,13 @@ class TestMadWeight(unittest.TestCase):
             stderr=devnull
 
         start = time.time()
-        print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print('this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
-        print 'tt~ full takes %smin %is' % (run_time//60, run_time % 60)
+        print('tt~ full takes %smin %is' % (run_time//60, run_time % 60))
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod_full', 'Events', 'fermi', 'weights.out')).read()
 
         solution = self.get_result(data)
@@ -133,7 +136,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """set automatic_html_opening False --no-save
@@ -167,13 +170,13 @@ class TestMadWeight(unittest.TestCase):
             stderr=devnull
         
         start = time.time()
-        print 'this mw test is expected to take 2 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print('this mw test is expected to take 2 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
-        print 'tt~ semi takes %smin %is' % (run_time//60, run_time % 60)
+        print('tt~ semi takes %smin %is' % (run_time//60, run_time % 60))
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod', 'Events', 'fermi', 'weights.out')).read()
 
 
@@ -204,7 +207,7 @@ class TestMadWeight(unittest.TestCase):
 
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_WA_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
         
         cmd = """set automatic_html_opening False --no-save
@@ -240,13 +243,13 @@ class TestMadWeight(unittest.TestCase):
             stderr=devnull
         
         start = time.time()
-        print 'this mw test is expected to take 15s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print('this mw test is expected to take 15s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
-        print 'wa takes %smin %is' % (run_time//60, run_time % 60)
+        print('wa takes %smin %is' % (run_time//60, run_time % 60))
         data = open(pjoin(MG5DIR, 'TEST_MW_WA_prod', 'Events', 'fermi', 'weights.out')).read()
 
 
@@ -267,6 +270,6 @@ class TestMadWeight(unittest.TestCase):
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_WA_prod'))
-        except Exception, error:
+        except Exception as error:
             pass
   

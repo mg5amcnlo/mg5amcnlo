@@ -15,6 +15,7 @@
 
 """Testing modules for the get_s_and_t_channels function"""
 
+from __future__ import absolute_import
 import sys
 import os
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]

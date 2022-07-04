@@ -57,7 +57,8 @@ is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
 # FxFx merging parameters                             !ONLY FOR PYTHIA8!
 #***********************************************************************
 Qcut       = -1.0     # Merging scale
-njmax      = 0        # Maximal multiplicity in the merging
+njmax      = -1       # Maximal multiplicity in the merging.
+#                     # -1 means guessed  from the process definition
 #***********************************************************************
 # Decay channels                                                       *
 #***********************************************************************

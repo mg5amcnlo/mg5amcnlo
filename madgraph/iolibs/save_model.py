@@ -15,6 +15,8 @@
 
 """Function to save model files."""
 
+from __future__ import absolute_import
+from __future__ import print_function
 import logging
 import os
 
@@ -27,8 +29,7 @@ def save_particles(fsock, part_list):
     """Save particle objects contained in part_list in the stream fsock"""
 
     if not isinstance(part_list, base_objects.ParticleList):
-        raise ValueError, \
-            "Object %s is not a valid ParticleList" % repr(part_list)
+        raise ValueError("Object %s is not a valid ParticleList" % repr(part_list))
 
     fsock.write("particles = [\n")
 
@@ -44,8 +45,7 @@ def save_interactions(fsock, inter_list):
     """Save interaction objects contained in inter_list in the stream fsock"""
 
     if not isinstance(inter_list, base_objects.InteractionList):
-        raise ValueError, \
-            "Object %s is not a valid InteractionList" % repr(inter_list)
+        raise ValueError("Object %s is not a valid InteractionList" % repr(inter_list))
 
     fsock.write("interactions = [\n")
 
@@ -61,31 +61,30 @@ def save_model(path, model):
     """Save a full model in directory path (try to create if necessary)."""
 
     if not isinstance(model, base_objects.Model):
-        raise ValueError, \
-            "Object %s is not a valid Model" % repr(model)
+        raise ValueError("Object %s is not a valid Model" % repr(model))
 
     if not isinstance(path, str):
-        raise ValueError, \
-            "Object %s is not a path string" % repr(path)
+        raise ValueError("Object %s is not a path string" % repr(path))
 
     if not os.path.isdir(path):
         logger.warning("Path %s does not exist, try to make it..." % str(path))
         try:
             os.mkdir(path)
-        except IOError, (errno, strerror):
+        except IOError as xxx_todo_changeme:
+            (errno, strerror) = xxx_todo_changeme.args
             logger.error("I/O error (%s): %s" % (errno, strerror))
             return None
 
-    print "Saving particles...",
+    print("Saving particles...", end=' ')
     files.write_to_file(os.path.join(path, 'particles.py'),
                         save_particles,
                         model['particles'])
-    print "%i particles saved to %s" % (len(model['particles']),
-                                      os.path.join(path, 'particles.py'))
+    print("%i particles saved to %s" % (len(model['particles']),
+                                      os.path.join(path, 'particles.py')))
 
-    print "Saving interactions...",
+    print("Saving interactions...", end=' ')
     files.write_to_file(os.path.join(path, 'interactions.py'),
                         save_interactions,
                         model['interactions'])
-    print "%i interactions saved to %s" % (len(model['interactions']),
-                                      os.path.join(path, 'interactions.py'))
+    print("%i interactions saved to %s" % (len(model['interactions']),
+                                      os.path.join(path, 'interactions.py')))

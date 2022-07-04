@@ -55,14 +55,17 @@
 ##
 ## BEGIN INCLUDE
 ##
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import os
 import re
 import stat
+from six.moves import range
 try: 
     import madgraph.madweight.Cards as Cards
-except ImportError, error:
-    print error
+except ImportError as error:
+    print(error)
     import internal.madweight.Cards as Cards
 
 ##
@@ -107,7 +110,7 @@ def check_for_help(opt):
 
     opt_pat=re.compile(r'''-?(?P<opt>\w*)[+-]?''',re.I)
     help=0
-    authorized_opt=tag_to_num.keys()+['version']
+    authorized_opt=list(tag_to_num.keys())+['version']
     for i in range(0,len(num_to_tag)):
         authorized_opt+=[str(i)]
     for i in range(1,len(opt)):
@@ -119,7 +122,7 @@ def check_for_help(opt):
                     os.system('cat ./Source/MadWeight/Readme.txt')
                     sys.exit()
             if opt_pat.search(opt[i]).group('opt').lower()=='version':
-                print 'MadWeight Version'
+                print('MadWeight Version')
                 os.system('cat ./Source/MadWeight/MW_TemplateVersion.txt')
                 sys.exit()
 
@@ -251,7 +254,7 @@ class MW_info(dict,P_info):
         """ check that self['mw_parameter']['?3'] is a list """
         nb_param=1
 
-        while self['mw_parameter'].has_key(str(nb_param*10+3)):
+        while str(nb_param*10+3) in self['mw_parameter']:
             if not isinstance(self['mw_parameter'][str(nb_param*10+3)], list):
                 self['mw_parameter'][str(nb_param*10+3)]=[self['mw_parameter'][str(nb_param*10+3)]]
             nb_param+=1
@@ -391,7 +394,7 @@ class MW_info(dict,P_info):
             self.run_opt['relaunch']=1
         
         #check value for 'madweight_main'
-        for i in range(3,9)+[-1,-3,-4]:
+        for i in list(range(3,9))+[-1,-3,-4]:
             if self.run_opt[num_to_tag[i]]==1:
                 self.run_opt['madweight_main']=1
                 break
@@ -407,10 +410,10 @@ class MW_info(dict,P_info):
         try:
             ff=open('Cards/mapping_card.dat')
         except:
-            print 'no mapping card found'
+            print('no mapping card found')
             for i in range(1,self.nb_card+1):
                 self.param_is_actif[i]=1 #if no file defined all card are supose to be used
-            self.actif_param=range(1,self.nb_card+1)
+            self.actif_param=list(range(1,self.nb_card+1))
             return
 
         self.actif_param=[]
@@ -425,7 +428,7 @@ class MW_info(dict,P_info):
                 self.actif_param.append(nb)
 
         if self.nb_card!=len(self.actif_param):
-            print 'wrong mapping file or some card are desactivated'
+            print('wrong mapping file or some card are desactivated')
 
 
     #3##########################################################################
@@ -495,7 +498,7 @@ class move:
 def detect_SubProcess(P_mode=0):
         MW_SubProcess_list=[]
         if P_mode == 1:
-            print 'WARNING: automatic renormalization is not supported anymore'
+            print('WARNING: automatic renormalization is not supported anymore')
 
         list_dir=os.listdir("./SubProcesses/")
         for name in list_dir:

@@ -15,6 +15,7 @@
 """Unit test Library for the objects in decay module."""
 from __future__ import division
 
+from __future__ import absolute_import
 import math
 import copy
 import os
@@ -24,8 +25,10 @@ import time
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.various.process_checks as process_checks
+import madgraph.various.misc as misc
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
+from six.moves import range
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -163,13 +166,11 @@ class TestMatrixElementChecker(unittest.TestCase):
                                                  'orders':{'QED':0}})
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
         comparisons, used_aloha = process_checks.check_processes(myproc)
-        
         goal_value_len = [8, 2]
 
         for i, comparison in enumerate(comparisons):
             self.assertEqual(len(comparison['values']), goal_value_len[i])
             self.assertTrue(comparison['passed'])
-        
         
         comparisons = process_checks.check_lorentz(myproc)
         nb_fail = process_checks.output_lorentz_inv(comparisons, 

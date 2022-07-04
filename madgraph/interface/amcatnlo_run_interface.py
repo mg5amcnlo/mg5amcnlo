@@ -17,6 +17,8 @@
 """
 from __future__ import division
 
+from __future__ import absolute_import
+from __future__ import print_function
 import atexit
 import glob
 import logging
@@ -37,7 +39,10 @@ import copy
 import datetime
 import tarfile
 import traceback
-import StringIO
+import six
+StringIO = six
+from six.moves import range
+from six.moves import zip
 try:
     import cpickle as pickle
 except:
@@ -108,7 +113,7 @@ def compile_dir(*arguments):
     elif len(arguments)==7:
         (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
     else:
-        raise aMCatNLOError, 'not correct number of argument'
+        raise aMCatNLOError('not correct number of argument')
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
@@ -148,7 +153,7 @@ def compile_dir(*arguments):
 
         logger.info('    %s done.' % p_dir) 
         return 0
-    except MadGraph5Error, msg:
+    except MadGraph5Error as msg:
         return msg
 
 
@@ -224,7 +229,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # and date, from the VERSION text file
         info = misc.get_pkg_info()
         info_line = ""
-        if info and info.has_key('version') and  info.has_key('date'):
+        if info and 'version' in info and  'date' in info:
             len_version = len(info['version'])
             len_date = len(info['date'])
             if len_version + len_date < 30:
@@ -424,10 +429,10 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             self.help_shower()
-            raise self.InvalidCmd, 'Invalid syntax, please specify the run name'
+            raise self.InvalidCmd('Invalid syntax, please specify the run name')
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
-            raise self.InvalidCmd, 'Directory %s does not exists' % \
-                            pjoin(os.getcwd(), 'Events',  args[0])
+            raise self.InvalidCmd('Directory %s does not exists' % \
+                            pjoin(os.getcwd(), 'Events',  args[0]))
 
         self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
@@ -613,17 +618,17 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_calculate_xsect()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd('Invalid Syntax: Too many argument')
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "LO" or "NLO"' % args[1]
+                raise self.InvalidCmd('%s is not a valid mode, please use "LO" or "NLO"' % args[1])
         mode = args[0]
         
         # check for incompatible options/modes
         if options['multicore'] and options['cluster']:
-            raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
-                    ' are not compatible. Please choose one.'
+            raise self.InvalidCmd('options -m (--multicore) and -c (--cluster)' + \
+                    ' are not compatible. Please choose one.')
 
 
     def check_generate_events(self, args, options):
@@ -638,17 +643,17 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_generate_events()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd('Invalid Syntax: Too many argument')
 
         elif len(args) == 1:
             if not args[0] in ['NLO', 'LO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "LO" or "NLO"' % args[1]
+                raise self.InvalidCmd('%s is not a valid mode, please use "LO" or "NLO"' % args[1])
         mode = args[0]
         
         # check for incompatible options/modes
         if options['multicore'] and options['cluster']:
-            raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
-                    ' are not compatible. Please choose one.'
+            raise self.InvalidCmd('options -m (--multicore) and -c (--cluster)' + \
+                    ' are not compatible. Please choose one.')
 
     def check_banner_run(self, args):
         """check the validity of line"""
@@ -725,19 +730,19 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_launch()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd('Invalid Syntax: Too many argument')
 
         elif len(args) == 1:
             if not args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO','auto']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[0]
+                raise self.InvalidCmd('%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[0])
         mode = args[0]
         
         # check for incompatible options/modes
         if options['multicore'] and options['cluster']:
-            raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
-                    ' are not compatible. Please choose one.'
+            raise self.InvalidCmd('options -m (--multicore) and -c (--cluster)' + \
+                    ' are not compatible. Please choose one.')
         if mode == 'NLO' and options['reweightonly']:
-            raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
+            raise self.InvalidCmd('option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"')
 
 
     def check_compile(self, args, options):
@@ -755,11 +760,11 @@ class CheckValidForCmd(object):
         
         if len(args) > 1:
             self.help_compile()
-            raise self.InvalidCmd, 'Invalid Syntax: Too many argument'
+            raise self.InvalidCmd('Invalid Syntax: Too many argument')
 
         elif len(args) == 1:
             if not args[0] in ['MC', 'FO']:
-                raise self.InvalidCmd, '%s is not a valid mode, please use "FO" or "MC"' % args[0]
+                raise self.InvalidCmd('%s is not a valid mode, please use "FO" or "MC"' % args[0])
         mode = args[0]
         
         # check for incompatible options/modes
@@ -827,8 +832,8 @@ class CompleteForCmd(CheckValidForCmd):
         return self.deal_multiple_categories(possibilites, formatting)
     
         
-       except Exception, error:
-           print error
+       except Exception as error:
+           print(error)
 
  
     def complete_compile(self, text, line, begidx, endidx):
@@ -1510,7 +1515,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 
                 if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
                     if aMCatNLO and not self.options['mg5_path']:
-                        raise "plotting NLO HEP file needs MG5 utilities"
+                        raise Exception("plotting NLO HEP file needs MG5 utilities")
                     
                     files.cp(pjoin(self.options['mg5_path'], 'Template','LO', 'Cards', 'pythia_card_default.dat'),
                              pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
@@ -1628,7 +1633,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             name = 'fo_lhe_postprocessing'
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
-                        
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1654,7 +1659,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.check_launch(argss, options)
 
         
-        if 'run_name' in options.keys() and options['run_name']:
+        if 'run_name' in list(options.keys()) and options['run_name']:
             self.run_name = options['run_name']
             # if a dir with the given run_name already exists
             # remove it and warn the user
@@ -1805,7 +1810,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
 
-        if not 'only_generation' in options.keys():
+        if not 'only_generation' in list(options.keys()):
             options['only_generation'] = False
 
         # for second step in applgrid mode, do only the event generation step
@@ -2242,8 +2247,8 @@ RESTART = %(mint_mode)s
                 job['combined']=1
                 jobs_to_run_new.append(job) # this jobs wasn't split
             elif job['split'] == 1:
-                jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
-                                            j['channel'] == job['channel'], jobs_to_run))
+                jobgroups_to_combine.append([j for j in jobs_to_run if j['p_dir'] == job['p_dir'] and \
+                                            j['channel'] == job['channel']])
             else:
                 continue
         for job_group in jobgroups_to_combine:
@@ -2318,7 +2323,7 @@ RESTART = %(mint_mode)s
                     # summed. All other lines can be averaged.
                     is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
                     floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
+                    floatgrps = list(zip(*floatsbyfile))
                     special=[]
                     for i,floatgrp in enumerate(floatgrps):
                         if i==0: # sum X-sec
@@ -2338,7 +2343,7 @@ RESTART = %(mint_mode)s
                 except ValueError:
                     # just average all
                     floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                    floatgrps = zip(*floatsbyfile)
+                    floatgrps = list(zip(*floatsbyfile))
                     averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
                     to_write.append(" ".join(str(a) for a in averages) + "\n")
             # write the data over the master location
@@ -2377,8 +2382,8 @@ RESTART = %(mint_mode)s
             # remove current job from jobs_to_collect. Make sure
             # to remove all the split ones in case the original
             # job had been a split one (before it was re-combined)
-            for j in filter(lambda j: j['p_dir'] == job['p_dir'] and \
-                                j['channel'] == job['channel'], jobs_to_collect_new):
+            for j in [j for j in jobs_to_collect_new if j['p_dir'] == job['p_dir'] and \
+                                j['channel'] == job['channel']]:
                 jobs_to_collect_new.remove(j)
             time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
                            (job['niters_done']*job['npoints_done'])
@@ -2520,7 +2525,9 @@ RESTART = %(mint_mode)s
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
-                random.seed(r)
+                if not hasattr(random, 'mg_seedset'):
+                    random.seed(r)  
+                    random.mg_seedset = r
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0
@@ -2812,9 +2819,10 @@ RESTART = %(mint_mode)s
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
 
         while p.poll() is None:
-            line = p.stdout.readline()
+            line = p.stdout.readline().decode(errors='ignore')
+            #misc.sprint(type(line))
             if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
-                print line[:-1]
+                print(line[:-1])
             elif __debug__ and line:
                 logger.debug(line[:-1])
 
@@ -2854,7 +2862,7 @@ RESTART = %(mint_mode)s
         """Distributes the APPLgrids ready to be filled by a second run of the code"""
         # if no appl_start_grid argument given, guess it from the time stamps 
         # of the starting grid files
-        if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
+        if not('appl_start_grid' in list(options.keys()) and options['appl_start_grid']):
             gfiles = misc.glob(pjoin('*', 'aMCfast_obs_0_starting_grid.root'),
                                pjoin(self.me_dir,'Events')) 
             
@@ -2862,13 +2870,13 @@ RESTART = %(mint_mode)s
             for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
             options['appl_start_grid']= \
-                max(time_stamps.iterkeys(), key=(lambda key: 
+                max(six.iterkeys(time_stamps), key=(lambda key: 
                                                time_stamps[key])).split('/')[-2]
             logger.info('No --appl_start_grid option given. '+\
                     'Guessing that start grid from run "%s" should be used.' \
                             % options['appl_start_grid'])
 
-        if 'appl_start_grid' in options.keys() and options['appl_start_grid']:
+        if 'appl_start_grid' in list(options.keys()) and options['appl_start_grid']:
             self.appl_start_grid = options['appl_start_grid']
             start_grid_dir=pjoin(self.me_dir, 'Events', self.appl_start_grid)
             # check that this dir exists and at least one grid file is there
@@ -2958,7 +2966,7 @@ RESTART = %(mint_mode)s
                 # check for PLUGIN format
                 cluster_class = misc.from_plugin_import(self.plugin_path, 
                                             'new_cluster', cluster_name,
-                                            info = 'cluster handling will be done with PLUGIN: %{plug}s' )
+                                            info = 'cluster handling will be done with PLUGIN: %(plug)s' )
                 if cluster_class:
                     self.cluster = cluster_class(**self.options)
         
@@ -3145,7 +3153,7 @@ RESTART = %(mint_mode)s
             all_log_files = misc.glob(pjoin('P*','born_G*','log_MINT*.txt'), 
                                       pjoin(self.me_dir, 'SubProcesses')) 
         else:
-            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+            raise aMCatNLOError('Running mode %s not supported.'%mode)
 
         try:
             message, debug_msg = \
@@ -3249,7 +3257,7 @@ RESTART = %(mint_mode)s
             log=open(gv_log,'r').read()                
             UPS_stats = re.search(UPS_stat_finder,log)
             for retunit_stats in re.finditer(RetUnit_finder, log):
-                if channel_name not in stats['UPS'].keys():
+                if channel_name not in list(stats['UPS'].keys()):
                     stats['UPS'][channel_name] = [0]*10+[[0]*10]
                 stats['UPS'][channel_name][10][int(retunit_stats.group('unit'))] \
                                      += int(retunit_stats.group('n_occurences'))
@@ -3273,7 +3281,7 @@ RESTART = %(mint_mode)s
                       int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
                       int(UPS_stats.group('n10')),[0]*10]
         debug_msg = ""
-        if len(stats['UPS'].keys())>0:
+        if len(list(stats['UPS'].keys()))>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
             nTotsun = sum([chan[1] for chan in stats['UPS'].values()],0)
             nTotsps = sum([chan[2] for chan in stats['UPS'].values()],0)
@@ -3309,7 +3317,7 @@ RESTART = %(mint_mode)s
             if nTot10 != 0:
                 debug_msg += '\n  Unknown return code (10):              %d'%nTot10
             nUnknownUnit = sum(nTot1[u] for u in range(10) if u \
-                                                not in unit_code_meaning.keys())
+                                                not in list(unit_code_meaning.keys()))
             if nUnknownUnit != 0:
                 debug_msg += '\n  Unknown return code (1):               %d'\
                                                                    %nUnknownUnit
@@ -3385,8 +3393,8 @@ RESTART = %(mint_mode)s
         average_contrib = 0.0
         for value in channel_contr_list.values():
             average_contrib += value
-        if len(channel_contr_list.values()) !=0:
-            average_contrib = average_contrib / len(channel_contr_list.values())
+        if len(list(channel_contr_list.values())) !=0:
+            average_contrib = average_contrib / len(list(channel_contr_list.values()))
         
         relevant_log_GV_files = []
         excluded_channels = set([])
@@ -3520,7 +3528,7 @@ RESTART = %(mint_mode)s
                     stats['timings'][time_stats.group('name')][channel_name]+=\
                                                  safe_float(time_stats.group('time'))
                 except KeyError:
-                    if time_stats.group('name') not in stats['timings'].keys():
+                    if time_stats.group('name') not in list(stats['timings'].keys()):
                         stats['timings'][time_stats.group('name')] = {}
                     stats['timings'][time_stats.group('name')][channel_name]=\
                                                  safe_float(time_stats.group('time'))
@@ -3545,7 +3553,7 @@ RESTART = %(mint_mode)s
         else:            
             debug_msg += '\n\n  Inclusive timing profile non available.'
         
-        sorted_keys = sorted(stats['timings'].keys(), key= lambda stat: \
+        sorted_keys = sorted(list(stats['timings'].keys()), key= lambda stat: \
                               sum(stats['timings'][stat].values()), reverse=True)
         for name in sorted_keys:
             if name=='Total':
@@ -3556,7 +3564,7 @@ RESTART = %(mint_mode)s
             try:
                 TimeList = [((100.0*time/stats['timings']['Total'][chan]), 
                      chan) for chan, time in stats['timings'][name].items()]
-            except KeyError, ZeroDivisionError:
+            except KeyError as ZeroDivisionError:
                 debug_msg += '\n\n  Timing profile for %s unavailable.'%name
                 continue
             TimeList.sort()
@@ -3565,7 +3573,7 @@ RESTART = %(mint_mode)s
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
                        safe_float((100.0*(sum(stats['timings'][name].values())/
                                       sum(stats['timings']['Total'].values()))))
-            except KeyError, ZeroDivisionError:
+            except KeyError as ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
             debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
                                              (TimeList[-1][0],TimeList[-1][1])
@@ -3624,22 +3632,25 @@ RESTART = %(mint_mode)s
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
-                stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         if event_norm.lower() == 'sum':
-            p.communicate(input = '1\n')
+            out, err = p.communicate(input = '1\n'.encode())
         elif event_norm.lower() == 'unity':
-            p.communicate(input = '3\n')
+            out, err = p.communicate(input = '3\n'.encode())
         elif event_norm.lower() == 'bias':
-            p.communicate(input = '0\n')
+            out, err = p.communicate(input = '0\n'.encode())
         else:
-            p.communicate(input = '2\n')
-
+            out, err = p.communicate(input = '2\n'.encode())
+        
+        out = out.decode(errors='ignore')
+        data = str(out)
         #get filename from collect events
-        filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
-
+        filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
+        
         if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
-                    'The event file has not been created. Check collect_events.log')
+                    'The event file has not been created: \n %s' % data)
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
@@ -3702,7 +3713,7 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 #remove the line break from output (last character)
-                output = output[:-1]
+                output = output.decode(errors='ignore')[:-1]
                 # add lib/include paths
                 if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
                     logger.warning('Linking FastJet: updating EXTRAPATHS')
@@ -3752,7 +3763,7 @@ RESTART = %(mint_mode)s
         # add the HEPMC path of the pythia8 installation
         if shower == 'PYTHIA8':
             hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
-                         stdout = subprocess.PIPE).stdout.read().strip()
+                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
@@ -3766,7 +3777,7 @@ RESTART = %(mint_mode)s
             ld_library_path = 'DYLD_LIBRARY_PATH'
         else:
             ld_library_path = 'LD_LIBRARY_PATH'
-        if ld_library_path in os.environ.keys():
+        if ld_library_path in list(os.environ.keys()):
             paths = os.environ[ld_library_path]
         else:
             paths = ''
@@ -3803,7 +3814,7 @@ RESTART = %(mint_mode)s
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
             not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
-            print open(mcatnlo_log).read()
+            print(open(mcatnlo_log).read())
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
 
@@ -3830,7 +3841,7 @@ RESTART = %(mint_mode)s
                                 stdin=subprocess.PIPE,
                                 stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
                                 cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
+                p.communicate(input = ('events.lhe\n%d\n' % self.shower_card['nsplit_jobs']).encode())
                 logger.info('Splitting done.')
             event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name)) 
 
@@ -3941,7 +3952,7 @@ RESTART = %(mint_mode)s
                      ' showering the (split) parton-level event file %s.gz with %s') % \
                      ('\n  '.join(hep_list), hep_format, evt_file, shower)
 
-            except OSError, IOError:
+            except OSError as IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
 
@@ -3949,7 +3960,7 @@ RESTART = %(mint_mode)s
             if hep_format == 'StdHEP':
                 try:
                     self.do_plot('%s -f' % self.run_name)
-                except Exception, error:
+                except Exception as error:
                     logger.info("Fail to make the plot. Continue...")
                     pass
 
@@ -4058,7 +4069,7 @@ RESTART = %(mint_mode)s
                                            stdin=subprocess.PIPE,
                                            stdout=os.open(os.devnull, os.O_RDWR), 
                                            cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                            p.communicate(input = infile)
+                            p.communicate(input = infile.encode())
                             files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
@@ -4119,6 +4130,47 @@ RESTART = %(mint_mode)s
             misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
                                                            cwd=run_dir_path)
             shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        
+        if self.run_card['ickkw'] >0 :
+            if self.run_card['ickkw'] != 3 or shower != 'PYTHIA8':
+                logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+            else:
+                pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
+                
+                pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
+                # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
+                                                         
+                for line in pythia_log:
+                    info = pythiare.search(line)
+                    if not info:
+                        continue
+                    try:
+                        # Pythia cross section in mb, we want pb
+                        sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                        sigma_err = float(info.group('xerr').replace('D','E')) *1e9
+                        Nacc = int(info.group('accepted'))
+                        #Ntry = int(info.group('accepted'))
+                    except:
+                        logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                        break
+                    
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('error_pythia', sigma_err)
+                    self.results.add_detail('shower_dir', os.path.basename(rundir))
+                    logger.info("\nFxFx  Cross-Section:\n"+\
+                                "======================\n"+\
+                                "    %f pb.\n"
+                                "    Number of events after merging: %s\n", sigma_m, Nacc, '$MG:BOLD')
+                    break
+                else:
+                    logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                                    
+                
+            
+            
+            
+            
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
             misc.gzip(f)
@@ -4341,6 +4393,9 @@ RESTART = %(mint_mode)s
             if not hasattr(mod, 'parameter_dict'):
                 from models import model_reader
                 mod = model_reader.ModelReader(mod)
+                if "set EWscheme MZ_MW_alpha" in self.banner.get_detail('proc_card'):
+                    mod.change_electroweak_mode("MZ_MW_alpha")
+                #misc.sprint(self.banner.get_detail('proc_card'))
                 mod.set_parameters_and_couplings(self.banner.param_card)
             aewm1 = 0
             for key in ['aEWM1', 'AEWM1', 'aEWm1', 'aewm1']:
@@ -4412,7 +4467,7 @@ RESTART = %(mint_mode)s
             # shower_card).
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                          stdout = subprocess.PIPE).stdout.read().strip()
+                                          stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             if self.shower_card['pdfcode']==0:
@@ -4435,7 +4490,7 @@ RESTART = %(mint_mode)s
             # set instead.
             try:
                 lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
-                                              stdout = subprocess.PIPE).stdout.read().strip()
+                                              stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
                 self.link_lhapdf(pjoin(self.me_dir, 'lib'))
                 content += 'LHAPDFPATH=%s\n' % lhapdfpath
                 pdfsetsdir = self.get_lhapdf_pdfsetsdir()
@@ -4516,7 +4571,7 @@ RESTART = %(mint_mode)s
         for evt_file in evt_files:
             last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
                     pjoin(self.me_dir, 'SubProcesses', evt_file)], \
-                    stdout = subprocess.PIPE).stdout.read().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -4528,7 +4583,6 @@ RESTART = %(mint_mode)s
             if line:
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
-
         return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
     def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
@@ -4596,49 +4650,11 @@ RESTART = %(mint_mode)s
 
         # check if we can use LHAPDF to compute the PDF uncertainty
         if any(self.run_card['reweight_pdf']):
-            use_lhapdf=False
-            lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
-                                           stdout=subprocess.PIPE).stdout.read().strip() 
-
-            try:
-                candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
-                            if os.path.isdir(pjoin(lhapdf_libdir,dirname))]
-            except OSError:
-                candidates=[]
-            for candidate in candidates:
-                if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                    sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
-                    try:
-                        import lhapdf
-                        use_lhapdf=True
-                        break
-                    except ImportError:
-                        sys.path.pop(0)
-                        continue
-                
-            if not use_lhapdf:
-                try:
-                    candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
-                                if os.path.isdir(pjoin(lhapdf_libdir+'64',dirname))]
-                except OSError:
-                    candidates=[]
-                for candidate in candidates:
-                    if os.path.isfile(pjoin(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
-                        sys.path.insert(0,pjoin(lhapdf_libdir+'64',candidate,'site-packages'))
-                        try:
-                            import lhapdf
-                            use_lhapdf=True
-                            break
-                        except ImportError:
-                            sys.path.pop(0)
-                            continue
-                
-            if not use_lhapdf:
-                try:
-                    import lhapdf
-                    use_lhapdf=True
-                except ImportError:
-                    logger.warning("Failed to access python version of LHAPDF: "\
+            lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
+            if lhapdf:
+                use_lhapdf = True
+            else:
+                logger.warning("Failed to access python version of LHAPDF: "\
                                    "cannot compute PDF uncertainty from the "\
                                    "weights in the events. The weights in the LHE " \
                                    "event files will still cover all PDF set members, "\
@@ -4646,8 +4662,8 @@ RESTART = %(mint_mode)s
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable and the"\
                                    "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
-                    use_lhapdf=False
-
+                use_lhapdf=False                
+            
         # turn off lhapdf printing any messages
         if any(self.run_card['reweight_pdf']) and use_lhapdf: lhapdf.setVerbosity(0)
 
@@ -4721,7 +4737,7 @@ RESTART = %(mint_mode)s
         else:
             self.njobs = len(arg_list)
             for args in arg_list:
-                [(cwd, exe)] = job_dict.items()
+                [(cwd, exe)] = list(job_dict.items())
                 self.run_exe(exe, args, run_type, cwd)
         
         self.wait_for_complete(run_type)
@@ -4737,7 +4753,7 @@ RESTART = %(mint_mode)s
             try:
                 last_line = subprocess.Popen(
                         ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
-                    stdout = subprocess.PIPE).stdout.read().strip()
+                    stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except IOError:
                 pass
             if last_line != "</LesHouchesEvents>":
@@ -4861,8 +4877,8 @@ RESTART = %(mint_mode)s
                 elif os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')):
                     input_files.append(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe'))
                 else:
-                    raise aMCatNLOError, 'Event file not present in %s' % \
-                            pjoin(self.me_dir, 'Events', self.run_name)
+                    raise aMCatNLOError('Event file not present in %s' % \
+                            pjoin(self.me_dir, 'Events', self.run_name))
             else: 
                 input_files.append(pjoin(cwd, 'events_%s.lhe' % args[3]))
             # the output files
@@ -4886,7 +4902,7 @@ RESTART = %(mint_mode)s
                     fname = 'histfile_%s' % args[3]
                 output_files.append(fname + '.tar')
             else:
-                raise aMCatNLOError, 'Not a valid output argument for shower job :  %d' % args[1]
+                raise aMCatNLOError('Not a valid output argument for shower job :  %d' % args[1])
             #submitting
             self.cluster.submit2(exe, args, cwd=cwd, 
                     input_files=input_files, output_files=output_files)
@@ -4973,7 +4989,7 @@ RESTART = %(mint_mode)s
                 output_files.append('%s/results.dat' % current)
 
         else:
-            raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
+            raise aMCatNLOError('not valid arguments: %s' %(', '.join(args)))
 
         #Find the correct PDF input file
         pdfinput = self.get_pdf_input_filename()
@@ -4997,7 +5013,7 @@ PYTHIA8LINKLIBS=""")
       data pythia_cmd_file/500*' '/""")
         else:
             if not self.options['pythia8_path']:
-                raise aMCatNLOError, 'Cannot find Pythia8 path in configuration file'
+                raise aMCatNLOError('Cannot find Pythia8 path in configuration file')
             os.environ["PYTHIA8DATA"] = pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc')
             # Write entries accoridng to the pythia8_path
             # Probably need to do something a bit more careful to asses when '-lz' really is necessary
@@ -5105,10 +5121,11 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix'
                        'MG5_aMC> set <absolute-path-to-%s>/bin/%s-config \n') % (code,code,code,code))
                 else:
                     output, _ = p.communicate()
-                    if code is 'applgrid' and output < '1.4.63':
+                    output.decode(errors='ignore')
+                    if code == 'applgrid' and output < '1.4.63':
                         raise aMCatNLOError('Version of APPLgrid is too old. Use 1.4.69 or later.'\
                                              +' You are using %s',output)
-                    if code is 'amcfast' and output < '1.1.1':
+                    if code == 'amcfast' and output < '1.1.1':
                         raise aMCatNLOError('Version of aMCfast is too old. Use 1.1.1 or later.'\
                                              +' You are using %s',output)
 
@@ -5126,7 +5143,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix'
         else:
             self.make_opts_var['applgrid'] = ""
 
-        if 'fastjet' in self.options.keys() and self.options['fastjet']:
+        if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
         
         # add the make_opts_var to make_opts
@@ -5262,7 +5279,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix'
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
-        except Exception, error:
+        except Exception as error:
             logger.warning("Fail to compile the Subprocesses")
             if __debug__:
                 raise
@@ -5386,7 +5403,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix'
             passing_cmd.append(mode)
 
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
-                              mode=mode, force=force,
+                              mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
                               return_instance=True)
 
@@ -5478,7 +5495,7 @@ PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz -ldl"""%{'pythia8_prefix'
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
-            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower']:
+            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower'] and self.run_card['parton_shower'].upper() != 'PYTHIA8':
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
@@ -5627,9 +5644,9 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
-               'Please upgrate your version of python.')
+    if sys.version_info[1] < 7:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.7 or python3.7 and later.\n'+\
+               'Please upgrade your version of python or specify a compatible version')
 
     import os
     import optparse
@@ -5658,7 +5675,7 @@ if '__main__' == __name__:
         try:
             (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
             done = True
-        except MyOptParser.InvalidOption, error:
+        except MyOptParser.InvalidOption as error:
             pass
         else:
             args += sys.argv[len(sys.argv)-i:]
@@ -5666,8 +5683,8 @@ if '__main__' == __name__:
         # raise correct error:                                                                                                                                                                                  
         try:
             (options, args) = parser.parse_args()
-        except MyOptParser.InvalidOption, error:
-            print error
+        except MyOptParser.InvalidOption as error:
+            print(error)
             sys.exit(2)
 
     if len(args) == 0:
@@ -5686,7 +5703,7 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        print(os.path.join(root_path, 'internal', 'me5_logging.conf'))
         logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)
@@ -5707,16 +5724,16 @@ if '__main__' == __name__:
 
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
-                    print parser_error
-                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                    print(parser_error)
+                    print('and %s  can not be interpreted as a valid command.' % args[0])
                 else:
-                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+                    print('ERROR: %s  not a valid command. Please retry' % args[0])
             else:
                 cmd_line.use_rawinput = False
                 cmd_line.run_cmd(' '.join(args))
                 cmd_line.run_cmd('quit')
 
     except KeyboardInterrupt:
-        print 'quit on KeyboardInterrupt'
+        print('quit on KeyboardInterrupt')
         pass
 

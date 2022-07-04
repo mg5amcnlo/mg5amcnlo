@@ -14,16 +14,19 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
+from __future__ import absolute_import
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
-import StringIO
+import six
+StringIO = six
+import sys
 from madgraph import MG5DIR
 
-import StringIO
+
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -56,7 +59,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue(mybanner.has_key('slha'))
+        self.assertTrue('slha' in mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -572,7 +575,9 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            self.assertEqual(run_card[key], run_card2[key])
+            if key == 'hel_recycling' and six.PY2:
+                continue 
+            self.assertEqual(run_card[key], run_card2[key], '%s element does not match %s, %s' %(key, run_card[key], run_card2[key]))
       
         run_card = bannermod.RunCardNLO()
 #        fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -606,6 +611,37 @@ class TestRunCard(unittest.TestCase):
         run_card3.write(fsock2)
         fsock2.close()
         self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
+
+    def test_check_valid_LO(self):
+        """ensure that some handling are done correctly"""
+
+        run_card = bannermod.RunCardLO()
+        run_card['dsqrt_q2fact1'] = 10
+        run_card['dsqrt_q2fact2'] = 20
+
+        # check that if fixed_fac_scale is on False and lpp1=1 fixed_fac_scale1 is False but if lpp=2 then  fixed_fac_scale1 is True
+        run_card.set('fixed_fac_scale', False, user=True)
+        run_card.set('lpp1', 2, user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['fixed_fac_scale1'], True)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+        run_card.set('lpp1', 1, user=True)
+        run_card.check_validity()
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+        # check that for elastisc a a collision we force to use fixed_fac_scale1/2
+        run_card.set('lpp1', 2, user=True)
+        run_card.set('lpp2', 2, user=True)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            run_card.check_validity()
+        run_card.set('fixed_fac_scale1', False, user=True)
+        run_card.set('fixed_fac_scale2', False, user=True)
+        run_card.check_validity()  # no crashing anymore
+        self.assertEqual(run_card['fixed_fac_scale1'], False)
+        self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+
             
 
 MadLoopParam = bannermod.MadLoopParam

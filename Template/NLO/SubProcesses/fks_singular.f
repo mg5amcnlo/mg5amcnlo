@@ -2210,7 +2210,6 @@ c Overwrite the shower scale for the S-events
       return
       end
 
-
       subroutine update_shower_scale_Sevents_v1(ifold_counter
      $     ,showerscale,showerscale_a,ifold_picked)
 c Original way of assigning shower starting scales. This is for backward
@@ -2396,7 +2395,10 @@ c pick the fold at random, weighted by their relative contributions
 c Now that we have the fold, check within that fold to find the FKS
 c configurations and the corresponding shower starting scale. Pick one
 c randomly based on the weight for that FKS configuration (in the
-c weight, the born and nbody_noborn should not be included)
+c weight, the born and nbody_noborn should not be included since those
+c are always assigned to the FKS configuration corresponding to a soft
+c singularity. Therefore, including them would bias the chosen scale to
+c that configuration.)
       wgt_sum=0d0
       do iFKS=1,fks_configs
          wgt_sum=wgt_sum+abs(wgt_fold_fks(iFKS,ifl))
@@ -2448,6 +2450,7 @@ c instead.
       ifold_picked=ifl
       return
       end
+
 
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)

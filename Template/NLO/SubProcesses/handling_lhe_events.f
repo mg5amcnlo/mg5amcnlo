@@ -854,7 +854,7 @@ c Write the <scales> block only for scales related to valid colour lines
  441  format(4(1x,e16.10))
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
+ 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
  701  format(a8,i1,a1,i1,a2,e14.8,a1)
 c

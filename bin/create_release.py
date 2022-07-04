@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -29,10 +29,14 @@ following actions:
 6. tar the MadGraph5_vVERSION directory.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
+from six.moves import range
+from six.moves import input
 
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
+if sys.version_info[1] < 7:
+    sys.exit('MadGraph5_aMC@NLO works only with python 2.7/3.7 or later.\n\
                Please upgrate your version of python.')
 
 import glob
@@ -46,7 +50,7 @@ import os.path as path
 import re
 import shutil
 import subprocess
-import urllib
+import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
 
 from datetime import date
 
@@ -78,12 +82,12 @@ diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communic
 
 if diff_result:
     logging.warning("Directory is not up-to-date. The release follow the last committed version.")
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
 
 release_date = date.fromtimestamp(time.time())
-for line in file(os.path.join(MG5DIR,'VERSION')):
+for line in open(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
         logging.info(line)
         version = line.rsplit('=')[1].strip()
@@ -91,14 +95,14 @@ for line in file(os.path.join(MG5DIR,'VERSION')):
         if not str(release_date.year) in line or not str(release_date.month) in line or \
                                                            not str(release_date.day) in line:
             logging.warning("WARNING: The release time information is : %s" % line)
-            answer = raw_input('Do you want to continue anyway? (y/n)')
+            answer = input('Do you want to continue anyway? (y/n)')
             if answer != 'y':
                 exit()
 
-Update_note = file(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
+Update_note = open(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
 if version not in Update_note:
     logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
 
@@ -114,7 +118,7 @@ if pattern.match(version):
 else:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
          "in consequence the automatic update of the code will be deactivated" )
-    answer = raw_input('Do you want to continue anyway? (y/n)')
+    answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
     rev_nb=None
@@ -123,11 +127,13 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
-        web_version = int(filetext.read().strip())            
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        text = filetext.read().decode().split('\n')
+        web_version = int(text[0].strip())
+        last_message = int(text[1].strip())
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
         web_version = -1
@@ -138,21 +144,21 @@ if rev_nb:
     elif rev_nb_i in [web_version+i for i in range(1,4)]:
         logging.warning("WARNING: current version on the web is %s" % web_version)
         logging.warning("Please check that this (small difference) is expected.")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
     elif web_version < rev_nb_i:
         logging.warning("CRITICAL: current version on the web is %s" % web_version)
         logging.warning("This is a very large difference. Indicating a wrong manipulation.")
         logging.warning("and can creates trouble for the auto-update.")
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()
     else:
         logging.warning("CRITICAL: current version on the web is %s" % web_version)
         logging.warning("This FORBIDS any auto-update for this version.")
         rev_nb=None
-        answer = raw_input('Do you want to continue anyway? (y/n)')
+        answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
             exit()                        
 # 1. bzr branch the present directory to a new directory
@@ -190,6 +196,7 @@ if rev_nb:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
     fsock.write("version_nb   %s\n" % rev_nb)
     fsock.write("last_check   %s\n" % int(time.time()))
+    fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
     
 # 1. Copy the .mg5_configuration_default.txt to it's default path
@@ -205,29 +212,29 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #create_empty.close()
 
 # 2. Create the automatic documentation in the apidoc directory
-try:
-    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                               'madgraph', 'aloha',
-                               os.path.join('models', '*.py')], cwd = filepath)
-except:
-    logging.error("Error while trying to run epydoc. Do you have it installed?")
-    logging.error("Execution cancelled.")
-    sys.exit()
+#try:
+#    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+#                               'madgraph', 'aloha',
+#                               os.path.join('models', '*.py')], cwd = filepath)
+#except:
+#    logging.error("Error while trying to run epydoc. Do you have it installed?")
+#    logging.error("Execution cancelled.")
+#    sys.exit()
 
-if status1:
-    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
-                 status)
-    sys.exit()
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
 #3. tarring the apidoc directory
-status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+#status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
-if status2:
-    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
-    sys.exit()
-else:
+#if status2:
+#    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+#                 status)
+#    sys.exit()
+#else:
     # remove the apidoc file.
-    shutil.rmtree(os.path.join(filepath,'apidoc'))
+#    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 4. Download the offline installer and other similar code
 install_str = """
@@ -250,7 +257,7 @@ ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
-    print 'Fail to create OfflineHEPToolsInstaller'
+    print('Fail to create OfflineHEPToolsInstaller')
     sys.exit()
 
 # 5. tar the MadGraph5_vVERSION directory.
@@ -277,14 +284,14 @@ except:
 
 
 logging.info("Running tests on directory %s", filepath)
-print os.listdir(filepath)
+print(os.listdir(filepath))
 import subprocess
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
-print "status:", status
+print("status:", status)
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
-print "status:", status
+print("status:", status)
 status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
-print "status:", status
+print("status:", status)
 
 
 logging.info("Thanks for creating a release. please check that the tests were sucessfull before releasing the version")

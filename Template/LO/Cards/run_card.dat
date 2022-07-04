@@ -12,7 +12,7 @@
 #   mind the format:   value    = variable     ! comment             *
 #                                                                    *
 #   To display more options, you can type the command:               *
-#      update full_run_card                                          *
+#      update to_full                                                *
 #*********************************************************************
 #                                                                    
 #*********************************************************************
@@ -28,7 +28,7 @@
 #*********************************************************************
 # Collider type and energy                                           *
 # lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
-#                                         3=photon from electron     *
+#                3=photon from electron, 4=photon from muon          *
 #*********************************************************************
      %(lpp1)s        = lpp1    ! beam 1 type 
      %(lpp2)s        = lpp2    ! beam 2 type
@@ -58,16 +58,19 @@ $ion_pdf
   %(gridpack)s     = gridpack  !True = setting up the grid pack
   %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
   %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
-$MLM
-$CKKW
+$mlm
+$ckkw
 #*********************************************************************
 #
 #*********************************************************************
-# handling of the helicities:
-#  0: sum over all helicities
-#  1: importance sampling over helicities
+# Phase-Space Optimization strategy (basic options)
 #*********************************************************************
    %(nhel)s  = nhel          ! using helicities importance sampling or not.
+                             ! 0: sum over helicity, 1: importance sampling
+   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.00773)
+                             ! 1 is old strategy (using amp square)
+			     ! 2 is new strategy (using only the denominator)
+$psoptim			     
 #*********************************************************************
 # Generation bias, check the wiki page below for more information:   *
 #  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *

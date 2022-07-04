@@ -13,11 +13,13 @@
 #
 ################################################################################
 from __future__ import division
+from __future__ import absolute_import
 import os
 import math
 import logging
 import re
 import xml.dom.minidom as minidom
+from six.moves import range
 
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
@@ -79,9 +81,9 @@ class RunStatistics(dict):
             new_stats = [new_stats, ]
         elif isinstance(new_stats,list):
             if any(not isinstance(_,RunStatistics) for _ in new_stats):
-                raise MadGraph5Error, "The 'new_stats' argument of the function "+\
+                raise MadGraph5Error("The 'new_stats' argument of the function "+\
                         "'updtate_statistics' must be a (possibly list of) "+\
-                                                       "RunStatistics instance."
+                                                       "RunStatistics instance.")
  
         keys = set([])
         for stat in [self,]+new_stats:
@@ -268,7 +270,7 @@ class OneResult(object):
                           # this can happen if we force maxweight
         self.th_nunwgt = 0 # associated number of event with th_maxwgt 
                            #(this is theoretical do not correspond to a number of written event)
-
+        self.timing = 0
         return
     
     #@cluster.multiple_try(nb_try=5,sleep=20)
@@ -277,14 +279,14 @@ class OneResult(object):
         
         if isinstance(filepath, str):
             finput = open(filepath)
-        elif isinstance(filepath, file):
+        elif hasattr(filepath, 'read') and hasattr(filepath, 'name'):
             finput = filepath
         else:
-            raise Exception, "filepath should be a path or a file descriptor"
+            raise Exception("filepath should be a path or a file descriptor")
         
         i=0
         found_xsec_line = False
-        for line in finput:            
+        for line in finput:           
             # Exit as soon as we hit the xml part. Not elegant, but the part
             # below should eventually be xml anyway.
             if '<' in line:
@@ -311,12 +313,12 @@ class OneResult(object):
                         if 'end code not correct' in line:
                             error_code = data[4]
                             log = pjoin(os.path.dirname(filepath), 'log.txt')
-                            raise Exception, "Reported error: End code %s \n Full associated log: \n%s"\
-                                  % (error_code, open(log).read())
+                            raise Exception("Reported error: End code %s \n Full associated log: \n%s"\
+                                  % (error_code, open(log).read()))
                         else:
                             log = pjoin(os.path.dirname(filepath), 'log.txt')
-                            raise Exception, "Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
-                                %  (line, open(log).read())                        
+                            raise Exception("Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
+                                %  (line, open(log).read()))                        
                 if len(data) > 10:
                     self.maxwgt = data[10]
                 if len(data) >12:
@@ -345,7 +347,7 @@ class OneResult(object):
             xml.append(line)
 
         if xml:
-            self.parse_xml_results('\n'.join(xml))        
+            self.parse_xml_results('\n'.join(xml))       
         
         # this is for amcatnlo: the number of events has to be read from another file
         if self.nevents == 0 and self.nunwgt == 0 and isinstance(filepath, str) and \
@@ -364,8 +366,14 @@ class OneResult(object):
         if statistics_node:
             try:
                 self.run_statistics.load_statistics(statistics_node[0])
-            except ValueError, IndexError:
+            except ValueError as IndexError:
                 logger.warning('Fail to read run statistics from results.dat')
+        else:
+            lo_statistics_node = dom.getElementsByTagName("lo_statistics")[0]
+            timing = lo_statistics_node.getElementsByTagName('cumulated_time')[0]
+            timing= timing.firstChild.nodeValue
+            self.timing = 0.3 + float(timing) #0.3 is the typical latency of bash script/...
+
 
     def set_mfactor(self, value):
         self.mfactor = int(value)
@@ -419,6 +427,7 @@ class Combine_results(list, OneResult):
     
     def add_results(self, name, filepath, mfactor=1):
         """read the data in the file"""
+
         try:
             oneresult = OneResult(name)
             oneresult.set_mfactor(mfactor)
@@ -429,7 +438,6 @@ class Combine_results(list, OneResult):
         except Exception:
             logger.critical("Error when reading %s" % filepath)
             raise
-        
     
     def compute_values(self, update_statistics=False):
         """compute the value associate to this combination"""
@@ -446,6 +454,7 @@ class Combine_results(list, OneResult):
         self.nunwgt = sum([one.nunwgt for one in self])  
         self.wgt = 0
         self.luminosity = min([0]+[one.luminosity for one in self])
+        self.timing = sum([one.timing for one in self])
         if update_statistics:
             self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
@@ -461,6 +470,7 @@ class Combine_results(list, OneResult):
         self.xsec = sum([one.xsec for one in self]) /nbjobs
         self.xerrc = sum([one.xerrc for one in self]) /nbjobs
         self.xerru = math.sqrt(sum([one.xerru**2 for one in self])) /nbjobs
+        self.timing = sum([one.timing for one in self]) #no average here 
         if error:
             self.xerrc = error
             self.xerru = error
@@ -502,19 +512,26 @@ class Combine_results(list, OneResult):
         """Compute iterations to have a chi-square on the stability of the 
         integral"""
 
-        nb_iter = min([len(a.ysec_iter) for a in self], 0)
+        #iter = [len(a.ysec_iter) for a in self]
+        #if iter:
+        #    nb_iter = min(iter)
+        #else:
+        #    nb_iter = 0 
+        #nb_iter = misc.mmin([len(a.ysec_iter) for a in self], 0)
+        #misc.sprint(nb_iter)
         # syncronize all iterations to a single one
         for oneresult in self:
-            oneresult.change_iterations_number(nb_iter)
+            oneresult.change_iterations_number(0)
             
         # compute value error for each iteration
-        for i in range(nb_iter):
-            value = [one.ysec_iter[i] for one in self]
-            error = [one.yerr_iter[i]**2 for one in self]
-            
-            # store the value for the iteration
-            self.ysec_iter.append(sum(value))
-            self.yerr_iter.append(math.sqrt(sum(error)))
+        #for i in range(nb_iter):
+        #    value = [one.ysec_iter[i] for one in self]
+        #    error = [one.yerr_iter[i]**2 for one in self]
+        #    
+        #   # store the value for the iteration
+        #    raise Exception
+        #    self.ysec_iter.append(sum(value))
+        #    self.yerr_iter.append(math.sqrt(sum(error)))
     
        
     template_file = \
@@ -538,7 +555,7 @@ class Combine_results(list, OneResult):
     table_line_template = \
 """
 <tr><td align=right>%(P_title)s</td>
-    <td align=right><a id="%(P_link)s" href=%(P_link)s onClick="check_link('%(P_link)s','%(mod_P_link)s','%(P_link)s')"> %(cross)s </a> </td>
+    <td align=right><a id="%(P_link)s" href=%(P_link)s > %(cross)s </a> </td>
     <td align=right>  %(error)s</td>
     <td align=right>  %(events)s</td>
     <td align=right>  %(unweighted)s</td>
@@ -663,6 +680,10 @@ class Combine_results(list, OneResult):
             line = '%s %s %s %s %s %s\n' % (i+1, self.ysec_iter[i], self.yerr_iter[i], 
                       self.eff_iter[i], self.maxwgt_iter[i], self.yasec_iter[i]) 
             fsock.writelines(line)
+
+        if self.timing:
+            text = """<lo_statistics>\n<cumulated_time> %s </cumulated_time>\n</lo_statistics>"""
+            fsock.writelines(text % self.timing)
         
 
 
@@ -685,19 +706,6 @@ function UrlExists(url) {
   }
   return http.status!=404;
 }
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-        if ( ! UrlExists(alt)){
-         obj.href = alt;
-         return true;
-        }
-       obj.href = alt;
-       return false;
-    }
-    obj.href = url;
-    return 1==1;
-}
 </script>
 """ 
 
@@ -707,12 +715,10 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
     run = cmd.results.current['run_name']
     all = Combine_results(run)
 
-    
     for Pdir in cmd.get_Pdir():
         P_comb = Combine_results(Pdir)
-        
         if jobs:
-            for job in filter(lambda j: j['p_dir'] in Pdir, jobs):
+            for job in [j for j in jobs if j['p_dir'] == os.path.basename(Pdir)]:
                     P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
         elif folder_names:
@@ -731,7 +737,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                             dir = folder.replace('*', '_G' + name)
                         P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), mfactor)
                 if jobs:
-                    for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                    for job in [j for j in jobs if j['p_dir'] == Pdir]:
                         P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
             except IOError:
@@ -745,12 +751,21 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                     else:
                         path = pjoin(G,'results.dat')
                     P_comb.add_results(os.path.basename(G), path, mfactors[G])
-                
+
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
 
+    try:
+        all_channels = sum([list(P) for P in all],[])
+        timings = sum(x.timing for x in all_channels)
+        logger.info('sum of cpu time of last step: %s', misc.format_time(timings))
+    except Exception as error:
+        logger.debug(str(error))
+        pass
 
+    for x in all_channels:
+        x.timing = 0
 
     return all
 

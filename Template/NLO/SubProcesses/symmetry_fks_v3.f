@@ -300,6 +300,7 @@ c***************************************************************************
             write(26,'(2i6)') mapconfig(i),-mapconfig(-use_config(i))
          endif
       enddo
+      close(26)
       end
 
 

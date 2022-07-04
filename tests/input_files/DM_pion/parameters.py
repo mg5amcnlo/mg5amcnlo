@@ -4,10 +4,12 @@
 
 
 
-from object_library import all_parameters, Parameter
+from __future__ import absolute_import
+import object_library as object_library
+all_parameters = object_library.all_parameters
+Parameter = object_library.Parameter
 
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
 
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',

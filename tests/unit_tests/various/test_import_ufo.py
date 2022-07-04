@@ -15,12 +15,15 @@
 """Unit test Library for importing and restricting model"""
 from __future__ import division
 
+from __future__ import absolute_import
 import copy
 import os
 import sys
 import time
 
 import tests.unit_tests as unittest
+
+import madgraph.interface.master_interface as Cmd
 import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
@@ -52,6 +55,20 @@ class TestImportUFO(unittest.TestCase):
         """Test that the expansion_order is set"""
         self.assertEqual(self.base_model.get('expansion_order'),
                          {'QCD': 99, 'QED': 99, 'HIG':1, 'HIW': 1})
+
+class TestImportUFO_fromcmd(unittest.TestCase):
+
+    def test_import_from_cmd(self):
+        """check that a model that defines "j" as a particle is correctly handle"""
+
+        self.cmd = Cmd.MasterCmd()
+        self.cmd.exec_cmd("import model sm") # important to trigger the bug
+        self.assertIn("j", self.cmd._multiparticles)
+
+        path = os.path.join(_file_path, '..', 'input_files', '231_Model_UFO')
+        self.cmd.exec_cmd("import model %s" % path, postcmd=True, precmd=True)
+
+        self.assertNotIn("j", self.cmd._multiparticles) 
 
 class TestNFlav(unittest.TestCase):
     """Test class for the get_nflav function"""
@@ -118,7 +135,7 @@ class TestImportUFONoSideEffect(unittest.TestCase):
                 elif hasattr(part,"goldstoneboson"):
                     self.assertEqual(part.goldstoneboson,True)
                 else:
-                    raise import_ufo.UFOImportError, "Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name
+                    raise import_ufo.UFOImportError("Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name)
                     
         
     def test_ImportUFONoSideEffectNLO(self):
@@ -284,8 +301,29 @@ class TestRestrictModel(unittest.TestCase):
                     [('GC_76', 1), ('GC_79', -1)],
                     [('GC_77', 1), ('GC_78', -1)],
                     [('GC_97', 1), ('GC_96', -1)]]
-        expected.sort()
-        iden.sort()
+        expected = [[('GC_100',1), ('GC_108',1), ('GC_49',1), ('GC_45',1), ('GC_40',1), ('GC_41',1), ('GC_104',1)],
+                    [('GC_21', 1), ('GC_27', -1)],
+                    [('GC_3', 1), ('GC_4', -1)],
+                    [('GC_38', 1), ('GC_39', -1)],
+                    [('GC_50', 1), ('GC_51', -1)],
+                    #[('GC_53', 1), ('GC_52', -1)], #GC_52 is not assigned to a vertex to they are consider as different coupling order and not merged... not relevant anyway
+                    [('GC_54', 1), ('GC_56', -1)],
+                    [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_7', 1), ('GC_9', -1)],
+                    [('GC_70', 1), ('GC_73', -1)],
+                    [('GC_74', 1), ('GC_75', -1)],
+                    [('GC_76', 1), ('GC_79', -1)],
+                    [('GC_77', 1), ('GC_78', -1)],
+                    [('GC_96', 1), ('GC_97', -1)]]
+        
+        for elem in expected:
+            elem.sort(key=str)
+        for elem in iden:
+            elem.sort(key=str)
+        
+        expected.sort(key=str)
+        iden.sort(key=str)
+        
         self.assertEqual(expected, iden)
 
     def test_locate_couplings(self):
@@ -362,7 +400,7 @@ class TestRestrictModel(unittest.TestCase):
             self.assertTrue(has_GC, True)
         
         # check that the same occur with opposite sign coupling
-        target = [i for i in iden if len(i)==2][1] 
+        target = [i for i in sorted(iden) if len(i)==2][1] 
         target2 = [i[0] for i in target]
         GC = target2[0]
         
@@ -466,10 +504,10 @@ class TestRestrictModel(unittest.TestCase):
         assert coupling_ddz_1 == coupling_eez_1
         
         result = self.model.remove_interactions([coupling_ddz_1, coupling_ddz_2])
-        self.assertTrue(coupling_eez_2 in input_eez['couplings'].values())
-        self.assertFalse(coupling_eez_1 in input_eez['couplings'].values())
-        self.assertFalse(coupling_ddz_1 in input_ddz['couplings'].values())
-        self.assertFalse(coupling_ddz_2 in input_ddz['couplings'].values())
+        self.assertTrue(coupling_eez_2 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_eez_1 in list(input_eez['couplings'].values()))
+        self.assertFalse(coupling_ddz_1 in list(input_ddz['couplings'].values()))
+        self.assertFalse(coupling_ddz_2 in list(input_ddz['couplings'].values()))
 
     def test_put_parameters_to_zero(self):
         """check that we remove parameters correctly"""

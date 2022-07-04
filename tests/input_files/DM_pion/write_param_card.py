@@ -1,8 +1,6 @@
 
-__date__ = "02 Aug 2012"
+__date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
-
-from function_library import *
 
 class ParamCardWriter(object):
     
@@ -28,7 +26,6 @@ class ParamCardWriter(object):
         self.fsock.write(self.header)
         
         self.write_card(list_of_parameters)
-        self.fsock.close()
     
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
@@ -82,7 +79,8 @@ class ParamCardWriter(object):
             self.write_block(lhablock)
             need_writing = [ param for param in all_ext_param if \
                                                      param.lhablock == lhablock]
-            need_writing.sort(self.order_param)
+            from functools import cmp_to_key
+            need_writing.sort(key=cmp_to_key(self.order_param))
             [self.write_param(param, lhablock) for param in need_writing]
             
             if self.generic_output:
@@ -118,9 +116,11 @@ class ParamCardWriter(object):
     def write_dep_param_block(self, lhablock):
         import cmath
         from parameters import all_parameters
-        from particles import all_particles
         for parameter in all_parameters:
-            exec("%s = %s" % (parameter.name, parameter.value))
+            try:
+                exec("%s = %s" % (parameter.name, parameter.value))
+            except Exception:
+                pass
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"
@@ -132,7 +132,6 @@ class ParamCardWriter(object):
         else:
             data = self.dep_width
             prefix = "DECAY "
-
         for part, param in data:
             if isinstance(param.value, str):
                 value = complex(eval(param.value)).real
@@ -141,32 +140,8 @@ class ParamCardWriter(object):
             
             text += """%s %s %f # %s : %s \n""" %(prefix, part.pdg_code, 
                         value, part.name, param.value)
-        # If more than a particles has the same mass/width we need to write it here
-        # as well
-        if lhablock == 'MASS':
-            arg = 'mass'
-            done = [part for (part, param) in self.dep_mass]
-        else:
-            arg = 'width'
-            done = [part for (part, param) in self.dep_width]
-        for particle in all_particles:
-            if particle.pdg_code <0:
-                continue
-            is_define = True
-            if particle not in done:
-                if getattr(particle, arg).lhacode[0] != particle.pdg_code:
-                    is_define = False                
-            if  not is_define:
-                value = float(particle.get(arg).value )
-                name =  particle.get(arg).name 
-                text += """%s %s %f # %s : %s \n""" %(prefix, particle.pdg_code, 
-                        value, particle.name, name)
-
-
-
-
         self.fsock.write(text)    
-        
+    
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
     data="""Block QNUMBERS %(pdg)d  # %(name)s 
         1 %(charge)d  # 3 times electric charge
@@ -177,8 +152,7 @@ class ParamCardWriter(object):
     def write_qnumber(self):
         """ write qnumber """
         from particles import all_particles
-        import particles
-        print particles.__file__
+        
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""
         text += """#===========================================================\n\n"""
@@ -189,11 +163,12 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': part.spin,
+                                 'spin': 2 * part.spin + 1,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         
         self.fsock.write(text)
+        
         
             
             
@@ -203,5 +178,5 @@ class ParamCardWriter(object):
             
 if '__main__' == __name__:
     ParamCardWriter('./param_card.dat', generic=True)
-    print 'write ./param_card.dat'
+    print('write ./param_card.dat')
     

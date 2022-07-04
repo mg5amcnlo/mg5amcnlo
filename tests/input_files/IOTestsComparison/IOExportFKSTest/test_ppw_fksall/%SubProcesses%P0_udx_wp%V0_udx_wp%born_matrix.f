@@ -279,9 +279,10 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J,M,N
       COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
@@ -296,8 +297,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    3/
+      DATA (CF(I,  1),I=  1,  1) /3.000000000000000D+00/
 C     1 T(2,1)
 C     ----------
 C     BEGIN CODE
@@ -306,9 +306,9 @@ C     ----------
       CALL OXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
 C     Amplitude(s) for diagram number 1
-      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_47,AMP(1))
+      CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_11,AMP(1))
 C     JAMPs contributing to orders QCD=0
-      JAMP(1,1)=+AMP(1)
+      JAMP(1,1) = AMP(1)
 
       RES = 0.D0
       DO M = 1, NAMPSO
@@ -319,7 +319,7 @@ C     JAMPs contributing to orders QCD=0
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX(M,N)) = RES(SQSOINDEX(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
+     $       *DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
       ENDDO

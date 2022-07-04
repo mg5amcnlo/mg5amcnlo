@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import logging.config
 import logging
 import pydoc
@@ -15,11 +17,11 @@ from madgraph import MG5DIR
 from madgraph import MadGraph5Error
 from madgraph.iolibs.files import cp
 #import madgraph.iolibs.save_load_object as save_load_object
-import loop_me_comparator
+from . import loop_me_comparator
 import madgraph.various.banner as banner_mod
 import madgraph.various.misc as misc
-import me_comparator
-from test_ML5 import procToFolderName
+from . import me_comparator
+from .test_ML5 import procToFolderName
 # The processes below are treated all together because they are relatively quick
 
 HCR_processes_short = []
@@ -172,16 +174,16 @@ def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-
     
     # Print out progress if it is a run for an individual process
     if len(my_proc_list)==1:
-        print "\n== %s %s =="%(my_proc_list[0][0],my_proc_list[0][2])
+        print("\n== %s %s =="%(my_proc_list[0][0],my_proc_list[0][2]))
     else:
-        print "\n== %s =="%filename
+        print("\n== %s =="%filename)
     
     # Check if pickle exists, if not create it        
     if pickle_file!="" and not os.path.isfile(os.path.join(_pickle_path,pickle_file)):
-        print " => Computing reference evaluation with %s"%chosen_runner
+        print(" => Computing reference evaluation with %s"%chosen_runner)
         create_loop_pickle(my_proc_list, model,
                                              pickle_file, energy, chosen_runner)
-        print "\n => Done with %s evaluation"%chosen_runner
+        print("\n => Done with %s evaluation"%chosen_runner)
     # Load the stored runner
     if pickle_file != "":
         stored_runner = me_comparator.PickleRunner.find_comparisons(
@@ -220,13 +222,12 @@ def compare_processes(testInstance, my_proc_list = [], model = 'loop_qcd_qed_sm-
         elif pickle_file == "" and not loop_induced:
             my_comp.set_me_runners(ML5_opt,ML5_default)
         else:
-            raise MadGraph5Error, \
-                'Cannot find pickle_file for loop induced process.'
+            raise MadGraph5Error('Cannot find pickle_file for loop induced process.')
     else:
         if pickle_file !="":
             my_comp.set_me_runners(stored_runner,ML5_opt)
         else:
-            raise MadGraph5Error,"CANNOT find the stored result with TIR"
+            raise MadGraph5Error("CANNOT find the stored result with TIR")
     
     # Run the actual comparison
     my_comp.run_comparison(my_proc_list,
@@ -249,8 +250,8 @@ def create_loop_pickle(my_proc_list, model, pickle_file, energy, \
 #       print "Creating loop pickle for chosen_runner=",chosen_runner
     allowed_chosen_runners = ['ML5_opt','ML5_default'] 
     if chosen_runner not in allowed_chosen_runners:
-        raise MadGraph5Error, 'The reference runner can only be in %s.'%\
-                                                      allowed_chosen_runners
+        raise MadGraph5Error('The reference runner can only be in %s.'%\
+                                                      allowed_chosen_runners)
     
     runner = None
     if chosen_runner == 'ML5_opt':
@@ -733,7 +734,7 @@ if '__main__' == __name__:
         proc = HCR_processes_long_dic[savefile]
         proc_list.append(proc)
         res_list.append(loop_me_comparator.LoopMG5Runner.\
-        parse_check_output(file(os.path.join(HCRpath,savefile+'.dat'))))
+        parse_check_output(open(os.path.join(HCRpath,savefile+'.dat'))))
         runner = loop_me_comparator.LoopHardCodedRefRunner()
         runner.setup(proc_list,res_list,model)
         create_pickle(proc_list,pickle_file,runner,ref_runner=None,\
