@@ -3014,6 +3014,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          'notification_center': True
                          }
 
+    options_hidden = {'keep_mixed_loop': False}
+
 
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
@@ -3746,6 +3748,22 @@ This implies that with decay chains:
                 if not to_print(key):
                     continue
                 default = self.options_configuration[key]
+                value = self.options[key]
+                if value == default:
+                    outstr += "  %25s \t:\t%s\n" % (key,value)
+                else:
+                    outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
+        
+                    outstr += "\n"
+            if len(args) != 1:
+                hid_to_print = [key for key in self.options_hidden if to_print(key)]
+            else:
+                hid_to_print = [key for key in self.options_hidden if self.options_hidden[key] != self.options[key]]
+            if hid_to_print:
+                outstr += "                      Hidden Options    \n"
+                outstr += "                      ---------------------    \n"
+            for key in hid_to_print:
+                default = self.options_hidden[key]
                 value = self.options[key]
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
@@ -7157,6 +7175,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
             self.options.update(self.options_madevent)
+            self.options.update(self.options_hidden)
 
         if not config_path:
             if 'MADGRAPH_BASE' in os.environ:
@@ -7999,6 +8018,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         elif args[0] in ['low_mem_multicore_nlo_generation']:	    
             if six.PY3 and self.options['OLP'] != 'MadLoop':
                 raise self.InvalidCmd('Not possible to set \"low_mem_multicore_nlo_generation\" for an OLP different of MadLoop when running  python3')
+            else:
+                self.options[args[0]] = args[1]
+        elif args[0] in self.options_hidden:
+            logger.critical("You are updating a HIDDEN parameter of MG5aMC(%s). This parameter is hidden for good reason. We do not provide any support for code generated with such flag (not even retro-compatibility)", args[0])
+            if args[1] in ['None','True','False']:
+                self.options[args[0]] = eval(args[1])
             else:
                 self.options[args[0]] = args[1]
         elif args[0] in self.options:

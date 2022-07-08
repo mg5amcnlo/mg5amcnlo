@@ -532,6 +532,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 raise MadGraph5Error('\nAutomatic process-order determination lead to negative constraints:\n' + \
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.')
+
+            misc.sprint(self.options)
             if self.options['nlo_mixed_expansion']:
                 orders = {'QED': 2*qed, 'QCD': 2*qcd}
                 # set all the other coupling to zero
@@ -663,6 +665,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
                        'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
+        fks_options.update(self.options)
 
         fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:

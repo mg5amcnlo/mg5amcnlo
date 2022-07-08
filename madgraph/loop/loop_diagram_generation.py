@@ -77,17 +77,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # subsequent diagram generation runs.
         self.lcutpartemployed=[]
 
-    def __init__(self, argument=None, loop_filter=None):
+    def __init__(self,  argument=None, opt={}, loop_filter=None):
         """Allow initialization with Process.
         If loop_filter is not None, then it will be applied to all subsequent
         diagram generation from this LoopAmplitude."""
         
         self.loop_filter = loop_filter
-        
+        self.opt = opt      
         if isinstance(argument, base_objects.Process):
             super(LoopAmplitude, self).__init__()
             self.set('process', argument)
-            self.generate_diagrams()
+            self.generate_diagrams(opt=opt)
         elif argument != None:
             # call the mother routine
             super(LoopAmplitude, self).__init__(argument)
@@ -494,6 +494,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         """ Filter the loop diagrams to make sure they belong to the class
         of coupling orders perturbed. """
         
+        if self.opt['keep_mixed_loop']:
+            logger.critical('bypass filter loop for perturbative orders')
+            return
+
         # First define what are the set of particles allowed to run in the loop.
         allowedpart=[]
         for part in self['process']['model']['particles']:
@@ -542,6 +546,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
     def check_factorization(self,user_orders):
         """ Makes sure that all non perturbed orders factorize the born diagrams
         """
+
+        if 'keep_mixed_loop' in self.opt and self.opt['keep_mixed_loop']:
+            logger.critical('Bypass check on loop factorization')
+            return
+
+
         warning_msg = "All Born diagrams do not factorize the same sum of power(s) "+\
           "of the the perturbed order(s) %s.\nThis is potentially dangerous"+\
           " as the real-emission diagrams from aMC@NLO will not be consistent"+\
@@ -589,7 +599,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 res.append('%s=*'%order)
         return ','.join(res)
 
-    def generate_diagrams(self, loop_filter=None, diagram_filter=None):
+    def generate_diagrams(self,  loop_filter=None, diagram_filter=None, opt={}):
         """ Generates all diagrams relevant to this Loop Process """
 
         # Description of the algorithm to guess the leading contribution.
@@ -730,21 +740,22 @@ class LoopAmplitude(diagram_generation.Amplitude):
     
         # Make sure to warn the user if we already possibly excluded mixed order
         # loops by smartly setting up the orders
-        warning_msg = ("Some loop diagrams contributing to this process might "+\
-        "be discarded because they are not pure (%s)-perturbation.\nMake sure"+\
-        " there are none or that you did not want to include them.")%(\
-                            ','.join(self['process']['perturbation_couplings']))
-        
-        if self['process']['has_born']:
-            for order in model['coupling_orders']:
-                if order not in self['process']['perturbation_couplings']:
-                    try:
-                        if self['process']['orders'][order]< \
-                                     self['born_diagrams'].get_max_order(order):
-                            logger.warning(warning_msg)
-                            break
-                    except KeyError:
-                        pass
+        if not self.opt['keep_mixed_loop']:
+            warning_msg = ("Some loop diagrams contributing to this process might "+\
+            "be discarded because they are not pure (%s)-perturbation.\nMake sure"+\
+            " there are none or that you did not want to include them.")%(\
+                                ','.join(self['process']['perturbation_couplings']))
+            
+            if self['process']['has_born']:
+                for order in model['coupling_orders']:
+                    if order not in self['process']['perturbation_couplings']:
+                        try:
+                            if self['process']['orders'][order]< \
+                                        self['born_diagrams'].get_max_order(order):
+                                logger.warning(warning_msg)
+                                break
+                        except KeyError:
+                            pass
 
         # Now we can generate the loop diagrams.
         totloopsuccessful=self.generate_loop_diagrams()

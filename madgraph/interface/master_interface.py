@@ -269,7 +269,7 @@ class Switcher(object):
                     'The NLO mode %s is not valid. Please chose one among: %s' \
                     % (nlo_mode, ' '.join(self._valid_nlo_modes)))
                 elif nlo_mode in ['all', 'real', 'LOonly']:
-                    self._fks_multi_proc = fks_base.FKSMultiProcess()
+                    self._fks_multi_proc = fks_base.FKSMultiProcess(options=self.options)
                     self.change_principal_cmd('aMC@NLO')
                 elif nlo_mode == 'virt' or nlo_mode == 'virtsqr':
                     self.change_principal_cmd('MadLoop')
