@@ -494,7 +494,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         """ Filter the loop diagrams to make sure they belong to the class
         of coupling orders perturbed. """
         
-        if self.opt['keep_mixed_loop']:
+        if 'keep_mixed_loop' in self.opt and self.opt['keep_mixed_loop']:
             logger.critical('bypass filter loop for perturbative orders')
             return
 
@@ -740,7 +740,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
     
         # Make sure to warn the user if we already possibly excluded mixed order
         # loops by smartly setting up the orders
-        if not self.opt['keep_mixed_loop']:
+        if 'keep_mixed_loop' not in self.opt or not self.opt['keep_mixed_loop']:
             warning_msg = ("Some loop diagrams contributing to this process might "+\
             "be discarded because they are not pure (%s)-perturbation.\nMake sure"+\
             " there are none or that you did not want to include them.")%(\

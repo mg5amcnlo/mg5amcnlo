@@ -533,7 +533,6 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                       ('QED: %d,  QCD: %d\n' % (qed, qcd)) + \
                       'Please specify the coupling orders from the command line.')
 
-            misc.sprint(self.options)
             if self.options['nlo_mixed_expansion']:
                 orders = {'QED': 2*qed, 'QCD': 2*qcd}
                 # set all the other coupling to zero
