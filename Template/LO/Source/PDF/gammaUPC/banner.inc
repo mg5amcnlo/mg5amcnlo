@@ -15,6 +15,6 @@
     WRITE(*,*)"|                                                             |"
     WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
     WRITE(*,*)"|                                                             |"
-    WRITE(*,*)"|    Please cite arXiv:22MM.XXXXX                             |"
+    WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
     WRITE(*,*)"|                                                             |"
     WRITE(*,*)"==============================================================="
