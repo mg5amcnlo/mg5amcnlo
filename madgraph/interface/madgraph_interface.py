@@ -8022,13 +8022,19 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.options[args[0]] = args[1]
         elif args[0] in self.options_hidden:
             logger.critical("You are updating a HIDDEN parameter of MG5aMC(%s). This parameter is hidden for good reason. We do not provide any support for code generated with such flag (not even retro-compatibility)", args[0])
-            if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
+            if args[1] in ['None','True','False','T','F']:
+                if args[1] == 'None':
+                    self.options[args[0]] = None
+                else:
+                    self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             else:
                 self.options[args[0]] = args[1]
         elif args[0] in self.options:
-            if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
+            if args[1] in ['None','True','False','T','F']:
+                if args[1] == 'None':
+                    self.options[args[0]] = None
+                else:
+                    self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             else:
                 self.options[args[0]] = args[1]
 
