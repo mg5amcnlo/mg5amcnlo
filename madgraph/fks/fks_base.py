@@ -133,9 +133,15 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         if 'nlo_mixed_expansion' in options:
             self['nlo_mixed_expansion'] = options['nlo_mixed_expansion']
-            del options['nlo_mixed_expansion']
+            #del options['nlo_mixed_expansion']
         else:
             self['nlo_mixed_expansion'] = True
+
+        if 'keep_mixed_loop' in options:
+            self['keep_mixed_loop'] = options['keep_mixed_loop']
+        else:
+            self['keep_mixed_loop'] = False
+
 
 
         #swhich the other loggers off
@@ -152,12 +158,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         olp='MadLoop'
         if 'OLP' in list(options.keys()):
             olp = options['OLP']
-            del options['OLP']
+            #del options['OLP']
 
         self['init_lep_split']=False
         if 'init_lep_split' in list(options.keys()):
             self['init_lep_split']=options['init_lep_split']
-            del options['init_lep_split']
+            #del options['init_lep_split']
 
         ncores_for_proc_gen = 0
         # ncores_for_proc_gen has the following meaning
@@ -166,11 +172,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         #   -1 : use all cores
         if 'ncores_for_proc_gen' in list(options.keys()):
             ncores_for_proc_gen = options['ncores_for_proc_gen']
-            del options['ncores_for_proc_gen']
+            #del options['ncores_for_proc_gen']
 
         try:
             # Now generating the borns for the first time.
-            super(FKSMultiProcess, self).__init__(procdef, **options)
+            tokeep_options = ['argument', 'collect_mirror_procs', 'ignore_six_quark_processes', 'optimize', 'loop_filter', 'diagram_filter']
+            new_options = dict((key, value) for key,value in options.items() if key in tokeep_options)
+
+            super(FKSMultiProcess, self).__init__(procdef, **new_options)
 
         except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
@@ -364,7 +373,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                                              'Process', ''),
                         i + 1, len(self['born_processes'])))
             try:
-                myamp = loop_diagram_generation.LoopAmplitude(myproc,  
+                myamp = loop_diagram_generation.LoopAmplitude(myproc, 
+                                                opt={'keep_mixed_loop':self['keep_mixed_loop']} ,
                                                 loop_filter=self['loop_filter'])
                 born.virt_amp = myamp
             except InvalidCmd:
