@@ -1661,7 +1661,7 @@ CONTAINS
     IMPLICIT NONE
     REAL(KIND(1d0)),INTENT(IN)::Q
     REAL(KIND(1d0))::ChargeFormFactor_dipole_proton
-    REAL(KIND(1d0)),PARAMETER::aa=1.40845d0 ! in unit of GeV-1 = 1/(0.71 GeV)
+    REAL(KIND(1d0)),PARAMETER::aa=1.1867816581938533d0 ! in unit of GeV-1 = 1/(sqrt(0.71) GeV)
     REAL(KIND(1d0))::QA
     QA=Q*aa
     ChargeFormFactor_dipole_proton=1d0/(1d0+QA**2)**2
