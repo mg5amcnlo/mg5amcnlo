@@ -1,0 +1,14 @@
+   IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+      nuclearA_beam1=0
+      nuclearZ_beam1=0
+   ELSE
+      nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+      nuclearZ_beam1=nb_proton(1)
+   ENDIF
+   IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+      nuclearA_beam2=0
+      nuclearZ_beam2=0
+   ELSE
+      nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+      nuclearZ_beam2=nb_proton(2)
+   ENDIF

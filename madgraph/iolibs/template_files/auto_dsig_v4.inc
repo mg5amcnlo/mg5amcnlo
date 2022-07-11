@@ -50,6 +50,10 @@ C
       double precision ee_comp_prod
 %(ee_comp_vars)s
       integer i_ee
+C
+C     STUFF FOR UPC
+C
+      double precision photonpdfsquare
 C  
 C EXTERNAL FUNCTIONS
 C  

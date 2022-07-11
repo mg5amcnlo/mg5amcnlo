@@ -25,10 +25,14 @@ else
   PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o eepdf.o gridpdfaux.o dfint.o kerset.o ElectroweakFluxDriver.o ElectroweakFlux.o
 endif
 
-all: $(LIBDIR)$(LIBRARY)
+all: $(LIBDIR)$(LIBRARY) makefile_gammaUPC
 
 $(LIBDIR)$(LIBRARY): $(PDF)
 	$(call CREATELIB, $@, $^)
 
+makefile_gammaUPC:
+	(cd ./gammaUPC ; make clean ; make ; cd ../)
+
 clean:
-	$(RM) *.o $(LIBDIR)$(LIBRARY)
+	@($(RM) *.o $(LIBDIR)$(LIBRARY))
+	@(cd ./gammaUPC ; make clean ; cd ../)

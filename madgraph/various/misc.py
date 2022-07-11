@@ -865,8 +865,8 @@ def rm_old_compile_file():
     
     # remove related libraries
     libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
-                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
-                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libgammaUPC.a','libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so', 'libgammaUPC.so']
     lib_pos='./lib'
     [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
                                  if os.path.exists(os.path.join(lib_pos, lib))]
