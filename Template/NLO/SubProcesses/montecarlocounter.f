@@ -2097,7 +2097,7 @@ c
             endif
          enddo
          if (pT.eq.99d99) then
-            if (ptparton_computed) then
+            if (.not.ptparton_computed) then
                ptparton=compute_pTparton(p)
                ptparton_computed=.true.
             endif
@@ -2155,7 +2155,7 @@ c
                if (.not. dzones2(i1bar,i2bar)) then
                   t(i1,i2)=xscales2(i1bar,i2bar)
                else
-                  if (ptparton_computed) then
+                  if (.not.ptparton_computed) then
                      ptparton=compute_pTparton(p)
                      ptparton_computed=.true.
                   endif
@@ -4396,8 +4396,7 @@ c Sum of final-state transverse masses
 c Safety threshold for the reference scale
          ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
       elseif (cur_part.eq.0) then
-         call get_global_ref_sc(p, ref_sc)
-         
+         call get_global_ref_sc(p,ref_sc)
       else
 ! in the case of mc@nlo-delta, make the scalar reference scale equal to
 ! the corresponding element of the ref scale array, i.e., the fks-father
@@ -4410,56 +4409,6 @@ c Safety threshold for the reference scale
       return
       end
 
-      subroutine get_global_ref_sc(p,ref_sc)
-      implicit none
-      include 'nexternal.inc'
-      double precision p(0:3,nexternal-1),ref_sc,pQCD(0:3,nexternal-1)
-     $     ,palg,sycut,rfj,pjet(0:3,nexternal-1)
-      integer i,j,NN,Nmass,njet,jet(nexternal-1)
-      double precision sumdot,pt,get_mass_from_id
-     $     ,amcatnlo_fastjetdmergemax
-      integer get_color
-      external sumdot,pt,get_color,get_mass_from_id
-     $     ,amcatnlo_fastjetdmergemax
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL  IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-      integer fks_j_from_i(nexternal,0:nexternal)
-     &     ,particle_type(nexternal),pdg_type(nexternal)
-      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
- ! start from s-hat      
-      ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
-      NN=0
-      Nmass=0
-      do j=nincoming+1,nexternal
-         if (is_a_j(j))then
-            NN=NN+1
-            do i=0,3
-               pQCD(i,NN)=p(i,j)
-            enddo
-         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
-     $           abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
-! reduce by ET of massive QCD particles
-            ref_sc=min(ref_sc,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
-         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
-     $           abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
-            write (*,*) 'Error in assign_ref_scale(): colored'/
-     $           /' massless particle that does not enter jets'
-            stop 1
-         endif
-      enddo
-! reduce by kT-cluster scale of massless QCD partons
-      if (NN.eq.1) then
-         ref_sc=min(ref_sc,pt(pQCD(0,1)))
-      elseif (NN.ge.2) then
-         palg=1d0
-         sycut=0d0
-         rfj=1d0
-         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
-     &        pjet,njet,jet)
-         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
-      endif
-      end
       
       subroutine assign_ref_scale_array(p,ref_sc_a)
       implicit none
@@ -4484,6 +4433,57 @@ c
       return
       end
 
+      subroutine get_global_ref_sc(p,ref_sc)
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal-1),ref_sc,pQCD(0:3,nexternal-1)
+     $     ,palg,sycut,rfj,pjet(0:3,nexternal-1)
+      integer i,j,NN,Nmass,njet,jet(nexternal-1)
+      double precision sumdot,pt,get_mass_from_id
+     $     ,amcatnlo_fastjetdmergemax
+      integer get_color
+      external sumdot,pt,get_color,get_mass_from_id
+     $     ,amcatnlo_fastjetdmergemax
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+ ! start from s-hat      
+      ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
+      NN=0
+      Nmass=0
+      do j=nincoming+1,nexternal-1
+         if (is_a_j(j))then
+            NN=NN+1
+            do i=0,3
+               pQCD(i,NN)=p(i,j)
+            enddo
+         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+     $           abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
+!     reduce by ET of massive QCD particles
+            
+            ref_sc=min(ref_sc,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
+         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+     $           abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
+            write (*,*) 'Error in assign_ref_scale(): colored'/
+     $           /' massless particle that does not enter jets'
+            stop 1
+         endif
+      enddo
+! reduce by kT-cluster scale of massless QCD partons
+      if (NN.eq.1) then
+         ref_sc=min(ref_sc,pt(pQCD(0,1)))
+      elseif (NN.ge.2) then
+         palg=1d0
+         sycut=0d0
+         rfj=1d0
+         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     &        pjet,njet,jet)
+         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
+      endif
+      end
 
       subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
