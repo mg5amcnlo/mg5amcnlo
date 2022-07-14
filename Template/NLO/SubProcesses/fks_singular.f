@@ -3259,8 +3259,6 @@ c Safety measure
          do i=1,nexternal
             do j=1,nexternal
                if(j.eq.i)cycle
-               SCALUP_a(iFKS,i,j)=min(SCALUP_a(iFKS,i,j),
-     &              sqrt((1d0-xi_i_fks_ev)*shat_ev))
                if (SCALUP_a(iFKS,i,j).ne.-1d0) then
                   SCALUP_a(iFKS,i,j)=max(SCALUP_a(iFKS,i,j),scaleMCcut)
                endif
