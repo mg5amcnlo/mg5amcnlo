@@ -98,7 +98,7 @@ extern "C" {
     //pythia.readString("merging:doptlundmerging = on");
     pythia.readString("Merging:doMerging = on");
     pythia.readString("Merging:runtimeAMCATNLOInterface = on");
-    pythia.readString("aMC@NLO:debugScales = on");
+    pythia.readString("aMC@NLO:debugScales = off");
     pythia.settings.word("Merging:Process", processString);
     //pythia.readString("merging:tms = 1000000");
     pythia.readString("merging:includeWeightInXSection = off");
