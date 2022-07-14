@@ -1717,220 +1717,7 @@ c Checks
       enddo
 
       call set_SCALUP_tmp_H(are_col_conn_H,are_col_conn_S,iBtoR,iRtoB
-     $     ,xscales2,dzones2,p,SCALUP_tmp_H3)
-      
-c
-c Scales written onto the LHE file for H events.
-c For notational consistency with the case of SCALUP_tmp_S, the array that
-c contains these scales is called SCALUP_tmp_H. If the scales are identified
-c with the target scales, SCALUP_tmp_H is a copy of xscales, but this is
-c only one of the possible options. Furthermore, at this point of the code
-c xscales is correctly labelled with 1<=i,j<=nexternal, but lacks the entries 
-c relevant to i and j equal to i_fks; these will be provided later
-      SCALUP_tmp_H=-1d0
-      do i=1,nexternal
-         icount=0
-         do j=1,nexternal
-            if(i.eq.j.or.i.eq.i_fks.or.i.eq.j_fks)cycle
-            if(iHscale.eq.0)then
-              if(are_col_conn_H(i,j))then
-                if(iRtoB(j).gt.0) then
-                  if(are_col_conn_S(iRtoB(i),iRtoB(j)))then
-c If the H-event colour line corresponds to an S-event colour line that
-c connects the two partons whose labels are obtained from mapping the 
-c labels at the real-emission level, the content of xscales() must be right
-                     SCALUP_tmp_H(i,j)=xscales(i,j)
-                   endif
-                else
-c Otherwise, an S-event colour line must have been broken, which can happen
-c only in the splitting mother->i_fks+j_fks. If j=j_fks, the previous if clause
-c must be fulfilled, which leaves one with only the case j=i_fks to deal with
-                  if(j.ne.i_fks)then
-                     write(*,*)'Error #6 in complete_xmcsubt:',
-     &                   i,j,i_fks,j_fks
-                    stop
-                  else
-                     SCALUP_tmp_H(i,j)=xscales(i,j_fks)
-                  endif
-                endif
-              endif
-            elseif(iHscale.eq.1)then
-              if(are_col_conn_H(i,j))then
-                SCALUP_tmp_H(i,j)=dipole_mass(p,i,j)
-                icount=icount+1
-              endif
-            else
-              write(*,*)'Error in complete_xmcsubt:'
-              write(*,*)' unknown iHscale:',iHscale
-              stop
-            endif
-         enddo
-         if(iHscale.eq.1)then
-           if( (pdg_type(i).eq.21.and.icount.ne.2) .or.
-     #         (abs(pdg_type(i)).le.6.and.icount.ne.1) )then
-              write(*,*)'Error #1 in complete_xmcsubt:',
-     #                  i,pdg_type(i),icount
-              stop
-           endif
-         endif
-      enddo
-c
-c Assignment of shower scale for i_fks and j_fks. The scales for i_fks are not
-c present in xscales, while those for j_fks get overwritten below, so to
-c have it identical to the scales for i_fks. First clean up
-      do i=1,nexternal
-        SCALUP_tmp_H(i_fks,i)=-1.d0
-        SCALUP_tmp_H(j_fks,i)=-1.d0
-      enddo
-      jbar=iRtoB(j_fks)
-      if(iBtoR(jbar).ne.j_fks)then
-        write(*,*)'Error #2 in complete_xmcsubt:',
-     #            j_fks,jbar,iRtoB(j_fks),iBtoR(jbar)
-      endif
-      icount=0
-      fksscales(1)=-1.d0
-      fksscales(2)=-1.d0
-      ifksscl(1)=0
-      ifksscl(2)=0
-      do i=1,nexternal-1
-        if(are_col_conn_S(jbar,i).and.i.ne.jbar)then
-          icount=icount+1
-          fksscales(icount)=xscales(iBtoR(jbar),iBtoR(i))
-          if(abs(IDUP_S(jbar)).le.6)then
-c Here and just below: in the case of more sophisticated scale
-c assignments (in assign_ifks_Hscale), this could be replaced by:
-c  ifksscl(icount)=iBtoR(i)
-            ifksscl(icount)=1
-          elseif(IDUP_S(jbar).eq.21)then
-            if(are_col_conn_H(i_fks,iBtoR(i)))
-     #        ifksscl(icount)=1
-          endif
-        endif
-      enddo
-      if (isspecial(jflow)) then
-         if (icount.eq.1 .and. IDUP_S(jbar).eq.21) then
-            icount=2
-            fksscales(2)=fksscales(1)
-            if (ifksscl(1).eq.0) then
-               ifksscl(2)=1
-            else
-               ifksscl(2)=0
-            endif
-         else
-            write (*,*) 'error in complete_xmcsubt 33: '/
-     &           /'when "special" icount should be 1 and '/
-     &           /'the father a gluon'
-            stop 1
-         endif
-      endif
-      if( (IDUP_S(jbar).eq.21.and.icount.ne.2) .or.
-     #    (abs(IDUP_S(jbar)).le.6.and.icount.ne.1) )then
-         write(*,*)'Error #3 in complete_xmcsubt:',
-     #             jbar,IDUP_S(jbar),icount
-         stop
-      endif
-c Associate a single scale with i_fks and j_fks;
-c what follows can be generalised if need be
-      call assign_ifks_Hscale(IDUP_S(jbar),ifksscl,fksscales)
-      do i=1,nexternal
-        if(are_col_conn_H(i_fks,i))SCALUP_tmp_H(i_fks,i)=fksscales(3)
-c The assignments for (j_fks,*) stem from MC considerations; in particular,
-c they guarantee a symmetric treatment of i_fks and j_fks in the case of
-c final-state branchings, and a shower from an initial-state j_fks
-c that respects the ordering in t. Note that assigments driven by
-c matrix-element considerations could be significantly different
-        if(are_col_conn_H(j_fks,i))SCALUP_tmp_H(j_fks,i)=fksscales(3)
-      enddo
-c Final consistency checks
-      do i=1,nexternal
-         icount=0
-         do j=1,nexternal
-           if(are_col_conn_H(i,j))then
-             if(SCALUP_tmp_H(i,j).ne.-1.d0)icount=icount+1
-           else
-             if(SCALUP_tmp_H(i,j).ne.-1.d0)then
-               write(*,*)'Error #4 in complete_xmcsubt:',
-     #          i,j,pdg_type(i),pdg_type(j),i_fks,j_fks,SCALUP_tmp_H(i,j)
-               do k=1,nexternal
-                 write(*,*)k,ICOLUP_H(1,k),ICOLUP_H(2,k)
-               enddo
-               stop
-             endif
-           endif
-         enddo
-         if( (pdg_type(i).eq.21.and.icount.ne.2) .or.
-     #       (abs(pdg_type(i)).le.6.and.icount.ne.1) )then
-           write(*,*)'Error #5 in complete_xmcsubt:',
-     #                i,pdg_type(i),icount
-           stop
-         endif
-      enddo
-
-c Overwrite the H-event scales when the H-event configuration cannot be
-c generated from the S-event one by the shower (i.e., it is in the dead
-c zone). Use the dipole masses of the n+1-body configuration for the
-c scales. (In anti-collinear+soft configurations these could be
-c small. Might check at some point using larger values for those).
-      do i1=1,nexternal-1
-         do i2=1,nexternal-1
-            if (.not.are_col_conn_S(i1,i2)) cycle
-            if (.not.dzones2(i1,i2)) cycle
-            ! check that i or j is equal to the mother, and that the
-            ! other one is connected to i_fks at the H-event level. This
-            ! is then the dipole that emitted i_fks.
-            if ((i1.eq.iRtoB(j_fks) .and.
-     $                   are_col_conn_H(iBtoR(i2),i_fks)) .or.
-     $          (i2.eq.iRtoB(j_fks) .and.
-     $                   are_col_conn_H(i_fks,iBtoR(i1)))) then
-! this is dipole that emitted i_fks
-               if (are_col_conn_H(iBtoR(i1),i_fks)) 
-     $              SCALUP_tmp_H(iBtoR(i1),i_fks)=
-     $                 sqrt(sumdot(p(0,iBtoR(i1)),p(0,i_fks),1d0))
-               if (are_col_conn_H(i_fks,iBtoR(i2)))
-     $              SCALUP_tmp_H(i_fks,iBtoR(i2))=
-     $              sqrt(sumdot(p(0,i_fks),p(0,iBtoR(i2)),1d0))
-               if (isspecial(jflow)) then
-                  ! in the special case, there is an extra dipole line
-                  ! that connects i1 and i2
-                  if (.not. are_col_conn_H(iBtoR(i1),iBtoR(i2))) then
-                     write (*,*) "ERROR: not connected correctly #13"
-                     stop 1
-                  endif
-                  SCALUP_tmp_H(iBtoR(i1),iBtoR(i2))=
-     $                 sqrt(sumdot(p(0,iBtoR(i1)),p(0,iBtoR(i2)),1d0))
-               endif
-            else
-               if (.not. are_col_conn_H(iBtoR(i1),iBtoR(i2))) then
-                  write (*,*) "ERROR: not connected correctly #12"
-                  stop 1
-               endif
-               SCALUP_tmp_H(iBtoR(i1),iBtoR(i2))=
-     $              sqrt(sumdot(p(0,iBtoR(i1)),p(0,iBtoR(i2)),1d0))
-            endif
-         enddo
-      enddo
-
-c$$$      write (*,*) 'i_fks,j_fks',i_fks,j_fks
-c$$$      do i=1,nexternal
-c$$$         write (*,*) 'SCALUP_tmp_H',SCALUP_tmp_H(i,1:nexternal)
-c$$$      enddo
-c$$$      do i=1,nexternal
-c$$$         write (*,*) 'SCALUP_tmp_H3',SCALUP_tmp_H3(i,1:nexternal)
-c$$$      enddo
-c$$$      do i=1,nexternal-1
-c$$$         write (*,*) 'xscales2',xscales2(i,1:nexternal-1)
-c$$$      enddo
-c$$$      do i=1,nexternal-1
-c$$$         write (*,*) 'dzones2',dzones2(i,1:nexternal-1)
-c$$$     $        ,'   are_col_conn_S',are_col_conn_S(i,1:nexternal-1)
-c$$$      enddo
-c$$$
-c$$$      if (any(SCALUP_tmp_H.ne.SCALUP_tmp_H3)) then
-c$$$         write(*,*)'SCALUP_tmp_H != SCALUP_tmp_H3'
-c$$$         stop 
-c$$$      endif
-      SCALUP_tmp_H = SCALUP_tmp_H3
-      
+     $     ,xscales2,dzones2,p,SCALUP_tmp_H)
 c
 c force IF colour connection to have II scale
 c if a sensible II scale exists
@@ -2289,13 +2076,14 @@ c
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i1,i2,ip,imother,i1bar,i2bar
-      double precision t(nexternal,nexternal),pT
+      double precision t(nexternal,nexternal),pT,pTparton
       integer ipbar,ipbar2
-      double precision sumdot
-      external sumdot,ipbar,ipbar2
-      logical MCpicture
+      double precision compute_pTparton
+      external ipbar,ipbar2,comput_pTparton
+      logical MCpicture,ptparton_computed
       parameter (MCpicture=.true.) ! Switch between MC- and ME-pictures.
 
+      ptparton_computed=.false.
       t(1:nexternal,1:nexternal)=-1d0
       imother=iRtoB(j_fks)
       if (MCpicture) then
@@ -2308,6 +2096,13 @@ c
      &              pT=min(pT,xscales2(imother,i2bar))
             endif
          enddo
+         if (pT.eq.99d99) then
+            if (ptparton_computed) then
+               ptparton=compute_pTparton(p)
+               ptparton_computed=.true.
+            endif
+            pt=ptparton
+         endif
       endif
       do i1=1,nexternal
          do i2=1,nexternal
@@ -2319,7 +2114,6 @@ c
                   i1bar=-99
                else
                   i1bar=ipbar(are_col_conn_H,imother,iRtoB)
-c                  i1bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                   i2bar=imother
                endif
             elseif (i1.eq.j_fks .and. i2.eq.i_fks) then
@@ -2328,7 +2122,6 @@ c                  i1bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                else
                   i1bar=imother
                   i2bar=ipbar(are_col_conn_H,imother,iRtoB)
-c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                endif
             elseif (i1.eq.i_fks .or. i1.eq.j_fks) then
                if (MCpicture) then
@@ -2352,11 +2145,7 @@ c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                   write (*,*) 'This should only happen in the MCpicture'
                   stop 1
                endif
-               if (pT.ne.99d99) then ! at least one is in the life zone
-                  t(i1,i2)=pT
-               else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
-               endif
+               t(i1,i2)=pT
             else
                if (.not.are_col_conn_S(i1bar,i2bar)) then
                   write (*,*) 'Lines not color connected #2',
@@ -2366,7 +2155,11 @@ c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
                if (.not. dzones2(i1bar,i2bar)) then
                   t(i1,i2)=xscales2(i1bar,i2bar)
                else
-                  t(i1,i2)=sqrt(sumdot(p(0,i1),p(0,i2),1d0))
+                  if (ptparton_computed) then
+                     ptparton=compute_pTparton(p)
+                     ptparton_computed=.true.
+                  endif
+                  t(i1,i2)=pTparton
                endif
             endif
          enddo
@@ -2384,6 +2177,45 @@ c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
       SCALUP_tmp_H(1:nexternal,1:nexternal)=t(1:nexternal,1:nexternal)
       end
 
+      double precision function compute_pTparton(p)
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal)
+      double precision pQCD(0:3,nexternal-1),palg,sycut,rfj,pjet(0:3
+     $     ,nexternal-1)
+      integer i,j,NN,njet,jet(nexternal-1)
+      double precision pt,amcatnlo_fastjetdmergemax
+      external pt,amcatnlo_fastjetdmergemax
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      NN=0
+      do j=nincoming+1,nexternal
+         if (is_a_j(j))then
+            NN=NN+1
+            do i=0,3
+               pQCD(i,NN)=p(i,j)
+            enddo
+         endif
+      enddo
+! reduce by kT-cluster scale of massless QCD partons
+      if (NN.eq.1) then
+         compute_pTparton=pt(pQCD(0,1))
+      elseif (NN.ge.2) then
+         palg=1d0
+         sycut=0d0
+         rfj=1d0
+         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     &        pjet,njet,jet)
+         compute_pTparton=sqrt(amcatnlo_fastjetdmergemax(NN-1))
+      else
+         write (*,*) 'Error in compute_pTparton(): '/
+     $        /'Must have at least one QCD parton at the NLO level'
+         stop 1
+      endif
+      end
+
+      
       integer function ipbar(are_col_conn_H,imother,iRtoB)
       ! ipbar is the colour connection of i_fks (if it exists and is not
       ! equal to the mother). Otherwise it is the colour connection of
@@ -2422,37 +2254,6 @@ c                  i2bar=ipbar2(are_col_conn_H,are_col_conn_S,imother,iBtoR)
       endif
       end
       
-
-      integer function ipbar2(are_col_conn_H,are_col_conn_S,imother,
-     &iBtoR)
-      ! ipbar is the colour connection of i_fks (if it exists and is not
-      ! equal to the mother). Otherwise it is the colour connection of
-      ! j_fks. The latter only happens when i_fks is a quark and j_fks
-      ! is an (incoming gluon).
-      implicit none
-      include 'nexternal.inc'
-      logical are_col_conn_H(nexternal,nexternal)
-      logical are_col_conn_S(nexternal-1,nexternal-1)
-      integer imother,iBtoR(nexternal-1),ipb
-      integer            i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-c
-      ipbar2=0
-      do ipb=1,nexternal-1
-         if (are_col_conn_S(ipb,imother) .and.
-     &       (are_col_conn_H(iBtoR(ipb),i_fks).or.
-     &        are_col_conn_H(iBtoR(ipb),j_fks)) ) then
-            ipbar2=ipb
-         endif
-      enddo
-c
-      if (ipbar2.eq.0) then
-         write(*,*)'pbar not found!'
-         stop 1
-      endif
-c
-      return
-      end
 
 
 
@@ -4525,7 +4326,7 @@ c
 
       xscalemax_a=-1d0
       xscalemin_a=-1d0
-      call assign_ref_scale_array(p_born,xi,shat,ref_scale_a)
+      call assign_ref_scale_array(p_born,ref_scale_a)
       do i=1,nexternal-2
          do j=i+1,nexternal-1
             xscalemin_a(i,j)=max(shower_scale_factor*frac_low
@@ -4595,35 +4396,87 @@ c Sum of final-state transverse masses
 c Safety threshold for the reference scale
          ref_sc=max(ref_sc,scaleMClow+scaleMCdelta)
       elseif (cur_part.eq.0) then
-! use born level s-hat
-         ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
+         call get_global_ref_sc(p, ref_sc)
+         
       else
 ! in the case of mc@nlo-delta, make the scalar reference scale equal to
 ! the corresponding element of the ref scale array, i.e., the fks-father
 ! and the partner. (The cur_part is set by the loop over the colour
 ! partners in the compute_xmcsubt_complete subroutine).
-         call assign_ref_scale_array(p,xii,sh,ref_sc_a)
+         call assign_ref_scale_array(p,ref_sc_a)
          fks_father=min(i_fks,j_fks)
          ref_sc=ref_sc_a(fks_father,cur_part)
       endif
       return
       end
 
-
-      subroutine assign_ref_scale_array(p,xii,sh,ref_sc_a)
+      subroutine get_global_ref_sc(p,ref_sc)
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal-1),ref_sc,pQCD(0:3,nexternal-1)
+     $     ,palg,sycut,rfj,pjet(0:3,nexternal-1)
+      integer i,j,NN,Nmass,njet,jet(nexternal-1)
+      double precision sumdot,pt,get_mass_from_id
+     $     ,amcatnlo_fastjetdmergemax
+      integer get_color
+      external sumdot,pt,get_color,get_mass_from_id
+     $     ,amcatnlo_fastjetdmergemax
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+ ! start from s-hat      
+      ref_sc=sqrt(sumdot(p(0,1),p(0,2),1d0))
+      NN=0
+      Nmass=0
+      do j=nincoming+1,nexternal
+         if (is_a_j(j))then
+            NN=NN+1
+            do i=0,3
+               pQCD(i,NN)=p(i,j)
+            enddo
+         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+     $           abs(get_mass_from_id(pdg_type(j))).ne.0d0) then
+! reduce by ET of massive QCD particles
+            ref_sc=min(ref_sc,sqrt((p(0,j)+p(3,j))*(p(0,j)-p(3,j))))
+         elseif (abs(get_color(pdg_type(j))).ne.1 .and.
+     $           abs(get_mass_from_id(pdg_type(j))).eq.0d0) then
+            write (*,*) 'Error in assign_ref_scale(): colored'/
+     $           /' massless particle that does not enter jets'
+            stop 1
+         endif
+      enddo
+! reduce by kT-cluster scale of massless QCD partons
+      if (NN.eq.1) then
+         ref_sc=min(ref_sc,pt(pQCD(0,1)))
+      elseif (NN.ge.2) then
+         palg=1d0
+         sycut=0d0
+         rfj=1d0
+         call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     &        pjet,njet,jet)
+         ref_sc=min(ref_sc,sqrt(amcatnlo_fastjetdmergemax(NN-1)))
+      endif
+      end
+      
+      subroutine assign_ref_scale_array(p,ref_sc_a)
       implicit none
       include "nexternal.inc"
-      include "madfks_mcatnlo.inc"
-      double precision p(0:3,nexternal-1),xii,sh
+      double precision p(0:3,nexternal-1)
       double precision ref_sc_a(nexternal,nexternal)
       double precision ref_sc
       integer i,j
       double precision sumdot
       external sumdot
 c
+      call get_global_ref_sc(p,ref_sc)
+c
       do i=1,nexternal-2
          do j=i+1,nexternal-1
-            ref_sc_a(i,j)=sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0)))
+            ref_sc_a(i,j)=min(sqrt(max(0d0,sumdot(p(0,i),p(0,j),1d0)))
+     $           ,ref_sc)
             ref_sc_a(j,i)=ref_sc_a(i,j)
          enddo
       enddo
