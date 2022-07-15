@@ -881,7 +881,7 @@ def undo_multiline(old_line, new_line):
 def do_multiline(line):
     char_limit = 72
     num_splits = len(line)//char_limit
-    if num_splits != 0 and len(line) != 72 and '!' not in line:
+    if num_splits != 0 and len(line) != 72 and '!' not in line[0:char_limit]:
         split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
         indent = ''
         for char in line[6:]:
