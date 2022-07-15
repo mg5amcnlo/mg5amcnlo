@@ -1478,6 +1478,8 @@ class ConfigFile(dict):
         return dict.__getitem__(self, name.lower())
 
     
+    get = __getitem__
+
     def set(self, name, value, changeifuserset=True, user=False, raiseerror=False):
         """convenient way to change attribute.
         changeifuserset=False means that the value is NOT change is the value is not on default.
@@ -4019,6 +4021,7 @@ class RunCardLO(RunCard):
           e+ e- beam -> lpp:0 ebeam:500
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
+          if "$" is used in syntax force sde_strategy to 1
          """
 
         for block in self.blocks:
@@ -4267,6 +4270,12 @@ class RunCardLO(RunCard):
             if self['ickkw']  == 1:
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
+
+        # forbid to use sde_strategy=1 with $ syntax
+        for proc_list in proc_def:
+            proc = proc_list[0]
+            if proc['forbidden_onsh_s_channels']:
+                self['sde_strategy'] = 1
             
         if 'fix_scale' in proc_characteristic['limitations']:
             self['fixed_ren_scale'] = 1
@@ -5260,7 +5269,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-8)
+        self.add_param("OSThres", 1.0e-13)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

@@ -172,7 +172,7 @@ c     This will be called for any PDG code. We only support (for now) 0-7, and 2
       ireuse = 0
       do i=1,2
 c     Check if result can be reused since any of last two calls
-         if (x.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
+         if (x*nb_hadron.eq.xlast(i) .and. xmu.eq.xmulast(i) .and.
      $        pdlabel.eq.pdlabellast(i) .and. ih.eq.ihlast(i)) then
             ireuse = i
          endif
