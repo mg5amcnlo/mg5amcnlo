@@ -1688,6 +1688,21 @@ c By construction, t_ij are the target scales. For notational consistency
 c with the case of SCALUP_tmp_S2, a copy of xscales2 is created and called
 c SCALUP_tmp_H2, meant to be used in the computation of Delta. 
 
+! Since pythia simply does a one-branch cluster, it does not check if
+! the stopping scale (in xscales) is smaller than the starting scale (as
+! determined by MG5_aMC in SCALUP_tmp_S). If this is the case, put the
+! event in the dead-zone.
+      do i=1,nexternal-1
+         do j=1,nexternal-1
+            if (i.eq.j) cycle
+            if (.not. dzones(iBtoR(i),iBtoR(j))) then
+               if (xscales(iBtoR(i),iBtoR(j)).gt.SCALUP_tmp_S(i,j)) then
+                  dzones(iBtoR(i),iBtoR(j))=.true.
+               endif
+            endif
+         enddo
+      enddo
+      
       SCALUP_tmp_H2=-1d0
       do i=1,nexternal
          if(i.eq.i_fks)cycle
