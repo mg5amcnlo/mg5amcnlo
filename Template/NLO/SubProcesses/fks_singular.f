@@ -2099,8 +2099,8 @@ c while for the S-events we can sum it to the 'i_soft' one.
             unwgt(j,i)=0d0
          enddo
       enddo
+      icontr_sum(0,1:icontr)=0
       do i=1,icontr
-         icontr_sum(0,i)=0
          if (H_event(i)) then
             do ii=1,i
                if (.not.H_event(ii)) cycle
