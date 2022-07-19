@@ -4426,6 +4426,30 @@ c Safety threshold for the reference scale
 
       
       subroutine assign_ref_scale_array(p,ref_sc_a)
+c--------------------------------------------------------------------------
+c     The setting of the reference scales, formerly equal to the dipole
+c     masses, is achieved by taking the minimum between the relevant
+c     dipole mass and a global quantity X, defined as follows:
+c     1. processes without coloured final-state particles: X=sqrt{shat};
+c     2. processes with massless coloured final-state particles: X=first
+c     kt-clustering scale as returned by fastjet;
+c     3. processes with massive coloured final-state particles:
+c     X=minimum of the transverse energies of such particles;
+c     4. processes with both massive and massless coloured final-state
+c     particles: X=minimum of the transverse energies of the massive
+c     particles, and of first kt-clustering scale as returned by fastjet
+c     run over the massless particles.
+c
+c     Possible variants:
+c     - run fastjet over both massless and massive particles, and use
+c     the first kt-clustering scale as returned by fastjet as X in case
+c     4. To be done: check how fastjet deals with masses;
+c     - go more local: on top of defining X as above, for each particle
+c     redefine it as the minimum of itself and of the particle
+c     transverse energy. Drawbacks: unclear why this should be relevant
+c     to final-final dipoles, and possible IR sensitivity in the case
+c     of massless collinear particles.
+c--------------------------------------------------------------------------
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal-1)
