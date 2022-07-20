@@ -102,9 +102,12 @@ class Particle(object):
             self.rwgt = 0
             return
 
-                
+              
         self.event = event
-        self.event_id = len(event) #not yet in the event
+        if event is not None: 
+            self.event_id = len(event) #not yet in the event
+        else:
+            self.event_id = -1 
         # LHE information
         self.pid = 0
         self.status = 0 # -1:initial. 1:final. 2: propagator
@@ -3285,22 +3288,14 @@ class NLO_PARTIALWEIGHT(object):
 
 if '__main__' == __name__:   
     
-    if False:
-        lhe = EventFile('unweighted_events.lhe')
-        #lhe.parsing = False
-        start = time.time()
-        for event in lhe:
-            pass
-        s = time.time()
-        print(s-start)
-#            event.parse_lo_weight()
-#        print('old method -> ', time.time()-start)
-#        lhe = EventFile('unweighted_events.lhe.gz')
-        #lhe.parsing = False
-#        start = time.time()
-#        for event in lhe:
-#            event.parse_lo_weight_test()
-#        print('new method -> ', time.time()-start)    
+
+    # Example 1: adding some missing information to the event (here distance travelled)
+
+
+
+
+
+ 
     
 
     # Example 1: adding some missing information to the event (here distance travelled)
@@ -3320,9 +3315,47 @@ if '__main__' == __name__:
             #write this modify event
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
-        
+
+    # Example 2: heavy edition of the lhe file (replace one particle, adding on particle in the final state)
+    if False: 
+        lhe = EventFile('/Users/omattelaer/Downloads/unweighted_events_laboni.lhe')
+        output = open('/tmp/output_events.lhe', 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+        # Loop over all events
+        for event in lhe:
+            photon = event[0]
+            pa = FourMomentum(photon)
+            E = 27.6
+            pein = FourMomentum(E=E , px=0,py=0, pz=E)
+            peout = pein - pa
+            #compute e_in and e_out
+            e_in = Particle(line="   11 -1 0 0  0 0  %s %s %s %s %s 0 9 " %(pein.px, pein.py, pein.pz, pein.E, pein.mass))
+            e_out = Particle(line="   11 1 1 2 0 0  %s %s %s %s %s 0 9 " % (peout.px, peout.py, peout.pz, peout.E, peout.mass))
+            e_in.event = event
+            #e_in.event_id = 0
+            e_out.event = event
+            #e_out.event_id = 2
+            old_in, event[0] = event[0], e_in
+            event.insert(2, e_out)
+            event.nexternal += 1
+
+            for i, particle in enumerate(event):
+                particle.event_id = i # need to overwrite that due to the displacement/replacement
+                if particle.mother1 == old_in:
+                    particle.mother1 = e_in
+                if particle.mother2 == old_in:
+                    particle.mother2 = e_in
+
+            #write this modify event
+            output.write(str(event))
+            #sys.exit(1)
+        output.write('</LesHouchesEvent>\n')
+
+
+
     # Example 3: Plotting some variable
-    if True:
+    if False:
         lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/it4.lhe')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
