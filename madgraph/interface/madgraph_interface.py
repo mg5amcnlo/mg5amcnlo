@@ -3507,6 +3507,7 @@ This implies that with decay chains:
                     text += " "
                 text += " ".join(order + '=' + str(inter['orders'][order]) \
                                  for order in inter['orders'])
+                text += " " + (inter['type'] if 'type' in inter else '')
                 text += '\n'
             pydoc.pager(text)
 
@@ -3518,7 +3519,7 @@ This implies that with decay chains:
                     print('Special interactions which identify two particles')
                 else:
                     print("Interactions %s has the following property:" % arg)
-                    print(self._curr_model['interactions'][int(arg)-1])
+                    print(self._curr_model['interactions'][int(arg)-1].__str__(couplings=self._curr_model['couplings']))
 
         elif args[0] == 'interactions':
             request_part = args[1:]
@@ -3547,10 +3548,10 @@ This implies that with decay chains:
                         name += part['antiname']
                     name += " "
                 text += "\nInteractions %s has the following property:\n" % name
-                text += str(self._curr_model['interactions'][i])
+                text += self._curr_model['interactions'][i].__str__(couplings=self._curr_model['couplings'])
 
                 text += '\n'
-                print(name)
+                print("%s %s %s" % (name,  inter['orders'], inter['type'] if 'type' in inter else 'tree'))
             if text =='':
                 text += 'No matching for any interactions'
             pydoc.pager(text)

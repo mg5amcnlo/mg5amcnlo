@@ -876,7 +876,7 @@ class Interaction(PhysicsObject):
                           for key in self.get('orders')]))/ \
                max((len(self.get('particles'))-2), 1)
 
-    def __str__(self):
+    def __str__(self, couplings=None):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
         display PDG code of involved particles."""
@@ -892,6 +892,32 @@ class Interaction(PhysicsObject):
             elif isinstance(self[prop], ParticleList):
                 mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
                    ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            elif prop == 'color':
+                mystr += '    \'' + prop + '\': ['
+                tmp = []
+                for i, col in enumerate(self['color']):
+                   tmp.append("c%i = %s" % (i, col))
+                mystr += "%s],\n" % ','.join(tmp)
+
+            elif prop == 'couplings':
+                mystr += '    \'' + prop + '\': {' 
+                tmp = []
+                for (c,l) in self[prop]:
+                    lorname = self['lorentz'][l]
+                    coupling = self[prop][(c,l)]
+                    if couplings:
+                        for running in couplings:
+                            for onecoup in couplings[running]:
+                                if onecoup.name == coupling:
+                                    coupling = "%s=%s" %(coupling, onecoup.expr.replace('mdl_', ''))
+                                    break
+                                else:
+                                    continue
+                            else: 
+                                continue
+                            break    
+                    tmp.append('(c%s, %s): %s' %(c,lorname,coupling))
+                mystr += ',\n                  '.join(tmp) + '}\n'
             else:
                 mystr = mystr + '    \'' + prop + '\': ' + \
                         repr(self[prop]) + ',\n'
