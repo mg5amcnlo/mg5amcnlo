@@ -6156,7 +6156,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.physics.illinois.edu/package_info.dat']
+                         'https://madgraph.mi.infn.it/package_info.dat']
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
@@ -6881,7 +6881,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
             signal.alarm(0)
             text = filetext.read().decode(errors='ignore').split('\n')
             web_version = int(text[0].strip())
@@ -6950,14 +6950,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
+                    path = "https://madgraph.mi.infn.it//binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file

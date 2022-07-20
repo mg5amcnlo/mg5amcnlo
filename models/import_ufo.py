@@ -105,7 +105,7 @@ def get_model_db():
     """return the file with the online model database"""
 
     data_path = ['http://madgraph.phys.ucl.ac.be/models_db.dat',
-                     'http://madgraph.physics.illinois.edu/models_db.dat']
+                     'https://madgraph.mi.infn.it//models_db.dat']
     import random
     import six.moves.urllib.request, six.moves.urllib.parse, six.moves.urllib.error
     r = random.randint(0,1)

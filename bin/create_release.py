@@ -127,7 +127,7 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         last_message = int(text[1].strip())
