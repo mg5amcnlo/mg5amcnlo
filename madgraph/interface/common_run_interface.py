@@ -6728,9 +6728,21 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 pass
             elif pdlabel == 'lhapdf':
                 lhapdf = misc.import_python_lhapdf(lhapdfconfig)
+
                 if lhapdf:
+                    if isinstance(run_card['lhaid'], list):
+                        lhaid= run_card['lhaid'][0]
+                    else:
+                        lhaid = run_card['lhaid']
+
+                    # if supported check first that pdfset is installed (and do it if not)
+                    if hasattr(mecmd, 'copy_lhapdf_set'):
+                        pdfsetsdir = mecmd.get_lhapdf_pdfsetsdir()
+                        mecmd.copy_lhapdf_set([lhaid], pdfsetsdir)
+
+                    old_value = param_card.get('sminputs').get((3,)).value
                     lhapdf.setVerbosity(0)
-                    pdf = lhapdf.mkPDF(run_card['lhaid'])
+                    pdf = lhapdf.mkPDF(lhaid)
                     new_value = pdf.alphasQ(91.1876)
                     param_card.get('sminputs').get((3,)).value = new_value
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
