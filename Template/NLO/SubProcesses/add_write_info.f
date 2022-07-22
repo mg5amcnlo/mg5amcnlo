@@ -6,7 +6,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "coloramps.inc"
+      include "born_coloramps.inc"
       include "nFKSconfigs.inc"
       include "leshouche_decl.inc"
       include "run.inc"
@@ -93,8 +93,8 @@ c For the boost to the lab frame
       data (xdir(i),i=1,3) /0,0,1/
 
 c For (n+1)-body this is the configuration mapping
-      integer            mapconfig(0:lmaxconfigs), this_config
-      common/to_mconfigs/mapconfig, this_config
+      integer            this_config
+      common/to_mconfigs/this_config
 
 c For shifting QCD partons from zero to their mass-shell
       double precision x(99),p(0:3,99)
@@ -124,7 +124,19 @@ c cFKSprocess
      #                fksfather_lhe,ipartner_lhe
       integer colour_connections(2,nexternal)
       common /colour_connections_to_write/ colour_connections
-
+c pt_clust string
+      integer need_matching(nexternal)
+      common /c_need_matching_to_write/ need_matching
+      double precision ptclus
+      CHARACTER temp*600,temp0*7,integ*1,float*18
+      CHARACTER integfour*4      
+      CHARACTER(LEN=1000) ptclusstring
+      common /c_ptclusstring/ ptclusstring
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
 c Set the leshouche info and fks info
 c
@@ -152,31 +164,44 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
-         save_nFKSprocess=nFKSprocess
-         do nFKSprocess=1,FKS_configs
-            call fks_inc_chooser()
-c For the S-events
-            call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
-     $           ,pmass_tree_S_t,pwidth_tree_S_t)
-c For the H-events
-            call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
-     $           ,pmass_tree_H_t,pwidth_tree_H_t)
-            do j=-max_branch,-1
-               itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
-               itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
-               sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
-               pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
-               pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
-               itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
-               itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
-               sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
-               pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
-               pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+         if (firsttime2) then
+c     For the S-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
+     $              ,pmass_tree_S_t,pwidth_tree_S_t)
+               do j=-max_branch,-1
+                  itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
+                  itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
+                  sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
+                  pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
+                  pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+               enddo
             enddo
-         enddo
-         firsttime=.false.
-         nFKSprocess=save_nFKSprocess
-         call fks_inc_chooser()
+            firsttime2=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
+         if (Hevents) then
+c     For the H-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
+     $              ,pmass_tree_H_t,pwidth_tree_H_t)
+               do j=-max_branch,-1
+                  itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
+                  itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
+                  sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
+                  pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
+                  pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
+               enddo
+            enddo
+            firsttime=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
       endif
 c Copy the saved information to the arrays actually used
       if (Hevents) then
@@ -243,11 +268,6 @@ c Assume helicity summed
       do i=1,nexternal
          jpart(7,i)=9
       enddo
-      if (firsttime2 .and. isum_hel.ne.0) then
-         write (*,*) 'WARNING: for writing the events, no helicity '//
-     &        'info is used even though some info could be available.'
-         firsttime2=.false.
-      endif
 c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
@@ -377,6 +397,10 @@ c Use the MadGraph masses in the event file
          call write_masses_lhe_MG()
       endif
 
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
 c
 c Derive the n-body from the (n+1)-body if we are doing S-events
 c
@@ -389,13 +413,15 @@ c
             elseif(i.eq.min(i_fks,j_fks)) then
                if(jpart(1,i_fks).eq.-jpart(1,j_fks)
      &              .and.j_fks.gt.nincoming) then
-                  jpart(1,i) = 21
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
                elseif(jpart(1,i_fks).eq.jpart(1,j_fks)
      &                 .and.j_fks.le.nincoming) then
-                  jpart(1,i)=21
-               elseif(abs(jpart(1,i_fks)).eq.21) then
+                  if (split_type(qcd_pos)) jpart(1,i)=21
+                  if (split_type(qed_pos)) jpart(1,i)=22
+               elseif(abs(jpart(1,i_fks)).eq.21.or.jpart(1,i_fks).eq.22) then
                   jpart(1,i)=jpart(1,j_fks)
-               elseif(jpart(1,j_fks).eq.21.and.j_fks.le.nincoming) then
+               elseif((jpart(1,j_fks).eq.21.or.jpart(1,i_fks).eq.22).and.j_fks.le.nincoming) then
                   jpart(1,i)=-jpart(1,i_fks)
                else
                   write (*,*) 'ERROR #5 in add_write_info()',
@@ -592,6 +618,38 @@ c
             shower_scale_a(ito(i),ito(j))=shower_scale_a(i,j)
          enddo
       enddo
+
+
+! write the ptclusstring that knows about which partons should be
+! considered in the MLM-like matching
+      if (ickkw.eq.3) then
+         if (nincoming.ne.2) then
+            write (*,*) 'Need to incoming particles with ickkw=3 '/
+     $           /'(add_write_info.f)'
+            stop
+         endif
+         temp0='<scales '
+         temp=''
+         do i=nincoming+1,nexpart
+            integfour=''
+            float=''
+            if (need_matching(i).ne.-1) then
+               ptclus=shower_scale
+            else
+               if (nincoming.ne.2) then
+                  write (*,*) 'need two incoming particles '/
+     $                 /'in add_write_info.f'
+                  stop 1
+               endif
+               ptclus=shower_scale-0.001d0
+            endif
+            Write(float,'(f16.5)') ptclus
+            write(integfour,'(i4)') ito(i)
+            temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
+     $           /'="'//trim(adjustl(float))//'"'
+         enddo
+         ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
+      endif
 c
 c     Set the number of particles that needs to be written in event file
 c
@@ -604,111 +662,51 @@ c
       subroutine set_itree(iconfig,Hevents,itree,sprop_tree,pmass_tree
      &     ,pwidth_tree)
       implicit none
-      integer iconfig
+      integer iconfig,iconf
       logical Hevents
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
-      double precision ZERO
-      parameter (ZERO=0d0)
+      include 'nFKSconfigs.inc'
+      include 'real_from_born_configs.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       integer itree(2,-max_branch:-1)
       integer sprop_tree(-max_branch:-1)
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs),mapconfig(0:lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include "born_conf.inc"
-      integer i,j,jj
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
+      integer i,j
       double precision pmass_tree(-nexternal:0)
       double precision pwidth_tree(-nexternal:0)
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-      include "born_props.inc"
-c
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 c Do not really care about t-channels: loop should just go to
-c nexternal-4, even though there is one more when there are t-channels
-c around
-      do j=-(nexternal-4),-1
-         do i=1,2
-            itree(i,j)=iforest(i,j,iconfig)
-         enddo
-         sprop_tree(j)=sprop(j,iconfig)
-         pmass_tree(j)=pmass(j,iconfig)
-         pwidth_tree(j)=pwidth(j,iconfig)
-      enddo
-c
-c When we are doing H-events, we need to add --when j_fks is final
-c state-- the s-channel branching fks_mother -> j_fks + i_fks.  When
-c j_fks is initial state, we need to add a 'bogus' t-channel splitting
-c to make sure that all the loops stop properly
-c
+c nexternal-3 (or 4), even though there is one more when there are
+c t-channels around
       if (Hevents) then
-c must re-label the external particles to get the correct daughters
-         if (i_fks.le.j_fks) then
-            write (*,*) 'ERROR: i_fks should be greater than j_fks'
-            stop
-         endif
+         iconf=real_from_born_conf(iconfig,nFKSprocess)
+         do j=-(nexternal-3),-1
+            do i=1,2
+               itree(i,j)=iforest(i,j,iconf,nFKSprocess)
+            enddo
+            sprop_tree(j)=sprop(j,iconf,nFKSprocess)
+            pmass_tree(j)=pmass(j,iconf,nFKSprocess)
+            pwidth_tree(j)=pwidth(j,iconf,nFKSprocess)
+         enddo
+      else
          do j=-(nexternal-4),-1
             do i=1,2
-               if ( itree(i,j).ge.i_fks ) then
-                  itree(i,j)=itree(i,j)+1
-               endif
+               itree(i,j)=iforest(i,j,iconfig,0)
             enddo
+            sprop_tree(j)=sprop(j,iconfig,0)
+            pmass_tree(j)=pmass(j,iconfig,0)
+            pwidth_tree(j)=pwidth(j,iconfig,0)
          enddo
-c
-         if (j_fks.gt.nincoming) then
-c we must add an extra s-channel. Easiest is to add it all the way at
-c the beginning. Therefore, relabel everything else first. Use the
-c original ones to make sure we are doing it correctly (and not
-c accidentally overwriting something).
-            do j=-(nexternal-4),-1
-               sprop_tree(j-1)=sprop(j,iconfig)
-               pmass_tree(j-1)=pmass(j,iconfig)
-               pwidth_tree(j-1)=pwidth(j,iconfig)
-               do i=1,2
-                  itree(i,j-1)=iforest(i,j,iconfig)
-c Also update the internal references
-                  if ( itree(i,j-1).lt. 0 ) then
-                     itree(i,j-1)=itree(i,j-1)-1
-                  endif
-               enddo
-            enddo
-c
-c Add the new s-channel
-c
-            itree(1,-1)=i_fks
-            itree(2,-1)=j_fks
-c This will never be an on-shell s-channel. Hence, give it some bogus values:
-            sprop_tree(-1)=0
-            pmass_tree(-1)=0d0
-            pwidth_tree(-1)=0d0
-c
-c We have to make sure that the fks_mother (which is equal to the j_fks
-c label of the Born) is replaced by the new s-channel
-c
-            do j=-(nexternal-3),-2 ! do not include the new s-channel
-               do i=1,2
-                  if ( itree(i,j).eq. j_fks ) then
-                     itree(i,j)=-1 ! reference to the new s-channel
-                  endif
-               enddo
-            enddo
-
-         else
-c j_fks is initial state
-            jj=-(nexternal-3)     ! Just add it at the end
-c setting itree to 1 (or 2) makes sure that the loops over s-channel
-c propagators will exit
-            itree(1,jj)=1
-            itree(2,jj)=1
-            sprop_tree(jj)=0
-            pmass_tree(jj)=0d0
-            pwidth_tree(jj)=0d0
-         endif
       endif
-
       return
       end
 
@@ -727,6 +725,7 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
+      include 'nFKSconfigs.inc'
 c
 c     Arguments
 c
@@ -748,6 +747,17 @@ c
 c     External
 c
       double precision dot
+
+c Special for the phase-space mapping in which the grandmother mass is
+c kept fixed between events and counter events:
+      integer igranny
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+
+
 c-----
 c  Begin Code
 c-----      
@@ -771,6 +781,9 @@ c-----
             endif
          enddo
       enddo
+
+      igranny=which_is_granny(nFKSprocess)
+      if (Hevents .and. igranny.ne.0 )igranny=igranny-1
 c
       do i=-1,-iloop,-1                      !Loop over propagators
          onbw(i) = .false.
@@ -781,11 +794,22 @@ c Skip the t-channels
             xp(j,i) = xp(j,itree(1,i))+xp(j,itree(2,i))
          enddo
          if (pwidth(i) .gt. 0d0) then !This is B.W.
-c
+c If s-channel is the grandmother, check if we need to write this
+c resonance. In that case, ignore the bwcutoff parameter. In this case,
+c also ignore the special case where both mother and daughter could be
+c resonant.
+            if (i.eq.igranny .and. .not. write_granny(nFKSprocess))then
+               cycle
+            elseif(i.eq.igranny .and. write_granny(nFKSprocess))then
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell=.true.
+            else
+               xmass = sqrt(dot(xp(0,i),xp(0,i)))
+               onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
+            endif
+c     
 c     If the invariant mass is close to pole mass, set OnBW to true
 c
-            xmass = sqrt(dot(xp(0,i),xp(0,i)))
-            onshell = ( abs(xmass-pmass(i)) .lt. bwcutoff*pwidth(i) )
             if(onshell)then
                OnBW(i) = .true.
 c     If mother and daughter have the same ID, remove one of them
@@ -819,6 +843,7 @@ c                  whichever is closer to mass shell
       enddo
       end
 
+
       subroutine fill_icolor_H(iflow,jpart)
       implicit none
       include "nexternal.inc"
@@ -833,6 +858,9 @@ c      include 'fks.inc'
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
       integer i_part,j_part,imother,lc
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
       call fill_icolor_S(iflow,jpart,lc)
 c
@@ -846,31 +874,66 @@ c
          endif
       enddo
 c
+
+      ! the case of all-colorless particles
+      if (lc.eq.0) lc=500
+
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+        write(*,*) "Error in fill_icolor_H, NOT IMPLEMENTED"
+        stop 1
+      endif
+
       imother=min(i_fks,j_fks)
+      if (imother.lt.1.or.imother.gt.nexternal) then
+        write(*,*) "Error in fill_icolor_H, invalid imother", imother
+        stop 1
+      endif
 c The following works only if i_fks is always greater than j_fks.      
       if (j_fks.gt.nincoming) then
-         if (j_part.eq.3.and.i_part.eq.-3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+         if (j_part.eq.3.and.i_part.eq.-3) then ! g/a > q qb
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #3 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=0
-            jpart(5,i_fks)=jpart(5,imother)
-            jpart(4,j_fks)=jpart(4,imother)
-            jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=jpart(5,imother)
+              jpart(4,j_fks)=jpart(4,imother)
+              jpart(5,j_fks)=0
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=lc+1
+              jpart(4,j_fks)=lc+1
+              jpart(5,j_fks)=0
+            endif
+         elseif (j_part.eq.-3.and.i_part.eq.3) then ! g/a > qb q
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #4 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=jpart(4,imother)
-            jpart(5,i_fks)=0
-            jpart(4,j_fks)=0
-            jpart(5,j_fks)=jpart(5,imother) 
-         elseif (j_part.eq.3.and.i_part.eq.8) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=jpart(4,imother)
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=jpart(5,imother) 
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=lc+1
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=lc+1 
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.8) then ! q > q g
+            if (jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0) then
                write (*,*) 'Error #5 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
@@ -879,8 +942,8 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.8) then
-            if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
+         elseif (j_part.eq.-3.and.i_part.eq.8) then ! qb > qb g
+            if (jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0) then
                write (*,*) 'Error #6 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
@@ -889,7 +952,17 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=jpart(5,imother)
             jpart(4,j_fks)=0
             jpart(5,j_fks)=lc+1
-         elseif (j_part.eq.8.and.i_part.eq.8) then
+         elseif (j_part.eq.3.and.i_part.eq.1) then ! q > q a 
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=jpart(4,imother)
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.-3.and.i_part.eq.1) then ! qb > q a
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=jpart(5,imother)
+         elseif (j_part.eq.8.and.i_part.eq.8) then ! g > g g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #7 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -906,32 +979,59 @@ c The following works only if i_fks is always greater than j_fks.
                jpart(4,j_fks)=lc+1
                jpart(5,j_fks)=jpart(5,imother)
             endif
+         elseif (j_part.eq.1.and.i_part.eq.1) then ! e.g. e+ > e+ gamma
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          else
             write (*,*) 'Error #1 in fill_icolor_H',i_part,j_part
             stop
          endif
       else
-         if (j_part.eq.-3.and.i_part.eq.-3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+         if (j_part.eq.-3.and.i_part.eq.-3) then ! g/a > q qb
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #8 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
                stop
             endif
-            jpart(4,i_fks)=0
-            jpart(5,i_fks)=jpart(4,imother)
-            jpart(4,j_fks)=0
-            jpart(5,j_fks)=jpart(5,imother)
-         elseif (j_part.eq.3.and.i_part.eq.3) then
-            if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=jpart(4,imother)
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=jpart(5,imother)
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=0
+              jpart(5,i_fks)=lc+1
+              jpart(4,j_fks)=0
+              jpart(5,j_fks)=lc+1
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.3) then ! g/a > qb q
+            if ((jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0).and.
+     &          split_type(qcd_pos)) then
                write (*,*) 'Error #9 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother),'HERE'
                stop
             endif
-            jpart(4,i_fks)=jpart(5,imother)
-            jpart(5,i_fks)=0
-            jpart(4,j_fks)=jpart(4,imother)
-            jpart(5,j_fks)=0
-         elseif (j_part.eq.3.and.i_part.eq.8) then
+            if (split_type(qcd_pos)) then
+              ! gluon (octet) splitting, inherit the color of the
+              ! mother
+              jpart(4,i_fks)=jpart(5,imother)
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=jpart(4,imother)
+              jpart(5,j_fks)=0
+            elseif (split_type(qed_pos)) then
+              ! photon (singlet) splitting, add a new color index
+              jpart(4,i_fks)=lc+1
+              jpart(5,i_fks)=0
+              jpart(4,j_fks)=lc+1
+              jpart(5,j_fks)=0
+            endif
+         elseif (j_part.eq.3.and.i_part.eq.8) then ! q > q g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
                write (*,*) 'Error #10 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -941,7 +1041,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=jpart(4,imother)
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=0
-         elseif (j_part.eq.-3.and.i_part.eq.8) then
+         elseif (j_part.eq.-3.and.i_part.eq.8) then ! qb > qb g
             if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #11 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -951,7 +1051,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=0
             jpart(5,j_fks)=lc+1
-         elseif (j_part.eq.8.and.i_part.eq.3) then
+         elseif (j_part.eq.8.and.i_part.eq.3) then ! q > g q
             if(jpart(4,imother).ne.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #12 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -961,7 +1061,7 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=0
             jpart(4,j_fks)=lc+1
             jpart(5,j_fks)=jpart(5,imother)
-         elseif (j_part.eq.8.and.i_part.eq.-3) then
+         elseif (j_part.eq.8.and.i_part.eq.-3) then ! qb > g qb
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).ne.0)then
                write (*,*) 'Error #13 in fill_icolor_H',
      &              jpart(4,imother),jpart(5,imother)
@@ -971,6 +1071,26 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=lc+1
             jpart(4,j_fks)=jpart(4,imother)
             jpart(5,j_fks)=lc+1
+         elseif (j_part.eq.3.and.i_part.eq.1) then ! q > q a 
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=jpart(4,imother)
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.-3.and.i_part.eq.1) then ! qb > qb a
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=jpart(5,imother)
+         elseif (j_part.eq.1.and.i_part.eq.3) then ! q > a q 
+            jpart(4,i_fks)=jpart(5,imother)
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.1.and.i_part.eq.-3) then ! qb > a qb
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=jpart(4,imother)
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          elseif (j_part.eq.8.and.i_part.eq.8) then
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #14 in fill_icolor_H',
@@ -1059,6 +1179,11 @@ c cuts.inc contains maxjetflavor
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
+      include 'orders.inc'
+      logical is_aorg(nexternal)
+      common /c_is_aorg/is_aorg
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 
 c Masses of the real process, as set by MadGraph
       include 'coupl.inc'
@@ -1076,6 +1201,10 @@ c
       xm2=-1.d0
 c WARNING: what follows will need to be reconsidered the case of 
 c QED corrections, for what is relevant to i_fks and j_fks
+      if (split_type(qcd_pos).and.split_type(qed_pos)) then
+          write(*,*) 'ERROR add_write_info not implemented'
+          stop
+      endif
       do i=1,nexternal
         if(i.eq.i_fks)then
           if(pmass(i).ne.0.d0)then
@@ -1090,12 +1219,14 @@ c QED corrections, for what is relevant to i_fks and j_fks
 c S events
             xmi=0.d0
             if(idparti.eq.-idpartj.and.j_fks.gt.nincoming) then
-               idpart=21
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
             elseif(idparti.eq.idpartj.and.j_fks.le.nincoming) then
-               idpart=21
-            elseif(abs(idparti).eq.21) then
+               if (split_type(qcd_pos)) idpart=21
+               if (split_type(qed_pos)) idpart=22
+            elseif(is_aorg(i_fks)) then
                idpart=idpartj
-            elseif(idpartj.eq.21.and.j_fks.le.nincoming) then
+            elseif(is_aorg(j_fks).and.j_fks.le.nincoming) then
                idpart=-idparti
             else
                write(*,*)'Error #2 in put_on_MC_mshell',
@@ -1109,7 +1240,7 @@ c S events
               xmj=mcmass(idpart)
             else
 c j_fks is an heavy particle
-              if(abs(idparti).ne.21)then
+              if(.not.is_aorg(i_fks))then
                 write(*,*)'Error #3 in put_on_MC_mshell',
      &            i_fks,j_fks,i,pmass(j_fks)
                 stop
@@ -1138,9 +1269,11 @@ c H events
      #          ( (abs(idpartj).eq.4.or.abs(idpartj).eq.5) .and.
      #            pmass(j_fks).eq.0.d0 ) )then
               xmj=mcmass(idpartj)
+            elseif(idpartj.eq.22) then
+              xmj=0d0
             else
 c j_fks is an heavy particle
-              if(idparti.ne.21)then
+              if(.not.is_aorg(i_fks))then
                 write(*,*)'Error #3 in put_on_MC_mshell',
      &            i_fks,j_fks,i,pmass(j_fks),(jpart(1,j),j=1,nexternal)
                 stop

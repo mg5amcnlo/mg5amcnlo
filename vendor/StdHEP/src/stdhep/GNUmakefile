@@ -17,7 +17,7 @@ SINC = $(STDHEP_DIR)/src/inc
 INCS = -I$(SINC) -I$(STDHEP_DIR)/mcfio/src \
        -I$(SINC)/isajet -I$(SINC)/pythia -I$(SINC)/herwig \
        -I$(SINC)/qq -I$(SINC)/dpm
-CFLAGS += -I$(SINC) -I$(STDHEP_DIR)/mcfio/src
+CFLAGS += -I$(SINC) -I$(STDHEP_DIR)/mcfio/src -I/usr/include/tirpc
 CPPFLGS = $(KPPFLAGS) $(INCS)
 
 FOBJS =	$(patsubst %.F,%$(SFX).o,$(wildcard *.F))

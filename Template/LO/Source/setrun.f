@@ -106,6 +106,22 @@ c     if no matching ensure that no pdfreweight are done
      $     sign((abs(pol(1))-1)*100,pol(1)),
      $     sign((abs(pol(2))-1)*100,pol(2))
 
+
+      if(pdlabel.eq.'eva') then
+            ! pbX=-100 (pure LH beam) => fLpol=1.0 (in eva)
+            ! pbX=0    (RH + LH beam) => fLpol=0.5 (in eva)
+            ! pbX=+100 (pure RH beam) => fLpol=0.0 (in eva)
+            pol(1) = (-1d0/200d0)*pb1 + 0.5d0
+            pol(2) = (-1d0/200d0)*pb2 + 0.5d0
+      else
+            if(pdsublabel(1).eq.'eva') then
+                  pol(1) = (-1d0/200d0)*pb1 + 0.5d0
+            endif
+            if(pdsublabel(2).eq.'eva') then
+                  pol(2) = (-1d0/200d0)*pb2 + 0.5d0
+            endif
+      endif
+
 c !!! Default behavior changed (MH, Aug. 07) !!!
 c If no pdf, read the param_card and use the value from there and
 c order of alfas running = 2
@@ -132,10 +148,10 @@ C     If use_syst, ensure that all variational parameters are 1
 c           In principle this should be always the case since the
 c           banner.py is expected to correct such wrong run_card.
       if(use_syst)then
-         if(scalefact.ne.1)then
-            write(*,*) 'Warning: use_syst=T, setting scalefact to 1'
-            scalefact=1
-         endif
+c         if(scalefact.ne.1)then
+c            write(*,*) 'Warning: use_syst=T, setting scalefact to 1'
+c            scalefact=1
+c         endif
          if(alpsfact.ne.1)then
             write(*,*) 'Warning: use_syst=T, setting alpsfact to 1'
             alpsfact=1
@@ -152,6 +168,10 @@ C       Fill common block for Les Houches init info
           idbmup(i)=11
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
+        elseif(lpp(i).eq.4) then
+            idbmup(i)=13
+        elseif(lpp(i).eq.-4) then
+            idbmup(i)=-13
         elseif(lpp(i).eq.0) then
           idbmup(i)=idup(i,1,1)
         else
@@ -179,10 +199,13 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=16)
+      parameter (npdfs=19)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
+     $   'eva',
+     $   'iww',
+     $     'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
      $   'cteq4_m',
@@ -201,6 +224,9 @@ C-------------------------------------------------
       integer numspdf(npdfs)
       data numspdf/
      $   00000,
+     $   00000,
+     $   00000,
+     $   00000, 
      $   20250,
      $   20270,
      $   19150,

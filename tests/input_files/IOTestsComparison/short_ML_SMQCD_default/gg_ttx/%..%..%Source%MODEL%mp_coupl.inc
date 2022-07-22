@@ -12,11 +12,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON/MP_RSCALE/ MP__MU_R
 
 
-      REAL*16 MP__MDL_MH,MP__MDL_MTA,MP__MDL_MW,MP__MDL_MB,MP__MDL_MZ
-     $ ,MP__MDL_MT
+      REAL*16 MP__MDL_MB,MP__MDL_MH,MP__MDL_MT,MP__MDL_MTA,MP__MDL_MW
+     $ ,MP__MDL_MZ
 
-      COMMON/MP_MASSES/ MP__MDL_MH,MP__MDL_MTA,MP__MDL_MW,MP__MDL_MB
-     $ ,MP__MDL_MZ,MP__MDL_MT
+      COMMON/MP_MASSES/ MP__MDL_MB,MP__MDL_MH,MP__MDL_MT,MP__MDL_MTA
+     $ ,MP__MDL_MW,MP__MDL_MZ
 
 
       REAL*16 MP__MDL_WH,MP__MDL_WT,MP__MDL_WW,MP__MDL_WZ

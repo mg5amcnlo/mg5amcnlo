@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 ################################################################################
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
@@ -84,8 +84,8 @@ class Compile_MG5:
 
     def test_output_NLO(self):
         """do the output of a simple LO process to ensure that LO is correctly configure."""
-        self.cmd.exec_cmd('generate p p > e+ ve [QCD]')
-        self.cmd.exec_cmd('output %s/TESTNLO' %root_path)
+        self.cmd.run_cmd('generate p p > e+ ve [QCD]')
+        self.cmd.run_cmd('output %s/TESTNLO' %root_path)
         shutil.rmtree('%s/TESTNLO' % root_path)
 
     @staticmethod
@@ -295,9 +295,9 @@ class Compile_MG5:
 
     def precompilation(self, debug=False):
         if debug:
-            subprocess.call('python -m compileall .', shell=True, cwd=root_path)            
+            subprocess.call('python3 -m compileall .', shell=True, cwd=root_path)            
         else:
-            subprocess.call('python -O -m compileall .', shell=True, cwd=root_path)
+            subprocess.call('python3 -O -m compileall .', shell=True, cwd=root_path)
 
 if __name__ == '__main__':
     Compile_MG5(sys.argv[1:])

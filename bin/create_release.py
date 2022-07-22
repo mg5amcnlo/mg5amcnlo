@@ -113,7 +113,7 @@ if pattern.match(version):
     #valid version format
     # Get current revision number:
     p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
-    rev_nb = p.stdout.read().strip()
+    rev_nb = p.stdout.read().strip().decode()
     logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
 else:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
@@ -127,10 +127,14 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
+        print(text)
         web_version = int(text[0].strip())
-        last_message = int(text[1].strip())
+        if text[1]:
+            last_message = int(text[1].strip())
+        else:
+            last_message = 99
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
@@ -194,7 +198,7 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 # 1. Add information for the auto-update
 if rev_nb:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
-    fsock.write("version_nb   %s\n" % rev_nb)
+    fsock.write("version_nb   %s\n" % int(rev_nb))
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
@@ -220,11 +224,16 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #    logging.error("Error while trying to run epydoc. Do you have it installed?")
 #    logging.error("Execution cancelled.")
 #    sys.exit()
-
+#
 #if status1:
 #    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
 #                 status)
 #    sys.exit()
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
+
 #3. tarring the apidoc directory
 #status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
@@ -255,6 +264,10 @@ collier_link = "http://collier.hepforge.org/collier-latest.tar.gz"
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
 ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
+
+# Add the tarball for SMWidth
+swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
+misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print('Fail to create OfflineHEPToolsInstaller')

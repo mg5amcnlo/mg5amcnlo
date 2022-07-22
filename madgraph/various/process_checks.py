@@ -629,9 +629,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_template(model)
             FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
-            wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
-            wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                                                    for c in l]))
+            wanted_lorentz = misc.make_unique(matrix_element.get_used_lorentz())
+            wanted_couplings = misc.make_unique([c for l in matrix_element.get_used_couplings() \
+                                                                    for c in l])
             FortranExporter.convert_model(model,wanted_lorentz,wanted_couplings)
             FortranExporter.finalize(matrix_element,"",self.cmd.options, ['nojpeg'])
 
@@ -1169,9 +1169,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_template(model)
             FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
-            wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
-            wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
-                                                                for c in l]))
+            wanted_lorentz = misc.make_unique(matrix_element.get_used_lorentz())
+            wanted_couplings = misc.make_unique([c for l in matrix_element.get_used_couplings() \
+                                                                for c in l])
             FortranExporter.convert_model(self.full_model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
@@ -1478,7 +1478,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tools=[1]
         else:
             tools=MLOptions["MLReductionLib"]
-            tools=list(set(tools)) # remove the duplication ones
+            tools=misc.make_unique(tools) # remove the duplication ones
             
         # not self-contained tir libraries
         tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6,'collier':7}

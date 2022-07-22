@@ -5,7 +5,7 @@ C updating the weight of each event, reflecting the relative number of
 C events requested in the splits.
       implicit none
       include 'max_split.inc'
-      character*140 buff
+      character*1000 buff
       character*10 filename
       character*14 filename2
       integer i,j,tot_evts,nevts(max_split),idummy,njobs

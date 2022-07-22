@@ -12,9 +12,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMMON/MP_RSCALE/ MU_R
 
 
-      REAL*16 MDL_MH,MDL_MTA,MDL_MW,MDL_MB,MDL_MZ,MDL_MT
+      REAL*16 MDL_MB,MDL_MH,MDL_MT,MDL_MTA,MDL_MW,MDL_MZ
 
-      COMMON/MP_MASSES/ MDL_MH,MDL_MTA,MDL_MW,MDL_MB,MDL_MZ,MDL_MT
+      COMMON/MP_MASSES/ MDL_MB,MDL_MH,MDL_MT,MDL_MTA,MDL_MW,MDL_MZ
 
 
       REAL*16 MDL_WH,MDL_WT,MDL_WW,MDL_WZ

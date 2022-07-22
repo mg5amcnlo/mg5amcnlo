@@ -72,6 +72,12 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+C     Common blocks
+
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
       INTEGER NB_SPIN_STATE(2)
       DATA  NB_SPIN_STATE /2,2/
       COMMON /NB_HEL_STATE/ NB_SPIN_STATE
@@ -115,6 +121,18 @@ C     ----------
 C     Make sure cuts are evaluated for first subprocess
       CUTSDONE=.FALSE.
       CUTSPASSED=.FALSE.
+
+      IF(PDLABEL.EQ.'dressed'.AND.DS_GET_DIM_STATUS('ee_mc').EQ.-1)THEN
+        CALL DS_REGISTER_DIMENSION('ee_mc', 0)
+C       ! set both mode 1: resonances, 2: no resonances to 50-50
+        CALL DS_ADD_BIN('ee_mc', 1)
+        CALL DS_ADD_BIN('ee_mc', 2)
+        CALL DS_ADD_ENTRY('ee_mc', 1, 0.5D0, .TRUE.)
+        CALL DS_ADD_ENTRY('ee_mc', 2, 0.5D0, .TRUE.)
+        CALL DS_UPDATE_GRID('ee_mc')
+      ENDIF
+
+
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
@@ -209,6 +227,7 @@ C     IMODE.EQ.0, regular run mode
         CALL DS_REGISTER_DIMENSION('PDF_convolution', 0,
      $    ALL_GRIDS=.FALSE.)
       ENDIF
+
 
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
@@ -609,3 +628,13 @@ C
       RETURN
       END
 
+
+      INTEGER FUNCTION GET_NHEL(HEL,PARTID)
+      IMPLICIT NONE
+      INTEGER HEL,PARTID
+      WRITE(*,*) 'this type of pdf is not support with'
+     $ //' group_subprocess=True. regenerate process with: set'
+     $ //' group_subprocesses false'
+      STOP 5
+      RETURN
+      END

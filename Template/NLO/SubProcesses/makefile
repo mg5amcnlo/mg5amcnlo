@@ -4,11 +4,16 @@ LIBDIR = ../lib/
 LINKLIBS = -L$(LIBDIR) -lgeneric
 LIBS = $(LIBDIR)libgeneric.a
 
+ifneq ("$(wildcard ../../Source/RUNNING)","")
+    LINKLIBS += -lrunning
+    LIBS += $(LIBDIR)librunning.$(libext)
+endif
+
 # Files for the read40 combiner of top drawer files
 READ40=read40.o
 
 # Files to collect all the events in the separate integration channels into a single file
-COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o
+COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o orderstags_glob.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<

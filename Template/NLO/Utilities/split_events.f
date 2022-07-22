@@ -15,7 +15,7 @@ c handling_lhe_events.f fill_MC_mshell.f
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
      # SCALUP_a(MAXNUP,MAXNUP)
       character*80 event_file,fname1,executable,inputfile
-      character*140 buff
+      character*1000 buff
       character*10 MonteCarlo
       character*3 str
       logical back

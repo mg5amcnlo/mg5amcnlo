@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
+import collections
 import contextlib
 import itertools
 import logging
@@ -465,7 +466,7 @@ def copytree(*args, **opts):
 
     if 'copy_function' not in opts:
         opts['copy_function'] = shutil.copy
-    return misc.copytree(*args, **opts)
+    return shutil.copytree(*args, **opts)
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -789,6 +790,7 @@ def detect_if_cpp_compiler_is_clang(cpp_compiler):
         return False
 
     output = output.decode(errors='ignore')
+    
     return 'LLVM' in str(output) or "clang" in str(output)
 
 
@@ -1726,25 +1728,31 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-## Define apple_notify (in a way which is system independent
-class Applenotification(object):
+## Define system_notify (in a way which is system independent
+class Notification(object):
 
     def __init__(self):
         self.init = False
         self.working = True
 
-    def load_notification(self):        
-        try:
-            import Foundation
-            import objc
-            self.NSUserNotification = objc.lookUpClass('NSUserNotification')
-            self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
-        except:
-            self.working=False
-            if which('osascript'):
-                self.working = 'osascript'
-            return
-        self.working=True
+    def load_notification(self):
+        self.init = True
+        self.working = False
+        if sys.platform == 'darwin':
+            try:
+                import Foundation
+                import objc
+                self.NSUserNotification = objc.lookUpClass('NSUserNotification')
+                self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+                self.working = "Foundation"
+            except:
+                if which('osascript'):
+                    self.working = 'osascript'
+                return
+        elif sys.platform == 'linux':
+            if which('notify-send'):
+                self.working = 'notify-send'
+            
 
     def __call__(self,subtitle, info_text, userInfo={}):
         
@@ -1752,7 +1760,7 @@ class Applenotification(object):
             self.load_notification()
         if not self.working:
             return
-        elif self.working is True:
+        elif self.working == "Foundation":
             try:
                 notification = self.NSUserNotification.alloc().init()
                 notification.setTitle_('MadGraph5_aMC@NLO')
@@ -1765,7 +1773,7 @@ class Applenotification(object):
                 self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
             except:
                 pass
-
+            
         elif self.working=='osascript':
             try:
                 os.system("""
@@ -1773,10 +1781,16 @@ class Applenotification(object):
               """.format(info_text, subtitle))
             except:
                 pass
-        
+
+        elif self.working == 'notify-send':
+            try:
+                os.system(""" notify-send "MadGraph5_aMC@NLO" "{}"  &> /dev/null """.format(info_text,subtitle))
+            except:
+                pass
 
 
-apple_notify = Applenotification()
+
+system_notify = Notification()
 
 class EasterEgg(object):
     
@@ -1901,7 +1915,7 @@ class EasterEgg(object):
         
         if muted:
             if not EasterEgg.done_notification:
-                apple_notify('On April first','turn up your volume!')
+                system_notify('On April first','turn up your volume!')
                 EasterEgg.done_notification = True
         else:
             os.system('say %s' % msg)
@@ -2111,6 +2125,12 @@ def import_python_lhapdf(lhapdfconfig):
         use_lhapdf=False
         return False
     else:
+        if sys.platform != "darwin":
+            if not 'LD_LIBRARY_PATH' in os.environ:
+                os.environ['LD_LIBRARY_PATH'] = lhapdf_libdir
+            else:
+                os.environ['LD_LIBRARY_PATH'] = '%s:%s' %(lhapdf_libdir,os.environ['LD_LIBRARY_PATH'])
+        
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
                             if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
@@ -2182,6 +2202,91 @@ def wget(http, path, *args, **opt):
         return call(['curl', '-L', http, '-o%s' % path], *args, **opt)
     else:
         return call(['wget', http, '--output-document=%s'% path], *args, **opt)
+
+
+def make_unique(input, keepordering=None):
+    "remove duplicate in a list "
+
+    if keepordering is None:
+        if MADEVENT:
+            keepordering = False
+        else:
+            keepordering = madgraph.ordering
+    if not keepordering:
+        return list(set(input))
+    else:
+        return list(dict.fromkeys(input)) 
+
+if six.PY3:
+    try:
+        from collections import MutableSet
+    except ImportError: # this is for python3.10
+        from collections.abc import  MutableSet
+    
+    class OrderedSet(collections.OrderedDict, MutableSet):
+
+        def __init__(self, arg=None):
+            super( OrderedSet, self).__init__()
+            if arg:
+                self.update(arg)
+
+        def update(self, *args, **kwargs):
+            if kwargs:
+                raise TypeError("update() takes no keyword arguments")
+
+            for s in args:
+                for e in s:
+                    self.add(e)
+
+        def add(self, elem):
+            self[elem] = None
+
+        def discard(self, elem):
+            self.pop(elem, None)
+
+        def pop(self, *args):
+            if args:
+                return super().pop(*args)
+            else:
+                key = next(iter(self))
+                del self[key]
+                return key
+
+        def __le__(self, other):
+            return all(e in other for e in self)
+
+        def __lt__(self, other):
+            return self <= other and self != other
+
+        def __ge__(self, other):
+            return all(e in self for e in other)
+
+        def __gt__(self, other):
+            return self >= other and self != other
+
+        def __repr__(self):
+            return 'OrderedSet([%s])' % (', '.join(map(repr, self.keys())))
+
+        def __str__(self):
+            return '{%s}' % (', '.join(map(repr, self.keys())))
+
+        def __eq__(self, other):
+            try:
+                return set(self) == set(other)
+            except TypeError:
+                return False
+        difference = property(lambda self: self.__sub__)
+        difference_update = property(lambda self: self.__isub__)
+        intersection = property(lambda self: self.__and__)
+        intersection_update = property(lambda self: self.__iand__)
+        issubset = property(lambda self: self.__le__)
+        issuperset = property(lambda self: self.__ge__)
+        symmetric_difference = property(lambda self: self.__xor__)
+        symmetric_difference_update = property(lambda self: self.__ixor__)
+        union = property(lambda self: self.__or__)
+else:
+    OrderedSet = set
+
 
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function (for using python2 type of sort)'

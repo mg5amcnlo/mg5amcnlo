@@ -25,6 +25,7 @@ import logging
 import time
 import tempfile
 import math
+import madgraph
 
 
 logger = logging.getLogger('test_cmd')
@@ -73,7 +74,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        self.debugging = False
+        self.debugging = unittest.debug
         if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -112,24 +113,17 @@ class TestMECmdShell(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            print("install pythia-pgs")
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
             print("install MadAnalysis")
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
-        if not misc.which('root'):
-            raise Exception('root is require for this test')
-        interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
+        #if not misc.which('root'):
+        #    raise Exception('root is require for this test')
+        #interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
@@ -141,7 +135,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.no_notification()
-        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
+        #self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
         
     
     @staticmethod
@@ -263,7 +257,6 @@ class TestMECmdShell(unittest.TestCase):
         
         self.check_parton_output('run_02_decayed_1', 100)           
         
-        self.assertEqual(self.debugging, False)
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -368,6 +361,10 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
+
+        if not self.cmd_line.options['pythia-pgs_path']:
+            return
+
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
@@ -380,8 +377,8 @@ class TestMECmdShell(unittest.TestCase):
         except:
             pass
         self.do('generate_events -f')     
-        
-        
+
+
         f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
         
@@ -410,7 +407,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
-        self.assertFalse(self.debugging)
+
         
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
@@ -443,7 +440,6 @@ class TestMECmdShell(unittest.TestCase):
         
         val2 = self.cmd_line.results.current['cross']
         err2 = self.cmd_line.results.current['error']        
-        
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
         target = 1310200.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
@@ -488,6 +484,100 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
         
+
+    def test_eva_collision(self):
+        """check that e p > e j gives the correct result"""
+        
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set group_subprocesses false')
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd(' generate w+ w-  > t t~')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
+        
+        self.assertEqual(run_card['lpp1'], -3)
+        self.assertEqual(run_card['lpp2'], 3)
+        self.assertEqual(run_card['pdlabel'], 'eva')
+        self.assertEqual(run_card['fixed_fac_scale'], True)
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.02174605
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+
+
+    def test_eft_running(self):
+        """check that  gives the correct result"""
+        
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd('import model %s/tests/input_files/SMEFTatNLO_running' % madgraph.MG5DIR)
+        mg_cmd.run_cmd('generate p p > t t~ NP=2 NP^2==2 QCD=2 QED=0')
+        mg_cmd.run_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
+
+        #f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        self.assertIn('fixed_extra_scale', run_card.user_set)
+        self.assertIn('mue_ref_fixed', run_card.user_set)
+        self.assertIn('mue_over_ref', run_card.user_set)
+
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+
+        target = 166.36114
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+        
+        # edit run_card -> fix scale
+        run_card['fixed_extra_scale'] = True
+        run_card['mue_ref_fixed'] = 250
+
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        target = 165.7
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+
+
+
+
+
+
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""
         mg_cmd = MGCmd.MasterCmd()
@@ -605,7 +695,6 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(banner3.get('param', 'mass', 24).value, 6.496446e+01)
         self.assertEqual(banner4.get('param', 'mass', 24).value, 7.242341e+01)         
         
-        self.assertFalse(self.debugging)
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
@@ -730,12 +819,6 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
 
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
@@ -757,6 +840,7 @@ class TestMEfromfile(unittest.TestCase):
                  add_time_of_flight --threshold=4e-14
                  pythia8
                  """ %self.run_dir
+
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
         if logging.getLogger('madgraph').level <= 20:
@@ -766,7 +850,7 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'mg5_cmd')],
                          #cwd=self.path,
                         stdout=stdout, stderr=stderr)
@@ -806,12 +890,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -853,7 +931,7 @@ class TestMEfromfile(unittest.TestCase):
         """)
         fsock.close()
                 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -875,10 +953,7 @@ class TestMEfromfile(unittest.TestCase):
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception as error:
-            pass
+
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -888,12 +963,6 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install pythia-pgs'.encode())
-            misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         if logging.getLogger('madgraph').level > 20:
             stdout = devnull
         else:
@@ -904,7 +973,7 @@ class TestMEfromfile(unittest.TestCase):
                     {'dir_name': self.run_dir, 'mg5_path':pjoin(_file_path, os.path.pardir)})
         fsock.close()
 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
                          pjoin(self.path, 'test_mssm_generation')],
                          #cwd=pjoin(self.path),
                         stdout=stdout,stderr=stdout)
@@ -912,7 +981,7 @@ class TestMEfromfile(unittest.TestCase):
         self.check_parton_output(cross=4.541638, error=0.035)
     
         self.check_parton_output('run_02', cross=4.41887317, error=0.035)
-        self.check_pythia_output()
+        #self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
         #
         
@@ -934,7 +1003,95 @@ class TestMEfromfile(unittest.TestCase):
             event.check()
         
         
+    def test_contur_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(_file_path,  os.path.pardir, 'tests', 'input_files','rivet_contur_test.cmd')],
+                         cwd=pjoin(self.path),
+                         stdout=stdout,stderr=stdout)
+
         
+
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'contur.map')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur', 'ANALYSIS', 'Summary.txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'scan_run_[01-12].txt')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Events', 'run_12',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'heavyNscan', 'Analysis', 'contur',  'conturPlot', 'combinedLevels.pdf')))
+
+
+    def test_rivet_from_file(self):
+        """check that contur runs as expected"""
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+        cmd = """generate p p > e+ e-
+        output %s
+        launch
+shower=pythia8
+analysis=off
+set mpi off
+set mmll 50
+set use_syst False
+set nevents 100
+set HEPMCoutput:file hepmc
+        launch -i
+rivet run_01
+set analysis MC_ZINC
+set draw_rivet_plots True
+                 """ %self.run_dir
+
+        open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'mg5_cmd')],
+                         #cwd=self.path,
+                         stdout=stdout, stderr=stderr)
+
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet_result.yoda')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_01',  'rivet-plots','index.html')))
+
+
+
+
+
         
 
     def load_result(self, run_name):

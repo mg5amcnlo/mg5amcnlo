@@ -160,7 +160,6 @@ def import_model_from_db(model_name, local_dir=False):
             import pwd
             username =pwd.getpwuid( os.getuid() )[ 0 ]  
         except Exception as error:
-            misc.sprint(str(error))
             username = ''
     if username in ['omatt', 'mattelaer', 'olivier', 'omattelaer'] and target is None and \
                                     'PYTHONPATH' in os.environ and not local_dir:
@@ -476,6 +475,8 @@ class UFOMG5Converter(object):
         self.interactions = base_objects.InteractionList()
         self.non_qcd_gluon_emission = 0 # vertex where a gluon is emitted withou QCD interaction
                                   # only trigger if all particles are of QCD type (not h>gg)
+        self.colored_scalar = False # in presence of color scalar particle the running of a_s is modified
+                                    # This is not supported by madevent/systematics
         self.wavefunction_CT_couplings = []
  
         # Check here if we can extract the couplings perturbed in this model
@@ -501,6 +502,9 @@ class UFOMG5Converter(object):
         self.ufomodel = model
         self.checked_lor = set()
 
+        if hasattr(self.ufomodel, 'all_running_elements'):
+            self.model.set('running_elements', self.ufomodel.all_running_elements)
+        
         if auto:
             self.load_model()
 
@@ -549,6 +553,11 @@ class UFOMG5Converter(object):
 
         for particle_info in self.ufomodel.all_particles:            
             self.add_particle(particle_info)
+
+        if self.colored_scalar:
+            logger.critical("Model with scalar colored particles. The running of alpha_s does not support such model.\n" + \
+                             "You can ONLY run at fix scale")
+            self.model['limitations'].append('fix_scale')
 
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
@@ -799,8 +808,11 @@ class UFOMG5Converter(object):
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
                 return
+            if hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson:
+                return
             elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
-                return      
+                return
+                  
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -874,6 +886,12 @@ class UFOMG5Converter(object):
                     particle.set('propagator', 0)
                
         assert(10 == nb_property) #basic check that all the information is there         
+
+        #check if we have scalar colored particle in the model -> issue with the running of alpha_s
+        if particle['spin'] == 1 and particle['color'] != 1:
+            if particle['type'] != 'ghost' and particle.get('mass').lower() == 'zero':
+                self.colored_scalar = True
+
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
@@ -1016,7 +1034,7 @@ class UFOMG5Converter(object):
                   the value of the pole. In the current implementation, this is
                   just to see if the pole is zero or not.
             """
-
+            
             if isinstance(CTCoupling.value,dict):
                 if -pole in list(CTCoupling.value.keys()):
                     return CTCoupling.value[-pole], [], 0
@@ -1076,7 +1094,9 @@ class UFOMG5Converter(object):
                     # attribute defined, but it is better to make sure.
                     if hasattr(self.model, 'map_CTcoup_CTparam'):
                         self.model.map_CTcoup_CTparam[couplname] = CTparamNames
+            
 
+                    
             # Finally modify the value of this CTCoupling so that it is no
             # longer a string expression in terms of CTParameters but rather
             # a dictionary with the CTparameters replaced by their _FIN_ and
@@ -1087,6 +1107,13 @@ class UFOMG5Converter(object):
             if new_value:
                 coupl.old_value = coupl.value
                 coupl.value = new_value
+
+        for CTparam in all_CTparameters:
+            if CTparam.name not in self.model.map_CTcoup_CTparam:
+                if not hasattr(self.model, "notused_ct_params"):
+                    self.model.notused_ct_params = [CTparam.name.lower()]
+                else:
+                    self.model.notused_ct_params.append(CTparam.name.lower())
 
     def add_CTinteraction(self, interaction, color_info):
         """ Split this interaction in order to call add_interaction for
@@ -1602,6 +1629,16 @@ class OrganizeModelExpression:
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
+        
+        if hasattr(self.model, 'all_running_elements'):
+            all_elements = set()
+            for runs in self.model.all_running_elements:
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+            all_elements.union(self.track_dependant)
+            self.track_dependant = list(all_elements)
+        
     
     def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
@@ -1662,21 +1699,33 @@ class OrganizeModelExpression:
         # if not, take Gf as the track_dependant variable
         present_aEWM1 = any(param.name == 'aEWM1' for param in
                         self.model.all_parameters if param.nature == 'external')
-
+   
         if not present_aEWM1:
-            self.track_dependant = ['aS','Gf','MU_R']
+            self.track_dependant += ['Gf']
+            self.track_dependant = list(set(self.track_dependant))
+        p = self.model.all_parameters[0]
+
+        mu_eff = list(set([param.name for param in self.model.all_parameters 
+                    if (param.nature == 'external' and
+                        param.lhablock.lower() == 'loop' and
+                        param.name != 'MU_R'
+                        )]))
+        self.track_dependant += mu_eff
+
 
         for param in self.model.all_parameters+additional_params:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
-                                               param.lhablock, param.lhacode)
+                                               param.lhablock, param.lhacode, 
+                                               param.scale if hasattr(param,'scale') else None)
                 
             else:
                 expr = self.shorten_expr(param.value)
                 depend_on = self.find_dependencies(expr)
                 parameter = base_objects.ModelVariable(param.name, expr, param.type, depend_on)
             
-            self.add_parameter(parameter)     
+            self.add_parameter(parameter)  
+           
             
     def add_parameter(self, parameter):
         """ add consistently the parameter in params and all_expr.
@@ -1747,7 +1796,8 @@ class OrganizeModelExpression:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
                 self.couplings[depend_on] = [parameter]
-            self.all_expr[coupling.value] = parameter                
+            self.all_expr[coupling.value] = parameter 
+        
 
     def find_dependencies(self, expr):
         """check if an expression should be evaluated points by points or not
@@ -1760,6 +1810,7 @@ class OrganizeModelExpression:
         
         # Split the different part of the expression in order to say if a 
         #subexpression is dependent of one of tracked variable
+        sexpr = str(expr)
         expr = self.separator.split(expr)
         # look for each subexpression
         for subexpr in expr:
@@ -1769,6 +1820,7 @@ class OrganizeModelExpression:
             elif subexpr in self.all_expr and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
+
         if depend_on:
             return tuple(depend_on)
         else:
@@ -2106,6 +2158,24 @@ class RestrictModel(model_reader.ModelReader):
                 null_parameters.append(name)
             elif value == 1:
                 one_parameters.append(name)
+
+        # check if the model is a running model with running.py and 
+        # check that the model is compatible with the restriction
+        running_param = self.get_running() 
+        if running_param:
+            tocheck = null_parameters+one_parameters
+            for p in  tocheck:
+                for block in running_param:
+                    block = ['mdl_%s' % c for c in block]
+                    if p in block:
+                        if any((p2 not in tocheck for p2 in block)):
+                            not_restricted = [p2 for p2 in block if p2 not in tocheck]
+                            raise Exception("Model restriction not compatible with the running of some parameters. \n %s is restricted to zero/one but mix with %s which is/are not."
+                                            %(p, not_restricted))
+                        else:
+                            continue # go to the next block
+
+
 
         return null_parameters, one_parameters
     
@@ -2516,6 +2586,9 @@ class RestrictModel(model_reader.ModelReader):
                         for use in  re_pat.findall(parameter.expr):
                             used.add(use)
                         
+        if madgraph.ordering:
+            used = sorted(used)
+            
         # modify the object for those which are still used
         for param in used:
             if not param:

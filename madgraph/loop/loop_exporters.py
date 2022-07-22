@@ -103,7 +103,6 @@ class LoopExporterFortran(object):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
-
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
@@ -201,7 +200,7 @@ class LoopExporterFortran(object):
         """
         if not hasattr(self, 'aloha_model'):
             self.aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
-        
+
         missing_lor = []
         for lor in model.get('lorentz'):
             if not hasattr(self.aloha_model.model.lorentz, lor.name):
@@ -280,7 +279,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
             
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         return
     
     def write_f2py_check_sa(self, matrix_element, output_path):
@@ -2306,9 +2305,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 final_lwf = lamp.get_final_loop_wavefunction()
                 while not final_lwf is None:
                     # We define here an HEFT vertex as any vertex built up from
-                    # only massless vectors and scalars (at least one of each)
+                    # only massless vectors and massive scalars (at least one of each)
+                    # We ask for massive scalars in part to remove the gluon ghost false positive.
                     scalars = len([1 for wf in final_lwf.get('mothers') if 
-                                                             wf.get('spin')==1])
+                                    wf.get('spin')==1 and wf.get('mass')!='ZERO'])
                     vectors = len([1 for wf in final_lwf.get('mothers') if 
                                   wf.get('spin')==3 and wf.get('mass')=='ZERO'])
                     if scalars>=1 and vectors>=1 and \
@@ -2882,9 +2882,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Now recast the split order basis for the loop, born and counterterm
         # amplitude into one single splitorderbasis.
-        overall_so_basis = list(set(
+        overall_so_basis = misc.make_unique(
             [born_so[0] for born_so in amps_orders['born_amp_orders']]+
-            [born_so[0] for born_so in amps_orders['loop_amp_orders']]))
+            [born_so[0] for born_so in amps_orders['loop_amp_orders']])
         # We must re-sort it to make sure it follows an increasing WEIGHT order
         order_hierarchy = matrix_element.get('processes')[0]\
                                             .get('model').get('order_hierarchy')

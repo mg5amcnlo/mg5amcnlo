@@ -1072,7 +1072,13 @@ class ConfigFile(dict):
             value = self[name]
 
         if hasattr(self, 'post_set_%s' % name):
-            return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror)
+            try:
+                return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror, name=name)
+            except TypeError as err:
+                if "an unexpected keyword argument 'name'" in str(err):
+                    return getattr(self, 'post_set_%s' % name)(value, change_userdefine, raiseerror)
+                else:
+                    raise
     
     def __setitem__(self, name, value, change_userdefine=False,raiseerror=False):
         """set the attribute and set correctly the type if the value is a string.
@@ -1167,10 +1173,10 @@ class ConfigFile(dict):
 
                     text= "value '%s' for entry '%s' is not valid.  Preserving previous value: '%s'.\n" \
                                % (value, name, self[lower_name])
-                    text += "allowed values are any list composed of the following entry: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
+                    text += "allowed values are any list composed of the following entries: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])
                     return self.warn(text, 'warning', raiseerror)                    
                 elif dropped:               
-                    text = "some value for entry '%s' are not valid. Invalid item are: '%s'.\n" \
+                    text = "some value for entry '%s' are not valid. Invalid items are: '%s'.\n" \
                                % (value, name, dropped)
                     text += "value will be set to %s" % new_values
                     text += "allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])        
@@ -1278,7 +1284,7 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         if change_userdefine:
             self.user_set.add(lower_name)
-        self.post_set(lower_name, None, change_userdefine, raiseerror)
+        self.post_set(lower_name, value, change_userdefine, raiseerror)
 
 
     def add_param(self, name, value, system=False, comment=False, typelist=None,
@@ -1333,9 +1339,9 @@ class ConfigFile(dict):
         else:
             out += "## Unknown for this class\n"
         if name.lower() in self.user_set:
-            out += "## This value is considered as been set by the user\n" 
+            out += "## This value is considered as being set by the user\n" 
         else:
-            out += "## This value is considered as been set by the system\n"
+            out += "## This value is considered as being set by the system\n"
         if name.lower() in self.allowed_value:
             if '*' not in self.allowed_value[name.lower()]:
                 out += "Allowed value are: %s\n" % ','.join([str(p) for p in self.allowed_value[name.lower()]])
@@ -1468,7 +1474,7 @@ class ConfigFile(dict):
         
         if lower_name in self.auto_set:
             return 'auto'
-
+        
         return dict.__getitem__(self, name.lower())
 
     
@@ -1484,10 +1490,188 @@ class ConfigFile(dict):
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
-            
         self.__setitem__(name, value, change_userdefine=user, raiseerror=raiseerror) 
  
 
+class RivetCard(ConfigFile):
+
+    def default_setup(self):
+        """initialize the directory to the default value"""
+        self.add_param('analysis', [], typelist=str)
+        self.add_param('run_rivet_later', False)
+        self.add_param('run_contur', False)
+        self.add_param('draw_rivet_plots', False)
+        self.add_param('draw_contur_heatmap', True)
+        self.add_param('xaxis_var', "default")
+        self.add_param('xaxis_relvar', "default")
+        self.add_param('xaxis_label', "default")
+        self.add_param('xaxis_log', False)
+        self.add_param('yaxis_var', "default")
+        self.add_param('yaxis_relvar', "default")
+        self.add_param('yaxis_label', "default")
+        self.add_param('yaxis_log', False)
+
+        # ================================================================
+        # hidden (users don't really have to touch these most of the time)
+        self.add_param('contur_ra', "default")
+        self.add_param('rivet_sqrts', "default")
+        self.add_param('weight_name', "default")
+        self.add_param('rivet_add', 'default')
+        self.add_param('contur_add', 'default')
+        # ================================================================
+
+    def read(self, finput):
+
+        if isinstance(finput, str):
+            if "\n" in finput:
+                finput = finput.split('\n')
+            elif os.path.isfile(finput):
+                finput = open(finput)
+            else:
+                raise Exception("No such file %s" % finput)
+
+        for line in finput:
+            if '#' in line:
+                line = line.split('#',1)[0]
+
+            if '!' in line:
+                line = line.split('#',1)[0]
+
+            if not line:
+                continue
+
+            if '=' in line:
+                key, value = line.split('=',1)
+                if key.strip() in ["xaxis_var", "xaxis_relvar", "xaxis_label",\
+                                   "yaxis_var", "yaxis_relvar", "yaxis_label",\
+                                   "rivet_add", "contur_add"]:
+                    value = value.lower()
+                    if value.strip() == "default":
+                        value = ""
+                self[key.strip()] = value.strip()
+
+    def write(self, output_file, template=None):
+
+        if not template:
+            if not MADEVENT:
+                template = pjoin(MG5DIR, 'Template', 'LO', 'Cards', 'rivet_card_default.dat')
+            else:
+                template = pjoin(MEDIR, 'Cards', 'rivet_card_default.dat')
+
+        text = ""
+        for line in open(template,'r'):
+            nline = line.split('#')[0]
+            nline = nline.split('!')[0]
+            comment = line[len(nline):]
+            nline = nline.split('=')
+            if len(nline) != 2:
+                text += line
+            elif nline[0].strip() in list(self.keys()):
+                text += '%s\t= %s %s\n' % (nline[0], self[nline[0].strip()], comment)
+            else:
+                logger.info('Adding missing parameter %s to current rivet_card (with default value)' % nline[1].strip())
+                text += line
+
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+
+        fsock.write(text)
+        fsock.close()
+
+    def getAnalysisList(self, runcard):
+
+        '''
+ This function defines/parses which analysis to run with Rivet
+ If not given and CONTUR is turned off : electrons, muons, taus, met, jets
+                               on : check the beam energy and run all available analyses with same beam E
+        '''
+
+        analysis_list = []
+        rivet_sqrts = int(runcard['ebeam1']) + int(runcard['ebeam2'])
+        self["rivet_sqrts"] = str(rivet_sqrts)
+
+        if len(self["analysis"]) == 1:
+            this_analysis = self["analysis"][0]
+
+            if this_analysis == "default" or this_analysis == None or this_analysis == "":
+                if not self["run_contur"]:
+                    analysis_list.append("MC_ELECTRONS")
+                    analysis_list.append("MC_MUONS")
+                    analysis_list.append("MC_TAUS")
+                    analysis_list.append("MC_MET")
+                    analysis_list.append("MC_JETS")
+                else:
+                    if not ((runcard['lpp1'] == 1) and (runcard['lpp2'] == 1)):
+                        raise MadGraph5Error("Incorrect beam type, lpp1 and lpp2 both should be 1 (proton)")
+                    ebeamsLHC = [3500, 4000, 6500]
+
+                    if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
+                        if int(runcard['ebeam1']) == int(runcard['ebeam2']):
+                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts/1000)))
+                            self["contur_ra"] = "{0}TeV".format(int(rivet_sqrts/1000))
+                        else:
+                            raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
+                                                 ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
+                    else:
+                        raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
+
+            else:
+                analysis_list.append(this_analysis)
+
+        else:
+            for this_analysis in self["analysis"]:
+                analysis_list.append(this_analysis)
+
+        return analysis_list
+
+    def setWeightName(self, runcard, py8card):
+
+        '''
+      Give weight names in case the jet merging is used to use for Rivet runs
+        '''
+
+        if self['weight_name'] == "default":
+            if runcard['ickkw'] == 0:
+                self['weight_name'] = "None"
+            else:
+                self['weight_name'] = "Weight_MERGING={0}".str(round(py8card['JetMatching:qCut'],3))
+
+    def setRelevantParamCard(self, f_params, f_relparams):
+
+        '''
+    Used for Contur
+    Used for cases when user wants to scan a BSM parameter that is not a value directly modifiable from UFO
+    e.g. Wants to scan the <<square of coupling>> when UFO only has <<coupling>>
+        '''
+
+        exec_line = "import math; "
+        for l_param in f_params.readlines():
+            exec_line = exec_line + l_param.strip() + "; "
+            f_relparams.write(l_param.strip()+"\n")
+
+        if self['xaxis_relvar']:
+            xexec_dict = {}
+            xexec_line = exec_line + "xaxis_relvar = " + self['xaxis_relvar']
+            exec(xexec_line, locals(), xexec_dict)
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = "xaxis_relvar"
+            f_relparams.write("{0} = {1}\n".format(self['xaxis_label'], xexec_dict['xaxis_relvar']))
+        else:
+            if self['xaxis_label'] == "":
+                self['xaxis_label'] = self['xaxis_var']
+
+        if self['yaxis_relvar']:
+            yexec_dict = {}
+            yexec_line = exec_line + "yaxis_relvar = " + self['yaxis_relvar']
+            exec(yexec_line, locals(), yexec_dict)
+            if self['yaxis_label'] == "": 
+                self['yaxis_label'] = "yaxis_relvar"
+            f_relparams.write("{0} = {1}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
+        else:
+            if self['yaxis_label'] == "":
+                self['yaxis_label'] = self['yaxis_var']
 
 class ProcCharacteristic(ConfigFile):
     """A class to handle information which are passed from MadGraph to the madevent
@@ -1510,9 +1694,12 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('complex_mass_scheme', False)
         self.add_param('pdg_initial1', [0])
         self.add_param('pdg_initial2', [0])
-        self.add_param('limitations', [], typelist=str)  
+        self.add_param('splitting_types',[], typelist=str)
+        self.add_param('perturbation_order', [], typelist=str)        
+        self.add_param('limitations', [], typelist=str)        
         self.add_param('hel_recycling', False)  
-        self.add_param('single_color', True)    
+        self.add_param('single_color', True)
+        self.add_param('nlo_mixed_expansion', True)    
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1662,7 +1849,7 @@ class PY8Card(ConfigFile):
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
         # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
-        self.add_param("HEPMCoutput:file", 'auto')
+        self.add_param("HEPMCoutput:file", 'hepmc.gz')
 
         # Hidden parameters always written out
         # ====================================
@@ -2274,16 +2461,148 @@ class PY8SubRun(PY8Card):
         self.add_param("Main:subrun", -1)
         self.add_param("Beams:LHEF", "events.lhe.gz")
 
+        
+class RunBlock(object):
+    """ Class for a series of parameter in the run_card that can be either
+        visible or hidden.
+        name: allow to set in the default run_card $name to set where that 
+              block need to be inserted
+        template_on: information to include is block is active
+        template_off: information to include is block is not active
+        on_fields/off_fields: paramater associated to the block
+               can be specify but are otherwise automatically but 
+               otherwise determined from the template.
+       
+        function:
+           status(self,run_card) -> return which template need to be used
+           check_validity(self, runcard)  -> sanity check
+           create_default_for_process(self, run_card, proc_characteristic, 
+                   history, proc_def)       
+           post_set_XXXX(card, value, change_userdefine, raiseerror)
+                   -> fct called when XXXXX is set
+           post_set(card, value, change_userdefine, raiseerror, **opt)
+                   -> fct called when a parameter is changed
+                   -> no access to parameter name 
+                   -> not called if post_set_XXXX is defined
+    """
+                        
+
+    
+    def __init__(self, name, template_on, template_off, on_fields=False, off_fields=False):
+
+        self.name = name
+        self.template_on = template_on
+        self.template_off = template_off
+        if on_fields:
+            self.on_fields = on_fields
+        else:
+            self.on_fields = self.find_fields_from_template(self.template_on)
+        if off_fields:
+            self.off_fields = off_fields
+        else:
+            self.off_fields = self.find_fields_from_template(self.template_off)
+
+    @property
+    def fields(self):
+        return self.on_fields + self.off_fields
+
+    @staticmethod
+    def find_fields_from_template(template):
+        """ return the list of fields from a template. checking line like
+        %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  """
+        
+        return re.findall(r"^\s*%\((.*)\)s\s*=\s*\1", template, re.M)
+
+    def get_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_on
+        else:
+            return self.template_off
+
+    def get_unused_template(self, card):
+        """ return the correct template according to the current banner status """
+        if self.status(card):
+            return self.template_off
+        else:
+            return self.template_on        
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used"""
+
+        if self.name in card.display_block:
+            return True
+
+        if any(f in card.user_set for f in self.off_fields):
+            return False
+
+        if any(f in card.user_set for f in self.on_fields):
+            return True
+
+        return False
 
 
-runblock = collections.namedtuple('block', ('name', 'fields', 'template_on', 'template_off'))
+    def manage_parameters(self, card, written, to_write):
+        """manage written/to_write according to the template written"""
+
+        if self.status(card):
+            used = self.on_fields
+        else:
+            used = self.off_fields
+
+        for name in used:
+            written.add(name)
+            if name in to_write:
+                to_write.remove(name)
+    
+    def check_validity(self, runcard):
+        """run self consistency check here --avoid to use runcard[''] = xxx here since it can trigger post_set function"""
+        return
+
+    def create_default_for_process(self, run_card, proc_characteristic, history, proc_def):
+        return 
+
+#    @staticmethod
+#    def post_set(card, value, change_userdefine, raiseerror, **opt):
+#        """default action to run when a parameter of the block is defined.
+#           Here we do not know which parameter is modified. if this is needed.
+#           then one need to define post_set_XXXXX(card, value, change_userdefine, raiseerror)
+#           and then only that function is used        
+#        """
+#
+#        if 'pdlabel' in card.user_set:
+#            card.user_set.remove('pdlabel')
+
+
+
 class RunCard(ConfigFile):
 
     filename = 'run_card'
     LO = True
-    blocks = [] 
-                                   
+
+    blocks = []
+    parameter_in_block = {}
+    allowed_lep_densities = {}    
+
+    @classmethod
+    def fill_post_set_from_blocks(cls):
+        """set the post_set function for any parameter defined in a run_block"""
+
+        if not cls.parameter_in_block and cls.blocks:
+            for block in cls.blocks:
+                for parameter in block.fields:
+                    if hasattr(block, 'post_set_%s' % parameter):
+                        setattr(cls, 'post_set_%s' % parameter, getattr(block, 'post_set_%s' % parameter))
+                    elif hasattr(block, 'post_set'):
+                        setattr(cls, 'post_set_%s' % parameter, block.post_set)
+                    cls.parameter_in_block[parameter] = block
+                    
+                    
     def __new__(cls, finput=None, **opt):
+
+        cls.fill_post_set_from_blocks()
+        RunCard.get_lepton_densities()
+
         if cls is RunCard:
             if not finput:
                 target_class = RunCardLO
@@ -2298,6 +2617,9 @@ class RunCard(ConfigFile):
                     target_class = RunCardLO
             else:
                 return None
+
+            target_class.fill_post_set_from_blocks()
+
             return super(RunCard, cls).__new__(target_class, finput, **opt)
         else:
             return super(RunCard, cls).__new__(cls, finput, **opt)
@@ -2310,9 +2632,9 @@ class RunCard(ConfigFile):
         self.hidden_param = []
         # in which include file the parameer should be written
         self.includepath = collections.defaultdict(list)
-        #some parameter have different name in fortran code
+        #some parameters have a different name in fortran code
         self.fortran_name = {}
-        #parameter which are not supported anymore. (no action on the code)
+        #parameters which are not supported anymore. (no action on the code)
         self.legacy_parameter = {}
         #a list with all the cuts variable and which type object impacted
         # L means charged lepton (l) and neutral lepton (n)
@@ -2324,21 +2646,48 @@ class RunCard(ConfigFile):
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
+
+
         self.cut_class = {} 
         self.warned=False
 
 
         super(RunCard, self).__init__(*args, **opts)
 
+    @classmethod
+    def get_lepton_densities(cls):
+        """ """
+
+        if cls.allowed_lep_densities:
+            return
+
+        if MADEVENT:
+            check_dir = pjoin(MEDIR, 'Source', 'PDF', 'lep_densities')
+        else:
+            check_dir = pjoin( MG5DIR, 'Template', 'Common', 'Source', 'PDF', 'lep_densities')
+
+        for name in os.listdir(check_dir):
+            if os.path.isdir(pjoin(check_dir, name)):
+                identity = (-11,11)
+                if os.path.exists(pjoin(check_dir, name, 'info')):
+                    for line in open(pjoin(check_dir, name, 'info')):
+                        if 'identity:' in line:
+                            identity = tuple([int(x) for x in line.split(':',1)[1].split(',')])
+
+            if identity not in cls.allowed_lep_densities:
+                cls.allowed_lep_densities[identity] = [name]
+            else:
+                cls.allowed_lep_densities[identity].append(name)
+
     def add_param(self, name, value, fortran_name=None, include=True, 
                   hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
-        fortran_name defines what is the associate name in the f77 code
-        include defines if we have to put the value in the include file
-        hidden defines if the parameter is expected to be define by the user.
-        legacy:Parameter which is not used anymore (raise a warning if not default)
+        fortran_name: defines what is the associate name in the f77 code
+        include: defines if we have to put the value in the include file
+        hidden: defines if the parameter is expected to be define by the user.
+        legacy: parameter that is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         sys_default: default used if the parameter is not in the card
         
@@ -2438,17 +2787,6 @@ class RunCard(ConfigFile):
             raise Exception
         if not template_options:
             template_options = collections.defaultdict(str)
-
-        # check which optional block to write:
-        write_block= []
-        for b in self.blocks:
-            name = b.name
-            # check if the block has to be written
-            if name not in self.display_block and \
-               not any(f in self.user_set for f in b.fields):
-                continue
-            write_block.append(b.name)
-            
             
         if python_template:
             text = open(template,'r').read()
@@ -2464,10 +2802,7 @@ class RunCard(ConfigFile):
                 text = string.Template(text)
                 mapping = {}
                 for b in self.blocks:
-                    if b.name in write_block:
-                        mapping[b.name] = b.template_on
-                    else:
-                        mapping[b.name] = b.template_off
+                    mapping[b.name] =  b.get_template(self)
                 text = text.substitute(mapping)
 
             if not self.list_parameter:
@@ -2482,12 +2817,12 @@ class RunCard(ConfigFile):
                 text = text % data
         else:  
             text = ""
-            for line in open(template,'r'):                  
+            for line in open(template,'r'):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
                 nline = nline.rsplit('=',1)
-                if python_template and nline[0].startswith('$'):
+                if python_template and nline[0].strip().startswith('$'):
                     block_name = nline[0][1:].strip()
                     this_group = [b for b in self.blocks if b.name == block_name]
                     if not this_group:
@@ -2495,14 +2830,8 @@ class RunCard(ConfigFile):
                         continue
                     else:
                         this_group = this_group[0]
-                    if block_name in write_block:
-                        text += this_group.template_on % self
-                        for name in this_group.fields:
-                            written.add(name)
-                            if name in to_write:
-                                to_write.remove(name)
-                    else:
-                        text += this_group.template_off % self
+                    text += this_group.get_template(self) % self
+                    this_group.manage_parameters(self, written, to_write)
                     
                 elif len(nline) != 2:
                     text += line
@@ -2535,14 +2864,17 @@ class RunCard(ConfigFile):
                     text += line 
 
             for b in self.blocks:
-                if b.name not in write_block:
-                    continue
+                if b.status(self):
+                    to_check = b.on_fields
+                else:
+                    to_check = b.off_fields
+
                 # check if all attribute of the block have been written already
-                if all(f in written for f in b.fields):
+                if all(f in written for f in to_check):
                     continue
 
                 to_add = ['']
-                for line in b.template_on.split('\n'):                  
+                for line in b.get_template(self).split('\n'):               
                     nline = line.split('#')[0]
                     nline = nline.split('!')[0]
                     nline = nline.split('=')
@@ -2563,9 +2895,19 @@ class RunCard(ConfigFile):
                             to_write.remove(name)
                     else:
                         raise Exception
-                
-                if b.template_off and b.template_off in text:
-                    text = text.replace(b.template_off, '\n'.join(to_add))
+                template_off = b.get_unused_template(self)
+                if '%(' in template_off:
+                    template_off = template_off % self
+                    if template_off and template_off in text:
+                        text = text.replace(template_off, '\n'.join(to_add))
+                    else:
+                        template_off = template_off.replace(' ', '\s*')
+                        text, n = re.subn(template_off, '\n'.join(to_add), text)
+                        if not n:
+                            text += '\n'.join(to_add)
+
+                elif template_off and template_off in text:
+                    text = text.replace(template_off, '\n'.join(to_add))
                 else:
                     text += '\n'.join(to_add)
 
@@ -2628,7 +2970,14 @@ class RunCard(ConfigFile):
         else:
             return self[name]   
 
-    
+    def mod_inc_pdlabel(self, value):
+        """flag pdlabel has 'dressed' if one of the special lepton PDF with beamstralung.
+        This modifies ONLY the value within the fortran code"""
+        if value in sum(self.allowed_lep_densities.values(),[]):
+            return 'dressed'
+        else:
+            return value
+
     @staticmethod
     def f77_formatting(value, formatv=None):
         """format the variable into fortran. The type is detected by default"""
@@ -2645,6 +2994,7 @@ class RunCard(ConfigFile):
             else:
                 logger.debug("unknow format for f77_formatting: %s" , str(value))
                 formatv = 'str'
+                value = str(value).lower()
         else:
             assert formatv
             
@@ -2695,7 +3045,10 @@ class RunCard(ConfigFile):
 
         for name in self.legacy_parameter:
             if self[name] != self.legacy_parameter[name]:
-                logger.warning("The parameter %s is not supported anymore this parameter will be ignored." % name)
+                logger.warning("The parameter %s is not supported anymore. This parameter will be ignored." % name)
+
+        for block in self.blocks:
+            block.check_validity(self)
                
     default_include_file = 'run_card.inc'
 
@@ -2704,10 +3057,11 @@ class RunCard(ConfigFile):
         include"""
         return
 
-    def write_include_file(self, output_dir):
+    def write_include_file(self, output_dir, output_file=None):
         """Write the various include file in output_dir.
         The entry True of self.includepath will be written in run_card.inc
-        The entry False will not be written anywhere"""
+        The entry False will not be written anywhere
+        output_file allows testing by providing stream"""
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
@@ -2723,7 +3077,10 @@ class RunCard(ConfigFile):
             else:
                 pathinc = incname
 
-            fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
+            if output_file:
+                fsock = output_file
+            else:
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
             for key in self.includepath[incname]:                
                 #define the fortran name
                 if key in self.fortran_name:
@@ -2733,6 +3090,8 @@ class RunCard(ConfigFile):
                     
                 #get the value with warning if the user didn't set it
                 value = self.get_default(key)
+                if hasattr(self, 'mod_inc_%s' % key):
+                    value = getattr(self, 'mod_inc_%s' % key)(value)
                 # Special treatment for strings containing a list of
                 # strings. Convert it to a list of strings
                 if isinstance(value, list):
@@ -2762,7 +3121,8 @@ class RunCard(ConfigFile):
                 else:
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
-            fsock.close()   
+            if not output_file:
+                fsock.close()   
 
     @staticmethod
     def get_idbmup(lpp):
@@ -2802,10 +3162,13 @@ class RunCard(ConfigFile):
             else:
                 return lhaid
         else: 
-            return {'none': 0, 
+            try:
+                return {'none': 0, 'iww': 0, 'eva':0,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
-                    }[pdf]    
+                    }[pdf] 
+            except:
+                return 0   
     
     def get_lhapdf_id(self):
         return self.get_pdf_id(self['pdlabel'])
@@ -2826,15 +3189,14 @@ class RunCard(ConfigFile):
             elif 'eta' in name:
                 self[name] = -1
             else:
-                self[name] = 0       
+                self[name] = 0      
 
-class RunCardLO(RunCard):
-    """an object to handle in a nice way the run_card information"""
-    
-    blocks = [
-#    HEAVY ION OPTIONAL BLOCK            
-        runblock(name='ion_pdf', fields=('nb_neutron1', 'nb_neutron2','nb_proton1','nb_proton2','mass_ion1', 'mass_ion2'),
-            template_on=\
+################################################################################################
+###  Define various template subpart for the LO Run_card
+################################################################################################
+
+# HEAVY ION ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Heavy ion PDF / rescaling of PDF                                   *
 #*********************************************************************
@@ -2846,28 +3208,29 @@ class RunCardLO(RunCard):
   %(nb_proton2)s    = nb_proton2 # number of proton for the second beam
   %(nb_neutron2)s    = nb_neutron2 # number of neutron for the second beam
   %(mass_ion2)s = mass_ion2 # mass of the heavy ion (second beam)  
-""",
-            template_off='# To see heavy ion options: type "update ion_pdf"'),
-              
-              
-#    BEAM POLARIZATION OPTIONAL BLOCK
-        runblock(name='beam_pol', fields=('polbeam1','polbeam2'),
-            template_on=\
+"""
+template_off = "# To see heavy ion options: type \"update ion_pdf\""
+
+heavy_ion_block = RunBlock('ion_pdf', template_on=template_on, template_off=template_off)
+
+# Beam Polarization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Beam polarization from -100 (left-handed) to 100 (right-handed)    *
 #*********************************************************************
      %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
      %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
-""",                                               
-            template_off='# To see polarised beam options: type "update beam_pol"'),
+"""
+template_off = "# To see polarised beam options: type \"update beam_pol\""
 
-#    SYSCALC OPTIONAL BLOCK              
-        runblock(name='syscalc', fields=('sys_scalefact', 'sys_alpsfact','sys_matchscale','sys_pdf'),
-              template_on=\
-"""#**************************************
-# Parameter below of the systematics study
-#  will be used by SysCalc (if installed)
-#**************************************
+beam_pol_block = RunBlock('beam_pol', template_on=template_on, template_off=template_off)
+
+
+# SYSCALC ------------------------------------------------------------------------------------
+template_on = \
+"""#********************************************************
+# Parameter used by SysCalc  --code not supported anymore --
+#***********************************************************
 #
 %(sys_scalefact)s = sys_scalefact  # factorization/renormalization scale factor
 %(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
@@ -2876,12 +3239,14 @@ class RunCardLO(RunCard):
 %(sys_pdf)s = sys_pdf # list of pdf sets. (errorset not valid for syscalc)
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf
 #
-""", 
-    template_off= '# Syscalc is deprecated but to see the associate options type\'update syscalc\''),
+"""
+template_off = ""
 
-#    ECUT block (hidden it by default but for e+ e- collider)             
-        runblock(name='ecut', fields=('ej','eb','ea','el','ejmax','ebmax','eamax','elmax','e_min_pdg','e_max_pdg'),
-              template_on=\
+syscalc_block = RunBlock('syscalc', template_on=template_on, template_off=template_off)
+
+
+# ECUT ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Minimum and maximum E's (in the center of mass frame)              *
 #*********************************************************************
@@ -2895,23 +3260,39 @@ class RunCardLO(RunCard):
  %(elmax)s   = elmax ! maximum E for the charged leptons
  %(e_min_pdg)s = e_min_pdg ! E cut for other particles (use pdg code). Applied on particle and anti-particle
  %(e_max_pdg)s = e_max_pdg ! E cut for other particles (syntax e.g. {6: 100, 25: 50})
-""", 
-    template_off= '#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#'),
+"""
 
-#    Frame for polarization
-    runblock(name='frame', fields=('me_frame'),
-              template_on=\
+template_off = "#\n# For display option for energy cut in the partonic center of mass frame type \'update ecut\'\n#"
+
+ecut_block = RunBlock('ecut', template_on=template_on, template_off=template_off)
+
+
+# Frame for polarization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Frame where to evaluate the matrix-element (not the cut!) for polarization   
 #*********************************************************************
   %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
                                ! in which to evaluate the matrix-element
                                ! [1,2] means the partonic center of mass 
-""", 
-    template_off= ''),        
-#    MERGING BLOCK:  MLM           
-        runblock(name='mlm', fields=('ickkw','alpsfact','chcluster','asrwgtflavor','auto_ptj_mjj','xqcut'),
-            template_on=\
+"""
+template_off = ""
+frame_block = RunBlock('frame', template_on=template_on, template_off=template_off)
+
+
+
+# EVA SCALE EVOLUTION ------------------------------------------------------------------------------------
+template_on = \
+"""  %(ievo_eva)s  = ievo_eva         ! scale evolution for EW pdfs (eva):
+                         ! 0 for evo by q^2; 1 for evo by pT^2
+"""
+template_off = ""
+eva_scale_block = RunBlock('eva_scale', template_on=template_on, template_off=template_off)
+
+
+
+# MLM Merging ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Matching parameter (MLM only)
 #*********************************************************************
@@ -2922,12 +3303,12 @@ class RunCardLO(RunCard):
  %(auto_ptj_mjj)s  = auto_ptj_mjj  ! Automatic setting of ptj and mjj if xqcut >0
                                    ! (turn off for VBF and single top processes)
  %(xqcut)s   = xqcut   ! minimum kt jet measure between partons
-""",
-            template_off='# To see MLM/CKKW  merging options: type "update MLM" or "update CKKW"'),
+"""
+template_off = "# To see MLM/CKKW  merging options: type \"update MLM\" or \"update CKKW\""
+mlm_block = RunBlock('mlm', template_on=template_on, template_off=template_off)
 
-#    MERGING BLOCK:  CKKW         
-        runblock(name='ckkw', fields=('ktdurhham','dparameter','ptlund','pdgs_for_merging_cut'),
-            template_on=\
+# CKKW Merging ------------------------------------------------------------------------------------
+template_on = \
 """#***********************************************************************
 # Turn on either the ktdurham or ptlund cut to activate                *
 # CKKW(L) merging with Pythia8 [arXiv:1410.3012, arXiv:1109.4829]      *
@@ -2936,15 +3317,25 @@ class RunCardLO(RunCard):
  %(dparameter)s   =  dparameter
  %(ptlund)s  =  ptlund
  %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above
-""",
-            template_off=''),
-    #    PS-OPTIM BLOCK:  PSOPTIM           
-        runblock(name='psoptim', fields=('job_strategy', 'hard_survey', 
-                                         'tmin_for_channel', 'survey_splitting',
-                                         'survey_nchannel_per_job', 'refine_evt_by_job'
-                                         'global_flag','aloha_flag', 'matrix_flag'
-                                         ),
-            template_on=\
+"""
+
+ckkw_block = RunBlock('ckkw', template_on=template_on, template_off="")
+
+# Running -----------------------------------------------------------------------------------------
+template_on = \
+"""#***********************************************************************
+# CONTROL The extra running scale (not QCD)                       *
+#    Such running is NOT include in systematics computation            *
+#***********************************************************************
+ %(fixed_extra_scale)s = fixed_extra_scale ! False means dynamical scale 
+ %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
+ %(mue_over_ref)s   =  mue_over_ref  ! ratio to mur if dynamical scale
+"""
+
+running_block = RunBlock('RUNNING', template_on=template_on, template_off="")
+
+# Phase-Space Optimization ------------------------------------------------------------------------------------
+template_on = \
 """#*********************************************************************
 # Phase-Space Optim (advanced)
 #*********************************************************************
@@ -2960,10 +3351,143 @@ class RunCardLO(RunCard):
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
-""",
-    template_off='# To see advanced option for Phase-Space optimization: type "update psoptim"'),
-    ]    
+"""
+
+template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
+
+psoptim_block = RunBlock('psoptim', template_on=template_on, template_off=template_off)
+
+# PDLABEL ------------------------------------------------------------------------------------
+class PDLabelBlock(RunBlock):
+
+    def check_validity(self, card):
+        """check which template is active and fill the parameter in the inactive one. """
+
+        if self.status(card):
+            if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
+                dict.__setitem__(card, 'pdlabel','lhapdf')
+            else:
+                if card['pdlabel1'] == card['pdlabel2']:
+                    if card['pdlabel'] != card['pdlabel1']:
+                        dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                elif card['pdlabel1'] in sum(card.allowed_lep_densities.values(),[]):
+                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option") 
+                elif card['pdlabel2'] in sum(card.allowed_lep_densities.values(),[]):
+                    raise InvalidRunCard("Assymetric beam pdf not supported for e e collision with ISR/bemstralung option")
+                elif card['pdlabel1'] == 'none':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel2'])
+                elif card['pdlabel2'] == 'none':
+                    dict.__setitem__(card, 'pdlabel', card['pdlabel1'])
+                else:
+                    dict.__setitem__(card, 'pdlabel', 'mixed')
+        else:
+            dict.__setitem__(card, 'pdlabel1', card['pdlabel'])
+            dict.__setitem__(card, 'pdlabel2', card['pdlabel'])
+
+        if abs(card['lpp1']) == 1 == abs(card['lpp2']) and card['pdlabel1'] != card['pdlabel2']:
+            raise InvalidRunCard("Assymetric beam pdf not supported for proton-proton collision") 
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used"""
+
+        if card['pdlabel'] == 'mixed':
+            return True
+
+        return super(PDLabelBlock, self).status(card)
+
+    @staticmethod
+    def post_set_pdlabel(card, value, change_userdefine, raiseerror, **opt):
+
+        if 'pdlabel1' in card.user_set:
+            card.user_set.remove('pdlabel1')
+        if 'pdlabel2' in card.user_set:
+            card.user_set.remove('pdlabel2')
+
+        #card['pdlabel1'] = value
+        #card['pdlabel2'] = value
+
+    @staticmethod
+    def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
+        """call when change to pdlabel1 or pdlabel2 --do not know which one """
+
+        if 'pdlabel' in card.user_set:
+            card.user_set.remove('pdlabel')
+
+
+
+template_on = \
+"""     %(pdlabel1)s    = pdlabel1     ! PDF type for beam #1
+     %(pdlabel2)s    = pdlabel2     ! PDF type for beam #2"""
+template_off = \
+"""     %(pdlabel)s    = pdlabel     ! PDF set """
+
+pdlabel_block = PDLabelBlock('pdlabel', template_on=template_on, template_off=template_off)
+
+# FIXED_FAC_SCALE ------------------------------------------------------------------------------------
+class FixedfacscaleBlock(RunBlock):
+
+    def check_validity(self, card):
+        """check which template is active and fill accordingly."""
+        return
+
+    @staticmethod
+    def post_set_fixed_fac_scale(card, value, change_userdefine, raiseerror, **opt):
+
+        if 'fixed_fac_scale1' in card.user_set:
+            card.user_set.remove('fixed_fac_scale1')
+        if 'fixed_fac_scale2' in card.user_set:
+            card.user_set.remove('fixed_fac_scale2')
+
+        # #card['pdlabel1'] = value
+        # #card['pdlabel2'] = value
+
+    @staticmethod
+    def post_set(card, value, change_userdefine, raiseerror, name='unknown', **opt):
+        """call when change to fixed_fac_scale1/2 --do not know which one--  """
+
+        if name in card.user_set:
+            if 'fixed_fac_scale' in card.user_set:
+                card.user_set.remove('fixed_fac_scale')
+            if name == 'fixed_fac_scale2' and 'fixed_fac_scale1' not in card.user_set:
+                dict.__setitem__(card, 'fixed_fac_scale1', card['fixed_fac_scale'])
+            if name == 'fixed_fac_scale1' and 'fixed_fac_scale2' not in card.user_set:
+                dict.__setitem__(card, 'fixed_fac_scale2', card['fixed_fac_scale'])   
+
+
+    def status(self, card):
+        """return False if template_off to be used, True if template_on to be used
+        inverted mode of display if the block is in card.display_block"""
+
+
+        if self.name in card.display_block:
+            return False
+
+        if any(f in card.user_set for f in self.off_fields):
+            return False
+
+        if any(f in card.user_set for f in self.on_fields):
+            return True
+
+        return True
+
+
+template_on = \
+"""     %(fixed_fac_scale)s = fixed_fac_scale  ! if .true. use fixed fac scale"""
+
+template_off = \
+""" %(fixed_fac_scale1)s = fixed_fac_scale1  ! if .true. use fixed fac scale for beam 1
+ %(fixed_fac_scale2)s = fixed_fac_scale2  ! if .true. use fixed fac scale for beam 2"""
+
+fixedfacscale = FixedfacscaleBlock('fixed_fact_scale', template_on=template_on, template_off=template_off)
+
+
+
+class RunCardLO(RunCard):
+    """an object to handle in a nice way the run_card information"""
     
+    blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
+             frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
+              pdlabel_block, fixedfacscale, running_block]
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -2974,10 +3498,10 @@ class RunCardLO(RunCard):
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("python_seed", -2, include=False, hidden=True, comment="controlling python seed [handling in particular the final unweighting].\n -1 means use default from random module.\n -2 means set to same value as iseed")
-        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9, -2,-3,4,-4],
-                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
-        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,4,-4],
-                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF from proton\n -1: PDF from anti-proton\n 2:photon from proton, 3:photon from electron, 4: photon from muon, 9: PLUGIN MODE')
+        self.add_param("lpp1", 1, fortran_name="lpp(1)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+                        comment='first beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
+        self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
+                       comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
         self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
         self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
@@ -2998,18 +3522,26 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        
-        self.add_param("pdlabel", "nn23lo1", allowed=['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo']), 
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none','mixed']+\
+                       sum(self.allowed_lep_densities.values(),[])
+        self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
+        self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
+        self.add_param("pdlabel2", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(2)")
         self.add_param("lhaid", 230000, hidden=True)
         self.add_param("fixed_ren_scale", False)
         self.add_param("fixed_fac_scale", False, hidden=True, include=False, comment="define if the factorization scale is fixed or not. You can define instead fixed_fac_scale1 and fixed_fac_scale2 if you want to make that choice per beam")
         self.add_param("fixed_fac_scale1", False, hidden=True)
         self.add_param("fixed_fac_scale2", False, hidden=True)
+        self.add_param("fixed_extra_scale", False, hidden=True)
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy",
+        self.add_param("mue_ref_fixed", 91.1880, hidden=True)
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n",
                                                 allowed=[-1,0,1,2,3,4])
+        self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
+        self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
+                        comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -3036,6 +3568,7 @@ class RunCardLO(RunCard):
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
+        self.add_param('dsqrt_shat',0., cut=True)
         self.add_param("nhel", 0, include=False)
         #pt cut
         self.add_param("ptj", 20.0, cut='j')
@@ -3231,6 +3764,7 @@ class RunCardLO(RunCard):
         if len(self['pdgs_for_merging_cut']) > 1000:
             raise InvalidRunCard("The number of elements in "+\
                                "'pdgs_for_merging_cut' should not exceed 1000.")
+
   
         # some cut need to be deactivated in presence of isolation
         if self['ptgmin'] > 0:
@@ -3246,10 +3780,10 @@ class RunCardLO(RunCard):
             self['iseed'] = self['gseed']
         
         #Some parameter need to be fixed when using syscalc
-        if self['use_syst']:
-            if self['scalefact'] != 1.0:
-                logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
-                self['scalefact'] = 1.0
+        #if self['use_syst']:
+        #    if self['scalefact'] != 1.0:
+        #        logger.warning('Since use_syst=T, changing the value of \'scalefact\' to 1')
+        #        self['scalefact'] = 1.0
      
         # CKKW Treatment
         if self['ickkw'] > 0:
@@ -3262,7 +3796,7 @@ class RunCardLO(RunCard):
             if self['use_syst']:
                 # some additional parameter need to be fixed for Syscalc + matching
                 if self['alpsfact'] != 1.0:
-                    logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
+                    logger.warning('Since use_syst=T, changing the value of \'alpsfact\' to 1')
                     self['alpsfact'] =1.0
             if self['maxjetflavor'] == 6:
                 raise InvalidRunCard('maxjetflavor at 6 is NOT supported for matching!')
@@ -3272,27 +3806,57 @@ class RunCardLO(RunCard):
                 self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
         if self['xqcut'] > 0:
             if self['ickkw'] == 0:
-                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
+                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be careful')
                 time.sleep(5)
             if self['drjj'] != 0:
                 if 'drjj' in self.user_set:
-                    logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+                    logger.warning('Since icckw>0, changing the value of \'drjj\' to 0')
                 self['drjj'] = 0
             if self['drjl'] != 0:
                 if 'drjl' in self.user_set:
-                    logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+                    logger.warning('Since icckw>0, changing the value of \'drjl\' to 0')
                 self['drjl'] = 0    
             if not self['auto_ptj_mjj']:         
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
     
-        # check validity of the pdf set
+        # check validity of the pdf set 
+        # note that pdlabel is automatically set to lhapdf if pdlabel1 or pdlabel2 is set to lhapdf
         if self['pdlabel'] == 'lhapdf':
             #add warning if lhaid not define
             self.get_default('lhaid', log_level=20)
-            
-        # if heavy ion mode use for one beam, forbis lpp!=1
+
+        mod = False
+        for i in [1,2]:
+            lpp = 'lpp%i' %i 
+            pdlabelX = 'pdlabel%i' % i
+            if self[lpp] == 0: # nopdf
+                if self[pdlabelX] != 'none':
+                    self.set(pdlabelX, 'none')
+                    mod = True
+            elif abs(self[lpp]) == 1: # PDF from PDF library
+                if self[pdlabelX] in ['eva', 'iww', 'none']:
+                    raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
+            elif abs(self[lpp]) in [3,4]: # PDF from PDF library
+                if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    self.set(pdlabelX, 'eva')
+                    mod = True
+            elif abs(self[lpp]) == 2:
+                if self[pdlabelX] != 'none':
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to none" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    self.set(pdlabelX, 'none')
+                    mod = True
+
+        if mod:
+            if 'pdlabel' in self.user_set:
+                self.user_set.remove('pdlabel')
+            self.user_set.add('pdlabel1')
+            #force rerun of consistency of lhapdf block
+            super(RunCardLO, self).check_validity()
+
+        # if heavy ion mode use for one beam, forbid lpp!=1
         if self['lpp1'] not in [1,2]:
             if self['nb_proton1'] !=1 or self['nb_neutron1'] !=0:
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp1=1/2")
@@ -3300,15 +3864,6 @@ class RunCardLO(RunCard):
             if self['nb_proton2'] !=1 or self['nb_neutron2'] !=0:
                 raise InvalidRunCard( "Heavy ion mode is only supported for lpp2=1/2")   
 
-        # check if lpp = 
-        for i in [1,2]:
-            if abs(self['lpp%s' % i ]) in [3,4] and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Photon from lepton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the EPA. Looks like you kept the default value (Mz). Is this really the cut-off of the EPA that you want to use?" % i)
-                time.sleep(5)
-        
-            if abs(self['lpp%s' % i ]) == 2 and self['dsqrt_q2fact%s'%i] == 91.188:
-                logger.warning("Since 2.7.1 Photon from proton are using fixed scale value of muf [dsqrt_q2fact%s] as the cut of the Improved Weizsaecker-Williams formula. Please edit it accordingly." % i)
-                time.sleep(5)
 
         # check that fixed_fac_scale(1/2) is setting as expected
         # if lpp=2/3/4 -> default is that beam in fixed scale
@@ -3319,46 +3874,49 @@ class RunCardLO(RunCard):
             if 'fixed_fac_scale2' in self.user_set:
                     if 'fixed_fac_scale' in self.user_set:
                         if not (self['fixed_fac_scale'] == self['fixed_fac_scale2'] == self['fixed_fac_scale2']):
-                            logger.warning('Both fixed_fac_scale, fixed_fac_scale1 and fixed_fac_scale2 are defined. The value of fixed_fac_scale is ignored')
+                            logger.warning('fixed_fac_scale, fixed_fac_scale1, and fixed_fac_scale2 are all defined. Ignoring the value of fixed_fac_scale.')
             elif 'fixed_fac_scale' in self.user_set:
-                logger.warning('Both fixed_fac_scale, fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale')
+                logger.warning('fixed_fac_scale and fixed_fac_scale1 are defined but not fixed_fac_scale2. The value of fixed_fac_scale2 will be set to the one of fixed_fac_scale.')
                 self['fixed_fac_scale2'] = self['fixed_fac_scale']
             elif self['lpp2'] !=0: 
                 raise Exception('fixed_fac_scale2 not defined while fixed_fac_scale1 is. Please fix your run_card.')
         elif 'fixed_fac_scale2' in self.user_set:
             if 'fixed_fac_scale' in self.user_set:
-                logger.warning('Both fixed_fac_scale, fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale')
+                logger.warning('fixed_fac_scale and fixed_fac_scale2 are defined but not fixed_fac_scale1. The value of fixed_fac_scale1 will be set to the one of fixed_fac_scale.')
                 self['fixed_fac_scale1'] = self['fixed_fac_scale']
             elif self['lpp1'] !=0: 
                 raise Exception('fixed_fac_scale1 not defined while fixed_fac_scale2 is. Please fix your run_card.')
         else:
             if 'fixed_fac_scale' in self.user_set:
-                if self['lpp1'] in [2,3,4]:
+                if abs(self['lpp1']) in [2,3,4] and abs(self['lpp2']) == 1:
                     logger.warning('fixed factorization scale is used for beam1. You can prevent this by setting fixed_fac_scale1 to False')
                     self['fixed_fac_scale1'] = True
-                    self['fixed_fac_scale2'] = self['fixed_fac_scale']
-                elif self['lpp2'] in [2,3,4]:
+                    #self['fixed_fac_scale2'] = self['fixed_fac_scale']
+                elif abs(self['lpp2']) in [2,3,4] and abs(self['lpp1']) == 1:
                     logger.warning('fixed factorization scale is used for beam2. You can prevent this by setting fixed_fac_scale2 to False')
-                    self['fixed_fac_scale1'] = self['fixed_fac_scale']
+                    #self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = True
                 else:
                     self['fixed_fac_scale1'] = self['fixed_fac_scale']
                     self['fixed_fac_scale2'] = self['fixed_fac_scale']
             elif self['lpp1'] !=0 or self['lpp2']!=0:
-                raise Exception('fixed_fac_scale not defined whithin your run_card. Plase fix this.')
+                logger.warning('fixed_fac_scale1 not defined whithin your run_card. Using default value: %s', self['fixed_fac_scale1'])
+                logger.warning('fixed_fac_scale1 not defined whithin your run_card. Using default value: %s', self['fixed_fac_scale2'])
 
-            
+        # check if lpp = 
+        if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
+            for i in [1,2]:
+                if abs(self['lpp%s' % i ]) in [3,4] and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
+        
+                if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
+                    logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
-                
-        # if both lpp1/2 are on PA mode -> force fixed factorization scale
-        if abs(self['lpp1']) in [2, 3,4] and abs(self['lpp2']) in [2, 3,4] and not self['fixed_fac_scale']:
-            if 'fixed_fac_scale1' not in self.user_set or 'fixed_fac_scale2' not in self.user_set:
-                raise InvalidRunCard("Having both beam in elastic photon mode requires fixed_fac_scale to be on True [since this is use as cutoff]. If you really want a running scale here, please define fixed_fac_scale1 on False and fixed_fac_scale2 on False")
 
         if six.PY2 and self['hel_recycling']:
             self['hel_recycling'] = False
             logger.warning("""Helicity recycling optimization requires Python3. This optimzation is therefore deactivated automatically. 
-            In general this optimization speed up the computation be a factor of two.""")
+            In general this optimization speeds up the computation by a factor of two.""")
 
                 
         # check that ebeam is bigger than the associated mass.
@@ -3368,7 +3926,7 @@ class RunCardLO(RunCard):
             if self['mass_ion%i' % i] == -1:
                 if self['ebeam%i' % i] < 0.938:
                     if self['ebeam%i' %i] == 0:
-                        logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                        logger.warning("At-rest proton mode set: energy beam set to 0.938")
                         self.set('ebeam%i' %i, 0.938)
                     else:
                         raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
@@ -3384,11 +3942,10 @@ class RunCardLO(RunCard):
         elif self['tmin_for_channel'] > 0:
             logger.warning('tmin_for_channel should be negative. Will be using -%f instead' % self['tmin_for_channel'])
             self.set('tmin_for_channel',  -self['tmin_for_channel'])
-            
 
             
-            
     def update_system_parameter_for_include(self):
+        """system parameter need to be setupe"""
         
         # polarization
         self['frame_id'] = sum(2**(n) for n in self['me_frame'])
@@ -3404,8 +3961,8 @@ class RunCardLO(RunCard):
             raise Exception("Maximum 25 different pdgs are allowed for pdg specific cut")
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
-            raise MadGraph5Error('Some PDG specific cuts are defined with negative pdg code')
+            logger.warning('PDG specific cuts are always applied symmetrically on particles/anti-particles. Always use positve PDG codes')
+            raise MadGraph5Error('Some PDG specific cuts are defined using negative pdg code')
         
         
         if any(pdg in pdg_to_cut for pdg in [1,2,3,4,5,21,22,11,13,15]):
@@ -3462,6 +4019,8 @@ class RunCardLO(RunCard):
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """
 
+        for block in self.blocks:
+            block.create_default_for_process(self, proc_characteristic, history, proc_def)
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
@@ -3482,6 +4041,13 @@ class RunCardLO(RunCard):
                         if not leg['state']:
                             beam_id_split[i].add(leg['id'])
                             beam_id.add(leg['id'])
+
+            if beam_id_split[0] != beam_id_split[1]:
+                b1 = [abs(x) for x in beam_id_split[0]]
+                b2 = [abs(x) for x in beam_id_split[1]]
+                if set(b1) != set(b2):
+                    self.display_block.append('fixed_fact_scale')
+                    self.display_block.append('pdlabel')
 
             if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
@@ -3512,13 +4078,58 @@ class RunCardLO(RunCard):
                 if set([ abs(i) for i in beam_id_split[0]]) == set([ abs(i) for i in beam_id_split[1]]):
                     self.display_block.append('ecut')
                 self.display_block.append('beam_pol')
-            else:
-                self['lpp1'] = 0
-                self['lpp2'] = 0    
-                self['use_syst'] = False   
-                self.display_block.append('beam_pol')  
-                self.display_block.append('ecut')       
-            
+     
+
+            # check for possibility of eva
+            eva_in_b1 =  any(i in beam_id_split[0] for i in [23,24,-24]) #,12,-12,14,-14])
+            eva_in_b2 =  any(i in beam_id_split[1] for i in [23,24,-24]) #,12,-12,14,-14])
+            if eva_in_b1 and eva_in_b2:
+                self['lpp1'] = -3
+                self['lpp2'] = 3
+                self['ebeam1'] = '15k'
+                self['ebeam2'] = '15k'
+                self['nhel'] = 1
+                self['pdlabel'] = 'eva'
+                self['fixed_fac_scale'] = True
+                self.display_block.append('beam_pol') 
+
+            elif eva_in_b1:
+                self.display_block.append('beam_pol') 
+                self['pdlabel1'] = 'eva'
+                self['fixed_fac_scale1'] = True
+                self['nhel']    = 1
+                for i in beam_id_split[1]:
+                    exit
+                    if abs(i) == 11:
+                        self['lpp1']    = -math.copysign(3,i)
+                        self['lpp2']    =  math.copysign(3,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+                    elif abs(i) == 13:
+                        self['lpp1']    = -math.copysign(4,i)
+                        self['lpp2']    =  math.copysign(4,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+            elif eva_in_b2:
+                self['pdlabel2'] = 'eva'
+                self['fixed_fac_scale2'] = True
+                self['nhel']    = 1
+                self.display_block.append('beam_pol') 
+                for i in beam_id_split[0]:
+                    if abs(i) == 11:
+                        self['lpp1']    =  math.copysign(3,i)
+                        self['lpp2']    = -math.copysign(3,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+                    if abs(i) == 13:
+                        self['lpp1']    =  math.copysign(4,i)
+                        self['lpp2']    = -math.copysign(4,i)
+                        self['ebeam1']  = '15k'
+                        self['ebeam2']  = '15k'
+
+            if any(i in beam_id for i in [22,23,24,-24,12,-12,14,-14]):
+                self.display_block.append('eva_scale')
+
             # automatic polarisation of the beam if neutrino beam  
             if any(id  in beam_id for id in [12,-12,14,-14,16,-16]):
                 self.display_block.append('beam_pol')
@@ -3540,7 +4151,7 @@ class RunCardLO(RunCard):
                     self['polbeam2'] = -100
                     if not all(id  in [12,14,16] for id in beam_id_split[1]):
                         logger.warning('Issue with default beam setup of neutrino in the run_card. Please check it up [polbeam2].')
-                if any(id  in beam_id_split[1] for id in [-12,-14,-16]):
+                elif any(id  in beam_id_split[1] for id in [-12,-14,-16]):
                     self['lpp2'] = 0   
                     self['ebeam2'] = '1k'  
                     self['polbeam2'] = 100
@@ -3655,6 +4266,13 @@ class RunCardLO(RunCard):
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
             
+        if 'fix_scale' in proc_characteristic['limitations']:
+            self['fixed_ren_scale'] = 1
+            self['fixed_fac_scale'] = 1
+            if self['ickkw']  == 1:
+                logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
+            self['ickkw'] = 0
+            
         # define class of particles present to hide all the cuts associated to 
         # not present class
         cut_class = collections.defaultdict(int)
@@ -3686,11 +4304,17 @@ class RunCardLO(RunCard):
                 cut_class[key] = max(cut_class[key], nb)
             self.cut_class = dict(cut_class)
             self.cut_class[''] = True #avoid empty
-                                   
+            
+        # If model has running functionality add the additional parameter
+        model = proc_def[0][0].get('model')
+        if model['running_elements']:
+            self.display_block.append('RUNNING') 
+            
     def write(self, output_file, template=None, python_template=False,
               **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
+
 
         if not template:
             if not MADEVENT:
@@ -4159,11 +4783,24 @@ class MadAnalysis5Card(dict):
 
         return cmds_list
 
+# Running -----------------------------------------------------------------------------------------
+template_on = \
+"""#***********************************************************************
+# CONTROL The extra running scale (not QCD)                       *
+#    Such running is NOT include in systematics computation            *
+#***********************************************************************
+ %(mue_ref_fixed)s  =  mue_ref_fixed ! scale to use if fixed scale mode
+"""
+running_block_nlo = RunBlock('RUNNING', template_on=template_on, template_off="")
+    
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
-    
+     
     LO = False
     
+    blocks = [running_block_nlo]
+
+        
     def default_setup(self):
         """define the default value"""
         
@@ -4171,6 +4808,7 @@ class RunCardNLO(RunCard):
         self.add_param('nevents', 10000)
         self.add_param('req_acc', -1.0, include=False)
         self.add_param('nevt_job', -1, include=False)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param('event_norm', 'average')
         #FO parameter
         self.add_param('req_acc_fo', 0.01, include=False)        
@@ -4184,7 +4822,8 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo'])                
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+             sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
@@ -4193,10 +4832,12 @@ class RunCardNLO(RunCard):
         self.add_param('mcatnlo_delta', True)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
+        self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
+        self.add_param('mue_ref_fixed', 91.118, hidden=True) 
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
@@ -4204,6 +4845,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
         self.add_param('muf2_over_ref', -1.0, hidden=True)
+        self.add_param('mue_over_ref', 1.0, hidden=True, system=True) # forbid the user to modigy due to incorrect handling of the Ellis-Sexton scale
         self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', -1.0, hidden=True)        
@@ -4230,12 +4872,17 @@ class RunCardNLO(RunCard):
         self.add_param('jetradius', 0.7)         
         self.add_param('ptj', 10.0 , cut=True)
         self.add_param('etaj', -1.0, cut=True)        
+        self.add_param('gamma_is_j', True)        
         self.add_param('ptl', 0.0, cut=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
         self.add_param('drll_sf', 0.0, cut=True)        
         self.add_param('mll', 0.0, cut=True)
         self.add_param('mll_sf', 30.0, cut=True) 
+        self.add_param('rphreco', 0.1) 
+        self.add_param('etaphreco', -1.0) 
+        self.add_param('lepphreco', True) 
+        self.add_param('quarkphreco', True) 
         self.add_param('ptgmin', 20.0, cut=True)
         self.add_param('etagamma', -1.0)        
         self.add_param('r0gamma', 0.4)
@@ -4243,7 +4890,7 @@ class RunCardNLO(RunCard):
         self.add_param('epsgamma', 1.0)
         self.add_param('isoem', True)        
         self.add_param('maxjetflavor', 4, hidden=True)
-        self.add_param('iappl', 0)   
+        self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
         #internal variable related to FO_analyse_card
@@ -4273,26 +4920,27 @@ class RunCardNLO(RunCard):
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
-            
-            if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
-                self['pdlabel']='nn23nlo'
-                self['reweight_pdf']=[False]
-                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
+            if self['lpp1'] == 0  == self['lpp2']:
+                if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                    self['pdlabel']='nn23nlo'
+                    self['reweight_pdf']=[False]
+                    logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
+
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
             # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed       
             scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
             for scale in scales:
                 if self[scale]:
-                    logger.warning('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                    logger.warning('''For consistency in FxFx merging, \'%s\' has been set to false'''
                                 % scale,'$MG:BOLD')
                     self[scale]= False
             #and left to default dynamical scale
             if len(self["dynamical_scale_choice"]) > 1 or self["dynamical_scale_choice"][0] != -1:
                 self["dynamical_scale_choice"] = [-1]
                 self["reweight_scale"]=[self["reweight_scale"][0]]
-                logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
+                logger.warning('''For consistency in FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
                                 ,'$MG:BOLD')
                 
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
@@ -4309,11 +4957,11 @@ class RunCardNLO(RunCard):
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:BOLD')            
                                 
-        # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
-        if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
-            raise InvalidRunCard('APPLgrid generation only possible with the use of LHAPDF')
-        if self['iappl'] != 0 and not self['reweight_scale']:
-            raise InvalidRunCard('APPLgrid generation only possible with including' +\
+        # For interface to PINEAPPL, need to use LHAPDF and reweighting to get scale uncertainties
+        if self['pineappl'] and self['pdlabel'].lower() != 'lhapdf':
+            raise InvalidRunCard('PineAPPL generation only possible with the use of LHAPDF')
+        if self['pineappl'] and not self['reweight_scale']:
+            raise InvalidRunCard('PineAPPL generation only possible with including' +\
                                       ' the reweighting to get scale dependence')
 
         # Hidden values check
@@ -4422,7 +5070,7 @@ class RunCardNLO(RunCard):
 
             if self['ebeam%i' % i] < 0.938:
                 if self['ebeam%i' %i] == 0:
-                    logger.warning("At rest proton mode set: Energy beam set to 0.938")
+                    logger.warning("At-rest proton mode set: energy beam set to 0.938 GeV")
                     self.set('ebeam%i' %i, 0.938)
                 else:
                     raise InvalidRunCard("Energy for beam %i lower than proton mass. Please fix this")    
@@ -4439,8 +5087,8 @@ class RunCardNLO(RunCard):
             raise Exception("Maximum 25 different PDGs are allowed for PDG specific cut")
         
         if any(int(pdg)<0 for pdg in pdg_to_cut):
-            logger.warning('PDG specific cuts are always applied symmetrically on particle/anti-particle. Always use positve PDG codes')
-            raise MadGraph5Error('Some PDG specific cuts are defined with negative PDG codes')
+            logger.warning('PDG specific cuts are always applied symmetrically on particles/anti-particles. Always use positve PDG codes')
+            raise MadGraph5Error('Some PDG specific cuts are defined using negative PDG codes')
         
         
         if any(pdg in pdg_to_cut for pdg in [21,22,11,13,15]+ list(range(self['maxjetflavor']+1))):
@@ -4490,7 +5138,7 @@ class RunCardNLO(RunCard):
             else:
                 template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
                 python_template = False
-       
+
         super(RunCardNLO, self).write(output_file, template=template,
                                     python_template=python_template, **opt)
 
@@ -4499,7 +5147,12 @@ class RunCardNLO(RunCard):
         """Rules
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
+          process with tagged photons -> gamma_is_j = false
+          process without QED splittings -> gamma_is_j = false, recombination = false
         """
+
+        for block in self.blocks:
+            block.create_default_for_process(self, proc_characteristic, history, proc_def)
 
         # check for beam_id
         beam_id = set()
@@ -4523,13 +5176,33 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+
+        # check for tagged photons
+        tagged_particles = set()
             
+        # If model has running functionality add the additional parameter
+        model = proc_def[0].get('model')
+        if model['running_elements']:
+            self.display_block.append('RUNNING') 
+
         # Check if need matching
         min_particle = 99
         max_particle = 0
         for proc in proc_def:
+            for leg in proc['legs']:
+                if leg['is_tagged']:
+                    tagged_particles.add(leg['id'])
             min_particle = min(len(proc['legs']), min_particle)
             max_particle = max(len(proc['legs']), max_particle)
+
+        if 22 in tagged_particles:
+            self['gamma_is_j'] = False
+
+        if 'QED' not in proc_characteristic['splitting_types']:
+            self['gamma_is_j'] = False
+            self['lepphreco'] = False
+            self['quarkphreco'] = False
+
         matching = False
         if min_particle != max_particle:
             #take one of the process with min_particle
@@ -4566,7 +5239,6 @@ class RunCardNLO(RunCard):
             self["jetradius"] = 1
             self["parton_shower"] = "PYTHIA8"
             
-    
     
     
 class MadLoopParam(ConfigFile):

@@ -7,10 +7,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: g d~ > t t~ d~ WEIGHTED<=3 [ real = QCD ]
-C     Process: g s~ > t t~ s~ WEIGHTED<=3 [ real = QCD ]
-C     Process: g u~ > t t~ u~ WEIGHTED<=3 [ real = QCD ]
-C     Process: g c~ > t t~ c~ WEIGHTED<=3 [ real = QCD ]
+C     Process: g d~ > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s~ > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g u~ > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c~ > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
 C     ****************************************************            
 C         
@@ -27,21 +27,19 @@ C
 C     ARGUMENTS                                                       
 C         
 C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), LUM
+      DOUBLE PRECISION LUM
 C     
 C     LOCAL VARIABLES                                                 
 C         
 C     
-      INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      INTEGER I, ICROSS,LP
       DOUBLE PRECISION G1
       DOUBLE PRECISION CX2,SX2,UX2,DX2
-      DOUBLE PRECISION XPQ(-7:7)
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+      DOUBLE PRECISION PDG2PDF
 C     
 C     GLOBAL VARIABLES                                                
 C         
@@ -53,6 +51,24 @@ C
       INCLUDE 'run.inc'
       INTEGER IMIRROR
       COMMON/CMIRROR/IMIRROR
+C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE 'eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+      DOUBLE PRECISION DUMMY_COMPONENTS(N_EE)
+      DOUBLE PRECISION G1_COMPONENTS(N_EE)
+      DOUBLE PRECISION CX2_COMPONENTS(N_EE),SX2_COMPONENTS(N_EE)
+     $ ,UX2_COMPONENTS(N_EE),DX2_COMPONENTS(N_EE)
+
+      INTEGER I_EE
+C     
+C     
+C     
+C     Common blocks
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 C     
 C     DATA                                                            
 C         
@@ -67,51 +83,52 @@ C
 C     ----------                                                      
 C         
       LUM = 0D0
-      IF (IMIRROR.EQ.2) THEN
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          G1=PDG2PDF(ABS(LPP(2)),0*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          CX2=PDG2PDF(ABS(LPP(1)),-4*LP,XBK(1),DSQRT(Q2FACT(1)))
-          SX2=PDG2PDF(ABS(LPP(1)),-3*LP,XBK(1),DSQRT(Q2FACT(1)))
-          UX2=PDG2PDF(ABS(LPP(1)),-2*LP,XBK(1),DSQRT(Q2FACT(1)))
-          DX2=PDG2PDF(ABS(LPP(1)),-1*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! g d~ > t t~ d~
-        PD(IPROC) = G1*DX2
-        IPROC=IPROC+1  ! g s~ > t t~ s~
-        PD(IPROC) = G1*SX2
-        IPROC=IPROC+1  ! g u~ > t t~ u~
-        PD(IPROC) = G1*UX2
-        IPROC=IPROC+1  ! g c~ > t t~ c~
-        PD(IPROC) = G1*CX2
-      ELSE
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          G1=PDG2PDF(ABS(LPP(1)),0*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          CX2=PDG2PDF(ABS(LPP(2)),-4*LP,XBK(2),DSQRT(Q2FACT(2)))
-          SX2=PDG2PDF(ABS(LPP(2)),-3*LP,XBK(2),DSQRT(Q2FACT(2)))
-          UX2=PDG2PDF(ABS(LPP(2)),-2*LP,XBK(2),DSQRT(Q2FACT(2)))
-          DX2=PDG2PDF(ABS(LPP(2)),-1*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! g d~ > t t~ d~
-        PD(IPROC) = G1*DX2
-        IPROC=IPROC+1  ! g s~ > t t~ s~
-        PD(IPROC) = G1*SX2
-        IPROC=IPROC+1  ! g u~ > t t~ u~
-        PD(IPROC) = G1*UX2
-        IPROC=IPROC+1  ! g c~ > t t~ c~
-        PD(IPROC) = G1*CX2
+      IF (ABS(LPP(1)) .GE. 1) THEN
+        G1=PDG2PDF(LPP(1),0,1,XBK(1),DSQRT(Q2FACT(1)))
+        IF ((ABS(LPP(1)).EQ.4.OR.ABS(LPP(1)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') G1_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
       ENDIF
+      IF (ABS(LPP(2)) .GE. 1) THEN
+        CX2=PDG2PDF(LPP(2),-4,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') CX2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        SX2=PDG2PDF(LPP(2),-3,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') SX2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        UX2=PDG2PDF(LPP(2),-2,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') UX2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        DX2=PDG2PDF(LPP(2),-1,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') DX2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+      ENDIF
+      PD(0) = 0D0
+      IPROC = 0
+      IPROC=IPROC+1  ! g d~ > t t~ d~
+      PD(IPROC) = G1*DX2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,DX2_COMPONENTS)
+      IPROC=IPROC+1  ! g s~ > t t~ s~
+      PD(IPROC) = G1*SX2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,SX2_COMPONENTS)
+      IPROC=IPROC+1  ! g u~ > t t~ u~
+      PD(IPROC) = G1*UX2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,UX2_COMPONENTS)
+      IPROC=IPROC+1  ! g c~ > t t~ c~
+      PD(IPROC) = G1*CX2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,CX2_COMPONENTS)
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

@@ -36,10 +36,10 @@
  %(nevt_job)s = nevt_job! Max number of events per job in event generation. 
                  !  (-1= no split).
 #***********************************************************************
-# Normalize the weights of LHE events such that they sum or average to *
-# the total cross section                                              *
+# Output format
 #***********************************************************************
- %(event_norm)s = event_norm    ! valid settings: average, sum, bias
+  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
+  %(event_norm)s =  event_norm       ! average/sum/bias. Normalization of the weight in the LHEF
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
@@ -94,6 +94,7 @@
            ! first are included via reweighting
  %(mur_over_ref)s  = muR_over_ref  ! ratio of current muR over reference muR
  %(muf_over_ref)s  = muF_over_ref  ! ratio of current muF over reference muF
+ $RUNNING
 #*********************************************************************** 
 # Reweight variables for scale dependence and PDF uncertainty          *
 #***********************************************************************
@@ -131,6 +132,10 @@
  %(bwcutoff)s  = bwcutoff
 #***********************************************************************
 # Cuts on the jets. Jet clustering is performed by FastJet.            *
+#  - If gamma_is_j, photons are also clustered with jets.              *
+#    Otherwise, they will be treated as tagged particles and photon    * 
+#    isolation will be applied. Note that photons in the real emission *
+#    will always be clustered with QCD partons.                        *
 #  - When matching to a parton shower, these generation cuts should be *
 #    considerably softer than the analysis cuts.                       *
 #  - More specific cuts can be specified in SubProcesses/cuts.f        *
@@ -139,6 +144,7 @@
   %(jetradius)s  = jetradius ! The radius parameter for the jet algorithm
  %(ptj)s  = ptj       ! Min jet transverse momentum
  %(etaj)s  = etaj      ! Max jet abs(pseudo-rap) (a value .lt.0 means no cut)
+ %(gamma_is_j)s = gamma_is_j! Wether to cluster photons as jets or not
 #***********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)        *
 # More specific cuts can be specified in SubProcesses/cuts.f           *
@@ -148,14 +154,23 @@
   %(drll)s  = drll    ! Min distance between opposite sign lepton pairs
   %(drll_sf)s  = drll_sf ! Min distance between opp. sign same-flavor lepton pairs
   %(mll)s  = mll     ! Min inv. mass of all opposite sign lepton pairs
- %(mll_sf)s  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
+  %(mll_sf)s  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
 #***********************************************************************
-# Photon-isolation cuts, according to hep-ph/9801442. When ptgmin=0,   *
-# all the other parameters are ignored.                                *
+# Fermion-photon recombination parameters                              *
+# If Rphreco=0, no recombination is performed                          *
+#***********************************************************************
+ %(rphreco)s  = Rphreco  ! Minimum fermion-photon distance for recombination
+ %(etaphreco)s  = etaphreco  ! Maximum abs(pseudo-rap) for photons to be recombined (a value .lt.0 means no cut)
+ %(lepphreco)s  = lepphreco  ! Recombine photons and leptons together
+ %(quarkphreco)s  = quarkphreco  ! Recombine photons and quarks together
+#***********************************************************************
+# Photon-isolation cuts, according to hep-ph/9801442                   *
+# Not applied if gamma_is_j                                            *
+# When ptgmin=0, all the other parameters are ignored                  *
 # More specific cuts can be specified in SubProcesses/cuts.f           *
 #***********************************************************************
- %(ptgmin)s  = ptgmin    ! Min photon transverse momentum
- %(etagamma)s  = etagamma  ! Max photon abs(pseudo-rap)
+  %(ptgmin)s  = ptgmin    ! Min photon transverse momentum
+  %(etagamma)s  = etagamma  ! Max photon abs(pseudo-rap)
   %(r0gamma)s  = R0gamma   ! Radius of isolation code
   %(xn)s  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
   %(epsgamma)s  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
@@ -170,9 +185,10 @@
   %(pt_max_pdg)s = pt_max_pdg ! Max pT for a massive particle
   %(mxx_min_pdg)s = mxx_min_pdg ! inv. mass for any pair of (anti)particles
 #***********************************************************************
-# For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
+# Use PineAPPL to generate PDF-independent fast-interpolation grid     *
+# (https://zenodo.org/record/3992765#.X2EWy5MzbVo)                     *
 #***********************************************************************
- %(iappl)s = iappl ! aMCfast switch (0=OFF, 1=prepare grids, 2=fill grids)
+ %(pineappl)s = pineappl ! PineAPPL switch 
 #***********************************************************************
 # Folding parameters for S-events to reduce the number of negatively   *
 # weighted events. Allowed values are 1, 2, 4 or 8 for each of the     *

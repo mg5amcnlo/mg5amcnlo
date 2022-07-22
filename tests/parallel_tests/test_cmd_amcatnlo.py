@@ -40,6 +40,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 
+from tests import test_manager
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -55,9 +56,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    
     
     def setUp(self):
+        self.debugging = unittest.debug
         
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
@@ -97,6 +99,8 @@ class MECmdShell(IOTests.IOTestManager):
         for multi in multiparticles:
             run_cmd('define %s' % multi)
         if isinstance(process, str):
+            if process.startswith('e') and '[' in process:
+                run_cmd('set include_lepton_initiated_processes True')
             run_cmd('generate %s' % process)
         else:
             for p in process:
@@ -168,7 +172,7 @@ class MECmdShell(IOTests.IOTestManager):
         """
         
         cmd = os.getcwd()
-        self.generate(['e+ e- > p p p [real=QCD]'], 'sm' )
+        self.generate('e+ e- > p p p [real=QCD]', 'sm' )
         self.assertEqual(cmd, os.getcwd())
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
@@ -341,7 +345,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-        self.assertFalse(self.debugging)
     
 
     def test_short_launch_amcatnlo_name(self):
@@ -488,7 +491,7 @@ class MECmdShell(IOTests.IOTestManager):
         """check that py6pt event generation stops in this case (because of fsr)"""
         
         cmd = os.getcwd()
-        self.generate(['e+ e- > t t~ [real=QCD]'], 'sm')
+        self.generate('e+ e- > t t~ [real=QCD]', 'sm')
         #change to py6
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
@@ -560,7 +563,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         
         
-
+    @test_manager.bypass_for_py3
     def test_short_jet_veto_xsec(self):
         """tests the jet-veto cross section at NNLL+NLO"""    
 

@@ -111,7 +111,10 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertEqual(detect(pjoin(card_dir, 'madanalysis5_parton_card.dat')),
                          'madanalysis5_parton_card.dat')
         
-        
+        # Rivet card
+        card_dir= pjoin(root_path,'..','Template', 'LO', 'Cards')
+        self.assertEqual(detect(pjoin(card_dir, 'rivet_card_default.dat')),
+                         'rivet_card.dat')        
         
         
     def test_help_category(self):

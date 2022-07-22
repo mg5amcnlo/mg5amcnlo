@@ -18,6 +18,7 @@ from object_library import all_functions, Function
 #
 # shortcuts for functions from cmath
 #
+print("load functionPlibrary", __file__)
 
 complexconjugate = Function(name = 'complexconjugate',
                             arguments = ('z',),

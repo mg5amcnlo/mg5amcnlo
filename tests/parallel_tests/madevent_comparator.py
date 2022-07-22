@@ -624,10 +624,10 @@ class MG5OldRunner(MG5Runner):
         devnull = open(os.devnull,'w') 
 
         if logging.root.level >=20:
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location],
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location],
                         stdout=devnull, stderr=devnull)
         else:       
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5'), proc_card_location])
+            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location])
         os.remove(proc_card_location)
 
         values = self.get_values()

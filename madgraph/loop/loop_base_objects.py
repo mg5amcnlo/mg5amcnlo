@@ -1426,6 +1426,8 @@ class LoopModel(base_objects.Model):
         if len(args)>0 and isinstance(args[0],LoopModel):
             if hasattr(args[0],'map_CTcoup_CTparam'):
                 self.map_CTcoup_CTparam = copy.copy(args[0].map_CTcoup_CTparam)
+            if hasattr(args[0],'notused_ct_params'):
+                self.notused_ct_params = list(args[0].notused_ct_params)                
 
         super(LoopModel,self).__init__(*args,**opts)
 
@@ -1484,11 +1486,6 @@ class LoopModel(base_objects.Model):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz','perturbation_couplings','conserved_charge']
 
-    def change_electroweak_mode(self, mode):
-
-        if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
-            raise Exception("can not change EW scheme for model handling EW correction")
-        super(LoopModel, self).change_electroweak_mode(mode)
 
 #===============================================================================
 # DGLoopLeg
@@ -1508,7 +1505,8 @@ class DGLoopLeg(base_objects.Leg):
         else:
             super(DGLoopLeg,self).__init__()
             for key in argument.get_sorted_keys():
-                self.set(key,argument[key])
+                if key in self.get_sorted_keys():
+                    self.set(key,argument[key])
 
     def default_setup(self):
        super(DGLoopLeg,self).default_setup()         

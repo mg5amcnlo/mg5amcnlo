@@ -62,7 +62,7 @@ C
       PARAMETER (NCOMB=12)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS 
 C     
@@ -181,7 +181,7 @@ C
       PARAMETER (NCOMB=12)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS 
 C     
@@ -362,6 +362,46 @@ C     Now the routines to update the wavefunctions
       ENDDO
       END
 
+      SUBROUTINE UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
+      USE POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,0
+            OUT(J,K,I)=(0.0D0,0.0D0)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
+      SUBROUTINE MP_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
+      USE POLYNOMIAL_CONSTANTS
+      INTEGER I,J,K
+      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+
+      DO I=1,LCUT_SIZE
+        DO J=1,OUT_SIZE
+          DO K=0,0
+            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
+          ENDDO
+          DO K=1,IN_SIZE
+            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      END
+
       SUBROUTINE UPDATE_WL_0_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
       USE POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
@@ -431,12 +471,12 @@ C     Now the routines to update the wavefunctions
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
             OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
           ENDDO
@@ -465,54 +505,14 @@ C     Now the routines to update the wavefunctions
             OUT(J,4,I)=OUT(J,4,I)+A(K,0,I)*B(J,4,K)+A(K,4,I)*B(J,0,K)
             OUT(J,5,I)=OUT(J,5,I)+A(K,1,I)*B(J,1,K)
             OUT(J,6,I)=OUT(J,6,I)+A(K,1,I)*B(J,2,K)+A(K,2,I)*B(J,1,K)
-            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
             OUT(J,7,I)=OUT(J,7,I)+A(K,2,I)*B(J,2,K)
+            OUT(J,8,I)=OUT(J,8,I)+A(K,1,I)*B(J,3,K)+A(K,3,I)*B(J,1,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
             OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
             OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
-      SUBROUTINE UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
-      USE POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*16 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,0
-            OUT(J,K,I)=(0.0D0,0.0D0)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
-          ENDDO
-        ENDDO
-      ENDDO
-      END
-
-      SUBROUTINE MP_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
-      USE POLYNOMIAL_CONSTANTS
-      INTEGER I,J,K
-      COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-      COMPLEX*32 OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-      INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-
-      DO I=1,LCUT_SIZE
-        DO J=1,OUT_SIZE
-          DO K=0,0
-            OUT(J,K,I)=CMPLX(0.0E0_16,0.0E0_16,KIND=16)
-          ENDDO
-          DO K=1,IN_SIZE
-            OUT(J,0,I)=OUT(J,0,I)+A(K,0,I)*B(J,0,K)
           ENDDO
         ENDDO
       ENDDO

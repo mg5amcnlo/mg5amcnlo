@@ -1,13 +1,11 @@
       subroutine finalize_event(xx,weight,lunlhe,putonshell)
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
       include "unlops.inc"
       include "run.inc"
       include 'timing_variables.inc'
-      include 'mint.inc'
-      integer ndim
-      common/tosigint/ndim
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
@@ -171,7 +169,7 @@ c get info on beam and PDFs
       integer ievent,izero
       parameter (izero=0)
       double precision aqcd,aqed,scale
-      character*140 buff
+      character*1000 buff
       double precision shower_scale,shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
       INTEGER MAXNUP,i,j,k

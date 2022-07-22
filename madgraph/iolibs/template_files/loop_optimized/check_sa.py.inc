@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 # This is an example of how to run MadLoop from Python using the f2py compilation of the wrapper file 'f2py_wrapper.f'.
 
