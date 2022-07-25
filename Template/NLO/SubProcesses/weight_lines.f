@@ -46,6 +46,10 @@ c parton_iproc
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=parton_iproc
          call move_alloc(temp2,parton_iproc)
+c parton_pdf
+         allocate(itemp3(nexternal,n_proc,max_contr))
+         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
+         call move_alloc(itemp3,parton_pdf)
 c unwgt
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
