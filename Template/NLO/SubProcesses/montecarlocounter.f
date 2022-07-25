@@ -635,7 +635,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       double precision p(0:3,nexternal),probne,zhw(nexternal)
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
      $     ,emscwgt(nexternal),MCsec(nexternal,max_bcol),sumMCsec
-     $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum,dummy
+     $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
@@ -760,7 +760,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       call check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
-         if(.not.is_pt_hard) call complete_xmcsubt(p,dummy,lzone,xmcxsec
+         if(.not.is_pt_hard) call complete_xmcsubt(p,lzone,xmcxsec
      $        ,xmcxsec2,MCsec,probne)
       else
 ! assign emsca on statistical basis (don't need flow here): 
@@ -1495,7 +1495,7 @@ c Main loop over colour partners used to end here
 
 c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
-      subroutine complete_xmcsubt(p,wgt,lzone,xmcxsec,xmcxsec2,MCsec
+      subroutine complete_xmcsubt(p,lzone,xmcxsec,xmcxsec2,MCsec
      $     ,probne)
       implicit none
       include "born_nhel.inc"
@@ -2161,9 +2161,9 @@ c
               id=7
            endif
            do jcount=1,icount
-             pdffnum(jcount)=pdg2pdf(abs(lpp(i)),id,xbjrk_cnt(i,0),
+             pdffnum(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
      #                               stoppingScale(jcount))
-             pdffden(jcount)=pdg2pdf(abs(lpp(i)),id,xbjrk_cnt(i,0),
+             pdffden(jcount)=pdg2pdf(abs(lpp(i)),id,1,xbjrk_cnt(i,0),
      #                               startingScale(jcount))
            enddo
          else
