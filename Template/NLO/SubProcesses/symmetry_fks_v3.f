@@ -394,62 +394,9 @@ c
 c Dummy routines
 c
 c
-      subroutine initplot
-      end
-      subroutine outfun(pp,www,iplot)
-      end
 
-      LOGICAL FUNCTION PASSCUTS(P,rwgt)
-      real*8 rwgt
-      include 'nexternal.inc'
-      real*8 p(0:3,nexternal)
-      rwgt=1d0
-      passcuts=.true.
-      RETURN
-      END
-
-      subroutine bias_weight_function(p,ipdg,bias_wgt)
-c Dummy function. Should always retrun 1.
-      implicit none
-      include 'nexternal.inc'
-      integer ipdg(nexternal)
-      double precision bias_wgt,p(0:3,nexternal)
-      bias_wgt=1d0
-      return
+      subroutine write_lhef_event(ifile,
+     # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       end
-
-
-      subroutine get_ID_H(IDUP_tmp)
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow),niprocs
-c      include 'leshouche.inc'
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
-      integer IDUP_tmp(nexternal),i
-c
-      do i=1,nexternal
-         IDUP_tmp(i)=IDUP(i,1)
-      enddo
-c
-      return
-      end
-
-      subroutine get_ID_S(IDUP_tmp)
-      implicit none
-      include "genps.inc"
-      include 'nexternal.inc'
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'born_leshouche.inc'
-      integer IDUP_tmp(nexternal),i
-c
-      do i=1,nexternal-1
-         IDUP_tmp(i)=IDUP(i,1)
-      enddo
-      IDUP_tmp(nexternal)=0
-c
-      return
-      end
+      

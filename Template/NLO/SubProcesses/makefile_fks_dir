@@ -45,7 +45,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 cluster.o splitorders_stuff.o 			\
-	 get_color.o iproc_map.o				\
+	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
 
@@ -55,19 +55,19 @@ RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
 	add_write_info.o madfks_plot.o
 
 # Files for mintFO
-MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o BinothLHA.o pythia8_fortran_dummy.o
+MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o pythia8_fortran_dummy.o
 
 # Files for mintMC
 MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
-POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o 
+POLES= $(RUN) check_poles.o BinothLHA.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for tests
-TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o pythia8_fortran_dummy.o
+TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o pythia8_fortran_dummy.o write_event.o handling_lhe_events.o
 
 # Files for gensym
-SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o 
+SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o pythia8_fortran_dummy.o write_event.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
@@ -144,7 +144,6 @@ genps_fks.o: mint_module.o FKSParams.o
 symmetry_fks_v3.o: mint_module.o
 test_soft_col_limits.o: mint_module.o
 madfks_plot.o: mint_module.o
-
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym

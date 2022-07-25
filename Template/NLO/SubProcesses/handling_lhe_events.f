@@ -846,6 +846,9 @@ c
             endif
          endif
       endif
+      if (ickkw.eq.3) then
+         write(ifile,'(a)') trim(adjustl(ptclusstring))
+      endif
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
          are_col_conn=.false.
@@ -877,9 +880,6 @@ c Write the <scales> block only for scales related to valid colour lines
          enddo
          write(ifile,'(a)')"  "//trim(scale_str)//">"
          write(ifile,'(a)') "  </scales>"
-      endif
-      if (ickkw.eq.3) then
-         write(ifile,'(a)') trim(adjustl(ptclusstring))
       endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
@@ -1036,7 +1036,6 @@ c
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
-         read(ifile,'(a)')string
       else
          if (ickkw.eq.3) then
             ptclusstring=buff

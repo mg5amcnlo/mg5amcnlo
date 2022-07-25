@@ -29,7 +29,6 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
-      include "mint.inc"
 c
 c     Properly initialize PY8 controls
 c
@@ -80,9 +79,6 @@ c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
 c general MadFKS parameters
-      include "FKSParams.inc"
-      logical              fixed_order,nlo_ps
-      common /c_fnlo_nlops/fixed_order,nlo_ps
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
@@ -675,7 +671,7 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,iamp
+     $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
@@ -706,10 +702,6 @@ c
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
-      integer ifold(ndimmax) 
-      common /cifold/ifold
-      integer               ifold_energy,ifold_phi,ifold_yij
-      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
@@ -748,10 +740,8 @@ c "npNLO".
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
-            do iamp=0,amp_split_size
-               virt_wgt_mint(iamp)=0d0
-               born_wgt_mint(iamp)=0d0
-            enddo
+            virt_wgt_mint(0:amp_split_size)=0d0
+            born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
          endif
          MCcntcalled=0

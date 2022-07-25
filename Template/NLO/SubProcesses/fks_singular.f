@@ -2816,7 +2816,6 @@ c while for the S-events we can sum it to the 'i_soft' one.
       enddo
       icontr_sum(0,1:icontr)=0
       do i=1,icontr
-         icontr_sum(0,i)=0
          if (H_event(i)) then
             do ii=1,i
                if (.not.H_event(ii)) cycle
@@ -2851,6 +2850,7 @@ c     Identical contributions found: sum the contribution "i" to "ii"
                   write (*,*) 'i:  ',icolour_con(1,1:nexternal,i)
                   write (*,*) '    ',icolour_con(2,1:nexternal,i)
                   stop 1
+               endif
                exit
             enddo
          else
@@ -7165,7 +7165,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       softtest=.false.
       colltest=.false.
-      fold=0
 
       if (j_fks.gt.nincoming)then
          delta_used=deltaO
