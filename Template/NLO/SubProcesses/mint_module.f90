@@ -1100,7 +1100,6 @@ contains
        write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan)
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
-    write (12,*) 'IDE',(ifold(i),i=1,ndim)
     if (use_poly_virtual) call save_polyfit(12)
     close (12)
   end subroutine write_grids_to_file
@@ -1140,7 +1139,6 @@ contains
        ans(1,0)=ans(1,0)+ans(1,kchan)
        unc(1,0)=unc(1,0)+unc(1,kchan)**2
     enddo
-    read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
     ! polyfit stuff:
     if (use_poly_virtual) then

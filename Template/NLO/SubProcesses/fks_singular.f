@@ -6387,7 +6387,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $           ,qed_pos))
          endif
       enddo
-      
+
       if (fold.eq.0) then
          if ((ran2().le.virtual_fraction(ichan) .and.
      $        abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
@@ -6420,12 +6420,12 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &                 /virtual_fraction(ichan)
                enddo
             endif
-            virt_wgt_save=virt_wgt
-            amp_split_virt_save(1:amp_split_size)=
-     $           amp_split_virt(1:amp_split_size)
             call cpu_time(tAfter)
             tOLP=tOLP+(tAfter-tBefore)
          endif
+         virt_wgt_save=virt_wgt
+         amp_split_virt_save(1:amp_split_size)=
+     $        amp_split_virt(1:amp_split_size)
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
          amp_split_virt(1:amp_split_size)=
