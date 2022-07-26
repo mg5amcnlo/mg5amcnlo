@@ -905,9 +905,9 @@ c subtraction terms.
  12      continue
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
-     $       ifold(ifold_energy)*ifold(ifold_phi)*ifold(ifold_yij)) then
+     $       ifold(ifold_energy)*ifold(ifold_yij)*ifold(ifold_phi)) then
             write (*,*) "ERROR in folding parameters (driver_mintMC.f)"
-     $           ,ifold_counter,ifold_energy,ifold_phi,ifold_yij
+     $           ,ifold_counter,ifold_energy,ifold_yij,ifold_phi
             write (*,*) ifold(:)
             stop 1
          endif
