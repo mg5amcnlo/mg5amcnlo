@@ -1214,8 +1214,8 @@ c
                               enddo
                            enddo
                         else
-                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
-     $                       ,kk))
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo
+     $                          ,1,1,kk))
                         endif
                      enddo
                   enddo
@@ -1238,7 +1238,6 @@ c
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
-         read(ifile,'(a)')string
       else
          if (ickkw.eq.3) then
             ptclusstring=buff

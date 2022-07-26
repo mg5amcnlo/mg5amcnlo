@@ -68,11 +68,11 @@ c negative number of events
 
       integer kk,kr,kf,kpdf
       double precision 
-     # sum_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # sum_wgt_resc_scale(0:maxorders,maxscales,maxscales,maxdynscales),
      # sum_wgt_resc_pdf(0:maxPDFs,maxPDFsets),
-     # xmax_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # xmax_wgt_resc_scale(0:maxorders,maxscales,maxscales,maxdynscales),
      # xmax_wgt_resc_pdf(0:maxPDFs,maxPDFsets),
-     # xmin_wgt_resc_scale(maxscales,maxscales,maxdynscales),
+     # xmin_wgt_resc_scale(0:maxorders,maxscales,maxscales,maxdynscales),
      # xmin_wgt_resc_pdf(0:maxPDFs,maxPDFsets)
       integer istep
       double precision percentage
@@ -80,8 +80,13 @@ c negative number of events
       logical mcatnlo_delta
       common /cMCatNLO_Delta/ mcatnlo_delta
 
+c Common blocks for the orders tags
+      integer n_orderstags,oo
+      integer orderstags_glob(maxorders)
+      common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'dbook.inc'
 
+      n_orderstags=0
       call setcharges(charges)
       call setmasses(zmasses)
       mxlproc=0
@@ -349,22 +354,24 @@ c
       itoterr=0
       mtoterr=0
       if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
-        do kk=1,maxdynscales
-          do kr=1,maxscales
-            do kf=1,maxscales
-              sum_wgt_resc_scale(kr,kf,kk)=0.d0
-              xmax_wgt_resc_scale(kr,kf,kk)=-1.d100
-              xmin_wgt_resc_scale(kr,kf,kk)=1.d100
+         do oo=0,n_orderstags
+            do kk=1,maxdynscales
+               do kr=1,maxscales
+                  do kf=1,maxscales
+                     sum_wgt_resc_scale(oo,kr,kf,kk)=0.d0
+                     xmax_wgt_resc_scale(oo,kr,kf,kk)=-1.d100
+                     xmin_wgt_resc_scale(oo,kr,kf,kk)=1.d100
+                  enddo
+               enddo
             enddo
-          enddo
-        enddo
-        do kk=1,maxPDFsets
-          do kpdf=0,maxPDFs
-            sum_wgt_resc_pdf(kpdf,kk)=0.d0
-            xmax_wgt_resc_pdf(kpdf,kk)=-1.d100
-            xmin_wgt_resc_pdf(kpdf,kk)=1.d100
-          enddo
-        enddo
+         enddo
+         do kk=1,maxPDFsets
+            do kpdf=0,maxPDFs
+               sum_wgt_resc_pdf(kpdf,kk)=0.d0
+               xmax_wgt_resc_pdf(kpdf,kk)=-1.d100
+               xmin_wgt_resc_pdf(kpdf,kk)=1.d100
+            enddo
+         enddo
       endif
 
       i=0
@@ -486,32 +493,33 @@ c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
 c XWGTUP*wgtxsecmu(kr,kf)/wgtref
          if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
-           do kk=1,dyn_scale(0)
-             do kr=1,numscales
-               do kf=1,numscales
-                 sum_wgt_resc_scale(kr,kf,kk)=
-     #              sum_wgt_resc_scale(kr,kf,kk)+wgtxsecmu(kr,kf,kk)
-                 xmax_wgt_resc_scale(kr,kf,kk)=
-     #             max(xmax_wgt_resc_scale(kr,kf,kk),
-     #               wgtxsecmu(kr,kf,kk))
-                 xmin_wgt_resc_scale(kr,kf,kk)=
-     #             min(xmin_wgt_resc_scale(kr,kf,kk),
-     #               wgtxsecmu(kr,kf,kk))
+            do oo=0,n_orderstags
+               do kk=1,dyn_scale(0)
+                  do kr=1,numscales
+                     do kf=1,numscales
+                        sum_wgt_resc_scale(oo,kr,kf,kk)=
+     $                       sum_wgt_resc_scale(oo,kr,kf,kk)
+     $                       +wgtxsecmu(oo,kr,kf,kk)
+                        xmax_wgt_resc_scale(oo,kr,kf,kk)=
+     $                       max(xmax_wgt_resc_scale(oo,kr,kf,kk),
+     $                       wgtxsecmu(oo,kr,kf,kk))
+                        xmin_wgt_resc_scale(oo,kr,kf,kk)=
+     $                       min(xmin_wgt_resc_scale(oo,kr,kf,kk),
+     $                       wgtxsecmu(oo,kr,kf,kk))
+                     enddo
+                  enddo
                enddo
-             enddo
-           enddo
-           do kk=1,lhaPDFid(0)
-             do kpdf=1,2*numPDFpairs
-               sum_wgt_resc_pdf(kpdf,kk)=sum_wgt_resc_pdf(kpdf,kk)+
-     #                                wgtxsecPDF(kpdf,kk)
-               xmax_wgt_resc_pdf(kpdf,kk)=
-     #           max(xmax_wgt_resc_pdf(kpdf,kk),
-     #             wgtxsecPDF(kpdf,kk))
-               xmin_wgt_resc_pdf(kpdf,kk)=
-     #           min(xmin_wgt_resc_pdf(kpdf,kk),
-     #             wgtxsecPDF(kpdf,kk))
-             enddo
-           enddo
+            enddo
+            do kk=1,lhaPDFid(0)
+               do kpdf=1,2*numPDFpairs
+                  sum_wgt_resc_pdf(kpdf,kk)=sum_wgt_resc_pdf(kpdf,kk)+
+     $                 wgtxsecPDF(kpdf,kk)
+                  xmax_wgt_resc_pdf(kpdf,kk)= max(xmax_wgt_resc_pdf(kpdf
+     $                 ,kk), wgtxsecPDF(kpdf,kk))
+                  xmin_wgt_resc_pdf(kpdf,kk)= min(xmin_wgt_resc_pdf(kpdf
+     $                 ,kk), wgtxsecPDF(kpdf,kk))
+               enddo
+            enddo
          endif
 
          if(AddInfoLHE)then
@@ -829,18 +837,20 @@ c Error if more that one sigma away
         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Sums of rescaled weights'
-          do kk=1,dyn_scale(0)
-            do kr=1,numscales
-              do kf=1,numscales
-                if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
-                  write(64,300)'scales',kk,kr,kf,' ->',
-     #                       sum_wgt_resc_scale(kr,kf,kk)/maxevt
-                else
-                  write(64,300)'scales',kk,kr,kf,' ->',
-     #                       sum_wgt_resc_scale(kr,kf,kk)
-                endif
-              enddo
-            enddo
+          do oo=0,n_orderstags
+             do kk=1,dyn_scale(0)
+                do kr=1,numscales
+                   do kf=1,numscales
+                      if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+                         write(64,300)'scales',oo,kk,kr,kf,' ->',
+     $                        sum_wgt_resc_scale(oo,kr,kf,kk)/maxevt
+                      else
+                         write(64,300)'scales',oo,kk,kr,kf,' ->',
+     $                        sum_wgt_resc_scale(oo,kr,kf,kk)
+                      endif
+                   enddo
+                enddo
+             enddo
           enddo
           if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
             do kk=1,lhaPDFid(0)
@@ -861,20 +871,22 @@ c Error if more that one sigma away
         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Max and min of rescaled weights'
-          do kk=1,dyn_scale(0)
-            do kr=1,numscales
-              do kf=1,numscales
-                if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
-                  write(64,400)'scales',kk,kr,kf,' ->',
-     #                       xmax_wgt_resc_scale(kr,kf,kk)/maxevt,
-     #                       xmin_wgt_resc_scale(kr,kf,kk)/maxevt
-                else
-                  write(64,400)'scales',kk,kr,kf,' ->',
-     #                       xmax_wgt_resc_scale(kr,kf,kk),
-     #                       xmin_wgt_resc_scale(kr,kf,kk)
-                endif
-              enddo
-            enddo
+          do oo=0,n_orderstags
+             do kk=1,dyn_scale(0)
+                do kr=1,numscales
+                   do kf=1,numscales
+                      if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
+                         write(64,400)'scales',oo,kk,kr,kf,' ->',
+     $                        xmax_wgt_resc_scale(oo,kr,kf,kk)/maxevt,
+     $                        xmin_wgt_resc_scale(oo,kr,kf,kk)/maxevt
+                      else
+                         write(64,400)'scales',oo,kk,kr,kf,' ->',
+     #                       xmax_wgt_resc_scale(oo,kr,kf,kk),
+     #                       xmin_wgt_resc_scale(oo,kr,kf,kk)
+                      endif
+                   enddo
+                enddo
+             enddo
           enddo
           if(event_norm.eq.'ave'.or.event_norm.eq.'bia')then
             do kk=1,lhaPDFid(0)

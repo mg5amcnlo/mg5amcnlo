@@ -18,7 +18,7 @@ HWUFILES=HwU.o open_output_files_dummy_HwU.o
 all: check_events combine_plots compare_events merge_events plot_events \
 	plot_events_lhef select_events split_events sum_plots uncertainties
 
-check_events : $(FILES) check_events.o dbook.o pineappl_interface_dummy.o
+check_events : $(FILES) check_events.o dbook.o pineappl_interface_dummy.o orderstags_glob.o
 	$(FF) $^ -o $@
 
 combine_plots : combine_plots.o
