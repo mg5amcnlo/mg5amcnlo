@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.11 (27/07/2022)
+     OM: Fixing an issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
+         The coupling where assigned to the wrong lorentz structure
 
 2.9.10 (06/05/2022)
      OM: allow model with GC in their name to use helicity recycling

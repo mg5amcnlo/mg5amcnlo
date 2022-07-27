@@ -210,7 +210,7 @@ class WriteALOHA:
         # couplings
         if  couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            detected_couplings.sort(key=lambda x: x[4:])
+            detected_couplings.sort(key=lambda x: int(x[4:]) if x[4:] else 0)
             if detected_couplings:
                 couplings = detected_couplings
             else:
@@ -580,7 +580,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         #return '%s\n    call %s(%s)' % \
         #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
         couplings = [name for type, name in self.declaration if name.startswith('COUP') ]
-        couplings.sort()
+        couplings.sort(lambda x: int(x[4:]) if x[4:] else 0))
         for elem in self.routine.symmetries:
             new_name = self.name.rsplit('_',1)[0] + '_%s' % elem
             out.write('%s\n' % self.get_header_txt(new_name, couplings).replace('subroutine','entry'))
@@ -1116,7 +1116,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         # couplings
         if couplings is None:
             detected_couplings = [name for type, name in self.declaration if name.startswith('COUP')]
-            coup_sort = lambda x,y: int(x[4:])-int(y[4:])  
+            #coup_sort = lambda x,y: int(x[4:])-int(y[4:])  
             detected_couplings.sort(key=lambda x: int(x[4:]) if x[4:] else 0 )
             if detected_couplings:
                 couplings = detected_couplings
