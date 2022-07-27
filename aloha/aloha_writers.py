@@ -580,7 +580,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         #return '%s\n    call %s(%s)' % \
         #    (self.get_header_txt(new_name, couplings), self.name, ','.join(arguments))
         couplings = [name for type, name in self.declaration if name.startswith('COUP') ]
-        couplings.sort(lambda x: int(x[4:]) if x[4:] else 0))
+        couplings.sort(lambda x: int(x[4:]) if x[4:] else 0)
         for elem in self.routine.symmetries:
             new_name = self.name.rsplit('_',1)[0] + '_%s' % elem
             out.write('%s\n' % self.get_header_txt(new_name, couplings).replace('subroutine','entry'))
