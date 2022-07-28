@@ -6353,6 +6353,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
+       
+        for iproc in range(len(matrix_elements)):
+            if iproc == 0:
+                get_helicity = [' if(iproc.eq.1)then']
+            else: 
+                get_helicity.append(' elseif(iproc.eq.%s)then' % (iproc+1))
+            get_helicity.append("   do i=1,nexternal")
+            get_helicity.append(
+                "        nhel(i) = get_nhel%i(ihel,i)" % ( iproc + 1))
+            get_helicity.append("enddo")
+        get_helicity.append(" endif" ) 
+
+        replace_dict['call_to_local_get_helicities'] = "\n".join(get_helicity)
+
         if writer:
             file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()

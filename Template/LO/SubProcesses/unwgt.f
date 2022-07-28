@@ -183,7 +183,7 @@ c     apply the boost
       end
 
 
-      SUBROUTINE unwgt(px,wgt,numproc, ivec)
+      SUBROUTINE unwgt(px,wgt,numproc, ihel, icol, ivec)
 C**************************************************************************
 C     Determines if event should be written based on its weight
 C**************************************************************************
@@ -198,6 +198,7 @@ c     Arguments
 c
       double precision px(0:3,nexternal),wgt
       integer numproc
+      integer ihel, icol
       integer ivec
 c
 c     Local
@@ -232,11 +233,7 @@ C-----
 C  BEGIN CODE
 C-----
       if (twgt .ge. 0d0) then
-         do i=1,nexternal
-            do j=0,3
-               p(j,i)=px(j,i)
-            enddo
-         enddo
+         p(:,:) = px(:,:)
          xwgt = abs(wgt)
          if (zooming) call zoom_event(xwgt,P)
          if (xwgt .eq. 0d0) return
@@ -249,9 +246,9 @@ c           Set sign of uwgt to sign of wgt
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt,numproc,.True., ivec)
+            call write_leshouche(p,uwgt,numproc,.True., ihel, icol, ivec)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.,ivec)
+            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True., ihel, icol, ivec)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -451,7 +448,7 @@ c      endif
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events, ivec)
+      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events, ihel, icol, ivec)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -478,6 +475,7 @@ c
       integer numproc
       logical do_write_events
       integer ivec
+      integer ihel,icol
 c
 c     Local
 c
@@ -518,8 +516,8 @@ C
       integer          IPSEL
       COMMON /SubProc/ IPSEL
 
-      character*101       hel_buf
-      common/to_helicity/hel_buf
+c      character*101       hel_buf
+c      common/to_helicity/hel_buf
 
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -550,6 +548,8 @@ c      data ncolalt/maxamps*0/
       data AlreadySetInBiasModule/.False./
 
       include 'symswap.inc'
+c     
+      integer nhel(nexternal)
 C-----
 C  BEGIN CODE
 C-----
@@ -588,9 +588,14 @@ c        Color info is filled in mothup
 
 c   Set helicities
 c      write(*,*) 'Getting helicity',hel_buf(1:50)
-      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
-c      write(*,*) 'ihel',jpart(7,1),jpart(7,2)
+c      read(hel_buf,'(20i5)') (jpart(7,isym(i, jsym)),i=1,nexternal)
+c     write(*,*) 'ihel',jpart(7,1),jpart(7,2)
+      call get_helicities(iproc, ihel, nhel)
+      do i=1, nexternal
+         jpart(7,isym(i, jsym)) = nhel(i)
+      enddo
 
+      
 c   Fix ordering of ptclus
       do i=1,nexternal
         ptcltmp(isym(i,jsym)) = ptclus(i)
@@ -669,7 +674,7 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc,flip, ivec)
+     $                npart,numproc,flip, icol, ivec)
 
       if (nincoming.eq.1)then
         do i=-nexternal+3,2*nexternal-3

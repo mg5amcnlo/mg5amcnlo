@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, channel, ANS, JAMP2, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -32,8 +32,13 @@ C ARGUMENTS
 C  
     REAL*8 P(0:3,NEXTERNAL),ANS
     double precision RHEL ! random number for selecting helicity
+    double precision RCOL ! random number for selecting helicity
     integer channel ! channel to keep for the multi-channel
     integer ivec ! for using the correct coupling
+c
+c   output argument
+c
+    integer ihel, icol
 c
 c global (due to reading writting) 
 c
@@ -75,8 +80,6 @@ C
     include '../../Source/vector.inc'
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
    
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
 
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
@@ -130,7 +133,6 @@ C ----------
         ENDDO
     ENDIF
     ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
     DO I=1,NCOMB
        TS(I)=0d0
     ENDDO
@@ -196,8 +198,7 @@ c           Always one helicity at a time
             ANS = T
 c           Include the Jacobian from helicity sampling
             ANS = ANS * hel_jacobian
-
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+	    IHEL = HEL_PICKED
     ELSE
 	ANS = 1D0
 	RETURN
@@ -208,7 +209,7 @@ c    CALL RANMAR(R) ! rhel passed as input
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS
        IF(RHEL.LT.SUMHEL)THEN
-          WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+          IHEL = I
 c         Set right sign for ANS, based on sign of chosen helicity
           ANS=DSIGN(ANS,TS(I))
           GOTO 10
@@ -243,9 +244,12 @@ c         Set right sign for ANS, based on sign of chosen helicity
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    call select_color(rcol, jamp2, channel,%(proc_id)s,  icol)
+
     END
- 
- 
+
+
 REAL*8 FUNCTION MATRIX%(proc_id)s(P,NHEL,IC, IHEL,AMP2, JAMP2, IVEC)
 C  
 %(info_lines)s

@@ -1031,3 +1031,76 @@ C
       stop 5
       return
       end
+
+
+    subroutine select_color(rcol, jamp2, iconfig, iproc, icol)
+    implicit none
+    include 'maxamps.inc' ! for the definition of maxflow
+    include 'coloramps.inc' ! set the coloramps
+c    
+c   argument IN
+c
+	double precision rcol ! random number
+	double precision jamp2(0:maxflow)
+	integer iconfig ! amplitude selected
+	integer iproc ! matrix element selected
+c	
+c   argument OUT
+c
+       integer icol
+c
+c    local
+c
+	integer nc ! number of assigned color in jamp2
+	logical is_LC
+	integer maxcolor
+	double precision targetamp(0:maxflow)
+	integer i,j
+	double precision xtarget
+
+      nc = int(jamp2(0))
+      is_LC = .true.
+      maxcolor=0
+      targetamp(0) = 0d0
+      if(nc.eq.0)then
+      icol = 0
+      return
+      endif
+      do i=1,nc
+      	  if(icolamp(i,iconfig,iproc))then
+        	  targetamp(i) = targetamp(i-1) + jamp2(i)
+          else	       
+        	  targetamp(i) = targetamp(i-1)
+          endif
+      enddo	  
+
+c     ensure that at least one leading color is different of zero if not allow
+c     all subleading color.
+      if (targetamp(nc).eq.0)then
+       is_LC = .false.
+       do icol =1,nc
+           targetamp(icol) = jamp2(icol)+targetamp(icol-1)
+       enddo
+      endif
+
+      xtarget=rcol*targetamp(nc)
+
+      icol = 1
+      do while (targetamp(icol) .lt. xtarget .and. icol .lt. nc)
+         icol = icol + 1
+      enddo
+
+       return
+       end    
+
+       subroutine get_helicities(iproc, ihel, nhel)
+
+       include 'nexternal.inc'
+       integer iproc
+       integer ihel
+       integer nhel(nexternal)
+       
+       %(call_to_local_get_helicities)s
+
+       return
+       end

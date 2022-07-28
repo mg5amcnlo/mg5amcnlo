@@ -79,9 +79,11 @@ C     Common blocks
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc'
 C     jamp2 information
-      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
-      COMMON/TO_JAMPS/       JAMP2
-
+c      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
+c      COMMON/TO_JAMPS/       JAMP2
+       double precision RHEL, RCOL
+       integer selected_hel(nb_page)
+       integer selected_col(nb_page)       
 c
 c     local
 c
@@ -130,7 +132,10 @@ C     Continue only if IMODE is 0, 4 or 5
          endif
 
 	 channel = %(get_channel)s
-         CALL SMATRIX%(proc_id)s(P1,0,channel,DSIGUU,JAMP2(0,1),1)
+	 call ranmar(RHEL)
+	 call ranmar(RCOL)
+         CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
+
 
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -166,7 +171,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d,1)
+           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d,selected_hel(1), selected_col(1), 1)
         ENDIF
 %(passcuts_end)s
       END
@@ -271,7 +276,9 @@ C     jamp2 information
 
       double precision p_multi(0:3, nexternal, nb_page)
       double precision hel_rand(nb_page)
+      double precision col_rand(nb_page)
       integer selected_hel(nb_page)
+      integer selected_col(nb_page)
       
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -321,6 +328,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
            p_multi(:,:,IVEC) = ALL_PP(:,:,IVEC)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
+	 CALL RANMAR(col_rand(IVEC))
 c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
 	 channel = %(get_channel)s
@@ -328,7 +336,7 @@ c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVE
 c	 do IVEC=1, NB_PAGE
 c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 c	 enddo 
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, ALL_OUT , selected_hel, jamp2)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 
 	 DO IVEC=1,NB_PAGE
@@ -377,7 +385,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, IVEC)
+           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, selected_hel(IVEC), selected_col(IVEC), IVEC)
         ENDIF
 	ENDDO
 %(passcuts_end)s
@@ -399,19 +407,20 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand,  channel, out , selected_hel, jamp2_multi)
-
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out , selected_hel, selected_col)
      USE OMP_LIB
+     implicit none
 
      include 'nexternal.inc'
      include '../../Source/vector.inc'
      include 'maxamps.inc'
      double precision p_multi(0:3, nexternal, NB_PAGE)
      double precision hel_rand(nb_page)
+     double precision col_rand(nb_page)
      integer channel
      double precision out(nb_page)
      integer selected_hel(nb_page)
-     double precision jamp2_multi(0:MAXFLOW, nb_page)
+     integer selected_col(nb_page)
 
      integer ivec
 
@@ -421,11 +430,12 @@ C
       DO IVEC=1, NB_PAGE
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
+     &                           col_rand(IVEC),
      &				 channel,
+     &                           IVEC,
      &				 out(IVEC),
-c     &				 selected_hel(IVEC),
-     &				 jamp2_multi(0,IVEC),
-     &				 IVEC
+     &				 selected_hel(IVEC),
+     &				 selected_col(IVEC)
      &				 )
       ENDDO
 !$OMP END DO
