@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, channel, ANS, JAMP2, IVEC)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -7,6 +7,7 @@ C
 C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
+c  potentially times multi-channel weight
 C  
 %(process_lines)s
 C 
@@ -29,8 +30,16 @@ C
 C  
 C ARGUMENTS 
 C  
-    REAL*8 P(0:3,NEXTERNAL),ANS
-    INTEGER IVEC
+    REAL*8 P(0:3,NEXTERNAL)
+    double precision RHEL ! random number for selecting helicity
+    double precision RCOL ! random number for selecting helicity
+    integer channel ! channel to keep for the multi-channel
+    integer ivec ! for using the correct coupling
+c
+c   output argument
+c
+    integer ihel, icol ! selected helicity/color
+    double precision ans 
 C  
 C LOCAL VARIABLES 
 C  
@@ -43,8 +52,6 @@ C
         INTEGER JC(NEXTERNAL),II
         REAL*8 XTOT
         INTEGER  J, JJ
-	double precision RHEL
-	integer channel
       double precision get_channel_cut
       external get_channel_cut
 
@@ -58,9 +65,6 @@ C
 C
 C   INFORMATION TO WRITE THE HELICITY IN THE EVENT --not memory efficient--
 C   
-    CHARACTER*101         HEL_BUFF
-    COMMON/TO_HELICITY/  HEL_BUFF
-
     INTEGER NB_SPIN_STATE_in(2)
     common /nb_hel_state/ nb_spin_state_in
     
@@ -91,17 +95,16 @@ C ----------
         DO I=1,NDIAGS
             AMP2(I)=0D0
         ENDDO
-        JAMP2(0)=%(ncolor)d
-        DO I=1,INT(JAMP2(0))
-            JAMP2(I)=0D0
-        ENDDO
     ENDIF
-    ANS = 0D0
-    WRITE(HEL_BUFF,'(20I5)') (0,I=1,NEXTERNAL)
-c   Kiran please check if you need this:    
-    DO I=1,NCOMB
-       TS(I)=0d0
+    JAMP2(0)=%(ncolor)d
+    DO I=1,INT(JAMP2(0))
+            JAMP2(I)=0D0
     ENDDO
+
+
+    ANS = 0D0
+
+    TS(:) = 0d0
 
     call MATRIX%(proc_id)s(P ,JC(1), TS, AMP2, JAMP2, IVEC)
     DO I=1,NCOMB     
@@ -122,7 +125,8 @@ c   Kiran please check if you need this:
 	DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
             IF(RHEL.LT.SUMHEL)THEN
-                WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
+	         IHEL = I
+c                WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
                 ANS=DSIGN(ANS,TS(I))
                 GOTO 10
@@ -152,6 +156,9 @@ c         Set right sign for ANS, based on sign of chosen helicity
         ENDIF
     ENDIF
     ANS=ANS/DBLE(IDEN)
+
+    call select_color(rcol, jamp2, channel,%(proc_id)s,  icol)
+
     END
  
  
