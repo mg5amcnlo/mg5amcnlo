@@ -6353,8 +6353,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
-       
+        get_nhel = []
         for iproc in range(len(matrix_elements)):
+            get_nhel.append("   integer get_nhel%i   " %(iproc+1) )
             if iproc == 0:
                 get_helicity = [' if(iproc.eq.1)then']
             else: 
@@ -6366,6 +6367,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         get_helicity.append(" endif" ) 
 
         replace_dict['call_to_local_get_helicities'] = "\n".join(get_helicity)
+        replace_dict['definition_of_local_get_nhel'] = "\n".join(get_nhel)
 
         if writer:
             file = open(pjoin(_file_path, \

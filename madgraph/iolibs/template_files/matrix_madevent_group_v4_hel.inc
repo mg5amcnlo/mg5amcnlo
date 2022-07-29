@@ -45,7 +45,7 @@ C LOCAL VARIABLES
 C  
         INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
         INCLUDE 'config_subproc_map.inc'
-        INTEGER NHEL(NEXTERNAL,NCOMB)
+        INTEGER NHEL(0:NEXTERNAL,NCOMB)
         REAL*8 T
         REAL*8 R,SUMHEL,TS(NCOMB)
         INTEGER I,IDEN
@@ -125,7 +125,7 @@ C ----------
 	DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS
             IF(RHEL.LT.SUMHEL)THEN
-	         IHEL = I
+	         IHEL = NHEL(0,I) ! this returns the id of the helicity before helicity recycling
 c                WRITE(HEL_BUFF,'(20i5)')(NHEL(II,I),II=1,NEXTERNAL)
 c         Set right sign for ANS, based on sign of chosen helicity
                 ANS=DSIGN(ANS,TS(I))

@@ -1094,11 +1094,13 @@ c     all subleading color.
        end    
 
        subroutine get_helicities(iproc, ihel, nhel)
-
+       implicit none
        include 'nexternal.inc'
        integer iproc
        integer ihel
        integer nhel(nexternal)
+       integer i
+       %(definition_of_local_get_nhel)s
        
        %(call_to_local_get_helicities)s
 
