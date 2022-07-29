@@ -78,9 +78,6 @@ C     Common blocks
       INTEGER       LHAID
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc'
-C     jamp2 information
-c      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
-c      COMMON/TO_JAMPS/       JAMP2
        double precision RHEL, RCOL
        integer selected_hel(nb_page)
        integer selected_col(nb_page)       
@@ -267,9 +264,6 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
-C     jamp2 information      
-      Double Precision jamp2(0:maxflow, nb_page)
-      common/to_jamps/       jamp2
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -329,13 +323,9 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-c         CALL SMATRIX%(proc_id)s(P1, RHEL, channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
 	 ENDDO
 	 channel = %(get_channel)s
 
-c	 do IVEC=1, NB_PAGE
-c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), channel, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
-c	 enddo 
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 
