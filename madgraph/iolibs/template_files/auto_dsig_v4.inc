@@ -79,8 +79,8 @@ C     Common blocks
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc'
        double precision RHEL, RCOL
-       integer selected_hel(nb_page)
-       integer selected_col(nb_page)       
+       integer selected_hel(block_size)
+       integer selected_col(block_size)       
 c
 c     local
 c
@@ -214,13 +214,13 @@ C
 C  
 C ARGUMENTS 
 C  
-      DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,NB_PAGE)
-      DOUBLE PRECISION ALL_WGT(NB_PAGE)
-      DOUBLE PRECISION ALL_XBK(2,NB_PAGE)
-      DOUBLE PRECISION ALL_Q2FACT(2,NB_PAGE)
-      DOUBLE PRECISION ALL_CM_RAP(NB_PAGE)
+      DOUBLE PRECISION ALL_PP(0:3,NEXTERNAL,BLOCK_SIZE)
+      DOUBLE PRECISION ALL_WGT(BLOCK_SIZE)
+      DOUBLE PRECISION ALL_XBK(2,BLOCK_SIZE)
+      DOUBLE PRECISION ALL_Q2FACT(2,BLOCK_SIZE)
+      DOUBLE PRECISION ALL_CM_RAP(BLOCK_SIZE)
       INTEGER IMODE
-      DOUBLE PRECISION ALL_OUT(NB_PAGE)
+      DOUBLE PRECISION ALL_OUT(BLOCK_SIZE)
 C ----------
 C BEGIN CODE
 C ----------
@@ -230,7 +230,7 @@ C
       INTEGER I,ITYPE,LP,IPROC
 %(pdf_vars_vec)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION ALL_PD(0:MAXPROC, NB_PAGE) 
+      DOUBLE PRECISION ALL_PD(0:MAXPROC, BLOCK_SIZE) 
       DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
@@ -268,11 +268,11 @@ C     Keep track of whether cuts already calculated for this event
       include 'coupl.inc'
       include 'run.inc'
 
-      double precision p_multi(0:3, nexternal, nb_page)
-      double precision hel_rand(nb_page)
-      double precision col_rand(nb_page)
-      integer selected_hel(nb_page)
-      integer selected_col(nb_page)
+      double precision p_multi(0:3, nexternal, block_size)
+      double precision hel_rand(block_size)
+      double precision col_rand(block_size)
+      integer selected_hel(block_size)
+      integer selected_col(block_size)
       
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -310,7 +310,7 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,NB_PAGE
+	 DO IVEC=1,BLOCK_SIZE
 c        Do not need those three here do I?	 
 	 XBK(:) = ALL_XBK(:,IVEC)
 c	 CM_RAP = ALL_CM_RAP(IVEC)
@@ -329,7 +329,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 
-	 DO IVEC=1,NB_PAGE
+	 DO IVEC=1,BLOCK_SIZE
 	 DSIGUU = ALL_OUT(IVEC)
 	 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -404,20 +404,20 @@ C
      include 'nexternal.inc'
      include '../../Source/vector.inc'
      include 'maxamps.inc'
-     double precision p_multi(0:3, nexternal, NB_PAGE)
-     double precision hel_rand(nb_page)
-     double precision col_rand(nb_page)
+     double precision p_multi(0:3, nexternal, BLOCK_SIZE)
+     double precision hel_rand(block_size)
+     double precision col_rand(block_size)
      integer channel
-     double precision out(nb_page)
-     integer selected_hel(nb_page)
-     integer selected_col(nb_page)
+     double precision out(block_size)
+     integer selected_hel(block_size)
+     integer selected_col(block_size)
 
      integer ivec
 
 
 !$OMP PARALLEL
 !$OMP DO
-      DO IVEC=1, NB_PAGE
+      DO IVEC=1, BLOCK_SIZE
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
      &                           col_rand(IVEC),

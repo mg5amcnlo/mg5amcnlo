@@ -1689,7 +1689,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,NB_PAGE\n"
+            pdf_lines = " DO iVEC=1,block_size\n"
 
 
         if ninitial == 1:
@@ -1739,7 +1739,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "\n"
                 if vector:
                     pdf_definition_lines_vec += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d(nb_page)" % (pdf_codes[pdg],i+1) \
+                                       ",".join(["%s%d(block_size)" % (pdf_codes[pdg],i+1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
@@ -1760,7 +1760,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_data_lines_vec += "DATA " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
                                                  for pdg in initial_states[i]]) + \
-                                                 "/%s/" % ','.join(['nb_page*1D0']* len(initial_states[i])) + \
+                                                 "/%s/" % ','.join(['block_size*1D0']* len(initial_states[i])) + \
                                                  "\n"
 
 
@@ -1846,7 +1846,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in processes:
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines += '\n   DO IVEC=1, NB_PAGE'
+                    pdf_lines += '\n   DO IVEC=1, block_size'
                     pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
                     for ibeam in [1, 2]:
                         initial_state = proc.get_initial_pdg(ibeam)
@@ -4973,10 +4973,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             vector_size = self.opt['output_options']['vector_size']
         except KeyError:
             vector_size = 1
+
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
 
-        text = [" integer nb_page\n"," parameter (nb_page=%i)\n" % vector_size]
+        text = [" integer block_size\n"," parameter (block_size=%i)\n" % vector_size,
+                " integer wrap_size\n"," parameter (wrap_size=%i)\n" % vector_size,
+                 " integer max_wrap\n"," parameter (max_wrap=1)\n" 
+                ]
 
         fsock.writelines(text)
         return vector_size

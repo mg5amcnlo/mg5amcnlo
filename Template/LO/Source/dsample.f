@@ -1,4 +1,4 @@
-      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+       subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
 c**************************************************************************
 c     Driver for sample which does complete integration
 c     This is done in double precision, and should be told the
@@ -25,16 +25,21 @@ c
 c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
-      double precision all_p(4*maxdim/3+14,nb_page), all_wgt(nb_page), all_x(maxinvar,nb_page)
-      integer all_lastbin(maxdim, nb_page)
-      double precision bckp(nb_page)
+      double precision all_p(4*maxdim/3+14,block_size), all_wgt(block_size), all_x(maxinvar,block_size)
+      integer all_lastbin(maxdim, block_size)
+c      double precision bckp(block_size)
       double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
       integer jmax,i,j,ipole
       integer itmax_adjust
 
       integer imirror, iproc, iconf
-      integer ivec !position of the event in the vectorization # max is nb_page 
+      integer imirror_vec(max_wrap), iproc_vec(max_wrap), iconf_vec(max_wrap)
+      integer ivec              !position of the event in the wrap # max is wrap_size (starts at 1)
+      integer ipos              !position of the event in the memory # max is block_size (starts at 1)
+      integer curr_wrap         !position of the wrap in the full memory # max is block_size/wrap_size (starts at zero
+                                   ! relation ipos = curr_wrap*wrap_size + ivec
+      
 c
 c     External
 c
@@ -101,8 +106,8 @@ c      common /to_fx/   fx
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 
 C     data for vectorization      
-      double precision all_xbk(2, nb_page), all_q2fact(2, nb_page), all_cm_rap(nb_page)
-      double precision all_fx(nb_page)
+      double precision all_xbk(2, block_size), all_q2fact(2, block_size), all_cm_rap(block_size)
+      double precision all_fx(block_size)
       
       
       LOGICAL CUTSDONE,CUTSPASSED
@@ -155,76 +160,89 @@ c
       ievent = 0
       iter = 1
       ivec = 0
+      ipos = 0
+      curr_wrap = 0
       do while(iter .le. itmax)
 c
 c     Get integration point
 c
          call sample_get_config(wgt,iter,ipole)
          if (iter .le. itmax) then
-c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
+            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec, ipos, curr_wrap, wrap_size
             ievent=ievent+1
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             CUTSDONE=.FALSE.
             CUTSPASSED=.FALSE.
             if (passcuts(p)) then
                ivec=ivec+1
-c              write(*,*) 'pass_point ivec is ', ivec
-               all_p(:,ivec) = p(:)
-               all_wgt(ivec) = wgt
-               all_x(:,ivec) = x(:)
-               all_xbk(:, ivec) = xbk(:)
-               all_q2fact(:, ivec) = q2fact(:)
-               all_cm_rap(ivec) = cm_rap
-               all_lastbin(:, ivec) = lastbin(:)
+               ipos=ipos+1 
+c               write(*,*) 'pass_point ivec is ', ivec, ipos, curr_wrap
+               all_p(:,ipos) = p(:)
+               all_wgt(ipos) = wgt
+               all_x(:,ipos) = x(:)
+               all_xbk(:, ipos) = xbk(:)
+               all_q2fact(:, ipos) = q2fact(:)
+               all_cm_rap(ipos) = cm_rap
+               all_lastbin(:, ipos) = lastbin(:)
 c               i = ivec
 c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.nb_page)then
+               if (ivec.lt.wrap_size)then
                   cycle
                endif
+c               write(*,*) "full wrap -> setup for next"
+               curr_wrap = curr_wrap+1
                ivec=0
-               if (nb_page.le.1) then
+               if (block_size.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
                else
-               do i=1, nb_page
+                  do i=(curr_wrap-1)*wrap_size+1, curr_wrap*wrap_size
+c                     write(*,*) "restore for prepare grouping", i
 c                 need to restore common block                  
-                  xbk(:) = all_xbk(:, i)
-                  cm_rap = all_cm_rap(i)
-                  q2fact(:) = all_q2fact(:,i)
-                  CUTSDONE=.TRUE.
-                  CUTSPASSED=.TRUE.
-                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
-               enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, nb_page)
-               call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,nb_page)
+                     xbk(:) = all_xbk(:, i)
+                     cm_rap = all_cm_rap(i)
+                     q2fact(:) = all_q2fact(:,i)
+                     CUTSDONE=.TRUE.
+                     CUTSPASSED=.TRUE.
+                     call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
+                  enddo
+                  write(*,*) "select grouping for", curr_wrap
+                  call select_grouping(imirror_vec(curr_wrap), iproc_vec(curr_wrap), iconf_vec(curr_wrap),
+     &                 all_wgt((curr_wrap-1)*wrap_size+1), wrap_size)                  
+                  if(curr_wrap.lt.max_wrap)then
+                     cycle
+                  endif
+                  curr_wrap=0
+                  ipos = 0
+                  call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
+     &                          iconf_vec, iproc_vec, imirror_vec, all_fx)
 
-                do i=1, nb_page
+                do i=1, block_size
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
                   q2fact(:) = all_q2fact(:,i)
-c                  all_fx(i) = dsig(all_p(1,i),all_wgt(i),0)
-c                  if (fx.ne.bckp(i))then
-c                     write(*,*) fx, "!=", bckp(i)
-c                     stop 1
-c                  endif
+                  fx = dsig(all_p(1,i),all_wgt(i),0)
+                  if (fx.ne.all_fx(i))then
+                     write(*,*) i, fx, "!=", all_fx(i)
+                     stop 1
+                  endif
+                enddo  
 c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
-               enddo
                endif
-               do I=1, nb_page
+               do I=1, block_size
                   all_wgt(i) = all_wgt(i)*all_fx(i)
-              enddo
-               do i =1, nb_page
+               enddo
+               do i =1, block_size
 c     if last paremeter is true -> allow grid update so only for a full page
                   lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
-c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.nb_page                   
-                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.nb_page) !Store result
+c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.block_size                   
+                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.block_size) !Store result
                enddo
-               if (nb_page.ne.1.and.force_reset)then
+               if (block_size.ne.1.and.force_reset)then
                   call reset_cumulative_variable()
                   force_reset=.false.
                endif
@@ -893,7 +911,7 @@ c      write(*,*) 'Forwarding random number generator'
 
 C     sanity check that we have a minimal number of event
       
-      if ( .not.MC_GROUPED_SUBPROC.or.nb_page.gt.1)then
+      if ( .not.MC_GROUPED_SUBPROC.or.block_size.gt.1)then
          events = max(events, maxtries)
          MC_GROUPED_SUBPROC = .false.
       else 

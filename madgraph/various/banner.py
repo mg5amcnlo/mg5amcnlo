@@ -3350,6 +3350,7 @@ template_on = \
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
+   %(wrap_size)s   = wrap_size ! size by watch N-consecutive events used the same matrix-element/symmetry/...
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
@@ -3720,7 +3721,8 @@ class RunCardLO(RunCard):
         self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
         self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
         self.add_param('matrix_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -O3')        
-        
+        self.add_param('wrap_size', 0, hidden=True, include=False, comment="size of the batch that are setup for lockstep computation. default(0) means the same as the vector_size parameter")
+
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)

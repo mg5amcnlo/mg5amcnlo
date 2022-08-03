@@ -114,7 +114,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
       
-      SUBROUTINE select_grouping(imirror,  iproc, iconf, wgt, nb_page)
+      SUBROUTINE select_grouping(imirror,  iproc, iconf, wgt, block_size)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 c     
@@ -122,15 +122,15 @@ c     INPUT (VIA COMMAND BLOCK)
 c       SELPROC 
 c       SUMPROB
 c     INPUT
-c       nb_page (number of weight to update)
+c       block_size (number of weight to update)
 c     INPUT/OUTPUT
-c       WGTS(nb_page) #multiplied by the associated jacobian      
+c       WGTS(block_size) #multiplied by the associated jacobian      
 c
 c     OUTPUT
 c
 c     iconf, iproc, imirror
 c
-      integer nb_page
+      integer block_size
       double precision WGT(*)
       integer imirror, iproc, iconf
 
@@ -203,7 +203,7 @@ C      all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-	DO I=1, NB_PAGE
+	DO I=1, BLOCK_SIZE
 	   WGT(i)=WGT(i)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
 	ENDDO	
 
@@ -211,7 +211,7 @@ C       Update weigth w.r.t SELPROC normalized to selection probability
 C       We are using the grouped_processes grid and it is initialized.
         CALL DS_GET_POINT('grouped_processes',R,LMAPPED
      $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
-     	DO I=1, nb_page
+     	DO I=1, block_size
 	  WGT(i)=WGT(i)*MC_GROUPED_PROC_JACOBIAN
 	ENDDO	
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
@@ -219,19 +219,21 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
-      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk, all_q2fact, all_cm_rap, ICONF,IPROC,IMIRROR, ALL_OUT,nb_page)
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk, all_q2fact, all_cm_rap,
+     & ICONF_vec,IPROC_vec,IMIRROR_vec, ALL_OUT)
 c     ******************************************************
 c
-c     INPUT: ALL_PP(0:3, NEXTERNAL, NB_PAGE)
-c     INPUT/OUtpUT       ALL_WGT(Nb_PAGE)
-c            nb_page = vector size
-c     ALL_OUT(NB_PAGE)
+c     INPUT: ALL_PP(0:3, NEXTERNAL, BLOCK_SIZE)
+c     INPUT/OUtpUT       ALL_WGT(Block_size)
+c            block_sixe = vector size
+c            wrap_size = number of event in lock step
+c     Iconf_vec, Iproc_vec, IMIRROR_vec have dimension(block_size/wrap_size)
+c     ALL_OUT(block_size)
 c            function (PDf*cross)
 c     ******************************************************
       USE DISCRETESAMPLER
       IMPLICIT NONE
 
-      integer nb_page
       include 'genps.inc'
       double precision all_p(4*maxdim/3+14,*)
       double precision all_wgt(*)
@@ -239,9 +241,12 @@ c     ******************************************************
       double precision all_q2fact(2,*)
       double precision all_cm_rap(*)
       integer iconf, iproc, imirror
+      integer iconf_vec(*), iproc_vec(*), imirror_vec(*)
+      integer nb_wrap
       double precision all_out(*)
       include 'maxconfigs.inc'
       include 'maxamps.inc'
+      include '../../Source/vector.inc'
 
       INTEGER LARGEDIM
       PARAMETER (LARGEDIM=2*MAXSPROC*LMAXCONFIGS)
@@ -295,20 +300,21 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
 
 c     set the running scale 
 c     and update the couplings accordingly
-      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, nb_page)
+      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, block_size)
 
       IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
       	  ALLOW_HELICITY_GRID_ENTRIES = .False.
       endif
 
-      call DSIGPROC_vec(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF, IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
+      write(*,*) "ALL_WGT", ALL_WGT(1), ALL_WGT(2)
+      call DSIGPROC_vec(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF_VEC, IPROC_VEC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
+      write(*,*) "ALL_OUT", ALL_OUT(1), ALL_OUT(2)
 
       
-      Do i =1,nb_page
+c      Do i =1,block_size
 c     Reset ALLOW_HELICITY_GRID_ENTRIES
 	  ALLOW_HELICITY_GRID_ENTRIES = .True. 
-
 c     Below is how one would go about adding each point to the grouped_processes grid
 C     However, keeping only the initialization grid is better because in that case all grouped ME's
 C     were computed with the same kinematics. For this reason, the code below remains commented.
@@ -316,9 +322,8 @@ c	  IF(grouped_MC_grid_status.ge.1) then
 c	    call map_3_to_1(ICONF,IPROC,IMIRROR,MAXSPROC,2,Lmapped)
 c		call DS_add_entry('grouped_processes',Lmapped,(ALL_OUT(i)/SELPROC(IMIRROR,IPROC,ICONF)))
 c	  ENDIF
-
-	  ENDDO
-      DO I=1, NB_PAGE
+c	  ENDDO
+      DO I=1, block_size
       	 IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
              SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DABS(ALL_OUT(I)*ALL_WGT(I))
@@ -811,7 +816,7 @@ c    not needed anymore ... can be removed ... set for debugging only
      endif
 c     set the running scale 
 c     and update the couplings accordingly
-      if (nb_page.le.1) then
+      if (block_size.le.1) then
       call update_scale_coupling(pp, wgt)
       endif
 
@@ -840,7 +845,7 @@ C     ccccccccccccccccccccccccc
 C      vectorize version
 C     ccccccccccccccccccccccccc
 
-      subroutine DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out)
+      subroutine DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF_VEC,IPROC_VEC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out)
 C     ****************************************************
 C     RETURNS DIFFERENTIAL CROSS SECTION 
 C     FOR A PROCESS
@@ -864,16 +869,18 @@ C     ****************************************************
 C     
 C     ARGUMENTS 
 C
-      double precision all_p(4*maxdim/3+14,nb_page)
-      double precision all_xbk(2, nb_page)
-      double precision all_q2fact(2, nb_page)
-      double precision all_cm_rap(nb_page)
-      double precision all_wgt(nb_page)
-      double precision all_out(nb_page)
+      double precision all_p(4*maxdim/3+14,*)
+      double precision all_xbk(2, *)
+      double precision all_q2fact(2, *)
+      double precision all_cm_rap(*)
+      double precision all_wgt(*)
+      double precision all_out(*)
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
+      INTEGER ICONF_VEC(*),IPROC_VEC(*),IMIRROR_VEC(*)
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      integer ipos, nb_wrap
 C     
 C     GLOBAL VARIABLES
 C     
@@ -892,7 +899,6 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 	  INTEGER LAST_ICONF
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
-	  integer ivec
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -901,25 +907,27 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,NB_PAGE),xdum
+      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,BLOCK_SIZE)
+      double precision xdum
       INTEGER I,J,K,JC(NEXTERNAL)
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
 	  SAVE ALL_P1,JC
 
+      do nb_wrap=1, max_wrap
+
       if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
-        ICONFIG=SYMCONF(ICONF)
+        ICONFIG=SYMCONF(ICONF_VEC(nb_wrap))
         DO I=1,MAXSPROC
-          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+          SUBDIAG(I) = CONFSUB(I,ICONFIG)
         ENDDO
-
+	
 C       Set momenta according to this permutation
-	do IVEC=1, NB_PAGE
-	   CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
-
-	    if (LAST_ICONF.ne.-1) then
-		  LAST_ICONF = ICONF
-		endif
+	do ipos=(nb_wrap-1)*wrap_size+1, nb_wrap*wrap_size
+	   CALL SWITCHMOM(ALL_P(1,IPOS),All_P1(0,1,IPOS),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+	   if (LAST_ICONF.ne.-1) then
+	   	  LAST_ICONF = ICONF
+           endif
 	enddo
 	endif	
 
@@ -927,46 +935,50 @@ C       Set momenta according to this permutation
       IB(1)=1
       IB(2)=2
 
-
-      IF(IMIRROR.EQ.2)THEN
-             DO IVEC=1,nb_page
+      write(*,*) "nb_wrap", nb_wrap, "ICONFIG", ICONFIG 
+      IF(IMIRROR_VEC(nb_wrap).EQ.2)THEN
+             DO  ipos=(nb_wrap-1)*wrap_size+1, nb_wrap*wrap_size
 C       Flip momenta (rotate around x axis)
         DO I=1,NEXTERNAL
-          ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
+          ALL_P1(2,I, IPOS)=-ALL_P1(2,I,IPOS)
+          ALL_P1(3,I, IPOS)=-ALL_P1(3,I,IPOS)
 	enddo
-          XDUM=ALL_XBK(1, ivec)
-	  ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
-	  ALL_XBK(2, ivec) = XDUM
-	  all_cm_rap(ivec) = - all_cm_rap(ivec)
+          XDUM=ALL_XBK(1, ipos)
+	  ALL_XBK(1, ipos) = ALL_XBK(2, ipos)
+	  ALL_XBK(2, ipos) = XDUM
+	  all_cm_rap(ipos) = - all_cm_rap(ipos)
 C       Flip beam identity
         IB(1)=2
         IB(2)=1
       ENDDO
       ENDIF
 
-      ALL_OUT(:)=0D0
-
+      DO I =1, block_size
+      ALL_OUT(I)=0D0
+      ENDDO
 c      IF (PASSCUTS(P1)) THEN
-       DO IVEC=1,nb_page
-      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
+       DO  ipos=(nb_wrap-1)*wrap_size+1, nb_wrap*wrap_size
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ipos).ne.0d0)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
       ENDDO
+      enddo
       
 %(call_dsig_proc_lines_vec)s
 c      ENDIF
 
-	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
+
+       do nb_wrap=1, block_size/wrap_size
+	  IF (LAST_ICONF.ne.-1.and.IMIRROR_VEC(nb_wrap).EQ.2) then
 C       Flip back local momenta P1 if cached
-	DO IVEC=1,nb_page
+	DO  ipos=(nb_wrap-1)*wrap_size+1, nb_wrap*wrap_size
         DO I=1,NEXTERNAL	
-          ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
+          ALL_P1(2,I,IPOS)=-ALL_P1(2,I,IPOS)
+          ALL_P1(3,I,IPOS)=-ALL_P1(3,I,IPOS)
         ENDDO
 	ENDDO
-	  endif
-
+	endif
+	enddo
       RETURN
 
       END
