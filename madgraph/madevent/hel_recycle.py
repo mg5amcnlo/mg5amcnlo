@@ -437,6 +437,8 @@ class HelicityRecycler():
 
     def set_output(self, file):
         self.output_file = file
+        if os.path.islink(self.output_file):
+            os.remove(self.output_file)
 
     def set_template(self, file):
         self.template_file = file
@@ -766,7 +768,7 @@ def get_arguments(line):
             element += 1
             arguments.append('')
             continue
-        if bracket_depth > 0:
+        if bracket_depth > 0 and char != ' ':
             arguments[element] += char
     return arguments
 

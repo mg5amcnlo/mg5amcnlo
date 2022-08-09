@@ -1,8 +1,16 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.11 (27/07/2022)
-     OM: Fixing an issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
+2.9.11 (09/08/2022)
+     OM: Fixing issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
          The coupling where assigned to the wrong lorentz structure
+     OM: Fixing another  issue for BSM model where an interaction is associated
+         to many coupling (detected for 10 coupling) where helicity recycling
+	 was discarding incorectly such type of interaction.
+     OM: Fixing an helicity recycling issue if during a benchmark scan a full
+         matrix-element did not had any contribution (all amplitude set to zero)
+	 but not in the following one. Those two runs were fine but any
+	 following points in the scan will automatically discard that
+	 matrix-element.
 
 2.9.10 (06/05/2022)
      OM: allow model with GC in their name to use helicity recycling
