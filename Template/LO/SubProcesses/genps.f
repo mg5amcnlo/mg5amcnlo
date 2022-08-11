@@ -555,9 +555,9 @@ c
 
 
 
-c         do i=1,nexternal
-c            m(i)=pmass(i)
-c         enddo
+         do i=1,nexternal
+            m(i)=pmass(i)
+         enddo
 c        Set stot
          if (nincoming.eq.1) then
             stot=m(1)**2
