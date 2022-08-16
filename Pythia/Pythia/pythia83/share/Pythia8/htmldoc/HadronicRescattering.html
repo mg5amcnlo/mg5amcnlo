@@ -1,0 +1,277 @@
+<html>
+<head>
+<title>Hadronic Rescattering</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Hadronic Rescattering</h2> 
+ 
+This page describes a model for hadronic rescattering. (Not to 
+be confused with partonic rescattering, an optional part of the 
+<a href="MultipartonInteractions.html" target="page">Multiparton Interactions</a> 
+framework.) Specifically, it is assumed that the hadrons produced 
+can scatter against each other on the way out, before the fragmenting 
+system has had time to expand enough that the hadrons get free. This 
+is happening in parallel with rapid decays, i.e. mainly strong such. 
+ 
+<p/> 
+A prerequisite is that the space-time production vertices of hadrons 
+from string fragmentation are known. This was implemented in 
+[<a href="Bibliography.html#refFer18" target="page">Fer18</a>], and is described separately on the 
+<a href="HadronVertexInformation.html" target="page">Hadron Vertex Information</a> 
+page. A smaller further smearing is obtained from the 
+<a href="PartonVertexInformation.html" target="page">Parton Vertex Information</a> 
+transverse displacement of separate MPI vertices. 
+ 
+The main on/off switch for rescattering is 
+<code>HadronLevel:Rescatter</code>, which by the default is off, since 
+rescattering slows down the generation of events considerably, and since 
+there are no detailed tunes with rescattering as of yet. The model 
+requires space-time information on hadron production vertices to be set, as 
+obtained with <code>Fragmentation:setVertices = on</code> and optionally also 
+<code>PartonVertex:setVertex = on</code>. 
+ 
+In some studies not all events are of interest, for example if studying 
+jet production and no jets with sufficently high <i>pT</i> are produced. 
+In those cases, it is possible to save a significant amount of time by 
+vetoing the event before rescattering has take place, by overriding the 
+<code>canVetoAfterHadronization</code> and 
+<code>doVetoAfterHadronization</code> methods of the 
+<a href="UserHooks.html" target="page">UserHooks</a> class. 
+ 
+<p/> 
+Technically, the processes here are the same as used in the 
+<a href="QCDLowEnergyProcesses.html" target="page">Low-energy QCD Processes</a> 
+framework, i.e. it is the same partial cross sections and the same 
+hadronization setup that is used in both cases. The two play different 
+functions, however, either representing the primary collision as there 
+or secondary rescattering collisions as here. 
+ 
+<p/> 
+The implementation is rather sophisticated for rescattering at low 
+energies, where the vast majority of interactions occur. It is less 
+appropriate at higher energies, where the lack of MPIs leads to too 
+few hadrons being produced. The rescattering rate becomes vanishingly 
+small before that is a problem, however. What this simplification buys 
+is the capability to switch between different colliding hadron 
+combinations without any need for a reinitialization. 
+ 
+<p/> 
+Currently there are only a few options available: 
+ 
+<a name="anchor1"></a>
+<p/><code>mode&nbsp; </code><strong> Rescattering:impactModel &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 1</code>)<br/>
+Impact-parameter shape of the opacity, i.e.\ rescattering 
+probability, with a width determined such that the current 
+rescattering cross section is reproduced, given the maximal 
+opacity below. 
+<br/><code>option </code><strong> 0</strong> : Solid disk with constant opacity out to a sharp edge. 
+   
+<br/><code>option </code><strong> 1</strong> : Gaussian fall-off of the opacity.   
+   
+ 
+<a name="anchor2"></a>
+<p/><code>parm&nbsp; </code><strong> Rescattering:opacity &nbsp;</strong> 
+ (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 1.</code>)<br/>
+Gives the probability of scattering at impact parameter 0. 
+   
+ 
+<a name="anchor3"></a>
+<p/><code>parm&nbsp; </code><strong> Rescattering:bMax &nbsp;</strong> 
+ (<code>default = <strong>5.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 100.</code>)<br/>
+Maximum allowed impact parameter for a rescattering to occur, 
+expressed in units of fm. This cuts off the tail of a Gaussian 
+impact-parameter profile, and more generally puts a (generous) 
+limit on how large a cross section can become. 
+   
+ 
+<a name="anchor4"></a>
+<p/><code>parm&nbsp; </code><strong> Rescattering:tau0RapidDecay &nbsp;</strong> 
+ (<code>default = <strong>100.</strong></code>; <code>minimum = 10.</code>)<br/>
+For hadrons with a nominal invariant lifetime below this value, 
+expressed in fm, their decays are considered in the same time-ordered 
+sequence as rescatterings, while the rest of the decays are considered 
+separately after the rescatterings. Note that the actual lifetime is 
+drawn from an exponential distribution, with the nominal lifetime 
+giving the average value. 
+   
+ 
+<a name="anchor5"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:scatterManyTimes &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+When on, particles that have rescattered can scatter again. 
+   
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:quickCheck &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+When on, a quick check is made that a pair of hadrons that is moving 
+away from each other cannot rescatter. This is done in the CM frame 
+of the event, not in that of the pair itself as done later. It therefore 
+rejects a small fraction (order 10%) of rescatterings that would have 
+been acceptable when viewed in the pair rest frame, but with a 
+significant gain in event generation time. 
+   
+ 
+<a name="anchor7"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:nearestNeighbours &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Allow or not hadrons that have been produced as nearest neighbours 
+on a string to rescatter against each other. There is no matter of 
+principle to forbid it, but such effects implicitly are already 
+included in current tunes without rescattering, so to include it 
+will require a larger retuning effort than not to. If off also 
+forbid hadrons that already scattered (primarily elastically) 
+to immediately scatter against each other again. 
+   
+ 
+<a name="anchor8"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:delayRegeneration &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+If on then forbid a scattered hadron from scattering again within 
+a given regeneration time, while if off a hadron can scatter 
+immediately afterwards. This applies to hadrons that emerge directly 
+from the scattering, i.e. mainly in elastic and excitation. It is 
+also relevant for the undiffracted hadron in single diffraction. 
+Hadrons produced via string fragmentation automatically get a time 
+delay by that. The size of the delay is given by the next parameter. 
+   
+ 
+<a name="anchor9"></a>
+<p/><code>parm&nbsp; </code><strong> Rescattering:tauRegeneration &nbsp;</strong> 
+ (<code>default = <strong>1.</strong></code>; <code>minimum = 0.</code>; <code>maximum = 2.</code>)<br/>
+When a hadron should be assigned a regeneration invariant time this is 
+done according to an exponential with average value given by this 
+parameter, expressed in units of fm. 
+   
+ 
+<a name="anchor10"></a>
+<p/><code>mode&nbsp; </code><strong> Rescattering:boostDir &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+Direction of boost below, 0 off, 1 - 3  give x, y and z respectively. 
+   
+ 
+<a name="anchor11"></a>
+<p/><code>parm&nbsp; </code><strong> Rescattering:boost &nbsp;</strong> 
+ (<code>default = <strong>0.</strong></code>)<br/>
+Boosts the event before rescattering, by this many units of rapidity. 
+For testing purposes. 
+   
+ 
+<a name="anchor12"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:useVelocityFrame &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Use center of velocity instead of center of momentum to determine rescattering 
+origin. 
+   
+ 
+<a name="anchor13"></a>
+<p/><code>flag&nbsp; </code><strong> Rescattering:inelastic &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+If turned off, all rescatterings will be treated as elastic. Used primarily 
+for model tests. 
+   
+ 
+<a name="section0"></a> 
+<h3>Nucleon excitations</h3> 
+ 
+<p/> 
+In rescattering, nucleon-nucleon interactions can produce resonance particles. 
+This is implemented as <i>N N &rarr; N X</i> or <i>N N &rarr; Delta X</i>, 
+where <i>N</i> is a nucleon (<i>p</i> or <i>n</i>), <i>Delta</i> 
+refers to a <i>Delta(1232)</i> particle, and <i>X</i> is a nucleon 
+excitation such as <i>p(1520)+</i> or <i>Delta(1600)+</i>. For the sake of 
+efficiency, the relevant cross sections are parameterized ahead of time. This 
+is handled by the <code>NucleonExcitations</code> class. 
+ 
+<p/> 
+For all excitation processes, the cross section is independent of the isospin 
+of the involved particles. This means that the calculations can be 
+simplified by using &quot;id masks&quot; of the various particles. We define 
+the mask of a particle as its id code with the quark content removed. 
+For example, the <i>p(1520)+</i> particle (<code>id = 102214</code>) 
+has mask 100004, which is the same for <i>n(1520)0</i>. 
+ 
+<p/> 
+The following methods of the <code>NucleonExcitations</code> class are 
+available. 
+ 
+<a name="anchor14"></a>
+<p/><strong> bool NucleonExcitations::check() &nbsp;</strong> <br/>
+run a check to validate the loaded cross section data. Returns whether 
+successful. 
+   
+ 
+<a name="anchor15"></a>
+<p/><strong> vector&lt;int&gt; NucleonExcitations::getExcitationMasks() &nbsp;</strong> <br/>
+search the particle database and returns a list of id masks for all 
+implemented nucleon excitations. A particle is defined as a potential 
+nucleon excitation if its quark content is <i>uud</i> (except for 
+<i>p+</i>). 
+   
+ 
+<a name="anchor16"></a>
+<p/><strong> vector&lt;pair&lt;int, int&gt;&gt; NucleonExcitations::getChannels() &nbsp;</strong> <br/>
+returns a list of all parameterized excitation channels. Each returned 
+<code>pair</code> contains the masks of the two outgoing 
+particles. For each excitation <i>X</i> (as defined by 
+<code>getExcitationMasks</code>), there are two possible excitation 
+channels, <i>N N &rarr; N X</i> and <i>N N &rarr; Delta 
+X</i>. Note that the masks for <i>N</i> and <i>Delta</i> are 
+<code>0002</code> and <code>0004</code>, respectively. 
+   
+ 
+<a name="anchor17"></a>
+<p/><strong> double NucleonExcitations::sigmaExTotal(double eCM) &nbsp;</strong> <br/>
+returns the total excitation cross section for two nucleons colliding at the 
+specified CM energy, using parameterized values. 
+   
+ 
+<a name="anchor18"></a>
+<p/><strong> double NucleonExcitations::sigmaExPartial(double eCM, int maskC, int maskD) &nbsp;</strong> <br/>
+returns the cross section for the process <i>N N &rarr; C D</i> at the 
+specified CM energy, using parameterized values. 
+   
+ 
+<a name="anchor19"></a>
+<p/><strong> bool NucleonExcitations::pickExcitation(int idA, int idB, double eCM, int& idCOut, double& mCOut, int& idDOut, double& mDOut) &nbsp;</strong> <br/>
+pick an excitation channel for the incoming particles with the specified 
+CM energy, using parameterized cross sections. If successful, the outgoing 
+particle ids are written to <code>idAOut</code> and <code>idBOut</code>, 
+and their corresponding masses are written to <code>mAOut</code> and 
+<code>mBOut</code>. Returns whether successful. 
+   
+ 
+<a name="anchor20"></a>
+<p/><strong> double NucleonExcitations::sigmaCalc(double eCM) &nbsp;</strong> <br/>
+   
+<a name="anchor21"></a>
+<strong> double sigmaCalc(double eCM, int maskC, int maskD) &nbsp;</strong> <br/>
+calculate the total excitation cross section or the partial cross section 
+for the process <i>N N &rarr; C D</i>, without using the parameterized 
+cross sections. 
+   
+ 
+<a name="anchor22"></a>
+<p/><strong> bool NucleonExcitations::parameterizeAll(int precision, double threshold = 8.) &nbsp;</strong> <br/>
+clear all parameterized cross sections and recalculatesthem for all possible 
+excitation channels, using excitations found with 
+<code>getExcitationMasks</code>. 
+   
+ 
+<a name="anchor23"></a>
+<p/><strong> bool NucleonExcitations::save(ostream& stream) &nbsp;</strong> <br/>
+   
+<a name="anchor24"></a>
+<strong> bool NucleonExcitations::save(string file = &quot;HadronWidths.dat&quot;) &nbsp;</strong> <br/>
+write all parameterized cross sections in an xml format to the 
+specified stream or file. 
+   
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

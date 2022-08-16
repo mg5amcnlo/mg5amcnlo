@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+# Copyright (C) 2021 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+# Author: Philip Ilten, August 2019.
+
+# This is a script to create a Python interface for Pythia using
+# PyBind11 and the binder tool. The necessary build environment for
+# this is available in the Docker image pythia8/dev:binder.
+
+################################################################################
+# VARIABLES: Global variables not defined via command line arguments.
+#     USAGE:     Text printed when the --help option is passed.
+#     OPTIONS:   List of valid options that can be passed by the user.
+#     CLASSES:   Classes to include in the partial interface.
+#     FUNCTIONS: Functions to include in the partial interface.
+################################################################################
+read -d "" USAGE << "BLOCKTEXT"
+Usage: ./generate [OPTION]
+
+The available options are defined below. Arguments to the options are
+indicated in caps, i.e. FILE.
+
+Configuration options.
+--help      : Print this message (also -h, --h, and -help).
+--part      : Generate the partial/simplified Python interface.
+--full      : Generate the full Python interface.
+--user=FILE : Generate a user defined Python interface using the Binder 
+              configuration in FILE.
+--debug     : Do not remove generated files.
+BLOCKTEXT
+OPTIONS="-h --h -help --help --part --full --user --debug"
+CLASSES="Pythia Event Vec4 RotBstMatrix Particle ParticleData ParticleDataEntry DecayChannel Info Settings Flag Mode Parm Word FVec MVec PVec WVec Rndm PDF DecayHandler RndmEngine UserHooks MergingHooks BeamShape SigmaProcess TimeShower SpaceShower HeavyIons PartonVertex Hist HistPlot SlowJet SlowJetHook"
+FUNCTIONS="m m2 dot3 cross3 cross4 theta costheta phi cosphi RRapPhi REtaPhi"
+PYTHIA_INCLUDE="../../include"
+BINDER_INCLUDE="include"
+BINDER_SRC="src"
+BINDER_HPP="pythia8.hpp"
+BINDER_CFG="pythia8.cfg"
+BINDER_DOC="pythia8.doc"
+GCC_INCLUDE="/usr/include/c++/6.3.1"
+
+################################################################################
+# FUNCTION: Create the bindings.
+################################################################################
+function binder() {
+    rm -rf $BINDER_SRC; mkdir $BINDER_SRC
+    docker run -i -t -v "$PWD:$PWD" -w $PWD -u `id -u` --rm pythia8/dev:binder\
+     --config $BINDER_CFG --root-module pythia8 --prefix $BINDER_SRC/\
+     $BINDER_HPP -- -w -std=c++11 -I$BINDER_INCLUDE\
+     -I$GCC_INCLUDE -I$GCC_INCLUDE/x86_64-redhat-linux -I/usr/include/clang
+}
+
+################################################################################
+# FUNCTION: Write out the base interface configuration.
+################################################################################
+function configure_base() {
+    cat > $BINDER_CFG << BLOCKTEXT
++include <Pythia8/UserHooks.h>
++include <Pythia8/HIUserHooks.h>
++include <Pythia8/HeavyIons.h>
++include <Pythia8/BeamShape.h>
++include <pybind11/stl.h>
++include <pybind11/complex.h>
+-function Pythia8::isfinite
+-function Pythia8::isinf
+-function Pythia8::isnan
+-class Pythia8::Writer
++binder std::multiset REMOVE
++binder std::complex REMOVE
++binder std::vector REMOVE
++binder std::map REMOVE
++binder std::unordered_map REMOVE
++default_member_lvalue_reference_return_value_policy pybind11::return_value_policy::reference
+BLOCKTEXT
+}
+
+################################################################################
+# FUNCTION: Write out the partial interface configuration. A first pass
+#           generates additional bindings, the second pass removes these.
+################################################################################
+function configure_part() {
+    # Determine the generated classes and functions.
+    if [ -d "$1" ]; then
+	CGENS=$(grep -Eoh "// Pythia8::[[:alnum:]]* " $1/*.cpp)
+	FGENS=$(grep -Eoh "// Pythia8::[[:alnum:]]*\(" $1/*.cpp)
+    fi
+	
+    # Create the configuration.
+    configure_base
+    for CLASS in $CLASSES; do
+	echo "+class Pythia8::$CLASS" >> $BINDER_CFG; done
+    for FUNC in $FUNCTIONS; do
+	echo "+function Pythia8::$FUNC" >> $BINDER_CFG; done
+
+    # Remove the additional bindings.
+    for CGEN in $CGENS; do
+	if [ "$CGEN" = "//" ]; then continue; fi
+	KEEP=false
+	for CLASS in $CLASSES; do
+	    if [ "Pythia8::$CLASS" = "$CGEN" ]; then KEEP=true; break; fi; done
+	if [ "$KEEP" = false ]; then echo "-class $CGEN" >> $BINDER_CFG; fi
+    done
+    for FGEN in $FGENS; do
+	if [ "$FGEN" = "//" ]; then continue; fi
+	KEEP=false
+	for FUNC in $FUNCTIONS; do
+	    FGEN=${FGEN%\(}
+	    if [ "Pythia8::$FUNC" = "$FGEN" ]; then KEEP=true; break; fi; done
+	if [ "$KEEP" = false ]; then echo "-function $FGEN" >> $BINDER_CFG; fi
+    done
+}
+
+################################################################################
+# FUNCTION: Write out the full interface configuration.
+################################################################################
+function configure_full() {
+    configure_base
+    echo "+namespace Pythia8" >> $BINDER_CFG
+}
+
+################################################################################
+# FUNCTION: Print formatted information to screen.
+#     bold/error/warn <message>
+# Errors are reported as white-on-red and warnings as black on yellow.
+################################################################################
+function bold() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput bold)$@$(tput sgr0); fi
+}
+
+function warn() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput setaf 0)$(tput setab 3)WARNING: $@$(tput sgr0); fi
+}
+
+function error() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput setaf 7)$(tput setab 1)ERROR: $@$(tput sgr0); fi
+}
+
+################################################################################
+# MAIN: The main execution of the generation script.
+################################################################################
+
+# Check if help requested.
+for VAR in "$@"; do
+    if [ "$VAR" = "-h" ] || [ "$VAR" = "--h" ] || [ "$VAR" = "-help" ] \
+	   || [ "$VAR" = "--help" ]; then
+	echo -e "$USAGE"
+	exit
+    fi
+done
+
+# Check Docker is available.
+if ! type docker &> /dev/null; then
+    error "Docker is required."
+    exit
+fi
+
+# Parse the user arguments and evaluate each as a global variable.
+for VAR in "$@"; do
+    if ! [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then
+	warn "Ignoring invalid option \"${VAR%=*}\".";
+	continue;
+    fi
+    VAR=${VAR#--};
+    KEY=${VAR%%=*}; VAL=${VAR#$KEY}; VAL=${VAL#*=}; KEY=${KEY//"-"/"_"}
+    KEY=$(echo $KEY | awk '{print toupper($0)}');  VAL=$(eval echo $VAL)
+    eval $KEY=\"$VAL\"; eval ${KEY}_SET=true
+done
+
+# Copy the source and modify the include statements.
+for DIR in Pythia8 Pythia8Plugins; do
+    rm -rf $BINDER_INCLUDE/$DIR
+    cp -r $PYTHIA_INCLUDE/$DIR $BINDER_INCLUDE/$DIR
+    sed -i.sed 's/#include[ ]*"\(.*\)"/#include !\1!/g' $BINDER_INCLUDE/$DIR/*.h
+    sed -i.sed 's/#include[ ]*<\(.*\)>/#include "\1"/g' $BINDER_INCLUDE/$DIR/*.h
+    sed -i.sed 's/#include[ ]*!\(.*\)!/#include <\1>/g' $BINDER_INCLUDE/$DIR/*.h
+    sed -i.sed 's/protected:/public:/g' $BINDER_INCLUDE/$DIR/*.h
+    sed -i.sed 's/\(const  *Info\& *info  *=  *infoPrivate;\)/\1\n  '\
+'Info infoPython() {return Info(infoPrivate);}/g' $BINDER_INCLUDE/$DIR/*.h
+done
+    
+# Create the master header file.
+echo "#include <Pythia8/Pythia.h>" > $BINDER_HPP
+echo "#include <Pythia8/HIUserHooks.h>" >> $BINDER_HPP
+echo "#include <Pythia8/HeavyIons.h>" >> $BINDER_HPP
+
+# Generate the bindings.
+if [ "$USER_SET" = true ]; then
+    if [ ! -f "$USER" ]; then
+	error "Binder configuration file '$USER' does not exist."
+	exit
+    fi
+    cp $USER $BINDER_CFG
+    binder
+elif [ "$FULL_SET" = true ]; then
+    configure_full
+    binder
+else
+    configure_part
+    binder
+    configure_part $BINDER_SRC/Pythia8
+    binder
+fi
+
+# Move the bindings.
+mv $BINDER_SRC/Pythia8/*.cpp $BINDER_SRC
+mv $BINDER_SRC/std/*.cpp $BINDER_SRC
+rmdir $BINDER_SRC/Pythia8 $BINDER_SRC/std
+
+# Remove the stream bindings.
+sed -i.sed "/_tcc/d" $BINDER_SRC/pythia8.cpp
+sed -i.sed '/cl.def_readwrite("osLHEF"/d' $BINDER_SRC/*.cpp
+sed -i.sed '/cl.def("closeFile"/d' $BINDER_SRC/*.cpp
+rm -f $BINDER_SRC/*tcc.cpp $BINDER_SRC/*tcc_*.cpp
+
+# Fix namespace for hashed "std" classes.
+sed -i.sed "s/hash<string>/hash<std::string>/g" $BINDER_SRC/*.cpp
+
+# Remove locale bindings.
+sed -i.sed '/bind_std_locale_classes/d' $BINDER_SRC/*.cpp
+rm -rf $BINDER_SRC/locale_classes*.cpp
+
+# Modify the GCC specific C++11 bindings.
+sed -i.sed 's/__cxx11:://g' $BINDER_SRC/*.cpp
+
+# Remove the GCC specific iterator bindings.
+sed -i.sed '/__gnu_cxx/d' $BINDER_SRC/*.cpp
+sed -i.sed '/REMOVE/d' $BINDER_SRC/*.cpp
+
+# Remove all sub-modules except "std".
+sed -i.sed '/{"", "Pythia8"},/d' $BINDER_SRC/pythia8.cpp
+OLD='modules.find(namespace_)'
+NEW='modules.find(namespace_ != "std" ? "" : "std")'
+sed -i.sed "s/$OLD/$NEW/g" $BINDER_SRC/pythia8.cpp
+
+# Include the module documentation.
+cat > $BINDER_DOC << BLOCKTEXT
+Copyright (C) 2021 Torbjorn Sjostrand.
+PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+Please respect the MCnet Guidelines, see GUIDELINES for details.
+
+This module is a Python interface to PYTHIA 8, generated automatically
+with Binder and PyBind11. An attempt has been made to translate all
+PYTHIA classes and functions as directly as possible. The following
+features are included:
+
+BLOCKTEXT
+if [ "$USER_SET" = true ]; then cat > $BINDER_DOC << BLOCKTEXT
+* A custom user interface to PYTHiA has been defined. See main01.py for
+  a direct Python translation of the C++ main01.cc example.
+BLOCKTEXT
+elif [ "$FULL_SET" = true ]; then cat > $BINDER_DOC << BLOCKTEXT
+* All PYTHIA classes and functions are available. See main01.py for
+  a direct Python translation of the C++ main01.cc example.
+BLOCKTEXT
+else cat > $BINDER_DOC << BLOCKTEXT
+* A limited subset of PYTHIA classes and functions are available. See
+  main01.py for a direct Python translation of the C++ main01.cc
+  example. To generate the full Python bindings, use "generate --full"
+  in the "plugins/python" directory.
+BLOCKTEXT
+fi
+cat > $BINDER_DOC << BLOCKTEXT
+* Documentation through the built-in help function in Python provides
+  the relevant mappings between the Python interface and the C++
+  code. For documentation on the purpose of the code, see the user
+  HTML manual and Doxygen.
+* Templated C++ types are returned as native Python types,
+  e.g. vectors are returned as lists, etc. Similarly, native Python
+  types can be passed as arguments and are converted to their
+  equivalent C++ templates.
+* No difference is made between passing by reference or pointer;
+  methods in C++ which take a pointer as an argument in Python simply
+  take the object, e.g. foo(Vec4*) and foo(Vec4\&) are the same in the
+  Python interface.
+* All operators defined in C++, e.g. Vec4*double are available. Note
+  that reverse operators are not, e.g. double*Vec4.
+* Classes with defined [] operators are iterable, using standard
+  Python iteration, e.g. for prt in pythia.event.
+* Classes with a << operator can be printed via the built-in print
+  function in Python. Note this means that a string representation via
+  str is also available for these classes in Python.
+* Derived classes in Python can be passed back to PYTHIA, and should
+  be available for all classes. See main10.py for a direct Python
+  translation of the C++ main10.cc example which uses a derived class
+  from the UserHooks class to veto events.
+* The constant Pythia::info member is available as
+  Pythia::infoPython. Note, this creates a new instance of the Info
+  class, and so needs to be called each time the information might be
+  updated.
+BLOCKTEXT
+BINDER_TXT=$(awk -v ORS='\\\\n' '1' $BINDER_DOC)
+sed -i.sed "s|root_module.doc() = .*;|root_module.doc() = \"$BINDER_TXT\";|g" \
+    $BINDER_SRC/pythia8.cpp
+
+# Clean up.
+if [ "$DEBUG_SET" != true ]; then
+    rm -rf $BINDER_HPP $BINDER_CFG $BINDER_DOC
+    rm -f $BINDER_SRC/pythia8.modules
+    rm -f $BINDER_SRC/pythia8.sources
+    rm -f $BINDER_SRC/*.sed 
+    for DIR in Pythia8 Pythia8Plugins; do rm -rf $BINDER_INCLUDE/$DIR; done
+fi

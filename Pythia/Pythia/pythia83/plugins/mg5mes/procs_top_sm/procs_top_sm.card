@@ -1,0 +1,10 @@
+# ./generate --output=procs_top_sm --card=procs_top_sm.card
+set group_subprocesses True
+import sm
+
+# Top quark production in e+e-.
+generate l+ l- > t t~  @600
+
+# Top quark pair production in pp.
+add process p p > t t~ @600
+

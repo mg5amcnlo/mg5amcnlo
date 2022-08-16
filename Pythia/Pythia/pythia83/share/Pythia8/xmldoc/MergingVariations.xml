@@ -1,0 +1,42 @@
+ 
+<chapter name="Scale and Scheme Variations"> 
+ 
+<h2>Scale and Scheme Variations in CKKW-L Based Merging 
+</h2> 
+ 
+Pythia allowes automated renormalization scale variations in CKKW-L based 
+merging schemes, i.e., CKKW-L, UMEPS and NLO merging. Furthermore, automated 
+merging scheme variations are available for UNLOPS merging. The details are 
+presented in <ref>Gel20</ref>. 
+ 
+<h3>Renormalization Scale Variations</h3> 
+ 
+Renormalization scale variations are automatically performed when multi-jet 
+merging according to one of the follwing schemes is used: CKKW-L, UMEPS, 
+NL<sup>3</sup> or UNLOPS. 
+NLO LHEF input files need to include the required scale variation weights, 
+which are detected and used by Pythia. Leading order LHEF input files do not 
+need to include scale variation weights. The renormalization scale (in GeV) 
+will be varied by the factors in the following vector. 
+ 
+<pvec name="Merging:muRfactors" 
+default="{0.5, 2.0}"> 
+Vector of renormalization scale variation factors to be applied in 
+CKKW-L based merging schemes. 
+</pvec> 
+ 
+<h3>UNLOPS Merging Scheme Variations</h3> 
+ 
+Three alternative UNLOPS merging schemes have been implemented and can be 
+applied simultaneously when running Pythia. The fixed order and parton shower 
+accuracy is identical in all schemes. Differences arise from subleading 
+contributions in the weighting of NLO events. The following flag enables the 
+automatic scheme variations. 
+ 
+<flag name="Merging:doSchemeVariation" default="on"> 
+Perform UNLOPS scheme variations. 
+</flag> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

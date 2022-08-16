@@ -1,0 +1,604 @@
+<html>
+<head>
+<title>Dire Splitting Enhancements</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Dire Splitting Enhancements</h2> 
+<ol id="toc">
+  <li><a href="#section0">QCD splittings</a></li>
+  <li><a href="#section1">QED splittings</a></li>
+  <li><a href="#section2">Electroweak splittings</a></li>
+  <li><a href="#section3">Dark U(1) splittings</a></li>
+</ol>
+
+ 
+The Dire parton shower allows to weight individual splittings to allow 
+efficient isolation and study of their impact. This can e.g. be used 
+to increase the rate of a single splitting, and/or decrease the rate 
+of others, thus e.g. allowing to study rare splittings. It should be 
+noted that this can make some splittings much more frequent, at the 
+expense of a new event weight, whose fluctuations might require larger 
+event samples. 
+ 
+ 
+<p/> 
+Nevertheless, sometimes enhancements can be useful. Dire offers the 
+option to enhance each available splitting kernel separately. For 
+brevity, we here only describe auxiliary parameters, then one 
+enhancement factor, and then just list all other corresponding 
+keywords. 
+ 
+<a name="anchor1"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:pTmin &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+The minimal pT value <i>t</i> (in GeV) of 
+emissions below which no enhancement of emission probabilities is 
+applied. Negative values mean that enhancements may be applied to 
+emissions at any pT. Default value is -1.0 GeV. 
+   
+ 
+<a name="anchor2"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The (double) value with 
+which the final-state <i>q->qg</i> splitting is enhanced. Note that 
+the enhancement is compensated by an additional weight factor included 
+in the parton shower weight, to guarantee the correct real-emission and 
+no-emission probabilities are generated. 
+   
+ 
+<a name="section0"></a> 
+<h3>QCD splittings</h3> 
+ 
+<a name="anchor3"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, q -> g q) 
+   
+<a name="anchor4"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, g -> g g, 1st color structure) 
+   
+<a name="anchor5"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, g -> g g, 2nd color structure) 
+   
+<a name="anchor6"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->1&1a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, g -> q qbar, soft quark) 
+   
+<a name="anchor7"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->1&1b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, g -> q qbar, soft antiquark) 
+   
+<a name="anchor8"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->2&1&2 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, q -> q' q qbar') 
+   
+<a name="anchor9"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&1&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR, q -> qbar q qbar) 
+   
+<a name="anchor10"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&21_notPartial &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q g, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+   
+<a name="anchor11"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&21_notPartial &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g g, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+   
+<a name="anchor12"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->1&1_notPartial &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> q qbar, with full soft logarithms, as e.g. needed in radiation 
+off top decay products) 
+   
+<a name="anchor13"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&21&21 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q g g) 
+   
+<a name="anchor14"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&d&dbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q d dbar, soft quark) 
+   
+<a name="anchor15"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&dbar&d &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q d dbar, soft antiquark) 
+   
+<a name="anchor16"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&u&ubar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q u ubar, soft quark) 
+   
+<a name="anchor17"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&ubar&u &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q u ubar, soft antiquark) 
+   
+<a name="anchor18"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&s&sbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q s sbar, soft quark) 
+   
+<a name="anchor19"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&sbar&s &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q s sbar, soft antiquark) 
+   
+<a name="anchor20"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&c&cbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q c cbar, soft quark) 
+   
+<a name="anchor21"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&cbar&c &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q c cbar, soft antiquark) 
+   
+<a name="anchor22"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&b&bbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q b bbar, soft quark) 
+   
+<a name="anchor23"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_1->1&bbar&b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q b bbar, soft antiquark) 
+   
+<a name="anchor24"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&21&21 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g g g) 
+   
+<a name="anchor25"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&d&dbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> q d dbar, soft quark) 
+   
+<a name="anchor26"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&dbar&d &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g d dbar, soft antiquark) 
+   
+<a name="anchor27"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&u&ubar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g u ubar, soft quark) 
+   
+<a name="anchor28"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&ubar&u &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g u ubar, soft antiquark) 
+   
+<a name="anchor29"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&s&sbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g s sbar, soft quark) 
+   
+<a name="anchor30"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&sbar&s &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g s sbar, soft antiquark) 
+   
+<a name="anchor31"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&c&cbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g c cbar, soft quark) 
+   
+<a name="anchor32"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&cbar&c &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g c cbar, soft antiquark) 
+   
+<a name="anchor33"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&b&bbar &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g b bbar, soft quark) 
+   
+<a name="anchor34"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qcd_21->21&bbar&b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR g -> g b bbar, soft antiquark) 
+   
+<a name="anchor35"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> q g) 
+   
+<a name="anchor36"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_21->1&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR g -> q qbar) 
+   
+<a name="anchor37"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR g -> g g, soft quark) 
+   
+<a name="anchor38"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR g -> g g, soft antiquark) 
+   
+<a name="anchor39"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> g q) 
+   
+<a name="anchor40"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_1->2&1&2 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> q' q qbar') 
+   
+<a name="anchor41"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qcd_1->1&1&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> qbar q qbar) 
+   
+ 
+<a name="section1"></a> 
+<h3>QED splittings</h3> 
+ 
+<a name="anchor42"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_1->1&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q a) 
+   
+<a name="anchor43"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_1->22&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> a q) 
+   
+<a name="anchor44"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_11->11&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> l a) 
+   
+<a name="anchor45"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_11->22&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> a l) 
+   
+<a name="anchor46"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->1&1a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> d dbar, soft quark) 
+   
+<a name="anchor47"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->1&1b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> d dbar, soft antiquark) 
+   
+<a name="anchor48"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->2&2a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> u ubar, soft quark) 
+   
+<a name="anchor49"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->2&2b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> u ubar, soft antiquark) 
+   
+<a name="anchor50"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->3&3a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> s sbar, soft quark) 
+   
+<a name="anchor51"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->3&3b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> s sbar, soft antiquark) 
+   
+<a name="anchor52"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->4&4a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> c cbar, soft quark) 
+   
+<a name="anchor53"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->4&4b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> c cbar, soft antiquark) 
+   
+<a name="anchor54"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->5&5a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> b bbar, soft quark) 
+   
+<a name="anchor55"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->5&5b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> b bbar, soft antiquark) 
+   
+<a name="anchor56"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->11&11a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> e+ e-, soft e-) 
+   
+<a name="anchor57"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->11&11b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> e+ e-, soft e+) 
+   
+<a name="anchor58"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->13&13a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> mu+ mu-, soft mu-) 
+   
+<a name="anchor59"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->13&13b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> mu+ mu-, soft mu+) 
+   
+<a name="anchor60"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->15&15a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> tau+ tau-, soft tau-) 
+   
+<a name="anchor61"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_22->15&15b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> tau+ tau-, soft tau+) 
+   
+<a name="anchor62"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_1->1&22_notPartial &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q a, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+   
+<a name="anchor63"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_qed_11->11&22_notPartial &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> l a, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+   
+<a name="anchor64"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_1->1&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> q a) 
+   
+<a name="anchor65"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_1->22&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> a q) 
+   
+<a name="anchor66"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_22->1&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR a -> q qbar) 
+   
+<a name="anchor67"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_11->11&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR l -> l a) 
+   
+<a name="anchor68"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_11->22&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> a l) 
+   
+<a name="anchor69"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_qed_22->11&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR a -> l+ l-). 
+   
+ 
+ 
+<a name="section2"></a> 
+<h3>Electroweak splittings</h3> 
+ 
+At present, electroweak evolution is under development, so that these 
+settings should not be touched for production for now. 
+ 
+<a name="anchor70"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_1->1&23 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q z) 
+   
+<a name="anchor71"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_1->23&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> z q) 
+   
+<a name="anchor72"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_23->1&1a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR z -> q qbar, soft quark) 
+   
+<a name="anchor73"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_23->1&1b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR z -> q qbar, soft antiquark) 
+   
+<a name="anchor74"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_24->1&1a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+FSR w -> q qbar', soft quark) 
+   
+<a name="anchor75"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_24->1&1b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR w -> q qbar', soft antiquark). 
+   
+<a name="anchor76"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_24->24&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR w -> w a). 
+   
+<a name="anchor77"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_25->21&21 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR h -> g g, as e.g. needed for Higgs hypothesis testing). 
+   
+<a name="anchor78"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_ew_25->22&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR h -> a a, as e.g. needed for Higgs hypothesis testing). 
+   
+ 
+<a name="section3"></a> 
+<h3>Dark U(1) splittings</h3> 
+ 
+At present, dark photon evolution is under development, so that these 
+settings should not be touched for production for now. 
+ 
+<a name="anchor79"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_1->1&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> q aDark) 
+   
+<a name="anchor80"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_1->22&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR q -> aDark q) 
+   
+<a name="anchor81"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_11->11&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> l aDark) 
+   
+<a name="anchor82"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_11->22&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR l -> aDark l) 
+   
+<a name="anchor83"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->1&1a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> d dbar, soft quark) 
+   
+<a name="anchor84"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->1&1b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> d dbar, soft antiquark) 
+   
+<a name="anchor85"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->2&2a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> u ubar, soft quark) 
+   
+<a name="anchor86"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->2&2b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> u ubar, soft antiquark) 
+   
+<a name="anchor87"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->3&3a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> s sbar, soft quark) 
+   
+<a name="anchor88"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->3&3b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> s sbar, soft antiquark) 
+   
+<a name="anchor89"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->4&4a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> c cbar, soft quark) 
+   
+<a name="anchor90"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->4&4b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> c cbar, soft antiquark) 
+   
+<a name="anchor91"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->5&5a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> b bbar, soft quark) 
+   
+<a name="anchor92"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->5&5b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> b bbar, soft antiquark) 
+   
+<a name="anchor93"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->11&11a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> e+ e-, soft e-) 
+   
+<a name="anchor94"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->11&11b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> e+ e-, soft e+) 
+   
+<a name="anchor95"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->13&13a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> mu+ mu-, soft mu-) 
+   
+<a name="anchor96"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->13&13b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> mu+ mu-, soft mu+) 
+   
+<a name="anchor97"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->15&15a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> tau+ tau-, soft tau-) 
+   
+<a name="anchor98"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->15&15b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> tau+ tau-, soft tau+) 
+   
+<a name="anchor99"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->211&211a &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> pi+ pi-, soft pi-) 
+   
+<a name="anchor100"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_fsr_u1new_22->211&211b &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(FSR aDark -> pi+ pi-, soft pi+) 
+   
+<a name="anchor101"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_1->1&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> q aDark) 
+   
+<a name="anchor102"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_1->22&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR q -> aDark a) 
+   
+<a name="anchor103"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_22->1&1 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR aDark -> q qbar) 
+   
+<a name="anchor104"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_11->11&22 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR l -> l aDark) 
+   
+<a name="anchor105"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_11->22&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR l -> aDark l) 
+   
+<a name="anchor106"></a>
+<p/><code>parm&nbsp; </code><strong> Enhance:Dire_isr_u1new_22->11&11 &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+(ISR aDark -> l+ l-). 
+   
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Stefan Prestel --> 

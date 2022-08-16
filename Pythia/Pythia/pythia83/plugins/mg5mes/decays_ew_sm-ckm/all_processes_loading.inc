@@ -1,0 +1,10 @@
+loaded_processes.push_back(new PY8MEs_R1_P0_sm_ckm_z_qq(model)); 
+loaded_processes.push_back(new PY8MEs_R2_P1_sm_ckm_z_bbx(model)); 
+loaded_processes.push_back(new PY8MEs_R3_P2_sm_ckm_z_ttx(model)); 
+loaded_processes.push_back(new PY8MEs_R4_P3_sm_ckm_z_ll(model)); 
+loaded_processes.push_back(new PY8MEs_R5_P4_sm_ckm_z_taptam(model)); 
+loaded_processes.push_back(new PY8MEs_R6_P5_sm_ckm_wp_qq(model)); 
+loaded_processes.push_back(new PY8MEs_R7_P6_sm_ckm_wp_bxq(model)); 
+loaded_processes.push_back(new PY8MEs_R8_P7_sm_ckm_wp_tbx(model)); 
+loaded_processes.push_back(new PY8MEs_R9_P8_sm_ckm_wp_tq(model)); 
+loaded_processes.push_back(new PY8MEs_R10_P9_sm_ckm_wp_lvl(model)); 

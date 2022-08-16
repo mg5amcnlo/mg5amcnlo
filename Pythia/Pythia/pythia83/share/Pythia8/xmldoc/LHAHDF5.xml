@@ -1,0 +1,76 @@
+<chapter name="HDF5 Event Files"> 
+ 
+<h2>HDF5 Event File Format</h2> 
+ 
+HDF5 is a binary data format, organised similarly to a data base. 
+Some modern matrix element generators support the output of 
+parton-level events in the HDF5 format. 
+The information is stored in the Les Houches Accord in close 
+analogy to (default) ASCII <aloc href="LHEF">Les Houches Event Files</aloc>. 
+ 
+<p/> 
+The HDF5 Les Houches event reader derives from the 
+<aloc href="LHA">LHAup</aloc> 
+class and acts as a replacement of the Pythia Les Houches reader. 
+ 
+<h3>Versions</h3> As the LHAHDF5 format is relatively new, no clear 
+version numbering standard has solidified. The reader attempts at 
+guessing the format, but there is no guarantee that the correct 
+version can be determined.  For full control, the version can be set 
+by 
+<word name="LHAHDF5:version" default=""> 
+  LHAHDF5 version number of the event file in the format X.Y.Z. 
+</word> 
+ 
+<p/> 
+The Pythia-internal version numbering scheme is: 
+ 
+<h4>LHAHDF5 0.1.0</h4> 
+<ul> 
+<li> The event file contains an <code>index</code> group, in which the indices 
+of the particles in a single event are stored. The indices refer to the 
+<code>particle</code> group.</li> 
+<li> No weight variations are supported. Event weights are a single 
+floating point number per event stored in the <code>event</code> 
+group.</li> 
+</ul> 
+ 
+<h4>LHAHDF5 0.2.0</h4> 
+<ul class="listnoextraspace"> 
+<li> The <code>index</code> group is removed.</li> 
+<li> No weight variations are supported. Event weights are a single 
+floating point number per event stored in the <code>event</code> 
+group.</li> 
+</ul> 
+ 
+<h4>LHAHDF5 1.0.0</h4> 
+<ul> 
+<li> The <code>index</code> group is removed.</li> 
+<li> Weight variations are supported. Event weights are a stored in a, 
+possibly one-dimensional, array per event in the <code>event</code> 
+group.</li> 
+</ul> 
+ 
+<h2>HDF5 Event File Usage</h2> 
+ 
+A number of external libraries are required to read HDF5 LHA event 
+files. The <a href="https://www.mpich.org/">MPICH</a> implementation of 
+MPI (message passing interface) is required, and its location can be 
+specified with the <code>--with-mpich</code> flags passed to the 
+<code>configure</code> script. Similarly, the <a 
+href="https://www.hdfgroup.org">HDF5</a> library and development 
+headers are required and can be configured with the 
+<code>--with-hdf5</code> options. Finally, the 
+<a href="https://github.com/BlueBrain/HighFive">HighFive</a> 
+header library is also required which can be configured with the 
+<code>--with-highfive</code> options. Currently, version 2.2 is 
+supported and can be downloaded as follows. 
+<pre> 
+    curl -OL https://github.com/BlueBrain/HighFive/archive/v2.2.zip \ 
+      && unzip v2.2.zip && mv HighFive-2.2/include/highfive . \ 
+      && rm -r HighFive-2.2/ && rm v2.2.zip 
+</pre> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

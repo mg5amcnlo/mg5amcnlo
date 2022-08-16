@@ -1,0 +1,15 @@
+# ./generate --output=procs_dis_sm-ckm --card=procs_dis_sm-ckm.card
+set group_subprocesses True
+import model sm-ckm
+
+# NC DIS.
+generate l- p > l- j      @300
+add process l+ p > l+ j   @300
+add process vl p > vl j   @300
+add process vl~ p > vl~ j @300
+
+# CC DIS.
+add process l- p > vl j   @300
+add process l+ p > vl~ j  @300
+add process vl p > l- j   @300
+add process vl~ p > l+ j  @300

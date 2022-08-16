@@ -1,0 +1,12 @@
+diff -rupNx '*.log' -x '*.orig' -x '*.rej' -x '*~' -x .git old/include/Pythia8/LesHouches.h new/include/Pythia8/LesHouches.h
+--- old/include/Pythia8/LesHouches.h	2020-04-14 13:38:55.007462438 +0100
++++ new/include/Pythia8/LesHouches.h	2020-04-14 13:42:47.549878657 +0100
+@@ -544,7 +544,7 @@ private:
+   Event* eventPtr;
+ 
+   // Pointer to settings and info objects.
+-  Info* infoPtr;
++  const Info* infoPtr;
+   Settings* settingsPtr;
+   ParticleData* particleDataPtr;
+ 

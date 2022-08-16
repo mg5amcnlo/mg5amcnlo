@@ -1,0 +1,80 @@
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/include/Pythia8/DireSplittingLibrary.h new/include/Pythia8/DireSplittingLibrary.h
+--- old/include/Pythia8/DireSplittingLibrary.h	2020-04-12 17:00:43.893620417 +0100
++++ new/include/Pythia8/DireSplittingLibrary.h	2020-04-12 17:08:02.897249105 +0100
+@@ -19,7 +19,6 @@
+ 
+ #include "Pythia8/DireSplittings.h"
+ #include "Pythia8/DireSplittingsQCD.h"
+-#include "Pythia8/DireSplittingsQCD2.h"
+ #include "Pythia8/DireSplittingsQED.h"
+ #include "Pythia8/DireSplittingsEW.h"
+ #include "Pythia8/DireSplittingsU1new.h"
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/include/Pythia8/Pythia.h new/include/Pythia8/Pythia.h
+--- old/include/Pythia8/Pythia.h	2020-04-12 17:00:43.893620417 +0100
++++ new/include/Pythia8/Pythia.h	2020-04-12 17:00:44.005621341 +0100
+@@ -291,13 +291,13 @@ public:
+   BeamParticle   beamA = {};
+   BeamParticle   beamB = {};
+ 
+-private:
+-
+   // The main keeper/collector of information, accessible from all
+   // PhysicsBase objects. The information is available from the
+   // outside through the public info object.
+   InfoHub         infoHub = {};
+ 
++private:
++
+   // Initialise new Pythia object (called by constructors).
+   void initPtrs();
+ 
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/Makefile new/Makefile
+--- old/Makefile	2020-04-12 17:00:43.849620053 +0100
++++ new/Makefile	2020-04-12 17:00:43.961620978 +0100
+@@ -31,7 +31,7 @@ LOCAL_SHARE=share/Pythia8
+ LOCAL_SRC=src
+ LOCAL_TMP=tmp
+ LOCAL_MKDIRS:=$(shell mkdir -p $(LOCAL_TMP) $(LOCAL_LIB))
+-CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON)
++CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON) -std=c++11
+ 
+ # PYTHIA.
+ OBJECTS=$(patsubst $(LOCAL_SRC)/%.cc,$(LOCAL_TMP)/%.o,\
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test008.cc new/private/tests/test008.cc
+--- old/private/tests/test008.cc	2020-04-12 17:00:43.905620515 +0100
++++ new/private/tests/test008.cc	2020-04-12 17:00:44.013621408 +0100
+@@ -47,7 +47,7 @@ int main() {
+ 
+   // Shorthand for some public members of pythia (also static ones).
+   Settings& settings = pythia.settings;
+-  const Info& info = pythia.info;
++  Info& info = pythia.info;
+ 
+   // Optionally limit output to minimal one.
+   if (smallOutput) {
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test020.cc new/private/tests/test020.cc
+--- old/private/tests/test020.cc	2020-04-12 17:00:43.905620515 +0100
++++ new/private/tests/test020.cc	2020-04-12 17:08:01.037233726 +0100
+@@ -23,7 +23,7 @@ int main() {
+   pythia.readString("PartonLevel:all = off");
+ 
+   // Create an LHAup object that can access relevant information in pythia.
+-  LHAupFromPYTHIA8 myLHA(&pythia.process, &pythia.info);
++  LHAupFromPYTHIA8 myLHA(&pythia.process, &pythia.infoHub);
+ 
+   // Open a file on which LHEF events should be stored, and write header.
+   myLHA.openLHEF("weakbosons.lhe");
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test112.cc new/private/tests/test112.cc
+--- old/private/tests/test112.cc	2020-04-12 17:00:43.905620515 +0100
++++ new/private/tests/test112.cc	2020-04-12 17:00:44.013621408 +0100
+@@ -119,8 +119,8 @@ int main() {
+ 
+     // Also fill the number of (absorptively and diffractively)
+     // wounded nucleaons.
+-    int nw = pythia.info.hiInfo->nAbsTarg() +
+-      pythia.info.hiInfo->nDiffTarg();
++    int nw = pythia.info.hiInfo()->nAbsTarg() +
++      pythia.info.hiInfo()->nDiffTarg();
+     wounded.fill(nw, weight);
+ 
+     // Find the correct centrality histograms.

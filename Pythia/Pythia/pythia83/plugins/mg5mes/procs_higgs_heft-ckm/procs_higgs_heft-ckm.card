@@ -1,0 +1,33 @@
+# ./generate --output=procs_higgs_heft-ckm --card=procs_higgs_heft-ckm.card
+set group_subprocesses True
+import model heft-ckm
+
+# Higgs production. No need to include h decays since fully factorised.
+generate p p > h                                @900
+
+add process p p > h z                           @904
+add process p p > h w+                          @905
+add process p p > h w-                          @905
+add process p p > h h                           @910
+
+# VBF
+add process p p > h j j / b  QCD<=0 HIG=0 HIW=0 @906
+add process p p > h b j / b  QCD<=0 HIG=0 HIW=0 @906
+add process p p > h b~ j / b QCD<=0 HIG=0 HIW=0 @906
+add process p p > h b~ b / b QCD<=0 HIG=0 HIW=0 @906
+
+# ttH
+add process p p > h t t~ HIW=0 HIG=0 QED<=2     @908
+
+# ee processes
+add process ta+ ta- > h                         @990
+
+# Higgs strahlung, with and without Z decay
+add process e+ e- > h z                         @904
+
+# ee VBF, ttH, and bbH
+add process e+ e- > h l+ l-                     @906
+add process e+ e- > h vl vl~                    @906
+add process e+ e- > h t t~                      @908
+add process e+ e- > h b b~                      @912
+

@@ -1,0 +1,23 @@
+! main46.cmnd
+
+! Specify statistics parameters.
+Main:numberOfEvents         = 100  ! number of events to be generated
+
+! Specify LHAHDF5 version if needed.
+! (Will be overridden if event file specifies version number.)
+!LHAHDF5:version = 0.2.0
+
+! Some example internal variations
+! Note: The HepMC interface automatically writes all atomic weights to the
+! output HepMC file. Weight groups will be atomized before writing a HepMC
+! file.
+! UncertaintyBands:doVariations = on
+! UncertaintyBands:List = {
+!     alphafsrShi fsr:muRfac=0.5,
+!     alphaisrShi isr:muRfac=0.5,
+!     alphaSfsrlo fsr:muRfac=2.0,
+!     alphaSisrlo isr:muRfac=2.0
+! }
+
+!HadronLevel:all = off
+!PartonLevel:MPI = off

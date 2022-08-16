@@ -1,0 +1,11 @@
+ProcessLevel:all = off
+Print:quiet = on
+
+// spareMode1 and spareMode2 give the particle types.
+// Can be overridden by passing two arguments.
+Main:spareMode1 = 2112
+Main:spareMode2 = 211
+
+// spareParm1 and spareMode2 give the min- and max energies respectively.
+Main:spareParm1 = 0.2
+Main:spareParm2 = 5.0

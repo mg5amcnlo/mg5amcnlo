@@ -1,0 +1,27 @@
+# Base on ubuntu
+FROM ubuntu:latest
+
+# Set some environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    TERM=xterm
+
+# Install system tools
+RUN apt-get update && apt-get install -y apt-utils
+
+# Install build tools
+RUN apt-get install -y \
+    git \
+    vim \
+    time \
+    gcc \
+    g++-7 \
+    g++-8 \
+    g++ \
+    clang-7 \
+    clang-8 \
+    clang-9 \
+    clang \
+    python \
+    python-dev \
+    cmake \
+    zlib1g-dev \

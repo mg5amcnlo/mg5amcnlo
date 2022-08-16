@@ -1,0 +1,340 @@
+# Copyright (C) 2020 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+# Contact: Christian Bierlich <christian.bierlich@thep.lu.se>
+# Steering file for Gitlab CI for Pythia 8.3. Requires the presence of 
+# dedicated docker images on runner, built with the dockerfiles found
+# private/docker.
+
+# Setting default image and shell, can be overridden in jobs.
+default:
+  image:
+    name: pythia8/dev:ubuntu
+  before_script:
+    - export SHELL=/bin/bash
+
+# Define global variables
+variables:
+  NUM_THREADS: 1
+  CONF_ALL: ""
+  LOCAL: /hep
+  FP_NODEP: ""
+  FP_DEP: ""
+
+# Define CI stages. The stage compile-more includes 
+# many compilation tests.
+
+stages:
+- compile
+- test
+- compile-deps
+- test-deps
+- compile-more
+
+# Import global variables in the before_script using this anchor.
+.global: &global
+- export SHELL=/bin/bash
+# Set number of threads on local runner.
+- export NUM_THREADS=$(grep -c ^processor /proc/cpuinfo)
+# Configure string with all dependencies on the docker image 'test'
+- export CONF_ALL="--with-mg5mes --with-hepmc2=$LOCAL/hepmc2 --with-hepmc3-config=$LOCAL/hepmc3/bin/HepMC3-config --with-fastjet3=$LOCAL/fastjet3 --with-evtgen=$LOCAL/evtgen --with-lhapdf5=$LOCAL/lhapdf5 --with-lhapdf6=$LOCAL/lhapdf6 --with-powheg=$LOCAL/powheg --with-rivet=$LOCAL/rivet --with-hdf5=$LOCAL/mpich --with-mpich=$LOCAL/mpich --with-highfive=$LOCAL/highfive --with-gzip"
+- export CONF_TST="--with-hepmc3-config=$LOCAL/hepmc3/bin/HepMC3-config --with-gzip"
+# Which example mains to skip when running floating point exception tests with no dependencies.
+- export FP_NODEP="41 42 43 44 45 46 48 71 72 74 75 81 82 83 84 85 86 87 88 89 91 92 93 280"
+# Which example mains to skip with dependencies.
+- export FP_DEP="91 92 93 111"
+  
+# Simple build template, no dependencies.
+.build:
+  script:
+    - ./configure
+    - make -j$NUM_THREADS
+    - cd examples/
+    - make main01
+    - ./main01 > ../main01.log
+    - if [[ -e ../main01.log ]]; then true; else false; fi
+  artifacts:
+    paths:
+      - main01.log
+    expire_in: 1 week
+
+# Template rule for running only with merges to
+# master, otherwise on manual trigger in gitlab ui.
+.master-trigger:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+      when: always
+    - when: manual
+      allow_failure: true
+
+# Templated test suite script.
+.testsuite:
+  script:
+    # Test against latest stable commit, as defined in README.md.
+    - REF=$(grep '^* ........ ' private/tests/README.md | cut -c3-10 | tail -n1)
+    - git checkout $REF
+    - ./configure --obj-common=-DGCCFPDEBUG $CONF_STRING
+    - make -j$NUM_THREADS
+    - cd private/tests/
+    - make clean
+    - make -j$NUM_THREADS drycheck
+    - make clean
+    - make clean -C ../..
+    - git checkout -
+    - make -j$NUM_THREADS -C ../..
+    - make -j$NUM_THREADS check > ../../testsums.log
+    - python testsumci.py
+  artifacts:
+    when: always
+    paths:
+      - testsums.log
+    expire_in: 1 week
+
+# Templated test for floating point exceptions in examples.
+.floatingpoint:
+  script:
+    - export CXX=g++
+    - ./configure --obj-common=-DGCCFPDEBUG $CONF_STRING
+    - make -j$NUM_THREADS
+    - cd examples/
+    - echo Skipping\ $FP_SKIP
+    - ./runmains --threads=$NUM_THREADS --skip="$FP_SKIP" > ../fpp-build.log
+    - grep exception *.log > ../fpp-except.log || true
+    - if [[ -s ../fpp-except.log ]]; then false; else echo "No floating point failures" > ../fpp-except.log; fi
+  artifacts:
+    when: always
+    paths:
+      - fpp-build.log
+      - fpp-except.log
+    expire_in: 1 week
+      
+## STAGE: compile
+
+# Build on ubuntu with newest g++.
+build-ubuntu:
+  extends: .build
+  stage: compile
+  before_script:
+    - *global
+    - export CXX=g++
+
+# Build on macos. We set it up on a dedicated machine, ie. no global.
+build-macos:
+  tags: 
+    - macos
+  extends: .build
+  stage: compile-more
+  before_script:
+    - export CXX=clang++
+    - export TERM=xterm-256color
+    - export SHELL=/bin/bash
+    - export NUM_THREADS=$(sysctl hw.logicalcpu | cut -c16)
+
+## STAGE: test
+
+# Run test suite without dependencies
+test-no-deps:
+  stage: test
+  extends: .testsuite
+  image: pythia8/dev:test
+  before_script: 
+    - *global
+    - export CONF_STRING=$CONF_TST
+
+# Floating point test without dependencies.
+floatingpoint-no-deps:
+  stage: test
+  extends: .floatingpoint
+  before_script:
+    - *global
+    - export FP_SKIP=$FP_NODEP
+    - export CONF_STRING=""
+          
+## STAGE: compile-deps
+
+# Test if standard Rivet linking works with newest version.
+build-rivet-hepmc3:
+  extends:
+    - .master-trigger
+  stage: compile-deps
+  image: pythia8/dev:rivet-hepmc3-stack
+  before_script:
+    - *global
+  script:
+     - source /root/install/rivetenv.sh
+     - ./configure --with-rivet=/root/install/
+     - make -j$NUM_THREADS
+     - cd examples/
+     - make main93
+     - ./main93 -c main93.cmnd -o ../test
+  artifacts:
+    when: always
+    paths:
+      - test.log
+    expire_in: 1 week
+
+# Test if standard Rivet linking works with newest version.
+build-rivet-hepmc2:
+  extends:
+    - .master-trigger
+  stage: compile-deps
+  image: pythia8/dev:rivet-stack
+  before_script:
+    - *global
+  script:
+     - source /root/install/rivetenv.sh
+     - ./configure --with-rivet
+     - make -j$NUM_THREADS
+     - cd examples/
+     - make main93
+     - ./main93 -c main93.cmnd -o ../test
+  artifacts:
+    when: always
+    paths:
+      - test.log
+      - test.yoda
+    expire_in: 1 week
+
+# Test if linking with everything works.
+build-all-deps:
+  extends:
+    - .master-trigger
+  stage: compile-deps
+  image: pythia8/dev:test
+  before_script:
+    - *global 
+    - export TERM=xterm
+    - export CONF_STRING=$CONF_ALL
+  script:
+    - ./configure $CONF_STRING
+    - make -j$NUM_THREADS
+
+## STAGE: test-deps
+
+# Run testsuite with all dependencies.
+test-all-deps:
+  stage: test-deps
+  image: pythia8/dev:test
+  extends:
+    - .master-trigger 
+    - .testsuite
+  before_script:
+    - *global
+    - export TERM=xterm
+    - export CONF_STRING=$CONF_ALL
+
+# Floating point test without dependencies.
+floatingpoint-all-deps:
+  stage: test-deps
+  image: pythia8/dev:test
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+      when: always
+    - when: manual
+  extends:
+    - .master-trigger 
+    - .floatingpoint
+  before_script:
+    - *global
+    - export FP_SKIP=$FP_DEP
+    - export CONF_STRING=$CONF_ALL
+
+## STAGE: compile-more
+
+# Other/Legacy compilers.
+build-cern-centos8-clang++:
+  extends:
+    - .build
+  image:
+    name: pythia8/dev:cern-centos8
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++
+  
+build-ubuntu-g++7:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=g++-7
+
+build-ubuntu-g++8:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=g++-8
+
+build-ubuntu-clang++:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++
+
+build-ubuntu-clang++7:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++-7
+
+build-ubuntu-clang++8:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++-8
+
+build-ubuntu-clang++9:
+  extends: 
+    - .build
+    - .master-trigger
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++-9
+
+build-cern-centos7-g++:
+  extends:
+    - .build
+    - .master-trigger
+  image:
+    name: pythia8/dev:cern-centos7
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=g++
+
+build-cern-centos7-clang++:
+  extends:
+    - .build
+    - .master-trigger
+  image:
+    name: pythia8/dev:cern-centos7
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=clang++
+
+build-cern-centos8-g++:
+  extends:
+    - .build
+    - .master-trigger
+  image:
+    name: pythia8/dev:cern-centos8
+  stage: compile-more
+  before_script:
+    - *global
+    - export CXX=g++

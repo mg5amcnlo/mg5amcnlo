@@ -1,0 +1,49 @@
+#! /bin/bash
+# testsum is a part of the PYTHIA event generator.
+# Copyright (C) 2021 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+
+# Simple script to run a number of testNN test programs
+# and compare their output with the expected output
+
+tried=0;
+failed=0;
+differs=0;
+ok=0;
+checkdir="cmp"
+if [ $# -gt 0 -a "$1" = "-d" ]; then
+  checkdir=$2
+  shift
+  shift
+fi
+
+if [ ! -d $checkdir ]; then
+  echo "The directory with comparison files does not exist."
+  echo "Create it by doing 'make checkdir' or 'make checkdir CHECKDIR=$checkdir'"
+  exit 1;
+fi
+
+for cmptest in $checkdir/test???.dat;
+  do test=`basename $cmptest`;
+  echo -n "Looking at $test and $cmptest ...";
+  tried=`expr $tried + 1`;
+    if [ -e $test ]; then
+    if  diff -q $test $cmptest > /dev/null; then
+      ok=`expr $ok + 1`;
+      echo " ok"
+    else
+      differs=`expr $differs + 1`;
+      echo " unexpected output"
+    fi
+  else
+    failed=`expr $failed + 1`;
+    echo " failed"
+  fi
+done
+
+echo ""
+echo "Tried:    $tried"
+echo "Passed:   $ok"
+echo "Differed: $differs"
+echo "Failed:   $failed"

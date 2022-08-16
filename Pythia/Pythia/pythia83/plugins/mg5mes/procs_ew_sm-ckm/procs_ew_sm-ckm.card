@@ -1,0 +1,78 @@
+# ./generate --output=procs_ew_sm-ckm --card=procs_ew_sm-ckm.card
+set group_subprocesses True
+import sm-ckm
+
+# 1) ee EW processes.
+
+# Photon final states
+generate  l+ l- > a a            @110
+add process l+ l- > a z          @111
+			         
+# Drell-Yan as 2->1.	         
+add process l+ l- > z            @120
+add process l+ vl > w+           @120
+add process vl~ l- > w-          @120
+
+# Drell-Yan as 2->2 (including interferences)
+add process l+ l- > l- l+        @121
+add process l+ l- > vl vl~       @121
+add process vl~ l- > l- vl~      @121
+add process l+ vl > l+ vl        @121
+add process l+ l- > ta- ta+      @121
+add process vl~ l- > ta- vl~     @121
+add process l+ vl > ta+ vl       @121
+add process l+ l- > j j          @121
+add process l+ l- > b b~         @121
+add process l+ l- > t t~         @121
+			         
+# ZZ/ZW/WW as 2->2	         
+add process l+ l- > z z          @130
+add process l+ vl > z w+         @130
+add process vl~ l- > z w-        @130
+add process l+ l- > w+ w-        @130
+
+# 2) pp EW processes
+
+# MEs corresponding to Pythia's EW processes.
+# Note: gg-initiated box diagrams not generated.
+add process p p > j a            @200
+add process p p > a a            @204
+			         
+# Drell-Yan as 2->1.	         
+add process p p > z              @220
+add process p p > w+             @220
+add process p p > w-             @220
+
+# Drell-Yan as 2->2 (including decays to quarks)
+add process p p > l- l+          @221
+add process p p > vl vl~         @221
+add process p p > l- vl~         @221
+add process p p > l+ vl          @221
+add process p p > ta- ta+        @221
+add process p p > ta- vl~        @221
+add process p p > ta+ vl         @221
+add process p p > j j  QCD=0     @221
+add process p p > b j  QCD=0     @221
+add process p p > b~ j QCD=0     @221
+add process p p > b b~ QCD=0     @221
+add process p p > b t~ QCD=0     @221
+add process p p > t~ b QCD=0     @221
+add process p p > t t~ QCD=0     @221
+			         
+# ZZ/ZW/WW as 2->2	         
+add process p p > z z            @230
+add process p p > z w+           @230
+add process p p > z w-           @230
+add process p p > w+ w-          @230
+
+# VBF
+#add process p p > z j j   QCD=0 @240
+#add process p p > z b j   QCD=0 @240
+#add process p p > z b~ j  QCD=0 @240
+#add process p p > z b b~  QCD=0 @240
+#add process p p > w+ j j  QCD=0 @240
+#add process p p > w+ b j  QCD=0 @240
+#add process p p > w+ b~ j QCD=0 @240
+#add process p p > w- j j  QCD=0 @240
+#add process p p > w- b j  QCD=0 @240
+#add process p p > w- b~ j QCD=0 @240

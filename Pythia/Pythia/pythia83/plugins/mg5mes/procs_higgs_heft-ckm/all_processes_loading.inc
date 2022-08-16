@@ -1,0 +1,14 @@
+loaded_processes.push_back(new PY8MEs_R908_P0_heft_ckm_gg_httx(model)); 
+loaded_processes.push_back(new PY8MEs_R908_P1_heft_ckm_ll_httx(model)); 
+loaded_processes.push_back(new PY8MEs_R912_P2_heft_ckm_ll_hbbx(model)); 
+loaded_processes.push_back(new PY8MEs_R906_P3_heft_ckm_ll_hll(model)); 
+loaded_processes.push_back(new PY8MEs_R906_P4_heft_ckm_qq_hqq(model)); 
+loaded_processes.push_back(new PY8MEs_R906_P5_heft_ckm_qq_hbxb(model)); 
+loaded_processes.push_back(new PY8MEs_R908_P6_heft_ckm_qq_httx(model)); 
+loaded_processes.push_back(new PY8MEs_R900_P7_heft_ckm_gg_h(model)); 
+loaded_processes.push_back(new PY8MEs_R904_P8_heft_ckm_qq_hz(model)); 
+loaded_processes.push_back(new PY8MEs_R905_P9_heft_ckm_qq_hwp(model)); 
+loaded_processes.push_back(new PY8MEs_R910_P10_heft_ckm_gg_hh(model)); 
+loaded_processes.push_back(new PY8MEs_R906_P11_heft_ckm_qq_hbq(model)); 
+loaded_processes.push_back(new PY8MEs_R990_P12_heft_ckm_taptam_h(model)); 
+loaded_processes.push_back(new PY8MEs_R904_P13_heft_ckm_ll_hz(model)); 

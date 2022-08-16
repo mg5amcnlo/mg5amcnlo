@@ -1,0 +1,62 @@
+# Copyright (C) 2021 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+# Author: Philip Ilten, October 2019.
+# Dockerfile for building the Python binding for Pythia 8.3.
+FROM fedora:24
+MAINTAINER Pythia 8 Collaboration "pythia8@projects.hepforge.org"
+
+# Set environment variables.
+ENV GIT git clone --depth 1
+ENV INC_TMP /root/include
+ENV INC_ORG /usr/include
+ENV LLVM_DIR /root/llvm
+ENV LLVM_GIT -b release_38 http://llvm.org/git
+ENV BINDER_DIR /root/binder
+ENV BINDER_GIT https://github.com/RosettaCommons/binder.git
+ENV CMAKE_LISTS $LLVM_DIR/tools/clang/tools/extra/CMakeLists.txt
+ENV BUILD_DIR /root/build
+ENV DNF_CACHE /var/cache/dnf
+ENV DNF_INSTALL git make cmake gcc-c++
+ENV DNF_REMOVE git make cmake gcc-c++
+
+# The following is a single RUN command to reduce the image size.
+
+# Install dependencies.
+RUN dnf -y install $DNF_INSTALL; \
+\
+# Clone LLVM, Clang, and extra tools.; \
+$GIT $LLVM_GIT/llvm.git $LLVM_DIR; \
+$GIT $LLVM_GIT/clang.git $LLVM_DIR/tools/clang; \
+$GIT $LLVM_GIT/clang-tools-extra.git $LLVM_DIR/tools/clang/tools/extra; \
+\
+# Clone Binder.; \
+$GIT $BINDER_GIT $BINDER_DIR; \
+ln -s $BINDER_DIR/source $LLVM_DIR/tools/clang/tools/extra/binder; \
+echo "add_subdirectory(binder)" > $CMAKE_LISTS; \
+\
+# Build Binder.; \
+mkdir $BUILD_DIR /root/install; \
+cd $BUILD_DIR; \
+cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON\
+ -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_INCLUDE_EXAMPLES=OFF\
+ -DLLVM_INCLUDE_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/root/install $LLVM_DIR; \
+make -j4; \
+mv lib/clang/3.8.1/include $INC_ORG/clang; \
+mv bin/binder /usr/local/bin/; \
+cd /; \
+rm -rf $LLVM_DIR $BINDER_DIR $BUILD_DIR; \
+\
+# Keep the headers.; \
+cp -r $INC_ORG $INC_TMP; \
+\
+# Clean up.; \
+dnf -y remove $DNF_REMOVE; \
+dnf -y autoremove; \
+rm -rf $DNF_CACHE/*; \
+\
+# Move the headers back.; \
+rm -rf $INC_ORG; mv $INC_TMP $INC_ORG
+
+# Create the entry point.
+ENTRYPOINT ["/usr/local/bin/binder"]

@@ -2,7 +2,8 @@
 
 workd=$(pwd)
 
-Pythia=Pythia/pythia8245MultiscalesFix
+#Pythia=Pythia/pythia8245MultiscalesFix
+Pythia=Pythia/pythia83
 
 cd $Pythia
 
@@ -10,12 +11,12 @@ make distclean
 
 configStr="./configure"
 configStr+=" --prefix=$(pwd)"
-configStr+=" --with-hepmc2=/usr/local/"
+#configStr+=" --with-hepmc2=/usr/local/"
 
 echo "$configStr --cxx-common='-ldl -fPIC -lstdc++ --std=c++14'"
 $configStr --cxx-common='-ldl -fPIC -lstdc++ --std=c++14'
 
-make
+make -j8
 make install
 
 ####################################################

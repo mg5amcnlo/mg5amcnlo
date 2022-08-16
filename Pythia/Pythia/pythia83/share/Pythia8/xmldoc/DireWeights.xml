@@ -1,0 +1,374 @@
+<chapter name="Dire Splitting Enhancements"> 
+ 
+<h2>Dire Splitting Enhancements</h2> 
+ 
+The Dire parton shower allows to weight individual splittings to allow 
+efficient isolation and study of their impact. This can e.g. be used 
+to increase the rate of a single splitting, and/or decrease the rate 
+of others, thus e.g. allowing to study rare splittings. It should be 
+noted that this can make some splittings much more frequent, at the 
+expense of a new event weight, whose fluctuations might require larger 
+event samples. 
+ 
+ 
+<p/> 
+Nevertheless, sometimes enhancements can be useful. Dire offers the 
+option to enhance each available splitting kernel separately. For 
+brevity, we here only describe auxiliary parameters, then one 
+enhancement factor, and then just list all other corresponding 
+keywords. 
+ 
+<parm name="Enhance:pTmin" default="-1.0"> 
+The minimal pT value <i>t</i> (in GeV) of 
+emissions below which no enhancement of emission probabilities is 
+applied. Negative values mean that enhancements may be applied to 
+emissions at any pT. Default value is -1.0 GeV. 
+</parm> 
+ 
+<parm name="Enhance:Dire_fsr_qcd_1->1&21" default="1.0"> 
+The (double) value with 
+which the final-state <i>q->qg</i> splitting is enhanced. Note that 
+the enhancement is compensated by an additional weight factor included 
+in the parton shower weight, to guarantee the correct real-emission and 
+no-emission probabilities are generated. 
+</parm> 
+ 
+<h3>QCD splittings</h3> 
+ 
+<parm name="Enhance:Dire_fsr_qcd_1->21&1" default="1.0"> 
+(FSR, q -> g q) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&21a" default="1.0"> 
+(FSR, g -> g g, 1st color structure) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&21b" default="1.0"> 
+(FSR, g -> g g, 2nd color structure) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->1&1a" default="1.0"> 
+(FSR, g -> q qbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->1&1b" default="1.0"> 
+(FSR, g -> q qbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->2&1&2" default="1.0"> 
+(FSR, q -> q' q qbar') 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&1&1" default="1.0"> 
+(FSR, q -> qbar q qbar) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&21_notPartial" default="1.0"> 
+(FSR q -> q g, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&21_notPartial" default="1.0"> 
+(FSR g -> g g, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->1&1_notPartial" default="1.0"> 
+(FSR g -> q qbar, with full soft logarithms, as e.g. needed in radiation 
+off top decay products) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&21&21" default="1.0"> 
+(FSR q -> q g g) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&d&dbar" default="1.0"> 
+(FSR q -> q d dbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&dbar&d" default="1.0"> 
+(FSR q -> q d dbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&u&ubar" default="1.0"> 
+(FSR q -> q u ubar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&ubar&u" default="1.0"> 
+(FSR q -> q u ubar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&s&sbar" default="1.0"> 
+(FSR q -> q s sbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&sbar&s" default="1.0"> 
+(FSR q -> q s sbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&c&cbar" default="1.0"> 
+(FSR q -> q c cbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&cbar&c" default="1.0"> 
+(FSR q -> q c cbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&b&bbar" default="1.0"> 
+(FSR q -> q b bbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_1->1&bbar&b" default="1.0"> 
+(FSR q -> q b bbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&21&21" default="1.0"> 
+(FSR g -> g g g) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&d&dbar" default="1.0"> 
+(FSR g -> q d dbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&dbar&d" default="1.0"> 
+(FSR g -> g d dbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&u&ubar" default="1.0"> 
+(FSR g -> g u ubar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&ubar&u" default="1.0"> 
+(FSR g -> g u ubar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&s&sbar" default="1.0"> 
+(FSR g -> g s sbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&sbar&s" default="1.0"> 
+(FSR g -> g s sbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&c&cbar" default="1.0"> 
+(FSR g -> g c cbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&cbar&c" default="1.0"> 
+(FSR g -> g c cbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&b&bbar" default="1.0"> 
+(FSR g -> g b bbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qcd_21->21&bbar&b" default="1.0"> 
+(FSR g -> g b bbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_1->1&21" default="1.0"> 
+(ISR q -> q g) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_21->1&1" default="1.0"> 
+(ISR g -> q qbar) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_21->21&21a" default="1.0"> 
+(ISR g -> g g, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_21->21&21b" default="1.0"> 
+(ISR g -> g g, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_1->21&1" default="1.0"> 
+(ISR q -> g q) 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_1->2&1&2" default="1.0"> 
+(ISR q -> q' q qbar') 
+</parm> 
+<parm name="Enhance:Dire_isr_qcd_1->1&1&1" default="1.0"> 
+(ISR q -> qbar q qbar) 
+</parm> 
+ 
+<h3>QED splittings</h3> 
+ 
+<parm name="Enhance:Dire_fsr_qed_1->1&22" default="1.0"> 
+(FSR q -> q a) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_1->22&1" default="1.0"> 
+(FSR q -> a q) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_11->11&22" default="1.0"> 
+(FSR l -> l a) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_11->22&11" default="1.0"> 
+(FSR l -> a l) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->1&1a" default="1.0"> 
+(FSR a -> d dbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->1&1b" default="1.0"> 
+(FSR a -> d dbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->2&2a" default="1.0"> 
+(FSR a -> u ubar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->2&2b" default="1.0"> 
+(FSR a -> u ubar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->3&3a" default="1.0"> 
+(FSR a -> s sbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->3&3b" default="1.0"> 
+(FSR a -> s sbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->4&4a" default="1.0"> 
+(FSR a -> c cbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->4&4b" default="1.0"> 
+(FSR a -> c cbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->5&5a" default="1.0"> 
+(FSR a -> b bbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->5&5b" default="1.0"> 
+(FSR a -> b bbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->11&11a" default="1.0"> 
+(FSR a -> e+ e-, soft e-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->11&11b" default="1.0"> 
+(FSR a -> e+ e-, soft e+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->13&13a" default="1.0"> 
+(FSR a -> mu+ mu-, soft mu-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->13&13b" default="1.0"> 
+(FSR a -> mu+ mu-, soft mu+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->15&15a" default="1.0"> 
+(FSR a -> tau+ tau-, soft tau-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_22->15&15b" default="1.0"> 
+(FSR a -> tau+ tau-, soft tau+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_1->1&22_notPartial" default="1.0"> 
+(FSR q -> q a, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+</parm> 
+<parm name="Enhance:Dire_fsr_qed_11->11&22_notPartial" default="1.0"> 
+(FSR l -> l a, with full soft logarithms, as e.g. needed in radiation off 
+top decay products) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_1->1&22" default="1.0"> 
+(ISR q -> q a) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_1->22&1" default="1.0"> 
+(ISR q -> a q) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_22->1&1" default="1.0"> 
+(ISR a -> q qbar) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_11->11&22" default="1.0"> 
+(ISR l -> l a) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_11->22&11" default="1.0"> 
+(FSR l -> a l) 
+</parm> 
+<parm name="Enhance:Dire_isr_qed_22->11&11" default="1.0"> 
+(FSR a -> l+ l-). 
+</parm> 
+ 
+ 
+<h3>Electroweak splittings</h3> 
+ 
+At present, electroweak evolution is under development, so that these 
+settings should not be touched for production for now. 
+ 
+<parm name="Enhance:Dire_fsr_ew_1->1&23" default="1.0"> 
+(FSR q -> q z) 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_1->23&1" default="1.0"> 
+(FSR q -> z q) 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_23->1&1a" default="1.0"> 
+(FSR z -> q qbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_23->1&1b" default="1.0"> 
+(FSR z -> q qbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_24->1&1a" default="1.0"> 
+FSR w -> q qbar', soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_24->1&1b" default="1.0"> 
+(FSR w -> q qbar', soft antiquark). 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_24->24&22" default="1.0"> 
+(FSR w -> w a). 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_25->21&21" default="1.0"> 
+(FSR h -> g g, as e.g. needed for Higgs hypothesis testing). 
+</parm> 
+<parm name="Enhance:Dire_fsr_ew_25->22&22" default="1.0"> 
+(FSR h -> a a, as e.g. needed for Higgs hypothesis testing). 
+</parm> 
+ 
+<h3>Dark U(1) splittings</h3> 
+ 
+At present, dark photon evolution is under development, so that these 
+settings should not be touched for production for now. 
+ 
+<parm name="Enhance:Dire_fsr_u1new_1->1&22" default="1.0"> 
+(FSR q -> q aDark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_1->22&1" default="1.0"> 
+(FSR q -> aDark q) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_11->11&22" default="1.0"> 
+(FSR l -> l aDark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_11->22&11" default="1.0"> 
+(FSR l -> aDark l) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->1&1a" default="1.0"> 
+(FSR aDark -> d dbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->1&1b" default="1.0"> 
+(FSR aDark -> d dbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->2&2a" default="1.0"> 
+(FSR aDark -> u ubar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->2&2b" default="1.0"> 
+(FSR aDark -> u ubar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->3&3a" default="1.0"> 
+(FSR aDark -> s sbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->3&3b" default="1.0"> 
+(FSR aDark -> s sbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->4&4a" default="1.0"> 
+(FSR aDark -> c cbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->4&4b" default="1.0"> 
+(FSR aDark -> c cbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->5&5a" default="1.0"> 
+(FSR aDark -> b bbar, soft quark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->5&5b" default="1.0"> 
+(FSR aDark -> b bbar, soft antiquark) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->11&11a" default="1.0"> 
+(FSR aDark -> e+ e-, soft e-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->11&11b" default="1.0"> 
+(FSR aDark -> e+ e-, soft e+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->13&13a" default="1.0"> 
+(FSR aDark -> mu+ mu-, soft mu-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->13&13b" default="1.0"> 
+(FSR aDark -> mu+ mu-, soft mu+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->15&15a" default="1.0"> 
+(FSR aDark -> tau+ tau-, soft tau-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->15&15b" default="1.0"> 
+(FSR aDark -> tau+ tau-, soft tau+) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->211&211a" default="1.0"> 
+(FSR aDark -> pi+ pi-, soft pi-) 
+</parm> 
+<parm name="Enhance:Dire_fsr_u1new_22->211&211b" default="1.0"> 
+(FSR aDark -> pi+ pi-, soft pi+) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_1->1&22" default="1.0"> 
+(ISR q -> q aDark) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_1->22&1" default="1.0"> 
+(ISR q -> aDark a) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_22->1&1" default="1.0"> 
+(ISR aDark -> q qbar) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_11->11&22" default="1.0"> 
+(ISR l -> l aDark) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_11->22&11" default="1.0"> 
+(ISR l -> aDark l) 
+</parm> 
+<parm name="Enhance:Dire_isr_u1new_22->11&11" default="1.0"> 
+(ISR aDark -> l+ l-). 
+</parm> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Stefan Prestel --> 

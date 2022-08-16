@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# Copyright (C) 2021 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+# Author: Philip Ilten and Stefan Prestel, August 2020.
+
+# This is a script to create a Python interface for Pythia using
+# PyBind11 and the binder tool. The necessary build environment for
+# this is available in the Docker image pythia8/dev:binder.
+
+################################################################################
+# VARIABLES: Global variables not defined via command line arguments.
+#     USAGE:     Text printed when the --help option is passed.
+#     OPTIONS:   List of valid options that can be passed by the user.
+################################################################################
+read -d "" USAGE << "BLOCKTEXT"
+Usage: ./generate [OPTION]
+
+The available options are defined below. Arguments to the options are
+indicated in caps, i.e. FILE.
+--help         : Print this message (also -h, --h, and -help).
+--debug        : Leave all generated files.
+
+For general usage there are three required options.
+--model=MODEL  : Model to use, either internal or external [sm]. When external,
+                 specify either the relative, e.g. "./sm", or absolute path.
+--output=OUT   : Output directory for the generated matrix elements [kernels].
+--process=PROC : Process or processes to generate ["p p > e+ e-"]. Multiple 
+                 processes can be passed, e.g. 
+                 ./generate --process="p p > e+ e-" --process="p p > mu+ mu-"
+
+Advanced usage is possible where the --process option is no longer
+used. The --model option, however, is still required if using any
+external models, and --output is required to specify the output
+directory.
+--card=FILE    : Run a full MadGraph command card.
+--verbatim     : Do not modfy the run card, e.g. append "output PY8MEs".
+--interactive  : Run MadGraph in interactive mode.
+BLOCKTEXT
+OPTIONS="-h --h -help --help --debug --model --output --process"
+OPTIONS+=" --card --verbatim --interactive"
+MG_CFG="mg5mes.py"
+
+################################################################################
+# FUNCTION: Create the bindings.
+################################################################################
+function madgraph() {
+    docker run -i -t -v "$MODEL_DIR:/models" -v "$OUTPUT_DIR:$OUTPUT_DIR"\
+     -v "$PWD:$PWD" -w $PWD -u `id -u` --rm pythia8/dev:mg5mes\
+     --mode=PY8Kernels "$@"
+}
+
+################################################################################
+# FUNCTION: Print formatted information to screen.
+#     bold/error/warn <message>
+# Errors are reported as white-on-red and warnings as black on yellow.
+################################################################################
+function bold() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput bold)$@$(tput sgr0); fi
+}
+
+function warn() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput setaf 0)$(tput setab 3)WARNING: $@$(tput sgr0); fi
+}
+
+function error() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput setaf 7)$(tput setab 1)ERROR: $@$(tput sgr0); fi
+}
+
+################################################################################
+# Emulate readlink -f (not available on OS X).
+################################################################################
+function realpath() {
+    DIR=$(dirname $1)
+    if [ -d $DIR ]; then cd $DIR; else return; fi
+    TARGET=`basename $1`
+    while [ -L "$TARGET" ]; do
+        TARGET=`readlink $TARGET`
+	DIR=$(dirname $TARGET)
+	if [ -d $DIR ]; then cd $DIR; else return; fi
+        TARGET=`basename $TARGET`
+    done
+    DIR=`pwd -P`
+    echo "$DIR/$TARGET"
+}
+
+################################################################################
+# MAIN: The main execution of the generation script.
+################################################################################
+
+# Check if help requested.
+for VAR in "$@"; do
+    if [ "$VAR" = "-h" ] || [ "$VAR" = "--h" ] || [ "$VAR" = "-help" ] \
+	   || [ "$VAR" = "--help" ]; then
+	echo -e "$USAGE"
+	exit
+    fi
+done
+
+# Check Docker is available.
+if ! type docker &> /dev/null; then
+    error "Docker is required."
+    exit
+fi
+
+# Parse the user arguments and evaluate each as a global variable.
+for VAR in "$@"; do
+    if ! [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then
+	warn "Ignoring invalid option \"${VAR%=*}\".";
+	continue;
+    fi
+    VAR=${VAR#--};
+    KEY=${VAR%%=*}; VAL=${VAR#$KEY}; VAL=${VAL#*=}; KEY=${KEY//"-"/"_"}
+    KEY=$(echo $KEY | awk '{print toupper($0)}');
+    if  [ "$KEY" = PROCESS ]; then VAL=$(eval echo \'$VAL\');
+    else VAL=$(eval echo $VAL); fi
+    SET=$(eval echo \$${KEY}_SET)
+    if [ "$SET" == true ]; then eval $KEY=\'$(eval echo \$$KEY)";"$VAL\';
+    else eval $KEY=\'$VAL\'; eval ${KEY}_SET=true; fi
+done
+
+# Set the defaults.
+if [ "$MODEL_SET" != true ]; then MODEL="sm"; fi
+if [ "$PROCESS_SET" != true ]; then PROCESS="p p > e+ e-"; fi
+if [ "$OUTPUT_SET" != true ]; then OUTPUT="kernels"; fi
+
+# Check options.
+if [ "$PROCESS_SET" == true ] && [ "$CARD_SET" == true ]; then
+    error "The --process and --card options cannot be combined."; exit
+elif [ "$PROCESS_SET" == true ] && [ "$INTERACTIVE_SET" == true ]; then
+    error "The --process and --interactive options cannot be combined."; exit
+elif [ "$CARD_SET" == true ] && [ "$INTERACTIVE_SET" == true ]; then
+    error "The --card and --interactive options cannot be combined."; exit
+fi
+
+# Find the model directory and model.
+if [[ "$MODEL" =~ [^a-zA-Z0-9-] ]]; then MODEL_DIR=$(realpath $MODEL/../)
+else MODEL_DIR=$(realpath "./"); fi
+if [ ! -d "$MODEL_DIR" ]; then error "Cannot find $MODEL."; exit; fi
+MODEL=${MODEL##*/}
+
+# Find the output directory.
+OUTPUT_DIR=$(realpath $OUTPUT)
+if [ ! -d $OUTPUT_DIR ]; then mkdir $OUTPUT_DIR
+else error "Output directory $OUTPUT_DIR already exists."; exit; fi
+
+# Make sure we can generate multiple processes.
+echo "set group_subprocesses True" > $MG_CFG
+
+# Run a user supplied card.
+if [ "$CARD_SET" == true ]; then
+  if [ -f $CARD ]; then 
+    cp $CARD $MG_CFG;
+    if [ "$VERBATIM_SET" != true ]; then
+	echo "output PY8MEs $OUTPUT_DIR" >> $MG_CFG; fi
+    madgraph $MG_CFG
+  else error "User configuration $CARD does not exist."; exit; fi
+# Run in interactive mode.
+elif [ "$INTERACTIVE_SET" == true ]; then
+    madgraph
+# Run the standard process generation.
+else
+    IFS=";"
+    echo "import model $MODEL" > $MG_CFG
+    PROCNUM=0
+    for PROC in $PROCESS; do
+        if [[ "$PROCNUM" == "0" ]]; then
+            echo "generate $PROC" >> $MG_CFG;
+        else
+            echo "add process $PROC" >> $MG_CFG;
+        fi
+        ((++PROCNUM))
+    done
+    IFS=" "
+    echo "output PY8MEs $OUTPUT_DIR" >> $MG_CFG
+    madgraph $MG_CFG
+fi
+
+# Move output.
+for PROC in "$OUTPUT_DIR/Processes_*"; do cp $PROC/* $OUTPUT_DIR; done
+$(cd $OUTPUT_DIR && rm -rf Parameters_*_PY8.* check_* rambo* Makefile)
+
+# Clean up.
+if [ "$DEBUG_SET" != true ]; then
+    rm -rf $OUTPUT_DIR/include $OUTPUT_DIR/lib $OUTPUT_DIR/Processes_*
+    rm -f $MG_CFG py.py
+fi

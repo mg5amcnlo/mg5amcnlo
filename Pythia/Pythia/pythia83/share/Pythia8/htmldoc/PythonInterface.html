@@ -1,0 +1,237 @@
+<html>
+<head>
+<title>Python Interface</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Python Interface</h2> 
+<ol id="toc">
+  <li><a href="#section0">Simplified Interface</a></li>
+  <li><a href="#section1">Limitations</a></li>
+  <li><a href="#section2">Installation</a></li>
+  <li><a href="#section3">Examples</a></li>
+  <li><a href="#section4">Interface Generation</a></li>
+</ol>
+
+ 
+<a href="https://www.python.org/" target="_top">Python</a> is a 
+powerful, high-level interpreted language that is widely used within 
+the particle physics community. It is particularly useful as an 
+interactive language that provides fast proto-typing of code. A Python 
+interface to PYTHIA is available. This interface is automatically 
+generated with <a href="https://github.com/RosettaCommons/binder" 
+target="_top">Binder</a> using the <a 
+href="https://github.com/pybind/pybind11" target="_top">PyBind11</a> 
+template library. Please note that this interface has not been 
+extensively tested and consequently issues may arise. If bugs are 
+found or additional features are required, as usual, please report 
+them to the PYTHIA authors. This interface is a significant departure 
+from the previous interface generated with SWIG, which does not 
+support C++11. 
+ 
+<p/> 
+A simplified interface ships with PYTHIA, which is intended to meet 
+the needs of most users while remaining lightweight. Note, not all 
+PYTHIA classes are available through this interface. It is also 
+possible for users to automatically generate their own interface. This 
+is particularly useful if users modify the PYTHIA source code and need 
+to update the interface. When generating the interface there are three 
+options: the simplified interface, a full interface, and a user 
+defined interface. The process of generating these interfaces is 
+described in more detail below. 
+ 
+<a name="section0"></a> 
+<h3>Simplified Interface</h3> 
+ 
+An attempt has been made to provide the everyday functionality of 
+PYTHIA through the simplified interface. However, if classes or 
+methods appear to be missing, please contact the PYTHIA authors; 
+additional functionality can be included upon request. The following 
+list highlights the available classes and methods in this interface, 
+roughly categorized by function. Note that <code>help(pythia8)</code> 
+will return all the available classes and methods in the interface. 
+<ul> 
+<li>top level: <code>Pythia</code></li> 
+ 
+<li>event access: <code>Event</code>, <code>Particle</code>, 
+<code>Vec4</code>, <code>RotBstMatrix</code></li> 
+ 
+<li>particle data: <code>ParticleData</code>, 
+<code>ParticleDataEntry</code>, <code>DecayChannel</code></li> 
+ 
+<li>settings and information: <code>Info</code>, 
+<code>Settings</code>, <code>Flag</code>, <code>Mode</code>, 
+<code>Parm</code>, <code>Word</code>, <code>FVec</code>, 
+<code>MVec</code>, <code>PVec</code>, <code>WVec</code></li> 
+ 
+<li>user interface pointers: <code>Rndm</code>, <code>PDF</code>, 
+<code>DecayHandler</code>, <code>RndmEngine</code>, 
+<code>UserHooks</code>, <code>MergingHooks</code>, 
+<code>BeamShape</code>, <code>SigmaProcess</code>, 
+<code>TimeShower</code>, <code>SpaceShower</code>, 
+<code>HeavyIons</code>, <code>PartonVertex</code></li> 
+ 
+<li>analysis tools: <code>Hist</code>, <code>HistPlot</code>, 
+<code>SlowJet</code>, <code>SlowJetHook</code></li> <li>kinematic 
+functions: <code>m</code>, <code>m2</code>, <code>dot3</code>, 
+<code>cross3</code>, <code>cross4</code>, <code>theta</code>, 
+<code>costheta</code>, <code>phi</code>, <code>cosphi</code>, 
+<code>RRapPhi</code>, <code>REtaPhi</code></li> 
+</ul> 
+ 
+There are some idiosyncrasies when working with standard template 
+library classes. One of the notable examples are maps with keys as 
+strings. In many cases, it is useful to be able to access the settings 
+maps from the <code>Settings</code> class of a <code>Pythia</code> 
+instance. Rather than calling something like 
+<code>getFlagMap()</code>, <code>getFlagMap("")</code> must be called 
+so the interface knows how to map the keys. A full working example is 
+given below. 
+<pre> 
+import pythia8 
+pythia = pythia8.Pythia("", False) 
+settings = pythia.settings 
+flags = settings.getFlagMap("") 
+for key, val in settings.getFlagMap("").items(): print(key) 
+</pre> 
+ 
+The following points highlight some of the features of the interface. 
+<ul> 
+<li>Documentation through the built-in help function in Python 
+provides the relevant mappings between the Python interface and the 
+C++ code. For documentation on the purpose of the code, see the user 
+HTML manual and Doxygen</li> 
+<li>Templated C++ types are returned as native Python types, 
+e.g. vectors are returned as lists, etc. Similarly, native Python 
+types can be passed as arguments and are converted to their equivalent 
+C++ templates</li> 
+<li>No difference is made between passing by reference or pointer; 
+methods in C++ which take a pointer as an argument in Python 
+simply take the object, e.g. <code>foo(Vec4*)</code> and 
+<code>foo(Vec4&amp;)</code> are the same in the Python interface.</li> 
+<li>All operators defined in C++, e.g. <code>Vec4*double</code> are 
+available. Note that reverse operators are not, 
+e.g. <code>double*Vec4</code>.</li> 
+<li>Classes with defined <code>[]</code> operators are iterable, using 
+standard Python iteration, e.g. <code>for prt in 
+pythia.event</code>.</li> 
+<li>Classes with a <code>&lt;&lt;</code> operator can be printed via 
+the built-in print function in Python. Note this means that a string 
+representation via <code>str</code> is also available for these 
+classes in Python.</li> 
+<li>Derived classes in Python can be passed back to PYTHIA, and should 
+be available for all classes. See <code>main10.py</code> for a direct 
+Python translation of the C++ <code>main10.cc</code> example which 
+uses a derived class from the UserHooks class to veto events.</li> 
+<li>The constant <code>Pythia::info</code> member is available as 
+<code>Pythia::infoPython</code>. Note, this creates a new instance of 
+the <code>Info</code> class, and so needs to be called each time the 
+information might be updated.</li> 
+</ul> 
+ 
+<a name="section1"></a> 
+<h3>Limitations</h3> 
+ 
+In general, most code using PYTHIA implemented through C++ is also 
+possible in the Python interface. There are a number of issues, such 
+as passing streams, which cannot be handled in the Python 
+interface. Additionally, protected members of classes are exposed as 
+fully public members in the Python interface. 
+ 
+<a name="section2"></a> 
+<h3>Installation</h3> 
+ 
+To install the Python interface, the Python system header 
+<code>Python.h</code> must be available. By default when configuring 
+using <code>--with-python</code> the system <code>python-config</code> 
+script will be used to determine the location of 
+<code>Python.h</code>. In some cases, users might wish to use a 
+different version of Python, and so <code>--with-python-config</code> 
+can be used to set the Python configuration script used to pick up 
+paths. Alternatively, the directory containing <code>Python.h</code> 
+can be set manually with the option 
+<code>--with-python-include</code>. Some example configurations could be 
+as follows, 
+<pre> 
+    ./configure --with-python 
+    ./configure --with-python-config=python3-config 
+    ./configure --with-python-include=/usr/include/python2.7 
+</pre> 
+where the Python configuration script and path must be changed 
+accordingly for the local system. 
+ 
+<p/> 
+After configuring the Python interface for PYTHIA to be built and 
+running <code>make</code> as usual, the following files should be 
+generated in the directory <code>lib</code>. 
+<ul> 
+<li><code>pythia8.so</code>: compiled Python module.</li> 
+<li><code>libpythia8.[so,dylib]</code>: the standard shared PYTHIA 
+library.</li> 
+</ul> 
+ 
+<p/> 
+To ensure that the <code>pythia8.so</code> module is available to 
+Python, the system variable <code>PYTHONPATH</code> should be set similar to 
+<pre> 
+    export PYTHONPATH=$(PREFIX_LIB):$PYTHONPATH 
+</pre> 
+where <code>PREFIX_LIB</code> is the directory <code>lib</code> which 
+contains <code>pythia8.so</code>. Generally, the library paths should 
+be set correctly, but it also may be necessary to set 
+<pre> 
+    export LD_LIBRARY_PATH=$(PREFIX_LIB):$LD_LIBRARY_PATH 
+</pre> 
+where <code>DYLD</code> should be substituted for <code>LD</code> in 
+OS X. Alternatively, it is also possible to define the Python path 
+from within Python, as is done within the provided examples. Note that 
+the Python module is always compiled as <code>pythia8.so</code>, even 
+in OS X. This is because older versions of Python in OS X do not 
+correctly recognize modules ending with the <code>dylib</code> suffix. 
+ 
+<a name="section3"></a> 
+<h3>Examples</h3> 
+ 
+To use the Python interface for PYTHIA, start Python 
+and <code>import pythia8</code>. The provided examples can be run 
+by <code>python mainXX.py</code> where <code>XX</code> is the number 
+of the example. 
+ 
+<a name="section4"></a> 
+<h3>Interface Generation</h3> 
+ 
+A script for automatically generating the Python interface, 
+<code>generate</code>, is available in <code>plugins/python/</code> 
+and should be run from this directory. This script requires that the 
+user has Docker installed. A small Docker image of roughly 80 MB will 
+be pulled to run the necessary generation code. There are a number of 
+command line arguments which can be passed. 
+<ul> 
+<li><code>--help</code> prints the help message for the script.</li> 
+<li><code>--part</code> generates the simplified interface. When 
+<code>generate</code> is run without arguments, then this is the 
+default behaviour. Note that this requires running the interface 
+generation twice. The first time the required classes are interfaced, 
+the second time additional classes are removed.</li> 
+<li><code>--full</code> generates the full interface.</li> 
+<li><code>--user=FILE</code> generates a user defined interface using 
+the Binder configuration given by <code>FILE</code>.</li> 
+<li><code>--debug</code> can be specified with any of the options 
+above and stops the temporary files used in generation from being 
+removed.</li> 
+</ul> 
+Whenever PYTHIA headers are modified, the Python interface is 
+invalidated, and so this automatic generation is particularly useful 
+in such a situation. An example of generating the full Python 
+interface is as follows. 
+<pre> 
+    cd plugins/python 
+    ./generate --full 
+</pre> 
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

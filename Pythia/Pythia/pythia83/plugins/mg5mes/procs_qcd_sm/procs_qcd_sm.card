@@ -1,0 +1,10 @@
+# ./generate --output=procs_qcd_sm --card=procs_qcd_sm.card
+set group_subprocesses True
+import sm
+
+# MEs corresponding to Pythia's QCD processes.
+generate p p > j j       @110
+add process p p > b b~   @120
+add process p p > j j j  @130
+add process p p > b b~ j @130
+

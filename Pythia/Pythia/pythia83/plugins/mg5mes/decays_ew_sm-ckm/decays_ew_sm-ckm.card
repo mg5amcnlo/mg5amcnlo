@@ -1,0 +1,20 @@
+# ./generate --output=decays_ew_sm-ckm --card=decays_ew_sm-ckm.card
+set group_subprocesses True
+import model sm-ckm
+
+generate z > j j        @1
+add process z > b b~    @2
+add process z > t t~    @3
+add process z > l+ l-   @4
+add process z > vl vl~  @4
+add process z > ta+ ta- @5
+add process w+ > j j    @6
+add process w- > j j    @6
+add process w+ > b~ j   @7
+add process w- > b j    @7
+add process w+ > t b~   @8
+add process w- > t~ b   @8
+add process w+ > t j    @9
+add process w- > t~ j   @9
+add process w+ > l+ vl  @10
+add process w- > l- vl~ @10

@@ -1,0 +1,68 @@
+# ./generate --output=decays_higgs_heft-ckm --card=decays_higgs_heft-ckm.card
+set group_subprocesses True
+import model heft-ckm
+
+generate h > z z                                    @10
+add process h > z l+ l-                             @11
+add process h > z vl vl~                            @11
+add process h > z ta+ ta-                           @11
+add process h > z j j  QCD=0                        @11
+add process h > z b b~ QCD=0                        @11
+
+# 4-parton final states specific to ZZ (aa and gg not included)
+# Can also be reached via eg h > b b , + z -> l l 
+#add process h > l+ l- l+ l-   HIG=0 HIW=0          @12
+#add process h > vl vl~ vl vl~ HIG=0 HIW=0          @12
+#add process h > ta+ ta- l+ l- HIG=0 HIW=0          @12
+#add process h > j j l+ l-     HIG=0 HIW=0          @12
+#add process h > j j vl vl~    HIG=0 HIW=0          @12
+#add process h > j j ta+ ta-   HIG=0 HIW=0          @12
+#add process h > b b~ l+ l-    HIG=0 HIW=0          @12
+#add process h > b b~ vl vl~   HIG=0 HIW=0          @12
+#add process h > b b~ ta+ ta-  HIG=0 HIW=0          @12
+#add process h > b b~ b b~  QCD=0 HIG=0 HIW=0       @12
+					            
+add process h > w+ w-                               @20
+add process h > w+ l- vl~                           @21
+add process h > w- l+ vl                            @21
+add process h > w+ ta- vl~                          @21
+add process h > w- ta+ vl                           @21
+add process h > w+ j j                              @21
+add process h > w- j j                              @21
+
+# wbj has interference between h>bb and h>ww
+add process h > w+ b j                              @22
+add process h > w- b~ j                             @22
+
+# 4-parton final states specific to WW.
+#add process h > w+ w-,  w+ > l+ vl,  w- > ta- vl~  @22
+#add process h > w+ w-,  w+ > l- vl~, w- > ta+ vl   @22
+#add process h > w+ w-,  w+ > j j, w- > l- vl~      @22
+#add process h > w+ w-,  w- > j j, w+ > l+ vl       @22
+#add process h > w+ w-,  w+ > j j, w- > ta- vl~     @22
+#add process h > w+ w-,  w- > j j, w+ > ta+ vl      @22
+
+# 4-parton states that can be reached either via WW or ZZ.
+#add process h > l+ l- vl vl~     HIG=0 HIW=0       @32
+#add process h > ta+ ta- vl vl~   HIG=0 HIW=0       @32
+#add process h > ta+ ta- ta+ ta-  HIG=0 HIW=0       @32
+#add process h > j j j j    QCD=0 HIG=0 HIW=0       @32
+#add process h > b b~ j j   QCD=0 HIG=0 HIW=0       @32
+
+# tau+ tau-
+add process h > ta+ ta-                             @40
+
+# b bbar
+add process h > b b~                                @50
+
+# gg, ggg, and gqq
+add process h > g g                                 @70
+add process h > g j j                               @701
+
+# gbb has interference between h>gg and h>bb
+add process h > g b b~                              @701
+
+# Photon-photon (HEFT)
+add process h > a a                                 @70
+
+# Note: ttbar final states not included

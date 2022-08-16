@@ -1,0 +1,12 @@
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test020.cc new/private/tests/test020.cc
+--- old/private/tests/test020.cc	2020-04-14 08:19:54.354156736 +0100
++++ new/private/tests/test020.cc	2020-04-14 08:19:54.526158245 +0100
+@@ -23,7 +23,7 @@ int main() {
+   pythia.readString("PartonLevel:all = off");
+ 
+   // Create an LHAup object that can access relevant information in pythia.
+-  LHAupFromPYTHIA8 myLHA(&pythia.process, &pythia.info);
++  LHAupFromPYTHIA8 myLHA(&pythia.process, const_cast<Info*>(&pythia.info));
+ 
+   // Open a file on which LHEF events should be stored, and write header.
+   myLHA.openLHEF("weakbosons.lhe");

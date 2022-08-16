@@ -1,0 +1,325 @@
+<html>
+<head>
+<title>DIRE Parton Showers</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Dire Parton Showers</h2> 
+<ol id="toc">
+  <li><a href="#section0">Settings related to the evaluation of running (QCD) couplings</a></li>
+  <li><a href="#section1">Settings to perform variations to gauge shower uncertainties</a></li>
+  <li><a href="#section2">Settings related to parton distribution functions and quark masses</a></li>
+  <li><a href="#section3">Settings related to the tune of Pythia 8 + Dire</a></li>
+  <li><a href="#section4">Settings for debugging or educational purposes</a></li>
+</ol>
+
+ 
+The Dire parton shower combines dipole-shower ideas in the spirit of Ariadne 
+with the careful handling of collinear enhancements in classical parton 
+showers. It includes a detailed treatment of mass effects and various 
+higher-order corrections. The Dire parton shower is developed jointly in 
+Pythia and Sherpa to allow maximal validation. 
+The Dire physics publication is arxiv:1506.05057 [hep-ph]. Please cite this 
+article (and of course the Pythia 8 reference) if you use Pythia 8 + Dire for 
+your research. 
+ 
+Dire is a complete replacement for the default showers in Pythia, and is 
+automatically interleaved with Pythia's multiple interaction model. 
+At present, Dire offers 
+ 
+<ul> 
+<li> 
+QCD and QED showers with automatic uncertainties and the possiblity to 
+enhance individual splittings. 
+</li> 
+<li> 
+Inclusive next-to-leading order DGLAP corrections to the shower evolution. 
+</li> 
+<li> 
+Next-to-leading order final-state showering for lepton colliders. 
+</li> 
+<li> 
+Iterated Matrix-Element corrections for splittings within the parton-shower 
+phase space. 
+</li> 
+</ul> 
+ 
+Built-in CKKW-L and UNLOPS merging are in preparation.  It is worth 
+noting that Dire is constructed as as weighted parton shower, meaning 
+that all events that are produced with Dire acquire a weight close to, 
+but not identical to, unity. These weights need to be included when 
+filling histograms or storing events. These weights can, conveniently 
+combined with other weights (due to weighted LHEF inputs, merging 
+etc.), be retrieved from <code>pythia.info.weight()</code>. 
+ 
+<p/> 
+The following discusses some basic settings that might be of interest. Some 
+convenience features are discussed <a href="DireWeights.html" target="page">here</a>, while 
+expert features (mainly aimed at comparisons of Dire to analytic calculations) 
+are documented <a href="DireExpert.html" target="page">here</a>. 
+ 
+<a name="anchor1"></a>
+<p/><code>mode&nbsp; </code><strong> DireTimes:kernelOrder &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -1</code>; <code>maximum = 4</code>)<br/>
+This setting defines which higher-order 
+corrections are applied to the parton-shower splitting functions used 
+for timelike (i.e. final state) evolution: 
+<br/><code>option </code><strong> -1</strong> :  
+Double-logarithmic kernels only, i.e. only gluon emissions, and no collinear 
+terms or gluon-to-quark branchings. This setting is only intended to compare 
+the parton shower to leading-logarithmic analytical resummation. 
+   
+<br/><code>option </code><strong> 0</strong> :  
+Leading order evolution kernels, as defined in the 
+original Dire publication. 
+   
+<br/><code>option </code><strong> 1</strong> :  
+Leading order evolution kernels, and additional 
+rescaling of the soft pieces to incorporate two-loop cusp efects 
+(similar to the CMW scheme). 
+   
+<br/><code>option </code><strong> 2</strong> :  
+Leading order evolution kernels, and additional 
+rescaling of the soft pieces to incorporate two- and three-loop 
+cusp efects. 
+   
+<br/><code>option </code><strong> 3</strong> :  
+Leading order evolution kernels, additional rescaling 
+of the soft pieces to incorporate two- and three-loop cusp 
+efects, and NLO corrections to collinear evolution from NLO DGLAP 
+kernels. 
+   
+   
+ 
+<a name="anchor2"></a>
+<p/><code>mode&nbsp; </code><strong> DireSpace:kernelOrder &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -1</code>; <code>maximum = 4</code>)<br/>
+This setting defines which higher-order 
+corrections are applied to the parton-shower splitting functions used 
+for spacelike (i.e. initial state) evolution: 
+<br/><code>option </code><strong> -1</strong> :  
+Double-logarithmic kernels only, i.e. only gluon emissions, and no collinear 
+terms or gluon-to-quark branchings. This setting is only intended to compare 
+the parton shower to leading-logarithmic analytical resummation. 
+   
+<br/><code>option </code><strong> 0</strong> :  
+Leading order evolution kernels, as defined in the 
+original Dire publication. 
+   
+<br/><code>option </code><strong> 1</strong> :  
+Leading order evolution kernels, and additional 
+rescaling of the soft pieces to incorporate two-loop cusp efects 
+(similar to the CMW scheme). 
+   
+<br/><code>option </code><strong> 2</strong> :  
+Leading order evolution kernels, and additional 
+rescaling of the soft pieces to incorporate two- and three-loop 
+cusp efects. 
+   
+<br/><code>option </code><strong> 3</strong> :  
+Leading order evolution kernels, additional rescaling 
+of the soft pieces to incorporate two- and three-loop cusp 
+efects, and NLO corrections to collinear evolution from NLO DGLAP 
+kernels. 
+   
+   
+ 
+<a name="anchor3"></a>
+<p/><code>mode&nbsp; </code><strong> DireTimes:kernelOrderMPI &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -1</code>; <code>maximum = 4</code>)<br/>
+Same as 
+<b>DireTimes:kernelOrder = n</b>, but for showers from secondary 
+scatterings or hadron decays. 
+   
+ 
+<a name="anchor4"></a>
+<p/><code>mode&nbsp; </code><strong> DireSpace:kernelOrderMPI &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -1</code>; <code>maximum = 4</code>)<br/>
+Same as 
+<b>DireSpace:kernelOrder = n</b>, but for showers from secondary 
+scatterings or hadron decays. 
+   
+ 
+<a name="anchor5"></a>
+<p/><code>parm&nbsp; </code><strong> DireTimes:pTrecombine &nbsp;</strong> 
+ (<code>default = <strong>2.0</strong></code>)<br/>
+The minimal pT value <i>t</i> (in 
+GeV) of final-state emissions below which the splitting probabilities 
+of some kernels are combined into a single splitting probability. 
+To be more precise, for <i>pT&lt;t</i>, the probabilities for <i>q->qg</i> 
+and <i>q->gq</i> are combined into a single probability, as are 
+<i>g->qqbar</i> and <i>g->qbarq</i> and the two color structures for 
+<i>g->gg</i>. This can help improve the numerical stability of the 
+Sudakov veto algorithm, however at the expense accuracy. Negative 
+values mean that variations are performed for all parton shower 
+emissions. Default value is 2.0 GeV. 
+   
+ 
+<a name="section0"></a> 
+<h3>Settings related to the evaluation of running (QCD) couplings</h3> 
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> ShowerPDF:usePDFalphas &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This switch is turned off 
+by default. Turned on, the alphaS running and thresholds will be 
+directly taken from the PDF set interfaced through LHAPDF6. This can be 
+helpful when validating the code, but will lead to a longer run time. 
+   
+ 
+<a name="section1"></a> 
+<h3>Settings to perform variations to gauge shower uncertainties</h3> 
+ 
+<a name="anchor7"></a>
+<p/><code>flag&nbsp; </code><strong> Variations:doVariations &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Turned on, this means that the timelike and spacelike showers 
+are allowed to perform on-the-fly variations of the renormalization 
+scale. Renormalization scale uncertainties are an important part of the 
+perturbative evolution. Note that currently, these variations will also 
+apply to showers off (soft) secondary scatterings. The range of 
+renormalization scale variations is given by the next four parameters. 
+   
+ 
+<a name="anchor8"></a>
+<p/><code>parm&nbsp; </code><strong> Variations:muRisrDown &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The (double) value with which the 
+(GeV<sup>2</sup>-valued) argument of &alpha;<sub>s</sub> in 
+initial-state evolution should be rescaled to produce a smaller value 
+of the renormalization scale in the context of automatic variations. 
+   
+ 
+<a name="anchor9"></a>
+<p/><code>parm&nbsp; </code><strong> Variations:muRisrUp &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The (double) value with which the 
+(GeV<sup>2</sup>-valued) argument of &alpha;<sub>s</sub> in 
+initial-state evolution should be rescaled to produce a larger value 
+of the renormalization scale in the context of automatic variations. 
+   
+ 
+<a name="anchor10"></a>
+<p/><code>parm&nbsp; </code><strong> Variations:muRfsrDown &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The (double) value with which the 
+(GeV<sup>2</sup>-valued) argument of &alpha;<sub>s</sub> in 
+final-state evolution should be rescaled to produce a smaller value 
+of the renormalization scale in the context of automatic variations. 
+   
+ 
+<a name="anchor11"></a>
+<p/><code>parm&nbsp; </code><strong> Variations:muRfsrUp &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The (double) value with which the 
+(GeV<sup>2</sup>-valued) argument of &alpha;<sub>s</sub> in 
+final-state evolution should be rescaled to produce a larger value 
+of the renormalization scale in the context of automatic variations. 
+   
+ 
+<a name="anchor12"></a>
+<p/><code>parm&nbsp; </code><strong> Variations:pTmin &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+The minimal pT value <i>t</i> (in GeV) 
+of emissions below which no parton shower variations are considered. 
+Negative values mean that variations may be performed for emissions at 
+any pT. Default value is -1.0 GeV. 
+   
+ 
+<p> 
+The following settings are currently under investigation and not used 
+in the code. 
+</p> 
+ 
+<a name="anchor13"></a>
+<p/><code>mode&nbsp; </code><strong> Variations:PDFmemberMin &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>)<br/>
+   
+<a name="anchor14"></a>
+<p/><code>mode&nbsp; </code><strong> Variations:PDFmemberMax &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>)<br/>
+   
+<a name="anchor15"></a>
+<p/><code>flag&nbsp; </code><strong> Variations:PDFup &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+   
+<a name="anchor16"></a>
+<p/><code>flag&nbsp; </code><strong> Variations:PDFdown &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+   
+ 
+ 
+<a name="section2"></a> 
+<h3>Settings related to parton distribution functions and quark masses</h3> 
+ 
+<a name="anchor17"></a>
+<p/><code>flag&nbsp; </code><strong> ShowerPDF:usePDFmasses &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Turned on, quark masses will be directly taken from the PDF 
+set interfaced through LHAPDF6. 
+   
+ 
+<a name="anchor18"></a>
+<p/><code>flag&nbsp; </code><strong> ShowerPDF:usePDF &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+   
+ 
+<a name="anchor19"></a>
+<p/><code>flag&nbsp; </code><strong> ShowerPDF:useSummedPDF &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Turned on, this means that the PDF ratios that are used in the 
+evolution once an initial state parton partakes in a branching include 
+both sea and valence quark contributions (if applicable). 
+   
+ 
+<a name="anchor20"></a>
+<p/><code>flag&nbsp; </code><strong> DireSpace:useGlobalMapIF &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Turned on, this means that the phase space of intial state 
+emissions with a final state spectator is setup such that all final 
+state particles share the momentum recoil of the emission. 
+   
+ 
+<a name="anchor21"></a>
+<p/><code>flag&nbsp; </code><strong> DireSpace:forceMassiveMap &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Turned on, this means that initial state emissions are 
+allowed masses. This means the shower produces the awkward situation 
+that incoming quarks are massless, but yield a assive final state 
+quark upon conversion to an incoming gluon. 
+   
+ 
+<a name="section3"></a> 
+<h3>Settings related to the tune of Pythia 8 + Dire</h3> 
+ 
+<a name="anchor22"></a>
+<p/><code>mode&nbsp; </code><strong> Dire:Tune &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -1</code>)<br/>
+If set to one, this enables the default tune of 
+Pythia8 + Dire. Currently, all other values mean that no Pythia 
+parameters are automatically overwritten by Dire. 
+   
+ 
+<a name="section4"></a> 
+<h3>Settings for debugging or educational purposes</h3> 
+ 
+<a name="anchor23"></a>
+<p/><code>mode&nbsp; </code><strong> DireSpace:nFinalMax &nbsp;</strong> 
+ (<code>default = <strong>-10</strong></code>; <code>minimum = 0</code>)<br/>
+The spacelike showers will stop if this number of 
+final state particles is reached. 
+   
+ 
+<a name="anchor24"></a>
+<p/><code>mode&nbsp; </code><strong> DireTimes:nFinalMax &nbsp;</strong> 
+ (<code>default = <strong>-10</strong></code>; <code>minimum = 0</code>)<br/>
+The timelike showers will stop if this number of 
+final state particles is reached. 
+   
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Stefan Prestel --> 

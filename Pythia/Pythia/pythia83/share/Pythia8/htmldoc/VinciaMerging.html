@@ -1,0 +1,224 @@
+<html>
+<head>
+<title>VINCIA Merging Settings</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Sector Merging (VINCIA only)</h2> 
+<ol id="toc">
+  <li><a href="#section0">Matrix Elements</a></li>
+  <li><a href="#section1">Process Specification</a></li>
+  <li><a href="#section2">Merging Scale</a></li>
+  <li><a href="#section3">Expert Settings</a></li>
+</ol>
+
+ 
+<p/> 
+The Vincia sector shower employs its own CKKW-L merging scheme, which 
+differs from the one implemented for the simple showers or Dire.  The 
+biggest difference is that the Vincia sector shower only possesses a 
+single history (or branching tree), i.e., any given configuration 
+produced by it can be uniquely traced back to every intermediate state 
+the shower has produced on the way. Sector merging can therefore be 
+viewed as the midpoint between the CKKW-L and the CKKW scheme, as only 
+a single, deterministic history needs to be generated, which 
+nevertheless <bold>exactly</bold> reflects the shower history and 
+Sudakov factors are generated dynamically using trial showers.  As 
+such, it is specifically designed for merging with high-multiplicity 
+matrix elements. 
+ 
+<p/> 
+Sector merging may be enabled by using the VINCIA sector shower and 
+switching merging on: 
+ 
+<pre> 
+PartonShowers:model = 2 
+Vincia:sectorShower = on 
+Merging:doMerging = on 
+</pre> 
+ 
+<p/> 
+In addition, the user should set 
+ 
+<pre> 
+Vincia:kineMapFFsplit = 1 
+</pre> 
+ 
+<p/> 
+since the inverse kinematic map for other splitting maps are 
+not currently available.  We also advise running with 
+ 
+<pre> 
+Check:abortIfVeto = on 
+</pre> 
+ 
+<p/> 
+such that any errors which occur during merging will be flagged as an 
+aborted event (rather than a zero weight event for normally vetoed 
+events). 
+ 
+<p/> 
+We note that, different to merging with the simple showers, 
+<code>Merging:doMerging</code> always has to be set to <code>on</code> 
+to enable merging, no matter which merging scale definition is used. 
+ 
+<p/> 
+The sector merging can generally replace CKKW-L merging with the 
+simple showers and is illustrated in the main program 
+<code>main280.cc</code>. However, also other <a href=".html" target="page"><code>main280.cc</code>. However, also other <aidx 
+href="CKKWLMerging">tree-level merging main programs</a> can be used 
+with the modifications to the command files as outlined below. 
+ 
+<a name="section0"></a> 
+<h3>Matrix Elements</h3> 
+ 
+As for merging with the simple showers, the 
+user has to provide LHE files with pre-generated events with up to 
+<code>N</code> additional jets. The maximal number of additional jets 
+relative to the Born that do not arise from resonance decays is 
+specified by setting 
+ 
+<pre> 
+Merging:nJetMax = N 
+</pre> 
+ 
+<a name="section1"></a> 
+<h3>Process Specification</h3> 
+ 
+The hard process should be specified through 
+<code>Merging:Process</code>, using the following rules: 
+<ul> 
+<li>The whole string should be encased in curly brackets, <code>{ 
+... }</code>.</li> 
+<li>Specify particles one at a time, separated by whitespace, using 
+Pythia's naming conventions in ParticleData.</li> 
+<li>The intial and final state should be separated by 
+<code>&gt;</code>.</li> 
+<li>Exactly two initial state particles should be specified </li> 
+<li>Resonance decays may be specifed also using <code>&gt;</code>, but 
+if there is more than one particle in the intermediate final state it 
+should be encased in round brackets, <code>( ... )</code>. In 
+principle as many nested decays may be specified as required, with 
+additional brackets for each decay. However, we make no claims on how 
+physically sensible merging in such systems is.</li> 
+<li> Resonances must decay to exactly 2 particles.</li> 
+<li> In addition to Pythia's naming scheme, the following 
+"multiparticles" are defined: 
+<ul> 
+<li><code>p=p+=pbar=p-=n=nbar=j={1,2,3,4,5,-1,-2,-3,-4,-5,21}</code></li> 
+<li><code>q=Q=QUARK={1,2,3,4,5}</code></li> 
+<li><code>qbar=QBAR=ANTIQUARK={-1,-2,-3,-4,-5}</code></li> 
+<li><code>LEPTONS={11,-11,13,-13,15,-15}</code></li> 
+<li><code>l+={-11,-13,-15}</code></li> 
+<li><code>l-={11,13,15}</code></li> 
+<li><code>NEUTRINOS={12,-12,14,-14,16,-16}</code></li> 
+<li><code>nu={12,14,16}</code></li> 
+<li><code>nubar={-12,-14,-16}</code></li> 
+<li><code>gammaZ={22,23}</code></li> 
+</ul> 
+</li> 
+</ul> 
+We note that the option <code>Merging:Process = guess</code> is not 
+supported, as we believe that the user should be fully aware and in 
+control of what the hard process in the event is. 
+ 
+<h4>VBF and HEFT</h4> 
+Following the idea that the user needs to specify the event topology exactly, 
+the following two switches can be used to further refine the process: 
+<a name="anchor1"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:MergeVBF &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Experimental switch to enable merging in VBF processes. 
+   
+<a name="anchor2"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:MergeHEFT &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Experimental switch to consider HEFT couplings in the history 
+construction. 
+   
+ 
+<a name="section2"></a> 
+<h3>Merging Scale</h3> 
+ 
+The sector merging presently supports three different merging scale 
+definitions. If only <code>Merging:doMerging = on</code> is set, the 
+shower evolution variable (a generalised <code>Ariadne</code> <i>pT</i>) is 
+used to define the merging scale. Additionally, the merging scale may be 
+defined in terms of a <i>kT</i> cut by setting 
+ 
+<pre> 
+<code>Merging:doKTMerging = on</code> 
+</pre> 
+ 
+<p/> 
+and (optionally) specifying <code>Merging:ktType</code>, see 
+<a href="CKKWLMerging">CKKW-L Merging</a> for details.  In both cases, 
+the merging scale should be specified through <code>Merging:TMS</code> 
+while for merging with a <i>kT</i> cut, also the <i>D</i> 
+parameter should be specified by <code>Merging:Dparameter</code>. 
+ 
+<p/> 
+It is also possible to define the merging scale by a set of cuts 
+imposed on the events upon generation by setting 
+<code>Merging:doCutBasedMerging = on</code>. The user then has to 
+provide the values of the three cuts: <code>Merging:pTiMS</code>, 
+<code>Merging:QijMS</code>, and <code>Merging:dRijMS</code> 
+representing the minimal transverse momentum <i>pT<sub>i</sub></i> 
+of a single jet and the minimal invariant mass <i>Q<sub>ij</sub></i> 
+and minimal separation <i>&Delta;R<sub>ij</sub></i> of every pair of 
+jets, as used to generate the events. 
+ 
+<a name="section3"></a> 
+<h3>Expert Settings</h3> 
+ 
+The Vincia sector shower supports dedicated merging in resonance 
+systems. At the current stage, it is, however, only an experimental 
+feature and should not yet be used for physics studies. 
+ 
+The expert user might want to experiment with the following settings. 
+<a name="anchor3"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:MergeInResSystems &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Experimental switch to enable merging of additional jets in resonance 
+decay systems. Currenly only handles colour-singlet resonances only. 
+Intended for expert users only! 
+   
+ 
+<a name="anchor4"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:MergeNJetMaxRes &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>)<br/>
+Analogue to <code>Merging:nJetMax</code>, to communicate the maximum 
+number of additional jets that can be produced from a given resonance 
+decay system by the matrix-element generator. Only used if 
+<code>Vincia:MergeInResSystems = on</code>. 
+   
+ 
+<a name="anchor5"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:MergeNResSys &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>)<br/>
+The number of resonance systems allowed to produce jets if 
+<code>Vincia:MergeInResSystems = on</code> and 
+<code>Vincia:MergeNJetMaxRes > 0</code>. 
+   
+ 
+<p/> 
+Additionally, for simple topologies, resonances can be explicitly 
+inserted into the event record if they have not been written to the 
+event file by the matrix element generator. We do note that the sector 
+merging heavily relies on this information and that attaching 
+resonances to leptons is ambiguous for general processes. 
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:InsertResInMerging &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If set to <code>on</code>, Vincia tries to attach resonances to 
+final-state leptons and insert them into the event record before 
+constructing the shower history. If turned on, the hard process must 
+explicitly contain a resonance, e.g. <code>Merging:Process = { p p > 
+Z0 }</code>. 
+   
+ 
+</body>
+</html>

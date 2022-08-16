@@ -1,0 +1,83 @@
+<chapter name="VINCIA MEC Settings"> 
+ 
+<h2>Matrix Element Corrections</h2> 
+ 
+Tree-level Matrix element corrections (MECs) have not yet been 
+re-implemented in the VINCIA shower. This feature will become 
+available in the future.  But since both the QCD helicity shower and 
+the EW shower require polarised particles, matrix elements can be used 
+to select helicities for the Born process. 
+ 
+<p/> 
+Born-level helicity selection can be enabled by setting the 
+<code>modeMECs</code> and the respective <code>maxMECs</code> switches 
+(see below) to <code>0</code>. Additionally, 
+<code>Vincia:MEPlugin</code> must be set to a valid plugin library. By 
+default, these plugins are not built and can be enabled with 
+<code>./configure --enable-mg5mes</code>. Plugins exist as libraries 
+of the form <code>libpythia8mg5PLUGIN.so</code> in the Pythia library 
+directory where <code>PLUGIN</code> is the name of the plugin. A 
+specific plugin is set via <code>Vincia:MEplugin = 
+PLUGIN</code>. Further details on generating custom plugins can be 
+found in <aloc href="Madgraph5Processes">Madgraph5 Processes</aloc>. 
+Setting <code>modeMECs</code> to <code>-1</code> instead turns any use 
+of matrix elements off completely.  Setting the respective 
+<code>maxMECs</code> switches to <code>-1</code> only turns off the 
+usage of matrix elements for that specific process type (e.g. for all 
+2&rarr;1 processes when setting <code>maxMECs2to1 = -1</code>). 
+ 
+<p/> 
+The main MEC switch is given by: 
+<modeopen name="Vincia:modeMECs" default="0" min="-1" max="0"> 
+Selects the matrix element correction mode, with <code>0</code> 
+switching any MECs off. 
+<option value="-1">Off. Pure LL shower without any matrix element 
+corrections.</option> 
+<option value="0">No matrix element corrections, but allows to use 
+matrix elements to select helicities at Born level.</option> 
+</modeopen> 
+ 
+<p/> 
+The matrix element library to be used has to be specified by: 
+<word name = "Vincia:MEplugin" default = ""> 
+Name of the plugin library to use for matrix element corrections and 
+Born-level helicity selection. 
+</word> 
+ 
+<h3>Matching Orders</h3> 
+ 
+These modes select the order of tree-level matrix element corrections 
+for different process types. 
+ 
+<modepick name="Vincia:maxMECs2to1" default="0" min="-1" max="0"> 
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;1 processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+</modepick> 
+<modepick name="Vincia:maxMECs2to2" default="0" min="-1" max="0"> 
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;2 processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+</modepick> 
+<modepick name="Vincia:maxMECs2toN" default="0" min="-1" max="0"> 
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;N processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+</modepick> 
+<modepick name="Vincia:maxMECsResDec" default="0" min="-1" max="0"> 
+Selects the order of tree-level matrix-element corrections in 
+resonance decays. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+</modepick> 
+<modepick name="Vincia:maxMECsMPI" default="-1" min="-1" max="0"> 
+Selects the order of tree-level matrix-element corrections applied to 
+the hardest MPI in the event. The value <code>-1</code> is equivalent 
+to switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+</modepick> 
+ 
+</chapter> 

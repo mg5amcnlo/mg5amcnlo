@@ -1,0 +1,502 @@
+<chapter name="VINCIA User Reference"> 
+ 
+<h2>The Antenna Shower Model (VINCIA)</h2> 
+ 
+<h3>Overview</h3> 
+ 
+<p/> 
+The cornerstone of VINCIA is a pT-ordered model for QCD + EW/QED 
+showers based on the antenna formalism.  Originally developed as a 
+standalone plugin, it has been incorporated into the Pythia 8 source 
+code since Pythia version 8.300. 
+ 
+<p/> 
+<b>QCD:</b> VINCIA's QCD antenna functions incorporate both the 
+collinear (DGLAP) and soft (eikonal) limits of QCD matrix elements at 
+leading colour. They hence should exhibit improved colour-coherence 
+effects relative to Pythia's original (DGLAP-based) simple shower 
+model. 
+ 
+<p/> 
+<b>QED:</b> 
+VINCIA's default QED antenna-shower module is based on a fully coherent 
+(multipole) treatment of photon radiation, which is 
+interleaved with the QCD evolution. 
+Photon splittings to lepton-antilepton and quark-antiquark pairs are 
+also included. 
+ 
+<p/> 
+<b>EW:</b> Optionally, the coherent QED shower can be replaced by a 
+full-fledged electroweak (EW) shower module, which allows for 
+branchings involving Z/W/h bosons as well, with antenna functions 
+capturing the collinear limits of the relevant matrix elements, 
+including ones involving gauge-boson self couplings. This can be used 
+to include weak corrections in electroweak Sudakov factors and to 
+resum multiple weak-boson emissions (and splittings). Note that, since 
+this module is based on collinar approximations, it does not exhibit 
+the full coherence of the pure-QED shower module. 
+ 
+<p/> 
+<b>Mass Effects:</b> In all cases, the effects of final-state parton 
+masses (e.g., bottom and top quark masses) are systematically 
+included, and the massive antenna functions have the appropriate 
+quasi-collinear limits. 
+ 
+<p/> 
+When VINCIA's option for interleaved resonance decays is selected <a 
+href="#ResonanceDecays">(see below)</a>, resonance decays are 
+interleaved with the rest of the perturbative evolution. This means 
+that each resonance in the hard process (or emitted by the EW shower) 
+is treated as stable until the evolution reaches a pT scale of order 
+the offshellness of that resonance, at which point the resonance is 
+replaced by its decay products and an internal ``resonance shower'' is 
+performed in the decay system, starting from the invariant mass of the 
+decaying resonance and ending at the offshellness scale. The 
+decay+shower system is then merged back into the upstream system and 
+the evolution of the event continues, starting from the offshellness 
+scale. In case of sequential resonance decays, this procedure may be 
+carried out either iteratively or sequentially, depending on the 
+offshellnesses involved. 
+ 
+<p/> 
+<b>Interleaved Evolution and MPI:</b> VINCIA's shower evolution is 
+ordered in a measure of transverse momentum and is fully interleaved 
+with Pythia's treatment of multiple parton interactions (MPI). When 
+the Vincia shower model is selected, both the hard interaction and any 
+MPI are showered by Vincia. 
+ 
+<h3>Main Switches</h3> 
+ 
+<modepick name="Vincia:nFlavZeroMass" default="4" min="2" max="6"> 
+Controls the number of flavours that will be treated as massless by 
+VINCIA, ie with massless kinematics and no mass corrections. The 
+remaining flavours will be bookkept with massive kinematics and 
+mass-corrected antenna functions.  Note that, even for flavours 
+treated as massless, an elementary phase-space check is still made eg 
+on all g&rarr;QQ branchings to ensure m(QQ) >= 2mQ.  Likewise, all 
+heavy flavours in the initial state are forced to undergo a conversion 
+into a gluon when the evolution variable reaches their mass threshold 
+(with the threshold determined by the maximum of the PDF threshold and 
+the relevant user-specifiable mass parameter given below). 
+</modepick> 
+ 
+<flag name="Vincia:helicityShower" default="off"> 
+Switch to use helicity-dependent antenna functions (or not). Only 
+meaningful when helicity information is present in the Born-level 
+events. 
+</flag> 
+ 
+<flag name="Vincia:sectorShower" default="on"> 
+Switch to (de-)activate the sector shower in VINCIA. In this 
+version of VINCIA, the sector shower has become the default, 
+due to its better scaling behaviour in multileg matching and merging, 
+see below. 
+</flag> 
+ 
+<parm name="Vincia:sectorDamp" default="1.0" min="0.0" max="1.0"> 
+In the symmetrisation over post-branching gluons that is done to 
+derive the sector antenna functions from the global ones, the 
+branching invariant with swapped gluons is nominally given by 
+<ei>yijSym = yik = 1 - yij - yjk</ei>. If the swapped gluons are j and 
+k (and straightforwardly generalised if they are i and j) then the 
+collinear <ei>yjk&rarr;0</ei> limit does not change by adding or 
+subtracting a term of order yjk. Therefore one could equally well use 
+<ei>yijSym = 1 - yij</ei> (or something inbetween). This is still 
+guaranteed to be positive definite and was indeed the choice in the 
+original sector antenna shower papers. Since the latter definition 
+produces a value for <ei>yijSym</ei> which is slightly larger than the 
+former, the corresponding 1/yijSym singularities in the antenna 
+function are damped slightly, so that larger values of the 
+<code>sectorDamp</code> parameter produces sector antenna functions 
+which have slightly smaller magnitudes outside the collinear 
+limits. Strictly speaking this choice is an ambiguity that should be 
+varied for uncertainty estimates, in which context we note that we 
+expect it to be almost entirely degenerate with variations of 
+nonsingular terms. 
+</parm> 
+ 
+<h3>Shower Starting Scales</h3> 
+ 
+<p/> 
+Similarly to PYTHIA, for processes that include at least one quark, 
+gluon, or photon in the final state, the default choice in VINCIA is 
+to start the shower from the factorisation scale used for the hard 
+process (as given by PYTHIA for internal processes, or defined by the 
+<code>scale</code> value for Les Houches input),while processes that 
+do not include any such partons are allowed to populate the full phase 
+space. This behaviour can be changed by the following option, which is 
+anologous to the <code>SpaceShower:PTmaxMatch</code> option in PYTHIA. 
+ 
+<modepick name="Vincia:pTmaxMatch" default="0" min="0" max="2"> 
+<option value="0">Showers off processes that include at least one 
+final-state quark, gluon, or photon, are started at the factorisation 
+scale, while processes that do not include any such partons are 
+started at the phase-space maximum.</option> 
+<option value="1">Showers are always started at the factorisation 
+scale.</option> 
+<option value="2">Showers are always started at the phase-space 
+maximum. This option is not recommended for physics runs as it will 
+lead to unphysical double counting in many cases.</option> 
+</modepick> 
+ 
+<p/> 
+When the first branching is limited by the factorisation scale for the 
+hard process, a multiplicative factor can be applied to either 
+increase or decrease the shower starting scale relative to the 
+factorisation scale: 
+<parm name="Vincia:pTmaxFudge" default="1.0" min="0.1" max="10.0"></parm> 
+<parm name="Vincia:pTmaxFudgeMPI" default="1.0" min="0.1" max="10.0"> 
+Same as above but for MPI systems, affecting the underlying event. 
+</parm> 
+ 
+<p/> 
+Note that for any (combination of) choices that result in ISR showers 
+not using the factorisation scale as the starting scale, the generated 
+Sudakov factor will effectively produce leftover PDF ratios in the 
+exclusive cross sections produced by the shower. 
+ 
+<h3>Further Shower Settings</h3> 
+ 
+<ul> 
+<li>Settings for VINCIA's QCD antenna showers 
+are described <aidx href="VinciaQCD">here</aidx>.</li> 
+<li>Settings for VINCIA's QED and EW antenna showers 
+are described <aidx href="VinciaEW">here</aidx>. </li> 
+<li>Settings for VINCIA's matrix-element corrections (MECs) 
+are described <aidx href="VinciaMECs">here</aidx>. </li> 
+</ul> 
+ 
+<h3>Merging with VINCIA</h3> 
+ 
+<p/> 
+VINCIA has its own dedicated approach to merging with 
+higher-multiplicity tree-level matrix elements, called sector 
+merging. Similar in spirit to the CKKW(-L) approaches, it exploits the 
+unique bijective property of VINCIA's sector shower to vastly reduce 
+the complexity of the merging procedure, so that merging especially at 
+high multiplicities becomes more efficient. Settings for VINCIA's 
+sector merging are described <aidx href="VinciaMerging">here</aidx>. 
+ 
+<h3>Interleaved Resonance Decays</h3> 
+ 
+<p/> 
+Decays of resonances produced in the hard process can be interleaved 
+with the shower evolution (see also further comments under the equivalent 
+option for Pythia's <aidx href="TimelikeShowers">TimelikeShowers</aidx>). 
+In VINCIA, this setting is 
+controlled by the following switch: 
+<flag name="Vincia:interleaveResDec" default="on"> 
+When this flag is set to <code>on</code>, decays of hard-process 
+resonances are performed as part of the final-state shower when the 
+event evolution reaches the <ei>pT</ei> scale defined by 
+<code>VINCIA:resDecScaleChoice</code> below. An internal shower which 
+preserves the invariant mass of the resonance is then performed inside 
+the resonance-decay system (including nested sequential resonance 
+decays) until that system reaches the same overall <ei>pT</ei> scale 
+as the rest of the event, at which point the resonance-decay system is 
+merged back into the upstream system and the event evolution 
+continues.  When this flag is set to <code>off</code>, resonance 
+decays are only performed after the shower off the production process 
+has been completed. All of the subsequent FSR is carried out inside 
+the resonance, with preserved resonance mass. 
+</flag> 
+ 
+<p/> 
+<a name="ResonanceDecays"></a> When decays of hard-process resonances are 
+interleaved with the shower evolution (and for any resonances produced 
+by VINCIA's electroweak shower), the evolution scale at which these 
+decays are performed (including showers and any nested resonance 
+decays at higher scales) is controlled by the following choice: 
+<modepick name="Vincia:resDecScaleChoice" default="1" min="0" max="2"> 
+<option value="0">Resonance decays are assigned a fixed scale equal to 
+the on-shell width of the given resonance. (This option is currently 
+not implemented for resonances produced by VINCIA's EW 
+shower.)</option> 
+<option value="1">Resonance decays are assigned a dynamical scale 
+given by <ei>|m<sup>2</sup> - m0<sup>2</sup>|/m0</ei>. This implies, 
+e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
+&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2) 
+&Gamma;</ei>.</option> 
+<option value="2">Resonance decays are assigned a dynamical scale 
+given by <ei>sqrt(|m<sup>2</sup> - m0<sup>2</sup>|)</ei>. This 
+implies, e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
+&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2 &Gamma; m0 
+)</ei>.</option> 
+</modepick> 
+ 
+<h3>Evolution with Enhanced (Biased) Kernels</h3> 
+ 
+<p/> 
+VINCIA's shower evolution can be biased to populate the multi-jet 
+phase space more efficiently and/or enhance the rate of rare processes 
+such as <ei>g&rarr;bb</ei> and <ei>g&rarr;cc</ei> splittings. It is 
+also possible to inhibit radiation (e.g., to focus on Sudakov 
+regions), by choosing enhancement factors smaller than unity. When 
+these options are used, it is important to note that the event weights 
+will be modified, reflecting that some types of events (e.g., multijet 
+events, or events with gluon splittings to heavy quarks) will be 
+"overrepresented" statistically, and others (events with few jets, or 
+events with no gluon splittings to heavy quarks) 
+underrepresented. Averages and histograms will therefore only be 
+correct if computed using the correct weight for each generated 
+event. A description and proof of the algorithm can be found in 
+<ref>MS16</ref>. Note that care has been taken to ensure that the 
+weights remain positive definite; under normal circumstances, VINCIA's 
+enhancement algorithm should not result in any negative weights. 
+ 
+<flag name="Vincia:enhanceInHardProcess" default="on"> 
+This flag controls whether the enhancement factors are applied to 
+shower branchings in the hard-process system. 
+</flag> 
+ 
+<flag name="Vincia:enhanceInResonanceDecays" default="on"> 
+This flag controls whether the enhancement factors are applied to 
+shower branchings inside resonance-decay systems (like Z/W/H decays) 
+that are treated as factorised from the hard process. 
+</flag> 
+ 
+<flag name="Vincia:enhanceInMPIshowers" default="off"> 
+This flag controls whether the enhancement factors are applied to 
+shower branchings in MPI systems. 
+</flag> 
+ 
+<parm name="Vincia:enhanceFacAll" default="1.0" min="0.01" max="100.0"> 
+This enhancement factor is applied as a multiplicative factor common 
+to all antenna functions, increasing the likelihood of all shower 
+branchings by the same amount. Values greater than unity thus more 
+frequently yields "busy" events, with many shower branchings. Values 
+smaller than unity suppress additional branchings, yielding more 
+Sudakov-like events. 
+</parm> 
+ 
+<parm name="Vincia:enhanceFacBottom" default="1.0" min="1.0" max="100.0"> 
+This enhances the probability for all branchings that increase the 
+number of bottom quarks (i.e., FSR <ei>g&rarr;bb</ei> splittings and 
+the corresponding ISR flavour-excitation process). Note: this factor 
+is applied on top of <code>Vincia:biasAll</code>. 
+</parm> 
+ 
+<parm name="Vincia:enhanceFacCharm" default="1.0" min="1.0" max="100.0"> 
+Same as <code>Vincia:enhanceFacBottom</code> but for charm quarks. 
+Note: this factor is applied on top of <code>Vincia:biasAll</code>. 
+</parm> 
+ 
+<parm name="Vincia:enhanceCutoff" default="10.0" min="0.0" max="1000.0"> 
+Do not apply enhancement factors to branchings below this 
+scale. Intended to be used to focus on enhancements of hard branchings 
+only. 
+</parm> 
+ 
+<h3>VINCIA Tunes</h3> 
+ 
+<p/> 
+<b>VINCIA has its own</b> set of dedicated tune presets, which can be 
+specified by the user. 
+ 
+<modepick name="Vincia:Tune" default="0" min="-1" max="0"> 
+<option value="-1">None. No VINCIA-specific tune parameter settings 
+will be used during initialisation.</option> 
+<option value="0">Hadronisation and MPI parameters optimised for use 
+with the VINCIA shower model, used as default VINCIA parameters since 
+PYTHIA 8.302.</option> 
+</modepick> 
+ 
+<p/> 
+<b>Note:</b> the requested tune parameters will only be activated when 
+VINCIA is switched on, in order not to interfere with the PYTHIA 
+settings when VINCIA is switched off. 
+ 
+<p/> 
+<b>Note 2:</b> as with ordinary Pythia tune parameters, the tuned 
+parameter values will be superseded by any user modifications made in 
+the user's command file or main program.  This should allow sufficient 
+flexibility to explore user variations away from the tuned values. 
+ 
+<h4>Advice on Tuning</h4> 
+ 
+<p/> 
+Although there are obviously parameters that it makes more sense to 
+tune than others, there is no explicit restriction imposed on what 
+parameters are allowed to be present in the tune file. This implies 
+some responsibility on the part of the user. 
+ 
+<p/> 
+<b>As a guideline,</b> the main parameters that need to be properly 
+tuned are the non-perturbative hadronisation parameters used in 
+PYTHIA's string fragmentation model. Since PYTHIA and VINCIA treat 
+soft radiation somewhat differently, there can be important 
+differences between the two in the soft region that the hadronisation 
+model will not re-absorb automatically and which therefore only a 
+retuning can address. 
+ 
+<p/> 
+The strategy used for the default tune of VINCIA is to take the 
+reference value for alphaS from the current world average value in the 
+MSbar scheme, and let the effective shower scheme tuning be done by 
+first translating to the CMW scheme and then fine-tune by modifying 
+the renormalisation-scale prefactors used for shower branchings. 
+ 
+<p/> 
+An alternative (but equivalent) strategy that is often used in PYTHIA 
+tunes, is to perceive of the value of the strong coupling itself as a 
+tuning parameter.  In this case the interpretation is that extracting 
+alphaS from, e.g., event shapes, can be done equally well using a 
+shower code as with more analytical approaches. The difference is that 
+the alphaS value extracted with the shower code is in an a priori 
+unknown scheme, defined by the shower algorithm. If the shower only 
+includes LO/LL accuracy for the given observable(s), the extraction 
+should be compared with other LO/LL extractions. This typically yields 
+alphaS values ~ 0.13 - 0.14. When explicit NLO corrections are 
+included for the relevant observable(s), values comparable to other 
+NLO extractions should result, around 0.12. 
+ 
+<h3>Expert Settings</h3> 
+ 
+<b>Importante Note:</b> the parameters in this section are intended 
+for use only by authors or expert users. 
+ 
+<h4>Octet Partitioning</h4> 
+ 
+<p/> 
+Within the antenna formalism, the collinear singularity of two gluons 
+j and k is distributed between two neighboring antennae. One contains 
+the singularity for j becoming soft, one the singularity for k 
+becoming soft. In showers based on so-called global antenna functions 
+(as opposed to sector functions), the two antennae share the collinear 
+singularity, j||k, point by point in phase space, and only after 
+summing over both is the full collinear AP splitting kernel recovered. 
+The parameter below controls the repartition ambiguity and gives the 
+value of "half" the gluon splitting function on its finite end.  For 
+sector showers, this parameter has no effect, as the collinear 
+singularities are combined within a single antenna function. 
+<parm name="Vincia:octetPartitioning" default="0.0" min="0.0" max="1.0"> 
+Gluon-collinear &alpha; parameter. Only used for final-final global 
+antennae. Note: only the default value (0) is consistent with the 
+initial-final (and initial-initial) antenna functions in VINCIA. 
+Special values of interest are: &alpha;=0, which corresponds to the 
+Gehrmann-Gehrmann-de Ridder-Glover (GGG) partitioning, and &alpha;=1, 
+which corresponds to the Gustafson (ARIADNE) partitioning. For the 
+sector shower, the <code>octetPartitioning</code> is forced to 
+&alpha;=1, to ensure positivity of the antenna function and as there 
+is no sensible meaning of the parameter anymore. 
+</parm> 
+ 
+<h4>Verbose Level</h4> 
+<modepick name="Vincia:verbose" default="1" min="-1" max="3"> 
+Level of detail of information written to standard output on what goes 
+on inside <code>VINCIA</code>. 
+<option value="-1">No runtime output.</option> 
+<option value="0">Quiet. Errors and (important) warnings are 
+printed.</option> 
+<option value="1">Normal. All warnings and error messages are 
+printed, but no additional diagnostic output is given. Standard 
+initialisation and summary information is also printed.</option> 
+<option value="2">Report. Enhanced runtime output. As for =1, but 
+ additional diagnostic information is printed, especially 
+when/where errors occur, and additional self-consistency checks may 
+be performed. Full initialisation and summary information is 
+printed.</option> 
+<option value="3">Debug. This level is solely intended to assist 
+authors for debugging purposes.</option> 
+</modepick> 
+ 
+<h4>Numerical Checks</h4> 
+<flag name="Vincia:CheckAntennae" default="on"> 
+By default, VINCIA checks antenna functions for positivity and absence 
+of dead zones. Switch to control whether to perform antenna 
+self-consistency checks or not. 
+</flag> 
+<modeopen name="Vincia:nPointsCheck" default="1000" min="0" max="1e6"> 
+Number of random points to check each antenna functions for 
+positivity. 
+</modeopen> 
+ 
+<parm name="Vincia:deadZoneAvoidance" default="0.0001" min="0.0" max="1.0"> 
+During initialisation, warnings are issued if any antenna functions 
+(in dimensionless form, with the Eikonal proportional to 2/y1/y2) 
+become smaller than this number, anywhere in the resolved part of 
+phase space (away from phase-space boundaries).  This is to warn 
+against spurious radiation zeroes or large negative finite terms 
+creating "dead zones", or near-dead zones, in the shower. For LL 
+showering and matching up to NLO, there is in principle no problem in 
+taking this parameter to zero if so desired. However, for the NLL and 
+higher-order matching corrections, very small values of this parameter 
+may result in weights greater than unity being generated, since the 
+corrections are multiplicative and large reweighting factors may be 
+needed to "make up" for any near-dead zones at the previous branching 
+step. 
+</parm> 
+ 
+<h4>Shower Uncertainty Bands</h4> 
+ 
+Automated uncertainty bands are not available in this version of 
+the VINCIA code. 
+ 
+<h3>References</h3> 
+ 
+<p/> 
+<b>The main references</b> for the current version of VINCIA are: 
+<ul> 
+<li><a href="http://arxiv.org/abs/arXiv:2003.00702">Sector Showers 
+for Hadron Collisions</a> (for Sector Showers).</li> 
+<li><a href="http://arxiv.org/abs/arXiv:1907.08980">Coherent Showers 
+in Decays of Coloured Resonances</a> (for showers in top quark 
+decays).</li> 
+<li><a href="http://arxiv.org/abs/arXiv:2008.09468">Efficient 
+Multi-Jet Merging with the VINCIA Sector Shower</a> (for Sector 
+Merging).</li> 
+<li><a href="http://arxiv.org/abs/arXiv:2002.04939">Multipole Photon 
+Radiation in the VINCIA Parton Shower</a> (for QED showers).</li> 
+<li><a href="https://arxiv.org/abs/2002.09248">Collinear electroweak 
+radiation in antenna parton showers</a> (for EW showers).</li> 
+</ul> 
+ 
+<h4>Authors and Contributions</h4> 
+ 
+<p/> 
+The authors of the current version, taking active responsibility for 
+code development and day-to-day maintenance, are 
+<ul> 
+<li>P. Skands: Main author</li> 
+<li>C. T. Preuss: Sector Showers, Sector Merging, MG5 Interface.</li> 
+<li>R. Verheyen: QED showers and EW showers.</li> 
+</ul> 
+ 
+<p/> 
+In addition, the following people have made significant individual 
+contributions to the underlying formalism and code development of 
+VINCIA: 
+<ul> 
+<li>H. Brooks: Resonance-decay showers and Sector Merging.</li> 
+<li>W. T. Giele and D. A. Kosower: Basics of the antenna shower 
+formalism.</li> 
+<li>L. Hartgring and E. Laenen: on NLO corrections to Z + 3 jets.</li> 
+<li>H.-T. Li: on 2&rarr;4 branchings and one-loop corrections to FF 
+shower kernels.</li> 
+<li>A. Larkoski: on helicity-based final-state showers and matrix 
+elements.</li> 
+<li>A. Lifson: Analytical MHV amplitudes.</li> 
+<li>N. Fischer: ISR and MECs for hadron collisions.</li> 
+<li>J. J. Lopez-Villarejo: Sector showers.</li> 
+<li>S. Prestel: Merging and strongly-ordered MECs.</li> 
+<li>M. Ritzmann: Mass corrections and initial-state antenna showers.</li> 
+<li>T. Sj&ouml;strand: Integration with PYTHIA 8.</li> 
+</ul> 
+ 
+ 
+<h4>About VINCIA</h4> 
+ 
+<p/> 
+<b>The name VINCIA</b> stands for "VIrtual Numerical Collider with 
+Interleaved Antennae". This reflects its main properties as a 
+numerical model for collider-physics processes based on 
+dipole-antennae and interleaved perturbative evolution.  It is also 
+intended to allude to a progression from PYTHIA - a name originating 
+in ancient Greece - to the renaissance era of Leonardo da Vinci. The 
+logo of VINCIA is the "Vitruvian Man", by da Vinci, a choice which 
+also reflects the combination of art and accuracy which is necessary 
+to write a good event generator. Classical antiquity is still 
+indirectly represented, via the namesake of the logo, Vitruvius, a 
+first-century (BC) Roman author, architect, and engineer. 
+ 
+</chapter> 

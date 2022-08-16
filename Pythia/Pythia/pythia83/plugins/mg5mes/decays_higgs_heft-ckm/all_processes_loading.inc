@@ -1,0 +1,17 @@
+loaded_processes.push_back(new PY8MEs_R701_P0_heft_ckm_h_ggg(model)); 
+loaded_processes.push_back(new PY8MEs_R11_P1_heft_ckm_h_ztaptam(model)); 
+loaded_processes.push_back(new PY8MEs_R11_P2_heft_ckm_h_zbbx(model)); 
+loaded_processes.push_back(new PY8MEs_R701_P3_heft_ckm_h_gbbx(model)); 
+loaded_processes.push_back(new PY8MEs_R21_P4_heft_ckm_h_wptamvl(model)); 
+loaded_processes.push_back(new PY8MEs_R22_P5_heft_ckm_h_wpbq(model)); 
+loaded_processes.push_back(new PY8MEs_R10_P6_heft_ckm_h_zz(model)); 
+loaded_processes.push_back(new PY8MEs_R11_P7_heft_ckm_h_zll(model)); 
+loaded_processes.push_back(new PY8MEs_R11_P8_heft_ckm_h_zqq(model)); 
+loaded_processes.push_back(new PY8MEs_R20_P9_heft_ckm_h_wpwm(model)); 
+loaded_processes.push_back(new PY8MEs_R21_P10_heft_ckm_h_wplvl(model)); 
+loaded_processes.push_back(new PY8MEs_R21_P11_heft_ckm_h_wpqq(model)); 
+loaded_processes.push_back(new PY8MEs_R40_P12_heft_ckm_h_taptam(model)); 
+loaded_processes.push_back(new PY8MEs_R50_P13_heft_ckm_h_bbx(model)); 
+loaded_processes.push_back(new PY8MEs_R70_P14_heft_ckm_h_gg(model)); 
+loaded_processes.push_back(new PY8MEs_R701_P15_heft_ckm_h_gqq(model)); 
+loaded_processes.push_back(new PY8MEs_R70_P16_heft_ckm_h_aa(model)); 

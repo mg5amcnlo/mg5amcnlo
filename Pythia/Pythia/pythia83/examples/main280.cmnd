@@ -1,0 +1,57 @@
+!---------------------------------------------------------!
+!                                                         !
+!       Merging settings for Vincia MESS                  !
+!                                                         !
+!---------------------------------------------------------!
+
+! Run settings.
+Main:numberOfEvents             = 100
+Next:numberCount                = 100
+Next:numberShowProcess          = 0
+Init:showChangedParticleData    = off
+Main:timesAllowErrors           = 10
+
+! MPI, Hadronisation, etc.
+PartonLevel:MPI                 = off
+HadronLevel:all                 = off
+Check:abortIfVeto               = on
+PDF:lepton                      = off
+
+! Turn off variations.
+UncertaintyBands:doVariations   = off
+
+! Vincia settings.
+PartonShowers:model             = 2     ! turn on Vincia
+Vincia:sectorShower             = on    ! turn on sector shower
+Vincia:verbose                  = 1
+Vincia:doFF                     = on
+Vincia:doIF                     = on
+Vincia:doII                     = on
+! Merging incompatible with RF for now.
+Vincia:doRF                     = off
+! Merging incompatible with QED/EW for now.
+Vincia:ewMode                   = 0
+Vincia:checkAntennae            = off
+! Needs to be set as other inverse maps not implemented.
+Vincia:kineMapFFsplit           = 1
+! Start at factorisation scale.
+Vincia:pTmaxMatch               = 1
+
+! Turn on sector merging.
+Merging:includeWeightInXsection = on
+! NOTE: both doMerging and doKTMerging need to be switched on.
+Merging:doMerging               = on
+Merging:doKTMerging             = on
+Merging:TMS                     = 10.
+Merging:Dparameter              = 0.4
+Merging:Process                 = { p p > l+ nu }
+! Maximal extra jet multiplicity.
+Merging:nJetMax                 = 2
+! If >= 0 only run that specific multiplicity.
+Merging:nJetReq                 = -1
+! Check that all event samples exist on/off.
+Merging:checkFilesExist         = true
+! Turn VBF merging on/off.
+Vincia:MergeVBF                 = off
+! Consider HEFT couplings in history construction on/off.
+Vincia:MergeHEFT                = off

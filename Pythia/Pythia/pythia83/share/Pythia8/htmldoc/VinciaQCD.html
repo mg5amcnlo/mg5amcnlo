@@ -1,0 +1,720 @@
+<html>
+<head>
+<title>VINCIA QCD Antenna Shower Settings</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+<h2>VINCIA QCD Antenna Shower Settings</h2> 
+<ol id="toc">
+  <li><a href="#section0">Main Switches</a></li>
+  <li><a href="#section1">The QCD coupling in the Vincia Shower</a></li>
+  <li><a href="#section2">Colour Charges</a></li>
+  <li><a href="#section3">Kinematics and Recoils</a></li>
+  <li><a href="#section4">Lower Cutoffs for the QCD evolution</a></li>
+  <li><a href="#section5">Other QCD Settings</a></li>
+</ol>
+
+ 
+<p>Here, parameters specific to VINCIA's QCD antenna 
+shower are collected. See the <a href="Vincia.html" target="page">main VINCIA 
+antenna shower page</a> for more general parameters that are 
+common to both the QCD and QED showers. 
+</p> 
+ 
+<a name="section0"></a> 
+<h3>Main Switches</h3> 
+ 
+<a name="anchor1"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:doII &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Main switch for initial-initial (II) antennae on/off (subject to 
+  the <code>PartonLevel</code> settings). 
+   
+ 
+<a name="anchor2"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:doIF &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Main switch for initial-final (IF) antennae on/off 
+  (subject to the <code>PartonLevel</code> settings). 
+  Note: setting this to off will switch off both the initial- and final-state 
+ends of corresponding QCD antennae. 
+   
+ 
+<a name="anchor3"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:doFF &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Main switch for final-final (FF) antennae on/off (subject to choices 
+  made at <code>PartonLevel</code>). 
+   
+ 
+<a name="anchor4"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:doRF &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Main switch for resonance-final (RF) antennae on/off 
+  (subject to the <code>PartonLevel</code> settings). 
+  Note: setting this to off will switch off both the resonance- and 
+  final-state ends of corresponding QCD antennae. 
+   
+ 
+<a name="anchor5"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:nGluonToQuark &nbsp;</strong> 
+ (<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 6</code>)<br/>
+Number of allowed quark flavours in final-state gluon splittings, 
+<i>g &rarr; q qbar</i>, during the shower evolution, phase space 
+permitting. E.g.,  a change to 4 would exclude <i>g &rarr; b 
+bbar</i> but would include the lighter quarks, etc. Note that this 
+parameter does not directly affect the running coupling. 
+   
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:convertGluonToQuark &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Allow incoming gluons to backwards-evolve into (anti)quarks 
+  during the initial-state shower evolution. 
+   
+ 
+<a name="anchor7"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:convertQuarkToGluon &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+  Allow incoming (anti)quarks to backwards-evolve into (anti)quarks 
+  during the initial-state shower evolution. 
+   
+ 
+<a name="alphaS"></a> 
+<a name="section1"></a> 
+<h3>The QCD coupling in the Vincia Shower</h3> 
+ 
+<p>The strong coupling constant is specified by providing 
+its reference value (interpreted as given at the Z pole in 
+the MSbar scheme) and running properties (loop order, behaviour at top 
+threshold, and any low-scale regularisation/dampening). 
+</p> 
+ 
+<p>Note that VINCIA only uses one global value for the definition of 
+the strong coupling constant. The effective couplings used in shower 
+branchings (renormalisation scheme and scale) are governed by separate 
+parameters which are specified under initial- and final-state showers 
+respectively. 
+</p> 
+ 
+<p> 
+VINCIA implements its own instance of PYTHIA's <code>AlphaStrong</code> class 
+for the strong coupling. You can find more documentation of the class in 
+the section on Standard-Model Parameters in the PYTHIA documentation. 
+Here, we list the specific parameters and switches governing its use 
+in VINCIA. 
+</p> 
+ 
+<a name="ref"></a> 
+<p>The free parameter of the strong coupling constant is specified by 
+<a name="anchor8"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:alphaSvalue &nbsp;</strong> 
+ (<code>default = <strong>0.118</strong></code>; <code>minimum = 0.06</code>; <code>maximum = 2.0</code>)<br/>
+The value of <i>&alpha;<sub>s</sub></i> at 
+the scale <i>m<sub>Z</sub></i>, in the MSbar scheme. The default 
+value is chosen to be in 
+agreement with the current world average. The effective value used for 
+showers may be further affected by translation to the CMW scheme 
+(below) and by renormalisation-scale prefactors given for FSR and ISR 
+showers separately. 
+   
+</p> 
+ 
+<a name="order"></a> 
+<a name="anchor9"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:alphaSorder &nbsp;</strong> 
+ (<code>default = <strong>2</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)<br/>
+Order at which <i>&alpha;<sub>s</sub></i> runs, 
+<br/><code>option </code><strong> 0</strong> : zeroth order, i.e. <i>&alpha;<sub>s</sub></i> is kept 
+fixed.   
+<br/><code>option </code><strong> 1</strong> : first order, i.e., one-loop running. 
+   
+<br/><code>option </code><strong> 2</strong> : second order, i.e., two-loop running. 
+   
+   
+ 
+<a name="schemeFSR"></a> 
+<p> 
+Resummation arguments [<a href="Bibliography.html#refCat91" target="page">Cat91</a>] indicate that a set of 
+universal QCD corrections can be absorbed in coherent parton showers by 
+applying the so-called CMW rescaling of the MSbar value 
+of <i>Lambda_QCD</i>, defined by 
+<center> 
+  <i>&alpha;<sub>s</sub>(CMW) = &alpha;<sub>s</sub>(MSbar) 
+  * (1 + K * &alpha;<sub>s</sub>(MSbar) / 2&pi;)</i> 
+</center> 
+with <i>K = CA * (67/18 - &pi;<sup>2</sup>/6) - 5/9nf</i>. The 
+translation amounts to an <i>NF</i>-dependent 
+rescaling of <i>Lambda_QCD</i>, relative to its MSbar value, by 
+a factor 1.661 for NF=3, 1.618 for NF=4, 1.569 for NF=5, 
+and 1.513 for NF=6. Although the original argument strictly concerned 
+only the eikonal for soft-gluon emissions, the current version of 
+VINCIA only offers the option of switching the rescaling of 
+<i>Lambda_QCD</i> on or off. When on, the rescaling is applied to 
+all branching types, not just gluon emissions. 
+</p> 
+<p> 
+<a name="anchor10"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:useCMW &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+If set to on, the alphaS value used for shower branchings will be 
+translated from the MSbar value to the CMW ("MC") scheme. If set to 
+off, the MSbar value will be used. 
+   
+<p> 
+<b>Note 1:</b> If using VINCIA with an externally defined matching scheme, be 
+aware 
+that the CMW rescaling may need be taken into account in the context of 
+matrix-element matching. Note also that this option has only been made 
+available for timelike and spacelike showers, not for hard processes. <br/> 
+<b>Note 2:</b> Tunes using this option need roughly 10% lower values of 
+<i>alpha<sub>s</sub>(m<sub>Z</sub>)</i> than tunes that do not. 
+</p> 
+ 
+<a name="thresholds"></a> 
+<p> 
+For both one- and two-loop running, the <code>AlphaStrong</code> class 
+automatically switches from 3-, to 4-, and then to 5-flavour running as 
+one passes the <i>s</i>, <i>c</i>, and <i>b</i> thresholds, 
+respectively, with matching equations imposed at each flavour 
+treshold to ensure continuous values. 
+By default, a change to 6-flavour running is also included above the 
+<i>t</i> threshold, though this can be disabled using the following 
+parameter: 
+<a name="anchor11"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:alphaSnfmax &nbsp;</strong> 
+ (<code>default = <strong>6</strong></code>; <code>minimum = 5</code>; <code>maximum = 6</code>)<br/>
+<br/><code>option </code><strong> 5</strong> : Use 5-flavour running for all scales above the 
+<i>b</i> 
+flavour threshold (old default).   
+<br/><code>option </code><strong> 6</strong> : Use 6-flavour running above the <i>t</i> 
+threshold (new default).   
+   
+</p> 
+ 
+<a name="ir"></a> 
+<a name="anchor12"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:alphaSmuFreeze &nbsp;</strong> 
+ (<code>default = <strong>0.75</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 10.0</code>)<br/>
+  The behaviour of the running coupling in the far infrared is 
+  regulated by a shift in the effective renormalisation scale, 
+  to <i>&mu;<sub>eff</sub> 
+<sup>2</sup> = &mu;<sub>freeze</sub><sup>2</sup> 
+   + &mu;<sub>R</sub><sup>2</sup></i>. 
+   
+ 
+<a name="maxCoup"></a> 
+<a name="anchor13"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:alphaSmax &nbsp;</strong> 
+ (<code>default = <strong>2.0</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+Largest allowed numerical value for <i>alphaS</i>. I.e., the running 
+is forced to plateau at this value. 
+   
+ 
+<a name="scaleFSR"></a> 
+<h4>Choice of Renormalisation Scales for Shower Branchings</h4> 
+<p> 
+When <code>Vincia:alphaSorder</code> is non-zero, 
+the actual value of alphaS used for shower branchings is governed by 
+the choice of scheme (MSbar or CMW, see the section on AlphaStrong 
+and then by running to the scale 
+<i>kR*Q<sup>2</sup></i>, at which the shower evaluates 
+<i>&alpha;<sub>s</sub></i>, with <i>Q<sup>2</sup></i> the 
+Vincia evolution scale of the branching. 
+ 
+The multiplicative scale factor <i>kR</i> is given by 
+<a name="anchor14"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:renormMultFacEmitF &nbsp;</strong> 
+ (<code>default = <strong>0.66</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+for gluon emission    
+</p> 
+<p> 
+and 
+<a name="anchor15"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:renormMultFacSplitF &nbsp;</strong> 
+ (<code>default = <strong>0.8</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+for gluon splitting.    
+</p> 
+ 
+<a name="scaleISR"></a> 
+<p> 
+For initial-state branchings, the functional form of <i>muR</i> is given by 
+the evolution variable and the scale factor <i>kR</i> is given by 
+<a name="anchor16"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:renormMultFacEmitI &nbsp;</strong> 
+ (<code>default = <strong>0.66</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+for gluon emission,    
+<a name="anchor17"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:renormMultFacSplitI &nbsp;</strong> 
+ (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+for gluon splitting (quark in the initial state backwards evolving into a 
+gluon),    
+<a name="anchor18"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:renormMultFacConvI &nbsp;</strong> 
+ (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+for gluon conversion (gluon in the initial state backwards evolving into a 
+(anti)quark)    
+</p> 
+ 
+<a name="section2"></a> 
+<h3>Colour Charges</h3> 
+<p>The normalisation of colour factors in VINCIA is chosen such that 
+the coupling factor for all antenna functions is &alpha;S/4&pi;. With 
+this normalisation, 
+all gluon-emission colour factors tend to NC in the large-NC limit 
+while all gluon-splitting colour factors tend to unity. (Thus, e.g., 
+the default normalisation of the qqbar &rarr; qgqbar antenna function 
+is 2CF.) 
+</p> 
+<p> 
+<a name="anchor19"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QQemitII:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+Emission of a final-state gluon from an initial-state qqbar pair. 
+   
+<a name="anchor20"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GQemitII:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.83333333</strong></code>)<br/>
+  Emission of a final-state gluon from an initial-state qg (or gqbar) pair. 
+   
+<a name="anchor21"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GGemitII:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>3.0</strong></code>)<br/>
+Emission of a final-state gluon from an initial-state gg pair. 
+   
+<a name="anchor22"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QXSplitII:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+  Quark in the initial state backwards evolving into a gluon and emitting 
+  an antiquark in the final state 
+   
+<a name="anchor23"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GXConvII:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+  Gluon in the initial state backwards evolving into a quark and emitting 
+  a quark in the final state (gluon conversion) 
+   
+<a name="anchor24"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QQemitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+  Gluon emission of an initial-final qq pair 
+   
+<a name="anchor25"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GQemitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.83333333</strong></code>)<br/>
+  Gluon emission off an initial-final gq pair 
+   
+<a name="anchor26"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QGemitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.83333333</strong></code>)<br/>
+  Gluon emission of an initial-final qg pair 
+   
+<a name="anchor27"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GGemitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>3.0</strong></code>)<br/>
+  Gluon emission of an initial-final gg pair 
+   
+<a name="anchor28"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QXSplitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+  Quark in the initial state evolving backwards into a gluon and emitting 
+  an antiquark in the final state 
+   
+<a name="anchor29"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GXConvIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+  Gluon in the initial state backwards evolving into a quark and emitting 
+  a quark into the final state (gluon conversion)   
+<a name="anchor30"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:XGSplitIF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+Gluon splitting in the final state   
+<a name="anchor31"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QQEmitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+<a name="anchor32"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QGEmitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.85</strong></code>)<br/>
+<a name="anchor33"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GGEmitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>3.0</strong></code>)<br/>
+<a name="anchor34"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QGSplitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+<a name="anchor35"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GGSplitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+<a name="anchor36"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:GXSplitFF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+<a name="anchor37"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QQEmitRF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.66666667</strong></code>)<br/>
+<a name="anchor38"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QGEmitRF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>2.85</strong></code>)<br/>
+<a name="anchor39"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:XGSplitRF:chargeFactor &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+Note: the two permutations g-g &rarr; g-q+qbar and g-g &rarr; qbar+q-g are 
+explicitly summed over in the code (with  appropriate swapping of 
+invariants in the latter case). 
+   
+</p> 
+ 
+<a name="section3"></a> 
+<h3>Kinematics and Recoils</h3> 
+<p>While the CM momenta of a <i>2&rarr;3</i> branching are fixed by 
+the generated invariants (and hence by the antenna function), the 
+global orientation of the produced 3-parton system with respect to the rest of 
+the event (or, equivalently, with respect to the original 
+dipole-antenna axis) suffers from an ambiguity outside the LL limits, 
+which can be significant in regions where the leading logs are 
+suppressed or absent.</p> 
+<p> 
+To illustrate this ambiguity, consider the emissision of a gluon from 
+a qqbar antenna with some finite amount of transverse momentum 
+(meaning transverse to the original dipole-antenna axis, in the CM of the 
+dipole-antenna). The transverse momenta of the qqbar pair after the 
+branching must now add up to an equal, opposite amount, so that total 
+momentum is conserved, i.e., the emission generates a recoil. By an 
+overall rotation of the post-branching 3-parton system, it is possible 
+to align either the q or the qbar with the original axis, such that it 
+becomes the other one that absorbs the entire recoil (the default in 
+showers based on <i>1&rarr;2</i> branchings such as old-fashioned parton 
+showers and Catani-Seymour showers), or to align 
+both of them slightly off-axis, so that they share the recoil (the 
+default in VINCIA, see illustration below). 
+</p> 
+ 
+<p> 
+  <a href="http://home.fnal.gov/~skands/vincia/img/vincia-kin.png"> 
+    <img src="vincia-kins.png" align="right" border="0" hspace="20" 
+         vspace="20" width="300" height="254" alt="2to3-kinematics"/> </a> 
+ 
+ 
+<h4>Kinematics and Recoils for II Antennae </h4> 
+<p>The post-branching momenta are fixed by the following requirements: <br/> 
+1) The direction of the initial state partons is aligned with the beam axis 
+(z-axis). <br/> 
+2) The invariant mass and the rapidity of the final state recoiler are not 
+changed by the branching. This allows a direct construction of the 
+post-branching momenta in the lab frame.</p> 
+ 
+<a name="kinematicsIF"></a> 
+<h4>Kinematics and Recoils for IF Antennae</h4> 
+</p> 
+For IF branchings, Vincia contains implementations of two different 
+kinematics maps, called "local" and "global" in what follows. 
+</p> 
+<p> 
+In the 
+"local map", the initial-state parton recoils 
+longitudinally, and there is no recoil imparted to any partons 
+that do not participate directly in the branching. (I.e., 
+recoil effects are absorbed locally within the branching antenna, and 
+no partons outside of it are affected.) This is equivalent to saying 
+that any transverse momentum associated with the emitted parton (j) is 
+absorbed by the other final-state parton (k). This 
+allows a simple construction  of the post-branching momenta in the 
+centre-of-mass frame of the initial-final antenna. 
+</p> 
+<p> 
+The "global map" allows for an overall transverse recoil associated with the 
+initial-state leg to be imparted to the system of final-state partons 
+other than those participating directly in the branchings. This is 
+equivalent to saying that any transverse momentum associated with the 
+emitted parton (j) is absorbed by the initial-stage leg (a), after 
+which a Lorentz transformation brings it (plus the final-state system) 
+back to having beam-collinear kinematics. The recoil vanishes For 
+final-state collinear kinematicsbut is in general nonzero outside that 
+limit. 
+</p> 
+<p> 
+Intuitively, the local map should be appropriate for final-state 
+splittings, while the global one would be appropriate for initial-state 
+ones. The full story is more complicated, partly since soft wide-angle 
+radiation intrinsically represents interference between the two cases, 
+and partly because the phase-space limits for the two maps (outside of 
+the strict soft and collinear limits) are different. (The x &lt; 1 
+constraint translates to slightly different constraints on the 
+branching invariants for the two maps, as does positivity of the Gram 
+determinant.) A probabilistic selection is therefore made between 
+the local and 
+global maps, using a form obtained by R. Verheyen based on comparisons 
+to DIS matrix elements, <i>P(global) = (sAK - saj)^2/[ (sAK + sjk)^2 + 
+(sAK - saj)^2 ] * Theta( sAK - saj )</i>, with Theta the unit step 
+function (since the momenta in the global map always become unphysical 
+for saj > sAK). 
+</p> 
+<p> 
+<a name="anchor40"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapIF &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 1</code>; <code>maximum = 3</code>)<br/>
+<br/><code>option </code><strong> 1</strong> : Local recoil map.    
+<br/><code>option </code><strong> 2</strong> : Gluon emissions use a probabilistic selection 
+between the global and local maps. Antennae that only contain 
+initial-state singularities always use the global one. Antennae that 
+only contain final-state singularities always use the local one.    
+<br/><code>option </code><strong> 3</strong> : Probabilistic selection between the global and 
+and local maps, for all IF branchings irrespective of their 
+singularity structure.    
+   
+</p> 
+ 
+<p>When using the probabilistic selection, it is possible (in 
+phase-space regions well away from the strict soft and collinear 
+limits) that the selected kinematics map produces unphysical momenta 
+(with x &gt; 1 or negative energies) for the given branching 
+invariants, while the other map would give physical momenta. In such 
+cases, one has to choose whether the given phase-space point should be 
+vetoed, or whether the other map should be allowed to be used instead 
+to construct the kinematics. 
+</p> 
+<a name="anchor41"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:kineMapIFretry &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+<br/><code>option </code><strong> off</strong> : If the map selected according to the probabilistic 
+choice above returns unphysical momenta, the trial branching is 
+vetoed.    
+<br/><code>option </code><strong> on</strong> : If the map selected according to the probabilistic 
+choice above returns unphysical momenta, the other map is tried. Only 
+if both maps fail to produce physical momenta is the trial branching 
+vetoed.     
+   
+ 
+<h4>Kinematics and Recoils for FF Antennae </h4> 
+ 
+<a name="anchor42"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapFFemit &nbsp;</strong> 
+ (<code>default = <strong>3</strong></code>; <code>minimum = 1</code>; <code>maximum = 3</code>)<br/>
+Selects which method to use for choosing the Euler angle for the 
+global orientation of the post-branching kinematics construction for 
+gluon emissions. 
+<br/><code>option </code><strong> 1</strong> : The ARIADNE angle (see illustration). 
+The recoiling mothers share the recoil in 
+proportion to their energy fractions in the CM of the 
+  dipole-antenna. Tree-level expansions of the VINCIA shower compared 
+  to tree-level matrix elements through third order in alphaS have 
+  shown this strategy to give the best overall approximation, 
+followed closely by the KOSOWER map below. 
+   
+<br/><code>option </code><strong> 2</strong> : LONGITUDINAL. The parton which has the 
+smallest invariant 
+mass together with the radiated parton is taken to be the "radiator". The 
+remaining parton is taken to be the "recoiler". The recoiler remains oriented 
+along the dipole axis in the branching rest frame and recoils 
+longitudinally against the radiator + radiated partons which have 
+equal and opposite transverse momenta (transverse to the original 
+dipole-antenna axis in the dipole-antenna CM). Comparisons to 
+higher-order QCD matrix elements show this to be by far the worst 
+option of the ones so far implemented, hence it could be 
+useful as an extreme case for uncertainty estimates, but should 
+probably not be considered for central tunes. (Note: exploratory attempts at 
+improving the behaviour of this map, e.g., by selecting 
+probabilistically between the radiator and the recoiler according to 
+approximate collinear splitting kernels, only resulted in 
+marginal improvements. Since such variations would introduce 
+additional complications in the VINCIA matching formalism, they 
+have not been retained in the distributed version.) 
+   
+<br/><code>option </code><strong> 3</strong> : The KOSOWER map. Comparisons to higher-order QCD 
+  matrix elements show only very small differences between this and 
+  the ARIADNE map above, but since the KOSOWER map is sometimes used in 
+  fixed-order contexts, we deem it interesting to include it as a 
+  complementary possibility. (Note: the KOSOWER maps in fact represent a 
+  whole family of kinematics maps. For experts, the specific choice 
+  made here corresponds to using <i>r=sij/(sij+sjk)</i> in the 
+  definition of the map.) 
+   
+   
+<a name="anchor43"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapFFsplit &nbsp;</strong> 
+ (<code>default = <strong>2</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+Selects which method to use for choosing the Euler angle for the 
+global orientation of the post-branching kinematics construction for 
+gluon splittings. 
+<br/><code>option </code><strong> 1</strong> : The ARIADNE angle (see illustration). 
+The recoiling mothers share the recoil in 
+proportion to their energy fractions in the CM of the 
+  dipole-antenna. Tree-level expansions of the VINCIA shower compared 
+  to tree-level matrix elements through third order in alphaS have 
+  shown this strategy to give the best overall approximation, 
+followed closely by the KOSOWER map below. 
+   
+<br/><code>option </code><strong> 2</strong> : LONGITUDINAL. For gluon splittings, this choice 
+forces the recoiler to always recoil purely longitudinally (in the antenna 
+CM) regardless of the size of the branching invariants. 
+   
+<br/><code>option </code><strong> 3</strong> : The KOSOWER map. Comparisons to higher-order QCD 
+  matrix elements show only very small differences between this and 
+  the ARIADNE map above, but since the KOSOWER map is sometimes used in 
+  fixed-order contexts, we deem it interesting to include it as a 
+  complementary possibility. (Note: the KOSOWER maps in fact represent a 
+  whole family of kinematics maps. For experts, the specific choice 
+  made here corresponds to using <i>r=sij/(sij+sjk)</i> in the 
+  definition of the map.) 
+   
+   
+ 
+<h4>Kinematics and Recoils for RF Antennae </h4> 
+ 
+<a name="anchor44"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapRFemit &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 1</code>; <code>maximum = 2</code>)<br/>
+  There is only one choice of kinematics map for resonance emissions. 
+  However there is a freedom to choose the recoiler(s). 
+<br/><code>option </code><strong> 1</strong> : Takes all non-colour-connected daughters in the 
+resonance decay system as the recoilers. 
+   
+<br/><code>option </code><strong> 2</strong> : Takes the original non-colour-connected daughter of 
+the resonance to always take the full recoil. E.g. in t->bW the 
+recoiler is always the W. This is equivalent to setting 
+TimeShower:recoilToColoured = off for Pythia. 
+   
+   
+<a name="anchor45"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapRFsplit &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 1</code>; <code>maximum = 2</code>)<br/>
+Same as above, but for R-g splittings. 
+<br/><code>option </code><strong> 1</strong> : Takes all non-colour-connected daughters in the 
+resonance decay system as the recoilers. 
+   
+<br/><code>option </code><strong> 2</strong> : Takes the original non-colour-connected daughter of 
+the resonance to always take the full recoil. E.g. in t->bW the 
+recoiler is always the W. This is equivalent to setting 
+TimeShower:recoilToColoured = off for Pythia. 
+   
+   
+ 
+<a name="section4"></a> 
+<h3>Lower Cutoffs for the QCD evolution</h3> 
+ 
+<p><b>The hadronisation cutoff</b>, a.k.a. the infrared regularisation scale, 
+defines the resolution scale at which the perturbative shower 
+evolution is stopped. Thus, perturbative emissions below this scale 
+are treated as fundmanentally unresolvable and are in effect 
+inclusively summed over. </p> 
+<p><b>Important Note:</b> when hadronisation is switched on, 
+  there is a delicate interplay between the hadronisation scale used 
+  in the shower and the parameters of the hadronisation 
+  model. Ideally, 
+  the parameters of the hadronisation model should scale as a function 
+  of the shower cutoff. This scaling does not happen automatically in 
+  current hadronisation models, such as the string model 
+  employed by PYTHIA. Instead, the 
+  parameters of the hadronisation model are tuned for one specific 
+  shower setting at a time and should be retuned if changes are made 
+  to the shower cutoff. 
+</p> 
+ 
+<a name="anchor46"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:cutoffScaleFF &nbsp;</strong> 
+ (<code>default = <strong>0.75</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+This parameter sets the value (in GeV) of the final-state shower 
+cutoff. 
+   
+<a name="anchor47"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:cutoffScaleII &nbsp;</strong> 
+ (<code>default = <strong>1.25</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+This parameter sets the value (in GeV) of the shower cutoff for 
+initial-initial antennae. 
+   
+<a name="anchor48"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:cutoffScaleIF &nbsp;</strong> 
+ (<code>default = <strong>1.5</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 10.0</code>)<br/>
+This parameter sets the value (in GeV) of the shower cutoff for 
+initial-final antennae. 
+   
+ 
+<a name="anchor49"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:ThresholdMB &nbsp;</strong> 
+ (<code>default = <strong>4.8</strong></code>)<br/>
+threshold (mass, in GeV) for bottom quark production.   
+ 
+<a name="anchor50"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:ThresholdMC &nbsp;</strong> 
+ (<code>default = <strong>1.5</strong></code>)<br/>
+threshold (mass, in GeV) for charm quark production.   
+ 
+<a name="section5"></a> 
+<h3>Other QCD Settings</h3> 
+ 
+<h4>Subleading Colour</h4> 
+<p> 
+During the perturbative shower evolution, the first aspect of 
+subleading colour is simply what colour factors are used for the 
+antenna functions. 
+In a strict leading-colour limit, one would use <i>CA</i> for all antennae, 
+thus overestimating the amount of radiation from quarks 
+(note that we use a normalisation convention in which the colour factor 
+for quarks is <i>2CF</i>, 
+hence the difference is explicitly subleading in colour). 
+A more realistic starting point is to use <i>2CF</i> for quark-antiquark 
+antennae, <i>CA</i> for gluon-gluon ones, and something inbetween for 
+quark-gluon ones.  The following switch 
+determines whether and how subleading-colour corrections are treated 
+in the evolution: 
+</p> 
+<a name="anchor51"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:modeSLC &nbsp;</strong> 
+ (<code>default = <strong>2</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+<br/><code>option </code><strong> 0</strong> : Strict LC evolution. All gluon-emission colour 
+factors are forced equal to CA thus overcounting the radiation from 
+quarks. Note that matrix-element corrections will still generate 
+corrections to the evolution up to the matched number of legs. 
+   
+<br/><code>option </code><strong> 1</strong> : Simple Colour Factors. The <code>chargeFactor</code> 
+parameters for each of the antenna functions are used to set the 
+colour factor for each type of gluon-emission antenna; see the section on 
+antenna functions. (Typically, 2CF for qqbar antennae, 
+CA for gg antennae, and the average of 2CF and CA for qg antennae.) 
+   
+<br/><code>option </code><strong> 2</strong> : Interpolating Colour Factors. The colour factor 
+for quark-antiquark antennae is forced equal to 2CF. 
+Gluon-gluon antennae are normalised to CA. 
+The colour factor for QG antennae is 
+<i>2CF * (1-yij)/(2-yij-yjk) + CA * (1-yjk)/(2-yij-yjk)</i>, which is 
+just a simple interpolation between CA in the gluon-collinear limit 
+and 2CF in the quark-collinear limit. More sophisticated choices 
+could also be motivated and may be interesting to explore in future 
+versions. 
+   
+<br/><code>option </code><strong> 3</strong> : Only used for development purposes.   
+   
+ 
+<p> 
+Colour flow is traced using Les-Houches style colour tags, augmented 
+by letting the last digit encode the "colour index", running from 1 to 
+9, described further in the section below on antenna swing. One 
+ambiguity arises in gluon emission as to which of the daughter 
+antennae should inherit the "parent" colour tag/index, and which 
+should be assigned a new one. This is controlled by the following parameter: 
+</p> 
+<a name="anchor52"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:CRinheritMode &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = -2</code>; <code>maximum = 2</code>)<br/>
+ <br/><code>option </code><strong> 0</strong> : Random   
+  <br/><code>option </code><strong> 1</strong> : The daughter with the largest invariant mass has 
+  a probability <em>1/(1 + r)</em> to inherit the parent tag, with 
+  <em>r &lt; 1</em> the ratio of the smallest to the largest daughter 
+  invariant masses squared. 
+     
+  <br/><code>option </code><strong> 2</strong> : The daughter with the largest invariant mass 
+  always inherits the parent tag (winner-takes-all extreme variant of 
+  option 1). 
+     
+  <br/><code>option </code><strong> -1</strong> : (Unphysical, intended for theory-level studies 
+  only). Inverted variant of option 1, so that the 
+  daughter with the smallest invariant mass preferentially inherits 
+  the parent colour tag. 
+     
+  <br/><code>option </code><strong> -2</strong> : (Unphysical, intended for theory-level studies 
+  only). Inverted variant of option 2, so that the daughter with the 
+  smallest invariant mas always inherits the parent colour tag. 
+     
+   
+ 
+</body>
+</html>

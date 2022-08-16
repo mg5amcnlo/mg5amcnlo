@@ -1,0 +1,336 @@
+<html>
+<head>
+<title>Front</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h1>PYTHIA 8</h1> 
+<ol id="toc">
+  <li><a href="#section0">Welcome to PYTHIA - The Lund Monte Carlo!</a></li>
+  <li><a href="#section1">Documentation</a></li>
+  <li><a href="#section2">Authors</a></li>
+  <li><a href="#section3">Former authors</a></li>
+  <li><a href="#section4">Further contributions</a></li>
+  <li><a href="#section5">Contact</a></li>
+  <li><a href="#section6">Licence</a></li>
+</ol>
+
+ 
+<a name="section0"></a> 
+<h3>Welcome to PYTHIA - The Lund Monte Carlo!</h3> 
+ 
+<p/> 
+PYTHIA is a general-purpose event generator for high-energy particle 
+collisions. PYTHIA 8 is the successor to PYTHIA 6, rewritten from 
+scratch in C++. It includes many new features, but rests on the same 
+historical physics base, including concepts such as soft and hard 
+processes, parton showers, multiparton interactions and string 
+fragmentation. With the current PYTHIA 8.3 version the step has been 
+taken from <code>C++98</code> to <code>C++11</code>, but the 
+transition from 8.2 should largely be transparent to users. Also 
+several new physics features are made available. 
+ 
+<a name="section1"></a> 
+<h3>Documentation</h3> 
+ 
+On these webpages you will find the manual for PYTHIA 8.3. The physics 
+descriptions may in places still need to be updated, but the 
+documentation of available settings and other practical details should 
+be fully up-to-date. Use the left-hand index to navigate this 
+documentation of program elements, especially of all possible program 
+settings. All parameters are provided with sensible default values, 
+however, so you need only change those of relevance to your particular 
+study, such as choice of beams, processes and phase space cuts. The 
+pages also contain a fairly extensive survey of all methods available 
+to the user, e.g. to study the produced events. What is lacking on 
+these webpages is an overview, on the one hand, and an in-depth 
+physics description, on the other. 
+ 
+<p/> 
+The overview can be found in the attached PDF file 
+<br/><a href="../pdfdoc/pythia8200.pdf" target="page"> 
+<b>An Introduction to PYTHIA 8.2</b></a> 
+<br/>T. Sj&ouml;strand et al, Comput. Phys.Commun. 191 (2015) 159 
+[arXiv:1410.3012 [hep-ph]]. 
+<br/>You are strongly recommended to read this summary when you 
+start out to learn how to use PYTHIA 8.2. 
+ 
+<p/> 
+For the physics description we refer to the complete 
+<br/><b>PYTHIA 6.4 Physics and Manual</b> 
+<br/>T. Sj&ouml;strand, S. Mrenna and P. Skands, JHEP05 (2006) 026, 
+<br/>which in detail describes the physics (largely) implemented also in 
+PYTHIA 8, and also provides a more extensive bibliography than found 
+here. When you use PYTHIA 8.2, you should therefore cite both. 
+ 
+<p/> 
+Furthermore, a separate 
+<br/><a href="../pdfdoc/worksheet8200.pdf" target="page"> 
+<b>PYTHIA 8.2 Worksheet</b></a>, 
+<br/>also an attached PDF file, offers a practical introduction to 
+using the generator. It has been developed for and used at a few 
+summer schools, with minor variations, but is also suited for 
+self-study. 
+ 
+<a name="section2"></a> 
+<h3>Authors</h3> 
+ 
+<p/> 
+<b>Christian Bierlich</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+and Niels Bohr Institute, University of Copenhagen, Copenhagen, Denmark<br/> 
+e-mail: christian.bierlich@thep.lu.se 
+ 
+<p/> 
+<b>Nishita Desai</b><br/> 
+Department of Theoretical Physics, Tata Institute of Fundamental Research, 
+Homi Bhabha Road, Mumbai 400005, India<br/> 
+e-mail: desai@theory.tifr.res.in 
+ 
+<p/> 
+<b>Leif Gellersen</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+e-mail: leif.gellersen@thep.lu.se 
+ 
+<p/> 
+<b>Ilkka Helenius</b><br/> 
+Department of Physics, University of Jyv&auml;skyl&auml;, P.O. Box 35, 
+FI-40014 University of Jyv&auml;skyl&auml;, Finland<br/> 
+e-mail: ilkka.m.helenius@jyu.fi 
+ 
+<p/> 
+<b>Philip Ilten</b><br/> 
+Department of Physics, University of Cincinnati, 
+Cincinnati, OH 45221, USA<br/> 
+e-mail: philten@cern.ch 
+ 
+<p/> 
+<b>Leif L&ouml;nnblad</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+e-mail: leif.lonnblad@thep.lu.se 
+ 
+<p/> 
+<b>Stephen Mrenna</b><br/> 
+Computing Division, Simulations Group, 
+Fermi National Accelerator Laboratory, 
+MS 234, Batavia, IL 60510, USA<br/> 
+e-mail: mrenna@fnal.gov 
+ 
+<p/> 
+<b>Stefan Prestel</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+e-mail: stefan.prestel@thep.lu.se 
+ 
+<p/> 
+<b>Christian Preuss</b><br/> 
+School of Physics and Astronomy, Monash University, PO Box 27, 3800 Melbourne, 
+Australia<br/> 
+e-mail: christian.preuss@monash.edu 
+ 
+<p/> 
+<b>Torbj&ouml;rn Sj&ouml;strand</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+e-mail: torbjorn@thep.lu.se 
+ 
+<p/> 
+<b>Peter Skands</b><br/> 
+School of Physics and Astronomy, Monash University, PO Box 27, 3800 Melbourne, 
+Australia<br/> 
+e-mail: peter.skands@monash.edu 
+ 
+<p/> 
+<b>Marius Utheim</b><br/> 
+Department of Astronomy and Theoretical Physics, Lund University, 
+S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
+e-mail: marius.utheim@thep.lu.se 
+ 
+<p/> 
+<b>Rob Verheyen</b><br/> 
+Department of Physics and Astronomy, University College London, Gower St, 
+Bloomsbury, London WC1E 6BT, UK<br/> 
+e-mail: r.verheyen@ucl.ac.uk 
+ 
+<a name="section3"></a> 
+<h3>Former authors</h3> 
+ 
+<p/><b>Stefan Ask</b> 
+ 
+<p/><b>Jesper Roy Christiansen</b> 
+ 
+<p/><b>Richard Corke</b> 
+ 
+<p/><b>Nadine Fischer</b> 
+ 
+<p/><b>Christine O. Rasmussen</b> 
+ 
+<a name="section4"></a> 
+<h3>Further contributions</h3> 
+ 
+Makefiles, configure scripts and HepMC interface by <b>Mikhail Kirsanov</b>. 
+<br/>Conversion of XML files to PHP ones by <b>Ben Lloyd</b>. 
+<br/>Simple Makefile for Win32/NMAKE by <b>Bertrand Bellenot</b>. 
+<br/>Extended Higgs sector partly implemented by <b>Marc Montull</b>. 
+<br/>Parts of charm and bottom decay tables courtesy <b>DELPHI</b> and 
+<b>LHCb</b> collaborations. 
+<br/>Tunes and comparisons with data, based on Rivet and Professor, 
+by <b>Hendrik Hoeth</b>. 
+<br/>Text and code on the use of ROOT in conjunction with PYTHIA 
+by <b>Rene Brun</b>, <b>Andreas Morsch</b> and <b>Axel Naumann</b>. 
+<br/>Code and data for MRST/MSTW PDFs by <b>Robert Thorne</b> and 
+<b>Graeme Watt</b>. 
+<br/>Code and data for the CTEQ/CT PDFs by <b>Joey Huston</b> 
+and colleagues. 
+<br/>Help with implementing new proton PDFs by <b>Tomas Kasemets</b>. 
+<br/>Code and data for Pomeron PDFs by <b>H1</b> collaboration and 
+especially <b>Paul Newman</b>. 
+<br/>Help with implementing new Pomeron fluxes and PDFs by 
+<b>Sparsh Navin</b>. 
+<br/>The new Hidden Valley code developed together with <b>Lisa Carloni</b>. 
+<br/>Code for a Kaluza-Klein electroweak gauge boson provided by 
+<b>Noam Hod</b> and <b>Mark Sutton</b>. 
+<br/>Code for equivalent photon flux around an unresolved proton by 
+<b>Oystein Alvestad</b>. 
+<br/>The MBR diffractive model and central diffraction by 
+<b>Robert Ciesielski</b>. 
+<br/>2012 branching ratios for most light hadrons, and the tau lepton, 
+by <b>Anil Pratap Singh</b>. 
+<br/>The pythia8-config script has been contributed by 
+<b>Andy Buckley</b>, along with many other helpful suggestions. 
+<br/>Code and data for several of the NNPDF2.3 QCD+QED sets, and further 
+later ones, provided by <b>Juan Rojo</b> and <b>Stefano Carrazza</b>. 
+<br/>The fjcore code from FastJet provided by <b>Matteo Cacciari</b>, 
+<b>Gavin Salam</b> and <b>Gregory Soyez</b>. 
+<br/>The initial-final dipole approach has been developed and 
+implemented by <b>Baptiste Cabouat</b>. 
+<br/>The MixMax random number generator has been contributed by 
+<b>Konstantin Savvidy</b> and <b>George Savvidy</b>. 
+<br/>Space-time hadronic production points in string fragmentation have 
+been studied and implemented by <b>Silvia Ferreres-Sol&eacute;</b>. 
+<br/>The code for deuteron production was tested by <b>Sophie Baker</b>. 
+<br/>C++ interface to MG5 matrix elements by <b>V. Hirschi</b> with 
+additional work by <b>O. Mattelaer</b>. 
+<br/>Mass corrections and initial-state showers in Vincia by 
+<b>M. Ritzmann</b>. 
+<br/>Final-state sector showers in Vincia by <b>J. Lopez-Villarejo</b>. 
+<br/>Helicity-dependence in Vincia by <b>A. Larkoski</b>. 
+<br/>Interleaved resonance showers and work on 
+sector merging and QED+EW showers in Vincia by <b>H. Brooks</b>. 
+<br/> 
+ 
+<br/><b>Note</b>: in several cases modifications have been made to 
+the original code, in order to integrate it with PYTHIA. In these cases 
+the blame for any mistakes has to rest with the regular authors. 
+ 
+<a name="section5"></a> 
+<h3>Contact</h3> 
+ 
+<h4>New version alerts</h4> 
+ 
+If you want to be alerted whenever a new public version is released, 
+you can subscribe on 
+<a href="http://www.hepforge.org/lists/listinfo/pythia8-announce"> 
+  pythia8-announce</a>. Expect a 
+handful of such messages per year. There is no fixed schedule; new 
+versions can appear either because a sufficient amount of changes have 
+been accumulated over time, or because some crucial new feature or bug 
+fix prompts action. 
+ 
+<h4>Bug reports and physics questions</h4> 
+ 
+No code is perfect, and we rely on PYTHIA users to report suspect 
+behaviour to us. We are starting to collect common questions and 
+problems with our <a 
+href="https://gitlab.com/Pythia8/releases/-/issues" 
+target="_blank">issue tracker</a>. Please check this resource first for 
+answered questions. New questions and issues can be either opened with 
+a freely available <a href="https://gitlab.com/users/sign_up" 
+target="_blank">gitlab.com account</a> or emailing us at 
+<a href="mailto:authors@pythia.org">authors@pythia.org</a> where no 
+account is required. To help us in the subsequent debugging efforts, 
+however, it is helpful if you can present your case in as clear terms 
+as possible. A convenient path is the following. 
+<ul> 
+<li>Users often combine PYTHIA with a set of other libraries in their 
+studies, and then problems originally attributed to PYTHIA usually 
+turn out to be located somewhere else. Therefore, check that the 
+problem remains if no other libraries are being used. If you want to 
+file a report that involves other libraries please have a <b>very</b> 
+convincing case that the problem is in PYTHIA to be taken 
+seriously.</li> 
+<li>Make sure you use a clean copy of PYTHIA, not one that has 
+been subject to "local modifications" by parties unknown. Also 
+make sure it is a recent one - you may have encountered a true bug, 
+but one already solved in the current version. If uncertain, 
+pick up a new copy directly from the PYTHIA webpage, and create a 
+new cleanly compiled PYTHIA library code.</li> 
+<li>Write a simple standalone main program <code>mymainNN.cc</code>, 
+with <code>NN</code> between 00 and 99, that demonstrates the 
+claimed bug. Feel free to use some of the existing sample main programs 
+<code>share/Pythia8/examples/mainNN.cc</code> as templates.</li> 
+<li>Put the <code>mymainNN.cc</code> program in the 
+<code>share/Pythia8/examples</code> subdirectory and run it from there 
+(<code>make mymainNN</code> followed by <code>./mymainNN</code>).</li> 
+<li>Now, systematically peel away all irrelevant code in the main 
+program, so that only code really needed to reproduce and document 
+the bug remains. Where explanations in the code would be helpful, 
+do add comments in English.</li> 
+<li>Send the main program, with a description what is the problem 
+and whatever guesses you may have about a probable cause.</li> 
+</ul> 
+ 
+<p/> 
+Note, the email <a 
+href="mailto:authors@pythia.org">authors@pythia.org</a> should always 
+be used when contacting the authors as it allows us to coordinate 
+replies. You may also include the individual addresses of authors that 
+are relevant for a specific issue. Never contact several persons 
+independently on the same topic, thereby potentially leading to 
+doublework. Abuse will have consequences. 
+ 
+<p/> 
+When responding to emails from us at 
+<a href="mailto:authors@pythia.org">authors@pythia.org</a>, reply 
+directly to the email, which has a unique return address of the form 
+<code>incoming+&lt;hash&gt;@incoming.gitlab.com</code>, and not 
+<a href="mailto:authors@pythia.org">authors@pythia.org</a>. Please 
+consider allowing your correspondence to be made publicly available to 
+other users via our <a 
+href="https://gitlab.com/Pythia8/releases/-/issues" 
+target="_blank">issue tracker</a>, by replying at any point with your 
+express permission, e.g. "this correspondence can be made public". 
+ 
+<p/> 
+Do note that the major collaborations, such as ATLAS and CMS, have 
+their own Monte Carlo support groups, with a lot of experience in 
+solving typical issues, many of which are related to the setups and 
+interfaces created inside the collaborations. If you are a member of a 
+major collaboration you please turn to these groups in the first 
+place, and only turn to us when it has been confirmed as a true 
+problem going beyond the local installation. 
+ 
+<a name="section6"></a> 
+<h3>Licence</h3> 
+ 
+PYTHIA 8 is licensed under the 
+<a href="COPYING" target="page"><b>GNU General Public Licence 
+version 2</b></a> or later. 
+<br/>Please respect the 
+<a href="GUIDELINES" target="page"><b>MCnet Guidelines</b></a> 
+for Event Generator Authors and Users. 
+ 
+<p/> 
+The program and the documentation is 
+Copyright &copy; 2019 Torbj&ouml;rn Sj&ouml;strand 
+ 
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

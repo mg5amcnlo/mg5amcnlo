@@ -1,0 +1,69 @@
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/include/Pythia8/Pythia.h new/include/Pythia8/Pythia.h
+--- old/include/Pythia8/Pythia.h	2020-04-12 14:27:05.454659099 +0100
++++ new/include/Pythia8/Pythia.h	2020-04-12 14:27:05.586659556 +0100
+@@ -291,13 +291,13 @@ public:
+   BeamParticle   beamA = {};
+   BeamParticle   beamB = {};
+ 
+-private:
+-
+   // The main keeper/collector of information, accessible from all
+   // PhysicsBase objects. The information is available from the
+   // outside through the public info object.
+   InfoHub         infoHub = {};
+ 
++private:
++
+   // Initialise new Pythia object (called by constructors).
+   void initPtrs();
+ 
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/Makefile new/Makefile
+--- old/Makefile	2020-04-12 14:27:05.406658933 +0100
++++ new/Makefile	2020-04-12 14:27:05.522659335 +0100
+@@ -31,7 +31,7 @@ LOCAL_SHARE=share/Pythia8
+ LOCAL_SRC=src
+ LOCAL_TMP=tmp
+ LOCAL_MKDIRS:=$(shell mkdir -p $(LOCAL_TMP) $(LOCAL_LIB))
+-CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON)
++CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON) -std=c++11
+ 
+ # PYTHIA.
+ OBJECTS=$(patsubst $(LOCAL_SRC)/%.cc,$(LOCAL_TMP)/%.o,\
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test008.cc new/private/tests/test008.cc
+--- old/private/tests/test008.cc	2020-04-12 14:27:05.466659140 +0100
++++ new/private/tests/test008.cc	2020-04-12 14:27:05.602659610 +0100
+@@ -47,7 +47,7 @@ int main() {
+ 
+   // Shorthand for some public members of pythia (also static ones).
+   Settings& settings = pythia.settings;
+-  const Info& info = pythia.info;
++  Info& info = pythia.info;
+ 
+   // Optionally limit output to minimal one.
+   if (smallOutput) {
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test112.cc new/private/tests/test112.cc
+--- old/private/tests/test112.cc	2020-04-12 14:27:05.466659140 +0100
++++ new/private/tests/test112.cc	2020-04-12 14:27:05.602659610 +0100
+@@ -119,8 +119,8 @@ int main() {
+ 
+     // Also fill the number of (absorptively and diffractively)
+     // wounded nucleaons.
+-    int nw = pythia.info.hiInfo->nAbsTarg() +
+-      pythia.info.hiInfo->nDiffTarg();
++    int nw = pythia.info.hiInfo()->nAbsTarg() +
++      pythia.info.hiInfo()->nDiffTarg();
+     wounded.fill(nw, weight);
+ 
+     // Find the correct centrality histograms.
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/src/VinciaISR.cc new/src/VinciaISR.cc
+--- old/src/VinciaISR.cc	2020-04-12 14:27:05.514659306 +0100
++++ new/src/VinciaISR.cc	2020-04-12 14:27:05.662659818 +0100
+@@ -6250,7 +6250,7 @@ bool VinciaISR::acceptTrial(const Event&
+   // of the trial scale.
+ 
+   double alphaTrial = trialPtr->getAlphaTrial(iTrial);
+-  if (isnan(alphaTrial)) cout << " alphaStrial is NAN!!!" << endl;
++  if (std::isnan(alphaTrial)) cout << " alphaStrial is NAN!!!" << endl;
+   if (alphaTrial != alphaTrial) cout << " alphaStrial is != alphaStrial" << endl;
+   // Scale is pT for gluon emission and m for splitting / conversion
+   double mu2     = (isII ? s1j*sj2/(S12+s1j+sj2) : s1j*sj2/(S12+sj2));

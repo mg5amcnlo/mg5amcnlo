@@ -1,0 +1,108 @@
+<chapter name="QCD Processes"> 
+ 
+<h2>Soft QCD Processes</h2> 
+ 
+As a rule, the processes in this class should not be mixed with 
+the simulation of other processes. All by themselves, they are 
+intended to represent the total cross section of hadron collisions, 
+with the exception of the "rare processes" that one wishes to study 
+separately. In particular, jet physics at all scales occurs as part 
+of the minimum-bias description. Note, therefore, 
+that there is a considerable amount of overlap between the soft and 
+hard QCD process classes, so that you are likely to double-count 
+if you include both in a run. 
+ 
+<p/> 
+We here use the "minimum bias" expression as a shorthand for 
+inelastic, nondiffractive events. Strictly speaking, "minimum bias" 
+represents an experimental procedure of accepting "everything", with 
+some non-universal cuts to exclude elastic and diffractive topologies. 
+In practice, the experimental minimum-bias sample may then contain 
+some contamination of what is in PYTHIA classified as diffractive, 
+especially (high-mass) double diffractive. 
+ 
+<p/> 
+Some options to modify these cross sections are found on the 
+<aloc href="TotalCrossSections">Total Cross Sections</aloc> page. 
+ 
+<flag name="SoftQCD:all" default="off"> 
+Common switch for the group of all soft QCD processes, 
+as listed separately in the following. 
+</flag> 
+ 
+<flag name="SoftQCD:nonDiffractive" default="off"> 
+The inelastic nondiffrative part of the total cross section, i.e. 
+what would often be called the "minimum-bias component". 
+The formalism is based on an <aloc href="MultipartonInteractions"> 
+eikonalized description</aloc> of all the hard QCD processes, so 
+includes them in combination with low-<ei>pT</ei> events. 
+Code 101.<br/> 
+Since the current description is handled by the multiparton-interactions 
+machinery as part of the parton-level processing, no hard process at 
+all is defined at the process-level part of the event generation. 
+Fortunately, in this case a special 
+<code><aloc href="EventInformation">codeSub()</aloc></code> 
+method provides information on the first, i.e. hardest, subprocess 
+selected by the multiparton-interactions machinery. 
+<note>Note</note>: this event class is almost equivalent to the 
+minimum-bias component of the total cross section. "Minimum-bias" 
+usually refers to the experimental selection procedure, however, 
+while "(inelastic) non-diffractive" better relates to the way events 
+are generated in the program code. (Although also what separates 
+diffractive from nondiffractive physics can be a matter of definition, 
+especially once colour reconnection is to be modelled.) 
+</flag> 
+ 
+<flag name="SoftQCD:elastic" default="off"> 
+Elastic scattering <ei>A B &rarr; A B</ei>. 
+Code 102. It is possible to include <aloc href="TotalCrossSections"> 
+Coulomb corrections</aloc>, but by default this is off. 
+</flag> 
+ 
+<flag name="SoftQCD:singleDiffractive" default="off"> 
+Single diffractive scattering <ei>A B &rarr; X B</ei> and 
+<ei>A B &rarr; A X</ei>. See pages on 
+<aloc href="TotalCrossSections">Total Cross Sections</aloc> 
+and <aloc href="Diffraction"> Diffraction</aloc> for details. 
+Codes 103 and 104. 
+</flag> 
+ 
+<flag name="SoftQCD:doubleDiffractive" default="off"> 
+Double diffractive scattering <ei>A B &rarr; X_1 X_2</ei>. 
+See pages on <aloc href="TotalCrossSections">Total Cross Sections</aloc> 
+and <aloc href="Diffraction">Diffraction</aloc> for details. Code 105. 
+</flag> 
+ 
+<flag name="SoftQCD:centralDiffractive" default="off"> 
+Central diffractive scattering <ei>A B &rarr; A X B</ei> 
+(a.k.a. double-Pomeron exchange, DPE). See pages on 
+<aloc href="TotalCrossSections">Total Cross Sections</aloc> 
+and on <aloc href="Diffraction">Diffraction</aloc> for details. 
+In particular note the <code>SigmaTotal:zeroAXB</code> flag, 
+which is on in most tunes, meaning no central diffraction, and 
+that therefore would need to be reset to off after the selection 
+of a tune (even the default one) to get central diffraction. 
+Code 106. 
+</flag> 
+ 
+<flag name="SoftQCD:inelastic" default="off"> 
+All of the above processes, except for elastic. Codes 101, 
+103, 104, 105 and 106. 
+</flag> 
+ 
+<p/> 
+<note>Note</note>: The repertoire of 
+<aloc href="QCDLowEnergyProcesses">Low-energy QCD processes</aloc> 
+largely overlaps with the one here, but in a simplified form 
+without any perturbative activity at all. It is thus mainly suited 
+for low energies, where also some special processes occur, such as 
+annihilation or scattering through a resonance. The 
+<aloc href="BeamParameters">variable-energy beams</aloc> 
+framework allow a smooth transition between the two, assuming you have 
+enabled matching sets of processes for the two scenarios. A normal 
+choice would be to enable all the processes, but one could e.g. decide 
+to use the nonDiffractive subprocess only. 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

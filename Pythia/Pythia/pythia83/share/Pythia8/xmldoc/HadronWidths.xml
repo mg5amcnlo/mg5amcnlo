@@ -1,0 +1,147 @@
+<chapter name="Mass-dependent hadron widths"> 
+ 
+<h2>Mass-dependent hadron widths</h2> 
+ 
+This page describes a model for mass-dependent hadron widths. This includes 
+mass-dependent branching ratios for hadrons produced off-shell, and is a, 
+important component of the 
+<aloc href="HadronicRescattering">rescattering framework</aloc>. 
+ 
+<p/> 
+The mass-dependent widths are handled by the <code>HadronWidths</code> class. 
+When running the program, the widths are precalculated and tabulated in order 
+to improve efficiency, which is particularly important for rescattering. 
+These precalculated values can be found in the <code>HadronWidths.dat</code> 
+file. 
+ 
+<p/> 
+A prerequisite is that the space-time production vertices of hadrons 
+from string fragmentation are known. This was implemented in 
+<ref>Fer18</ref>, and is described separately on the 
+<aloc href="HadronVertexInformation">Hadron Vertex Information</aloc> 
+page. A smaller further smearing is obtained from the 
+<aloc href="PartonVertexInformation">Parton Vertex Information</aloc> 
+transverse displacement of separate MPI vertices. 
+ 
+<h3>The <code>HadronWidths</code> class</h3> 
+ 
+<p/> 
+The following methods are found in the <code>HadronWidths</code> class. 
+ 
+<method name="bool HadronWidths::check()"> 
+run a check to validate the loaded hadron widths data. Returns whether 
+successful. 
+</method> 
+ 
+<method name="vector&lt;int&gt; HadronWidths::getResonances()"> 
+gets a list of the implemented resonance particles. 
+</method> 
+ 
+<method 
+name="vector&lt;int&gt; HadronWidths::hasResonances(int idA, int idB)"> 
+returns whether the two specified incoming particles can form 
+resonances. 
+</method> 
+ 
+<method name="vector&lt;int&gt; HadronWidths::getPossibleResonances(int idA, 
+int idB)"> 
+gets a list of resonances that could possibly be formed by the 
+specified incoming particles. That is, all resonance particles that 
+has data and can decay into those particles. 
+</method> 
+ 
+<method name="bool HadronWidths::hasData(int id)"> 
+returns whether mass-dependent widths have been parameterized for the 
+specified particle. If <code>id</code> is negative, it instead returns whether 
+data exists for the corresponding absolute value. 
+</method> 
+ 
+<method name="bool HadronWidths::canDecay(int idR, int prodA, int prodB)"> 
+returns whether data exists for the decay <ei>R &rarr; A + B</ei>. 
+</method> 
+ 
+<method name="double HadronWidths::width(int id, double m)"> 
+returns the mass-dependent width of the specified particle at the given mass. 
+If parameterized data does not exist for that particle, its nominal width is 
+returned instead. 
+</method> 
+ 
+<method name="double HadronWidths::partialWidth(int idR, 
+int prodA, int prodB, double m)"> 
+</method> 
+<methodmore name="double HadronWidths::br(int id, 
+int prodA, int prodB, double m)"> 
+returns the mass-dependent partial width or branching ratio of the decay 
+<ei>R &rarr; A + B</ei>. If parameterized data does not exist for that decay 
+channel, both methods will return zero. 
+</methodmore> 
+ 
+<method name="double HadronWidths::mDistr(int id, double m)"> 
+gives the mass distribution density for the specified particle. This is given 
+by a Breit-Wigner function, using the mass-dependent width. If the 
+mass-dependent width is not available, it uses the nominal width instead. 
+</method> 
+ 
+<method name="bool HadronWidths::pickMasses(int idA, int idB, double eCM, 
+double& mAOut, double& mBOut, int lType = 1)"> 
+given two particles produced at the specified CM energy, this method samples 
+the masses of those two particles, according to their mass distributions and 
+available phase space. If successful, the resulting masses are written to 
+<code>mAOut</code> and <code>mBOut</code>, and the method returns true. 
+The <code>lType</code> parameter is <ei>2l+1</ei>, where <ei>l</ei> is the 
+angular momentum of the outgoing two-body system. 
+</method> 
+ 
+<method name="bool HadronWidths::pickDecay(int idDec, double m, 
+int& idAOut, int& iBOut, double& mAOut, double& mBOut)"> 
+pick a decay channel for the <code>idDec</code> particle with the specified 
+mass, using mass-dependent branching ratios. If successful, the outgoing 
+particle ids are written to <code>idAOut</code> and <code>idBOut</code>, 
+and their corresponding masses are written to <code>mAOut</code> and 
+<code>mBOut</code>. Returns whether successful. 
+</method> 
+ 
+<p/> 
+In some cases, parameterized hadron widths are not available. This could 
+happen for example if the user defines new particles or changes properties of 
+existing resonance hadrons. In these cases, the following methods can be used 
+to calculate new widths and generate parameterization data. 
+ 
+<method name="double HadronWidths::widthCalc(int id, double m)"> 
+</method> 
+<methodmore name="double HadronWidths::widthCalc(int idR, 
+int prodA, int prodB, double m)"> 
+calculate the mass-dependent width of the particle at the specified mass, 
+or the partial width of the decay <ei>R &rarr; A + B</ei>. 
+This does not use the parameterized mass-dependent width for the resonance 
+particle, even if it is defined. However, this is dependent on the mass 
+distributions of the decay products, and these will be calculated using 
+mass-dependent widths if they have been parameterized for those particles. 
+</methodmore> 
+ 
+<method name="bool HadronWidths::parameterize(int id, int precision)"> 
+</method> 
+<methodmore name="void HadronWidths::parameterizeAll(int precision)"> 
+the <code>parameterize</code> method recalculates the widths of the specified 
+particle. The widths are calculated at <code>precision</code> number of 
+points, evenly spaced between the minimum and maxium mass of that particle. 
+Note that this will use existing parameterizations for decay products, if 
+available. 
+The <code>parametizeAll</code> method clears all parameterized data and 
+recalculates it for all particles in the event record that set 
+<code>varWidth = on</code>. This is done in a way that ensures that if such a 
+hadron decays into other hadrons with mass-dependent widths, then the widths 
+of the decay products are parameterized first. 
+</methodmore> 
+ 
+<method name="bool HadronWidths::save(ostream& stream)"> 
+</method> 
+<methodmore name="bool HadronWidths::save(string 
+file = &quot;HadronWidths.dat&quot;)"> 
+write all parameterized mass-dependent widths in an xml format to the 
+specified stream or file. 
+</methodmore> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

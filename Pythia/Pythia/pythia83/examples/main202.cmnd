@@ -1,0 +1,38 @@
+! File: main202.cmnd
+! This file contains commands to be read in for a PYTHIA8/VINCIA run.
+! Lines not beginning with a letter or digit are comments.
+! Names are case-insensitive  -  but spellings-sensitive!
+
+!Main and print info
+Main:numberOfEvents = 1000        ! number of events to generate
+Next:numberCount = 100            ! print message every n events
+Next:numberShowInfo = 0            ! print event information n times
+Next:numberShowProcess = 0         ! print hard process n times
+Next:numberShowEvent = 1           ! print event record n times
+Main:timesAllowErrors = 0
+
+!Process info
+Beams:eCM = 7000.
+Top:qqbar2ttbar = on
+Top:gg2ttbar = on
+
+! Force leptonic W decays
+24:onMode = off
+24:onIfAny = 13
+
+! Switch on/off FSR, ISR, hadronization, and event checks
+PartonLevel:FSR = on
+PartonLevel:ISR = on
+PartonLevel:MPI = on
+HadronLevel:all = on
+PartonLevel:Remnants = on
+!Check:event = on
+
+! VINCIA settings
+PartonShowers:Model = 2
+Vincia:doII    = on
+Vincia:doIF    = on
+Vincia:doFF    = on
+Vincia:doRF    = on
+Vincia:ewMode  = 2
+Vincia:verbose = 2

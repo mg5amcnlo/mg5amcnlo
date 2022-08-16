@@ -1,0 +1,690 @@
+
+<html><head><title>Example Keywords</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="../pythia32.gif"/></head><body>
+<chapter name="Examples by Keyword"> 
+<h2>Examles by Keyword</h2> 
+ 
+<p>The Pythia examples directory contains about 100 examples, each 
+showcasing one or several features of the framework. The examples are 
+ordered by keyword below, and cross referenced, allowing for 
+exploration of the various features. A new user may want to start with 
+examples presenting the <a 
+href="ExampleKeywords.html#basic+usage">Basic Usage</a> before going 
+on to explore more advanced topics. Below, the search box can be used 
+to search for keywords which will be displayed the box. This is 
+followed by an expandable list of keywords with links. Finally, a full 
+list of keywords and the relevant examples for each keyword is 
+provided. The code for the example can be accessed by clicking on the 
+name of the example.</p> 
+ 
+<script src="Underscore.js"></script> 
+<script src="Jquery.js" ></script> 
+<script src="Search.js" index="Examples.js"></script> 
+<form> 
+  <input id="search-input" type="search" placeholder="Search Keywords" 
+         style="color:#000000"/> 
+  <ul id="search-result" style="list-style-type:none;padding:0"></ul> 
+</form> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+
+<button class="expand">Click to show the list of keywords.</button>
+<div class="panel"><p style="line-height:2">&#9679;
+<a href=#amc@nlo>aMC@NLO</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#analysis>Analysis</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#angantyr>Angantyr</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#anti-kt>anti&#8209;kT</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#astroparticle>Astroparticle</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#b+decays>B&nbsp;decays</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#basic+usage>Basic&nbsp;usage</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#beam+gas>Beam&nbsp;gas</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#beam+momentum>Beam&nbsp;momentum</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#biasing>Biasing</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#bsm>BSM</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#celljet>Celljet</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#centrality>Centrality</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#charged+multiplicity>Charged&nbsp;multiplicity</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#ckkw-l>CKKW&#8209;L</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#colour+reconnection>Colour&nbsp;reconnection</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#command+file>Command&nbsp;file</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#command+line+option>Command&nbsp;line&nbsp;option</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#cross+sections>Cross&nbsp;sections</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#dark+matter>Dark&nbsp;matter</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#diffraction>Diffraction</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#dire>Dire</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#dis>DIS</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#displaced+vertex>Displaced&nbsp;vertex</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#dps>DPS</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#electron-positron>Electron&#8209;positron</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#event+filter>Event&nbsp;filter</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#event+record>Event&nbsp;record</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#event+shapes>Event&nbsp;shapes</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#evtgen>EvtGen</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#exclusive>Exclusive</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#external+decays>External&nbsp;decays</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#external+derived+class>External&nbsp;derived&nbsp;class</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#external+resonance>External&nbsp;resonance</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#extra+dimensions>Extra&nbsp;dimensions</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#fastjet>Fastjet</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#fixed+target>Fixed&nbsp;target</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#fxfx>FxFx</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hadron+widths>Hadron&nbsp;widths</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hadronic+rescattering>Hadronic&nbsp;rescattering</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hadronization>Hadronization</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hard+diffraction>Hard&nbsp;diffraction</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hdf5+file>HDF5&nbsp;file</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#heavy+ion>Heavy&nbsp;ion</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#heavy+ions>Heavy&nbsp;ions</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#helaconia>Helaconia</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#hepmc>Hepmc</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#jet+finding>Jet&nbsp;finding</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#jets>Jets</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#kt>kT</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#leading+order>Leading&nbsp;order</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#lhapdf>LHAPDF</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#lhe+file>LHE&nbsp;file</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#lheh5>Lheh5</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#low+energy>Low&nbsp;energy</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#madgraph>Madgraph</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#matching>Matching</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#matplotlib>Matplotlib</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#merging>Merging</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#minimum+bias>Minimum&nbsp;bias</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#mlm>MLM</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#mpi>MPI</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#multi-instance>Multi&#8209;instance</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#multiplicities>Multiplicities</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#nl3>NL3</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#nlo>NLO</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#onia>Onia</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#openmp>OpenMP</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#parton+distribution>Parton&nbsp;distribution</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#performance>Performance</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#photon+beam>Photon&nbsp;beam</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#photon-photon>Photon&#8209;photon</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#photoproduction>Photoproduction</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#pileup>Pileup</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#powheg>Powheg</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#process+cross+sections>Process&nbsp;cross&nbsp;sections</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#process+selection>Process&nbsp;selection</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#process+veto>Process&nbsp;veto</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#proton-ion>Proton&#8209;ion</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#pt+bias>pT&nbsp;bias</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#pt+spectra>pT&nbsp;spectra</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#pythia+6>Pythia&nbsp;6</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#python>Python</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#r-hadron>R&#8209;hadron</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#random+number+generator>Random&nbsp;number&nbsp;generator</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#rescattering>Rescattering</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#resonance+decay>Resonance&nbsp;decay</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#resonances>Resonances</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#rivet>Rivet</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#root>Root</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#rope+hadronization>Rope&nbsp;hadronization</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#second+interaction>Second&nbsp;interaction</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#slowjet>Slowjet</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#string+shoving>String&nbsp;shoving</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#supersymmetry>Supersymmetry</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#tevatron>Tevatron</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#top>Top</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#top+mass>Top&nbsp;mass</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#tuning>Tuning</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#two-body+decay>Two&#8209;body&nbsp;decay</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#umeps>UMEPS</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#uncertainty+bands>Uncertainty&nbsp;bands</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#unlops>UNLOPS</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#upc>UPC</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#user+hook>User&nbsp;hook</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#userhooks>Userhooks</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#vertex+spread>Vertex&nbsp;spread</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#vincia>Vincia</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#weak+showers>Weak&nbsp;showers</a>&ensp;&ensp;&ensp;&ensp;&#9679;&nbsp;<a href=#z+production>Z&nbsp;production</a></p></div><a name=amc@nlo></a><h3>aMC@NLO</h3><ul>
+<li><a href=examples/main34.html>main34.cc</a>: demonstrates how Madgraph5_aMC@NLO can be run "from within" Pythia, making use of the <code>LHAupMadgraph</code> wrapper/interface of Madgraph5_aMC@NLO and the Pythia jet matching facilities.</li></li>
+<li><a href=examples/main34-python.html>main34.py</a>: a Python interface equivalent of <code>main34.cc</code>. Demonstrates usage of a PYTHIA plugin within the Python interface.</li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=analysis></a><h3>Analysis</h3><ul>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+<li><a href=examples/main121.html>main121.cc</a>: set up automatic uncertainty band variations to PDFs and factorization and renormalization scales.</li></li>
+<li><a href=examples/main16.html>main16.cc</a>: put all user analysis code into a class of its own, separate from the main program; provide the "cards file" name as a command-line argument. Also exemplifies how Higgs mass, width and branching ratios can be set by hand.</li></li>
+<li><a href=examples/main18.html>main18.cc</a>: shows how to write an event filter class, where you keep a vector of pointers to the subset of particles you want to study further. The event record itself remains unchanged.</li></li>
+<li><a href=examples/main30.html>main30.cc</a>: example how to create a tailormade copy of the ordinary event record, here with hard-process history tracing closer to the PYTHIA 6 conventions.</li></li>
+<li><a href=examples/main91.html>main91.cc</a>: shows how ROOT can be used for histogramming in a program that for the rest is structured like a normal PYTHIA run. </li></li>
+<li><a href=examples/main92.html>main92.cc</a>: shows how PYTHIA events can be stored as ROOT trees.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=angantyr></a><h3>Angantyr</h3><ul>
+<li><a href=examples/main111.html>main111.cc</a>: simple pp collisions as in <code>main01.cc</code>, but using the Angantyr model for Heavy Ion collisions. Also shows how Rivet analyses can be set up easily using a special interface.</li></li>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+<li><a href=examples/main113.html>main113.cc</a>: Pb-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+</ul>
+
+<a name=anti-kt></a><h3>anti&#8209;kT</h3><ul>
+<li><a href=examples/main10.html>main10.cc</a>: illustration how userHooks can be used interact directly with the event-generation process.</li></li>
+<li><a href=examples/main10-python.html>main10.py</a>: a Python interface equivalent of <code>main10.cc</code>. Provides an example of how to derive PYTHIA classes in Python.</li></li>
+</ul>
+
+<a name=astroparticle></a><h3>Astroparticle</h3><ul>
+<li><a href=examples/main07.html>main07.cc</a>: set up a fictitious production process to a generic resonance, where you easily can compose your own list of (two-body) decay modes to a variety of final states. Also traces decay chains down to truly stable particles: gamma, e+-, p/pbar and neutrinos. Suitable for astroparticle applications, like neutralino pair annihilation, where cross sections are calculated separately in another program.  Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution.</li></li>
+</ul>
+
+<a name=b+decays></a><h3>B&nbsp;decays</h3><ul>
+<li><a href=examples/main15.html>main15.cc</a>: loop over several tries, either to redo B decays only or to redo the complete hadronization chain of an event. Since much of the generation process is only made once this is a way to increase efficiency.</li></li>
+<li><a href=examples/main48.html>main48.cc</a>: demonstrates how to use the <code>EvtGenDecays</code> class provided by <code>include/Pythia8Plugins/EvtGen.h</code> to perform decays with the <code>EvtGen</code> package. The <code>main48.cc</code> header contains special instructions how to configure PYTHIA for use with <code>EvtGen</code>.</li></li>
+</ul>
+
+<a name=basic+usage></a><h3>Basic&nbsp;usage</h3><ul>
+<li><a href=examples/main01.html>main01.cc</a>: a simple study of the charged multiplicity for jet events at the LHC. (Brief example fitting on one slide.)</li></li>
+<li><a href=examples/main01-python.html>main01.py</a>: a Python interface equivalent of <code>main01.cc</code>.</li></li>
+<li><a href=examples/main02.html>main02.cc</a>: a simple study of the <ei>pT</ei> spectrum of Z bosons at the Tevatron. (Brief example fitting on one slide.)</li></li>
+<li><a href=examples/main03.html>main03.cc</a>: a simple study of several different kinds of events, with the choice to be made in the <code>main03.cmnd</code> "cards file". Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution. </li></li>
+<li><a href=examples/main04.html>main04.cc</a>: tests of cross sections, multiplicities and average transverse momenta for elastic, diffractive and nondiffractive topologies, using <code>main04.cmnd</code> to pick processes. For photoproduction  one can use the alternative <code>main04_photons.cmnd</code> input.</li></li>
+<li><a href=examples/main05.html>main05.cc</a>: generation of QCD jet events at the LHC, with jet analysis using the <code>SlowJet</code> inclusive anti-<ei>kT</ei> sequential-recombination finder and the <code>CellJet</code> cone-jet finder.</li></li>
+<li><a href=examples/main06.html>main06.cc</a>: generation of LEP1 hadronic events, i.e. <ei>e^+e^- &rarr; gamma*/Z^0 &rarr; q qbar</ei>, with charged multiplicity, sphericity, thrust and jet analysis.</li></li>
+<li><a href=examples/main08.html>main08.cc</a>: generation of the QCD jet cross section biased towards higher pT values, by two different techniques. Firstly, by splitting the run into subruns, each in its own <ei>pT</ei> bin, and adding the results properly reweighted. Two suboptions, with limits set either in the main program or by subrun specification in the <code>main08.cmnd</code> file. Secondly, by a continuous reweighting with a <ei>pT^4</ei> bias in the selection, compensated by a <ei>1/pT^4</ei> event weight. Also inclusion of soft processes is illustrated, with subruns and weighted events.</li></li>
+<li><a href=examples/main11.html>main11.cc</a>: a study of top events, fed in from the Les Houches Event File <code>ttbar.lhe</code>, here generated by PYTHIA 6.4. This file currently only contains 100 events so as not to make the distributed PYTHIA package too big, and so serves mainly as a demonstration of the principles involved. </li></li>
+<li><a href=examples/main12.html>main12.cc</a>: a more sophisticated variant of <code>main11.cc</code>, where two Les Houches Event Files (<code>ttbar.lhe</code> and <code>ttbar2.lhe</code>) successively are used as input. Also illustrating some other aspects, like the capability to mix in internally generated events.</li></li>
+<li><a href=examples/main13.html>main13.cc</a>: a streamlined version of <code>main12.cc</code>, where two Les Houches Event Files (<code>ttbar.lhe</code> and <code>ttbar2.lhe</code>) successively are used as input in <code>main13.cmnd</code> file.</li></li>
+<li><a href=examples/main16.html>main16.cc</a>: put all user analysis code into a class of its own, separate from the main program; provide the "cards file" name as a command-line argument. Also exemplifies how Higgs mass, width and branching ratios can be set by hand.</li></li>
+<li><a href=examples/main20.html>main20.cc</a>: shows how PYTHIA 8 can write a Les Houches Event File, using facilities potentially useful also for other programs to write an LHEF. See also <code>main64.cc</code>.</li></li>
+<li><a href=examples/main24.html>main24.cc</a>: tests of internally implemented cross sections for Supersymmetric particle production, with SUSY spectrum defined in <code>slha2-example.spc</code> and settings in <code>main24.cmnd</code>. For illustration, an alternative example spectrum is also available, <code>sps1aWithDecays.spc</code>, which contains a decay table in SLHA format.</li></li>
+<li><a href=examples/main25.html>main25.cc</a>: input RPV-SUSY events from an LHEF file that contains an SLHA spectrum inside its header. The event file, <code>main25.lhe</code>, contains a sample events that illustrate how to arrange color tags in the presence of the color-space epsilon tensors that accompany baryon number violating event topologies. </li></li>
+<li><a href=examples/main36.html>main36.cc</a>: demonstrates how to generate Deeply Inelastic Scattering events, e.g. in a HERA configuration.</li></li>
+<li><a href=examples/main37.html>main37.cc</a>: shows how LHEF version 3.0 files can be read and used to fill several histograms of the same property, but with different event weights.</li></li>
+<li><a href=examples/main38.html>main38.cc</a>: an extended version of <code>main37.cc</code>, where additionally it is shown how to extract many different kinds of LHEF version 3.0 information.</li></li>
+<li><a href=examples/main41.html>main41.cc</a>: similar to <code>main01</code>, except that the event record is output in the HepMC event record format. Requires that HepMC3 is properly linked. Note that the <code>hepmcout41.dat</code> output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main42.html>main42.cc</a>: a streamlined version for the generation of events that are then stored in HepMC format, without any event analysis. That is, all physics studies will have to be done afterwards. The name of the input "cards file" (e.g. <code>main42.cmnd</code>) and output HepMC event file (e.g. <code>hepmcout42.dat</code>) are to be provided as command-line arguments. Requires that HepMC3 is properly linked. Note that the HepMC output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main64.html>main64.cc</a>: exemplifies how LHEF version 3 events can be written on an external file.</li></li>
+<li><a href=examples/main72.html>main72.cc</a>: a comparison of SlowJet and FastJet jet finding, showing that they find the same jets if run under identical conditions, in this case for QCD jets.</li></li>
+<li><a href=examples/main73.html>main73.cc</a>: a comparison of jet properties on the parton and the hadron level, illustrating possibilities for larger control of which particles are used in the jet analyses.</li></li>
+<li><a href=examples/main76.html>main76.cc</a>: simple setup for Dark Matter production in several different scenarios, as specified in <code>main76.cmnd</code>, notably with long-lived particle signatures.</li></li>
+</ul>
+
+<a name=beam+gas></a><h3>Beam&nbsp;gas</h3><ul>
+<li><a href=examples/main19.html>main19.cc</a>: use several instances of Pythia, one for signal events and others for a variable number of pileup and "beam-gas" events, combined into one common event record. Illustrates how new Pythia instances can copy existing settings and particle data.</li></li>
+</ul>
+
+<a name=beam+momentum></a><h3>Beam&nbsp;momentum</h3><ul>
+<li><a href=examples/main23.html>main23.cc</a>: shows how to write external classes, derived from PYTHIA base classes, that can be handed to PYTHIA for internal generation. The MIXMAX random number generator is this way compared with the default PYTHIA one. Explicit implementations are included for the generation of external beam momentum spread and vertex location, and for a simple scaling external parton distribution set.</li></li>
+</ul>
+
+<a name=biasing></a><h3>Biasing</h3><ul>
+<li><a href=examples/main08.html>main08.cc</a>: generation of the QCD jet cross section biased towards higher pT values, by two different techniques. Firstly, by splitting the run into subruns, each in its own <ei>pT</ei> bin, and adding the results properly reweighted. Two suboptions, with limits set either in the main program or by subrun specification in the <code>main08.cmnd</code> file. Secondly, by a continuous reweighting with a <ei>pT^4</ei> bias in the selection, compensated by a <ei>1/pT^4</ei> event weight. Also inclusion of soft processes is illustrated, with subruns and weighted events.</li></li>
+<li><a href=examples/main09.html>main09.cc</a>: generation of two predetermined hard interactions in each event.</li></li>
+<li><a href=examples/main63.html>main63.cc</a>: exemplifies how rare emissions can be enhanced in the shower.</li></li>
+</ul>
+
+<a name=bsm></a><h3>BSM</h3><ul>
+<li><a href=examples/main24.html>main24.cc</a>: tests of internally implemented cross sections for Supersymmetric particle production, with SUSY spectrum defined in <code>slha2-example.spc</code> and settings in <code>main24.cmnd</code>. For illustration, an alternative example spectrum is also available, <code>sps1aWithDecays.spc</code>, which contains a decay table in SLHA format.</li></li>
+<li><a href=examples/main26.html>main26.cc</a>: test program for processes in scenarios with large extra dimensions or unparticles. </li></li>
+<li><a href=examples/main27.html>main27.cc</a>: production of Kaluza-Klein <ei>gamma/Z</ei> states in TeV-sized extra dimensions. </li></li>
+<li><a href=examples/main28.html>main28.cc</a>: production of long-lived R-hadrons, that are forced to decay at a separate vertices and possibly with changed momenta.</li></li>
+<li><a href=examples/main75.html>main75.cc</a>: setup (in <code>main75.cmnd</code>) for Dark Matter production via an <ei>s</ei>-channel mediator, where a mono-jet <ei>pT</ei> spectrum is found with the FastJet package.</li></li>
+<li><a href=examples/main76.html>main76.cc</a>: simple setup for Dark Matter production in several different scenarios, as specified in <code>main76.cmnd</code>, notably with long-lived particle signatures.</li></li>
+</ul>
+
+<a name=celljet></a><h3>Celljet</h3><ul>
+<li><a href=examples/main05.html>main05.cc</a>: generation of QCD jet events at the LHC, with jet analysis using the <code>SlowJet</code> inclusive anti-<ei>kT</ei> sequential-recombination finder and the <code>CellJet</code> cone-jet finder.</li></li>
+</ul>
+
+<a name=centrality></a><h3>Centrality</h3><ul>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+<li><a href=examples/main113.html>main113.cc</a>: Pb-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+</ul>
+
+<a name=charged+multiplicity></a><h3>Charged&nbsp;multiplicity</h3><ul>
+<li><a href=examples/main01.html>main01.cc</a>: a simple study of the charged multiplicity for jet events at the LHC. (Brief example fitting on one slide.)</li></li>
+<li><a href=examples/main01-python.html>main01.py</a>: a Python interface equivalent of <code>main01.cc</code>.</li></li>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+<li><a href=examples/main113.html>main113.cc</a>: Pb-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+</ul>
+
+<a name=ckkw-l></a><h3>CKKW&#8209;L</h3><ul>
+<li><a href=examples/main280.html>main280.cc</a>: do CKKW-L merging with the VINCIA sector shower with HepMC2 output to use in RIVET analyses. Also redirects all Pythia output to a log file to reduce terminal output.</li></li>
+<li><a href=examples/main84.html>main84.cc</a>: do CKKW-L merging with output in such a way that it can be used in subsequent RIVET analyses. Input is provided by the <code>main84.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main85.html>main85.cc</a>: do CKKW-L merging, with HepMC event output. Input settings are provided by the <code>main85.cmnd</code> file. This example program allows the use of input Les Houches events that are regularised with only very minimal cuts, and on which Pythia itself should enforce the more restrictive merging scale cut. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=colour+reconnection></a><h3>Colour&nbsp;reconnection</h3><ul>
+<li><a href=examples/main101.html>main101.cc</a>: shows how the string shoving mechanism, part of the rope hadronization framework, can be set up and used to generate ridge effects.</li></li>
+<li><a href=examples/main102.html>main102.cc</a>: shows how flavour production is changed in the rope hadronization framework.</li></li>
+<li><a href=examples/main29.html>main29.cc</a>: colour reconnection models studied for top production. Illustrates how to set up the user hooks in <code>include/Pythia8Plugins/ColourReconnectionHooks.h</code>, with several models not found in the standard PYTHIA library.</li></li>
+</ul>
+
+<a name=command+file></a><h3>Command&nbsp;file</h3><ul>
+<li><a href=examples/main03.html>main03.cc</a>: a simple study of several different kinds of events, with the choice to be made in the <code>main03.cmnd</code> "cards file". Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution. </li></li>
+<li><a href=examples/main04.html>main04.cc</a>: tests of cross sections, multiplicities and average transverse momenta for elastic, diffractive and nondiffractive topologies, using <code>main04.cmnd</code> to pick processes. For photoproduction  one can use the alternative <code>main04_photons.cmnd</code> input.</li></li>
+<li><a href=examples/main103.html>main103.cc</a>: shows how to use a filter to select a specific final state from resonance decays.</li></li>
+<li><a href=examples/main13.html>main13.cc</a>: a streamlined version of <code>main12.cc</code>, where two Les Houches Event Files (<code>ttbar.lhe</code> and <code>ttbar2.lhe</code>) successively are used as input in <code>main13.cmnd</code> file.</li></li>
+<li><a href=examples/main16.html>main16.cc</a>: put all user analysis code into a class of its own, separate from the main program; provide the "cards file" name as a command-line argument. Also exemplifies how Higgs mass, width and branching ratios can be set by hand.</li></li>
+<li><a href=examples/main24.html>main24.cc</a>: tests of internally implemented cross sections for Supersymmetric particle production, with SUSY spectrum defined in <code>slha2-example.spc</code> and settings in <code>main24.cmnd</code>. For illustration, an alternative example spectrum is also available, <code>sps1aWithDecays.spc</code>, which contains a decay table in SLHA format.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+<li><a href=examples/main42.html>main42.cc</a>: a streamlined version for the generation of events that are then stored in HepMC format, without any event analysis. That is, all physics studies will have to be done afterwards. The name of the input "cards file" (e.g. <code>main42.cmnd</code>) and output HepMC event file (e.g. <code>hepmcout42.dat</code>) are to be provided as command-line arguments. Requires that HepMC3 is properly linked. Note that the HepMC output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main43.html>main43.cc</a>: a further extension of <code>main42.cc</code>, where subruns are used to process several consecutive LHEF, as in <code>main13.cc</code>, with information stored e.g in <code>main43.cmnd</code>. Other comments as for <code>main42.cc</code>.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=command+line+option></a><h3>Command&nbsp;line&nbsp;option</h3><ul>
+<li><a href=examples/main16.html>main16.cc</a>: put all user analysis code into a class of its own, separate from the main program; provide the "cards file" name as a command-line argument. Also exemplifies how Higgs mass, width and branching ratios can be set by hand.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+<li><a href=examples/main42.html>main42.cc</a>: a streamlined version for the generation of events that are then stored in HepMC format, without any event analysis. That is, all physics studies will have to be done afterwards. The name of the input "cards file" (e.g. <code>main42.cmnd</code>) and output HepMC event file (e.g. <code>hepmcout42.dat</code>) are to be provided as command-line arguments. Requires that HepMC3 is properly linked. Note that the HepMC output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=cross+sections></a><h3>Cross&nbsp;sections</h3><ul>
+<li><a href=examples/main04.html>main04.cc</a>: tests of cross sections, multiplicities and average transverse momenta for elastic, diffractive and nondiffractive topologies, using <code>main04.cmnd</code> to pick processes. For photoproduction  one can use the alternative <code>main04_photons.cmnd</code> input.</li></li>
+<li><a href=examples/main154.html>main154.cc</a>: plot the energy dependence of the low-energy cross sections used in the hadronic rescattering framework.</li></li>
+<li><a href=examples/main155.html>main155.cc</a>: plot the energy dependence of the low-energy cross sections, specifically the contribution from resonances. </li></li>
+</ul>
+
+<a name=dark+matter></a><h3>Dark&nbsp;matter</h3><ul>
+<li><a href=examples/main75.html>main75.cc</a>: setup (in <code>main75.cmnd</code>) for Dark Matter production via an <ei>s</ei>-channel mediator, where a mono-jet <ei>pT</ei> spectrum is found with the FastJet package.</li></li>
+</ul>
+
+<a name=diffraction></a><h3>Diffraction</h3><ul>
+<li><a href=examples/main04.html>main04.cc</a>: tests of cross sections, multiplicities and average transverse momenta for elastic, diffractive and nondiffractive topologies, using <code>main04.cmnd</code> to pick processes. For photoproduction  one can use the alternative <code>main04_photons.cmnd</code> input.</li></li>
+<li><a href=examples/main61.html>main61.cc</a>: exemplifies the generation of hard diffractive processes.</li></li>
+<li><a href=examples/main68.html>main68.cc</a>: exemplifies hard diffraction in the context of a photon-inside-lepton beam, like a HERA.</li></li>
+</ul>
+
+<a name=dire></a><h3>Dire</h3><ul>
+<li><a href=examples/main200.html>main200.cc</a>: simple example of the VINCIA (or DIRE) shower model(s), on Z decays at LEP I, with some basic event shapes, spectra, and multiplicity counts.</li></li>
+<li><a href=examples/main201.html>main201.cc</a>: comparison of VINCIA and Pythia on inclusive jets at LHC, with option to run the two generators in parallel using OpenMP.</li></li>
+<li><a href=examples/main202.html>main202.cc</a>: VINCIA setup for ttbar production at LHC, with measurement of run time and options to switch various shower and MPI/hadronisation components on/off via command file.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+</ul>
+
+<a name=dis></a><h3>DIS</h3><ul>
+<li><a href=examples/main36.html>main36.cc</a>: demonstrates how to generate Deeply Inelastic Scattering events, e.g. in a HERA configuration.</li></li>
+<li><a href=examples/main68.html>main68.cc</a>: exemplifies hard diffraction in the context of a photon-inside-lepton beam, like a HERA.</li></li>
+<li><a href=examples/main70.html>main70.cc</a>: exemplifies how to provide an external photon flux for photo-production processes. </li></li>
+</ul>
+
+<a name=displaced+vertex></a><h3>Displaced&nbsp;vertex</h3><ul>
+<li><a href=examples/main28.html>main28.cc</a>: production of long-lived R-hadrons, that are forced to decay at a separate vertices and possibly with changed momenta.</li></li>
+</ul>
+
+<a name=dps></a><h3>DPS</h3><ul>
+<li><a href=examples/main77.html>main77.cc</a>: example on how double parton scattering events can be reweighted according to a different model than default in Pythia.  Contributed by Boris Blok and Paolo Gunnellini.</li></li>
+</ul>
+
+<a name=electron-positron></a><h3>Electron&#8209;positron</h3><ul>
+<li><a href=examples/main06.html>main06.cc</a>: generation of LEP1 hadronic events, i.e. <ei>e^+e^- &rarr; gamma*/Z^0 &rarr; q qbar</ei>, with charged multiplicity, sphericity, thrust and jet analysis.</li></li>
+<li><a href=examples/main200.html>main200.cc</a>: simple example of the VINCIA (or DIRE) shower model(s), on Z decays at LEP I, with some basic event shapes, spectra, and multiplicity counts.</li></li>
+</ul>
+
+<a name=event+filter></a><h3>Event&nbsp;filter</h3><ul>
+<li><a href=examples/main18.html>main18.cc</a>: shows how to write an event filter class, where you keep a vector of pointers to the subset of particles you want to study further. The event record itself remains unchanged.</li></li>
+</ul>
+
+<a name=event+record></a><h3>Event&nbsp;record</h3><ul>
+<li><a href=examples/main30.html>main30.cc</a>: example how to create a tailormade copy of the ordinary event record, here with hard-process history tracing closer to the PYTHIA 6 conventions.</li></li>
+</ul>
+
+<a name=event+shapes></a><h3>Event&nbsp;shapes</h3><ul>
+<li><a href=examples/main06.html>main06.cc</a>: generation of LEP1 hadronic events, i.e. <ei>e^+e^- &rarr; gamma*/Z^0 &rarr; q qbar</ei>, with charged multiplicity, sphericity, thrust and jet analysis.</li></li>
+</ul>
+
+<a name=evtgen></a><h3>EvtGen</h3><ul>
+<li><a href=examples/main48.html>main48.cc</a>: demonstrates how to use the <code>EvtGenDecays</code> class provided by <code>include/Pythia8Plugins/EvtGen.h</code> to perform decays with the <code>EvtGen</code> package. The <code>main48.cc</code> header contains special instructions how to configure PYTHIA for use with <code>EvtGen</code>.</li></li>
+</ul>
+
+<a name=exclusive></a><h3>Exclusive</h3><ul>
+<li><a href=examples/main78.html>main78.cc</a>: demonstrates how to generate different types of photon-initiated dilepton events in proton-proton collisions.</li></li>
+</ul>
+
+<a name=external+decays></a><h3>External&nbsp;decays</h3><ul>
+<li><a href=examples/main17.html>main17.cc</a>: shows (a) how to use UserHooks to regularize onium cross section for pT &rarr; 0, and (b) how decays could be handled externally.</li></li>
+<li><a href=examples/main48.html>main48.cc</a>: demonstrates how to use the <code>EvtGenDecays</code> class provided by <code>include/Pythia8Plugins/EvtGen.h</code> to perform decays with the <code>EvtGen</code> package. The <code>main48.cc</code> header contains special instructions how to configure PYTHIA for use with <code>EvtGen</code>.</li></li>
+</ul>
+
+<a name=external+derived+class></a><h3>External&nbsp;derived&nbsp;class</h3><ul>
+<li><a href=examples/main23.html>main23.cc</a>: shows how to write external classes, derived from PYTHIA base classes, that can be handed to PYTHIA for internal generation. The MIXMAX random number generator is this way compared with the default PYTHIA one. Explicit implementations are included for the generation of external beam momentum spread and vertex location, and for a simple scaling external parton distribution set.</li></li>
+</ul>
+
+<a name=external+resonance></a><h3>External&nbsp;resonance</h3><ul>
+<li><a href=examples/main22.html>main22.cc</a>: shows how an external resonance can be implemented as a new class derived from a PYTHIA base class, and be used in an external process, both of them handed in for generation as with normal internal classes.</li></li>
+<li><a href=examples/main62.html>main62.cc</a>: illustrates how a user hook can be made to steer the angular distribution selection in resonance decays. The prime example would be if LHEF input, e.g. from Madgraph, contains undecayed resonances with helicity information. These would then be decayed isotropically by PYTHIA, but this example shows how one could do better. Some input in <code>main62.cmnd</code>. </li></li>
+</ul>
+
+<a name=extra+dimensions></a><h3>Extra&nbsp;dimensions</h3><ul>
+<li><a href=examples/main26.html>main26.cc</a>: test program for processes in scenarios with large extra dimensions or unparticles. </li></li>
+<li><a href=examples/main27.html>main27.cc</a>: production of Kaluza-Klein <ei>gamma/Z</ei> states in TeV-sized extra dimensions. </li></li>
+</ul>
+
+<a name=fastjet></a><h3>Fastjet</h3><ul>
+<li><a href=examples/main71.html>main71.cc</a>: an example how the FastJet jet finding package can be linked to allow an analysis of the final state, in this case for a study of W + jet production.</li></li>
+<li><a href=examples/main72.html>main72.cc</a>: a comparison of SlowJet and FastJet jet finding, showing that they find the same jets if run under identical conditions, in this case for QCD jets.</li></li>
+<li><a href=examples/main74.html>main74.cc</a>: exemplifies how to use one of the contributed add-ons to the FastJet package. In this case the modified Mass Drop Tagger is used to improve the mass reconstruction of a boosted hadronically decaying <ei>Z^0</ei>.</li></li>
+<li><a href=examples/main75.html>main75.cc</a>: setup (in <code>main75.cmnd</code>) for Dark Matter production via an <ei>s</ei>-channel mediator, where a mono-jet <ei>pT</ei> spectrum is found with the FastJet package.</li></li>
+<li><a href=examples/main82.html>main82.cc</a>: do CKKW-L merging with a user-defined merging scale function. Input is provided by the <code>main82.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+</ul>
+
+<a name=fixed+target></a><h3>Fixed&nbsp;target</h3><ul>
+<li><a href=examples/main19.html>main19.cc</a>: use several instances of Pythia, one for signal events and others for a variable number of pileup and "beam-gas" events, combined into one common event record. Illustrates how new Pythia instances can copy existing settings and particle data.</li></li>
+</ul>
+
+<a name=fxfx></a><h3>FxFx</h3><ul>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=hadron+widths></a><h3>Hadron&nbsp;widths</h3><ul>
+<li><a href=examples/main156.html>main156.cc</a>: perform parameterization of hadron widths and output the resulting tables.</li></li>
+</ul>
+
+<a name=hadronic+rescattering></a><h3>Hadronic&nbsp;rescattering</h3><ul>
+<li><a href=examples/main333.html>main333.cc</a>: illustrates the use of UserHooks to veto events after hadronization, but before any subsequent processes such as rescattering or Bose-Einstein.</li></li>
+</ul>
+
+<a name=hadronization></a><h3>Hadronization</h3><ul>
+<li><a href=examples/main101.html>main101.cc</a>: shows how the string shoving mechanism, part of the rope hadronization framework, can be set up and used to generate ridge effects.</li></li>
+<li><a href=examples/main102.html>main102.cc</a>: shows how flavour production is changed in the rope hadronization framework.</li></li>
+<li><a href=examples/main15.html>main15.cc</a>: loop over several tries, either to redo B decays only or to redo the complete hadronization chain of an event. Since much of the generation process is only made once this is a way to increase efficiency.</li></li>
+<li><a href=examples/main21.html>main21.cc</a>: an example how a single particle or various parton-level configurations can be input directly for hadronization, without being tied to the full process-generation machinery, e.g. to study the hadronization of junction topologies. Can also be used for single-resonance decays, with showers.</li></li>
+<li><a href=examples/main25.html>main25.cc</a>: input RPV-SUSY events from an LHEF file that contains an SLHA spectrum inside its header. The event file, <code>main25.lhe</code>, contains a sample events that illustrate how to arrange color tags in the presence of the color-space epsilon tensors that accompany baryon number violating event topologies. </li></li>
+<li><a href=examples/main29.html>main29.cc</a>: colour reconnection models studied for top production. Illustrates how to set up the user hooks in <code>include/Pythia8Plugins/ColourReconnectionHooks.h</code>, with several models not found in the standard PYTHIA library.</li></li>
+<li><a href=examples/main73.html>main73.cc</a>: a comparison of jet properties on the parton and the hadron level, illustrating possibilities for larger control of which particles are used in the jet analyses.</li></li>
+</ul>
+
+<a name=hard+diffraction></a><h3>Hard&nbsp;diffraction</h3><ul>
+<li><a href=examples/main68.html>main68.cc</a>: exemplifies hard diffraction in the context of a photon-inside-lepton beam, like a HERA.</li></li>
+</ul>
+
+<a name=hdf5+file></a><h3>HDF5&nbsp;file</h3><ul>
+<li><a href=examples/main46.html>main46.cc</a>: an example illustrating the generation of HepMC events using the HDF5 LHA format (LHAHDF5).</li></li>
+</ul>
+
+<a name=heavy+ion></a><h3>Heavy&nbsp;ion</h3><ul>
+<li><a href=examples/main70.html>main70.cc</a>: exemplifies how to provide an external photon flux for photo-production processes. </li></li>
+</ul>
+
+<a name=heavy+ions></a><h3>Heavy&nbsp;ions</h3><ul>
+<li><a href=examples/main111.html>main111.cc</a>: simple pp collisions as in <code>main01.cc</code>, but using the Angantyr model for Heavy Ion collisions. Also shows how Rivet analyses can be set up easily using a special interface.</li></li>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+<li><a href=examples/main113.html>main113.cc</a>: Pb-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+</ul>
+
+<a name=helaconia></a><h3>Helaconia</h3><ul>
+<li><a href=examples/main35.html>main35.cc</a>: demonstrates how to generate quarkonia events with the external HelacOnia package interfaced to Pythia, and compare results with the internal implementation.</li></li>
+</ul>
+
+<a name=hepmc></a><h3>Hepmc</h3><ul>
+<li><a href=examples/main280.html>main280.cc</a>: do CKKW-L merging with the VINCIA sector shower with HepMC2 output to use in RIVET analyses. Also redirects all Pythia output to a log file to reduce terminal output.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+<li><a href=examples/main41.html>main41.cc</a>: similar to <code>main01</code>, except that the event record is output in the HepMC event record format. Requires that HepMC3 is properly linked. Note that the <code>hepmcout41.dat</code> output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main42.html>main42.cc</a>: a streamlined version for the generation of events that are then stored in HepMC format, without any event analysis. That is, all physics studies will have to be done afterwards. The name of the input "cards file" (e.g. <code>main42.cmnd</code>) and output HepMC event file (e.g. <code>hepmcout42.dat</code>) are to be provided as command-line arguments. Requires that HepMC3 is properly linked. Note that the HepMC output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main43.html>main43.cc</a>: a further extension of <code>main42.cc</code>, where subruns are used to process several consecutive LHEF, as in <code>main13.cc</code>, with information stored e.g in <code>main43.cmnd</code>. Other comments as for <code>main42.cc</code>.</li></li>
+<li><a href=examples/main44.html>main44.cc</a>: a legacy HepMC2 example, where subruns are used to process several consecutive LHEF, with information stored e.g in <code>main44.cmnd</code>. This example mainly serves as comparison to <code>main45.cc</code> which uses HepMC3.</li></li>
+<li><a href=examples/main45.html>main45.cc</a>: an example illustrating the generation of HepMC events using HepMC3, where subruns are used to process several consecutive LHEF. Input settings can e.g be stored in <code>main44.cmnd</code>. For users unfamiliar with HepMC3, note that <code>main44.cc</code> is basically a carbon copy, but uses HepMC2 instead, for comparison.</li></li>
+<li><a href=examples/main46.html>main46.cc</a>: an example illustrating the generation of HepMC events using the HDF5 LHA format (LHAHDF5).</li></li>
+<li><a href=examples/main84.html>main84.cc</a>: do CKKW-L merging with output in such a way that it can be used in subsequent RIVET analyses. Input is provided by the <code>main84.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main85.html>main85.cc</a>: do CKKW-L merging, with HepMC event output. Input settings are provided by the <code>main85.cmnd</code> file. This example program allows the use of input Les Houches events that are regularised with only very minimal cuts, and on which Pythia itself should enforce the more restrictive merging scale cut. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. </li></li>
+<li><a href=examples/main86.html>main86.cc</a>: do unitarised ME+PS (UMEPS) merging, with HepMC event output. Input settings are provided by the <code>main86.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="UMEPSMerging">UMEPS Merging</aloc> for further details. </li></li>
+<li><a href=examples/main87.html>main87.cc</a>: do NL<sup>3</sup> NLO merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main87.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (NL<sup>3</sup> section) for further details. </li></li>
+<li><a href=examples/main88.html>main88.cc</a>: do unitarised NLO+PS (UNLOPS) merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main88.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (UNLOPS section) for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=jet+finding></a><h3>Jet&nbsp;finding</h3><ul>
+<li><a href=examples/main05.html>main05.cc</a>: generation of QCD jet events at the LHC, with jet analysis using the <code>SlowJet</code> inclusive anti-<ei>kT</ei> sequential-recombination finder and the <code>CellJet</code> cone-jet finder.</li></li>
+<li><a href=examples/main06.html>main06.cc</a>: generation of LEP1 hadronic events, i.e. <ei>e^+e^- &rarr; gamma*/Z^0 &rarr; q qbar</ei>, with charged multiplicity, sphericity, thrust and jet analysis.</li></li>
+<li><a href=examples/main10.html>main10.cc</a>: illustration how userHooks can be used interact directly with the event-generation process.</li></li>
+<li><a href=examples/main10-python.html>main10.py</a>: a Python interface equivalent of <code>main10.cc</code>. Provides an example of how to derive PYTHIA classes in Python.</li></li>
+<li><a href=examples/main71.html>main71.cc</a>: an example how the FastJet jet finding package can be linked to allow an analysis of the final state, in this case for a study of W + jet production.</li></li>
+<li><a href=examples/main72.html>main72.cc</a>: a comparison of SlowJet and FastJet jet finding, showing that they find the same jets if run under identical conditions, in this case for QCD jets.</li></li>
+<li><a href=examples/main74.html>main74.cc</a>: exemplifies how to use one of the contributed add-ons to the FastJet package. In this case the modified Mass Drop Tagger is used to improve the mass reconstruction of a boosted hadronically decaying <ei>Z^0</ei>.</li></li>
+<li><a href=examples/main75.html>main75.cc</a>: setup (in <code>main75.cmnd</code>) for Dark Matter production via an <ei>s</ei>-channel mediator, where a mono-jet <ei>pT</ei> spectrum is found with the FastJet package.</li></li>
+<li><a href=examples/main82.html>main82.cc</a>: do CKKW-L merging with a user-defined merging scale function. Input is provided by the <code>main82.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+</ul>
+
+<a name=jets></a><h3>Jets</h3><ul>
+<li><a href=examples/main333.html>main333.cc</a>: illustrates the use of UserHooks to veto events after hadronization, but before any subsequent processes such as rescattering or Bose-Einstein.</li></li>
+<li><a href=examples/main68.html>main68.cc</a>: exemplifies hard diffraction in the context of a photon-inside-lepton beam, like a HERA.</li></li>
+</ul>
+
+<a name=kt></a><h3>kT</h3><ul>
+<li><a href=examples/main82.html>main82.cc</a>: do CKKW-L merging with a user-defined merging scale function. Input is provided by the <code>main82.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+</ul>
+
+<a name=leading+order></a><h3>Leading&nbsp;order</h3><ul>
+<li><a href=examples/main280.html>main280.cc</a>: do CKKW-L merging with the VINCIA sector shower with HepMC2 output to use in RIVET analyses. Also redirects all Pythia output to a log file to reduce terminal output.</li></li>
+<li><a href=examples/main80.html>main80.cc</a>: do CKKW-L merging with a merging scale defined in <ei>kT</ei>. Input is provided by the <code>main80.cmnd</code> file and input LHE files. Very basic and pedagogical setup, suitable for tutorials.</li></li>
+<li><a href=examples/main81.html>main81.cc</a>: do CKKW-L merging with a merging scale defined in <ei>kT</ei>. Input is provided by the <code>main81.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main82.html>main82.cc</a>: do CKKW-L merging with a user-defined merging scale function. Input is provided by the <code>main82.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main83.html>main83.cc</a>: as <code>main82.cc</code> but with an additional cut on the lowest multiplicity allowed for the reclustered state. The same input as for <code>main82.cc</code> can be used. </li></li>
+<li><a href=examples/main84.html>main84.cc</a>: do CKKW-L merging with output in such a way that it can be used in subsequent RIVET analyses. Input is provided by the <code>main84.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main85.html>main85.cc</a>: do CKKW-L merging, with HepMC event output. Input settings are provided by the <code>main85.cmnd</code> file. This example program allows the use of input Les Houches events that are regularised with only very minimal cuts, and on which Pythia itself should enforce the more restrictive merging scale cut. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. </li></li>
+<li><a href=examples/main86.html>main86.cc</a>: do unitarised ME+PS (UMEPS) merging, with HepMC event output. Input settings are provided by the <code>main86.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="UMEPSMerging">UMEPS Merging</aloc> for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=lhapdf></a><h3>LHAPDF</h3><ul>
+<li><a href=examples/main51.html>main51.cc</a>: a test of the shape of parton densities, as a check prior to using a given PDF set in a generator.  Requires that LHAPDF is properly linked. Also shows how to plot histograms (with logarithmic <ei>x</ei> scale) using the Python/Matplotlib/Pyplot solution.</li></li>
+<li><a href=examples/main52.html>main52.cc</a>: compares the charged multiplicity distribution, and a few other minimum-bias physics aspects, between default PYTHIA PDF and another one. Requires that LHAPDF is properly linked.</li></li>
+<li><a href=examples/main53.html>main53.cc</a>: tests the possibility to do backwards evolution from an incoming photon at the hard interaction. Requires that you link to a LHAPDF set that includes the photon PDF.</li></li>
+<li><a href=examples/main54.html>main54.cc</a>: compares the internal and LHAPDF implementations of the NNPDF 2.3 QCD+QED sets, for results and for timing. Requires that LHAPDF is properly linked.</li></li>
+</ul>
+
+<a name=lhe+file></a><h3>LHE&nbsp;file</h3><ul>
+<li><a href=examples/main11.html>main11.cc</a>: a study of top events, fed in from the Les Houches Event File <code>ttbar.lhe</code>, here generated by PYTHIA 6.4. This file currently only contains 100 events so as not to make the distributed PYTHIA package too big, and so serves mainly as a demonstration of the principles involved. </li></li>
+<li><a href=examples/main12.html>main12.cc</a>: a more sophisticated variant of <code>main11.cc</code>, where two Les Houches Event Files (<code>ttbar.lhe</code> and <code>ttbar2.lhe</code>) successively are used as input. Also illustrating some other aspects, like the capability to mix in internally generated events.</li></li>
+<li><a href=examples/main13.html>main13.cc</a>: a streamlined version of <code>main12.cc</code>, where two Les Houches Event Files (<code>ttbar.lhe</code> and <code>ttbar2.lhe</code>) successively are used as input in <code>main13.cmnd</code> file.</li></li>
+<li><a href=examples/main20.html>main20.cc</a>: shows how PYTHIA 8 can write a Les Houches Event File, using facilities potentially useful also for other programs to write an LHEF. See also <code>main64.cc</code>.</li></li>
+<li><a href=examples/main25.html>main25.cc</a>: input RPV-SUSY events from an LHEF file that contains an SLHA spectrum inside its header. The event file, <code>main25.lhe</code>, contains a sample events that illustrate how to arrange color tags in the presence of the color-space epsilon tensors that accompany baryon number violating event topologies. </li></li>
+<li><a href=examples/main37.html>main37.cc</a>: shows how LHEF version 3.0 files can be read and used to fill several histograms of the same property, but with different event weights.</li></li>
+<li><a href=examples/main38.html>main38.cc</a>: an extended version of <code>main37.cc</code>, where additionally it is shown how to extract many different kinds of LHEF version 3.0 information.</li></li>
+<li><a href=examples/main42.html>main42.cc</a>: a streamlined version for the generation of events that are then stored in HepMC format, without any event analysis. That is, all physics studies will have to be done afterwards. The name of the input "cards file" (e.g. <code>main42.cmnd</code>) and output HepMC event file (e.g. <code>hepmcout42.dat</code>) are to be provided as command-line arguments. Requires that HepMC3 is properly linked. Note that the HepMC output file can become quite big; so no example is included in this distribution.</li></li>
+<li><a href=examples/main43.html>main43.cc</a>: a further extension of <code>main42.cc</code>, where subruns are used to process several consecutive LHEF, as in <code>main13.cc</code>, with information stored e.g in <code>main43.cmnd</code>. Other comments as for <code>main42.cc</code>.</li></li>
+<li><a href=examples/main44.html>main44.cc</a>: a legacy HepMC2 example, where subruns are used to process several consecutive LHEF, with information stored e.g in <code>main44.cmnd</code>. This example mainly serves as comparison to <code>main45.cc</code> which uses HepMC3.</li></li>
+<li><a href=examples/main45.html>main45.cc</a>: an example illustrating the generation of HepMC events using HepMC3, where subruns are used to process several consecutive LHEF. Input settings can e.g be stored in <code>main44.cmnd</code>. For users unfamiliar with HepMC3, note that <code>main44.cc</code> is basically a carbon copy, but uses HepMC2 instead, for comparison.</li></li>
+<li><a href=examples/main62.html>main62.cc</a>: illustrates how a user hook can be made to steer the angular distribution selection in resonance decays. The prime example would be if LHEF input, e.g. from Madgraph, contains undecayed resonances with helicity information. These would then be decayed isotropically by PYTHIA, but this example shows how one could do better. Some input in <code>main62.cmnd</code>. </li></li>
+<li><a href=examples/main64.html>main64.cc</a>: exemplifies how LHEF version 3 events can be written on an external file.</li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=lheh5></a><h3>Lheh5</h3><ul>
+<li><a href=examples/main46.html>main46.cc</a>: an example illustrating the generation of HepMC events using the HDF5 LHA format (LHAHDF5).</li></li>
+</ul>
+
+<a name=low+energy></a><h3>Low&nbsp;energy</h3><ul>
+<li><a href=examples/main151.html>main151.cc</a>: compare the energy dependence of the average charged multiplicity between the simple treatment in rescattering and the full framework.</li></li>
+<li><a href=examples/main152.html>main152.cc</a>: compare multiplicities and <ei>pT</ei> spectra with or without rescattering, the former with or without rescattering between nearest neighbours along the string.</li></li>
+<li><a href=examples/main153.html>main153.cc</a>: simple generation of low-energy events.</li></li>
+<li><a href=examples/main154.html>main154.cc</a>: plot the energy dependence of the low-energy cross sections used in the hadronic rescattering framework.</li></li>
+<li><a href=examples/main155.html>main155.cc</a>: plot the energy dependence of the low-energy cross sections, specifically the contribution from resonances. </li></li>
+</ul>
+
+<a name=madgraph></a><h3>Madgraph</h3><ul>
+<li><a href=examples/main203.html>main203.cc</a>: VINCIA setup for electroweak shower off high-pT dijets at LHC. The VINCIA EW shower requires hard-process partons with assigned helicities. This is done via Pythia's MG5 matrix-element interface, which this example also shows how to build and link. </li></li>
+<li><a href=examples/main34.html>main34.cc</a>: demonstrates how Madgraph5_aMC@NLO can be run "from within" Pythia, making use of the <code>LHAupMadgraph</code> wrapper/interface of Madgraph5_aMC@NLO and the Pythia jet matching facilities.</li></li>
+<li><a href=examples/main34-python.html>main34.py</a>: a Python interface equivalent of <code>main34.cc</code>. Demonstrates usage of a PYTHIA plugin within the Python interface.</li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=matching></a><h3>Matching</h3><ul>
+<li><a href=examples/main31.html>main31.cc</a>: exemplifies an improved matching of parton showers to LHEF-style input based on the <aloc href="POWHEGMerging">POWHEG approach</aloc>. The <code>main31.cmnd</code> allows to switch between several different matching options. It also allows to select input process, in this case either for the POWHEG-hvq program applied to top pair production <ref>Cor10</ref> or for QCD 2+3-jet events. The small samples of input events are stored in the <code>powheg-hvq.lhe</code> and <code>powheg-dijets.lhe</code> files, respectively. </li></li>
+<li><a href=examples/main32.html>main32.cc</a>: exemplifies MLM merging, either in the ALPGEN variant or in the Madgraph one, and with input events either from ALPGEN or from Madgraph, with relevant control cards stored in <code>main32.cmnd</code>. See <aloc href="JetMatching">Jet Matching</aloc> for further details. Traditionally the ALPGEN output is split into one file with events and another with parameters and cross sections (unlike in LHEF). Here a sample of <ei>W + 3 jets</ei> events is stored in <code>main32.unw</code> and the parameters to go with it in <code>main32_unw.par</code>. Madgraph events are taken from the <code>w+_production_lhc_2.lhe</code> file in this case. </li></li>
+<li><a href=examples/main33.html>main33.cc</a>: demonstrates how to link the POWHEGBOX matrix element programs dynamically, bypassing the need for intermediate LHE files. Two special files are used in this option: <code>include/Pythia8Plugins/LHAPowheg.h</code> contains the LHAup class wrapper used to build the POWHEG plugin libraries, and <code>include/Pythia8Plugins/PowhegProcs.h</code> the simple class that facilitates loading the POWHEG plugins. In addition <code>main33.cmnd</code> contains the commands needed for POWHEGBOX to run the example. </li></li>
+<li><a href=examples/main34.html>main34.cc</a>: demonstrates how Madgraph5_aMC@NLO can be run "from within" Pythia, making use of the <code>LHAupMadgraph</code> wrapper/interface of Madgraph5_aMC@NLO and the Pythia jet matching facilities.</li></li>
+<li><a href=examples/main34-python.html>main34.py</a>: a Python interface equivalent of <code>main34.cc</code>. Demonstrates usage of a PYTHIA plugin within the Python interface.</li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=matplotlib></a><h3>Matplotlib</h3><ul>
+<li><a href=examples/main03.html>main03.cc</a>: a simple study of several different kinds of events, with the choice to be made in the <code>main03.cmnd</code> "cards file". Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution. </li></li>
+<li><a href=examples/main07.html>main07.cc</a>: set up a fictitious production process to a generic resonance, where you easily can compose your own list of (two-body) decay modes to a variety of final states. Also traces decay chains down to truly stable particles: gamma, e+-, p/pbar and neutrinos. Suitable for astroparticle applications, like neutralino pair annihilation, where cross sections are calculated separately in another program.  Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution.</li></li>
+</ul>
+
+<a name=merging></a><h3>Merging</h3><ul>
+<li><a href=examples/main280.html>main280.cc</a>: do CKKW-L merging with the VINCIA sector shower with HepMC2 output to use in RIVET analyses. Also redirects all Pythia output to a log file to reduce terminal output.</li></li>
+<li><a href=examples/main31.html>main31.cc</a>: exemplifies an improved matching of parton showers to LHEF-style input based on the <aloc href="POWHEGMerging">POWHEG approach</aloc>. The <code>main31.cmnd</code> allows to switch between several different matching options. It also allows to select input process, in this case either for the POWHEG-hvq program applied to top pair production <ref>Cor10</ref> or for QCD 2+3-jet events. The small samples of input events are stored in the <code>powheg-hvq.lhe</code> and <code>powheg-dijets.lhe</code> files, respectively. </li></li>
+<li><a href=examples/main32.html>main32.cc</a>: exemplifies MLM merging, either in the ALPGEN variant or in the Madgraph one, and with input events either from ALPGEN or from Madgraph, with relevant control cards stored in <code>main32.cmnd</code>. See <aloc href="JetMatching">Jet Matching</aloc> for further details. Traditionally the ALPGEN output is split into one file with events and another with parameters and cross sections (unlike in LHEF). Here a sample of <ei>W + 3 jets</ei> events is stored in <code>main32.unw</code> and the parameters to go with it in <code>main32_unw.par</code>. Madgraph events are taken from the <code>w+_production_lhc_2.lhe</code> file in this case. </li></li>
+<li><a href=examples/main33.html>main33.cc</a>: demonstrates how to link the POWHEGBOX matrix element programs dynamically, bypassing the need for intermediate LHE files. Two special files are used in this option: <code>include/Pythia8Plugins/LHAPowheg.h</code> contains the LHAup class wrapper used to build the POWHEG plugin libraries, and <code>include/Pythia8Plugins/PowhegProcs.h</code> the simple class that facilitates loading the POWHEG plugins. In addition <code>main33.cmnd</code> contains the commands needed for POWHEGBOX to run the example. </li></li>
+<li><a href=examples/main80.html>main80.cc</a>: do CKKW-L merging with a merging scale defined in <ei>kT</ei>. Input is provided by the <code>main80.cmnd</code> file and input LHE files. Very basic and pedagogical setup, suitable for tutorials.</li></li>
+<li><a href=examples/main81.html>main81.cc</a>: do CKKW-L merging with a merging scale defined in <ei>kT</ei>. Input is provided by the <code>main81.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main82.html>main82.cc</a>: do CKKW-L merging with a user-defined merging scale function. Input is provided by the <code>main82.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main83.html>main83.cc</a>: as <code>main82.cc</code> but with an additional cut on the lowest multiplicity allowed for the reclustered state. The same input as for <code>main82.cc</code> can be used. </li></li>
+<li><a href=examples/main84.html>main84.cc</a>: do CKKW-L merging with output in such a way that it can be used in subsequent RIVET analyses. Input is provided by the <code>main84.cmnd</code> file and the three data files <code>w+_production_lhc_0.lhe</code>, <code>w+_production_lhc_1.lhe</code> and <code>w+_production_lhc_2.lhe</code>. </li></li>
+<li><a href=examples/main85.html>main85.cc</a>: do CKKW-L merging, with HepMC event output. Input settings are provided by the <code>main85.cmnd</code> file. This example program allows the use of input Les Houches events that are regularised with only very minimal cuts, and on which Pythia itself should enforce the more restrictive merging scale cut. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. </li></li>
+<li><a href=examples/main86.html>main86.cc</a>: do unitarised ME+PS (UMEPS) merging, with HepMC event output. Input settings are provided by the <code>main86.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="UMEPSMerging">UMEPS Merging</aloc> for further details. </li></li>
+<li><a href=examples/main87.html>main87.cc</a>: do NL<sup>3</sup> NLO merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main87.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (NL<sup>3</sup> section) for further details. </li></li>
+<li><a href=examples/main88.html>main88.cc</a>: do unitarised NLO+PS (UNLOPS) merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main88.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (UNLOPS section) for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=minimum+bias></a><h3>Minimum&nbsp;bias</h3><ul>
+<li><a href=examples/main04.html>main04.cc</a>: tests of cross sections, multiplicities and average transverse momenta for elastic, diffractive and nondiffractive topologies, using <code>main04.cmnd</code> to pick processes. For photoproduction  one can use the alternative <code>main04_photons.cmnd</code> input.</li></li>
+<li><a href=examples/main52.html>main52.cc</a>: compares the charged multiplicity distribution, and a few other minimum-bias physics aspects, between default PYTHIA PDF and another one. Requires that LHAPDF is properly linked.</li></li>
+</ul>
+
+<a name=mlm></a><h3>MLM</h3><ul>
+<li><a href=examples/main32.html>main32.cc</a>: exemplifies MLM merging, either in the ALPGEN variant or in the Madgraph one, and with input events either from ALPGEN or from Madgraph, with relevant control cards stored in <code>main32.cmnd</code>. See <aloc href="JetMatching">Jet Matching</aloc> for further details. Traditionally the ALPGEN output is split into one file with events and another with parameters and cross sections (unlike in LHEF). Here a sample of <ei>W + 3 jets</ei> events is stored in <code>main32.unw</code> and the parameters to go with it in <code>main32_unw.par</code>. Madgraph events are taken from the <code>w+_production_lhc_2.lhe</code> file in this case. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=mpi></a><h3>MPI</h3><ul>
+<li><a href=examples/main77.html>main77.cc</a>: example on how double parton scattering events can be reweighted according to a different model than default in Pythia.  Contributed by Boris Blok and Paolo Gunnellini.</li></li>
+</ul>
+
+<a name=multi-instance></a><h3>Multi&#8209;instance</h3><ul>
+<li><a href=examples/main19.html>main19.cc</a>: use several instances of Pythia, one for signal events and others for a variable number of pileup and "beam-gas" events, combined into one common event record. Illustrates how new Pythia instances can copy existing settings and particle data.</li></li>
+</ul>
+
+<a name=multiplicities></a><h3>Multiplicities</h3><ul>
+<li><a href=examples/main151.html>main151.cc</a>: compare the energy dependence of the average charged multiplicity between the simple treatment in rescattering and the full framework.</li></li>
+</ul>
+
+<a name=nl3></a><h3>NL3</h3><ul>
+<li><a href=examples/main87.html>main87.cc</a>: do NL<sup>3</sup> NLO merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main87.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (NL<sup>3</sup> section) for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=nlo></a><h3>NLO</h3><ul>
+<li><a href=examples/main87.html>main87.cc</a>: do NL<sup>3</sup> NLO merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main87.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (NL<sup>3</sup> section) for further details. </li></li>
+<li><a href=examples/main88.html>main88.cc</a>: do unitarised NLO+PS (UNLOPS) merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main88.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (UNLOPS section) for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=onia></a><h3>Onia</h3><ul>
+<li><a href=examples/main17.html>main17.cc</a>: shows (a) how to use UserHooks to regularize onium cross section for pT &rarr; 0, and (b) how decays could be handled externally.</li></li>
+<li><a href=examples/main35.html>main35.cc</a>: demonstrates how to generate quarkonia events with the external HelacOnia package interfaced to Pythia, and compare results with the internal implementation.</li></li>
+</ul>
+
+<a name=openmp></a><h3>OpenMP</h3><ul>
+<li><a href=examples/main201.html>main201.cc</a>: comparison of VINCIA and Pythia on inclusive jets at LHC, with option to run the two generators in parallel using OpenMP.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+</ul>
+
+<a name=parton+distribution></a><h3>Parton&nbsp;distribution</h3><ul>
+<li><a href=examples/main23.html>main23.cc</a>: shows how to write external classes, derived from PYTHIA base classes, that can be handed to PYTHIA for internal generation. The MIXMAX random number generator is this way compared with the default PYTHIA one. Explicit implementations are included for the generation of external beam momentum spread and vertex location, and for a simple scaling external parton distribution set.</li></li>
+<li><a href=examples/main51.html>main51.cc</a>: a test of the shape of parton densities, as a check prior to using a given PDF set in a generator.  Requires that LHAPDF is properly linked. Also shows how to plot histograms (with logarithmic <ei>x</ei> scale) using the Python/Matplotlib/Pyplot solution.</li></li>
+<li><a href=examples/main52.html>main52.cc</a>: compares the charged multiplicity distribution, and a few other minimum-bias physics aspects, between default PYTHIA PDF and another one. Requires that LHAPDF is properly linked.</li></li>
+<li><a href=examples/main53.html>main53.cc</a>: tests the possibility to do backwards evolution from an incoming photon at the hard interaction. Requires that you link to a LHAPDF set that includes the photon PDF.</li></li>
+<li><a href=examples/main54.html>main54.cc</a>: compares the internal and LHAPDF implementations of the NNPDF 2.3 QCD+QED sets, for results and for timing. Requires that LHAPDF is properly linked.</li></li>
+<li><a href=examples/main55.html>main55.cc</a>: exemplifies how you can use the internal implementation of interpolation in an lhagrid1 .dat file, without linking LHAPDF6. Also illustrates the topical issue of associated event properties for an intermediate spinless resonance in <ei>&gamma; + &gamma; &rarr; &gamma; + &gamma;</ei> at 750 GeV.</li></li>
+</ul>
+
+<a name=performance></a><h3>Performance</h3><ul>
+<li><a href=examples/main333.html>main333.cc</a>: illustrates the use of UserHooks to veto events after hadronization, but before any subsequent processes such as rescattering or Bose-Einstein.</li></li>
+</ul>
+
+<a name=photon+beam></a><h3>Photon&nbsp;beam</h3><ul>
+<li><a href=examples/main53.html>main53.cc</a>: tests the possibility to do backwards evolution from an incoming photon at the hard interaction. Requires that you link to a LHAPDF set that includes the photon PDF.</li></li>
+<li><a href=examples/main55.html>main55.cc</a>: exemplifies how you can use the internal implementation of interpolation in an lhagrid1 .dat file, without linking LHAPDF6. Also illustrates the topical issue of associated event properties for an intermediate spinless resonance in <ei>&gamma; + &gamma; &rarr; &gamma; + &gamma;</ei> at 750 GeV.</li></li>
+<li><a href=examples/main69.html>main69.cc</a>: exemplifies how to generate all relevant contributions for charged particle spectra in photon-photon and photon-proton collisions. </li></li>
+<li><a href=examples/main70.html>main70.cc</a>: exemplifies how to provide an external photon flux for photo-production processes. </li></li>
+<li><a href=examples/main78.html>main78.cc</a>: demonstrates how to generate different types of photon-initiated dilepton events in proton-proton collisions.</li></li>
+</ul>
+
+<a name=photon-photon></a><h3>Photon&#8209;photon</h3><ul>
+<li><a href=examples/main69.html>main69.cc</a>: exemplifies how to generate all relevant contributions for charged particle spectra in photon-photon and photon-proton collisions. </li></li>
+</ul>
+
+<a name=photoproduction></a><h3>Photoproduction</h3><ul>
+<li><a href=examples/main68.html>main68.cc</a>: exemplifies hard diffraction in the context of a photon-inside-lepton beam, like a HERA.</li></li>
+<li><a href=examples/main69.html>main69.cc</a>: exemplifies how to generate all relevant contributions for charged particle spectra in photon-photon and photon-proton collisions. </li></li>
+<li><a href=examples/main70.html>main70.cc</a>: exemplifies how to provide an external photon flux for photo-production processes. </li></li>
+<li><a href=examples/main78.html>main78.cc</a>: demonstrates how to generate different types of photon-initiated dilepton events in proton-proton collisions.</li></li>
+</ul>
+
+<a name=pileup></a><h3>Pileup</h3><ul>
+<li><a href=examples/main19.html>main19.cc</a>: use several instances of Pythia, one for signal events and others for a variable number of pileup and "beam-gas" events, combined into one common event record. Illustrates how new Pythia instances can copy existing settings and particle data.</li></li>
+</ul>
+
+<a name=powheg></a><h3>Powheg</h3><ul>
+<li><a href=examples/main31.html>main31.cc</a>: exemplifies an improved matching of parton showers to LHEF-style input based on the <aloc href="POWHEGMerging">POWHEG approach</aloc>. The <code>main31.cmnd</code> allows to switch between several different matching options. It also allows to select input process, in this case either for the POWHEG-hvq program applied to top pair production <ref>Cor10</ref> or for QCD 2+3-jet events. The small samples of input events are stored in the <code>powheg-hvq.lhe</code> and <code>powheg-dijets.lhe</code> files, respectively. </li></li>
+<li><a href=examples/main33.html>main33.cc</a>: demonstrates how to link the POWHEGBOX matrix element programs dynamically, bypassing the need for intermediate LHE files. Two special files are used in this option: <code>include/Pythia8Plugins/LHAPowheg.h</code> contains the LHAup class wrapper used to build the POWHEG plugin libraries, and <code>include/Pythia8Plugins/PowhegProcs.h</code> the simple class that facilitates loading the POWHEG plugins. In addition <code>main33.cmnd</code> contains the commands needed for POWHEGBOX to run the example. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=process+cross+sections></a><h3>Process&nbsp;cross&nbsp;sections</h3><ul>
+<li><a href=examples/main14.html>main14.cc</a>: a systematic comparison of several cross section values with their corresponding values in PYTHIA 6.4, the latter available as a table in the code.</li></li>
+</ul>
+
+<a name=process+selection></a><h3>Process&nbsp;selection</h3><ul>
+<li><a href=examples/main03.html>main03.cc</a>: a simple study of several different kinds of events, with the choice to be made in the <code>main03.cmnd</code> "cards file". Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution. </li></li>
+</ul>
+
+<a name=process+veto></a><h3>Process&nbsp;veto</h3><ul>
+<li><a href=examples/main10.html>main10.cc</a>: illustration how userHooks can be used interact directly with the event-generation process.</li></li>
+<li><a href=examples/main10-python.html>main10.py</a>: a Python interface equivalent of <code>main10.cc</code>. Provides an example of how to derive PYTHIA classes in Python.</li></li>
+</ul>
+
+<a name=proton-ion></a><h3>Proton&#8209;ion</h3><ul>
+<li><a href=examples/main112.html>main112.cc</a>: p-Pb collisions at LHC energies, using the Angantyr model for Heavy Ion collisions, and analyzing events by centrality bins.</li></li>
+</ul>
+
+<a name=pt+bias></a><h3>pT&nbsp;bias</h3><ul>
+<li><a href=examples/main08.html>main08.cc</a>: generation of the QCD jet cross section biased towards higher pT values, by two different techniques. Firstly, by splitting the run into subruns, each in its own <ei>pT</ei> bin, and adding the results properly reweighted. Two suboptions, with limits set either in the main program or by subrun specification in the <code>main08.cmnd</code> file. Secondly, by a continuous reweighting with a <ei>pT^4</ei> bias in the selection, compensated by a <ei>1/pT^4</ei> event weight. Also inclusion of soft processes is illustrated, with subruns and weighted events.</li></li>
+</ul>
+
+<a name=pt+spectra></a><h3>pT&nbsp;spectra</h3><ul>
+<li><a href=examples/main152.html>main152.cc</a>: compare multiplicities and <ei>pT</ei> spectra with or without rescattering, the former with or without rescattering between nearest neighbours along the string.</li></li>
+</ul>
+
+<a name=pythia+6></a><h3>Pythia&nbsp;6</h3><ul>
+<li><a href=examples/main14.html>main14.cc</a>: a systematic comparison of several cross section values with their corresponding values in PYTHIA 6.4, the latter available as a table in the code.</li></li>
+<li><a href=examples/main30.html>main30.cc</a>: example how to create a tailormade copy of the ordinary event record, here with hard-process history tracing closer to the PYTHIA 6 conventions.</li></li>
+</ul>
+
+<a name=python></a><h3>Python</h3><ul>
+<li><a href=examples/main01-python.html>main01.py</a>: a Python interface equivalent of <code>main01.cc</code>.</li></li>
+<li><a href=examples/main03.html>main03.cc</a>: a simple study of several different kinds of events, with the choice to be made in the <code>main03.cmnd</code> "cards file". Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution. </li></li>
+<li><a href=examples/main07.html>main07.cc</a>: set up a fictitious production process to a generic resonance, where you easily can compose your own list of (two-body) decay modes to a variety of final states. Also traces decay chains down to truly stable particles: gamma, e+-, p/pbar and neutrinos. Suitable for astroparticle applications, like neutralino pair annihilation, where cross sections are calculated separately in another program.  Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution.</li></li>
+<li><a href=examples/main10-python.html>main10.py</a>: a Python interface equivalent of <code>main10.cc</code>. Provides an example of how to derive PYTHIA classes in Python.</li></li>
+<li><a href=examples/main34-python.html>main34.py</a>: a Python interface equivalent of <code>main34.cc</code>. Demonstrates usage of a PYTHIA plugin within the Python interface.</li></li>
+</ul>
+
+<a name=r-hadron></a><h3>R&#8209;hadron</h3><ul>
+<li><a href=examples/main28.html>main28.cc</a>: production of long-lived R-hadrons, that are forced to decay at a separate vertices and possibly with changed momenta.</li></li>
+</ul>
+
+<a name=random+number+generator></a><h3>Random&nbsp;number&nbsp;generator</h3><ul>
+<li><a href=examples/main23.html>main23.cc</a>: shows how to write external classes, derived from PYTHIA base classes, that can be handed to PYTHIA for internal generation. The MIXMAX random number generator is this way compared with the default PYTHIA one. Explicit implementations are included for the generation of external beam momentum spread and vertex location, and for a simple scaling external parton distribution set.</li></li>
+</ul>
+
+<a name=rescattering></a><h3>Rescattering</h3><ul>
+<li><a href=examples/main151.html>main151.cc</a>: compare the energy dependence of the average charged multiplicity between the simple treatment in rescattering and the full framework.</li></li>
+<li><a href=examples/main152.html>main152.cc</a>: compare multiplicities and <ei>pT</ei> spectra with or without rescattering, the former with or without rescattering between nearest neighbours along the string.</li></li>
+<li><a href=examples/main154.html>main154.cc</a>: plot the energy dependence of the low-energy cross sections used in the hadronic rescattering framework.</li></li>
+<li><a href=examples/main155.html>main155.cc</a>: plot the energy dependence of the low-energy cross sections, specifically the contribution from resonances. </li></li>
+</ul>
+
+<a name=resonance+decay></a><h3>Resonance&nbsp;decay</h3><ul>
+<li><a href=examples/main22.html>main22.cc</a>: shows how an external resonance can be implemented as a new class derived from a PYTHIA base class, and be used in an external process, both of them handed in for generation as with normal internal classes.</li></li>
+<li><a href=examples/main62.html>main62.cc</a>: illustrates how a user hook can be made to steer the angular distribution selection in resonance decays. The prime example would be if LHEF input, e.g. from Madgraph, contains undecayed resonances with helicity information. These would then be decayed isotropically by PYTHIA, but this example shows how one could do better. Some input in <code>main62.cmnd</code>. </li></li>
+</ul>
+
+<a name=resonances></a><h3>Resonances</h3><ul>
+<li><a href=examples/main155.html>main155.cc</a>: plot the energy dependence of the low-energy cross sections, specifically the contribution from resonances. </li></li>
+</ul>
+
+<a name=rivet></a><h3>Rivet</h3><ul>
+<li><a href=examples/main111.html>main111.cc</a>: simple pp collisions as in <code>main01.cc</code>, but using the Angantyr model for Heavy Ion collisions. Also shows how Rivet analyses can be set up easily using a special interface.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=root></a><h3>Root</h3><ul>
+<li><a href=examples/main91.html>main91.cc</a>: shows how ROOT can be used for histogramming in a program that for the rest is structured like a normal PYTHIA run. </li></li>
+<li><a href=examples/main92.html>main92.cc</a>: shows how PYTHIA events can be stored as ROOT trees.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=rope+hadronization></a><h3>Rope&nbsp;hadronization</h3><ul>
+<li><a href=examples/main102.html>main102.cc</a>: shows how flavour production is changed in the rope hadronization framework.</li></li>
+</ul>
+
+<a name=second+interaction></a><h3>Second&nbsp;interaction</h3><ul>
+<li><a href=examples/main09.html>main09.cc</a>: generation of two predetermined hard interactions in each event.</li></li>
+</ul>
+
+<a name=slowjet></a><h3>Slowjet</h3><ul>
+<li><a href=examples/main05.html>main05.cc</a>: generation of QCD jet events at the LHC, with jet analysis using the <code>SlowJet</code> inclusive anti-<ei>kT</ei> sequential-recombination finder and the <code>CellJet</code> cone-jet finder.</li></li>
+<li><a href=examples/main72.html>main72.cc</a>: a comparison of SlowJet and FastJet jet finding, showing that they find the same jets if run under identical conditions, in this case for QCD jets.</li></li>
+</ul>
+
+<a name=string+shoving></a><h3>String&nbsp;shoving</h3><ul>
+<li><a href=examples/main101.html>main101.cc</a>: shows how the string shoving mechanism, part of the rope hadronization framework, can be set up and used to generate ridge effects.</li></li>
+</ul>
+
+<a name=supersymmetry></a><h3>Supersymmetry</h3><ul>
+<li><a href=examples/main24.html>main24.cc</a>: tests of internally implemented cross sections for Supersymmetric particle production, with SUSY spectrum defined in <code>slha2-example.spc</code> and settings in <code>main24.cmnd</code>. For illustration, an alternative example spectrum is also available, <code>sps1aWithDecays.spc</code>, which contains a decay table in SLHA format.</li></li>
+<li><a href=examples/main76.html>main76.cc</a>: simple setup for Dark Matter production in several different scenarios, as specified in <code>main76.cmnd</code>, notably with long-lived particle signatures.</li></li>
+</ul>
+
+<a name=tevatron></a><h3>Tevatron</h3><ul>
+<li><a href=examples/main02.html>main02.cc</a>: a simple study of the <ei>pT</ei> spectrum of Z bosons at the Tevatron. (Brief example fitting on one slide.)</li></li>
+</ul>
+
+<a name=top></a><h3>Top</h3><ul>
+<li><a href=examples/main202.html>main202.cc</a>: VINCIA setup for ttbar production at LHC, with measurement of run time and options to switch various shower and MPI/hadronisation components on/off via command file.</li></li>
+</ul>
+
+<a name=top+mass></a><h3>Top&nbsp;mass</h3><ul>
+<li><a href=examples/main29.html>main29.cc</a>: colour reconnection models studied for top production. Illustrates how to set up the user hooks in <code>include/Pythia8Plugins/ColourReconnectionHooks.h</code>, with several models not found in the standard PYTHIA library.</li></li>
+</ul>
+
+<a name=tuning></a><h3>Tuning</h3><ul>
+<li><a href=examples/main121.html>main121.cc</a>: set up automatic uncertainty band variations to PDFs and factorization and renormalization scales.</li></li>
+<li><a href=examples/main52.html>main52.cc</a>: compares the charged multiplicity distribution, and a few other minimum-bias physics aspects, between default PYTHIA PDF and another one. Requires that LHAPDF is properly linked.</li></li>
+<li><a href=examples/main93.html>main93.cc</a>: streamlined event generation with possibility to output ROOT files, output HepMC files and run RIVET analyses, all by specifying output modes in a cmnd file, where also the event generator settings are specified. The example is run with command line options, run <code>./main93 -h</code> to see a full list. See <aloc href="ROOTusage">ROOT Usage</aloc> for information about ROOT output, <aloc href="RIVETusage">RIVET Usage</aloc> for information about RIVET and <aloc href="HepMCInterface">HepMC Interface</aloc> for information about HepMC.</li></li>
+</ul>
+
+<a name=two-body+decay></a><h3>Two&#8209;body&nbsp;decay</h3><ul>
+<li><a href=examples/main07.html>main07.cc</a>: set up a fictitious production process to a generic resonance, where you easily can compose your own list of (two-body) decay modes to a variety of final states. Also traces decay chains down to truly stable particles: gamma, e+-, p/pbar and neutrinos. Suitable for astroparticle applications, like neutralino pair annihilation, where cross sections are calculated separately in another program.  Also shows how to plot histograms using the Python/Matplotlib/Pyplot solution.</li></li>
+</ul>
+
+<a name=umeps></a><h3>UMEPS</h3><ul>
+<li><a href=examples/main86.html>main86.cc</a>: do unitarised ME+PS (UMEPS) merging, with HepMC event output. Input settings are provided by the <code>main86.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code> and <code>w_production_tree_2.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="UMEPSMerging">UMEPS Merging</aloc> for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=uncertainty+bands></a><h3>Uncertainty&nbsp;bands</h3><ul>
+<li><a href=examples/main121.html>main121.cc</a>: set up automatic uncertainty band variations to PDFs and factorization and renormalization scales.</li></li>
+</ul>
+
+<a name=unlops></a><h3>UNLOPS</h3><ul>
+<li><a href=examples/main88.html>main88.cc</a>: do unitarised NLO+PS (UNLOPS) merging, with inclusive NLO input, and with HepMC event output. Input settings are provided by the <code>main88.cmnd</code> file. This example program allows the consistent use of input Les Houches events that are regularised with only very minimal cuts, similar to <code>main85.cc</code>. The example program can be used with the tree-level input files <code>w_production_tree_0.lhe</code>, <code>w_production_tree_1.lhe</code>, <code>w_production_tree_2.lhe</code> and the inclusive POWHEG input files <code>w_production_powheg_0.lhe</code>, <code>w_production_powheg_1.lhe</code>. The program will produce positively and negatively weighted events. See <aloc href="NLOMerging">NLO Merging</aloc> (UNLOPS section) for further details. </li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=upc></a><h3>UPC</h3><ul>
+<li><a href=examples/main70.html>main70.cc</a>: exemplifies how to provide an external photon flux for photo-production processes. </li></li>
+<li><a href=examples/main78.html>main78.cc</a>: demonstrates how to generate different types of photon-initiated dilepton events in proton-proton collisions.</li></li>
+</ul>
+
+<a name=user+hook></a><h3>User&nbsp;hook</h3><ul>
+<li><a href=examples/main103.html>main103.cc</a>: shows how to use a filter to select a specific final state from resonance decays.</li></li>
+</ul>
+
+<a name=userhooks></a><h3>Userhooks</h3><ul>
+<li><a href=examples/main10.html>main10.cc</a>: illustration how userHooks can be used interact directly with the event-generation process.</li></li>
+<li><a href=examples/main10-python.html>main10.py</a>: a Python interface equivalent of <code>main10.cc</code>. Provides an example of how to derive PYTHIA classes in Python.</li></li>
+<li><a href=examples/main17.html>main17.cc</a>: shows (a) how to use UserHooks to regularize onium cross section for pT &rarr; 0, and (b) how decays could be handled externally.</li></li>
+<li><a href=examples/main333.html>main333.cc</a>: illustrates the use of UserHooks to veto events after hadronization, but before any subsequent processes such as rescattering or Bose-Einstein.</li></li>
+<li><a href=examples/main62.html>main62.cc</a>: illustrates how a user hook can be made to steer the angular distribution selection in resonance decays. The prime example would be if LHEF input, e.g. from Madgraph, contains undecayed resonances with helicity information. These would then be decayed isotropically by PYTHIA, but this example shows how one could do better. Some input in <code>main62.cmnd</code>. </li></li>
+<li><a href=examples/main63.html>main63.cc</a>: exemplifies how rare emissions can be enhanced in the shower.</li></li>
+<li><a href=examples/main89.html>main89.cc</a>: do matching/merging according to five alternative methods, simply by choosing which <code>.cmnd</code> file to read: <code>main89ckkwl.cmnd</code> for CKKW-L, <code>main89fxfx.cmnd</code> for FxFx, <code>main89mlm.cmnd</code> for MLM, <code>main89umeps.cmnd</code> for UMEPS, and <code>main89unlops.cmnd</code> for UNLOPS. </li></li>
+</ul>
+
+<a name=vertex+spread></a><h3>Vertex&nbsp;spread</h3><ul>
+<li><a href=examples/main23.html>main23.cc</a>: shows how to write external classes, derived from PYTHIA base classes, that can be handed to PYTHIA for internal generation. The MIXMAX random number generator is this way compared with the default PYTHIA one. Explicit implementations are included for the generation of external beam momentum spread and vertex location, and for a simple scaling external parton distribution set.</li></li>
+</ul>
+
+<a name=vincia></a><h3>Vincia</h3><ul>
+<li><a href=examples/main200.html>main200.cc</a>: simple example of the VINCIA (or DIRE) shower model(s), on Z decays at LEP I, with some basic event shapes, spectra, and multiplicity counts.</li></li>
+<li><a href=examples/main201.html>main201.cc</a>: comparison of VINCIA and Pythia on inclusive jets at LHC, with option to run the two generators in parallel using OpenMP.</li></li>
+<li><a href=examples/main202.html>main202.cc</a>: VINCIA setup for ttbar production at LHC, with measurement of run time and options to switch various shower and MPI/hadronisation components on/off via command file.</li></li>
+<li><a href=examples/main203.html>main203.cc</a>: VINCIA setup for electroweak shower off high-pT dijets at LHC. The VINCIA EW shower requires hard-process partons with assigned helicities. This is done via Pythia's MG5 matrix-element interface, which this example also shows how to build and link. </li></li>
+<li><a href=examples/main280.html>main280.cc</a>: do CKKW-L merging with the VINCIA sector shower with HepMC2 output to use in RIVET analyses. Also redirects all Pythia output to a log file to reduce terminal output.</li></li>
+<li><a href=examples/main300.html>main300.cc</a>: allows to steer Pythia from the command line and can produce HepMC files and allows for OpenMP parallelization. More documentation can be obtained by executing <code>./main300 --help</code>. The input file main300.cmnd further illustrates the use of DIRE.</li></li>
+</ul>
+
+<a name=weak+showers></a><h3>Weak&nbsp;showers</h3><ul>
+<li><a href=examples/main203.html>main203.cc</a>: VINCIA setup for electroweak shower off high-pT dijets at LHC. The VINCIA EW shower requires hard-process partons with assigned helicities. This is done via Pythia's MG5 matrix-element interface, which this example also shows how to build and link. </li></li>
+</ul>
+
+<a name=z+production></a><h3>Z&nbsp;production</h3><ul>
+<li><a href=examples/main02.html>main02.cc</a>: a simple study of the <ei>pT</ei> spectrum of Z bosons at the Tevatron. (Brief example fitting on one slide.)</li></li>
+<li><a href=examples/main61.html>main61.cc</a>: exemplifies the generation of hard diffractive processes.</li></li>
+</ul>
+<script src="Expand.js"></script></body></html>

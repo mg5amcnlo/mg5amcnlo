@@ -8,15 +8,18 @@ using namespace Pythia8;
 
 extern "C" { 
 
-  // set up a global instance of pytia8
+  // set up a global instance of pythia8
   Pythia pythia;
   // set up a global instance of LHAup
   //MyLHAupFortran lhareader;
-  MyLHAupFortran lhareader(&pythia.settings);
-  LHA3FromPythia8 lhawriter(&pythia.event, &pythia.settings, &pythia.info,
-    &pythia.particleData);
+  shared_ptr<MyLHAupFortran> lhareader
+    = make_shared<MyLHAupFortran>(&pythia.settings);
+  shared_ptr<LHA3FromPythia8> lhawriter
+    = make_shared<LHA3FromPythia8>(&pythia.event, &pythia.settings,
+    &pythia.info, &pythia.particleData);
 
-  PrintFirstEmission printFirstEmission(&lhawriter); 
+  shared_ptr<PrintFirstEmission> printFirstEmission
+        = make_shared<PrintFirstEmission>(lhawriter);
 
   // a counter for the number of event
   int iEvent = 0;
@@ -34,9 +37,9 @@ extern "C" {
       cout<<"Pythia8 input file ' "<<cmdFilePath<<" ' not found."<<endl;
       abort();
     }
-    lhareader.setInit();
+    lhareader->setInit();
     // Example of a user hook for storing in the out stream the event after the first emission.
-    pythia.setUserHooksPtr(&printFirstEmission);
+    pythia.setUserHooksPtr(printFirstEmission);
     if (cmdFilePath!="") {
       cout<<"Initialising Pythia8 from cmd file '"<<cmdFilePath<<"'"<<endl;		
       pythia.readFile(cmdFilePath.c_str());
@@ -45,19 +48,19 @@ extern "C" {
      pythia.readString("Beams:frameType=5");
      pythia.readString("Check:epTolErr=1.0000000000e-02");
     }
-    pythia.setLHAupPtr(& lhareader);
+    pythia.setLHAupPtr(lhareader);
     pythia.init();
-    pythia.mergingPtr->setLHAPtr(&lhawriter);
+    pythia.mergingPtr->setLHAPtr(lhawriter);
     // Flag that Pythia8 intiialisation has been performed.
     pythia_control_.is_pythia_active = 1;
   }
 
   // an initialisation function
   void pythia_init_default_(int& idIn1, int& idIn2, int outIDs [10], double masses[26]) {
-    lhareader.setInit();
+    lhareader->setInit();
     pythia.settings.addFlag("aMC@NLO:debugScales",false);
     // Example of a user hook for storing in the out stream the event after the first emission.
-    pythia.setUserHooksPtr(&printFirstEmission);
+    pythia.setUserHooksPtr(printFirstEmission);
 
     // Reconstruct the process string.
     string processString = "";
@@ -122,27 +125,27 @@ extern "C" {
     pythia.readString("PartonLevel:Remnants         = off");
     pythia.readString("Check:event                  = off");
 
-    pythia.setLHAupPtr(& lhareader);
+    pythia.setLHAupPtr(lhareader);
     pythia.init();
-    pythia.mergingPtr->setLHAPtr(&lhawriter);
+    pythia.mergingPtr->setLHAPtr(lhawriter);
     // Flag that Pythia8 intiialisation has been performed.
     pythia_control_.is_pythia_active = 1;
   }
 
   // a function to shower and analyse events
   void pythia_setevent_() {
-    if (!lhareader.is_initialised()) {
-      lhareader.setInit();
+    if (!lhareader->is_initialised()) {
+      lhareader->setInit();
       pythia.init();
     }
     //This should set the LHA event using fortran common blocks
-    lhareader.setEvent();
+    lhareader->setEvent();
   }
 
   // a function to shower and analyse events
   void pythia_next_() {
-    if (!lhareader.is_initialised()) {
-      lhareader.setInit();
+    if (!lhareader->is_initialised()) {
+      lhareader->setInit();
       pythia.init();
     }
     pythia.next();

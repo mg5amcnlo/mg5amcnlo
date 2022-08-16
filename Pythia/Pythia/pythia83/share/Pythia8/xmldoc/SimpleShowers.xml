@@ -1,0 +1,111 @@
+<chapter name="Simple Showers"> 
+ 
+<h2>The Simple Shower</h2> 
+ 
+<h3>Introduction</h3> 
+ 
+Up until the end of the PYTHIA 8.2 version these simple shower codes 
+were the only ones distributed as part of the PYTHIA package. 
+They were originally only called <code>TimeShower</code> and 
+<code>SpaceShower</code>, with no further qualification necessary. 
+In version 8.240 (December 2018) a transformation was begun where 
+this physics code was transferred to <code>SimpleTimeShower</code> 
+and <code>SimpleSpaceShower</code>, while <code>TimeShower</code> 
+and <code>SpaceShower</code> remained as bare-bones base classes. 
+This paved the way for the inclusion of the VINCIA and Dire showers 
+as core parts of the PYTHIA 8.3 distribution. 
+ 
+<p/> 
+The prepending of "simple" was a minimalistic choice under the 
+circumstances; more fancy names could have been chosen. What it 
+refers to is that showers like VINCIA and Dire aim higher, in 
+striving to achieve better coherence and higher-logarithmic accuracy, 
+whereas the simple ones operate in an improved LL approximation. In 
+other respects the  simple showers can do more different physics than 
+the other two, at least currently. Some examples of the broad approach 
+are 
+<ul> 
+<li>Matrix elements corrections for the first ("hardest") gluon 
+emission in most two-body resonance decays, effectively making the 
+FSR in these decays NLO accurate.</li> 
+<li>There is no corresponding NLO accuracy for ISR in any processes, 
+but several examples where reasonably accurate kinematics spectra 
+are available over the full phase space, by input of partial 
+higher-order information.</li> 
+<li>The default dipole-recoil scheme for FSR can be switched to a 
+global-recoil option for the first few emissions, in order to simplify 
+matching and merging to higher-order calculations (e.g. as done 
+in MadGraph_aMC@NLO).</li> 
+<li>The default global-recoil scheme for ISR can be replaced by a 
+dipole-recoil scheme, where the other colour dipole end may be in 
+the final state (as needed e.g. for DIS studies).</li> 
+<li>Showers off massive objects, within and beyond the Standard 
+Model, including e.g. octet onium states.</li> 
+<li>Showers interleaved with multiparton interactions, and set up 
+to handle <aloc href="SecondHardProcess">two predefined hard 
+interactions</aloc>.</li> 
+<li>QED showers, where photons can be emitted and then branch 
+into fermion pairs that shower further.</li> 
+<li>Weak radiation of <ei>W^+-</ei> and <ei>Z^0</ei> off fermions.</li> 
+<li>Radiation also in some hadronic decays.</li> 
+<li>Possibility to handle both abelian and nonabelian showers in a 
+hidden valley sector, where relevant fully interleaved with normal 
+QCD and QED radiation.</li> 
+<li>A wide selection of further switches and parameters to vary shower 
+assumptions: running of <ei>alpha_s</ei>, <ei>p_Tmin</ei> value, 
+scale choices, gluon polarization effects, mass effects in 
+<ei> g &rarr; q qbar</ei>, etc.</li> 
+<li>Most existing tunes to LEP and LHC data are based on this choice 
+of showers.</li> 
+</ul> 
+ 
+<p/> 
+When the <code>Time/SpaceShower</code> became 
+<code>SimpleTime/SpaceShower</code> the related settings names 
+were retained, for reasons of backwards compatibility of user code, 
+e.g. in command files. Thus shower setting names beginning with 
+<code>TimeShower:</code>, <code>SpaceShower:</code>, 
+<code>WeakShower:</code>, <code>UncertaintyBands:</code> 
+or <code>HiddenValley:</code> refer to the current baseline "simple" 
+showers. 
+ 
+<h3>Shower components</h3> 
+ 
+The <aloc href="MasterSwitches">Master Switches</aloc> for ISR and FSR 
+in general, and a switch for QED radiation in 
+<aloc href="ParticleDecays">Particle Decays</aloc> to leptons, 
+are intended to be common for all shower programs, where applicable. 
+ 
+<p/> 
+The full description of settings in the Simple Shower framework 
+is spread across several pages: 
+<ul> 
+<li>The final-state <aloc href="TimelikeShowers">Timelike Showers</aloc> 
+cover all aspects of QCD and QED FSR, including also options for 
+interleaved resonance decays.</li> 
+<li>The initial-state <aloc href="SpacelikeShowers">Spacelike Showers</aloc> 
+cover all aspects of QCD and QED ISR.</li> 
+<li>While the main switches for weak radiation of <ei>W^+-</ei> and 
+<ei>Z^0</ei> are found in the two previous FSR and ISR pages, 
+there also a few common technical 
+<aloc href="WeakShowers">Weak Showers</aloc> settings.</li> 
+<li>There is a special framework to produce uncertainty bands from 
+<aloc href="Variations">Automated Variations</aloc> of basic 
+parameters, such as factorization and renormalization scales, or 
+choice of parton distributions.</li> 
+<li>The settings for final-state showers in a 
+<aloc href="HiddenValleyProcesses">Hidden Valleys</aloc> 
+are stored along with the switches for such hard processes.</li> 
+<li>There is a wide selection of 
+<aloc href="MatchingAndMerging">Matching and Merging</aloc> 
+approaches that have been implemented so as to work well with these 
+showers.</li> 
+<li>Tunes that include ISR and FSR parameters are described on the 
+<aloc href="Tunes">Tunes</aloc> page.</li> 
+<li>The shower evolution can be interrupted or modified with the 
+help of <aloc href="UserHooks">User Hooks</aloc>.</li> 
+</ul> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

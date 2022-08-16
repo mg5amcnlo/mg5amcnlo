@@ -258,9 +258,9 @@ public:
 
   // Constructor.
   LHA3FromPythia8(Event* eventPtrIn, Settings* settingsPtrIn,
-    Info* infoPtrIn, ParticleData* particleDataPtrIn, int pDigitsIn = 15,
-    bool = false) : LHEF3FromPythia8(eventPtrIn, settingsPtrIn, infoPtrIn,
-    particleDataPtrIn, pDigitsIn, false) {}
+    const Info* infoPtrIn, ParticleData* particleDataPtrIn, int pDigitsIn = 15,
+    bool = false) : LHEF3FromPythia8(eventPtrIn, infoPtrIn,
+    pDigitsIn, false) {}
 
   // Routine for reading, setting and printing the initialisation info.
   bool setInit();
@@ -275,6 +275,8 @@ private:
   const Event* processPtr;
 
 };
+
+typedef shared_ptr<LHA3FromPythia8> LHA3FromPythia8Ptr;
 
 //--------------------------------------------------------------------------
 
@@ -647,7 +649,7 @@ class PrintFirstEmission : public UserHooks {
 
 public:
 
-  PrintFirstEmission(LHA3FromPythia8* lhawriterPtrIn)
+  PrintFirstEmission(LHA3FromPythia8Ptr lhawriterPtrIn)
     : lhawriterPtr(lhawriterPtrIn) {
     doRemoveDecayProducts=true;
     inputEvent.init("(hard process-modified)", particleDataPtr);
@@ -690,7 +692,7 @@ public:
     return false;
   }
 
-  LHA3FromPythia8* lhawriterPtr;
+  LHA3FromPythia8Ptr lhawriterPtr;
 
   Event inputEvent;
   vector< pair<int,int> > resonances;

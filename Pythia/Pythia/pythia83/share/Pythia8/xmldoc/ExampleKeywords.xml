@@ -1,0 +1,28 @@
+<chapter name="Examples by Keyword"> 
+<h2>Examles by Keyword</h2> 
+ 
+<p>The Pythia examples directory contains about 100 examples, each 
+showcasing one or several features of the framework. The examples are 
+ordered by keyword below, and cross referenced, allowing for 
+exploration of the various features. A new user may want to start with 
+examples presenting the <a 
+href="ExampleKeywords.html#basic+usage">Basic Usage</a> before going 
+on to explore more advanced topics. Below, the search box can be used 
+to search for keywords which will be displayed the box. This is 
+followed by an expandable list of keywords with links. Finally, a full 
+list of keywords and the relevant examples for each keyword is 
+provided. The code for the example can be accessed by clicking on the 
+name of the example.</p> 
+ 
+<script src="Underscore.js"></script> 
+<script src="Jquery.js" ></script> 
+<script src="Search.js" index="Examples.js"></script> 
+<form> 
+  <input id="search-input" type="search" placeholder="Search Keywords" 
+         style="color:#000000"/> 
+  <ul id="search-result" style="list-style-type:none;padding:0"></ul> 
+</form> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

@@ -1,0 +1,93 @@
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/include/Pythia8/Pythia.h new/include/Pythia8/Pythia.h
+--- old/include/Pythia8/Pythia.h	2020-04-12 20:42:26.819212914 +0100
++++ new/include/Pythia8/Pythia.h	2020-04-12 20:42:26.935212524 +0100
+@@ -291,13 +291,13 @@ public:
+   BeamParticle   beamA = {};
+   BeamParticle   beamB = {};
+ 
+-private:
+-
+   // The main keeper/collector of information, accessible from all
+   // PhysicsBase objects. The information is available from the
+   // outside through the public info object.
+   InfoHub         infoHub = {};
+ 
++private:
++
+   // Initialise new Pythia object (called by constructors).
+   void initPtrs();
+ 
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/Makefile new/Makefile
+--- old/Makefile	2020-04-12 20:42:26.779213049 +0100
++++ new/Makefile	2020-04-12 20:42:26.891212673 +0100
+@@ -31,7 +31,7 @@ LOCAL_SHARE=share/Pythia8
+ LOCAL_SRC=src
+ LOCAL_TMP=tmp
+ LOCAL_MKDIRS:=$(shell mkdir -p $(LOCAL_TMP) $(LOCAL_LIB))
+-CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON)
++CXX_COMMON:=-I$(LOCAL_INCLUDE) $(CXX_COMMON) -std=c++11
+ 
+ # PYTHIA.
+ OBJECTS=$(patsubst $(LOCAL_SRC)/%.cc,$(LOCAL_TMP)/%.o,\
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test008.cc new/private/tests/test008.cc
+--- old/private/tests/test008.cc	2020-04-12 20:42:26.835212861 +0100
++++ new/private/tests/test008.cc	2020-04-12 20:51:47.015804775 +0100
+@@ -47,7 +47,7 @@ int main() {
+ 
+   // Shorthand for some public members of pythia (also static ones).
+   Settings& settings = pythia.settings;
+-  const Info& info = pythia.info;
++  const InfoHub& info = pythia.info;
+ 
+   // Optionally limit output to minimal one.
+   if (smallOutput) {
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test020.cc new/private/tests/test020.cc
+--- old/private/tests/test020.cc	2020-04-12 20:42:26.835212861 +0100
++++ new/private/tests/test020.cc	2020-04-12 20:42:26.947212484 +0100
+@@ -23,7 +23,7 @@ int main() {
+   pythia.readString("PartonLevel:all = off");
+ 
+   // Create an LHAup object that can access relevant information in pythia.
+-  LHAupFromPYTHIA8 myLHA(&pythia.process, &pythia.info);
++  LHAupFromPYTHIA8 myLHA(&pythia.process, &pythia.infoHub);
+ 
+   // Open a file on which LHEF events should be stored, and write header.
+   myLHA.openLHEF("weakbosons.lhe");
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test061.cc new/private/tests/test061.cc
+--- old/private/tests/test061.cc	2020-04-12 20:42:26.835212861 +0100
++++ new/private/tests/test061.cc	2020-04-12 20:51:56.219843089 +0100
+@@ -17,7 +17,7 @@ int main() {
+   // Create Pythia instance. Shorthand for event and info.
+   Pythia pythia;
+   Event& event = pythia.event;
+-  const Info& info = pythia.info;
++  const InfoHub& info = pythia.info;
+ 
+   // Set it up to generate Z's at 8 TeV.
+   pythia.readString("Beams:eCM = 8000.");
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test068.cc new/private/tests/test068.cc
+--- old/private/tests/test068.cc	2020-04-12 20:42:26.835212861 +0100
++++ new/private/tests/test068.cc	2020-04-12 20:52:03.699874677 +0100
+@@ -16,7 +16,7 @@ int main() {
+ 
+   // Create Pythia instance. Shorthand for event and info.
+   Pythia pythia;
+-  const Info& info = pythia.info;
++  const InfoHub& info = pythia.info;
+ 
+   // Set it up to generate dijets at HERA.
+   pythia.readString("Beams:frametype = 2");    // Beams with different energies
+diff -rupN -x label -x '*.orig' -x '*.rej' -x '*~' -x .git old/private/tests/test112.cc new/private/tests/test112.cc
+--- old/private/tests/test112.cc	2020-04-12 20:42:26.835212861 +0100
++++ new/private/tests/test112.cc	2020-04-12 20:52:12.139910796 +0100
+@@ -119,8 +119,8 @@ int main() {
+ 
+     // Also fill the number of (absorptively and diffractively)
+     // wounded nucleaons.
+-    int nw = pythia.info.hiInfo->nAbsTarg() +
+-      pythia.info.hiInfo->nDiffTarg();
++    int nw = pythia.info.hiinfo->nAbsTarg() +
++      pythia.info.hiinfo->nDiffTarg();
+     wounded.fill(nw, weight);
+ 
+     // Find the correct centrality histograms.

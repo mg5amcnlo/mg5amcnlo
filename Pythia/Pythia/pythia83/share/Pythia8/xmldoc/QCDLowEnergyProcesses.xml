@@ -1,0 +1,126 @@
+<chapter name="Low-energy QCD Processes"> 
+ 
+<h2>Low-energy QCD Processes</h2> 
+ 
+The normal <aloc href="QCDSoftProcesses">Soft QCD Processes</aloc> assume 
+sufficiently high energies that a perturbative treatment is possible, 
+e.g. that the nondiffractive event class is defined by an MPI machinery 
+involving QCD matrix elements and PDFs. This will not work at arbitrary 
+low collision energies, and also not for incoming hadrons for which no 
+PDFs are available. 
+ 
+<p/> 
+The processes in this section offer an alternative, where a simplified 
+nonperturbative description is used. No QCD matrix elements or PDFs are 
+needed, making the framework more flexible. The lack of hard collisions 
+and MPIs do imply that it is only relevant for low energies, and will 
+undershoot e.g. the expected charged multiplicity at higher energies. 
+Within the <aloc href="BeamParameters">variable-energy beams</aloc> 
+framework it is possible to smoothly transition from the low-energy 
+processes here to the corresponding higher-energy soft QCD processes. 
+ 
+<p/> 
+Technically, the processes here are the same as used in the 
+<aloc href="HadronicRescattering">Hadronic Rescattering</aloc> framework, 
+i.e. it is the same partial cross sections and the same hadronization 
+setup that is used in both cases. The two play different functions, 
+however, either representing the primary collision as here or secondary 
+rescattering collisions as there. 
+ 
+<p/> 
+It is possible to switch on either all or a subset of the allowed 
+collisions, as follows. 
+ 
+<flag name="LowEnergyQCD:all" default="off"> 
+Common switch for the group of all low-energy nonperturbative 
+QCD processes. If this one is off, it is still possible to enable a 
+subset from the ones below. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:nonDiffractive" default="off"> 
+Inelastic nondiffractive processes, simulated as a single gluon 
+exchange giving two longitudinal strings stretched between the beam 
+remnants. Simplifications will be introduced if the energy is not 
+sufficient. Code 151. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:elastic" default = "off"> 
+Elastic scattering <ei>A B &rarr; A B</ei>. Code 152. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:singleDiffractiveXB" default = "off"> 
+Single diffractive scattering <ei>A B &rarr; X B</ei>. Here 
+<ei>X</ei> represents a single longitudinal string. Code 153. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:singleDiffractiveAX" default = "off"> 
+Single diffractive scattering <ei>A B &rarr; A X</ei>. Code 154. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:doubleDiffractive" default = "off"> 
+Double diffractive scattering <ei>A B &rarr; X_1 X_2</ei>. Code 155. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:excitation" default = "off"> 
+Only relevant for <ei>N N</ei> or <ei>Nbar Nbar</ei> collisions, where 
+<ei>N</ei> is a <ei>p</ei> or <ei>n</ei>. Either or both are excited 
+to higher exclusive states, so it works as a low-mass variant of 
+single or double diffraction, where <ei>X</ei> is replaced by a single 
+hadron. Code 157. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:annihilation" default = "off"> 
+Main application for baryon-antibaryon collisions, where it requires 
+at least one matching valence quark-antiquark pair to annihilate, 
+with colour flow between the leftovers such that the baryon numbers 
+are annihilated. See further <code>probDoubleAnnihilation</code> 
+below. Code 158. 
+</flag> 
+ 
+<flag name="LowEnergyQCD:resonant" default = "off"> 
+Scattering <ei>A B &rarr; X &rarr; C D</ei> via an intermediate 
+resonance state <ei>X</ei>. The final state may agree with the initial 
+one, but is distinguished from elastic scattering by a quite different 
+angular decay distribution. Code 159. 
+</flag> 
+ 
+<p/> 
+There are also some settings that can be used to modify the behaviour 
+or cross section of the processes above. 
+ 
+<parm name="LowEnergyQCD:probDoubleAnnihilation" default="0.2" 
+min="0." max="1.0"> 
+If only one pair can annihilate, then the remnants of a baryon-antibaryon 
+collision are combined into two quark-antiquark strings. If two pairs 
+can annihilate, then with this probability they do, leaving only a single 
+quark-antiquark string. For the rest two strings are formed as before. 
+</parm> 
+ 
+<parm name="LowEnergyQCD:sEffAQM" default="0.6" min="0." max="1.0"> 
+</parm> 
+<parmmore name="LowEnergyQCD:cEffAQM" default="0.2" min="0." max="1.0"> 
+</parmmore> 
+<parmmore name="LowEnergyQCD:bEffAQM" default="0.07" min="0." max="1.0"> 
+Cross sections for many strange hadrons and all charm and bottom ones 
+are unmeasured. In such cases the Additive Quark Model offers a simple 
+approximate recipe to extrapolate unknown cross sections from known 
+ones, where the colliding hadrons only consist of <ei>u</ei> and 
+<ei>d</ei> quarks. To this end, cross sections are assumed to be 
+proportional to the product of the effective number of quarks in each 
+of the two colliding hadrons. The numbers above indicate how much an 
+<ei>s</ei>, <ei>c</ei> or <ei>b</ei> quark contributes, where a 
+<ei>u</ei> or <ei>d</ei> is normalized to unity. The assumption in the 
+choice of default values  is that these factors scale inversely with 
+the respective quark constituent mass. 
+</parmmore> 
+ 
+<flag name="LowEnergyQCD:useSummedResonances" default="off"> 
+By default, <ei>pi pi</ei> and <ei>pi K</ei> cross sections are 
+calculated using the parameterization of Pel&agrave;ez et al. When 
+this option is on, these cross sections are instead calculated by 
+summing Breit-Wigner forms for each resonance. 
+</flag> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

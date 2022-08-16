@@ -1,0 +1,472 @@
+<html>
+<head>
+<title>Dire Expert Settings</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Dire Expert Settings</h2> 
+<ol id="toc">
+  <li><a href="#section0">Further QCD and QED photon shower settings</a></li>
+  <li><a href="#section1">Further dark photon shower settings</a></li>
+  <li><a href="#section2">Matching and merging settings</a></li>
+  <li><a href="#section3">Other experimental merging settings</a></li>
+  <li><a href="#section4">Color factors</a></li>
+  <li><a href="#section5">Configurable timelike splitting kernels</a></li>
+</ol>
+
+ 
+One purpose of Dire is to have a numerical tool that can be compared to 
+analytic resummation techniques as well as possible. Thus, some settings 
+are available to facilitate theory comparisons. In an experimental 
+production run, these paramaters should not be changed from their default 
+values. 
+ 
+ 
+<a name="section0"></a> 
+<h3>Further QCD and QED photon shower settings</h3> 
+ 
+<a name="anchor1"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:QED:doForcePosChgCorrelators &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, this requires all QED splitting functions to use positive charge 
+correlators. This especially means that some (otherwise in principle allowed) 
+splittings are forbidden. This switch is only included to compare to other 
+methods. 
+   
+ 
+<a name="anchor2"></a>
+<p/><code>parm&nbsp; </code><strong> Dire:QED:pTminForcePos &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+This parameter determines the minimal evolution variable above which the above 
+scheme of positive-only charge correlators is employed. 
+   
+ 
+On top of possible scaling factors for the arguments of the running QCD 
+coupling, Dire also offers different functional forms of the argument itself. 
+All of these functional forms reduce to a relative transverse momentum in 
+the soft collinear limits, but differ for hard emissions. 
+ 
+<a name="anchor3"></a>
+<p/><code>mode&nbsp; </code><strong> DireTimes:alphasScheme &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>)<br/>
+<br/><code>option </code><strong> 0</strong> :  
+The evolution variable is used as argument of the strong coupling. 
+   
+<br/><code>option </code><strong> 1</strong> :  
+The collinear transverse momentum is used as argument. 
+   
+<br/><code>option </code><strong> 2</strong> :  
+The eikonal factor <i>sij sjk / sik</i> for the splitting 
+<i>(ij),k -> i,j,k</i> is used. 
+   
+   
+ 
+<a name="anchor4"></a>
+<p/><code>mode&nbsp; </code><strong> DireSpace:alphasScheme &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>)<br/>
+<br/><code>option </code><strong> 0</strong> :  
+The evolution variable is used as argument of the strong coupling. 
+   
+<br/><code>option </code><strong> 1</strong> :  
+The collinear transverse momentum is used as argument. 
+   
+<br/><code>option </code><strong> 2</strong> :  
+The eikonal factor <i>sij sjk / sik</i> for the splitting 
+<i>(ij),k -> i,j,k</i> is used. 
+   
+   
+ 
+ 
+ 
+<a name="section1"></a> 
+<h3>Further dark photon shower settings</h3> 
+ 
+Dark photon emissions/splittings in Dire can be enabled with the following 
+switches. It is worth noting that dark-photon radiation is handled very 
+similar to QED/QCD radiation. 
+ 
+<a name="anchor5"></a>
+<p/><code>flag&nbsp; </code><strong> TimeShower:U1newShowerByL &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then final state leptons are allowed to radiate dark photons. 
+   
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> TimeShower:U1newShowerByQ &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then final state quarks are allowed to radiate dark photons. 
+   
+ 
+<a name="anchor7"></a>
+<p/><code>flag&nbsp; </code><strong> SpaceShower:U1newShowerByL &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then incoming leptons are allowed to radiate dark photons. 
+   
+ 
+<a name="anchor8"></a>
+<p/><code>flag&nbsp; </code><strong> SpaceShower:U1newShowerByQ &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then incoming quarks are allowed to radiate dark photons. 
+   
+ 
+<p> 
+Dark photon emission rates are govered by several parameters. 
+</p> 
+ 
+<a name="anchor9"></a>
+<p/><code>parm&nbsp; </code><strong> Dire:U1new:alphaX &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The coupling of the dark photon to (ficticious) dark-sector particles. 
+   
+ 
+ 
+<a name="section2"></a> 
+<h3>Matching and merging settings</h3> 
+ 
+Dire offers some functionality for matrix-element + parton shower merging. 
+The currently most advanced of the available schemes are iterated matrix 
+element corrections in the "MOPS" scheme. The details of the scheme are 
+goverened by the following settings. 
+ 
+<a name="anchor10"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doMECs &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, matrix-element corrections for the first few splittings are used. 
+   
+ 
+<a name="anchor11"></a>
+<p/><code>word&nbsp; </code><strong> Dire:MG5card &nbsp;</strong> <br/>
+The ME corrections in Dire rely on code produced by MadGraph5. The 
+initialization of this code requires a Madgraph parameter card. This 
+setting should give the full path to such a "<code>param_card</code>". 
+Without this input, the code will abort. 
+   
+ 
+<a name="anchor12"></a>
+<p/><code>mode&nbsp; </code><strong> Dire:nFinalMaxMECs &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>)<br/>
+If set, this limits the amount of matrix element corrections to final-state 
+particle counts below this value. Any negative value means that ME corrections 
+are applied for each splitting for which ME code is available. 
+   
+ 
+<a name="anchor13"></a>
+<p/><code>parm&nbsp; </code><strong> Dire:pTminMECs &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The minimal evolution scale value (in GeV) for which ME corrections should 
+be applied. A negative value means no restriction. 
+   
+ 
+<a name="anchor14"></a>
+<p/><code>parm&nbsp; </code><strong> Dire:QminMECs &nbsp;</strong> 
+ (<code>default = <strong>1.0</strong></code>)<br/>
+The minimal of all two-particle momentum invariants (in GeV) for which ME 
+corrections should be applied. Non-negative values mean that all two-particle 
+invariants are calculated, and if any is below this parameter, then ME 
+corrections are not attempted. The corresponding change in the emission rate 
+is relected in the probability of clustering histories used for MECs, such 
+that subsequent ME corrections still recover the correct distribution. 
+   
+ 
+<a name="anchor15"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:suppressLargeMECs &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+   
+ 
+<a name="anchor16"></a>
+<p/><code>word&nbsp; </code><strong> Dire:MEplugin &nbsp;</strong> <br/>
+  name of the plugin library to use for matrix element corrections. 
+   
+ 
+<a name="section3"></a> 
+<h3>Other experimental merging settings</h3> 
+ 
+<p> 
+The following settings are currently under investigation and not used 
+in the code. 
+</p> 
+ 
+<a name="anchor17"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doMerging &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This switch should be considered experimental. If on, this simply ensures 
+that the merging machinery can be accessed. The type of merging can then 
+be further specified with the switches below. 
+   
+ 
+<a name="anchor18"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doMOPS &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag switches on the handling of unordered configurations necessary in 
+the MOPS merging method. 
+   
+ 
+<a name="anchor19"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doMEM &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag switches on the possibility to classify input configurations 
+according to the HYTRESS hypothesis testing scheme. 
+   
+ 
+<a name="anchor20"></a>
+<p/><code>parm&nbsp; </code><strong> MEM:WidthH &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+This parameter allows to set the Higgs-boson width parameter used to calculate 
+Higgs hypothesis likelihoods in the HYTREES scheme. 
+   
+ 
+<a name="anchor21"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doGenerateSubtractions &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag allows to retrieve differential real-emission parton-shower 
+counter-terms necessary for MC@NLO matching directly from a shower 
+call. 
+   
+ 
+<a name="anchor22"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doGenerateMergingWeights &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag allows to switch on/off the generation of CKKW-L-type 
+reweighting factors by the merging machinery. 
+   
+ 
+<a name="anchor23"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doSingleLegSudakovs &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag allows to retrieve no-emission probabilities from the parton 
+showers on a leg-by-leg basis. The default definition of no-emission 
+probabilities is instead based on the evolution of a state as as a whole. 
+   
+ 
+<a name="anchor24"></a>
+<p/><code>flag&nbsp; </code><strong> Dire:doExitAfterMerging &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, this switch will allow to terminate the event processing once 
+the calls to the merging machinery have been executed. 
+   
+ 
+<a name="anchor25"></a>
+<p/><code>flag&nbsp; </code><strong> DireTimes:DecaysAsShower &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then shower-generated particles that are classified as resonances 
+can also decayed directly within the final-state parton-shower evolution. 
+   
+ 
+<a name="anchor26"></a>
+<p/><code>flag&nbsp; </code><strong> DireSpace:DecaysAsShower &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If on, then shower-generated particles that are classified as resonances 
+can also decayed directly within the initial-state parton-shower evolution. 
+   
+ 
+ 
+<a name="section4"></a> 
+<h3>Color factors</h3> 
+ 
+The expert user may also want to change the color factors used by QCD 
+showering. This can be done using the settings 
+ 
+<a name="anchor27"></a>
+<p/><code>parm&nbsp; </code><strong> DireColorQCD:TR &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+Changes TR used by Dire. Any negative value means that consistent defaults 
+are used. 
+   
+ 
+<a name="anchor28"></a>
+<p/><code>parm&nbsp; </code><strong> DireColorQCD:CA &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+Changes CA used by Dire. Any negative value means that consistent defaults 
+are used. 
+   
+ 
+<a name="anchor29"></a>
+<p/><code>parm&nbsp; </code><strong> DireColorQCD:NC &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+Changes NC used by Dire. Any negative value means that consistent defaults 
+are used. 
+   
+ 
+<a name="anchor30"></a>
+<p/><code>parm&nbsp; </code><strong> DireColorQCD:CF &nbsp;</strong> 
+ (<code>default = <strong>-1.0</strong></code>)<br/>
+Changes CF used by Dire. Any negative value means that consistent defaults 
+are used. 
+   
+ 
+<a name="section5"></a> 
+<h3>Configurable timelike splitting kernels</h3> 
+ 
+For in-depth theory comparisons, changed splitting kernels can be necessary. 
+Thus, the user can customize the  soft, collinear and finite behavior of 
+timelike splitting probabilities to a large extent by changing the 
+coefficients of mock-up series expansions and by exponential factors. 
+A publication discussing these options is in preparation. 
+ 
+<a name="anchor31"></a>
+<p/><code>flag&nbsp; </code><strong> DireTimes:useBackboneGluons &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+This flag ensures that the recoil in radiation off gluons that trace back 
+to the core process is handled identical to that off hard-process quarks, as 
+is relevant for theoretical quark-gluon discrimination studies. 
+   
+ 
+ 
+<a name="anchor32"></a>
+<p/><code>flag&nbsp; </code><strong> DireTimes:doGeneralizedKernel &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+If enabled, then the user may reconfigure timelike splitting kernels. 
+   
+ 
+<p> 
+Please find below all changeable coefficients. 
+</p> 
+ 
+<a name="anchor33"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softCoeffs:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor34"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softExps:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor35"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaCoeffs:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor36"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaExps:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor37"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor38"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor39"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_1->1&21 &nbsp;</strong> 
+ (<code>default = <strong>-2.0</strong></code>)<br/>
+   
+ 
+<a name="anchor40"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softCoeffs:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor41"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softExps:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor42"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaCoeffs:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor43"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaExps:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor44"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor45"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor46"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_1->21&1 &nbsp;</strong> 
+ (<code>default = <strong>-2.0</strong></code>)<br/>
+   
+ 
+<a name="anchor47"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softCoeffs:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor48"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softExps:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor49"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaCoeffs:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor50"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaExps:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor51"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor52"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor53"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_21->21&21a &nbsp;</strong> 
+ (<code>default = <strong>-2.0</strong></code>)<br/>
+   
+ 
+<a name="anchor54"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softCoeffs:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor55"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:softExps:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor56"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaCoeffs:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor57"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:kappaExps:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor58"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor59"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor60"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_21->21&21b &nbsp;</strong> 
+ (<code>default = <strong>-2.0</strong></code>)<br/>
+   
+ 
+<a name="anchor61"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_21->1&1a &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor62"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_21->1&1a &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor63"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_21->1&1a &nbsp;</strong> 
+ (<code>default = <strong>0.0</strong></code>)<br/>
+   
+ 
+<a name="anchor64"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collCoeffs:Dire_fsr_qcd_21->1&1b &nbsp;</strong> 
+ (<code>default = <strong>{0.,1.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor65"></a>
+<p/><code>pvec&nbsp; </code><strong> DireGeneralizedKernel:collExps:Dire_fsr_qcd_21->1&1b &nbsp;</strong> 
+ (<code>default = <strong>{0.,0.,0.,0.}</strong></code>)<br/>
+   
+<a name="anchor66"></a>
+<p/><code>parm&nbsp; </code><strong> DireGeneralizedKernel:finCoeffs:Dire_fsr_qcd_21->1&1b &nbsp;</strong> 
+ (<code>default = <strong>0.0</strong></code>)<br/>
+   
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Stefan Prestel --> 

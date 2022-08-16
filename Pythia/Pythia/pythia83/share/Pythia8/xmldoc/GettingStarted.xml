@@ -1,0 +1,29 @@
+<chapter name="Resources for New Users"> 
+ 
+<h2>Resources for New Users</h2> 
+ 
+<p>For a new user, getting started using an event generator can be a 
+daunting task.  PYTHIA attemts to describe all parts of high-energy 
+collisions between several species of fundamental and composite 
+particles, and must by definition contain many settings and 
+possibilities, which are not neccesarily interesting or useful to a 
+new user.</p> 
+ 
+<p>PYTHIA therefore ships with several example programs, each 
+highlighting one, or a few, aspects of the framework. All example 
+programs are located in the <code>examples/</code> subdirectory, along 
+with instructions on how to be run.</p> 
+ 
+<p>A new user who is already familar with other event generators, 
+might want to start reading through the description of the 
+<aloc href="ProgramFlow">Program Flow</aloc>, and then proceed to browse 
+through the <aloc href="ExampleKeywords">Example Main Programs</aloc>, 
+to find the physics aspects the user desires to study.</p> 
+ 
+<p>For completely new users, the separate 
+<a href="../pdfdoc/worksheet8200.pdf" target="page"> 
+PYTHIA 8.2 Worksheet</a>, offers a more suitable practical introduction.</p> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

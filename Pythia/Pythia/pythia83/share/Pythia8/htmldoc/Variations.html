@@ -1,0 +1,485 @@
+<html>
+<head>
+<title>Automated Variations of Shower Parameters</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Automated Variations of Shower Parameters for Uncertainty Bands 
+and Enhancement of Rare Splittings</h2> 
+<ol id="toc">
+  <li><a href="#section0">Specifying the Variations</a></li>
+  <li><a href="#section1">Accessing the Uncertainty Weights</a></li>
+  <li><a href="#section2">NLO Compensation Term for Renormalisation-Scale Variations</a></li>
+  <li><a href="#section3">List of Recognised Keywords for Uncertainty Variations</a></li>
+  <li><a href="#section4">Enhanced rate of rare shower splittings</a></li>
+</ol>
+
+ 
+While a number of different central "tunes" of the Pythia parameters 
+are provided, it is often desired  to study how event properties change when 
+some of the parameters (such as those describing the parton showers) are 
+varied.   Pythia has the ability to provide a series of weights 
+to reflect the change in probability for a particular final state to occur 
+when a subset of parton-shower parameters are varied.  Details on the 
+implementation and interpretation of these weights can be found in 
+[<a href="Bibliography.html#refMre16" target="page">Mre16</a>]. 
+Currently, the list of available automated variations 
+(see <a href="#keywords">full list below</a>) includes: 
+<ul> 
+<li> The renormalization scale for QCD emissions in FSR; </li> 
+<li> The renormalization scale for QCD emissions in ISR; </li> 
+<li> The inclusion of non-singular terms in QCD emissions in FSR; </li> 
+<li> The inclusion of non-singular terms in QCD emissions in ISR. </li> 
+<li> The PDF members of a PDF family in LHAPDF6. </li> 
+<li> Individual PDF members of a PDF family in LHAPDF6. </li> 
+</ul> 
+Similar variations would be possible for QED emissions, but these have not 
+yet been implemented. 
+ 
+<p/> 
+Since the computation of the uncertainty variations takes additional 
+CPU time (albeit much less than would be required for independent runs 
+with the equivalent variations), the automated uncertainty variations 
+are switched off by default. 
+<a name="anchor1"></a>
+<p/><code>flag&nbsp; </code><strong> UncertaintyBands:doVariations &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Master switch to perform variations. 
+   
+ 
+<p/> 
+The main intended purpose of these variations is to estimate 
+perturbative uncertainties associated with the parton showers. Due to 
+the pole at LambdaQCD, however, branchings near the perturbative 
+cutoff can nominally result in very large reweighting factors, which 
+is unwanted for typical applications. We therefore enable to limit the 
+absolute (plus/minus) magnitude by which alphaS is allowed to vary by 
+<a name="anchor2"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:deltaAlphaSmax &nbsp;</strong> 
+ (<code>default = <strong>0.2</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 1.0</code>)<br/>
+ The allowed range of variation of alphaS, interpreted as abs(alphaSprime 
+ - alphaS) &lt; deltaAlphaSmax. 
+   
+ 
+<p/> 
+Likewise, non-singular-term variations are mainly intended to 
+capture uncertainties related to missing higher-order tree-level 
+matrix elements and are hence normally uninteresting for very soft 
+branchings. The following parameter allows to switch off the 
+variations of non-singular terms below a fixed perturbative threshold: 
+<a name="anchor3"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:cNSpTmin &nbsp;</strong> 
+ (<code>default = <strong>5.0</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 20.0</code>)<br/>
+Variations of non-singular terms will not be performed for branchings 
+occurring below this threshold. 
+   
+ 
+<p/> 
+By default, the automated shower uncertainty variations are enabled 
+for the showers off the hardest interaction (and associated 
+resonance decays), but not for the showers off MPI systems 
+which would be more properly labeled as underlying-event uncertainties. 
+If desired, the variations can be applied also to showers off MPI systems 
+via the following switch: 
+<a name="anchor4"></a>
+<p/><code>flag&nbsp; </code><strong> UncertaintyBands:MPIshowers &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Flag specifying whether the automated shower variations include 
+showers off MPI systems or not. Note that substantially larger 
+weight fluctuations must be expected when including shower 
+variations for MPI, due to the (many) more systems which then 
+enter in the reweightings. 
+   
+ 
+<p/> 
+The following parameters allow one to switch off all 
+variations below a fixed threshold.  It is specified in terms of 
+a multiplier for the <code>TimeShower:pTmin</code> squared (FSR) or 
+<code>SpaceShower:pT0Ref</code> squared (ISR). 
+A separate cutoff can be specified for ISR or FSR: 
+<a name="anchor5"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:ISRpTmin2Fac &nbsp;</strong> 
+ (<code>default = <strong>4.0</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 100.0</code>)<br/>
+Variations will not be performed for ISR branchings 
+occurring below the threshold fixed by 
+<code>UncertaintyBands:ISRpTmin2Fac</code> times 
+<code> SpaceShower:pT0Ref^2 </code>. 
+   
+<a name="anchor6"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:FSRpTmin2Fac &nbsp;</strong> 
+ (<code>default = <strong>4.0</strong></code>; <code>minimum = 0.0</code>; <code>maximum = 100.0</code>)<br/>
+Variations will not be performed for FSR branchings 
+occurring below the threshold fixed by 
+<code>UncertaintyBands:FSRpTmin2Fac</code> times 
+<code> TimeShower:pTmin^2 </code>. 
+   
+ 
+<p/> 
+To ensure coverage of the phase space for the variations, the overestimate 
+of the Sudakov used in the veto algorithm is artifically increased, which 
+is compensated in the rejection factor. A larger factor reduces fluctuations 
+at the cost of a longer generation time. The default parameters chosen are 
+a compromise between time and fluctuations. 
+<a name="anchor7"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:overSampleFSR &nbsp;</strong> 
+ (<code>default = <strong>3.0</strong></code>; <code>minimum = 1.0</code>; <code>maximum = 10.0</code>)<br/>
+The QCD FSR Sudakov is artificially increased by this factor. The increase 
+is compensated for in the veto algorithm. 
+   
+<a name="anchor8"></a>
+<p/><code>parm&nbsp; </code><strong> UncertaintyBands:overSampleISR &nbsp;</strong> 
+ (<code>default = <strong>2.0</strong></code>; <code>minimum = 1.0</code>; <code>maximum = 10.0</code>)<br/>
+The similar parameter for the QCD ISR Sudakov. 
+   
+ 
+<p/> 
+The user can control whether the variations are calculated in all or 
+specific stages of the event generation: 
+<a name="anchor9"></a>
+<p/><code>mode&nbsp; </code><strong> UncertaintyBands:type &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)<br/>
+<br/><code>option </code><strong> 0</strong> :   Variations are calculated where allowed;    
+<br/><code>option </code><strong> 1</strong> :    only for the process (including ISR and FSR);    
+<br/><code>option </code><strong> 2</strong> :    only for resonance decay and showering;    
+   
+ 
+<p/> 
+<b>Merging Warning:</b> in multi-jet merging approaches, trial showers 
+are used to generate missing Sudakov factor corrections to the hard 
+matrix elements. Currently that framework is not consistently combined 
+with the variations introduced here, so the two should not be used 
+simultaneously. This restriction will be lifted in a future release. 
+ 
+<a name="section0"></a> 
+<h3>Specifying the Variations</h3> 
+ 
+When <code>UncertaintyBands:doVariations</code> is switched on, the user 
+can define an arbitrary number of uncertainty variations to perform. 
+To allow for combinations of individual parameter variations (such as 
+a simultaneous variation of both the ISR and FSR renormalisation scales), 
+the user generally requests <b>groups</b> of variations, each of 
+which may consist of one or several individual variations. The 
+format for specifying each variation group is: 
+<pre> 
+    Label keyword1=value keyword2=value ... 
+</pre> 
+where the user has complete freedom to specify the label, and each 
+keyword must be selected from the 
+<a href="#keywords">list of currently recognised keywords</a> below. 
+Instead of an equal sign it is also possible to leave a blank between 
+a keyword and its value. 
+ 
+<p/> 
+To exemplify, an uncertainty variation corresponding to simultaneously 
+increasing both the ISR and FSR renormalisation scales by a factor of 
+two would be defined as follows 
+<pre> 
+    myVariation1 fsr:muRfac=2.0 isr:muRfac=2.0 
+</pre> 
+ 
+<p/> 
+Staying within the context of this example, the user might also want to 
+check what a variation of the two scales independently of each other would 
+produce. This can be achieved within the same run by adding two further 
+variations, as follows: 
+<pre> 
+    myVariation2 fsr:muRfac=2.0 
+    myVariation3 isr:muRfac=2.0 
+</pre> 
+Different histograms can then be filled with each set of weights as 
+desired (see the 
+<a href="CrossSectionsAndWeights.html" target="page">Cross Sections and Weights</a> 
+page for how to access the weights). 
+Variations by smaller or larger factors can obviously also be added in the 
+same way, again within one and the same run. 
+ 
+<p/>Note that, internally, Pythia only keeps track of the individual 
+component variations. These are then combined together suitably in the 
+output when requested. I.e., in the example above, Pythia only keeps 
+internal track of two weight variations, for <code>fsr:muRfac=2.0</code> and 
+<code>isr:muRfac=2.0</code> respectively; these are then combined together 
+on the fly if the user requests 
+the weight for the <code>myVariation1</code> group. 
+See the 
+<a href="CrossSectionsAndWeights.html" target="page">Cross Sections and Weights</a> 
+page for how to access both individual and group weights. 
+ 
+<p/> 
+Once a list of variations defined as above has been decided on, 
+the whole list should be passed to Pythia in the form of a single 
+<a href="SettingsScheme.html" target="page">"vector of strings"</a>, defined as 
+follows: 
+<a name="anchor10"></a>
+<p/><code>wvec&nbsp; </code><strong> UncertaintyBands:List &nbsp;</strong> 
+ (<code>default = <strong>{alphaShi fsr:muRfac=0.5 isr:muRfac=0.5, alphaSlo fsr:muRfac=2.0 isr:muRfac=2.0, hardHi fsr:cNS=2.0 isr:cNS=2.0, hardLo fsr:cNS=-2.0 isr:cNS=-2.0}</strong></code>)<br/>
+Vector of uncertainty-variation strings defining which variations will be 
+calculated by Pythia when <code>UncertaintyBands:doVariations</code> 
+is switched on. 
+   
+ 
+<p/> 
+For completeness, we note that a command-file specification 
+equivalent to the above default variations could look as follows: 
+<pre> 
+    UncertaintyBands:List = { 
+        alphaShi fsr:muRfac=0.5 isr:muRfac=0.5, 
+        alphaSlo fsr:muRfac=2.0 isr:muRfac=2.0, 
+        hardHi fsr:cNS=2.0 isr:cNS=2.0, 
+        hardLo fsr:cNS=-2.0 isr:cNS=-2.0 
+    } 
+</pre> 
+ 
+Note that keywords separated only by spaces are interpreted as 
+belonging to a single group of simultaneous variations, while 
+different groups are separated by commas. Note also that the beginning and 
+end of the  vector is marked by curly braces. 
+<p/> 
+The combination of variations in a group has a total weight 
+that is the product of those for the corresponding 
+individual parameter variations. 
+The individual parameter variations are bookkept separately because: 
+<br/>(1) there is some potential redundancy of 
+individual parameter variations between different groups, 
+<br/>(2) they are often accumulated in different parts of 
+the code,  and 
+<br/>(3) the user might want to deconvolute the products in the group. 
+ 
+<p/> 
+In the example given above, there are 8 individual parameter variations 
+<code> fsr:muRfac=0.5,isr:muRfac=0.5,fsr:muRfac=2.0,isr:muRfac=2.0, 
+fsr:cNS=2.0,isr:cNS=2.0,fsr:cNS=-2.0,isr:cNS=-2.0</code> 
+and 4 groups <code>alphaShi,alphaSlo,hardHi,hardLo</code>. 
+ 
+<a name="access"></a> 
+<a name="section1"></a> 
+<h3>Accessing the Uncertainty Weights</h3> 
+ 
+The methods for how to access the uncertainty weights are collected 
+and documented on the 
+<a href="CrossSectionsAndWeights.html" target="page">Cross Sections and Weights</a> page. 
+ 
+<a name="section2"></a> 
+<h3>NLO Compensation Term for Renormalisation-Scale Variations</h3> 
+ 
+Additionally, there is a run-time parameter: 
+<a name="anchor11"></a>
+<p/><code>flag&nbsp; </code><strong> UncertaintyBands:muSoftCorr &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+This flags tells the shower to apply an O(&alpha;S<sup>2</sup>) 
+compensation term to the renormalization-scale variations, which 
+reduces their magnitude for soft emissions, as described in 
+[<a href="Bibliography.html#refMre16" target="page">Mre16</a>]. 
+   
+ 
+<a name="keywords"></a> 
+<a name="section3"></a> 
+<h3>List of Recognised Keywords for Uncertainty Variations</h3> 
+ 
+The following keywords adjust the renormalisation scales and 
+non-singular terms for all FSR and ISR branchings, respectively: 
+<ul> 
+<li><code>fsr:muRfac</code> : multiplicative factor applied to the 
+renormalization scale for FSR branchings.</li> 
+<li><code>isr:muRfac</code> : multiplicative factor applied to the 
+renormalization scale for ISR branchings.</li> 
+<li><code>fsr:cNS</code> : additive non-singular ("finite") 
+term in the FSR splitting functions.</li> 
+<li><code>isr:cNS</code> : additive non-singular ("finite") 
+term in the ISR splitting functions.</li> 
+</ul> 
+Note that the <code>muRfac</code> parameters are applied linearly to 
+the renormalisation scale, hence &mu;<sup>2</sup> &rarr; 
+(<code>muRfac</code>)<sup>2</sup>*&mu;<sup>2</sup>. 
+ 
+<p/> 
+The keywords for PDF variations (plus and minus) is: 
+<ul> 
+  <li><code>isr:PDF:plus</code> : any number </li> 
+  <li><code>isr:PDF:minus</code> : any number </li> 
+</ul> 
+The number is not used, but is there for syntactical consistency. 
+Note, this uses the formula from the LHAPDF6 library to calculate the 
+variation. 
+ 
+<p/> 
+Alternatively, the variation from the default to any other individual 
+PDF member is calculated using the following syntax: 
+<ul> 
+  <li><code>isr:PDF:member</code> : member number </li> 
+</ul> 
+To force the calculation for ALL members of the PDF family, then use: 
+<ul> 
+  <li><code>isr:PDF:family</code> : any number </li> 
+</ul> 
+The number is not used. 
+ 
+<p/> 
+Optionally, a further level of detail can be accessed by specifying 
+variations for specific types of branchings, with the global keywords 
+above corresponding to setting the same value for all 
+branchings. Using the <code>fsr:muRfac</code> parameter for 
+illustration, the individual branching types that can be specified 
+are: 
+<ul> 
+<li><code>fsr:G2GG:muRfac</code> : variation for g&rarr;gg branchings.</li> 
+<li><code>fsr:Q2QG:muRfac</code> : variation for q&rarr;qg branchings.</li> 
+<li><code>fsr:G2QQ:muRfac</code> : variation for g&rarr;qqbar branchings.</li> 
+<li><code>fsr:X2XG:muRfac</code> : variation for gluon bremsstrahlung off 
+other types of particles (such as coloured new-physics particles). </li> 
+</ul> 
+For the distinction between <code>Q2QG</code> and <code>X2XG</code>, 
+the following switch can be used to control whether <i>b</i> and 
+<i>t</i> quarks are considered to be <code>Q</code> or <code>X</code> 
+particles (e.g. providing a simple way to control top-quark or bottom-quark 
+radiation independently of the rest of the shower uncertainties): 
+<a name="anchor12"></a>
+<p/><code>mode&nbsp; </code><strong> UncertaintyBands:nFlavQ &nbsp;</strong> 
+ (<code>default = <strong>6</strong></code>; <code>minimum = 2</code>; <code>maximum = 6</code>)<br/>
+Number of quark flavours controlled via <code>Q2QG</code> keywords, with 
+higher ID codes controlled by <code>X2XG</code> keywords. Thus a change to 
+5 would mean that top-quark variations would use <code>X2XG</code> keyword 
+values instead of the corresponding <code>Q2QG</code> ones. 
+   
+ 
+<a name="section4"></a> 
+<h3>Enhanced rate of rare shower splittings</h3> 
+ 
+PYTHIA also offers possibilities to enhance the frequency of rare 
+splittings.  This is not a trivial task, since a simple "upweighting" of 
+splittings would produce a mismatch between emission and no-emission 
+probabilities, leading to a violation of the principle that the parton 
+shower should not change the inclusive (input) cross section. 
+Nevertheless, a general algorithm that allows for increased emission 
+probabilities, while keeping no-emission factors intact, was presented 
+in [<a href="Bibliography.html#refLon13a" target="page">Lon13a</a>]. 
+ 
+<p/>In [<a href="Bibliography.html#refLon13a" target="page">Lon13a</a>] two types of enhancements are proposed: those 
+of "regular" shower emissions, and those of trial shower emissions, the 
+latter as part of the mandatory Sudakov reweighting in ME+PS merging 
+schemes. Both of these possibilities are accessible through the same 
+machinery as for the parton shower variations, but cannot be used at the 
+same time. 
+ 
+<p/>The price to pay for these enhancements is that events come with a 
+compensatory weight. The advantages of obtaining higher statistics 
+for rare branchings thus is mitigated, and the usefulness has to be 
+evaluated case by case. 
+ 
+<p/>Currently enhancements of ISR and FSR branchings have been 
+included. These enhancements are currently not phase-space dependent, 
+i.e. emissions will be enhanced uniformly in phase space. 
+ 
+<p/>To increase statistics of rare emissions in the showers, e.g. QED 
+or weak radiation, Pythia supplies the following settings implementing 
+the strategy of section 4 in [<a href="Bibliography.html#refLon13a" target="page">Lon13a</a>]. 
+ 
+<p/> 
+Since the computation of enhanced splittings also takes additional 
+CPU time (albeit much less than would be required for independent runs 
+with the equivalent variations), such enhancements 
+are switched off by default. 
+<a name="anchor13"></a>
+<p/><code>flag&nbsp; </code><strong> Enhancements:doEnhance &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Master switch to perform enhanced splittings. If activated, the enhancement 
+factors in <code>EnhancedSplittings:List</code> will be used to rescale 
+the splitting probabilities. 
+   
+ 
+The list of desired enhancements should be passed to Pythia in the form of 
+a single <a href="SettingsScheme.html" target="page">"vector of strings"</a>, defined as 
+follows: 
+<a name="anchor14"></a>
+<p/><code>wvec&nbsp; </code><strong> EnhancedSplittings:List &nbsp;</strong> 
+ (<code>default = <strong>{isr:Q2QA=50.,isr:Q2AQ=50.,fsr:Q2QA=50.0}</strong></code>)<br/>
+Currently, the following input names are recognized by the PYTHIA 
+showers, and can thus be used to enhance the respective 
+splittings. 
+<p/> 
+ISR QCD branchings: 
+<br/><code>isr:G2GG</code> for <i>g &rarr; g + g</i>, 
+<br/><code>isr:G2QQ</code> for <i>g &rarr; q + qbar</i>, 
+<br/><code>isr:Q2QG</code> for <i>q &rarr; q + g</i>, 
+<br/><code>isr:Q2GQ</code> for <i>q &rarr; g + q</i>; 
+<p/> 
+ISR QED branchings: 
+<br/><code>isr:Q2QA</code> for <i>q &rarr; q + photon</i>, 
+<br/><code>isr:Q2AQ</code> for <i>q &rarr; photon + q</i>; 
+<p/> 
+ISR weak shower branchings: 
+<br/><code>isr:Q2QW</code> for <i>q &rarr; q + W</i> or 
+<i>q &rarr; q + Z</i>; 
+<p/> 
+FSR QCD branchings: 
+<br/><code>fsr:G2GG</code> for <i>g &rarr; g + g</i>, 
+<br/><code>fsr:G2QQ</code> for <i>g &rarr; q + qbar</i> 
+with <i>q</i> a light quark, 
+<br/><code>fsr:Q2QG</code> for <i>q &rarr; q + g</i>; 
+<p/> 
+FSR QED branchings: 
+<br/><code>fsr:Q2QA</code> for <i>q &rarr; q + photon</i>, 
+<br/><code>fsr:A2QQ</code> for <i>photon &rarr; q + qbar</i>, 
+<br/><code>fsr:A2LL</code> for <i>photon &rarr; lepton + antilepton</i>, 
+<p/> 
+FSR weak shower branchings: 
+<br/><code>fsr:Q2QW</code> for <i>q &rarr; q + W</i> or 
+<i>q &rarr; q + Z</i>; 
+<p/> 
+FSR hidden valley branchings: 
+<br/><code>fsr:Q2QHV</code> for all hidden valley branchings. 
+<br/> 
+<br/>Charge-conjugated branchings are included whenever relevant. 
+Note that the order of the daughters matters: in the backwards 
+evolution machinery the step is from the first daughter to the mother 
+by the emission of the second daughter. 
+   
+ 
+<p/> 
+Let's consider some examples. 
+The evolution step changing the partonic state from 
+<i>q qbar &rarr; e+ e-</i> to <i>g qbar &rarr; e+ e- qbar</i> 
+through an initial state splitting can be enhanced 
+by allowing a non-unity enhancement value for the splitting 
+<code>isr:G2QQ</code>. Another evolution 
+step changing <i>g qbar &rarr; e+ e- qbar</i> to 
+<i>g qbar &rarr; e+ e- qbar gluon</i> through FSR (ISR) can be 
+enhanced by allowing a non-unity enhancement value for the splitting 
+<code>fsr:Q2QG</code> (<code>isr:Q2QG</code>). Yet another ISR branching 
+converting 
+<i>g qbar &rarr; e+ e- qbar</i> to <i>q qbar &rarr; e+ e- qbar q</i> can 
+be enhanced by non-unity enhancement value for the splitting 
+<code>isr:Q2GQ</code> 
+(note the ordering in the branching name). 
+ 
+<p/>In the context of merging, it can be beneficial to allow for enhanced 
+trial emissions. As discussed in section 3 of [<a href="Bibliography.html#refLon13a" target="page">Lon13a</a>], this 
+means that the Sudakov factors that are commonly generated by event 
+vetoes based on trial emissions (see e.g. [<a href="Bibliography.html#refLon11" target="page">Lon11</a>]) are 
+instead given by small but non-vanishing event weights. This can have 
+advantages, since all events of an input sample will be retained. 
+Pythia allows users to enhance trial emissions by using the following 
+setting. 
+<a name="anchor15"></a>
+<p/><code>flag&nbsp; </code><strong> Enhancements:doEnhanceTrial &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Master switch to perform enhanced trial splittings, which are used in 
+CKKWL-type merging trial showers. 
+   
+ 
+<p/> 
+If you use enhanced emissions or enhanced trial emissions, it is paramount to 
+attribute a corrective weight to each event containing enhanced emissions. 
+For enhanced emissions, the weight is included in the usual shower weight, 
+for enhanced trial emissions, it is included in the merging weight. See the 
+<a href="CrossSectionsAndWeights.html" target="page">Cross Sections and Weights</a> 
+page for more details. 
+ 
+<p/>A simple example of enhanced regular emissions is provided in 
+<code>main63.cc</code>. 
+ 
+</body>
+</html>
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

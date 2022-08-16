@@ -1,0 +1,269 @@
+<chapter name="Cross sections and weights"> 
+ 
+<h2>Cross Sections and Weights</h2> 
+ 
+Although Pythia's baseline setup is for generating sets of fully 
+unweighted events (each representing an equal fraction of the total 
+generated cross section), some options and interfaces 
+allow for, and even mandate, generation of weighted events. 
+Methods related to retrieving both the integrated cross sections 
+computed by Pythia as well as various kinds of event weights are 
+collected on this page. 
+ 
+<h3>Cross Sections and Weight Sums</h3> 
+ 
+Here are the currently available methods related to the event sample 
+as a whole, for the default value <code>i = 0</code>, and otherwise for 
+the specific process code provided as argument. This is the number 
+obtained with <code>Info::code()</code>, while the further subdivision 
+given by <code>Info::codeSub()</code> is not bookkept. While continuously 
+updated during the run, it is recommended only to study these properties 
+at the end of the event generation, when the full statistics is available. 
+The individual process results are not available if 
+<aloc href="SecondHardProcess">a second hard process</aloc> has been 
+chosen, but can be gleaned from the <code>pythia.stat()</code> output. 
+ 
+<method name="vector&lt;int&gt; Info::codesHard()"> 
+returns a vector with all the process codes set up for the current run, 
+i.e. the valid nonzero arguments for the five methods below. 
+</method> 
+ 
+<method name="string Info::nameProc(int i = 0)"> 
+returns the process name for process code <code>i</code>. 
+</method> 
+ 
+<method name="long Info::nTried(int i = 0)"> 
+</method> 
+<methodmore name="long Info::nSelected(int i = 0)"> 
+</methodmore> 
+<methodmore name="long Info::nAccepted(int i = 0)"> 
+the total number of tried phase-space points, selected hard processes 
+and finally accepted events, summed over all allowed processes 
+(<code>i = 0</code>) or for the given process. 
+The first number is only intended for a study of the phase-space selection 
+efficiency. The last two numbers usually only disagree if the user introduces 
+some veto during the event-generation process; then the former is the number 
+of acceptable events found by PYTHIA and the latter the number that also 
+were approved by the user. If you set <aloc href="SecondHardProcess">a 
+second hard process</aloc> there may also be a mismatch. 
+</methodmore> 
+ 
+<method name="double Info::sigmaGen(int i = 0)"> 
+</method> 
+<methodmore name="double Info::sigmaErr(int i = 0)"> 
+the estimated cross section and its estimated error, 
+summed over all allowed processes (<code>i = 0</code>) or for the given 
+process, in units of mb. The numbers refer to the accepted event sample 
+above, i.e. after any user veto. 
+</methodmore> 
+ 
+<method name="double Info::weightSum()"> 
+Sum of weights accumulated during the run. For unweighted events this 
+agrees with the number of generated events. In order to obtain 
+histograms normalized "per event", at the end of a run, histogram 
+contents should be divided by this weight. (And additionally 
+divided by the bin width.) Normalization to cross section also 
+required multiplication by <code>sigmaGen()</code> below. 
+</method> 
+ 
+<method name="int Info::lhaStrategy()"> 
+normally 0, but if Les Houches events are input then it gives the 
+event weighting strategy, see 
+<aloc href="LHA">Les Houches Accord</aloc>. 
+</method> 
+ 
+<h3>Event Weight</h3> 
+ 
+<method name="double Info::weight()"> 
+weight assigned to the current event. Is normally 1 and thus 
+uninteresting. However, there are several cases where one may have 
+nontrivial event weights. These weights must the be used e.g. when 
+filling histograms. 
+<br/>(i) In the <code><aloc href="PhaseSpaceCuts"> 
+PhaseSpace:increaseMaximum = off</aloc></code> default strategy, 
+an event with a differential cross-section above the assumed one 
+(in a given phase-space point) is assigned a weight correspondingly 
+above unity. This should happen only very rarely, if at all, and so 
+could normally be disregarded. 
+<br/>(ii) The <aloc href="UserHooks">User Hooks</aloc> class offers 
+the possibility to bias the selection of phase space points, which 
+means that events come with a compensating weight, stored here. 
+<br/>(iii) For Les Houches events some strategies allow negative weights, 
+which then after unweighting lead to events with weight -1. There are 
+also Les Houches strategies where no unweighting is done, so events 
+come with a weight. Specifically, for strategies <ei>+4</ei> and 
+<ei>-4</ei>, the event weight is in units of pb. (Internally in mb, 
+but converted at output.) 
+<br/>(iv) If enhanced parton shower emissions are activated, the corrective 
+weight to each event containing enhanced emissions is included here. 
+</method> 
+ 
+<h3>CKKW-L and NLO Merging Weights</h3> 
+ 
+<method name="double Info::mergingWeight()"> 
+combined leading-order merging weight assigned to the current event, if 
+tree-level multi-jet merging (i.e. 
+<aloc href="CKKWLMerging"> CKKW-L</aloc> or 
+<aloc href="UMEPSMerging"> UMEPS</aloc> merging) is attempted. 
+If tree-level multi-jet merging is performed, all histograms should be 
+filled with this weight, as discussed in 
+<aloc href="CKKWLMerging"> CKKW-L Merging</aloc> and 
+<aloc href="UMEPSMerging"> UMEPS Merging</aloc>. 
+</method> 
+ 
+<method name="double Info::mergingWeightNLO()"> 
+combined NLO merging weight assigned to the current event, if 
+NLO multi-jet merging (i.e. 
+<aloc href="NLOMerging"> NL<sup>3</sup></aloc> or 
+<aloc href="NLOMerging"> UNLOPS</aloc> merging) is attempted. 
+If NLO multi-jet merging is performed, all histograms should be filled 
+with this weight, as discussed in 
+<aloc href="NLOMerging"> NLO Merging</aloc>. 
+</method> 
+ 
+<p/> 
+Note that there are two schemes to handle the combination of merging 
+weight and event weight. These can be selected by using the setting 
+ 
+<flag name="Merging:includeWeightInXsection" default="on"> 
+If on, then the reweighting of events in the CKKW-L scheme is included 
+in the event weight <code>Info::weight()</code>, the merging weight 
+<code>Info:mergingWeight()</code> is unity, and the cross section 
+printed by <code>Info::sigmaGen()</code> includes the effect of CKKW-L 
+merging. 
+</flag> 
+ 
+<h3>User Hooks Weight</h3> 
+ 
+<method name="virtual double UserHooks::biasedSelectionWeight()"> 
+Returns the weight you should assign to the event, to use e.g. when 
+you histogram results. It is the exact inverse of the weight you 
+used to modify the phase-space sampling, a weight that must be stored 
+in the <code>selBias</code> member variable, such that this routine 
+can return <code>1/selBias</code>. The weight is also returned by the 
+<code>Info::weight()</code> method, which may be more convenient to use. 
+</method> 
+ 
+<h3>Shower Uncertainty-Variation Weights</h3> 
+ 
+As discussed in the sections on Parton Showers, the user can 
+request Pythia to compute (sets of) alternative event weights 
+representing (groups of) variations of shower parameters. 
+See <ref>Mre16</ref> and the page on 
+<aloc href="Variations">Automated Variations</aloc> for further 
+documentation. 
+ 
+<p/> 
+The following methods give access to the groups of uncertainty weights: 
+ 
+<method name=" int    Info::nVariationGroups() "> 
+  returns the number of groups 
+</method> 
+<method name=" string Info::getGroupName(int iG) "> 
+  returns the name of the iG-th group 
+</method> 
+<method name=" double Info::getGroupWeight(int iG) "> 
+  returns the weight of the iG-th group 
+</method> 
+ 
+<p/> 
+Correspondingly, the individual parameter-variation weights can also 
+be accessed: 
+ 
+<method name="int Info::nWeights()"> 
+  returns number of individual parameter-variation weights 
+</method> 
+<method> name="string Info::weightLabel(int i)"> 
+returns label of i-th individual parameter-variation weight 
+</method> 
+<method name="double Info::weight(int i)"> 
+  returns value of i-th indivudal parameter-variation weight 
+</method> 
+ 
+<p/> 
+Note, <code> weight(0) </code> returns the same value as 
+<code>weight()</code>, 
+which is the baseline weight for each event (normally unity for an 
+ordinary unweighted event sample). The individual parameter-variation 
+weights are thus enumerated starting from <code>1</code> for 
+the first up to <code>nWeights()</code> for 
+the last individual parameter variation. 
+ 
+<h3>The Weight Container</h3> 
+ 
+In the long run, we plan to consolidate all possible weights into 
+one structure with a simple getter for the user. This strategy 
+is currently used when producing <code>HepMC2</code> and 
+<code>HepMC3</code> output. In these two cases, all weights 
+that appear in the event generation will automatically be 
+transferred to the output files. This means that the HepMC file will 
+automatically contain weights from various sources, e.g. weights from 
+<aloc href="LHEF">LHE files</aloc>, 
+<aloc href="Variations">automated shower variations</aloc>, etc. Note that 
+for LHEF files, only the <ei>detailed format</ei> is currently 
+supported in the weight container, and that the names of weights 
+appearing in HepMC will use the convention discussed in 
+<ref>But14</ref>, page 162.  The sample main programs 
+<code>main44.cc</code> and <code>main45.cc</code> 
+illustrate this behaviour. 
+ 
+<p/> 
+In this context, the following program methods are relevant: 
+ 
+<method name="int Info::numberOfWeights()"> 
+The total length of the set of all weights, similar to 
+<code>Info::nWeights</code> above (which returns the length of the set 
+of shower variation weights). 
+</method> 
+ 
+<method name="string Info::weightNameByIndex(int i)"> 
+Returns the name of the i'th weight.  For example, if "i" indexes a 
+shower variation, this would e.g. return <code>fsr:muRfac=0.5</code> 
+and so on. If "i" pertains to a weight read from an input LHEF file 
+(see <aloc href="LHEF">Les Houches Event Files</aloc> for further 
+details), then the name will be returned in the convention discussed 
+in <ref>But14</ref>, page 162. These latter names are constructed from 
+the content of the "&lt;weight&gt;" tags in the LHE file header. 
+</method> 
+ 
+<method name="double Info::weightValueByIndex(int i)"> 
+Returns the value of the i'th weight. The normalization of all weights 
+is synchronized. For unweighted event generation (as would be the case 
+when running stand-alone, of for LHEFs employing weight strategy 3), 
+the value is relative to the cross section. For weighted events 
+(e.g. when using LHEFs employing weight strategy +-4), the value will 
+include the cross section prefactor. <code>main44.cc</code> gives an 
+example for both these cases. 
+</method> 
+ 
+<method name="vector &lt;string&gt; Info::weightNameVector() const"> 
+Returns a vector of all weight names. The ordering of entries in synchronized 
+with the order of <code> Info::weightValueVector()</code>. 
+</method> 
+ 
+<method name="vector &lt;double&gt; Info::weightValueVector() const"> 
+Returns a vector of all weight values. The ordering of entries in synchronized 
+with the order of <code> Info::weightNameVector()</code>. 
+</method> 
+ 
+<p/> 
+Custom weights such as shower variations weights, shower variation group 
+weights, and weights directly included from LHEF input receive an 
+<code>AUX_</code> prefix in the weight name as reported by the methods 
+<code>Info::weightNameByIndex</code> and <code>Info::weightNameVector</code> 
+to mark them as auxiliary output. This allows the user to further process or 
+combine the weights in a meaningful way. Since the number of these weights 
+depends on the LHEF input, different numbers of weights might occur in the 
+output when processing multiple LHEF input files. To avoid this, the following 
+flag allows to suppress the output of <code>AUX_</code> weights. 
+ 
+<flag name="Weights:suppressAUX" default="off"> 
+If on, the output of weights with <code>AUX</code> prefix will be 
+suppressed in the five above mentioned methods. The nominal weight and 
+combined weight variations from LHEF, parton shower and merging 
+remain. 
+</flag> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 

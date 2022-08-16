@@ -1,0 +1,233 @@
+<chapter name="Parton Vertex Information"> 
+ 
+<h2>Parton Vertex Information</h2> 
+ 
+While the setting of secondary production vertices of unstable 
+hadrons and leptons is a standard part of the particle decay 
+rotines, no corresponding standardized handling is in place for 
+the evolution in the partonic or hadronization phases 
+of the event generation. The intention is to provide such methods 
+in due course. 
+ 
+<p/> 
+There are some cases where such information is needed already now, 
+specifically for the 
+<aloc href="RopeHadronization">Rope Hadronization</aloc> and the 
+<aloc href="HadronicRescattering">Hadronic Rescattering</aloc> 
+frameworks. Therefore the beginning of a framework is available, 
+that can be used to set impact-parameter-plane vertices for 
+partonic production by MPI, FSR, ISR and beam remnants. This is 
+done in the <code>PartonVertex</code> class. 
+ 
+<p/> 
+This is a base class, with a default implementation, but the user 
+can replace it with a derived class that does a more sophisticated 
+handling. Improvements and extensions are likely to come to the 
+base class. So, while people are welcome to write their own derived 
+classes, it is likely that these may need to be modified in later 
+PYTHIA versions. 
+ 
+<h3>Hadronization Parameters</h3> 
+ 
+Currently the base class implements a few alternative approaches to 
+picking a partonic vertex, for use inside the rope hadronization and 
+hadronic rescattering frameworks. There are also some free parameters 
+in the models. 
+ 
+<flag name="PartonVertex:setVertex" default="off"> 
+Master switch to allow the setting of partonic vertices. 
+</flag> 
+ 
+<modepick name="PartonVertex:modeVertex" default="2" min="1" max="4"> 
+Choice between alternative procedures to select vertex. 
+<option value="1">Proton profile is a (Lorentz-contracted) 
+uniform-parton-density ball. This gives an almond-shaped 
+overlap region between two colliding hadrons, favouring MPI being 
+displaced perpendicularly to the collision plane. 
+</option> 
+<option value="2">Proton profile is a (Lorentz-contracted) 
+three-dimensional Gaussian, or equivalently a two-dimensional one, 
+since a Gaussian easily factorizes so that the <ei>z</ei> can be 
+integrated out. This gives a Gaussian overlap region between the 
+two colliding hadrons, since the product of two displaced Gaussians 
+is another Gaussian. 
+</option> 
+<option value="3">Proton profile is a Gaussian, as above, but 
+elongated by a scale factor <ei>rEps</ei> in the <ei>x</ei> direction 
+and compressed by the same factor in the <ei>y</ei> direction. 
+Here <ei>rEps = sqrt( (1 + epsilon) / (1 - epsilon) )</ei>, where 
+<ei>epsilon</ei> is described further below. If <ei>epsilon &lt; 0</ei> 
+then the role of elongation and compression is exchanged. 
+</option> 
+<option value="4">Proton profile is Gaussian, as above, but with a 
+further modulation factor <ei>1 + epsilon * cos(2 * phi)</ei>, where 
+the asymmetry parameter <ei>epsilon</ei> is described further below. 
+The azimuthal angle <ei>phi</ei> is defined with respect the the 
+hadron-hadron collision plane. Among rotationally symmetric parton 
+distributions only the Gaussian one (or a sum of Gaussians) do not 
+give rise to azimuthal asymmetries, so this option offers some 
+further flexibility. 
+</option> 
+<note>Warning:</note> In the first option collisions cannot happen 
+if the impact parameter is larger than twice the proton/hadron radius. 
+The MPI machinery has a separate framework for selecting impact 
+parameters, however, by default closer to option 2, and thus able 
+to produce larger separations. To this end, the impact parameter 
+is limited to be at most 0.95 of the maximal in option 1, 
+and a warning is issued for values initially above that. 
+</modepick> 
+ 
+<parm name="PartonVertex:phiAsym" default="0." min="-0.9" max="0.9"> 
+The azimuthal asymmetry parameter <ei>epsilon</ei> defined above for 
+<code>PartonVertex:modeVertex =</code> 3 and 4. A positive (negative) value 
+favours MPI production in (out of) the collision frame, as could be 
+expected for a matter distribution with a flatter-(sharper-)than-Gaussian 
+edge. 
+</parm> 
+ 
+<parm name="PartonVertex:ProtonRadius" default="0.85" min="0." max="10."> 
+The proton radius and shape depends on the collision energy and on the 
+context in which it is used. The default value is based on the static 
+charge-radius definition. If the DIPSY model <ref>Fle11</ref> is used, 
+then for a description at LHC collision energies, say 14 TeV, the required 
+profile corresponds roughly to a Gaussian with a width of around 0.7 fm. 
+</parm> 
+ 
+<parm name="PartonVertex:EmissionWidth" default="0.1" min="0." max="10."> 
+Vertices of ISR+FSR partons are smeared relative to their mother by a 
+Gaussian distribution with a width of <code>EmissionWidth</code>/<ei>pT</ei>, 
+where <ei>pT</ei> is the transverse momentum of the produced parton (in GeV). 
+This parameter thus determined the overall strength of the transverse space 
+smearing. 
+</parm> 
+ 
+<parm name="PartonVertex:pTmin" default="0.2" min="0.05" max="1."> 
+The parton transverse smearing is assumed proportional to <ei>1 / pT</ei>, 
+but <ei>pT</ei> is limited to be above this parameter so as to avoid 
+unreasonable values. 
+</parm> 
+ 
+<flag name="PartonVertex:randomPlane" default="on"> 
+If off then the impact parameter vector lies in the <ei>xz</ei> plane, 
+which is convenient for theoretical studies of azimuthal distributions. 
+If on then the event will be rotated a random angle around the z axis 
+so as to be more realistic. The angle can still be reconstructed from 
+the vertices of the two incoming hadrons. 
+</flag> 
+ 
+<h3>External models</h3> 
+ 
+A derived class for setting parton vertex information can be provided 
+to PYTHIA with the 
+<br/><code> 
+bool Pythia::setPartonVertexPtr( PartonVertex* partonVertexPtrIn) 
+</code><br/> 
+method. The methods in the derived <code>PartonVertex</code> class 
+can then be used to add vertex information to produced particles, 
+at creation time, in MPI, FSR and ISR and beam remnants. The assigned 
+vertex information will afterwards be accessible as properties of the 
+individual particles. Particles produced in other types of processes 
+than the ones mentioned above will not have vertex information 
+assigned (e.g. hard process), neither will particles produced in the 
+weak shower. 
+ 
+<method name="virtual void init()"> 
+can be used to initialize various parameters of the model or precalculate 
+common numbers. Note that a separate non-virtual method will already 
+have provided pointers to the <code>Info</code>, <code>Settings</code> 
+and <code>Rndm</code> classes, so that these are available in all derived 
+classes. 
+</method> 
+ 
+<method name="virtual void vertexMPI( int iBeg, int nAdd, double bNow, 
+Event& event)"> 
+Method to assign a production vertex to a particle produced in the MPI 
+framework. Should set the vertices <code>vProd</code> of the particles 
+concerned. 
+<argument name="iBeg"> is the index of the first parton of a MPI. 
+</argument> 
+<argument name="nAdd"> is the number of partons involved in the MPI, 
+currently always four: two in and two out. 
+</argument> 
+<argument name="bNow"> is the impact parameter of the event. It is not 
+expressed in physical units (like fm), but rescaled such that the average 
+is unity for MPI events. See the section on 
+<aloc href="MultipartonInteractions">Multiparton Interactions</aloc> for 
+a description of choices for the <ei>b</ei> dependence. 
+</argument> 
+<argument name="event"> reference to the whole event, to read information 
+from and set the relevant <code>vProd</code> values into. 
+</argument> 
+</method> 
+ 
+<method name="virtual Vec4 vertexFSR( int iNow, Event& event)"> 
+Method to assign production vertex to a particle produced in the FSR 
+(<code>TimeShower</code>). Should set the vertex <code>vProd</code> 
+of the particle concerned. 
+<argument name="iNow"> is the index of the parton concerned. In a 
+branching the daughters automatically inherit the vertex of the mother, 
+if it has one, and similarly for the recoiler. This method is called 
+specifically for what is considered the emitted parton of the process, 
+i.e. the gluon in a <ei>q &rarr; q g</ei> branching, and allows the 
+vertex of this parton to be modified. 
+</argument> 
+<argument name="event"> reference to the whole event, to read information 
+from and set the relevant <code>vProd</code> values into. 
+</argument> 
+</method> 
+ 
+<method name="virtual Vec4 vertexISR( int iNow, Event& event)"> 
+Method to assign production vertex to a particle produced in the ISR 
+(<code>SpaceShower</code>). Should set the vertices <code>vProd</code> 
+of the particle concerned. 
+<argument name="iNow"> is the index of the parton concerned. This method 
+is called three times for each ISR branching, for the daughter, the 
+new recoiler and the sister. 
+</argument> 
+<argument name="event"> reference to the whole event, to read information 
+from and set the relevant <code>vProd</code> values into. 
+</argument> 
+</method> 
+ 
+<method name="virtual void vertexBeam( int iBeam, vector&lt;int&gt;& iRemn, 
+vector&lt;int&gt;& iInit, Event& event)"> 
+Method to assign production vertices for the beam itself and the beam 
+remnants. 
+<argument name="iBeam"> is 0 and 1, respectively, for the two beams. 
+The two beam particles are then located in event record positions 1 
+and 2, and normally you would set them to be displaced <code>+-bNow</code> 
+along the <ei>x</ei> axis. 
+</argument> 
+<argument name="vector&lt;int&gt;& iRemn"> are the indices of the beam 
+remnants that could be displaced by you. 
+</argument> 
+<argument name="vector&lt;int&gt;& iInit"> are the indices of the initiator 
+partons for all the MPIs of the event. They already had their vertices 
+assigned and should not be changed. But that information could be used 
+e.g. to ensure that the energy-weighted average of all initiators and all 
+remnants together give the proper beam impact parameter. 
+</argument> 
+<argument name="event"> reference to the whole event, to read information 
+from and set the relevant <code>vProd</code> values into. 
+</argument> 
+</method> 
+ 
+<method name="virtual void vertexHadrons( int nBefFrag, Event& event)"> 
+Method to shift hadron production vertices by an amount related to 
+that of the partons they come from. This may be the most complicated 
+step of them all, since there is not a unique one-to-one association 
+between a hadron and a parton. 
+<argument name="nBefFrag"> is the size of the event record before the 
+latest fragmentation step, and <code>event.size()</code> the one 
+after. All the hadrons in that range come from the fragmentation of 
+the partons given by their common mother indices, and are open to 
+receive modified production vertices. 
+</argument> 
+<argument name="event"> reference to the whole event, to read information 
+from and set the relevant <code>vProd</code> values into. 
+</argument> 
+</method> 
+ 
+</chapter> 
+ 
+<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
