@@ -5481,7 +5481,7 @@ This implies that with decay chains:
 
 
     # Import files
-    def do_import(self, line, force=False):
+    def do_import(self, line, force=False, options={}):
         """Main commands: Import files with external formats"""
 
         args = self.split_arg(line)
@@ -5512,7 +5512,8 @@ This implies that with decay chains:
                 
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
-                        complex_mass_scheme=self.options['complex_mass_scheme'])
+                        complex_mass_scheme=self.options['complex_mass_scheme'],
+                        options=options)
                 except ufomodels.UFOError as err:
                     model_path, _,_ = import_ufo.get_path_restrict(args[1])
                     if six.PY3 and self.options['auto_convert_model']:
@@ -7595,7 +7596,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info('Desactivate complex mass scheme.')
             if not self._curr_model:
                 return
-            self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded

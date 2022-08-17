@@ -1596,7 +1596,7 @@ class Model(PhysicsObject):
         
         return default
 
-    def change_electroweak_mode(self, mode):
+    def change_electroweak_mode(self, mode, **opt):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
@@ -1679,7 +1679,7 @@ class Model(PhysicsObject):
             else:
                 return False
 
-    def change_mass_to_complex_scheme(self, toCMS=True):
+    def change_mass_to_complex_scheme(self, toCMS=True, bypass_check=False):
         """modify the expression changing the mass to complex mass scheme"""
         
         # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
@@ -1736,7 +1736,7 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):
                     status = self.change_electroweak_mode(
-                                                   set(['mz','mw','alpha']))
+                                                   set(['mz','mw','alpha']), bypass_check)
                     # Use the newly defined parameter for the W mass
                     mass = self.get_parameter(particle.get('mass'))
                     if not status:

@@ -241,7 +241,8 @@ def get_path_restrict(model_name, restrict=True):
     return model_path, restrict_file, restrict_name
 
 def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
-                                                    complex_mass_scheme = None):
+                                                    complex_mass_scheme = None,
+                                                    options={}):
     """ a practical and efficient way to import a model"""
     
     model_path, restrict_file, restrict_name = get_path_restrict(model_name, restrict)
@@ -281,7 +282,12 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
             # False because we haven't changed the model yet.
             model.set_parameters_and_couplings(param_card = restrict_file,
                                                       complex_mass_scheme=False)
-            model.change_mass_to_complex_scheme(toCMS=True)
+            if 'allow_qed_cms' in options and options['allow_qed_cms']:
+                allow_qed = True
+            else:
+                allow_qed = False
+
+            model.change_mass_to_complex_scheme(toCMS=True, bypass_check=allow_qed)
         else:
             # Make sure that the parameter 'CMSParam' of the model is set to 0.0
             # as it should in order to have the correct NWA renormalization condition.
@@ -304,12 +310,16 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
            keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
     else:
+        if 'allow_qed_cms' in options and options['allow_qed_cms']:
+            allow_qed = True
+        else:
+            allow_qed = False
         # Change to complex mass scheme if necessary
         if useCMS:
-            model.change_mass_to_complex_scheme(toCMS=True)
+            model.change_mass_to_complex_scheme(toCMS=True, bypass_check=allow_qed)
         else:
             # It might be that the default of the model (i.e. 'CMSParam') is CMS.
-            model.change_mass_to_complex_scheme(toCMS=False)
+            model.change_mass_to_complex_scheme(toCMS=False, bypass_check=allow_qed)
       
     return model
     
