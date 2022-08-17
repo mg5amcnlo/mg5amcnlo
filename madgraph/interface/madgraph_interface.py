@@ -5481,7 +5481,7 @@ This implies that with decay chains:
 
 
     # Import files
-    def do_import(self, line, force=False):
+    def do_import(self, line, force=False, options={}):
         """Main commands: Import files with external formats"""
 
         args = self.split_arg(line)
@@ -5512,7 +5512,8 @@ This implies that with decay chains:
                 
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
-                        complex_mass_scheme=self.options['complex_mass_scheme'])
+                        complex_mass_scheme=self.options['complex_mass_scheme'],
+                        options=options)
                 except ufomodels.UFOError as err:
                     model_path, _,_ = import_ufo.get_path_restrict(args[1])
                     if six.PY3 and self.options['auto_convert_model']:
@@ -6158,7 +6159,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.physics.illinois.edu/package_info.dat']
+                         'https://madgraph.mi.infn.it/package_info.dat']
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
@@ -6883,7 +6884,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
             signal.alarm(0)
             text = filetext.read().decode(errors='ignore').split('\n')
             web_version = int(text[0].strip())
@@ -6952,14 +6953,14 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             fail = 0
             for i in range(data['version_nb'], web_version):
                 try:
-                    filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/patch/build%s.patch' %(i+1))
+                    filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/patch/build%s.patch' %(i+1))
                 except Exception:
                     print('fail to load patch to build #%s' % (i+1))
                     fail = i
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.physics.illinois.edu/binary/binary_file%s.tgz" %(i+1)
+                    path = "https://madgraph.mi.infn.it//binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -7597,7 +7598,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info('Desactivate complex mass scheme.')
             if not self._curr_model:
                 return
-            self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded

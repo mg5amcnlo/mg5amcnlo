@@ -113,7 +113,7 @@ if pattern.match(version):
     #valid version format
     # Get current revision number:
     p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
-    rev_nb = p.stdout.read().strip()
+    rev_nb = p.stdout.read().strip().decode()
     logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
 else:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
@@ -127,7 +127,7 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.physics.illinois.edu/mg5amc_build_nb')
+        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         last_message = int(text[1].strip())
@@ -194,7 +194,7 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 # 1. Add information for the auto-update
 if rev_nb:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
-    fsock.write("version_nb   %s\n" % rev_nb)
+    fsock.write("version_nb   %s\n" % int(rev_nb))
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.write("last_message %s\n" % int(last_message))
     fsock.close()

@@ -308,6 +308,8 @@ def deactivate_dependence(dependency, cmd=None, log = None):
     
 
     if dependency in ['pjfry','golem','samurai','ninja','collier']:
+        if dependency not in cmd.options:
+            return
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = None
