@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.11 (09/08/2022)
+2.9.12 (09/08/2022)
      OM: Fixing issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
          The coupling where assigned to the wrong lorentz structure
      OM: Fixing another  issue for BSM model where an interaction is associated
@@ -11,6 +11,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	 but not in the following one. Those two runs were fine but any
 	 following points in the scan will automatically discard that
 	 matrix-element.
+
+2.9.11 (03/06/22)
+     OM: Fixing a bug on the color assignment for b-quark (that's leading to a crash of herwig)
+         This occur in five flavor model, if you do not force yourself the definition of the
+	 multi-particle "j" and "b". This bug was present since 2.3.1 (where the flipping of such
+	 multi-particle to 4/5 flavor was done automatically for the first time)
+	 
 
 2.9.10 (06/05/2022)
      OM: allow model with GC in their name to use helicity recycling

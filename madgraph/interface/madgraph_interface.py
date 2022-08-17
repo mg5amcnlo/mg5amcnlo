@@ -5783,6 +5783,8 @@ This implies that with decay chains:
                 scheme = 5
                 
         if scheme in [4,5]:
+            self.optimize_order(multi)
+            self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:

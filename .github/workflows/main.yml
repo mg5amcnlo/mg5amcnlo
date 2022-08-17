@@ -1,0 +1,91 @@
+# This is a basic workflow to help you get started with Actions
+
+name: sync with bazaar
+
+# Controls when the workflow will run
+#    branches: [ 3.3.1_lo_vectorization ]
+on:
+  # Triggers the workflow on push or pull request events but only for the 3.4.0 branch
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - '.github/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'message for bzr commit'     
+        required: true
+
+env:
+  commitmsg: ${{ github.event.head_commit.message }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  bazaarsync:
+    # The type of runner that the job will run on
+    runs-on: self-hosted
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: check login
+        run: whoami
+
+      - name: check permission
+        run: ls -l /afs/cern.ch/user/o/olmattel/.bzr.log
+      
+      - name: check where we are
+        run: pwd
+
+      - name: check identify to launchpad
+        run: bzr launchpad-login mattelaer-bot -v
+
+      - name: check identify to launchpad is preserve
+        run: |
+          bzr lp-login
+          bzr --version 
+          python --version
+          echo  $GITHUB_WORKSPACE
+          pwd
+
+
+      # Runs a set of commands using the runners shell
+      - name: bzr branch
+        run:  bzr branch lp:~maddevelopers/mg5amcnlo/2.0_git ~/2.0 || (cd ~/2.0 &&bzr revert  && bzr pull && bzr revert)
+
+      # Runs a set of commands using the runners shell
+      - name: get commit message
+        run: |
+             if [[ $message != "" ]]; then
+             commitmsg = $message;
+             fi
+             echo $commitmsg
+             echo "${{ github.event.head_commit.message }}"
+             echo "${{ github.event.commits[0].message }}"
+
+      # Runs a set of commands using the runners shell
+      - name: move data from git to bzr
+        run:  cp -r $GITHUB_WORKSPACE/* ~/2.0
+   
+      # Runs a set of commands using the runners shell
+      - name: commit to bzr
+        run: |
+           cd ~/2.0
+           bzr whoami "github bot <olivier.mattelaer@uclouvain.be>"
+           bzr commit -m "${commitmsg}"
+      # Runs a set of commands using the runners shell
+      - name: push to bazaar
+        run: |
+           cd ~/2.0
+           bzr launchpad-login
+           echo "done so far"
+           bzr push lp:~maddevelopers/mg5amcnlo/2.0_git
+
+
+
+
