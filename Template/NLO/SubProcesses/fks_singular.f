@@ -291,11 +291,12 @@ c and not be part of the plots nor computation of the cross section.
         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
-        wgt1=amp_split_virt(iamp)*f_nb/g**(QCD_power)
+        wgt1=amp_split_virt(iamp)*f_nb
         virt_wgt_mint(iamp)=virt_wgt_mint(iamp)
      $       +wgt1
         born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $       +amp_split_born_for_virt(iamp)*f_nb
+        wgt1=wgt1/g**(QCD_power)
         call add_wgt(14,orders,wgt1,0d0,0d0)
       enddo
       call cpu_time(tAfter)
