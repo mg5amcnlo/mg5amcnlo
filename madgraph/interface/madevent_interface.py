@@ -5542,20 +5542,20 @@ tar -czf split_$1.tar.gz split_$1
             if os.path.isfile(file_path):
                 if 'removeHEPMC' in self.to_store:
                     os.remove(file_path)
+                else:
+                    self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
+                    if 'compressHEPMC' in self.to_store:
+                        misc.gzip(file_path,stdout=file_path)
+                        hepmc_fileformat = ".gz"
 
-                self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
-                if 'compressHEPMC' in self.to_store:
-                    misc.gzip(file_path,stdout=file_path)
-                    hepmc_fileformat = ".gz"
+                    moveHEPMC_in_to_store = None
+                    for to_store in self.to_store:
+                        if "moveHEPMC" in to_store:
+                           moveHEPMC_in_to_store = to_store
 
-                moveHEPMC_in_to_store = None
-                for to_store in self.to_store:
-                    if "moveHEPMC" in to_store:
-                        moveHEPMC_in_to_store = to_store
-
-                if not moveHEPMC_in_to_store == None:
-                    move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
-                    os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
+                    if not moveHEPMC_in_to_store == None:
+                        move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
+                        os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
 
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
