@@ -3440,68 +3440,107 @@ c Checks on invariants
       end
 
 
+      block data check_invariants_block
+      integer imprecision(7),max_imprecision
+      common /c_check_invariants/ max_imprecision,imprecision
+      data imprecision /7*0/
+      data max_imprecision /10/
+      end
 
       subroutine check_invariants(ileg,sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12
      $     ,xm22)
       implicit none
       integer ileg
-
-      double precision xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),xk3(0:3)
-      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
-
       double precision tiny,dot
       parameter(tiny=1d-5)
+      double precision xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),xk3(0:3)
+      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
+      integer imprecision(7),max_imprecision
+      common /c_check_invariants/ max_imprecision,imprecision
 
       if(ileg.le.2)then
          if((abs(xtk+2*dot(xp1,xk3))/sh.ge.tiny).or.
      &      (abs(xuk+2*dot(xp2,xk3))/sh.ge.tiny))then
-            write(*,*)'Imprecision 1 in check_invariants'
+            write(*,*)'Warning: imprecision 1 in check_invariants'
             write(*,*)abs(xtk+2*dot(xp1,xk3))/sh,
      &                abs(xuk+2*dot(xp2,xk3))/sh
-            stop
+            imprecision(1)=imprecision(1)+1
+            if (imprecision(1).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' imprecisions. Stopping...'
+               stop
+            endif
          endif
 c
       elseif(ileg.eq.3)then
          if(sqrt(w1+xm12).ge.sqrt(sh)-sqrt(xm22))then
-            write(*,*)'Imprecision 2a in check_invariants'
+            write(*,*)'Warning: imprecision 2 in check_invariants'
             write(*,*)sqrt(w1),sqrt(sh),xm22
-            stop
+            imprecision(2)=imprecision(2)+1
+            if (imprecision(2).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' imprecisions. Stopping...'
+               stop
+            endif
          endif
          if(((abs(w1-2*dot(xk1,xk3))/sh.ge.tiny)).or.
      &      ((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)))then
-            write(*,*)'Imprecision 2b in check_invariants'
+            write(*,*)'Warning: imprecision 3 in check_invariants'
             write(*,*)abs(w1-2*dot(xk1,xk3))/sh,
      &                abs(w2-2*dot(xk2,xk3))/sh
-            stop
+            imprecision(3)=imprecision(3)+1
+            if (imprecision(3).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' imprecisions. Stopping...'
+               stop
+            endif
          endif
          if(xm12.eq.0d0)then
-            write(*,*)'Error 2c in check_invariants'
-            stop
+            write(*,*)'Warning 4 in check_invariants'
+            imprecision(4)=imprecision(4)+1
+            if (imprecision(4).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' warnings. Stopping...'
+               stop
+            endif
          endif
 c
       elseif(ileg.eq.4)then
          if(sqrt(w2).ge.sqrt(sh)-sqrt(xm12))then
-            write(*,*)'Imprecision 3a in check_invariants'
+            write(*,*)'Warning: imprecision 5 in check_invariants'
             write(*,*)sqrt(w2),sqrt(sh),xm12
-            stop
+            imprecision(5)=imprecision(5)+1
+            if (imprecision(5).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' imprecisions. Stopping...'
+               stop
+            endif
          endif
          if(((abs(w2-2*dot(xk2,xk3))/sh.ge.tiny)).or.
      &      ((abs(xq2q+2*dot(xp2,xk2))/sh.ge.tiny)).or.
      &      ((abs(xq1q+2*dot(xp1,xk1)-xm12)/sh.ge.tiny)))then
-            write(*,*)'Imprecision 3b in check_invariants'
+            write(*,*)'Warning: imprecision 6 in check_invariants'
             write(*,*)abs(w2-2*dot(xk2,xk3))/sh,
      &                abs(xq2q+2*dot(xp2,xk2))/sh,
      &                abs(xq1q+2*dot(xp1,xk1)-xm12)/sh
-            stop
+            imprecision(6)=imprecision(6)+1
+            if (imprecision(6).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' imprecisions. Stopping...'
+               stop
+            endif
          endif
          if(xm22.ne.0d0)then
-            write(*,*)'Error 3c in check_invariants'
-            stop
+            write(*,*)'Warning 7 in check_invariants'
+            imprecision(7)=imprecision(7)+1
+            if (imprecision(7).ge.max_imprecision) then
+               write (*,*) 'Error: ',max_imprecision
+     $              ,' warnings. Stopping...'
+               stop
+            endif
          endif
-
       endif
-
       return
       end
 
