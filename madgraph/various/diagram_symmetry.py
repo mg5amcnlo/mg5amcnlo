@@ -361,8 +361,18 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
             except Exception:
                 QCD = 0
 
+            onshell = vertex.get('legs')[-1].get('onshell')
+            if onshell is True:
+                onshell = 1
+            elif onshell is False:
+                onshell = 0
+            else:
+                onshell = -1
+
+
+
             return ((part.get('color'),
-                     part.get('mass'), part.get('width'), QCD),)
+                     part.get('mass'), part.get('width'), QCD, onshell),)
 
 def find_symmetry_subproc_group(subproc_group):
     """Find symmetric configs by directly comparing the configurations

@@ -24,6 +24,7 @@ c
       double precision pmass(nexternal)
       common/to_mass/  pmass
 
+      
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
@@ -69,8 +70,8 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           rscale=rscale/2d0
       elseif(dynamical_scale_choice.eq.4) then
-c         \sqrt(s), partonic energy
-          rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
+c     \sqrt(s), partonic energy
+         rscale = dsqrt(max(0d0,sumdot(p(0,1), p(0,2), 1d0)))
       elseif(dynamical_scale_choice.eq.5) then
 c         \decaying particle mass, for decays
           rscale=dsqrt(max(0d0,dot(P(0,1),P(0,1))))
@@ -125,7 +126,7 @@ c
       integer i
       logical first
       data first/.true./
-
+      double precision tempscale
 c----------
 c     start
 c----------
@@ -133,8 +134,8 @@ c----------
       if (dynamical_scale_choice.eq.-1) then
 c         Cluster external states until reducing the system to a 2->2 topology whose transverse mass is used for setting the scale.
 c         This is not done in this file due to the clustering.
-         q2factorization(1)=0d0          !factorization scale**2 for pdf1
-         q2factorization(2)=0d0          !factorization scale**2 for pdf2
+         if(.not.fixed_fac_scale1) q2factorization(1)=0d0          !factorization scale**2 for pdf1
+         if(.not.fixed_fac_scale2) q2factorization(2)=0d0          !factorization scale**2 for pdf2
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc
@@ -142,9 +143,9 @@ cc      to use this code you need to set                                        
 cc                 dymamical_scale_choice to 0 in the run_card                   cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c         default: use the renormalization scale
-          call set_ren_scale(P,q2factorization(1))
-          q2factorization(1)=q2factorization(1)**2
-          q2factorization(2)=q2factorization(1)   !factorization scale**2 for pdf2
+          call set_ren_scale(P,tempscale)
+          if(.not.fixed_fac_scale1) q2factorization(1)=tempscale**2
+          if(.not.fixed_fac_scale2) q2factorization(2)=tempscale**2   !factorization scale**2 for pdf2
 
 c
 c-some examples of dynamical scales
@@ -180,9 +181,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER DEFINE SCALE: END of USER CODE                                      cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       else
-          call set_ren_scale(P,q2factorization(1))
-          q2factorization(1)=q2factorization(1)**2
-          q2factorization(2)=q2factorization(1)   !factorization scale**2 for pdf2
+          call set_ren_scale(P,tempscale)
+          if(.not.fixed_fac_scale1)  q2factorization(1)=tempscale**2
+          if(.not.fixed_fac_scale2)  q2factorization(2)=tempscale**2 !factorization scale**2 for pdf2
       endif
 
 

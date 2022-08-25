@@ -68,19 +68,6 @@ function UrlExists(url) {
   }
   return http.status!=404;
 }
-function check_link(url,alt, id){
-    var obj = document.getElementById(id);
-    if ( ! UrlExists(url)){
-       if ( ! UrlExists(alt)){
-         obj.href = url;
-         return 1==1;
-        }
-       obj.href = alt;
-       return 1 == 2;
-    }
-    obj.href = url;
-    return 1==1;
-}
 </script>    
     <H2 align=center> Results in the %(model)s for %(process)s </H2> 
     <HR>
@@ -148,7 +135,7 @@ class AllResults(dict):
     
     _run_entries = ['cross', 'error','nb_event_pythia','run_mode','run_statistics',
                     'nb_event','cross_pythia','error_pythia',
-                    'nb_event_pythia8','cross_pythia8','error_pythia8']
+                    'nb_event_pythia8','cross_pythia8','error_pythia8', 'shower_dir']
 
     def __init__(self, model, process, path, recreateold=True):
         
@@ -377,6 +364,8 @@ class AllResults(dict):
         elif name in ['nb_event_pythia']:
             run[name] = int(value)
         elif name in ['run_mode','run_statistics']:
+            run[name] = value
+        elif name in ['shower_dir']:
             run[name] = value
         elif name == 'cross' and run[name] != 0:
             run['prev_' + name] = run[name]
@@ -782,10 +771,12 @@ class OneTagResults(dict):
         self.pgs = []
         self.delphes = []
         self.shower = []
+        self.rivet= []
         
         self.level_modes = ['parton', 'pythia', 'pythia8',
                             'pgs', 'delphes','reweight','shower',
-                            'madanalysis5_hadron','madanalysis5_parton']
+                            'madanalysis5_hadron','madanalysis5_parton',
+                            'rivet']
         # data 
         self.status = ''
 
@@ -884,6 +875,16 @@ class OneTagResults(dict):
             if 'ma5_card' not in self.madanalysis5_hadron and \
                misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'history.ma5'),html_path):
                 self.madanalysis5_hadron.append('ma5_card')
+
+        if level in ['rivet','all'] and 'rivet' not in nolevel:
+
+            if 'yoda' not in self.rivet and os.path.exists(pjoin(path, 'rivet_result.yoda')):
+                self.rivet.append('yoda')
+            if 'rivethtml' not in self.rivet and os.path.exists(pjoin(path, 'rivet-plots', 'index.html')):
+                self.rivet.append('rivethtml')
+            if 'contur' not in self.rivet and os.path.exists(pjoin(path, '..','..', 'Analysis','contur','conturPlot','combinedLevels.pdf')):
+                self.rivet.append('contur')                
+
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
@@ -1014,18 +1015,21 @@ class OneTagResults(dict):
     def special_link(self, link, level, name):
         
         id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
-        
-        return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        return " <a  id='%(id)s' href='%(link)s.gz'>%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
+        #return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
+        #      % {'link': link, 'id': id, 'name':name}
     
     def double_link(self, link1, link2, name, id):
-        
-         return " <a  id='%(id)s' href='%(link1)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
-              % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
+        return " <a  id='%(id)s' href='%(link2)s'>%(name)s</a>" \
+              % {'link1': link1, 'link2':link2, 'id': id, 'name':name}
+        #return " <a  id='%(id)s' href='%(link2)s' onClick=\"check_link('%(link1)s','%(link2)s','%(id)s')\">%(name)s</a>" \
+        #      % {'link1': link1, 'link2':link2, 'id': id, 'name':name}       
         
     def get_links(self, level):
         """ Get the links for a given level"""
         
+
         out = ''
         if level == 'parton':
             if 'gridpack' in self.parton:
@@ -1211,6 +1215,15 @@ class OneTagResults(dict):
             
             return out % self
                 
+        if level == 'rivet':
+            if 'yoda' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet_result.yoda\">yoda</a>"
+            if 'rivethtml' in self.rivet:
+                out += " <a href=\"./Events/%(run_name)s/rivet-plots/index.html\">rivet plots</a>"
+            if 'contur' in self.rivet:
+                out += " <a href=\"./Analysis/contur/conturPlot/combinedLevels.pdf\">contur1</a>"
+                out += " <a href=\"./Analysis/contur/conturPlot/dominantPools0CLs.pdf\">contur2</a>"
+            return out % self     
     
     
     def get_action(self, ttype, local_dico, runresults):
@@ -1327,7 +1340,7 @@ class OneTagResults(dict):
         nb_line = 0
         self.nb_line = nb_line
         for key in ['parton', 'reweight', 'pythia', 'pythia8', 'pgs', 
-                    'delphes', 'shower', 'madanalysis5_hadron']:
+                    'delphes', 'shower', 'madanalysis5_hadron','rivet']:
             if len(getattr(self, key)):
                 nb_line += 1
         if nb_line ==0 and not os.path.exists(pjoin(self.me_dir, "Events", self["run_name"], "%(run)s_%(tag)s_banner.txt)" % \
@@ -1384,6 +1397,13 @@ class OneTagResults(dict):
 
         sub_part_template_shower = """
         <td> %(type)s %(run_mode)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
+        
+        sub_part_template_fxfx = """
+        <td rowspan=%(cross_span)s><center><a href="./MCATNLO/%(shower_dir)s/mcatnlo_run.log"> %(cross).4g </a> </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s %(run_mode)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
         </tr>"""
@@ -1525,11 +1545,24 @@ class OneTagResults(dict):
                 # been done.
 
             elif ttype == 'shower':
-                template = sub_part_template_shower
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
                 else:
                     local_dico['cross_span'] = nb_line
+                
+                if self['cross_pythia']:
+                    if self['nb_event_pythia']:
+                        local_dico['nb_event'] = self['nb_event_pythia']
+                    else:
+                        local_dico['nb_event'] = 0
+                    local_dico['cross'] = self['cross_pythia']
+                    local_dico['err'] = self['error_pythia']
+                    local_dico['shower_dir'] = self['shower_dir']
+
+                    template = sub_part_template_fxfx
+                else:
+                    template = sub_part_template_shower
+
             else:
                 template = sub_part_template_pgs             
             

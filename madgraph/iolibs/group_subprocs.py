@@ -317,7 +317,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                "Need matrix elements to run find_mapping_diagrams"
 
         if max_tpropa == 0:
-            max_tpropa = base_objects.Vertex.max_tpropa
+            max_tpropa = int(base_objects.Vertex.max_tpropa)
         
         matrix_elements = self.get('matrix_elements')
         model = matrix_elements[0].get('processes')[0].get('model')
@@ -363,7 +363,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                                 max(diagram.get_vertex_leg_numbers()) > minvert:
                     diagram_maps[ime].append(0)
                     continue
-                if diagram.get_nb_t_channel() > max_tpropa:
+                if diagram.get_nb_t_channel() > int(max_tpropa):
                     diagram_maps[ime].append(0)
                     continue
                 # Create the equivalent diagram, in the format

@@ -4,6 +4,11 @@ LIBDIR = ../lib/
 LINKLIBS = -L$(LIBDIR) -lgeneric
 LIBS = $(LIBDIR)libgeneric.a
 
+ifneq ("$(wildcard ../../Source/RUNNING)","")
+    LINKLIBS += -lrunning
+    LIBS += $(LIBDIR)librunning.$(libext)
+endif
+
 # Files for the read40 combiner of top drawer files
 READ40=read40.o
 

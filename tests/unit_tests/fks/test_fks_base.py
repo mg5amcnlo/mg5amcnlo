@@ -43,12 +43,14 @@ class TestFKSProcess(unittest.TestCase):
     # the model, import the SM but remove 2nd and 3rd gen quarks
     remove_list = [3,4,5,6,-3,-4,-5,-6]
     mymodel = import_ufo.import_model('sm')
-    for p in mymodel['particles']:
+    for p in mymodel['particles'][:]:
         if p.get_pdg_code() in remove_list:
             mymodel['particles'].remove(p)
-    for ii in mymodel['interactions']:
-        if any([p.get_pdg_code() in remove_list for p in ii['particles']]):
+    for ii in mymodel['interactions'][:]:
+        for p in ii['particles']:
+            if p.get_pdg_code() in remove_list:
                 mymodel['interactions'].remove(ii)
+                break
 
     myleglist = MG.LegList()
     # PROCESS: u g > u g 
@@ -596,65 +598,104 @@ class TestFKSProcess(unittest.TestCase):
                 # real config 1: g g > g g g
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}],
                     },
                  {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                     'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}],
                      },
                  {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                     'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}],
                      }],
                 # real config 2: u g > u g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 3: ux g > ux g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 4: d g > d g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 5: dx g > dx g g
                 [{'i':3, 'j':1, 'ij':1, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}],
                     }],
                 # real config 6: g u > u g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 7: g ux > ux g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 8: g d > d g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 9: g dx > dx g g
                 [{'i':3, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}],
                     }],
                 # real config 10: g g > u ux g
                 [{'i':4, 'j':3, 'ij':3, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}],
                     }],
                 # real config 11: g g > d dx g
                 [{'i':4, 'j':3, 'ij':3, 'ij_id':21, 'need_color_links':False,
                   'need_charge_links':False, 'splitting_type':['QCD'],
-                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]]
+                  'extra_cnt_index':-1, 'underlying_born':[[21,21,21,21]],
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}]
                     }]]
 
         myfks.generate_reals([],[])
@@ -757,12 +798,9 @@ class TestFKSProcess(unittest.TestCase):
         #u g > g u
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
         #take the third real of the first leg for this process 2j 21 >2 21 21i
-        if six.PY2:
-            leglist = fksproc.reals[0][2]['leglist']
-            leglist_qed = fksproc_qed.reals[0][0]['leglist']
-        else:
-            leglist = fksproc.reals[0][0]['leglist']
-            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+        leglist = fksproc.reals[0][2]['leglist']
+        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1, 2,\
                                            [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
@@ -884,14 +922,10 @@ class TestFKSProcess(unittest.TestCase):
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
 
         #take the first real for this process 2j 21 >2 21 21i
-        if six.PY2:
-            leglist = fksproc.reals[0][2]['leglist']
-            # 2j 21 > 21 2 22i for QED process
-            leglist_qed = fksproc_qed.reals[0][0]['leglist']
-        else:
-            leglist = fksproc.reals[0][0]['leglist']
-            # 2j 21 > 21 2 22i for QED process
-            leglist_qed = fksproc_qed.reals[0][2]['leglist']
+        leglist = fksproc.reals[0][2]['leglist']
+        # 2j 21 > 21 2 22i for QED process
+        leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        
 
         # safety check (pick the right real)
         self.assertEqual([l['id'] for l in leglist], [2,21,2,21,21])
@@ -969,36 +1003,31 @@ class TestFKSProcess(unittest.TestCase):
                 if amp.pdgs == array.array('i', [2, 21, 2, 21, 21])]
         self.assertEqual(len(amp_ugugg), 1)
         self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
-#        misc.sprint('fix rb links')
         self.assertEqual(amp_ugugg[0].fks_infos,
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                    #'rb_links':[{'born_conf': 0, 'real_conf': 11},
-                    #            {'born_conf': 1, 'real_conf': 10},
-                    #            {'born_conf': 2, 'real_conf': 9}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}]},
                  {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 14},
-                     #            {'born_conf': 1, 'real_conf': 4},
-                     #            {'born_conf': 2, 'real_conf': 7}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}]},
                  {'i':5, 'j':3, 'ij':3, 'ij_id':2, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  },
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 1},
-                     #           {'born_conf': 1, 'real_conf': 13},
-                     #           {'born_conf': 2, 'real_conf': 8}]},
+                  'rb_links':[{'born_conf': 0, 'real_conf': 1},
+                                {'born_conf': 1, 'real_conf': 13},
+                                {'born_conf': 2, 'real_conf': 8}]},
                  {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
                   'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
                   'extra_cnt_index':-1,
-                  }
-                     #'rb_links':[{'born_conf': 0, 'real_conf': 2},
-                     #            {'born_conf': 1, 'real_conf': 5},
-                     #            {'born_conf': 2, 'real_conf': 12}]}
+                  'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}]}
                      ])
 
         

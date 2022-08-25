@@ -257,6 +257,7 @@ c
 c     Need to start from scratch. This is clunky but I'll just
 c     remove the grid, so we are clean
 c
+      goto 200
       write(*,*) "Trying w/ fresh grid"
       open(unit=25,file='ftn25',status='unknown',err=102)
       write(25,*) ' '
@@ -329,7 +330,7 @@ c
 c
 c     All done
 c
-      open(unit=66,file='results.dat',status='unknown')
+200   open(unit=66,file='results.dat',status='unknown')
       i=1
       do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
          i=i+1
@@ -453,6 +454,10 @@ c-----
       CUMULATED_TIMING = t_after - CUMULATED_TIMING
 
       if (N_EVALS.eq.0) then
+         write(outUnit,*) '<lo_statistics> '
+         write(outUnit,*) '<cumulated_time>'//trim(toStr_real(CUMULATED_TIMING))
+     &        //'</cumulated_time>'
+         write(outUnit,*) '</lo_statistics>'
         return
       endif
       
@@ -1002,6 +1007,13 @@ c
      &                                              grid_type=grid_type)
       endif
 
+      if(DS_get_dim_status('ee_mc').ge.1) then
+        call DS_write_grid(stream_id, dim_name='ee_mc', 
+     &                                              grid_type=grid_type)
+      endif      
+
+
+      
       end subroutine write_discrete_grids
 
       subroutine write_grid(name)
@@ -1445,21 +1457,32 @@ c
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       logical cutsdone, cutspassed
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
-c
+ 
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      character*7 pdsublabel(2)
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL,pdsublabel
+c     
 c     Begin code
 c
 c       It is important to divide the wgt stored in the grid by the 
 c       corresponding jacobian otherwise it flattens the sampled
 c       distribution.
-C       Also, if HEL_PICKED is equal to -1, it means that MadEvent
+C       Also, if HEL_PICKED is greater than 0, it means that MadEvent
 C       is in the initialization stage where all helicity were probed
 c       and added individually to the grid directly by matrix<i>.f so
 c       that they shouldn't be added here.
-        if(ISUM_HEL.ne.0.and.HEL_PICKED.ne.-1.and.
+        if(ISUM_HEL.ne.0.and.HEL_PICKED.gt.0.and.
      &                            (.NOT.CUTSDONE.or.CUTSPASSED)) then
           call DS_add_entry('Helicity',HEL_PICKED,(wgt/hel_jacobian))
         endif
 
+        if(pdlabel.eq.'dressed'.and.ee_picked.ne.-1) then
+           if(ee_jacobian.ne.0d0) then
+              call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))
+           endif
+       endif
+       
       end subroutine add_entry_to_discrete_dimensions
 
 C
@@ -1502,6 +1525,10 @@ C       Security in case of all helicity vanishing (G1 of gg > qq )
       endif
       if(MC_grouped_subproc.and.DS_get_dim_status('grouped_processes').ne.-1) then
         call DS_update_grid('grouped_processes', filterZeros=.True.)
+      endif
+
+      if (DS_get_dim_status('ee_mc').ne.-1)then
+         call DS_update_grid('ee_mc', filterZeros=.True.)
       endif
 
       end subroutine update_discrete_dimensions
@@ -1715,7 +1742,10 @@ c--------------
 c     tjs 3/5/2011  use stored value for last bin
 c--------------
                i = lastbin(j)
-c               write(*,*) 'bin choice',j,i,lastbin(j)
+               if (i.eq.0) then
+                  write(*,*) "issue with", j,'/',invar
+               endif
+c     write(*,*) 'bin choice',j,i,lastbin(j)
                if (i .gt. ng) then
                   print*,'error i>ng',i,j,ng,point(j)
                   i=ng
@@ -2270,7 +2300,11 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-
+c
+c     
+c
+       logical init_mode
+       common/to_determine_zero_hel/init_mode
 c----
 c  Begin Code
 c----
@@ -2278,6 +2312,9 @@ c----
          write(*,*) nb_pass_cuts, 
      &    ' points passed the cut but all returned zero'
          write(*,*) 'therefore considering this contribution as zero'
+         if (init_mode) then
+            call print_zero_amp()
+         endif
       else if (nb_pass_cuts.gt.0.and.nb_pass_cuts.lt.1000)then
          write(*,*) 'only', nb_pass_cuts, 
      &    ' points passed the cut and they all returned zero'

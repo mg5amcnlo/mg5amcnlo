@@ -44,6 +44,7 @@ C
       double precision ee_comp_prod
 %(ee_comp_vars)s
       integer i_ee
+      include "../../Source/PDF/pdf.inc"
 C                                                                     
 C DATA                                                                
 C                                                                     

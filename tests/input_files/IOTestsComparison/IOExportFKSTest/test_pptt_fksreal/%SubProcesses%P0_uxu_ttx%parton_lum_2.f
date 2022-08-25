@@ -7,10 +7,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: g u > t t~ u [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g c > t t~ c [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g d > t t~ d [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: g s > t t~ s [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: g u > t t~ u [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g c > t t~ c [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g d > t t~ d [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: g s > t t~ s [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
 C     ****************************************************            
 C         
@@ -52,6 +52,18 @@ C
       INTEGER IMIRROR
       COMMON/CMIRROR/IMIRROR
 C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE 'eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+      DOUBLE PRECISION DUMMY_COMPONENTS(N_EE)
+      DOUBLE PRECISION G1_COMPONENTS(N_EE)
+      DOUBLE PRECISION D2_COMPONENTS(N_EE),U2_COMPONENTS(N_EE)
+     $ ,S2_COMPONENTS(N_EE),C2_COMPONENTS(N_EE)
+
+      INTEGER I_EE
+      INCLUDE '../../Source/PDF/pdf.inc'
+C     
 C     DATA                                                            
 C         
 C     
@@ -66,26 +78,51 @@ C     ----------
 C         
       LUM = 0D0
       IF (ABS(LPP(1)) .GE. 1) THEN
-        LP=SIGN(1,LPP(1))
-        G1=PDG2PDF(ABS(LPP(1)),0*LP,XBK(1),DSQRT(Q2FACT(1)))
+        G1=PDG2PDF(LPP(1),0,1,XBK(1),DSQRT(Q2FACT(1)))
+        IF ((ABS(LPP(1)).EQ.4.OR.ABS(LPP(1)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') G1_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
       ENDIF
       IF (ABS(LPP(2)) .GE. 1) THEN
-        LP=SIGN(1,LPP(2))
-        D2=PDG2PDF(ABS(LPP(2)),1*LP,XBK(2),DSQRT(Q2FACT(2)))
-        U2=PDG2PDF(ABS(LPP(2)),2*LP,XBK(2),DSQRT(Q2FACT(2)))
-        S2=PDG2PDF(ABS(LPP(2)),3*LP,XBK(2),DSQRT(Q2FACT(2)))
-        C2=PDG2PDF(ABS(LPP(2)),4*LP,XBK(2),DSQRT(Q2FACT(2)))
+        D2=PDG2PDF(LPP(2),1,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') D2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        U2=PDG2PDF(LPP(2),2,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') U2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        S2=PDG2PDF(LPP(2),3,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') S2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        C2=PDG2PDF(LPP(2),4,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') C2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
       ENDIF
       PD(0) = 0D0
       IPROC = 0
       IPROC=IPROC+1  ! g u > t t~ u
       PD(IPROC) = G1*U2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,U2_COMPONENTS)
       IPROC=IPROC+1  ! g c > t t~ c
       PD(IPROC) = G1*C2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,C2_COMPONENTS)
       IPROC=IPROC+1  ! g d > t t~ d
       PD(IPROC) = G1*D2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,D2_COMPONENTS)
       IPROC=IPROC+1  ! g s > t t~ s
       PD(IPROC) = G1*S2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(G1_COMPONENTS,S2_COMPONENTS)
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

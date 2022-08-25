@@ -69,6 +69,12 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+C     Common blocks
+ 
+      CHARACTER*7         PDLABEL,EPA_LABEL
+      INTEGER       LHAID
+      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
       integer nb_spin_state(2)
       data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
       common /nb_hel_state/ nb_spin_state
@@ -97,6 +103,8 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
 
+      logical init_mode
+      common /to_determine_zero_hel/init_mode
 C ----------
 C BEGIN CODE
 C ----------
@@ -105,6 +113,18 @@ C ----------
 C     Make sure cuts are evaluated for first subprocess
       CUTSDONE=.FALSE.
       CUTSPASSED=.FALSE.
+
+	  if(pdlabel.eq.'dressed'.and.DS_get_dim_status('ee_mc').eq.-1)then
+	  	  call DS_register_dimension('ee_mc', 0)
+c		  ! set both mode 1: resonances, 2: no resonances to 50-50
+		  call DS_add_bin('ee_mc', 1)
+		  call DS_add_bin('ee_mc', 2)
+		  call DS_add_entry('ee_mc', 1, 0.5d0, .true.)
+		  call DS_add_entry('ee_mc', 2, 0.5d0, .true.)
+		  call DS_update_grid('ee_mc')
+          endif				      
+
+
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
@@ -180,7 +200,7 @@ C   IMODE.EQ.0, regular run mode
 		call DS_set_min_points(10,'grouped_processes')
         DO J=1,SYMCONF(0)
           DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(init_mode.or.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
               DO IMIRROR=1,2
                 IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
                   CALL MAP_3_TO_1(J,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
@@ -194,14 +214,15 @@ C   IMODE.EQ.0, regular run mode
 	  IF(MC_grouped_subproc.and.DS_dim_index(run_grid, 'PDF_convolution',.True.).eq.-1) then
 	    call DS_register_dimension('PDF_convolution', 0, all_grids=.False.)
 	  ENDIF
-	
+
+
 C     Select among the subprocesses based on PDF weight
       SUMPROB=0D0
 C     Turn caching on in dsigproc to avoid too many calls to switchmom
       LAST_ICONF=0
       DO J=1,SYMCONF(0)
          DO IPROC=1,MAXSPROC
-            IF(CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            IF(init_mode.or.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
                DO IMIRROR=1,2
                   IF(IMIRROR.EQ.1.OR.MIRRORPROCS(IPROC))THEN
 C                 Calculate PDF weight for all subprocesses
@@ -245,7 +266,7 @@ C       Turn caching on in dsigproc to avoid too many calls to switchmom
         LAST_ICONF=0
         DO J=1,SYMCONF(0)
           DO I=1,MAXSPROC
-            IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN		  
+            IF(init_mode.or.CONFSUB(I,SYMCONF(J)).NE.0) THEN		  
               DO K=1,2
                 IF(K.EQ.1.OR.MIRRORPROCS(I))THEN			
                   IPROC=I
@@ -264,7 +285,11 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+		  if(init_mode) then
+		    SELPROC(K,I,J) = 1d0
+		  else
+                    SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
+		  endif
                   SUMPROB = SUMPROB + SELPROC(K,I,J) 
 		        ENDIF
               ENDDO
@@ -289,7 +314,7 @@ c     If we are still initializing the grid or simply not using one at all, then
       TOTWGT=0D0
       DO J=1,SYMCONF(0)
         DO I=1,MAXSPROC
-	  IF(CONFSUB(I,SYMCONF(J)).NE.0) THEN
+	  IF(init_mode.or.CONFSUB(I,SYMCONF(J)).NE.0) THEN
           DO K=1,2
             TOTWGT=TOTWGT+SELPROC(K,I,J)
             IF(R.LT.TOTWGT)THEN
@@ -507,4 +532,17 @@ C
 %(read_write_good_hel)s
 
 
+     SUBROUTINE PRINT_ZERO_AMP()
 
+     %(print_zero_amp)s
+     return
+     end
+
+
+     integer function get_nhel(hel,partid)
+      implicit none
+      integer hel,partid
+      write(*,*) "this type of pdf is not support with group_subprocess=True. regenerate process with: set group_subprocesses false"
+      stop 5
+      return
+      end

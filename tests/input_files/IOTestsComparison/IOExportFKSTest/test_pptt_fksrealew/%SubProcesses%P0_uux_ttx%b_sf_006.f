@@ -11,8 +11,8 @@ C     Also the values needed for the counterterms are stored in the
 C      C_BORN_CNT common block
 C     
 C     
-C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     spectators: 3 3 
 
 C     
@@ -93,8 +93,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     spectators: 3 3 
 
 C     
@@ -178,8 +178,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
-C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: u u~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
+C     Process: c c~ > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     spectators: 3 3 
 
 C     
@@ -208,9 +208,10 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
+      REAL*8 CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO),
      $  JAMP2(NCOLOR2,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -225,10 +226,10 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  2) /    9,    3/
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  2) /    3,    9/
+      DATA (CF(I,  1),I=  1,  2) /9.000000000000000D+00
+     $ ,3.000000000000000D+00/
+      DATA (CF(I,  2),I=  1,  2) /3.000000000000000D+00
+     $ ,9.000000000000000D+00/
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -241,19 +242,18 @@ C     ----------
           AMP(I)=SAVEAMP(I,HELL)
         ENDDO
       ENDIF
-C     JAMP1s contributing to orders QCD=2 QED=0
-      JAMP1(1,1)=+1D0/2D0*(+1D0/3D0*AMP(2))
-      JAMP1(2,1)=+1D0/2D0*(-AMP(2))
-C     JAMP1s contributing to orders QCD=0 QED=2
-      JAMP1(1,2)=-AMP(1)-AMP(3)
-      JAMP1(2,2)=0D0
-C     JAMP2s contributing to orders QCD=2 QED=0
-      JAMP2(1,1)=+1D0/8D0*(+AMP(2)-1D0/9D0*AMP(2))
-      JAMP2(2,1)=+1D0/8D0*(-3D0*AMP(2)+1D0/3D0*AMP(2))
-C     JAMP2s contributing to orders QCD=0 QED=2
-      JAMP2(1,2)=+1D0/4D0*(-3D0*AMP(1)+1D0/3D0*AMP(1)-3D0*AMP(3)+1D0
-     $ /3D0*AMP(3))
-      JAMP2(2,2)=0D0
+C     JAMPs contributing to orders QCD=2 QED=0
+      JAMP1(1,1) = (1.666666666666667D-01)*AMP(2)
+      JAMP1(2,1) = (-5.000000000000000D-01)*AMP(2)
+C     JAMPs contributing to orders QCD=0 QED=2
+      JAMP1(1,2) = (-1.000000000000000D+00)*AMP(1)+(
+     $ -1.000000000000000D+00)*AMP(3)
+C     JAMPs contributing to orders QCD=2 QED=0
+      JAMP2(1,1) = (1.111111111111111D-01)*AMP(2)
+      JAMP2(2,1) = (-3.333333333333333D-01)*AMP(2)
+C     JAMPs contributing to orders QCD=0 QED=2
+      JAMP2(1,2) = (-6.666666666666666D-01)*AMP(1)+(
+     $ -6.666666666666666D-01)*AMP(3)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -265,7 +265,7 @@ C     JAMP2s contributing to orders QCD=0 QED=2
           ENDDO
           DO N = 1, NAMPSO
             ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP
-     $       *DCONJG(JAMP1(I,N))/DENOM(I)
+     $       *DCONJG(JAMP1(I,N))
           ENDDO
         ENDDO
       ENDDO

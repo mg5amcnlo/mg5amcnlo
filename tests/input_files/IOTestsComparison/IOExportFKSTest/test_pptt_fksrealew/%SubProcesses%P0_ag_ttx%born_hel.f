@@ -66,7 +66,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: a g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: a g > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -152,7 +152,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: a g > t t~ [ real = QCD QED ] QCD^2=4 QED^2=2
+C     Process: a g > t t~ [ real = QCD QED ] QCD^2<=4 QED^2<=2
 C     
       IMPLICIT NONE
 C     
@@ -180,8 +180,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J,M,N
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8 CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -196,8 +197,7 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  1) /    4/
+      DATA (CF(I,  1),I=  1,  1) /4.000000000000000D+00/
 C     1 T(2,3,4)
 C     ----------
 C     BEGIN CODE
@@ -212,7 +212,8 @@ C     ----------
         ENDDO
       ENDIF
 C     JAMPs contributing to orders QCD=1 QED=1
-      JAMP(1,1)=-AMP(1)-AMP(2)
+      JAMP(1,1) = (-1.000000000000000D+00)*AMP(1)+(-1.000000000000000D
+     $ +00)*AMP(2)
       DO I = 1, NSQAMPSO
         ANS(I) = 0D0
       ENDDO
@@ -223,7 +224,7 @@ C     JAMPs contributing to orders QCD=1 QED=1
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP
-     $     *DCONJG(JAMP(I,M))/DENOM(I)
+     $     *DCONJG(JAMP(I,M))
         ENDDO
       ENDDO
       END

@@ -166,7 +166,7 @@ c
       xnorm=1.d0/float(ncalls0)
       if(useitmax)xnorm=xnorm/float(itmax)
 c Normalization factor for the PineAPPL grids
-      if(pineappl) appl_norm_histo = 1d0 / dble(ncalls0*itmax)
+      if(pineappl) appl_norm_histo = 1d0 / (dble(ncalls0)*dble(itmax))
       call analysis_end(xnorm)
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
@@ -297,6 +297,13 @@ c      (see comments inside the fill_plots subroutine)
          appl_www_histo = www(1)
       endif
       call analysis_fill(p,istatus,ipdg,www,ibody)
+      if(pineappl)then
+        ! this call is necessary since PineAPPL
+        ! already combine the different contributions
+        ! with the same kinematics, while histograms
+        ! are filled contribution by contribution.
+        call APPL_delete_itype
+      endif
 c Fill the accumulated results
       i_wgt=1
       if (do_rwgt_scale) then

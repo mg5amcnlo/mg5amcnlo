@@ -2,15 +2,18 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
-      include "born_conf.inc"
-      integer this_config
-      integer mapconfig_local(0:lmaxconfigs)
-      common/to_mconfigs/mapconfig_local, this_config
-      double precision pmass(-nexternal:0,lmaxconfigs)
-      double precision pwidth(-nexternal:0,lmaxconfigs)
-      integer pow(-nexternal:0,lmaxconfigs)
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
       integer i,j
       double precision zero
@@ -29,29 +32,22 @@
       common /c_qmass_qwidth/qmass_common,qwidth_common
       double precision xvar(99)
       common /c_vegas_x/xvar
-      include 'coupl.inc'
-      include 'born_props.inc'
+      integer            this_config
+      common/to_mconfigs/this_config
 c     
+      call cpu_time(tBefore)
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
       do i=-max_branch,-1
          do j=1,2
-            itree(j,i)=0
-         enddo
-      enddo
-      do i=-max_branchb_used,-1
-         do j=1,2
-            itree(j,i)=iforest(j,i,iconfig)
+            itree(j,i)=iforest(j,i,iconfig,0)
          enddo
       enddo
 
-      do i =0,lmaxconfigsb_used
-        mapconfig_local(i) = mapconfig(i)
-      enddo
       do i=-nexternal,0
-         qmass(i)=pmass(i,iconfig)
-         qwidth(i)=pwidth(i,iconfig)
+         qmass(i)=pmass(i,iconfig,0)
+         qwidth(i)=pwidth(i,iconfig,0)
          qmass_common(i)=qmass(i)
          qwidth_common(i)=qwidth(i)
       enddo
@@ -68,6 +64,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)
+      tGenPS=tGenPS+(tAfter-tBefore)
       return
       end
 
@@ -630,6 +628,7 @@ c better compute it again to set all the common blocks correctly.
 C
       include 'run.inc'
       integer ndim_dummy
+      double precision fksmass
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
@@ -652,30 +651,30 @@ c Conflicting BW stuff
 
       if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
-         if (abs(lpp(1)).ne.4) then ! this is for pp collisions
+         if (abs(lpp(1)).ne.4.and.abs(lpp(1)).ne.3) then ! this is for pp collisions
 c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
 C  rndx(1) -> tau; rndx(2) -> ycm
            if (one_body) then
 c tau is fixed by the mass of the final state particle
-            call compute_tau_one_body(totmass,stot,tau_born,xjac)
+              call compute_tau_one_body(totmass,stot,tau_born,xjac)
            else
-            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
      $           cBW(-ns_channel-1).ne.2)then
 c Generate tau according to a Breit-Wiger function
-               call generate_tau_BW(stot,ndim_dummy,rndx(1),qmass(
+                 call generate_tau_BW(stot,ndim_dummy,rndx(1),qmass(
      $              -ns_channel-1),qwidth(-ns_channel-1),cBW(-ns_channel
      $              -1),cBW_mass(-1, -ns_channel-1),cBW_width(-1,
      $              -ns_channel-1),tau_born,xjac)
-            else
+               else 
 c     not a Breit Wigner
-               call generate_tau(stot,ndim_dummy,rndx(1),tau_born,xjac)
-            endif
+                 call generate_tau(stot,ndim_dummy,rndx(1),tau_born,xjac)
+               endif
            endif
          
 c Generate the rapditity of the Born system
            call generate_y(tau_born,rndx(2),ycm_born,ycmhat,xjac)
 
-         else  ! this is for dressed ee collisions
+        else                    ! this is for dressed ee collisions
            call generate_ee_tau_y(rndx(1), rndx(2), one_body, totmass,
      $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
      $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
@@ -989,11 +988,17 @@ c Trivial, but prevents loss of accuracy
         sqrtshat_born=totmass
       endif
 
+      !!!!! for dressed-lepton collisions only !!!!
       ! if j_fks is initial state, then use the mapping without
       ! event-projection if use_evpr is set to false
       !(note that in e+e- collisions, if tau is generated with a BW
       ! then use_evpr is set to true)
-      use_evpr = use_evpr.or.j_fks.gt.nincoming 
+      if (lpp(1).eq.1.and.lpp(2).eq.1) then
+          use_evpr = .true.
+      else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
+     $         (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4)) then
+          use_evpr = use_evpr.or.j_fks.gt.nincoming 
+      endif
 
       if (use_evpr) then
         ! standard mapping with event-projection
@@ -3316,14 +3321,14 @@ c Jacobian due to delta() of tau_born
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
-      if (s_mass.gt.smin+tiny) then
+      if (s_mass.gt.smin*(1d0+tiny)) then
          call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
-      elseif(abs(s_mass-smin).lt.tiny) then
+      elseif(abs(s_mass-smin).lt.tiny*smin) then
          call trans_x(7,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
       else
-         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin,smax
          jac=-1d0
       endif
       tau=s/stot
@@ -4190,6 +4195,7 @@ c     S=A/(B-x) transformation:
       return 
       end
 
+
       subroutine generate_x_ee(rnd, xmin, x, omx, jac)
       implicit none
       ! generates the momentum fraction with importance
@@ -4246,8 +4252,8 @@ c     S=A/(B-x) transformation:
 C dressed lepton stuff
       double precision x1_ee, x2_ee, jac_ee
       
-      double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      $     ,tau_lower_bound
@@ -4329,14 +4335,14 @@ C dressed lepton stuff
         !    because the compute_eepdf function assumes that
         !    this is the case in general
         if (rnd2.lt.0.5d0) then
-          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx1_ee, jac_ee)
+          call generate_x_ee(rnd2*2d0, dsqrt(tau_born), x1_ee, omx_ee(1), jac_ee)
           x2_ee = tau_born / x1_ee
-          omx2_ee = 1d0 - x2_ee
+          omx_ee(2) = 1d0 - x2_ee
           xjac0 = xjac0 / x1_ee * 2d0 * jac_ee / (1d0-x2_ee)**get_ee_expo()
         else
-          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx2_ee, jac_ee)
+          call generate_x_ee(1d0-2d0*(rnd2-0.5d0), dsqrt(tau_born), x2_ee, omx_ee(2), jac_ee)
           x1_ee = tau_born / x2_ee
-          omx1_ee = 1d0 - x1_ee
+          omx_ee(1) = 1d0 - x1_ee
           xjac0 = xjac0 / x2_ee * 2d0  * jac_ee / (1d0-x1_ee)**get_ee_expo()
         endif
       else
@@ -4346,10 +4352,10 @@ C dressed lepton stuff
         ! while in the ee case x1 and x2 are generated first.
 
         call generate_x_ee(rnd1, tau_born_lower_bound,
-     $      x1_ee, omx1_ee, jac_ee)
+     $      x1_ee, omx_ee(1), jac_ee)
         xjac0 = xjac0 * jac_ee
         call generate_x_ee(rnd2, tau_born_lower_bound/x1_ee,
-     $      x2_ee, omx2_ee, jac_ee)
+     $      x2_ee, omx_ee(2), jac_ee)
         xjac0 = xjac0 * jac_ee
 
         tau_born = x1_ee * x2_ee
@@ -4372,7 +4378,7 @@ C dressed lepton stuff
       ! in order to (re-)generate tau and ycm
       ! from x1 and x2. It also (re-)checks that tau_born 
       ! is pysical, and otherwise sets xjac0=-1000
-      call get_tau_y_from_x12(x1_ee, x2_ee, omx1_ee, omx2_ee, tau_born, ycm_born, ycmhat, xjac0) 
+      call get_tau_y_from_x12(x1_ee, x2_ee, omx_ee(1), omx_ee(2), tau_born, ycm_born, ycmhat, xjac0) 
 
       x1bk=x1_ee
       x2bk=x2_ee

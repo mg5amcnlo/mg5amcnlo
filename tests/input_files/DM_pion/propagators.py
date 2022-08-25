@@ -3,7 +3,7 @@
 # Date: Mon 1 Oct 2012 14:58:26
 
 from __future__ import absolute_import
-from .object_library import all_propagators, Propagator
+from object_library import all_propagators, Propagator
 
 
 # define only once the denominator since this is always the same

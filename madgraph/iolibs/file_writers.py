@@ -64,7 +64,7 @@ class FileWriter(io.FileIO):
     def write_line(self, line):
         """Write a line with proper indent and splitting of long lines
         for the language in question."""
-
+        return ['%s\n' % l for l in line.split('\n')]
         pass
 
     def write_comment_line(self, line):
@@ -202,6 +202,7 @@ class FortranWriter(FileWriter):
     number_re = re.compile('^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
+    uniformcase = True #force everyting to be lower/upper case 
     downcase = False
     line_length = 71
     max_split = 20
@@ -257,23 +258,24 @@ class FortranWriter(FileWriter):
             # Replace all double quotes by single quotes
             myline = myline.replace('\"', '\'')
             # Downcase or upcase Fortran code, except for quotes
-            splitline = myline.split('\'')
-            myline = ""
-            i = 0
-            while i < len(splitline):
-                if i % 2 == 1:
-                    # This is a quote - check for escaped \'s
-                    while  splitline[i] and splitline[i][-1] == '\\':
-                        splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
-                else:
-                    # Otherwise downcase/upcase
-                    if FortranWriter.downcase:
-                        splitline[i] = splitline[i].lower()
+            if self.uniformcase:
+                splitline = myline.split('\'')
+                myline = ""
+                i = 0
+                while i < len(splitline):
+                    if i % 2 == 1:
+                        # This is a quote - check for escaped \'s
+                        while  splitline[i] and splitline[i][-1] == '\\':
+                            splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
                     else:
-                        splitline[i] = splitline[i].upper()
-                i = i + 1
-
-            myline = "\'".join(splitline).rstrip()
+                        # Otherwise downcase/upcase
+                        if FortranWriter.downcase:
+                            splitline[i] = splitline[i].lower()
+                        else:
+                            splitline[i] = splitline[i].upper()
+                    i = i + 1
+    
+                myline = "\'".join(splitline).rstrip()
 
             # Check if line starts with dual keyword and adjust indent 
             if self.__keyword_list and re.search(self.keyword_pairs[\
@@ -454,7 +456,7 @@ class FortranWriter(FileWriter):
                 else:
                     if not line.endswith('\n'):
                         line = '%s\n' % line
-                    file.writelines(self, line)
+                    super(FileWriter,self).writelines(line)
             else:
                 removed.append(line)
                 
@@ -982,13 +984,13 @@ class PythonWriter(FileWriter):
     
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
-        file.write(self, text)
+        self.write(text)
         
 class MakefileWriter(FileWriter):
     
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
-        file.write(self, text)
+        self.write(text)
         
     def writelines(self, lines):
         """Extends the regular file.writeline() function to write out

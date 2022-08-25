@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 ################################################################################
 #
@@ -113,7 +113,7 @@ if pattern.match(version):
     #valid version format
     # Get current revision number:
     p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
-    rev_nb = p.stdout.read().strip()
+    rev_nb = p.stdout.read().strip().decode()
     logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
 else:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
@@ -127,8 +127,14 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
-        web_version = int(filetext.read().strip())            
+        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
+        text = filetext.read().decode().split('\n')
+        print(text)
+        web_version = int(text[0].strip())
+        if text[1]:
+            last_message = int(text[1].strip())
+        else:
+            last_message = 99
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
@@ -192,8 +198,9 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 # 1. Add information for the auto-update
 if rev_nb:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
-    fsock.write("version_nb   %s\n" % rev_nb)
+    fsock.write("version_nb   %s\n" % int(rev_nb))
     fsock.write("last_check   %s\n" % int(time.time()))
+    fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
     
 # 1. Copy the .mg5_configuration_default.txt to it's default path
@@ -209,29 +216,34 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
 #create_empty.close()
 
 # 2. Create the automatic documentation in the apidoc directory
-try:
-    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-                               'madgraph', 'aloha',
-                               os.path.join('models', '*.py')], cwd = filepath)
-except:
-    logging.error("Error while trying to run epydoc. Do you have it installed?")
-    logging.error("Execution cancelled.")
-    sys.exit()
+#try:
+#    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
+#                               'madgraph', 'aloha',
+#                               os.path.join('models', '*.py')], cwd = filepath)
+#except:
+#    logging.error("Error while trying to run epydoc. Do you have it installed?")
+#    logging.error("Execution cancelled.")
+#    sys.exit()
+#
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
+#if status1:
+#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
+#                 status)
+#    sys.exit()
 
-if status1:
-    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
-                 status)
-    sys.exit()
 #3. tarring the apidoc directory
-status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+#status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
-if status2:
-    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
-    sys.exit()
-else:
+#if status2:
+#    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+#                 status)
+#    sys.exit()
+#else:
     # remove the apidoc file.
-    shutil.rmtree(os.path.join(filepath,'apidoc'))
+#    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 4. Download the offline installer and other similar code
 install_str = """

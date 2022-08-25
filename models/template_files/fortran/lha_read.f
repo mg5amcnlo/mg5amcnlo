@@ -185,6 +185,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       integer npara
       logical fopened,found
       integer iunit,GL,logfile
+      integer start
       character*20 ctemp
       character*132 buff
       character*20 tag
@@ -227,6 +228,18 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                  temp=buff(7:132)
                  call LHA_firststring(blockname,temp)
                  call LHA_case_trap(blockname)
+c                check if Q= is in string
+                 start=index(temp,'Q=')
+                 if (start.ne.0) then
+
+                   temp = temp(2+start:132)
+                   call LHA_firststring(val,temp)
+                   value(npara)=val
+                   ctemp='mdl__'//trim(blockname)//'__scale'
+                   call LHA_case_trap(ctemp)
+                   param(npara)=ctemp
+                   npara = npara + 1              
+                 endif
              else if (tag .eq. 'decay') then ! If we are in a decay, directly try to get back the correct name/value pair
                  blockname='decay'
                  temp=buff(7:132)
@@ -269,7 +282,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
-      subroutine LHA_get_real(npara,param,value,name,var,def_value_num)
+      subroutine LHA_get_real_silent(npara,param,value,name,var,def_value_num)
 c----------------------------------------------------------------------------------
 c     finds the parameter named "name" in param and associate to "value" in value
 c----------------------------------------------------------------------------------
@@ -292,12 +305,18 @@ c
 c
 c     local
 c
-      logical found
+      logical found, log
       integer i
 c
 c     start
 c
-      i=1
+      log = .false.
+      goto 10
+      
+      entry LHA_get_real(npara,param,value,name,var,def_value_num)
+      log = .true.
+      
+ 10   i=1
       found=.false.
       do while(.not.found.and.i.le.npara)
          ctemp=param(i)
@@ -313,9 +332,11 @@ c
          i=i+1
       enddo
       if (.not.found) then
-         write (*,*) "Warning: parameter ",name," not found"
-         write (*,*) "         setting it to default value ",
-     &def_value_num
+         if (log) then
+            write (*,*) "Warning: parameter ",name," not found"
+            write (*,*) "         setting it to default value ",
+     &           def_value_num
+         endif
          var=def_value_num
       endif
       return

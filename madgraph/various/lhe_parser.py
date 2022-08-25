@@ -255,7 +255,7 @@ class EventFile(object):
                     self.banner = ''
                     break 
                 if 'b' in mode or self.zip_mode:
-                    line = str(line.decode(self.encoding))
+                    line = str(line.decode(self.encoding,errors='ignore'))
                 if '<event' in line.lower():
                     self.seek(0)
                     self.banner = ''
@@ -331,7 +331,7 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode or self.zip_mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<event' in line:
                 mode = 1
@@ -361,13 +361,13 @@ class EventFile(object):
             if not line:
                 raise StopIteration
             if 'b' in self.mode:
-                line = line.decode(self.encoding)
+                line = line.decode(self.encoding,errors='ignore')
             
             if '<eventgroup' in line:
                 events=[]
                 text = ''
             elif '<event' in line:
-                text = []
+                text = ''
                 mode=1
             elif '</event>' in line:
                 if self.parsing:
@@ -494,28 +494,33 @@ class EventFile(object):
         if self.banner:
             try:
                 import internal
-            except:
-                import madgraph.various.banner as banner_module
-            else:
                 import internal.banner as banner_module
-            if not isinstance(self.banner, banner_module.Banner):
+            except ImportError:
+                try:
+                    import madgraph.various.banner as banner_module
+                except ImportError:
+                    logger.debug("no banner module found")
+                    banner_module = None
+
+            if banner_module and not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
-                banner.modify_init_cross(cross)
+                banner.modify_init_cross(cross, allow_zero=True) # for few event cross might miss input
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
                 banner = self.banner
-            # modify the lha strategy
-            curr_strategy = banner.get_lha_strategy()
-            if normalization in ['unit', 'sum']:
-                strategy = 3
-            else:
-                strategy = 4
-            if curr_strategy >0: 
-                banner.set_lha_strategy(abs(strategy))
-            else:
-                banner.set_lha_strategy(-1*abs(strategy))
+            if banner_module:
+                # modify the lha strategy
+                curr_strategy = banner.get_lha_strategy()
+                if normalization in ['unit', 'sum']:
+                    strategy = 3
+                else:
+                    strategy = 4
+                if curr_strategy >0: 
+                    banner.set_lha_strategy(abs(strategy))
+                else:
+                    banner.set_lha_strategy(-1*abs(strategy))
                 
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
@@ -1150,6 +1155,7 @@ class MultiEventFile(EventFile):
         all_wgt = all_wgt[-nb_keep:]  
         self.seek(0)
         self._configure = True
+
         return all_wgt, sum_cross, total_event
     
     def configure(self):
@@ -2227,6 +2233,8 @@ class Event(list):
         
         if other is None:
             return False
+        if len(self) != len(other):
+            return False
         
         for i,p in enumerate(self):
             if p.E != other[i].E:
@@ -2358,6 +2366,128 @@ class Event(list):
             out[position] = (part.E, part.px, part.py, part.pz)
             
         return out
+
+
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+        """ same as get_momenta but return all valid permutation of the final state 
+              where identical particle does NOT have the same parent
+              for easier development debug output allow to return internal variable for the unittest to check
+        """  
+
+
+        p = self.get_momenta(get_order, allow_reversed)
+
+        nbin = len(get_order[0])
+        final = get_order[1]
+        data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
+        for i, part in enumerate(self):
+            pdg = part.pid
+            if part.status != 1:
+                continue
+            try:
+                m1 = part.mother1.event_id
+            except AttributeError:
+                m1 = 0
+            try:
+                m2 = part.mother2.event_id
+            except AttributeError:
+                m2 = 0
+            M = (m1,m2)
+            if pdg in data:
+                max_prev = max(k+1  for N in data[pdg] for k in data[pdg][N] ) - nbin
+                if M in data[pdg]:
+                    data[pdg][M].append(nbin+final.index(pdg,max_prev))
+                else:
+                    data[pdg][M] = [nbin+final.index(pdg, max_prev)]
+            else:
+                data[pdg] = {M:[nbin+final.index(pdg)]}
+
+        # for unnittest 
+        if debug_output == 1:
+            return data
+
+        # check which pdg to permutate
+        # need to permutate pdg code where multiple M are present
+        perms_perid = {}
+        for pdg in data:
+            if len(data[pdg]) == 1:
+                mother = list(data[pdg].keys())[0]
+                perms_perid[pdg] = [[(i,i) for i in data[pdg][mother]]]
+            else:
+                positions = []
+                mapping = [] #mapping from position to the class
+                for mother in data[pdg]:
+                    for val in data[pdg][mother]:
+                        mapping.append(mother)
+                        positions.append(val)
+                all_perms = Event.get_permutation(positions, mapping)
+                perms_perid[pdg] = [[(pos, positions[i]) for i,pos in enumerate(perm)] for perm in all_perms]
+
+        if debug_output == 2:
+            return perms_perid
+
+        all_perms = []
+        import itertools
+        for i in itertools.product(*perms_perid.values()): 
+            perm_pos = dict(sum(i,[]))
+            new_p = [[0,0,0,0]]*len(p)
+            new_p[:nbin] = p[:nbin]
+            for i,j in perm_pos.items():
+                new_p[i] = p[j] 
+            all_perms.append(new_p)
+
+        return all_perms
+
+            
+
+    @staticmethod
+    def equiv_sequence(l1,l2, mapping):
+        """check if two sequence are equivalent
+        mapping is a dictionary taking an index and return an identifier.
+        The two list are consider equivalent if the  total content associated to an identifier
+        is the same (up to ordering)
+        so (3,4,5) and (4,3,5) are the same for mapping={0:"a",1:"a",2:"b"}
+        since a is assocated to 3,4 in both case (and b to 5 in each case
+        but (3,4,5) and (3,5,4) are not the same because b has 5 in one case and 4 in the second
+        """
+        content1 = collections.defaultdict(set)
+        content2 = collections.defaultdict(set)
+        for i in range(len(l1)):
+            content1[mapping[i]].add(l1[i])
+            content2[mapping[i]].add(l2[i])
+
+        for key in content1:
+            if content1[key] != content2[key]:
+                return False
+        return True
+
+    @staticmethod
+    def get_permutation(orig, belong):
+        """
+        orig is the position of the various particle to permutate
+        belong is the class to which they belong
+        so for [3,4,5] and ["A", "A" , "b"] the code will return
+        three permutation of orig (like)
+        [3,4,5], [3,5,4], [4,5,3] 
+        """
+
+        import itertools
+
+        assert(len(orig) == len(belong))
+        invert = {}
+        for i in range(len(orig)):
+            invert[i] = belong[i]
+
+        allperms = []
+        for perm in itertools.permutations(orig):
+            if not any(Event.equiv_sequence(perm, prev, invert) for prev in allperms):
+                allperms.append(perm)
+        return allperms
+
+
+
+
+
 
     
     def get_scale(self,type):
@@ -2668,7 +2798,7 @@ class OneNLOWeight(object):
             bjks : %(bjks)s
             scales**2, gs: %(scales2)s %(gs)s
             born/real related : %(born_related)s %(real_related)s
-            type / nfks : %(type)s  %(nfks)s
+            type / nfks : %(orderflag)s %(type)s  %(nfks)s
             to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
             ref_wgt :  %(ref_wgt)s""" % self.__dict__
             return out
@@ -2691,6 +2821,7 @@ class OneNLOWeight(object):
             to_add('%.10e', self.real)
             to_add('%i', self.nexternal)
             to_add('%i', self.pdgs)
+            to_add('%i', self.orderflag)
             to_add('%i', self.qcdpower)
             to_add('%.10e', self.bjks)
             to_add('%.10e', self.scales2)
@@ -2707,8 +2838,7 @@ class OneNLOWeight(object):
     def parse(self, text, keep_bias=False):
         """parse the line and create the related object.
            keep bias allow to not systematically correct for the bias in the written information"""
-        #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
-        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
+        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 404 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
         data = text.split()
         # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
@@ -2743,9 +2873,13 @@ class OneNLOWeight(object):
         #    from example: 21 2 -11 12 1 2
         self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
         flag = 6+self.nexternal # new starting point for the position
+        # 5[pre] next integer is the expansion order defined at NLO (from example 404)
+        # New since 3.1.0.
+        self.orderflag = int(data[flag])
         # 5. next integer is the power of g_strong in the matrix elements (as before)
         #    from example: 2
-        self.qcdpower = int(data[flag])
+        self.qcdpower = int(data[flag+1])
+        flag= flag+1
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
         #    from example: 0.52500539D-02 0.30205908D+00 
         self.bjks = [float(f) for f in data[flag+1:flag+3]]
@@ -2962,6 +3096,15 @@ class NLO_PARTIALWEIGHT(object):
                 out[position] = (part.E, part.px, part.py, part.pz)
                 
             return out
+
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+            """ same as get_momenta but return all valid permutation of the final state 
+                    where identical particle does NOT have the same parent
+                    for easier development debug output allow to return internal variable for the unittest to check
+            """  
+
+
+            return [self.get_momenta(get_order, allow_reversed)]
             
             
         def get_helicity(self, *args):
@@ -3179,28 +3322,64 @@ if '__main__' == __name__:
         output.write('</LesHouchesEvent>\n')
         
     # Example 3: Plotting some variable
-    if False:
-        lhe = EventFile('unweighted_events.lhe.gz')
+    if True:
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/it4.lhe')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
         nbins = 100
         
         nb_pass = 0
-        data = []
+        data_t1 = []
+        data_t2 = []
+        wgts = []
+        colors = []
         for event in lhe:
-            etaabs = 0 
-            etafinal = 0
-            for particle in event:
-                if particle.status==1:
-                    p = FourMomentum(particle)
-                    eta = p.pseudorapidity
-                    if abs(eta) > etaabs:
-                        etafinal = eta
-                        etaabs = abs(eta)
-            if etaabs < 4:
-                data.append(etafinal)
-                nb_pass +=1     
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors.append('red')
+            else:
+                colors.append('blue')
+        lhe = EventFile('/Users/omattelaer/Documents/eclipse/2.7.2_alternate/PROC_TEST_TT2/SubProcesses/P1_mupmum_ttxmupmum/G10/unweighted.lhe')
+        import numpy as np
+        import matplotlib.pyplot as plt
+        data2_t1 = []
+        data2_t2 = []
+        wgts = []
+        colors2 = []
+        for event in lhe:
+            p = [FourMomentum(particle) for particle in event]
+            t1 = - (p[1] -p[5])**2/13000**2
+            data2_t1.append(t1)
+            t2 = - (p[0] -p[2]-p[3])**2/13000**2
+            data2_t2.append(t2)
+            wgts.append(event.wgt)
+            if event.wgt > 0.2335320e-005:
+                colors2.append('black')
+            else:
+                colors2.append('green')
 
+
+        
+#        colors = (0,0,0)
+        area = np.pi*3
+
+        # Plot
+#        ax.set_xlim([10^-20,13000**2])
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('pa')
+        plt.ylabel('pmu')
+        plt.scatter(data_t1, data_t2, c=colors, label='weighted')#, s=area, c=colors, alpha=0.5)
+        plt.scatter(data2_t1, data2_t2, c=colors2, label='unweighted')#, s=area, c=colors, alpha=0.5)
+        plt.legend()        
+        
+        plt.show()
+            
                         
         print(nb_pass)
         gs1 = gridspec.GridSpec(2, 1, height_ratios=[5,1])
@@ -3213,7 +3392,6 @@ if '__main__' == __name__:
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
-        ax.set_xlim([-4,4])
         print("bin value:", n)
         print("start/end point of bins", bins)
         plt.axis('on')

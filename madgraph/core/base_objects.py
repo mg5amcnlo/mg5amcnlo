@@ -25,6 +25,8 @@ import os
 import re
 import six
 StringIO = six
+
+import madgraph
 import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
@@ -36,6 +38,9 @@ from functools import reduce
 
 logger = logging.getLogger('madgraph.base_objects')
 pjoin = os.path.join
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 #===============================================================================
 # PhysicsObject
@@ -1041,8 +1046,10 @@ class Model(PhysicsObject):
         self['version_tag'] = None # position of the directory (for security)
         self['gauge'] = [0, 1]
         self['case_sensitive'] = True
+        self['running_elements'] = []
         self['allow_pickle'] = True
         self['limitations'] = [] # MLM means that the model can sometimes have issue with MLM/default scale. 
+                                 # fix_scale means that the model should use fix_scale computation.
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
         
@@ -1315,7 +1322,7 @@ class Model(PhysicsObject):
         # Set coupling hierachy
         hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
         # Special case for only QCD and QED couplings, unless already set
-        if self.get('coupling_orders') == set(['QCD', 'QED']):
+        if set(self.get('coupling_orders')) == set(['QCD', 'QED']):
             hierarchy['QED'] = 2
         return hierarchy
 
@@ -1405,7 +1412,7 @@ class Model(PhysicsObject):
                                           i.get('orders').keys()])])
             # Append the corresponding particles, excluding the
             # particles that have already been added
-            particles.append(set(sum([[p.get_pdg_code() for p in \
+            particles.append(misc.make_unique(sum([[p.get_pdg_code() for p in \
                                       inter.get('particles') if \
                                        p.get_pdg_code() not in sum_particles] \
                                       for inter in interactions[-1]], [])))
@@ -1419,6 +1426,38 @@ class Model(PhysicsObject):
         return max([inter.get_WEIGHTED_order(self) for inter in \
                         self.get('interactions')])
             
+    def get_running(self, used_parameters=None):
+        """return a list of parameter which needs to be run together.
+           check also that at least one requested coupling is dependent of 
+           such running 
+        """
+        
+        correlated = []
+        
+        for key in self["running_elements"]:
+            for param_list in key.run_objects:
+                names = [k.name for k in param_list]
+                try:
+                    names.remove('aS')
+                except Exception:
+                    pass
+                # find all set of parameter where at least one paremeter are present
+                this_ones = set(names)
+                for subset in list(correlated):
+                    if any(n in subset for n in names):
+                        this_ones.update(subset)
+                        correlated.remove(subset)
+                correlated.append(this_ones)
+        
+        #filtering
+        if used_parameters:
+            for subset in list(correlated): 
+                if not any(n in subset for n in used_parameters):
+                    correlated.remove(subset)
+        
+        return correlated   
+
+        
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
@@ -1657,6 +1696,9 @@ class Model(PhysicsObject):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
+        if isinstance(mode, str) and "_" in mode:
+            mode = set([s.lower() for s in mode.split('_')])
+
         assert mode in ["external",set(['mz','mw','alpha'])]
         
         try:
@@ -1801,7 +1843,7 @@ class Model(PhysicsObject):
 
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
-                depend = list(set(mass.depend + width.depend))
+                depend = misc.make_unique(mass.depend + width.depend)
                 if len(depend)>1 and 'external' in depend:
                     depend.remove('external')
                 depend = tuple(depend)
@@ -1890,6 +1932,9 @@ class Model(PhysicsObject):
             for coup in list_coup:                
                 coup.expr = pat.sub(replace, coup.expr)
                 
+    def get_all_spin(self):
+        return {p.get('spin') for p in self['particles']}
+
     def add_param(self, new_param, depend_param):
         """add the parameter in the list of parameter in a correct position"""
             
@@ -1936,7 +1981,7 @@ class ParamCardVariable(ModelVariable):
     depend = ('external',)
     type = 'real'
     
-    def __init__(self, name, value, lhablock, lhacode):
+    def __init__(self, name, value, lhablock, lhacode, scale=None):
         """Initialize a new ParamCardVariable
         name: name of the variable
         value: default numerical value
@@ -1947,6 +1992,7 @@ class ParamCardVariable(ModelVariable):
         self.value = value 
         self.lhablock = lhablock
         self.lhacode = lhacode
+        self.scale = scale
 
 
 #===============================================================================
@@ -2076,6 +2122,7 @@ class Leg(PhysicsObject):
 
         else :
             return False
+
 
     # Make sure sort() sorts lists of legs according to 'number'
     def __lt__(self, other):
@@ -2448,6 +2495,8 @@ class Diagram(PhysicsObject):
         """Returns a nicely formatted string of the diagram content."""
 
         pass_sanity = True
+        removed_index = set()
+
         if self['vertices']:
             mystr = '('
             for vert in self['vertices']:
@@ -2463,10 +2512,21 @@ class Diagram(PhysicsObject):
                 if __debug__ and len(used_leg) != len(set(used_leg)):
                     pass_sanity = False
                     responsible = id(vert)
+                if __debug__ and any(l['number'] in removed_index for l in vert['legs']):
+                    pass_sanity = False
+                    responsible = id(vert)
                     
                 if self['vertices'].index(vert) < len(self['vertices']) - 1:
                     # Do not want ">" in the last vertex
                     mystr = mystr[:-1] + '>'
+                    if __debug__:
+                        if vert['legs'][-1]['number'] != min([l['number'] for l in vert['legs'][:-1]]):
+                            pass_sanity = False
+                            responsible = id(vert)
+                        for l in vert['legs']:
+                            removed_index.add(l['number'])
+                        removed_index.remove(vert['legs'][-1]['number'])
+
                 lastleg = vert['legs'][-1]
                 if lastleg['polarization']:
                     mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
@@ -2614,7 +2674,7 @@ class Diagram(PhysicsObject):
 
 
         if max_n_loop == 0:
-            max_n_loop = Vertex.max_n_loop_for_multichanneling
+            max_n_loop = int(Vertex.max_n_loop_for_multichanneling)
         
         res = [len(v.get('legs')) for v in self.get('vertices') if (v.get('id') \
                                   not in veto_inter_id) or (v.get('id')==-2 and 
@@ -3005,7 +3065,7 @@ class Process(PhysicsObject):
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
                 'NLO_mode', 'split_orders', 'born_sq_orders']
 
-    def nice_string(self, indent=0, print_weighted = True, prefix=True):
+    def nice_string(self, indent=0, print_weighted=True, prefix=True, print_perturbated=True):
         """Returns a nicely formated string about current process
         content. Since the WEIGHTED order is automatically set and added to 
         the user-defined list of orders, it can be ommitted for some info
@@ -3079,14 +3139,14 @@ class Process(PhysicsObject):
                     for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
-        if self['perturbation_couplings']:
+        if print_perturbated and self['perturbation_couplings']:
             mystr = mystr + '[ '
             if self['NLO_mode']!='tree':
                 if self['NLO_mode']=='virt' and not self['has_born']:
                     mystr = mystr + 'sqrvirt = '
                 else:
                     mystr = mystr + self['NLO_mode'] + ' = '
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
@@ -3200,11 +3260,11 @@ class Process(PhysicsObject):
             mystr = mystr + '[ '
             if self['NLO_mode']:
                 mystr = mystr + self['NLO_mode']
-                if not self['has_born']:
+                if not self['has_born'] and self['NLO_mode'] != 'noborn':
                     mystr = mystr + '^2'
                 mystr = mystr + '= '
                 
-            for order in self['perturbation_couplings']:
+            for order in sorted(self['perturbation_couplings']):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
@@ -3436,11 +3496,16 @@ class Process(PhysicsObject):
 
         return len([leg for leg in self.get('legs') if leg.get('state') == False])
 
-    def get_initial_ids(self):
+    def get_initial_ids(self, beamid=0):
         """Gives the pdg codes for initial state particles"""
 
-        return [leg.get('id') for leg in \
+        if beamid == 0:
+            return [leg.get('id') for leg in \
                 [leg for leg in self.get('legs') if leg.get('state') == False]]
+        else:
+            return [leg.get('id') for leg in \
+                [leg for leg in self.get('legs') if leg.get('state') == False and
+                leg.get('number') == beamid]]
 
     def get_initial_pdg(self, number):
         """Return the pdg codes for initial state particles for beam number"""

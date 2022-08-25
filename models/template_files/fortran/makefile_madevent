@@ -16,6 +16,7 @@ include makeinc.inc
 
 LIBDIR=../../lib/
 LIBRARY=libmodel.$(libext)
+RUNNING = ../alfas_functions.o ../RUNNING/matrix_exponential.o ../RUNNING/c8lib.o  ../RUNNING/r8lib.o
 
 all: $(LIBDIR)$(LIBRARY) ../param_card.inc
 
@@ -27,7 +28,7 @@ rw_para.o: ../param_card.inc
 helas_couplings: helas_couplings.o $(LIBRARY)
 	$(FC) $(FFLAGS) -o $@ $^
 
-testprog: testprog.o $(LIBRARY)
+testprog: testprog.o $(LIBRARY) # $(RUNNING)
 	$(FC) $(FFLAGS) -o $@ $^
 
 $(LIBRARY): $(MODEL)
@@ -40,3 +41,10 @@ $(LIBDIR)$(LIBRARY): $(MODEL)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 
+couplings.f: ../maxparticles.inc ../run.inc
+
+../run.inc:
+	touch ../run.inc
+
+../maxparticles.inc:
+	touch ../maxparticles.inc

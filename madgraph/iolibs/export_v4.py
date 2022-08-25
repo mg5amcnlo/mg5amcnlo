@@ -12,15 +12,17 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
+from __future__ import absolute_import, division
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
+import six
+from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+import math, cmath
 from six import StringIO
-from distutils import dir_util
 import itertools
 import fractions
 import glob
@@ -34,9 +36,11 @@ import subprocess
 import sys
 import time
 import traceback
+import  collections
 
 import aloha
 
+import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -54,10 +58,12 @@ import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
 import madgraph.various.process_checks as process_checks
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph
 import aloha.create_aloha as create_aloha
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
+from models import UFOError
 
 
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
@@ -65,10 +71,14 @@ from madgraph.iolibs.files import cp, ln, mv
 
 from madgraph import InvalidCmd
 
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
+if madgraph.ordering:
+    set = misc.OrderedSet
+
 
 default_compiler= {'fortran': 'gfortran',
                        'f2py': 'f2py',
@@ -165,17 +175,18 @@ class ProcessExporterFortran(VirtualExporter):
                         'output_options':{}
                         }
     grouped_mode = False
+    jamp_optim = False
 
     def __init__(self,  dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
         self.mgme_dir = MG5DIR
         self.dir_path = dir_path
         self.model = None
-
+        self.beam_polarization = [True,True]
+        
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
-        
         self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
@@ -192,13 +203,35 @@ class ProcessExporterFortran(VirtualExporter):
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            # check handling for the polarization
+            for m in matrix_elements:
+                for me in m.get('matrix_elements'):
+                    for p in me.get('processes'):
+                        for beamid in [1,2]:
+                            for pid in p.get_initial_ids(beamid):
+                                spin = p.get('model').get_particle(pid).get('spin')
+                                if spin != 2:
+                                    self.beam_polarization[beamid-1] = False
+                                    break
+
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory(\
                                           me_group, fortran_model, group_number)
         else:
+             # check handling for the polarization
+            self.beam_polarization = [True,True]
+            for me in matrix_elements.get_matrix_elements():
+                for p in me.get('processes'):
+                    for beamid in [1,2]:
+                        for pid in p.get_initial_ids(beamid):
+                            spin = p.get('model').get_particle(pid).get('spin')
+                            if spin != 2:
+                                self.beam_polarization[beamid-1] = False
+                                break
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory(\
                                                    me, fortran_model, me_number)    
+
                         
         return calls    
         
@@ -253,10 +286,10 @@ class ProcessExporterFortran(VirtualExporter):
                      "No valid MG_ME path given for MG4 run directory creation."
             logger.info('initialize a new directory: %s' % \
                         os.path.basename(self.dir_path))
-            shutil.copytree(pjoin(self.mgme_dir, 'Template/LO'),
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'),
                             self.dir_path, True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # copy plot_card
             for card in ['plot_card']:
@@ -269,8 +302,8 @@ class ProcessExporterFortran(VirtualExporter):
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
 #            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
@@ -278,9 +311,9 @@ class ProcessExporterFortran(VirtualExporter):
 #                if os.path.isfile(filename):
 #                    files.cp(filename, pjoin(self.dir_path,name))
 #                elif os.path.isdir(filename):
-#                     shutil.copytree(filename, pjoin(self.dir_path,name), True)
-            # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
+#                     misc.copytree(filename, pjoin(self.dir_path,name), True)
+            # misc.copytree since dir_path already exists
+            misc.copytree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
             # Copy plot_card
             for card in ['plot_card']:
@@ -574,6 +607,13 @@ class ProcessExporterFortran(VirtualExporter):
                 shutil.copy2(pjoin(model_path, file), \
                                      pjoin(self.dir_path, 'Source', 'MODEL'))
 
+        # add file for EWA 
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock = open(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'),'w')
+        fsock.write(template % {'MW': 'wmass','MZ':'zmass'})                 
+        fsock.close() 
+        ln(pjoin(self.dir_path, 'Source', 'ElectroweakFlux.inc'), self.dir_path + '/Source/PDF')
+
 
     def make_model_symbolic_link(self):
         """Make the copy/symbolic links"""
@@ -671,7 +711,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
+
+        if self.opt['running']:
+            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
             text = open(path).read() % replace_dict
@@ -888,6 +933,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         self.model = model
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        self.opt['exporter'] = self.__class__
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -903,7 +949,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if hasattr(self, 'aloha_model'):
             aloha_model = self.aloha_model
         else:
-            aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            try:
+                with misc.MuteLogger(['madgraph.models'], [60]):
+                    aloha_model = create_aloha.AbstractALOHAModel(os.path.basename(model.get('modelpath')))
+            except (ImportError, UFOError):
+                aloha_model = create_aloha.AbstractALOHAModel(model.get('modelpath'))
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
@@ -977,11 +1027,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                          for process in matrix_element.get('processes')])
 
 
-    def get_helicity_lines(self, matrix_element,array_name='NHEL'):
+    def get_helicity_lines(self, matrix_element,array_name='NHEL', add_nb_comb=False):
         """Return the Helicity matrix definition lines for this matrix element"""
 
         helicity_line_list = []
-        i = 0
+        i = 0            
+        if add_nb_comb:
+            spins = matrix_element.get_spin_state()
+            spins.insert(0, len(spins))
+            helicity_line_list.append(\
+                ("DATA ("+array_name+"(I,0),I=1,%d) /" + \
+                 ",".join(['%2r'] * (len(spins)-1)) + "/") % tuple(spins))
+            
         for helicities in matrix_element.get_helicity_matrix():
             i = i + 1
             int_list = [i, len(helicities)]
@@ -1023,8 +1080,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     logger.debug('WEIGHTED^2%s%s encoutered. Please check behavior for' + \
                             'https://bazaar.launchpad.net/~maddevelopers/mg5amcnlo/3.0.1/revision/613', \
                             (process.get_squared_order_type(user_sqso), sqsos[split_orders.index(user_sqso)]))
-
-                if (process.get_squared_order_type(user_sqso) =='==' and \
+                if user_sqso not in split_orders:
+                    is_a_match = False
+                elif (process.get_squared_order_type(user_sqso) =='==' and \
                         value!=sqsos[split_orders.index(user_sqso)]) or \
                    (process.get_squared_order_type(user_sqso) in ['<=','='] and \
                                 value<sqsos[split_orders.index(user_sqso)]) or \
@@ -1073,7 +1131,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 enumerate(matrix_element.get('color_matrix').\
                                                  get_line_denominators()):
                 # First write the common denominator for this color matrix line
-                ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
+                #ret_list.append("DATA Denom(%i)/%i/" % (index + 1, denominator))
                 # Then write the numerators for the matrix elements
                 num_list = matrix_element.get('color_matrix').\
                                             get_line_numerators(index, denominator)
@@ -1083,10 +1141,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for k in range(0, len(num_list), n):
                     ret_list.append("DATA (CF(i,%3r),i=%3r,%3r) /%s/" % \
                                     (index + 1, k + 1, min(k + n, len(num_list)),
-                                     ','.join(["%5i" % int(i) for i in num_list[k:k + n]])))
+                                     ','.join([("%.15e" % (int(i)/denominator)).replace('e','d') for i in num_list[k:k + n]])))
+                
                 my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[index])
                 ret_list.append("C %s" % repr(my_cs))
-
             return ret_list
 
 
@@ -1114,6 +1172,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                              ','.join([".true." for i in range(configs)])))
             return ret_list
 
+
         # There is a color basis - create a list showing which JAMPs have
         # contributions to which configs
 
@@ -1139,6 +1198,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     # Add this JAMP number to this diag_num
                     diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
                                           [ijamp+1]
+                else:
+                    self.proc_characteristic['single_color'] = False
 
         colamps = ijamp + 1
         for iconfig, num_diag in enumerate(mapconfigs):        
@@ -1155,7 +1216,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         return ret_list
 
-    def get_amp2_lines(self, matrix_element, config_map = []):
+    def get_amp2_lines(self, matrix_element, config_map = [], replace_dict=None):
         """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
@@ -1196,9 +1257,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 # Not using \sum |M|^2 anymore since this creates troubles
                 # when ckm is not diagonal due to the JIM mechanism.
                 if '+' in amp:
-                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                    amp = "(%s)*dconjg(%s)" % (amp, amp)
                 else:
-                    line += "%s*dconjg(%s)" % (amp, amp)
+                    amp = "%s*dconjg(%s)" % (amp, amp)
+                
+                line =  line + "%s" % (amp)
+                #line += " * get_channel_cut(p, %s) " % (config)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
@@ -1244,8 +1308,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             # Mutliply by -1 for those which have an imaginary coefficient.
             ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
                               for coefficient in coeff_list]
-            # Find the common denominator.      
-            commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            # Find the common denominator.  
+            if six.PY2:    
+                commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            else:
+                commondenom=abs(reduce(math.gcd, coefs_list).denominator)
             num_list=[(coefficient*commondenom).numerator \
                       for coefficient in coefs_list]
             res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
@@ -1267,7 +1334,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
     def get_JAMP_lines_split_order(self, col_amps, split_order_amps, 
-          split_order_names=None, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)"):
+          split_order_names=None, JAMP_format="JAMP(%s,{0})", AMP_format="AMP(%s)"):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
         defined as a matrix element or directly as a color_amplitudes dictionary.
         The split_order_amps specifies the group of amplitudes sharing the same
@@ -1322,6 +1389,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # construct the list of color_amplitudes for JAMP to be constructed
         # accordingly.
         res_list=[]
+        max_tmp = 0
         for i, amp_order in enumerate(split_order_amps):
             col_amps_order = []
             for jamp in color_amplitudes:
@@ -1332,13 +1400,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                                 amp_order[0])]))
             if self.opt['export_format'] in ['madloop_matchbox']:
                 res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1)),
-                                   JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
+                                   JAMP_format=JAMP_format.format(str(i+1)),
+                                   JAMP_formatLC="LN"+JAMP_format.format(str(i+1)))[0])
             else:
-                res_list.extend(self.get_JAMP_lines(col_amps_order,
-                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
+                toadd, nb_tmp = self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format=JAMP_format.format(str(i+1)))
+                res_list.extend(toadd)
+                max_tmp = max(max_tmp, nb_tmp)         
 
-        return res_list
+        return res_list, max_tmp
 
 
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", 
@@ -1362,7 +1432,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             raise MadGraph5Error("Incorrect col_amps argument passed to get_JAMP_lines")
 
-
+        all_element = {}
         res_list = []
         for i, coeff_list in enumerate(color_amplitudes):
             # It might happen that coeff_list is empty if this function was
@@ -1387,7 +1457,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 # the same coefficient (up to a sign), put it in front
                 list_fracs = [abs(coefficient[0][1]) for coefficient in coefs]
                 common_factor = False
-                diff_fracs = list(set(list_fracs))
+                diff_fracs = misc.make_unique(list_fracs)
                 if len(diff_fracs) == 1 and abs(diff_fracs[0]) != 1:
                     common_factor = True
                     global_factor = diff_fracs[0]
@@ -1397,6 +1467,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for (coefficient, amp_number) in coefs:
                     if not coefficient:
                         continue
+                    value = (1j if coefficient[2] else 1)* coefficient[0] * coefficient[1] * fractions.Fraction(3)**coefficient[3]
+                    if (i+1, amp_number) not in all_element:
+                        all_element[(i+1, amp_number)] = value
+                    else:
+                        all_element[(i+1, amp_number)] += value
                     if common_factor:
                         res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
@@ -1413,10 +1488,160 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     
                 if common_factor:
                     res = res + ')'
-    
                 res_list.append(res)
+        
+        if 'jamp_optim' in self.cmd_options:
+            jamp_optim = banner_mod.ConfigFile.format_variable(self.cmd_options['jamp_optim'], bool, 'jamp_optim')
+        else:
+            # class default
+            jamp_optim = self.jamp_optim
+                
+        if not jamp_optim:
+            return res_list, 0
+        else:
+            saved = list(res_list)
+        
+        if len(all_element) > 1000:
+            logger.info("Computing Color-Flow optimization [%s term]", len(all_element))
+            start_time = time.time()
+        else: 
+            start_time = 0
+        
+        res_list = []
+        
+        self.myjamp_count = 0
+        for key in all_element:
+            all_element[key] = complex(all_element[key])
+        new_mat, defs = self.optimise_jamp(all_element)
+        if start_time:
+            logger.info("Color-Flow passed to %s term in %ss. Introduce %i contraction", len(new_mat), int(time.time()-start_time), len(defs))
+        
+        
+        #misc.sprint("number of iteration", self.myjamp_count)
+        def format(frac):
+            if isinstance(frac, fractions.Fraction):
+                if frac.denominator == 1:
+                    return str(frac.numerator)
+                else:
+                    return "%id0/%id0" % (frac.numerator, frac.denominator)
+            elif frac.real == frac:
+                #misc.sprint(frac.real, frac)
+                return ('%.15e' % frac.real).replace('e','d')
+                #str(float(frac.real)).replace('e','d')
+            else:
+                return ('(%.15e,%.15e)' % (frac.real, frac.imag)).replace('e','d')
+                #str(frac).replace('e','d').replace('j','*imag1')
+                
+        
+        
+        for i, amp1, amp2, frac, nb in defs:
+            if amp1 > 0:
+                amp1 = AMP_format % amp1
+            else:
+                amp1 = "TMP_JAMP(%d)" % -amp1
+            if amp2 > 0:
+                amp2 = AMP_format % amp2
+            else:
+                amp2 = "TMP_JAMP(%d)" % -amp2
+            
+            if frac not in  [1., -1]:
+                res_list.append(' TMP_JAMP(%d) = %s + (%s) * %s ! used %d times' % (i,amp1, format(frac), amp2, nb))                
+            elif frac == 1.:
+                res_list.append(' TMP_JAMP(%d) = %s +  %s ! used %d times' % (i,amp1, amp2, nb))  
+            else:
+                res_list.append(' TMP_JAMP(%d) = %s - %s ! used %d times' % (i,amp1, amp2, nb))  
+
+        jamp_res = collections.defaultdict(list)
+        max_jamp=0
+        for (jamp, var), factor in new_mat.items():
+            if var > 0:
+                name = AMP_format % var
+            else:
+                name = "TMP_JAMP(%d)" % -var
+            if factor not in [1.]:
+                jamp_res[jamp].append("(%s)*%s" % (format(factor), name))
+            elif factor ==1:
+                jamp_res[jamp].append("%s" % (name))
+            max_jamp = max(max_jamp, jamp)
+        
+        
+        for i in range(1,max_jamp+1):
+            name = JAMP_format % i
+            if not jamp_res[i]:
+                res_list.append(" %s = 0d0" %(name))
+            else:
+                res_list.append(" %s = %s" %(name, '+'.join(jamp_res[i])))
+
+        return res_list, len(defs)
+
+    def optimise_jamp(self, all_element, nb_line=0, nb_col=0, added=0):
+        """ optimise problem of type Y = A X
+                A is a matrix (all_element)
+                X is the fortran name of the input.
+            The code iteratively add sub-expression jtemp[sub_add]
+            and recall itself (this is add to the X size)
+        """
+        self.myjamp_count +=1
+        
+        if not nb_line:
+            for i,j in all_element:
+                if i+1 > nb_line:
+                    nb_line = i+1
+                if j+1> nb_col:
+                    nb_col = j+1      
+
+        max_count = 0
+        all_index = []
+        operation = collections.defaultdict(lambda: collections.defaultdict(int))
+        for i in range(nb_line):
+            for j1 in range(-added, nb_col):
+                v1 = all_element.get((i,j1), 0)
+                if not v1: 
+                    continue                    
+                for j2 in range(j1+1, nb_col):
+                    R = all_element.get((i,j2), 0)/v1
+                    if not R:
+                        continue
                     
-        return res_list
+                    operation[(j1,j2)][R] +=1 
+                    if operation[(j1,j2)][R] > max_count:
+                        max_count = operation[(j1,j2)][R]
+                        all_index = [(j1,j2, R)]
+                    elif operation[(j1,j2)][R] == max_count:
+                        all_index.append((j1,j2, R))
+        if max_count <= 1:
+            return all_element, []
+        #added += 1
+        #misc.sprint(max_count, len(all_index))
+        #misc.sprint(operation)
+        to_add = []
+        for index in all_index:
+            j1,j2,R = index
+            first = True
+            for i in range(nb_line):
+                v1 = all_element.get((i,j1), 0)
+                v2 = all_element.get((i,j2), 0)
+                if not v1 or not v2: 
+                    continue
+                if v2/v1 == R:
+                    if first:
+                        first = False
+                        added +=1
+                        to_add.append((added,j1,j2,R, max_count))
+                        
+                    all_element[(i,-added)] = v1
+                    del all_element[(i,j1)] #= 0
+                    del all_element[(i,j2)] #= 0 
+
+        logger.log(5,"Define %d new shortcut reused %d times", len(to_add), max_count)
+        new_element, new_def =  self.optimise_jamp(all_element, nb_line=nb_line, nb_col=nb_col, added=added)
+        for one_def in to_add:
+            new_def.insert(0, one_def)
+        return new_element, new_def   
+           
+           
+            
+            
 
     def get_pdf_lines(self, matrix_element, ninitial, subproc_group = False):
         """Generate the PDF lines for the auto_dsig.f file"""
@@ -1425,6 +1650,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         model = processes[0].get('model')
 
         pdf_definition_lines = ""
+        ee_pdf_definition_lines = ""
         pdf_data_lines = ""
         pdf_lines = ""
 
@@ -1442,6 +1668,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
 
+            if tuple(initial_states) in [([-11],[11]), ([11],[-11]), ([-13],[13]),([13],[-13])]:
+                dressed_lep = True
+            else:
+                dressed_lep = False
+            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n"
+
+   
             # Prepare all variable names
             pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
                               sum(initial_states,[])])
@@ -1466,6 +1699,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
+                ee_pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d_components(n_ee)" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i] if abs(pdg) in [11,13]]) + \
+                                                 "\n"
+
 
             # Get PDF data lines for all initial states
             for i in [0,1]:
@@ -1479,30 +1718,36 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\nLP=SIGN(1,LPP(IB(%d)))\n" \
+                           "IF (ABS(LPP(IB(%d))).GE.1) THEN\n!LP=SIGN(1,LPP(IB(%d)))\n" \
                                  % (i + 1, i + 1)
                 else:
                     pdf_lines = pdf_lines + \
-                           "IF (ABS(LPP(%d)) .GE. 1) THEN\nLP=SIGN(1,LPP(%d))\n" \
+                           "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
 
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(IB(%d))),%d*LP, 1," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
+                                        ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
                                          (pdf_codes[initial_state],
-                                          i + 1, i + 1, pdgtopdf[initial_state],
+                                          i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
+                            if dressed_lep:
+                                pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
+                                (pdf_codes[initial_state],i + 1)
                         else:
                             pdf_lines = pdf_lines + \
-                                        ("%s%d=PDG2PDF(ABS(LPP(%d)),%d*LP, %d," + \
+                                        ("%s%d=PDG2PDF(LPP(%d),%d, %d," + \
                                          "XBK(%d),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],
                                           i + 1,
                                           i + 1, i + 1)
+                            if dressed_lep:
+                                pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
+                                (pdf_codes[initial_state],i + 1)
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -1511,19 +1756,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC)="
+                comp_list = []
                 for ibeam in [1, 2]:
                     initial_state = proc.get_initial_pdg(ibeam)
                     if initial_state in list(pdf_codes.keys()):
                         pdf_lines = pdf_lines + "%s%d*" % \
                                     (pdf_codes[initial_state], ibeam)
+                        comp_list.append("%s%d" % (pdf_codes[initial_state], ibeam))
                     else:
                         pdf_lines = pdf_lines + "1d0*"
+                        comp_list.append("DUMMY")
                 # Remove last "*" from pdf_lines
                 pdf_lines = pdf_lines[:-1] + "\n"
+                
+                # this is for the lepton collisions with electron luminosity 
+                # put here "%s%d_components(i_ee)*%s%d_components(i_ee)"
+                if dressed_lep:
+                    pdf_lines += "if (pdlabel.eq.'dressed')" + \
+                             "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
+                             tuple(comp_list)
                 pdf_lines = pdf_lines + "PD(0)=PD(0)+DABS(PD(IPROC))\n"
 
+                if not dressed_lep:
+                    ee_pdf_definition_lines = ""
+
         # Remove last line break from the return variables
-        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines
 
     #===========================================================================
     # write_props_file
@@ -1695,7 +1953,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -1810,7 +2068,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            out = out.decode()
+            out = out.decode(errors='ignore')
             if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
@@ -1881,8 +2139,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             if not version:# not linux 
                 version = 14 # set version to remove MACFLAG
             else:
-                version = int(version.split('.')[1])
-            if version >= 14:
+                majversion, version = [int(x) for x in version.split('.',3)[:2]]
+
+            if majversion >= 11 or (majversion ==10 and version >= 14):
                 for_update['MACFLAG'] = '-mmacosx-version-min=10.8' if is_lc else ''
 
         if not root_dir:
@@ -1923,6 +2182,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Additional actions needed for setup of Template
         """
 
+        self.model = model
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
@@ -1956,6 +2216,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
+
+        if model['running_elements']:
+            fsock = open( pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 'r')
+            text = fsock.read()
+            fsock.close()
+            fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
+            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning')
+            text = text.replace('LIBS =', 'LIBS = $(LIBDIR)/librunning.$(libext)')
+            fsock.write(text)
+            fsock.close()
+        else:
+            # Add file in SubProcesses
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
@@ -1966,7 +2240,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     pjoin(self.dir_path, 'Source'))        
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))          
+        self.write_source_makefile(writers.FileWriter(filename),model)          
         
     #===========================================================================
     # export model files
@@ -2016,10 +2290,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """
 
         source_dir = pjoin(self.dir_path, "Source")
-        logger.info("Running make for Helas")
-        misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-        logger.info("Running make for Model")
-        misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for Source directory")
+        try:
+            misc.compile(cwd=source_dir, mode='fortran')
+        except:
+            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -2057,7 +2333,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             
         if self.prefix_info: 
             self.write_f2py_splitter()
-            self.write_f2py_makefile()
+            self.write_f2py_makefile(self.model)
             self.write_f2py_check_sa(matrix_elements,
                             pjoin(self.dir_path,'SubProcesses','check_sa.py'))
         else:
@@ -2081,6 +2357,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 %(python_information)s
   subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
+C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
@@ -2095,10 +2372,14 @@ CF2PY double precision, intent(in) :: SCALE2
   double precision ANS, ALPHAS, PI,SCALE2
   include 'coupl.inc'
   
-  PI = 3.141592653589793D0
-  G = 2* DSQRT(ALPHAS*PI)
-  CALL UPDATE_AS_PARAM()
-  if (scale2.ne.0d0) stop 1
+  
+  if (scale2.eq.0)then
+       PI = 3.141592653589793D0
+       G = 2* DSQRT(ALPHAS*PI)
+       CALL UPDATE_AS_PARAM()
+  else
+       CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
+  endif
 
 %(smatrixhel)s
 
@@ -2122,9 +2403,13 @@ CF2PY intent(in) :: value
 
       character*512 name
       double precision value
+      
+      %(helreset_def)s
 
       include '../Source/MODEL/input.inc'
       include '../Source/MODEL/coupl.inc'
+
+      %(helreset_setup)s
 
       SELECT CASE (name)
          %(parameter_setup)s
@@ -2164,9 +2449,97 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
   RETURN
   END 
  
+
+
+    subroutine set_fixed_extra_scale(new_value)
+    implicit none
+CF2PY logical, intent(in) :: new_value
+    logical new_value
+                logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
   
+        fixed_extra_scale = new_value
+        return 
+        end
+
+    subroutine set_mue_over_ref(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_over_ref = new_value
+        
+    return 
+    end
+
+    subroutine set_mue_ref_fixed(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_ref_fixed = new_value
+        
+    return 
+    end
+
+
+    subroutine set_maxjetflavor(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    maxjetflavor = new_value
+        
+    return 
+    end
+
+
+    subroutine set_asmz(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    asmz = new_value
+    write(*,*) "asmz is set to ", new_value
+        
+    return 
+    end
+
+    subroutine set_nloop(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    nloop = new_value
+     write(*,*) "nloop is set to ", new_value
+        
+    return 
+    end
+
         """
-         
+        
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
@@ -2207,6 +2580,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             parameter_setup.append('        CASE ("%s")\n          %s = value' 
                                    % (key, var))
 
+        # part for the resetting of the helicity
+        helreset_def = []
+        helreset_setup = []
+        for prefix in set(allprefix):
+            helreset_setup.append(' %shelreset = .true. ' % prefix)
+            helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
+        
+
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
                           'maxpart': max_nexternal,
@@ -2216,6 +2597,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                           'prefix':'\',\''.join(allprefix),
                           'pids': ','.join(str(pid) for (pdg,pid) in allids),
                           'parameter_setup': '\n'.join(parameter_setup),
+                          'helreset_def' : '\n'.join(helreset_def),
+                          'helreset_setup' : '\n'.join(helreset_setup),
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
@@ -2236,22 +2619,41 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             lha = '_'.join([str(i) for i in p.lhacode])
             params['%s_%s' % (block.upper(), lha)] = name
 
+        if model['running_elements']:
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        add_scale.add(one_element.lhablock)
+            for block in add_scale:
+                if block.upper() == "SMINPUTS":
+                    continue
+                name = block
+                params['%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+                params['mdl__%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+
         return params                      
                                         
         
         
-        
-         
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
         return
     
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         """ """
+        template = pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py')
+        destination = pjoin(self.dir_path, 'SubProcesses', 'makefile')
+
         # Add file in SubProcesses
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+        if model['running_elements']:
+            text = open(template,'r').read()
+            text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning ')
+            text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning ')
+            open(destination, 'w').write(text)
+        else:
+             shutil.copy(template, destination)
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -2410,17 +2812,24 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
     #===========================================================================
     # write_source_makefile
     #===========================================================================
-    def write_source_makefile(self, writer):
+    def write_source_makefile(self, writer, model):
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
+        if model['running_elements']:
+            running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
+            set_of_lib += ' $(LIBDIR)librunning.$(libext) '
+        else:
+            running_line  = '' 
+
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': running_line} 
 
         text = open(path).read() % replace_dict
         
@@ -2522,7 +2931,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
-            jamp_lines = self.get_JAMP_lines(matrix_element)
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines(matrix_element)
             # Consider the output of a dummy order 'ALL_ORDERS' for which we
             # set all amplitude order to weight 1 and only one squared order
             # contribution which is of course ALL_ORDERS=2.
@@ -2531,6 +2940,8 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             replace_dict['chosen_so_configs'] = '.TRUE.'
             replace_dict['nSqAmpSplitOrders']=1
             replace_dict['split_order_str_list']=''
+            replace_dict['nb_temp_jamp'] = nb_tmp_jamp
+
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
@@ -2542,9 +2953,9 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
-            jamp_lines = self.get_JAMP_lines_split_order(\
+            jamp_lines, nb_tmp_jamp = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
-            
+            replace_dict['nb_temp_jamp'] = nb_tmp_jamp
             # Now setup the array specifying what squared split order is chosen
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
                               matrix_element.get('processes')[0],squared_orders)
@@ -2719,7 +3130,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         else:
             raise MadGraph5Error(error_msg % 'col_amps')
 
-        text = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
+        text, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(col_amps,
                                             JAMP_format=JAMP_format,
                                             AMP_format=AMP_format,
                                             split=-1)
@@ -2735,12 +3146,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text += super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
+        text += text2 
         
-        return text
+        return text, 0
 
 
 
@@ -2753,6 +3165,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     MadGraph v4 - MadWeight format."""
 
     matrix_file="matrix_standalone_v4.inc"
+    jamp_optim = False
 
     def copy_template(self, model):
         """Additional actions needed for setup of Template
@@ -2761,9 +3174,9 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         super(ProcessExporterFortranMW, self).copy_template(model)        
 
         # Add the MW specific file
-        shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
+        misc.copytree(pjoin(MG5DIR,'Template','MadWeight'),
                                pjoin(self.dir_path, 'Source','MadWeight'), True)        
-        shutil.copytree(pjoin(MG5DIR,'madgraph','madweight'),
+        misc.copytree(pjoin(MG5DIR,'madgraph','madweight'),
                         pjoin(self.dir_path, 'bin','internal','madweight'), True) 
         files.mv(pjoin(self.dir_path, 'Source','MadWeight','src','setrun.f'),
                                       pjoin(self.dir_path, 'Source','setrun.f'))
@@ -2782,6 +3195,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             # Probably madweight already called
             pass
         
+        ln(pjoin(self.dir_path, 'Source','PDF','eepdf.inc'),pjoin(self.dir_path, 'Source'))
+
         # Copy the different python file in the Template
         self.copy_python_file()
         # create the appropriate cuts.f
@@ -2810,7 +3225,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -2961,6 +3376,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         #proc_charac
+        if hasattr(self, "nlo_mixed_expansion"):
+            self.proc_characteristics['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         self.create_proc_charac()
 
         # Write maxparticles.inc based on max of ME's/subprocess groups
@@ -3224,7 +3641,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        jamp_lines, nb = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
         
         replace_dict['template_file'] =  os.path.join(_file_path, \
@@ -3313,11 +3730,12 @@ c     channel position
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Lines that differ between subprocess group and regular
         if proc_id:
@@ -3499,7 +3917,7 @@ c     channel position
 #                                  ",".join([str(d) for d in pdgs])))
 #                    lines.append("data tprid(%d,%d)/0/" % \
 #                                 (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append(line+" T "+str(last_leg.get('id')))
 #		    lines.append("data tprid(%d,%d)/%d/" % \
 #                                 (last_leg.get('number'), nconfigs,
@@ -3529,6 +3947,36 @@ class ProcessExporterFortranME(ProcessExporterFortran):
     matrix_file = "matrix_madevent_v4.inc"
     done_warning_tchannel = False
     
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True,
+                        'output_options':{},
+                        'hel_recycling': False
+                        }
+    jamp_optim = True
+    
+
+    def __new__(cls, *args, **opts):
+        """wrapper needed for some plugin"""
+
+        return super(ProcessExporterFortranME, cls).__new__(cls)
+
+
+    def __init__(self,  dir_path = "", opt=None):
+        
+        super(ProcessExporterFortranME, self).__init__(dir_path, opt)
+        
+        # check and format the hel_recycling options as it should if provided 
+        if opt and isinstance(opt['output_options'], dict) and \
+                                       'hel_recycling' in opt['output_options']:
+            self.opt['hel_recycling'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['hel_recycling'], bool, 'hel_recycling')
+
+        if opt and isinstance(opt['output_options'], dict) and \
+                                       't_strategy' in opt['output_options']:
+            self.opt['t_strategy'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['t_strategy'], int, 't_strategy')
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -3558,6 +4006,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
+        
+        if model["running_elements"]:
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
+                raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
         
         
 
@@ -3634,7 +4088,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             pass
         model_path = model.get('modelpath')
         # This is not safe if there is a '##' or '-' in the path.
-        shutil.copytree(model_path, 
+        misc.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
         if hasattr(model, 'restrict_card'):
@@ -3694,8 +4148,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
 
-
-
         #os.chdir(path)
         # Create the directory PN_xx_xxxxx in the specified path
         subprocdir = "P%s" % matrix_element.get('processes')[0].shell_string()
@@ -3722,8 +4174,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1,
                           v5=self.opt['v5_model'])
 
+
         # Create the matrix.f file, auto_dsig.f file and all inc files
-        filename = pjoin(Ppath, 'matrix.f')
+        if 'hel_recycling' in self.opt and self.opt['hel_recycling']:
+            filename = pjoin(Ppath, 'matrix_orig.f')
+        else:
+            filename = pjoin(Ppath, 'matrix.f')
         calls, ncolor = \
                self.write_matrix_element_v4(writers.FortranWriter(filename),
                       matrix_element, fortran_model, subproc_number = me_number)
@@ -3915,6 +4371,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
             self.proc_characteristic['grouped_matrix'] = False
+        self.proc_characteristic['nlo_mixed_expansion'] = mg5options['nlo_mixed_expansion']
         
         self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
 
@@ -4070,12 +4527,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
         replace_dict = {'proc_prefix':''}
-
+ 
+ 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
         if fortran_model.width_tchannel_set_tozero and not ProcessExporterFortranME.done_warning_tchannel:
-            logger.warning("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False")
+            logger.info("Some T-channel width have been set to zero [new since 2.8.0]\n if you want to keep this width please set \"zerowidth_tchannel\" to False", '$MG:BOLD')
             ProcessExporterFortranME.done_warning_tchannel = True
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
@@ -4091,8 +4549,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
-        
+        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
         for m, w in mass_width:
             if w == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
@@ -4176,7 +4633,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 6
 
         # Extract amp2 lines
-        amp2_lines = self.get_amp2_lines(matrix_element, config_map)
+        amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
         # The JAMP definition depends on the splitting order
@@ -4185,6 +4642,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
                               matrix_element.get('processes')[0],squared_orders)
+            replace_dict['select_configs_if'] = '          IF (CHOSEN_SO_CONFIGS(SQSOINDEX%(proc_id)s(M,N))) THEN' % replace_dict
+            replace_dict['select_configs_endif'] = ' endif'
         else:
             # Consider the output of a dummy order 'ALL_ORDERS' for which we
             # set all amplitude order to weight 1 and only one squared order
@@ -4192,6 +4651,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             squared_orders = [(2,),]
             amp_orders = [((1,),tuple(range(1,ngraphs+1)))]
             replace_dict['chosen_so_configs'] = '.TRUE.'
+            # addtionally set the function to NOT be called
+            replace_dict['select_configs_if'] = ''
+            replace_dict['select_configs_endif'] = ''
             
         replace_dict['nAmpSplitOrders']=len(amp_orders)
         replace_dict['nSqAmpSplitOrders']=len(squared_orders)
@@ -4206,10 +4668,36 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract JAMP lines
         # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
-        jamp_lines = self.get_JAMP_lines_split_order(\
+        jamp_lines, nb_temp = self.get_JAMP_lines_split_order(\
                              matrix_element,amp_orders,split_order_names=
                         split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        replace_dict['nb_temp_jamp'] = nb_temp
+
+        if self.beam_polarization == [True, True]:
+            replace_dict['beam_polarization'] = """
+                         DO JJ=1,nincoming
+               IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
+                 T=T*ABS(POL(JJ))
+               ELSE IF(POL(JJ).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(JJ)))
+               ENDIF
+             ENDDO
+            """
+        else:
+            replace_dict['beam_polarization'] = ""
+            for i in [0,1]:
+                if self.beam_polarization[i]:
+                    replace_dict['beam_polarization'] = """
+                                   ! handling only one beam polarization here. Second beam can be handle via the pdf.
+                                   IF(POL(%(bid)i).NE.1d0.AND.NHEL(%(bid)i,I).EQ.INT(SIGN(1d0,POL(%(bid)i)))) THEN
+                 T=T*ABS(POL(%(bid)i))
+               ELSE IF(POL(%(bid)i).NE.1d0)THEN
+                 T=T*(2d0-ABS(POL(%(bid)i)))
+               ENDIF """ % {'bid': i+1}
+
+
+
 
         replace_dict['template_file'] = pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)
@@ -4298,11 +4786,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['dsig_line'] = dsig_line
 
         # Extract pdf lines
-        pdf_vars, pdf_data, pdf_lines = \
+        pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                   self.get_pdf_lines(matrix_element, ninitial, proc_id != "")
         replace_dict['pdf_vars'] = pdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['ee_comp_vars'] = eepdf_vars
 
         # Lines that differ between subprocess group and regular
         if proc_id:
@@ -4321,8 +4810,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
 
-        if not isinstance(self, ProcessExporterFortranMEGroup):
-            ncomb=matrix_element.get_helicity_combinations()
+        # extract and replace ncombinations, helicity lines
+        ncomb=matrix_element.get_helicity_combinations()
+        replace_dict['ncomb']= ncomb
+        helicity_lines = self.get_helicity_lines(matrix_element, add_nb_comb=True)
+        replace_dict['helicity_lines'] = helicity_lines
+        
+        if not isinstance(self, ProcessExporterFortranMEGroup):            
             replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         else:
             replace_dict['read_write_good_hel'] = ""
@@ -4582,7 +5076,7 @@ c           This is dummy particle used in multiparticle vertices
         For s-channels, we need to output one PDG for each subprocess in
         the subprocess group, in order to be able to pick the right
         one for multiprocesses."""
-
+        
         lines = []
 
         s_and_t_channels = []
@@ -4622,12 +5116,20 @@ c           This is dummy particle used in multiparticle vertices
                 else:
                     stchannels.append((empty_verts, None))
 
+
             # For t-channels, just need the first non-empty one
             tchannels = [t for s,t in stchannels if t != None][0]
-
+                 
+            # pass to ping-pong strategy for t-channel for 3 ore more T-channel
+            #  this is directly related to change in genps.f
+            tstrat = self.opt.get('t_strategy', 0)
+            if isinstance(self, madgraph.loop.loop_exporters.LoopInducedExporterMEGroup):
+                tstrat = 2
+            tchannels, tchannels_strategy = ProcessExporterFortranME.reorder_tchannels(tchannels, tstrat, self.model)
+            
             # For s_and_t_channels (to be used later) use only first config
             s_and_t_channels.append([[s for s,t in stchannels if t != None][0],
-                                     tchannels])
+                                     tchannels, tchannels_strategy])
 
             # Make sure empty_verts is same length as real vertices
             if any([s for s,t in stchannels]):
@@ -4650,6 +5152,7 @@ c           This is dummy particle used in multiparticle vertices
             # Correspondance between the config and the diagram = amp2
             lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                      mapconfigs[iconfig]))
+            lines.append("data tstrategy(%d)/%d/" % (nconfigs, tchannels_strategy))
             # Number of QCD couplings in this diagram
             nqcd = 0
             for h in helas_diags:
@@ -4686,7 +5189,7 @@ c           This is dummy particle used in multiparticle vertices
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -4702,7 +5205,322 @@ c           This is dummy particle used in multiparticle vertices
         writer.writelines(lines)
 
         return s_and_t_channels, nqcd_list
+    
 
+
+    #===========================================================================
+    # reoder t-channels
+    #===========================================================================
+    
+    #ordering = 0    
+    @staticmethod
+    def reorder_tchannels(tchannels, tstrat, model):
+        # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        #ProcessExporterFortranME.ordering +=1
+
+        if len(tchannels) < 3 or tstrat == 2 or not model:
+            return tchannels, 2
+        elif tstrat == 1:
+            return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+        elif tstrat == -2:
+            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+        elif tstrat == -1:
+            return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels, 1), -1        
+        elif len(tchannels) < 4:
+            #
+            first = tchannels[0]['legs'][1]['number']
+            t1 =  tchannels[0]['legs'][-1]['id']
+            last = tchannels[-1]['legs'][1]['number']
+            t2 = tchannels[-1]['legs'][0]['id']
+            m1  = model.get_particle(t1).get('mass') == 'ZERO'
+            m2  = model.get_particle(t2).get('mass') == 'ZERO'
+            if m2 and not m1:
+                return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+            elif m1 and not m2:
+                return tchannels, 2
+            elif first < last:
+                return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+            else:
+                return tchannels, 2 
+        else:
+            first = tchannels[0]['legs'][1]['number']
+            t1 =  tchannels[0]['legs'][-1]['id']
+            last = tchannels[-1]['legs'][1]['number']
+            t2 = tchannels[-1]['legs'][0]['id']
+            m1  = model.get_particle(t1).get('mass') == 'ZERO'
+            m2  = model.get_particle(t2).get('mass') == 'ZERO'
+            
+            t12 =  tchannels[1]['legs'][-1]['id']
+            m12 = model.get_particle(t12).get('mass') == 'ZERO'
+            t22 = tchannels[-2]['legs'][0]['id']
+            m22 = model.get_particle(t22).get('mass') == 'ZERO'
+            if m2 and not m1:
+                if m22:
+                    return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+                else:
+                    return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+            elif m1 and not m2:
+                if m12:
+                    return tchannels, 2
+                else:
+                    return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+            elif m1 and m2 and  len(tchannels) == 4 and not m12: # 3 T propa
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+                # this case seems quite sensitive we tested method 2 specifically and this was not helping in general 
+            elif not m1 and not m2 and  len(tchannels) == 4 and m12:
+                if first < last:
+                    return ProcessExporterFortranME.reorder_tchannels_flipside(tchannels), 1
+                return tchannels, 2
+            else:
+                return ProcessExporterFortranME.reorder_tchannels_pingpong(tchannels), -2
+
+
+                
+
+    @staticmethod
+    def reorder_tchannels_flipside(tchannels):
+        """change the tchannel ordering to pass to a ping-pong strategy.
+           assume ninitial == 2
+        
+        We assume that we receive something like this
+        
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-1)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-N+2)
+                |                
+                X --------- L
+                |
+                | (-N+1) 
+                |                
+        -N ----- X ------- P        
+        
+        coded as 
+        (1 -2 > -X) (-X 4 > -X-1) (-X-1 -1 > -X-2) ...
+        ((-N+3) 3 > (-N+2)) ((-n+2) L > (-n+1)) ((-n+1) P > -N)
+        
+        we want to convert this as:
+        -N ----- X ------- -2
+                |
+                | (-N+1) 
+                |
+                X -------- 4
+                | 
+                | (-N+2)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-X-1)
+                |                
+                X --------- L
+                |
+                | (-X) 
+                |                
+        2 ----- X ------- P          
+        
+        coded as 
+        ( 2 P > -X) (-X L > -X-1) (-X-1 3 > -X-2)... (-X-L -2 > -N)
+        """
+        
+        # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        if len(tchannels) < 2:
+            return tchannels
+
+        out = []
+        oldid2new = {}
+        
+        # initialisation
+        # id of the first T-channel (-X)
+        propa_id = tchannels[0]['legs'][-1]['number'] 
+        #
+        # Setup the last vertex to refenence the second id beam
+        # -N (need to setup it to 2.
+        initialid = tchannels[-1]['legs'][-1]['number']       
+        oldid2new[initialid] = 2
+        oldid2new[1] = initialid
+            
+        i = 0 
+        while tchannels:
+            old_vert = tchannels.pop()
+                
+            #copy the vertex /leglist to avoid side effects
+            new_vert = copy.copy(old_vert)
+            new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
+            # vertex taken from the bottom we have 
+            # (-N+1 X > -N) we need to flip to pass to 
+            # -N X > -N+1 (and then relabel -N and -N+1  
+            legs = new_vert['legs'] # shorcut
+            id1 = legs[0]['number']
+            id2 = legs[1]['number']
+            id3 = legs[2]['number']
+            # to be secure  we also support (X -N+1 > -N)
+            if id3 == id2 -1 and id1 !=1:
+                legs[0], legs[1] = legs[1], legs[0]
+            #flipping side
+            legs[0], legs[2] = legs[2], legs[0]
+
+            # the only new relabelling is the last element of the list
+            # always thanks to the above flipping
+            old_propa_id = new_vert['legs'][-1]['number'] 
+            oldid2new[old_propa_id] = propa_id
+
+            
+            #pass to new convention for leg numbering:
+            for l in new_vert['legs']:
+                if l['number'] in  oldid2new:
+                    l['number'] = oldid2new[l['number']]  
+                    
+            # new_vert is now ready
+            out.append(new_vert)
+            # prepare next iteration
+            propa_id -=1
+            i +=1
+
+        return out
+    
+    @staticmethod
+    def reorder_tchannels_pingpong(tchannels, id=2):
+        """change the tchannel ordering to pass to a ping-pong strategy.
+           assume ninitial == 2
+        
+        We assume that we receive something like this
+        
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-1)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-N+2)
+                |                
+                X --------- L
+                |
+                | (-N+1) 
+                |                
+        -N ----- X ------- P        
+        
+        coded as 
+        (1 -2 > -X) (-X 4 > -X-1) (-X-1 -1 > -X-2) ...
+        ((-N+3) 3 > (-N+2)) ((-n+2) L > (-n+1)) ((-n+1) P > -N)
+        
+        we want to convert this as:
+        1 ----- X ------- -2
+                |
+                | (-X) 
+                |
+                X -------- 4
+                | 
+                | (-X-2)
+                |
+                X --------- -1
+
+                X----------  3
+                | 
+                | (-X-3)
+                |                
+                X --------- L
+                |
+                | (-X-1) 
+                |                
+        2 ----- X ------- P          
+        
+        coded as 
+        (1 -2 > -X) (2 P > -X-1) (-X 4 > -X-2) (-X-1 L > -X-3) ...
+        """
+
+        # no need to modified anything if 1 or less T-Channel
+        #Note that this counts the number of vertex (one more vertex compare to T)
+        if len(tchannels) < 2:
+            return tchannels
+
+        out = []
+        oldid2new = {}
+        
+        # initialisation
+        # id of the first T-channel (-X)
+        propa_id = tchannels[0]['legs'][-1]['number'] 
+        #
+        # Setup the last vertex to refenence the second id beam
+        # -N (need to setup it to 2.
+        initialid = tchannels[-1]['legs'][-1]['number']       
+        oldid2new[initialid] = id
+
+
+        
+        i = 0 
+        while tchannels:
+            #ping pong by taking first/last element in aternance
+            if id ==2:
+                if i % 2 == 0:
+                    old_vert = tchannels.pop(0)
+                else:
+                    old_vert = tchannels.pop()
+            else:
+                if i % 2 != 0:
+                    old_vert = tchannels.pop(0)
+                else:
+                    old_vert = tchannels.pop()
+                    
+            #copy the vertex /leglist to avoid side effects
+            new_vert = base_objects.Vertex(old_vert)
+            new_vert['legs'] = base_objects.LegList([base_objects.Leg(l) for l in old_vert['legs']])
+            # if vertex taken from the bottom we have 
+            # (-N+1 X > -N) we need to flip to pass to 
+            # -N X > -N+1 (and then relabel -N and -N+1
+            # to be secure  we also support (X -N+1 > -N)
+            if (i % 2 ==1 and id ==2) or (i %2 == 0 and id ==1): 
+                legs = new_vert['legs'] # shorcut
+                id1 = legs[0]['number']
+                id2 = legs[1]['number'] 
+                if id1 > id2:
+                    legs[0], legs[1] = legs[1], legs[0]
+                else:
+                    legs[0], legs[2] = legs[2], legs[0]
+            
+            # the only new relabelling is the last element of the list
+            # always thanks to the above flipping
+            old_propa_id = new_vert['legs'][-1]['number'] 
+            oldid2new[old_propa_id] = propa_id
+
+            if i==0 and id==1:
+                legs[0]['number'] = 2
+            
+            #pass to new convention for leg numbering:
+            for l in new_vert['legs']:
+                if l['number'] in  oldid2new:
+                    l['number'] = oldid2new[l['number']]    
+            
+            # new_vert is now ready
+            out.append(new_vert)
+            # prepare next iteration
+            propa_id -=1
+            i +=1
+
+        return out
+
+            
+        
+        
+    
     #===========================================================================
     # write_decayBW_file
     #===========================================================================
@@ -4815,8 +5633,9 @@ c           This is dummy particle used in multiparticle vertices
     def write_symmetry(self, writer, v5=True):
         """Write the SubProcess/driver.f file for ME"""
 
-        path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
         
+        path = pjoin(_file_path,'iolibs','template_files','madevent_symmetry.f')
+
         if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
             card = 'Source/MODEL/MG5_param.dat'
         else:
@@ -5021,8 +5840,17 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
 
+
     matrix_file = "matrix_madevent_group_v4.inc"
     grouped_mode = 'madevent'
+    default_opt = {'clean': False, 'complex_mass':False,
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True,
+                        'output_options':{},
+                        'hel_recycling': True
+                        }
+    
+    
     #===========================================================================
     # generate_subprocess_directory
     #===========================================================================
@@ -5083,16 +5911,58 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_driver(writers.FortranWriter(filename),ncomb,
                                   n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
+        try:
+            self.proc_characteristic['hel_recycling'] = self.opt['hel_recycling']
+        except KeyError:
+            self.proc_characteristic['hel_recycling'] = False
+            self.opt['hel_recycling'] = False
         for ime, matrix_element in \
                 enumerate(matrix_elements):
-            filename = 'matrix%d.f' % (ime+1)
-            calls, ncolor = \
-               self.write_matrix_element_v4(writers.FortranWriter(filename), 
-                            matrix_element,
-                            fortran_model,
-                            proc_id=str(ime+1),
-                            config_map=subproc_group.get('diagram_maps')[ime],
-                            subproc_number=group_number)
+            if self.opt['hel_recycling']:
+                filename = 'matrix%d_orig.f' % (ime+1)
+                replace_dict = self.write_matrix_element_v4(None, 
+                                matrix_element,
+                                fortran_model,
+                                proc_id=str(ime+1),
+                                config_map=subproc_group.get('diagram_maps')[ime],
+                                subproc_number=group_number)
+                calls,ncolor = replace_dict['return_value']
+                tfile = open(replace_dict['template_file']).read()
+                file = tfile % replace_dict
+                # Add the split orders helper functions.
+                file = file + '\n' + open(replace_dict['template_file2'])\
+                                                            .read()%replace_dict
+                # Write the file
+                writer = writers.FortranWriter(filename)
+                writer.writelines(file)
+                
+                #
+                # write the dedicated template for helicity recycling
+                #
+                tfile = open(replace_dict['template_file'].replace('.inc',"_hel.inc")).read() 
+                file = tfile % replace_dict
+                # Add the split orders helper functions.
+                file = file + '\n' + open(replace_dict['template_file2'])\
+                                                            .read()%replace_dict
+                # Write the file
+                writer = writers.FortranWriter('template_matrix%d.f' % (ime+1))
+                writer.uniformcase = False
+                writer.writelines(file)
+                
+                
+                
+                
+            else:
+                filename = 'matrix%d.f' % (ime+1)
+                calls, ncolor = \
+                   self.write_matrix_element_v4(writers.FortranWriter(filename), 
+                                matrix_element,
+                                fortran_model,
+                                proc_id=str(ime+1),
+                                config_map=subproc_group.get('diagram_maps')[ime],
+                                subproc_number=group_number)
+
+
 
             filename = 'auto_dsig%d.f' % (ime+1)
             self.write_auto_dsig_file(writers.FortranWriter(filename),
@@ -5309,6 +6179,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         s1,s2 = matrix_elements[0].get_spin_state_initial()
         replace_dict['nb_spin_state1'] = s1
         replace_dict['nb_spin_state2'] = s2
+        
+        printzeroamp = []
+        for iproc in range(len(matrix_elements)):
+            printzeroamp.append(\
+                "        call print_zero_amp_%i()" % ( iproc + 1))
+        replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
+        
         
         if writer:
             file = open(pjoin(_file_path, \
@@ -5589,7 +6466,32 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)            
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
+        self.scales = []
+        self.MUE = None # extra parameter loop #2 which is running
+        
+        if self.model.get('running_elements'):
+            all_elements = set()
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+                        add_scale.add(one_element.lhablock)
+            all_elements.union(set(self.PS_dependent_key))
+            self.PS_dependent_key = list(all_elements)
+            MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+            
+            if MUE:
+                self.MUE = MUE[0]
+                self.PS_dependent_key.append(MUE[0].name)
+            
+            try:
+                add_scale.remove('SMINPUTS')
+            except Exception:
+                pass
+            self.scales = add_scale
+
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -5661,9 +6563,10 @@ class UFO_model_to_mg4(object):
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
-        # Keep only separation in alphaS        
+        # Keep only separation in alphaS + running one        
         keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
+
         for key in keys:
             to_add = [o for o in self.model['parameters'][key] if o.name]
 
@@ -5673,19 +6576,25 @@ class UFO_model_to_mg4(object):
                 self.params_dep += to_add
             else:
                 self.params_indep += to_add
-        # same for couplings
+                
+        # same for couplings + tracking which running happens
         keys = list(self.model['couplings'].keys())
         keys.sort(key=len)
+        used_running_key = set()
         for key, coup_list in self.model['couplings'].items():
             if any([(k in key) for k in self.PS_dependent_key]):
-                self.coups_dep += [c for c in coup_list if
+                to_add = [c for c in coup_list if
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
+                if to_add:
+                    self.coups_dep += to_add
+                    used_running_key.update(set(key))
             else:
                 self.coups_indep += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings)]
-                
+        #store the running parameter that are used
+        self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -5694,12 +6603,13 @@ class UFO_model_to_mg4(object):
         #    G.expr = '2*cmath.sqrt(as*pi)'
         #    self.params_indep.insert(0, self.params_dep.pop(index))
         # No need to add it if not defined   
-            
-        if 'aS' not in self.params_ext:
+
+        if 'aS' not in self.params_ext and 'aS' not in self.params_indep:
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
             self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -5749,6 +6659,7 @@ class UFO_model_to_mg4(object):
         self.create_intparam_def(dp=True,mp=False)
         if self.opt['mp']:
             self.create_intparam_def(dp=False,mp=True)
+        self.create_ewa()
         
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
@@ -5839,10 +6750,28 @@ class UFO_model_to_mg4(object):
                                   'madweight','matchbox','madloop_matchbox', 'plugin']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-        #elif self.opt['export_format'] in []:
-            #pass
         else:
             raise MadGraph5Error('Unknown format')
+
+        if self.opt['export_format'].startswith('standalone'):
+            cp( MG5DIR + '/Template/LO/Source/alfas_functions.f', 
+                self.dir_path)
+            cp( MG5DIR + '/Template/LO/Source/alfas.inc', 
+                self.dir_path)
+
+            fsock = open(pjoin(self.dir_path, '..', 'cuts.inc'),'w')
+            fsock.write('''            
+            logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+            ''')
+
+            if self.model['running_elements']:
+                cp( MG5DIR + '/Template/Running',  pjoin(self.dir_path, '..', 'RUNNING'))
+
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -5917,6 +6846,7 @@ class UFO_model_to_mg4(object):
                     complex_mass.add('CMASS_%s' % one_mass)
             
         if masses:
+            masses = sorted(list(masses))
             fsock.writelines('double precision '+','.join(masses)+'\n')
             fsock.writelines('common/masses/ '+','.join(masses)+'\n\n')
             if self.opt['mp']:
@@ -5930,6 +6860,7 @@ class UFO_model_to_mg4(object):
                             ','.join([self.mp_prefix+m for m in masses])+'\n\n')                
 
         if widths:
+            widths = sorted(list(widths))
             fsock.writelines('double precision '+','.join(widths)+'\n')
             fsock.writelines('common/widths/ '+','.join(widths)+'\n\n')
             if self.opt['mp']:
@@ -6011,18 +6942,20 @@ class UFO_model_to_mg4(object):
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]
-
+        
         # check the parameter is a CT parameter or not
         # if yes, just use the needed ones        
         real_parameters = [param for param in real_parameters \
                                            if self.check_needed_param(param)]
 
+        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
+        
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
             mp_fsock.writelines(self.mp_real_format+' '+','.join([\
                               self.mp_prefix+p for p in real_parameters])+'\n')
-            mp_fsock.writelines('common/MP_params_R/ '+','.join([\
+            mp_fsock.writelines('common/MP_T_params_R/ '+','.join([\
                             self.mp_prefix+p for p in real_parameters])+'\n\n')        
         
         complex_parameters = [param.name for param in self.params_dep + 
@@ -6114,6 +7047,32 @@ class UFO_model_to_mg4(object):
         self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
         self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
         
+
+    def create_ewa(self):
+        """create electroweakFlux.inc 
+           this file only need the correct name for the mass for the W and Z
+        """
+
+        
+        try:
+            fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
+        except:
+            logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
+            return
+
+        masses = {}
+        for particle in self.model['particles']:
+            if particle.get('pdg_code') == 24:
+                masses['MW'] = particle.get('mass')
+            elif particle.get('pdg_code') == 23:
+                masses['MZ'] =  particle.get('mass')
+            if len(masses) == 2:
+                break
+
+        template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
+        fsock.write(template % masses)                 
+        fsock.close()
+
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters
@@ -6240,11 +7199,11 @@ class UFO_model_to_mg4(object):
                                  %(mp_prefix)sgal(2) = 1e0_16
                              """%{'mp_prefix':self.mp_prefix})
 
-    
+    nb_def_by_file = 50
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
         
-        nb_def_by_file = 25
+        nb_def_by_file = self.nb_def_by_file
         
         self.create_couplings_main(nb_def_by_file)
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
@@ -6319,19 +7278,73 @@ class UFO_model_to_mg4(object):
 
                             implicit none
                             double precision PI, ZERO
-                            logical READLHA
+                            logical READLHA, FIRST
+                            data first /.true./
+                            save first
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
                             logical updateloop
                             common /to_updateloop/updateloop
-                            include \'model_functions.inc\'""")
+                            include \'model_functions.inc\'
+                            double precision Gother
+                            
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
+
+        if self.opt['export_format'] in ['madevent', 'madloop_optimized']:
+            fsock.writelines("""
+                            include \'../maxparticles.inc\'
+                            include \'../cuts.inc\'
+                            include \'../run.inc\'""")
+        else:
+            fsock.writelines("""
+                            include \'../cuts.inc\'
+                            data maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed /5,.false.,1d0,91.188/
+                            include \'../run.inc\'""")
+        fsock.writelines("""
+                            double precision alphas 
+                            external alphas
+                            """)
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
+                            
                          """)
-            
+        
+        if self.model['running_elements']:
+            running_block = self.model.get_running(self.used_running_key) 
+            if running_block:
+                MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+
+                
+                
+                fsock.write_comments('calculate the running parameter')
+                fsock.writelines(' if(fixed_extra_scale.and.first) then')
+                if self.MUE:
+                    fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
+                fsock.writelines(' first = .false.') 
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines(' elseif(.not.fixed_extra_scale) then')
+                fsock.writelines(' Gother = G')
+                
+                if self.MUE:
+                    fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
+                else:
+                    misc.sprint('NO MUE')
+                    #raise Exception
+                
+                fsock.writelines(' if(mue_over_ref.ne.1d0)then')
+                fsock.writelines('  Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*model_scale))')
+                fsock.writelines(' endif')
+                
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines('endif')
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -6350,15 +7363,41 @@ class UFO_model_to_mg4(object):
                             double precision mu_r2, as2
                             include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
-                            include \'coupl.inc\'""")
+                            include \'coupl.inc\'
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
         fsock.writelines("""
-                            if (mu_r2.gt.0d0) MU_R = mu_r2
+                            if (mu_r2.gt.0d0) MU_R = DSQRT(mu_r2)
+                            model_scale = DSQRT(mu_r2)
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
                             CALL UPDATE_AS_PARAM()
                          """)
         fsock.writelines('''\n return \n end\n''')
+
+        # fsock.writelines("""subroutine update_model_to_scale(scale)
+        #                     ! scale in GeV
+        #                     implicit none
+        #                     double precision scale
+        #                     double precision PI
+        #                     double precision alphas
+        #                     external alphas
+        #                     parameter  (PI=3.141592653589793d0)
+        #                     double precision mu_r2, as2
+        #                     include \'model_functions.inc\'""")
+        # fsock.writelines("""include \'input.inc\'
+        #                     include \'coupl.inc\'
+        #                     """)
+        # fsock.writelines("""
+        #                     AS = ALPHAS(scale)
+        #                     AS2 = AS*AS
+        #                     call update_as_param2(scale**2, AS2)
+        #                  """)
+        # fsock.writelines('''\n return \n end\n''')
+
+
 
         if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
@@ -6381,6 +7420,14 @@ class UFO_model_to_mg4(object):
             
             nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+
+            if self.model['running_elements']:
+                #running_block = self.model.get_running(self.used_running_key) 
+                if running_block:
+                    fsock.write_comments('calculate the running parameter')
+                    for i in range(len(running_block)):
+                        fsock.writelines(" call MP_C_RUNNING_%s(G) ! %s \n" % (i+1,list(running_block[i])))   
+            
                     
             fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
     
@@ -6388,6 +7435,317 @@ class UFO_model_to_mg4(object):
                         ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
+            
+        if self.model['running_elements'] and running_block:
+            self.write_running_blocks(fsock, running_block)
+    
+    def write_running_blocks(self, fsock, running_block):
+        
+        for block_nb, runparams in enumerate(running_block):
+            text = self.write_one_running_block(block_nb, runparams)
+            fsock.writelines(text)
+            
+    
+    template_running_gs_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include 'input.inc'
+      %(mpinput)s
+
+      include '../cuts.inc'
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+
+      double complex mat1(%(size)i,%(size)i), mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      data mat1 /%(mat1)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r1 = (1/GMU -1/G0)/ beta0
+      r2 = DLOG(G0/GMU)/beta0
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat1(j,i) *r1 + mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../cuts.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r2 = DLOG(G0/GMU) / beta0 
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_x3 = """
+    SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+       include '../cuts.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat3
+      data mat3 /%(mat3)s/
+      double precision C0
+      data C0 /0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      if (first) then
+         C0 = %(mp)s%(initc0)s
+         first = .false.
+         %(check_scale)s
+      endif
+      
+      %(mp)s%(assignc)s =  1/DSQRT( 1/C0/C0 - 2*mat3 *DLOG(MU_R/mdl__%(scale)s__scale))
+      
+      return
+      end
+      """
+    
+    def get_scales(self):
+
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+
+        return scales
+
+
+    def write_one_running_block(self, block_nb, runparams):
+               
+        runparams = list(runparams)
+        
+        size = len(runparams) 
+        mat1=[[0]*size for _ in range(size)]
+        mat2=[[0]*size for _ in range(size)]
+        mat3=0
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+        
+        data = {}
+        data['block_nb'] = block_nb+1
+        data['size'] = size
+        data['mp'] = ''
+        if mat3:
+            template = self.template_running_x3
+            data['mat3']
+            data['initc0'] = "MDL_%s" % runparams[0]
+            data['assignc'] = "MDL_%s" % runparams[0]
+            text = template % data
+            if self.opt['mp']:
+                data['mp'] = 'MP_'
+                data['initc0'] = "MP__MDL_%s" % runparams[0]
+                data['assignc'] = "MP__MDL_%s" % runparams[0]
+                text += template % data 
+            return text
+        
+        data['initc0'] = "\n".join(["c0(%i) = MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+        data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+        data['mp'] = ''
+        data['check_scale'] = ''
+        
+        if len(scales) == 1:
+            data['scale'] = scales.pop()
+        else:
+            one_scale = scales.pop()
+            data['scale'] = one_scale
+            for scale in scales:
+                check_scale = """ if (MDL__%(1)s__SCALE.ne.MDL__%(2)s__SCALE) then
+                write(*,*) 'ERROR scale %(1)s and %(2)s need to be equal for the running'
+                stop 5
+                endif
+                """
+                data['check_scale'] += check_scale % {'1': one_scale, '2': scale}           
+
+        # need to compute the matrices
+        # carefull some component are proportional to aS
+        # need to convert those to G^2
+        # need to be carefull with prefactor included (none yet)
+
+        
+        
+        
+        
+        data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mat2'] = ",".join(["%e" % mat2[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mpinput'] =''
+        if any(mat1[i][j] for i,j in zip(range(size),range(size))):
+            template = self.template_running_gs_gs2
+        else:
+            template = self.template_running_gs2
+        
+        text = template % data
+        if self.opt['mp']:
+            data['mp'] = 'MP_'
+            data['mpinput']="INCLUDE 'mp_input.inc'"
+            data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+            data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+            text += template % data   
+            
+        return text
 
     def create_couplings_part(self, nb_file, data, dp=True, mp=False):
         """ create couplings[nb_file].f containing information coming from data.
@@ -6441,7 +7799,8 @@ class UFO_model_to_mg4(object):
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt"]:
+                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "log_trajectory"]:
                     additional_fct.append(fct.name)
         
         fsock = self.open('model_functions.inc', format='fortran')
@@ -6454,6 +7813,9 @@ class UFO_model_to_mg4(object):
           double complex grreglog
           double complex recms
           double complex arg
+          double complex B0F
+          double complex sqrt_trajectory
+          double complex log_trajectory
           %s
           """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
 
@@ -6468,6 +7830,9 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_grreglog
           %(complex_mp_format)s mp_recms
           %(complex_mp_format)s mp_arg
+          %(complex_mp_format)s mp_B0F
+          %(complex_mp_format)s mp_sqrt_trajectory
+          %(complex_mp_format)s mp_log_trajectory
           %(additional)s
           """ %\
           {"additional": "\n".join(["          %s mp_%s" % (self.mp_complex_format, i) for i in additional_fct]),
@@ -6635,6 +8000,346 @@ class UFO_model_to_mg4(object):
                 endif
              endif
           endif
+          end
+
+          module b0f_caching
+
+          type b0f_node
+          double complex p2,m12,m22
+          double complex value
+          type(b0f_node),pointer::parent
+          type(b0f_node),pointer::left
+          type(b0f_node),pointer::right
+          end type b0f_node
+
+          contains
+
+          subroutine b0f_search(item, head, find)
+          implicit none
+          type(b0f_node),pointer,intent(inout)::head,item
+          logical,intent(out)::find
+          type(b0f_node),pointer::item1
+          integer::icomp
+          find=.false.
+          nullify(item%parent)
+          nullify(item%left)
+          nullify(item%right)
+          if(.not.associated(head))then
+             head => item
+             return
+          endif
+          item1 => head
+          do
+             icomp=b0f_node_compare(item,item1)
+             if(icomp.lt.0)then
+                if(.not.associated(item1%left))then
+                   item1%left => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%left
+                endif
+             elseif(icomp.gt.0)then
+                if(.not.associated(item1%right))then
+                   item1%right => item
+                   item%parent => item1
+                   exit
+                else
+                   item1 => item1%right
+                endif
+             else
+                find=.true.
+                item%value=item1%value
+                exit
+             endif
+          enddo
+          return
+          end
+
+          integer function b0f_node_compare(item1,item2) result(res)
+          implicit none
+          type(b0f_node),pointer,intent(in)::item1,item2
+          res=complex_compare(item1%p2,item2%p2)
+          if(res.ne.0)return
+          res=complex_compare(item1%m22,item2%m22)
+          if(res.ne.0)return
+          res=complex_compare(item1%m12,item2%m12)
+          return
+          end
+
+          integer function real_compare(r1,r2) result(res)
+          implicit none
+          double precision r1,r2
+          double precision maxr,diff
+          double precision tiny
+          parameter (tiny=-1d-14)
+          maxr=max(abs(r1),abs(r2))
+          diff=r1-r2
+          if(maxr.le.1d-99.or.abs(diff)/max(maxr,1d-99).le.abs(tiny))then
+             res=0
+             return
+          endif
+          if(diff.gt.0d0)then
+             res=1
+             return
+          else
+             res=-1
+             return
+          endif
+          end
+
+          integer function complex_compare(c1,c2) result(res)
+          implicit none
+          double complex c1,c2
+          double precision r1,r2
+          r1=dble(c1)
+          r2=dble(c2)
+          res=real_compare(r1,r2)
+          if(res.ne.0)return
+          r1=dimag(c1)
+          r2=dimag(c2)
+          res=real_compare(r1,r2)
+          return
+          end
+
+          end module b0f_caching
+
+          double complex function B0F(p2,m12,m22)
+          use b0f_caching
+          implicit none
+          double complex p2,m12,m22
+          double complex zero,TWOPII
+          parameter (zero=(0.0d0,0.0d0))
+          parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double precision M,M2,Ga,Ga2
+          double precision tiny
+          parameter (tiny=-1d-14)
+          double complex logterms
+          double complex log_trajectory
+          logical use_caching
+          parameter (use_caching=.true.)
+          type(b0f_node),pointer::item
+          type(b0f_node),pointer,save::b0f_bt
+          integer init
+          save init
+          data init /0/
+          logical find
+          IF(m12.eq.zero)THEN
+c           it is a special case
+c           refer to Eq.(5.48) in arXiv:1804.10017
+            M=DBLE(p2) ! M^2
+            M2=DBLE(m22) ! M2^2
+            IF(M.LT.tiny.OR.M2.LT.tiny)THEN
+            WRITE(*,*)'ERROR:B0F is not well defined when M^2,M2^2<0'
+            STOP
+            ENDIF
+            M=DSQRT(DABS(M))
+            M2=DSQRT(DABS(M2))
+            IF(M.EQ.0d0)THEN
+               Ga=0d0
+            ELSE
+               Ga=-DIMAG(p2)/M
+            ENDIF
+            IF(M2.EQ.0d0)THEN
+               Ga2=0d0
+            ELSE
+               Ga2=-DIMAG(m22)/M2
+            ENDIF
+            IF(p2.ne.m22.and.p2.ne.zero.and.m22.ne.zero)THEN
+               b0f=(m22-p2)/p2*LOG((m22-p2)/m22)
+               IF(M.GT.M2.and.Ga*M2.GT.Ga2*M)THEN
+                  b0f=b0f-TWOPII
+               ENDIF
+               RETURN
+            ELSE
+                WRITE(*,*)'ERROR:B0F is not supported for a simple form'
+                STOP
+            ENDIF
+          ENDIF
+c         the general case
+c         trajectory method as advocated in arXiv:1804.10017 (Eq.(E.47))
+          if(use_caching)then
+             if(init.eq.0)then
+                nullify(b0f_bt)
+                init=1
+             endif
+             allocate(item)
+             item%p2=p2
+             item%m12=m12
+             item%m22=m22
+             find=.false.
+             call b0f_search(item,b0f_bt,find)
+             if(find)then
+                b0f=item%value
+                deallocate(item)
+                return
+             else
+                logterms=log_trajectory(100,p2,m12,m22)
+                b0f=-LOG(p2/m22)+logterms
+                item%value=b0f
+                return
+             endif
+          else
+             logterms=log_trajectory(100,p2,m12,m22)
+             b0f=-LOG(p2/m22)+logterms
+          endif
+          RETURN
+          end
+
+          double complex function sqrt_trajectory(n_seg,p2,m12,m22)
+c         only needed when p2*m12*m22=\=0
+          implicit none
+          integer n_seg ! number of segments
+          double complex p2,m12,m22
+          double complex zero,one
+          parameter (zero=(0.0d0,0.0d0),one=(1.0d0,0.0d0))
+          double complex gamma0,gamma1
+          double precision M,Ga,dGa,Ga_start
+          double precision Gai,intersection
+          double complex argim1,argi,p2i
+          double complex gamma0i,gamma1i
+          double precision tiny
+          parameter (tiny=-1d-24)
+          integer i
+          double precision prefactor
+          IF(ABS(p2*m12*m22).EQ.0d0)THEN
+            WRITE(*,*)'ERROR:sqrt_trajectory works when p2*m12*m22/=0'
+            STOP
+          ENDIF
+          M=DBLE(p2) ! M^2
+          M=DSQRT(DABS(M))
+          IF(M.EQ.0d0)THEN
+             Ga=0d0
+          ELSE
+             Ga=-DIMAG(p2)/M
+          ENDIF
+c         Eq.(5.37) in arXiv:1804.10017
+          gamma0=one+m12/p2-m22/p2
+          gamma1=m12/p2-dcmplx(0d0,1d0)*ABS(tiny)/p2
+          IF(ABS(Ga).EQ.0d0)THEN
+             sqrt_trajectory=SQRT(gamma0**2-4d0*gamma1)
+             RETURN
+          ENDIF
+c         segments from -DABS(tiny*Ga) to Ga
+          Ga_start=-DABS(tiny*Ga)
+          dGa=(Ga-Ga_start)/n_seg
+          prefactor=1d0
+          Gai=Ga_start
+          p2i=dcmplx(M**2,-Gai*M)
+          gamma0i=one+m12/p2i-m22/p2i
+          gamma1i=m12/p2i-dcmplx(0d0,1d0)*ABS(tiny)/p2i
+          argim1=gamma0i**2-4d0*gamma1i
+          DO i=1,n_seg
+             Gai=dGa*i+Ga_start
+             p2i=dcmplx(M**2,-Gai*M)
+             gamma0i=one+m12/p2i-m22/p2i
+             gamma1i=m12/p2i-dcmplx(0d0,1d0)*ABS(tiny)/p2i
+             argi=gamma0i**2-4d0*gamma1i
+             IF(DIMAG(argi)*DIMAG(argim1).LT.0d0)THEN
+                intersection=DIMAG(argim1)*(DBLE(argi)-DBLE(argim1))
+                intersection=intersection/(DIMAG(argi)-DIMAG(argim1))
+                intersection=intersection-DBLE(argim1)
+                IF(intersection.GT.0d0)THEN
+                   prefactor=-prefactor
+                ENDIF
+             ENDIF
+             argim1=argi
+          ENDDO
+          sqrt_trajectory=SQRT(gamma0**2-4d0*gamma1)*prefactor
+          RETURN
+          end
+
+          double complex function log_trajectory(n_seg,p2,m12,m22)
+c         sum of log terms appearing in Eq.(5.35) of arXiv:1804.10017
+c         only needed when p2*m12*m22=\=0
+          implicit none
+c         4 possible logarithms appearing in Eq.(5.35) of arXiv:1804.10017
+c         log(arg(i)) with arg(i) for i=1 to 4
+c         i=1: (ga_{+}-1)
+c         i=2: (ga_{-}-1)
+c         i=3: (ga_{+}-1)/ga_{+}
+c         i=4: (ga_{-}-1)/ga_{-}
+          integer n_seg ! number of segments
+          double complex p2,m12,m22
+          double complex zero,one,half,TWOPII
+          parameter (zero=(0.0d0,0.0d0),one=(1.0d0,0.0d0))
+          parameter (half=(0.5d0,0.0d0))
+          parameter (TWOPII=2.0d0*3.1415926535897932d0*(0.0d0,1.0d0))
+          double complex gamma0,gammap,gammam,sqrtterm
+          double precision M,Ga,dGa,Ga_start
+          double precision Gai,intersection
+          double complex argim1(4),argi(4),p2i,sqrttermi
+          double complex gamma0i,gammapi,gammami
+          double precision tiny
+          parameter (tiny=-1d-14)
+          integer i,j
+          double complex addfactor(4)
+          double complex sqrt_trajectory
+          IF(ABS(p2*m12*m22).EQ.0d0)THEN
+            WRITE(*,*)'ERROR:log_trajectory works when p2*m12*m22/=0'
+            STOP
+          ENDIF
+          M=DBLE(p2) ! M^2
+          M=DSQRT(DABS(M))
+          IF(M.EQ.0d0)THEN
+             Ga=0d0
+          ELSE
+             Ga=-DIMAG(p2)/M
+          ENDIF
+c         Eq.(5.36-5.38) in arXiv:1804.10017
+          sqrtterm=sqrt_trajectory(n_seg,p2,m12,m22)
+          gamma0=one+m12/p2-m22/p2
+          gammap=half*(gamma0+sqrtterm)
+          gammam=half*(gamma0-sqrtterm)
+          IF(ABS(Ga).EQ.0d0)THEN
+             log_trajectory=-LOG(gammap-one)-LOG(gammam-one)+gammap*LOG((gammap-one)/gammap)+gammam*LOG((gammam-one)/gammam)
+             RETURN
+          ENDIF
+c         segments from -DABS(tiny*Ga) to Ga
+          Ga_start=-DABS(tiny*Ga)
+          dGa=(Ga-Ga_start)/n_seg
+          addfactor(1:4)=zero
+          Gai=Ga_start
+          p2i=dcmplx(M**2,-Gai*M)
+          sqrttermi=sqrt_trajectory(n_seg,p2i,m12,m22)
+          gamma0i=one+m12/p2i-m22/p2i
+          gammapi=half*(gamma0i+sqrttermi)
+          gammami=half*(gamma0i-sqrttermi)
+          argim1(1)=gammapi-one
+          argim1(2)=gammami-one
+          argim1(3)=(gammapi-one)/gammapi
+          argim1(4)=(gammami-one)/gammami
+          DO i=1,n_seg
+             Gai=dGa*i+Ga_start
+             p2i=dcmplx(M**2,-Gai*M)
+             sqrttermi=sqrt_trajectory(n_seg,p2i,m12,m22)
+             gamma0i=one+m12/p2i-m22/p2i
+             gammapi=half*(gamma0i+sqrttermi)
+             gammami=half*(gamma0i-sqrttermi)
+             argi(1)=gammapi-one
+             argi(2)=gammami-one
+             argi(3)=(gammapi-one)/gammapi
+             argi(4)=(gammami-one)/gammami
+             DO j=1,4
+                IF(DIMAG(argi(j))*DIMAG(argim1(j)).LT.0d0)THEN
+                   intersection=DIMAG(argim1(j))*(DBLE(argi(j))-DBLE(argim1(j)))
+                   intersection=intersection/(DIMAG(argi(j))-DIMAG(argim1(j)))
+                   intersection=intersection-DBLE(argim1(j))
+                   IF(intersection.GT.0d0)THEN
+                      IF(DIMAG(argim1(j)).LT.0)THEN
+                         addfactor(j)=addfactor(j)-TWOPII
+                      ELSE
+                         addfactor(j)=addfactor(j)+TWOPII
+                      ENDIF
+                   ENDIF
+                ENDIF
+                argim1(j)=argi(j)
+              ENDDO
+          ENDDO
+          log_trajectory=-(LOG(gammap-one)+addfactor(1))-(LOG(gammam-one)+addfactor(2))
+          log_trajectory=log_trajectory+gammap*(LOG((gammap-one)/gammap)+addfactor(3))
+          log_trajectory=log_trajectory+gammam*(LOG((gammam-one)/gammam)+addfactor(4))
+          RETURN
           end
           
           double complex function arg(comnum)
@@ -6807,6 +8512,329 @@ class UFO_model_to_mg4(object):
                  endif
               endif
               end
+
+              module mp_b0f_caching
+
+              type mp_b0f_node
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s value
+              type(mp_b0f_node),pointer::parent
+              type(mp_b0f_node),pointer::left
+              type(mp_b0f_node),pointer::right
+              end type mp_b0f_node
+
+              contains
+
+              subroutine mp_b0f_search(item, head, find)
+              implicit none
+              type(mp_b0f_node),pointer,intent(inout)::head,item
+              logical,intent(out)::find
+              type(mp_b0f_node),pointer::item1
+              integer::icomp
+              find=.false.
+              nullify(item%%parent)
+              nullify(item%%left)
+              nullify(item%%right)
+              if(.not.associated(head))then
+                 head => item
+                 return
+              endif
+              item1 => head
+              do
+                 icomp=mp_b0f_node_compare(item,item1)
+                 if(icomp.lt.0)then
+                    if(.not.associated(item1%%left))then
+                       item1%%left => item
+                       item%%parent => item1
+                       exit
+                    else
+                       item1 => item1%%left
+                    endif
+                 elseif(icomp.gt.0)then
+                    if(.not.associated(item1%%right))then
+                       item1%%right => item
+                       item%%parent => item1
+                       exit
+                     else
+                       item1 => item1%%right
+                     endif
+                 else
+                     find=.true.
+                     item%%value=item1%%value
+                     exit
+                 endif
+              enddo
+              return
+              end
+
+              integer function mp_b0f_node_compare(item1,item2) result(res)
+              implicit none
+              type(mp_b0f_node),pointer,intent(in)::item1,item2
+              res=mp_complex_compare(item1%%p2,item2%%p2)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m22,item2%%m22)
+              if(res.ne.0)return
+              res=mp_complex_compare(item1%%m12,item2%%m12)
+              return
+              end
+
+              integer function mp_real_compare(r1,r2) result(res)
+              implicit none
+              %(real_mp_format)s r1,r2
+              %(real_mp_format)s maxr,diff
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              maxr=max(abs(r1),abs(r2))
+              diff=r1-r2
+              if(maxr.le.1.0e-99_16.or.abs(diff)/max(maxr,1.0e-99_16).le.abs(tiny))then
+                 res=0
+                 return
+              endif
+              if(diff.gt.0.0e0_16)then
+                 res=1
+                 return
+              else
+                 res=-1
+                 return
+              endif
+              end
+
+              integer function mp_complex_compare(c1,c2) result(res)
+              implicit none
+              %(complex_mp_format)s c1,c2
+              %(real_mp_format)s r1,r2
+              r1=real(c1,kind=16)
+              r2=real(c2,kind=16)
+              res=mp_real_compare(r1,r2)
+              if(res.ne.0)return
+              r1=imagpart(c1)
+              r2=imagpart(c2)
+              res=mp_real_compare(r1,r2)
+              return
+              end
+
+              end module mp_b0f_caching
+
+              %(complex_mp_format)s function mp_b0f(p2,m12,m22)
+              use mp_b0f_caching
+              implicit none
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,TWOPII
+              parameter (zero=(0.0e0_16,0.0e0_16))
+              parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(real_mp_format)s M,M2,Ga,Ga2
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              %(complex_mp_format)s logterms
+              %(complex_mp_format)s mp_log_trajectory
+              logical use_caching
+              parameter (use_caching=.true.)
+              type(mp_b0f_node),pointer::item
+              type(mp_b0f_node),pointer,save::b0f_bt
+              integer init
+              save init
+              data init /0/
+              logical find
+              IF(m12.eq.zero)THEN
+                 M=real(p2,kind=16)
+                 M2=real(m22,kind=16)
+                 IF(M.LT.tiny.OR.M2.LT.tiny)THEN
+                 WRITE(*,*)'ERROR:MP_B0F is not well defined when M^2,M2^2<0'
+                 STOP
+                 ENDIF
+                 M=sqrt(abs(M))
+                 M2=sqrt(abs(M2))
+                 IF(M.EQ.0.0e0_16)THEN
+                    Ga=0.0e0_16
+                 ELSE
+                    Ga=-imagpart(p2)/M
+                 ENDIF
+                 IF(M2.EQ.0.0e0_16)THEN
+                    Ga2=0.0e0_16
+                 ELSE
+                    Ga2=-imagpart(m22)/M2
+                 ENDIF
+                 IF(p2.NE.m22.AND.p2.NE.zero.AND.m22.NE.zero)THEN
+                    mp_b0f=(m22-p2)/p2*log((m22-p2)/m22)
+                    IF(M.GT.M2.AND.Ga*M2.GT.Ga2*M)THEN
+                       mp_b0f=mp_b0f-TWOPII
+                    ENDIF
+                    RETURN
+                 ELSE
+                    WRITE(*,*)'ERROR:MP_B0F is not supported for a simple form'
+                    STOP
+                 ENDIF
+              ENDIF
+              if(use_caching)then
+                 if(init.eq.0)then
+                    nullify(b0f_bt)
+                    init=1
+                 endif
+                 allocate(item)
+                 item%%p2=p2
+                 item%%m12=m12
+                 item%%m22=m22
+                 find=.false.
+                 call mp_b0f_search(item, b0f_bt, find)
+                 if(find)then
+                    mp_b0f=item%%value
+                    deallocate(item)
+                    return
+                 else
+                    logterms=mp_log_trajectory(100,p2,m12,m22)
+                    mp_b0f=-LOG(p2/m22)+logterms
+                    item%%value=mp_b0f
+                    return
+                 endif
+              else
+                 logterms=mp_log_trajectory(100,p2,m12,m22)
+                 mp_b0f=-LOG(p2/m22)+logterms
+              endif
+              RETURN
+              end
+
+              %(complex_mp_format)s function mp_sqrt_trajectory(n_seg,p2,m12,m22)
+              implicit none
+              integer n_seg
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,one
+              parameter (zero=(0.0e0_16,0.0e0_16),one=(1.0e0_16,0.0e0_16))
+              %(complex_mp_format)s gamma0,gamma1
+              %(real_mp_format)s M,Ga,dGa,Ga_start
+              %(real_mp_format)s Gai,intersection
+              %(complex_mp_format)s argim1,argi,p2i
+              %(complex_mp_format)s gamma0i,gamma1i
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-24_16)
+              integer i
+              %(real_mp_format)s prefactor
+              IF(ABS(p2*m12*m22).EQ.0.0e0_16)THEN
+              WRITE(*,*)'ERROR:mp_sqrt_trajectory works when p2*m12*m22/=0'
+              STOP
+              ENDIF
+              M=real(p2,kind=16)
+              M=sqrt(abs(M))
+              IF(M.EQ.0.0e0_16)THEN
+                 Ga=0.0e0_16
+              ELSE
+                 Ga=-imagpart(p2)/M
+              ENDIF
+              gamma0=one+m12/p2-m22/p2
+              gamma1=m12/p2-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2
+              IF(abs(Ga).EQ.0.0e0_16)THEN
+                mp_sqrt_trajectory=sqrt(gamma0**2-4.0e0_16*gamma1)
+                RETURN
+              ENDIF
+              Ga_start=-abs(tiny*Ga)
+              dGa=(Ga-Ga_start)/n_seg
+              prefactor=1.0e0_16
+              Gai=Ga_start
+              p2i=cmplx(M**2,-Gai*M)
+              gamma0i=one+m12/p2i-m22/p2i
+              gamma1i=m12/p2i-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2i
+              argim1=gamma0i**2-4.0e0_16*gamma1i
+              DO i=1,n_seg
+                 Gai=dGa*i+Ga_start
+                 p2i=cmplx(M**2,-Gai*M)
+                 gamma0i=one+m12/p2i-m22/p2i
+                 gamma1i=m12/p2i-cmplx(0.0e0_16,1.0e0_16)*abs(tiny)/p2i
+                 argi=gamma0i**2-4.0e0_16*gamma1i
+                 IF(imagpart(argi)*imagpart(argim1).LT.0.0e0_16)THEN
+                   intersection=imagpart(argim1)*(real(argi,kind=16)-real(argim1,kind=16))
+                   intersection=intersection/(imagpart(argi)-imagpart(argim1))
+                   intersection=intersection-real(argim1,kind=16)
+                   IF(intersection.GT.0.0e0_16)THEN
+                      prefactor=-prefactor
+                   ENDIF
+                 ENDIF
+                 argim1=argi
+              ENDDO
+              mp_sqrt_trajectory=sqrt(gamma0**2-4.0e0_16*gamma1)*prefactor
+              RETURN
+              end
+
+              %(complex_mp_format)s function mp_log_trajectory(n_seg,p2,m12,m22)
+              implicit none
+              integer n_seg
+              %(complex_mp_format)s p2,m12,m22
+              %(complex_mp_format)s zero,one,half,TWOPII
+              parameter (zero=(0.0e0_16,0.0e0_16),one=(1.0e0_16,0.0e0_16))
+              parameter (half=(0.5e0_16,0.0e0_16))
+              parameter (TWOPII=2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16))
+              %(complex_mp_format)s gamma0,gammap,gammam,sqrtterm
+              %(real_mp_format)s M,Ga,dGa,Ga_start
+              %(real_mp_format)s Gai,intersection
+              %(complex_mp_format)s argim1(4),argi(4),p2i,sqrttermi
+              %(complex_mp_format)s gamma0i,gammapi,gammami
+              %(real_mp_format)s tiny
+              parameter (tiny=-1.0e-14_16)
+              integer i,j
+              %(complex_mp_format)s addfactor(4)
+              %(complex_mp_format)s mp_sqrt_trajectory
+              IF(abs(p2*m12*m22).eq.0.0e0_16)THEN
+              WRITE(*,*)'ERROR:mp_log_trajectory works when p2*m12*m22/=0'
+              STOP
+              ENDIF
+              M=real(p2,kind=16)
+              M=sqrt(abs(M))
+              IF(M.eq.0.0e0_16)THEN
+                 Ga=0.0e0_16
+              ELSE
+                 Ga=-imagpart(p2)/M
+              ENDIF
+              sqrtterm=mp_sqrt_trajectory(n_seg,p2,m12,m22)
+              gamma0=one+m12/p2-m22/p2
+              gammap=half*(gamma0+sqrtterm)
+              gammam=half*(gamma0-sqrtterm)
+              IF(abs(Ga).EQ.0.0e0_16)THEN
+                 mp_log_trajectory=-LOG(gammap-one)-LOG(gammam-one)+gammap*LOG((gammap-one)/gammap)+gammam*LOG((gammam-one)/gammam)
+                 RETURN
+              ENDIF
+              Ga_start=-abs(tiny*Ga)
+              dGa=(Ga-Ga_start)/n_seg
+              addfactor(1:4)=zero
+              Gai=Ga_start
+              p2i=cmplx(M**2,-Gai*M)
+              sqrttermi=mp_sqrt_trajectory(n_seg,p2i,m12,m22)
+              gamma0i=one+m12/p2i-m22/p2i
+              gammapi=half*(gamma0i+sqrttermi)
+              gammami=half*(gamma0i-sqrttermi)
+              argim1(1)=gammapi-one
+              argim1(2)=gammami-one
+              argim1(3)=(gammapi-one)/gammapi
+              argim1(4)=(gammami-one)/gammami
+              DO i=1,n_seg
+                 Gai=dGa*i+Ga_start
+                 p2i=cmplx(M**2,-Gai*M)
+                 sqrttermi=mp_sqrt_trajectory(n_seg,p2i,m12,m22)
+                 gamma0i=one+m12/p2i-m22/p2i
+                 gammapi=half*(gamma0i+sqrttermi)
+                 gammami=half*(gamma0i-sqrttermi)
+                 argi(1)=gammapi-one
+                 argi(2)=gammami-one
+                 argi(3)=(gammapi-one)/gammapi
+                 argi(4)=(gammami-one)/gammami
+                 DO j=1,4
+                    IF(imagpart(argi(j))*imagpart(argim1(j)).LT.0.0e0_16)THEN
+                       intersection=imagpart(argim1(j))*(real(argi(j),kind=16)-real(argim1(j),kind=16))
+                       intersection=intersection/(imagpart(argi(j))-imagpart(argim1(j)))
+                       intersection=intersection-real(argim1(j),kind=16)
+                       IF(intersection.GT.0.0e0_16)THEN
+                          IF(imagpart(argim1(j)).LT.0.0e0_16)THEN
+                             addfactor(j)=addfactor(j)-TWOPII
+                          ELSE
+                             addfactor(j)=addfactor(j)+TWOPII
+                          ENDIF
+                       ENDIF
+                    ENDIF
+                    argim1(j)=argi(j)
+                 ENDDO
+              ENDDO
+              mp_log_trajectory=-(LOG(gammap-one)+addfactor(1))-(LOG(gammam-one)+addfactor(2))
+              mp_log_trajectory=mp_log_trajectory+gammap*(LOG((gammap-one)/gammap)+addfactor(3))
+              mp_log_trajectory=mp_log_trajectory+gammam*(LOG((gammam-one)/gammam)+addfactor(4))
+              RETURN
+              end
               
               %(complex_mp_format)s function mp_arg(comnum)
               implicit none
@@ -6826,7 +8854,7 @@ class UFO_model_to_mg4(object):
         if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
             fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
             input = pjoin(model_path,'Fortran','functions.f')
-            file.writelines(fsock, open(input).read())
+            fsock.writelines(open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
             
         # check for functions define in the UFO model
@@ -6838,8 +8866,8 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt"] + done:
-                    done.append(str(fct.name.lower()))
+                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -6876,7 +8904,7 @@ class UFO_model_to_mg4(object):
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt"]:
+                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
@@ -6920,9 +8948,12 @@ class UFO_model_to_mg4(object):
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
-        
-        nb_coup_indep = 1 + len(self.coups_dep) // 25 
-        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        if self.opt['export_format'].startswith('standalone'):
+            text += ' alfas_functions.o '
+
+
+        nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
@@ -6977,6 +9008,25 @@ class UFO_model_to_mg4(object):
         fsock = self.open('ident_card.dat')
      
         external_param = [format(param) for param in self.params_ext]
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b.lower(),
+                     91.188, b, [0])
+                external_param.append(format(param))
+
         fsock.writelines('\n'.join(external_param))
 
     def create_actualize_mp_ext_param_inc(self):
@@ -7022,12 +9072,35 @@ class UFO_model_to_mg4(object):
                 ("\n call MP_LHA_get_real(npara,param,value,'%(name)s',"+
                  "%(mp_prefix)s%(name)s,%(value)s)") \
                 % {'name': parameter.name,'mp_prefix': self.mp_prefix,
-                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}    
+                   'value': self.mp_p_to_f.parse(str(parameter.value.real))}
+
+            if parameter.lhablock.lower() == 'loop':
+                template = template.replace('LHA_get_real', 'LHA_get_real_silent') 
+                
             return template        
     
         fsock = self.open('param_read.inc', format='fortran')
         res_strings = [format_line(param) \
                           for param in self.params_ext]
+        
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b,
+                     91.188, b, 0)
+                res_strings.append(format_line(param))
         
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        
@@ -7048,7 +9121,7 @@ class UFO_model_to_mg4(object):
 
     @staticmethod
     def create_param_card_static(model, output_path, rule_card_path=False,
-                                 mssm_convert=True):
+                                 mssm_convert=True, write_special=True):
         """ create the param_card.dat for a givent model --static method-- """
         #1. Check if a default param_card is present:
         done = False
@@ -7060,7 +9133,7 @@ class UFO_model_to_mg4(object):
                 files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
                          output_path)
         if not done:
-            param_writer.ParamCardWriter(model, output_path)
+            param_writer.ParamCardWriter(model, output_path, write_special=write_special)
          
         if rule_card_path:   
             if hasattr(model, 'rule_card'):
@@ -7076,16 +9149,27 @@ class UFO_model_to_mg4(object):
                     translator.make_valid_param_card(output_path, rule_card_path)
                 translator.convert_to_slha1(output_path)        
     
-    def create_param_card(self):
+    def create_param_card(self, write_special=True):
         """ create the param_card.dat """
 
         rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
         if not hasattr(self.model, 'rule_card'):
             rule_card=False
+        write_special = True
+        if 'exporter' in self.opt:
+            import madgraph.loop.loop_exporters as loop_exporters
+            import madgraph.iolibs.export_fks as export_fks
+            write_special = False
+            if  issubclass(self.opt['exporter'], loop_exporters.LoopProcessExporterFortranSA):
+                write_special = True
+                if issubclass(self.opt['exporter'],(loop_exporters.LoopInducedExporterME,export_fks.ProcessExporterFortranFKS)):
+                     write_special = False
+                        
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 
                                       rule_card_path=rule_card, 
-                                      mssm_convert=True)
+                                      mssm_convert=True,
+                                      write_special=write_special)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 
@@ -7173,6 +9257,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         ExporterClass=None
         amcatnlo_options = dict(opt)
         amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['running'] = cmd._curr_model.get('running_elements')
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
@@ -7196,7 +9281,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'mp': False,  
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name'),
-               'v5_model': False if cmd._model_v4_path else True })
+               'v5_model': False if cmd._model_v4_path else True,
+               'running': cmd._curr_model.get('running_elements'),
+                })
 
         format = cmd._export_format #shortcut
 

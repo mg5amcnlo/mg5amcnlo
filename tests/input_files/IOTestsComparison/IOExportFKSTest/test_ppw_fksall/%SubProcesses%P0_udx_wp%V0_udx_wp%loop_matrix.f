@@ -12,8 +12,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
-C     Process: c s~ > w+ [ all = QCD QED ] QCD^2=2 QED^2=2
+C     Process: u d~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
+C     Process: c s~ > w+ [ all = QCD QED ] QCD^2<=2 QED^2<=2
 C     
 C     Modules
 C     
@@ -2602,11 +2602,14 @@ C
       PARAMETER (NEXTERNAL=3)
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
+      INCLUDE 'nsqso_born.inc'
 C     
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, USERHEL
       COMMON/USERCHOICE/USERHEL
 C     ----------
@@ -2630,7 +2633,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       INTEGER HEL, RET_CODE
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C     
@@ -2747,7 +2753,10 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL)
-      REAL*8 ANS(0:3,0:NSQUAREDSO)
+      INCLUDE 'nsqso_born.inc'
+      INTEGER ANS_DIMENSION
+      PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
+      REAL*8 ANS(0:3,0:ANS_DIMENSION)
       REAL*8 PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
       INTEGER RET_CODE
 C     

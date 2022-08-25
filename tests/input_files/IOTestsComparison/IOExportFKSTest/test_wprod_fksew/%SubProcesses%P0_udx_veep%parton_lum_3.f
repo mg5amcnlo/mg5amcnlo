@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u a > ve e+ d [ all = QED QCD ] QCD^2<=0 QED^2<=6
-C     Process: c a > ve e+ s [ all = QED QCD ] QCD^2<=0 QED^2<=6
+C     Process: u a > ve e+ d [ all = QCD QED ] QCD^2<=0 QED^2<=6
+C     Process: c a > ve e+ s [ all = QCD QED ] QCD^2<=0 QED^2<=6
 C     
 C     ****************************************************            
 C         
@@ -50,6 +50,17 @@ C
       INTEGER IMIRROR
       COMMON/CMIRROR/IMIRROR
 C     
+C     STUFF FOR DRESSED EE COLLISIONS
+C     
+      INCLUDE 'eepdf.inc'
+      DOUBLE PRECISION EE_COMP_PROD
+      DOUBLE PRECISION DUMMY_COMPONENTS(N_EE)
+      DOUBLE PRECISION U1_COMPONENTS(N_EE),C1_COMPONENTS(N_EE)
+      DOUBLE PRECISION A2_COMPONENTS(N_EE)
+
+      INTEGER I_EE
+      INCLUDE '../../Source/PDF/pdf.inc'
+C     
 C     DATA                                                            
 C         
 C     
@@ -64,20 +75,33 @@ C     ----------
 C         
       LUM = 0D0
       IF (ABS(LPP(1)) .GE. 1) THEN
-        LP=SIGN(1,LPP(1))
-        U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
-        C1=PDG2PDF(ABS(LPP(1)),4*LP,XBK(1),DSQRT(Q2FACT(1)))
+        U1=PDG2PDF(LPP(1),2,1,XBK(1),DSQRT(Q2FACT(1)))
+        IF ((ABS(LPP(1)).EQ.4.OR.ABS(LPP(1)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') U1_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
+        C1=PDG2PDF(LPP(1),4,1,XBK(1),DSQRT(Q2FACT(1)))
+        IF ((ABS(LPP(1)).EQ.4.OR.ABS(LPP(1)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') C1_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
       ENDIF
       IF (ABS(LPP(2)) .GE. 1) THEN
-        LP=SIGN(1,LPP(2))
-        A2=PDG2PDF(ABS(LPP(2)),7*LP,XBK(2),DSQRT(Q2FACT(2)))
+        A2=PDG2PDF(LPP(2),7,2,XBK(2),DSQRT(Q2FACT(2)))
+        IF ((ABS(LPP(2)).EQ.4.OR.ABS(LPP(2)).EQ.3)
+     $   .AND.PDLABEL.NE.'none') A2_COMPONENTS(1:N_EE) =
+     $    EE_COMPONENTS(1:N_EE)
       ENDIF
       PD(0) = 0D0
       IPROC = 0
       IPROC=IPROC+1  ! u a > ve e+ d
       PD(IPROC) = U1*A2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(U1_COMPONENTS,A2_COMPONENTS)
       IPROC=IPROC+1  ! c a > ve e+ s
       PD(IPROC) = C1*A2
+      IF (ABS(LPP(1)).EQ.ABS(LPP(2)).AND. (ABS(LPP(1))
+     $ .EQ.3.OR.ABS(LPP(1)).EQ.4).AND.PDLABEL.NE.'none')PD(IPROC)
+     $ =EE_COMP_PROD(C1_COMPONENTS,A2_COMPONENTS)
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

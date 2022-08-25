@@ -338,7 +338,14 @@ class HelpToCmd(object):
         self.run_options_help([('-f','answer all question by default'),
                                ('--tag=', 'define the tag for the pythia8 run'),
                                ('--no_default', 'not run if pythia8_card not present')])
-    
+
+    def help_rivet(self):
+        logger.info("syntax: rivet [RUN] [--run_options]")
+        logger.info("-- run rivet on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the rivet run'),
+                               ('--no_default', 'not run if rivet_card not present')])
+
     def help_banner_run(self):
         logger.info("syntax: banner_run Path|RUN [--run_options]")
         logger.info("-- Reproduce a run following a given banner")
@@ -393,12 +400,7 @@ class HelpToCmd(object):
         logger.info("     -r          : Refresh of the existing filters (erasing them if already present).",'$MG:color:BLUE')
         logger.info("     --nPS=<int> : Specify how many phase-space points should be tried to set up the filters.",'$MG:color:BLUE')
         
-    def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--threshold=]")
-        logger.info('-- Add in the lhe files the information')
-        logger.info('   of how long it takes to a particle to decay.')
-        logger.info('   threshold option allows to change the minimal value required to')
-        logger.info('   a non zero value for the particle (default:1e-12s)')
+
 
     def help_calculate_decay_widths(self):
         
@@ -518,7 +520,6 @@ class AskRun(cmd.ControlSwitch):
     def check_available_module(self, options):
         
         self.available_module = set()
-        
         if options['pythia-pgs_path']:
             self.available_module.add('PY6')
             self.available_module.add('PGS')
@@ -535,6 +536,12 @@ class AskRun(cmd.ControlSwitch):
                 self.available_module.add('Delphes')
             else:
                 logger.warning("Delphes program installed but no parton shower module detected.\n    Please install pythia8")
+        if options['rivet_path']:
+            if 'PY8' in self.available_module:
+                self.available_module.add('Rivet')
+            else:
+                logger.warning("Rivet program installed but no parton shower with hepmc output detected.\n    Please install pythia8")
+        
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
@@ -631,6 +638,9 @@ class AskRun(cmd.ControlSwitch):
             return 'OFF'
         
         return None
+
+
+        
 #
 #   HANDLING DETECTOR
 #
@@ -745,7 +755,9 @@ class AskRun(cmd.ControlSwitch):
         if 'MA4' in self.available_module:
             self.allowed_analysis.append('MadAnalysis4')
         if 'MA5' in self.available_module:
-            self.allowed_analysis.append('MadAnalysis5')            
+            self.allowed_analysis.append('MadAnalysis5') 
+        if 'Rivet' in self.available_module:
+            self.allowed_analysis.append('Rivet') 
             
         if self.allowed_analysis:
             self.allowed_analysis.append('OFF')
@@ -770,8 +782,32 @@ class AskRun(cmd.ControlSwitch):
                 return False
         else:
             return False
+
+    def consistency_shower_analysis(self, vshower, vanalysis):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower != 'Pythia8' and vanalysis == 'Rivet':
+            return 'OFF' #new value for analysis
         
+        return None
         
+    def consistency_analysis_shower(self, vanalysis, vshower):
+        """consistency_XX_YY(val_XX, val_YY)
+           -> XX is the new key set by the user to a new value val_XX
+           -> YY is another key
+           -> return value should be None or "replace_YY" 
+        """
+
+        if vshower != 'Pythia8' and vanalysis == 'Rivet':
+            return 'Pythia8' #new value for analysis
+        
+        return None
+
+
     def set_default_analysis(self):
         """initialise the switch for analysis"""
         
@@ -1179,43 +1215,6 @@ class CheckValidForCmd(object):
         #    raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
         return run
-
-    def check_add_time_of_flight(self, args):
-        """check that the argument are correct"""
-        
-        
-        if len(args) >2:
-            self.help_time_of_flight()
-            raise self.InvalidCmd('Too many arguments')
-        
-        # check if the threshold is define. and keep it's value
-        if args and args[-1].startswith('--threshold='):
-            try:
-                threshold = float(args[-1].split('=')[1])
-            except ValueError:
-                raise self.InvalidCmd('threshold options require a number.')
-            args.remove(args[-1])
-        else:
-            threshold = 1e-12
-            
-        if len(args) == 1 and  os.path.exists(args[0]): 
-                event_path = args[0]
-        else:
-            if len(args) and self.run_name != args[0]:
-                self.set_run_name(args.pop(0))
-            elif not self.run_name:            
-                self.help_add_time_of_flight()
-                raise self.InvalidCmd('Need a run_name to process')            
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
-            if not os.path.exists(event_path):
-                event_path = event_path[:-3]
-                if not os.path.exists(event_path):    
-                    raise self.InvalidCmd('No unweighted events associate to this run.')
-
-
-        
-        #reformat the data
-        args[:] = [event_path, threshold]
 
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
@@ -1676,23 +1675,6 @@ class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
     
-    def complete_add_time_of_flight(self, text, line, begidx, endidx):
-        "Complete command"
-       
-        args = self.split_arg(line[0:begidx], error=False)
-
-        if len(args) == 1:
-            #return valid run_name
-            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
-            data = [n.rsplit('/',2)[1] for n in data]
-            return  self.list_completion(text, data + ['--threshold='], line)
-        elif args[-1].endswith(os.path.sep):
-            return self.path_completion(text,
-                                        os.path.join('.',*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
-        else:
-            return self.list_completion(text, ['--threshold='], line)
-    
     def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
@@ -2045,11 +2027,8 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--tag=','--no_default'], line)
 
-    complete_delphes = complete_pgs        
-
-
-
-
+    complete_delphes = complete_pgs   
+    complete_rivet = complete_pgs     
 
 #===============================================================================
 # MadEventCmd
@@ -2058,6 +2037,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
     """The command line processor of Mad Graph"""    
     
+
+    LO = True
     # Truth values
     true = ['T','.true.',True,'true']
     # Options and formats available
@@ -2117,6 +2098,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         self.load_results_db()        
         self.results.def_web_mode(self.web)
+
+        self.Gdirs = None
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
@@ -2177,6 +2160,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     if not os.path.exists(pjoin(path, 'plot_events')):
                         logger.info("No valid MadAnalysis path found")
                         continue
+                elif key == "rivet_path":
+                    if not os.path.exists(pjoin(path, 'bin', 'rivet')):
+                        logger.info("No valid rivet path found")
+                        continue
                 elif key == "td_path":
                     if not os.path.exists(pjoin(path, 'td')):
                         logger.info("No valid td path found")
@@ -2195,61 +2182,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                           
         return self.options
 
-    ############################################################################
-    def do_add_time_of_flight(self, line):
-
-        args = self.split_arg(line)
-        #check the validity of the arguments and reformat args
-        self.check_add_time_of_flight(args)
-        
-        event_path, threshold = args
-        #gunzip the file
-        if event_path.endswith('.gz'):
-            need_zip = True
-            misc.gunzip(event_path)
-            event_path = event_path[:-3]
-        else:
-            need_zip = False
-            
-        import random
-        try:
-            import madgraph.various.lhe_parser as lhe_parser
-        except:
-            import internal.lhe_parser as lhe_parser 
-            
-        logger.info('Add time of flight information on file %s' % event_path)
-        lhe = lhe_parser.EventFile(event_path)
-        output = open('%s_2vertex.lhe' % event_path, 'w')
-        #write the banner to the output file
-        output.write(lhe.banner)
-
-        # get the associate param_card
-        begin_param = lhe.banner.find('<slha>')
-        end_param = lhe.banner.find('</slha>')
-        param_card = lhe.banner[begin_param+6:end_param].split('\n')
-        param_card = check_param_card.ParamCard(param_card)
-
-        cst = 6.58211915e-25 # hbar in GeV s
-        c = 299792458000 # speed of light in mm/s
-        # Loop over all events
-        for event in lhe:
-            for particle in event:
-                id = particle.pid
-                width = param_card['decay'].get((abs(id),)).value
-                if width:
-                    vtim = c * random.expovariate(width/cst)
-                    if vtim > threshold:
-                        particle.vtim = vtim
-            #write this modify event
-            output.write(str(event))
-        output.write('</LesHouchesEvents>\n')
-        output.close()
-        
-        files.mv('%s_2vertex.lhe' % event_path, event_path)
-        
-        if need_zip:
-            misc.gzip(event_path)
-        
     ############################################################################
     def do_banner_run(self, line): 
         """Make a run from the banner file"""
@@ -2457,6 +2389,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         self.banner = None
         self.Gdirs = None
+        
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
@@ -2469,9 +2402,164 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             args.pop(0)
             
         self.run_generate_events(switch_mode, args)
-        
-        
-        
+
+        self.postprocessing()
+
+
+    # postprocessing : runs after all the event generation has been done
+    # even for the 'scan' mode, madevent->pythia->madevent->pythia->...->POSTPROCESSING
+    def postprocessing(self):
+
+        # Run Rivet postprocessor
+        cmd_do_rivet = common_run.CommonRunCmd.do_rivet(self,"--no_default",True)
+        if cmd_do_rivet:
+            rivet_config = cmd_do_rivet[0]
+            postprocess_RIVET = cmd_do_rivet[1]
+            postprocess_CONTUR = cmd_do_rivet[2]
+            if postprocess_RIVET or postprocess_CONTUR:
+                self.rivet_postprocessing(rivet_config, postprocess_RIVET, postprocess_CONTUR)
+
+    def rivet_postprocessing(self, rivet_config, postprocess_RIVET, postprocess_CONTUR):
+
+        # Check number of Rivet jobs to run 
+        run_dirs = [pjoin(self.me_dir, 'Events',run_name) 
+                      for run_name in self.postprocessing_dirs]
+
+        nb_rivet = len(run_dirs)
+
+        if postprocess_RIVET:
+
+            # Submit Rivet jobs
+            for i_rivet in range(nb_rivet):
+                self.cluster.submit2(pjoin(run_dirs[i_rivet], "run_rivet.sh"), argument=[str(i_rivet)])
+
+            startRivet = time.time()
+
+            def wait_monitoring(Idle, Running, Done):
+                if Idle+Running+Done == 0:
+                    return
+                logger.info('Rivet analysis jobs: %d Idle, %d Running, %d Done [%s]'\
+                             %(Idle, Running, Done, misc.format_time(time.time() - startRivet)))
+            self.cluster.wait(pjoin(self.me_dir, 'Events'),wait_monitoring)
+
+            self.update_status("postprocessing rivet done", level="rivet")
+
+        if postprocess_CONTUR:
+
+            self.update_status("Starting postprocess contur", level="rivet")
+
+            set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
+            rivet_path = self.options['rivet_path']
+            yoda_path = self.options['yoda_path']
+            set_env = set_env + "# RIVET/YODA PATH SETUP\n"
+            set_env = set_env + "export PATH={0}:{1}:$PATH\n"\
+                                             .format(pjoin(rivet_path, 'bin'),\
+                                                     pjoin(yoda_path, 'bin'))
+            set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:{2}:{3}:$LD_LIBRARY_PATH\n"\
+                                                        .format(pjoin(rivet_path, 'lib'),\
+                                                                pjoin(rivet_path, 'lib64'),\
+                                                                pjoin(yoda_path, 'lib'),\
+                                                                pjoin(yoda_path, 'lib64'))
+            major, minor = sys.version_info[0:2]
+            set_env = set_env + "export PYTHONPATH={0}:{1}:{2}:{3}:$PYTHONPATH\n\n"\
+                                                   .format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(yoda_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
+                                                           pjoin(yoda_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'))
+
+            contur_path = self.options['contur_path']
+            set_env = set_env + "# CONTUR PATH SETUP\n"
+            set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor), 'bin'))
+            set_env = set_env + "export PYTHONPATH={0}:$PYTHONPATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor)))
+
+            set_env = set_env + "source {0} >> contur.log 2>&1\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
+
+            os.system("mkdir -p {0}".format(pjoin(self.me_dir, 'Analysis', 'contur')))
+
+            if nb_rivet == 1:
+                this_yoda_file = pjoin(run_dirs[0], "rivet_result.yoda")
+                os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda')))
+                if not rivet_config["weight_name"] == "None":
+                    contur_cmd = 'contur --wn "{0}" {1}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+                else:
+                    contur_cmd = 'contur {0}\n'.format(pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+            else:
+                # Link yoda and params files inside analysis/contur/scan directory
+                scan_subdirs = []
+                for i_rivet in range(nb_rivet):
+                    this_scan_dir = pjoin(self.me_dir, 'Analysis', 'contur', 'scan', rivet_config["contur_ra"])
+                    os.system("mkdir -p {0}".format(this_scan_dir))
+
+                    this_scan_subdir = pjoin(this_scan_dir, str(i_rivet+1).zfill(4))
+                    scan_subdirs.append(this_scan_subdir)
+                    os.mkdir(this_scan_subdir)
+
+                    this_yoda_file = pjoin(run_dirs[i_rivet], "rivet_result.yoda")
+                    this_param_file = pjoin(run_dirs[i_rivet], "params.dat")
+                    os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(this_scan_subdir, "runpoint_"+str(i_rivet+1).zfill(4)+".yoda")))
+                    os.system("ln -s {0} {1}".format(this_param_file, pjoin(this_scan_subdir, "params.dat")))
+
+                    if rivet_config['xaxis_relvar'] or rivet_config['yaxis_relvar']:
+                        f_params = open(pjoin(run_dirs[i_rivet], "params.dat"))
+                        f_relparams = open(pjoin(run_dirs[i_rivet], "params_replace.dat"), "w")
+                        rivet_config.setRelevantParamCard(f_params=f_params,f_relparams=f_relparams)
+                        f_params.close()
+                        f_relparams.close()
+
+                        files.mv(pjoin(run_dirs[i_rivet], "params_replace.dat"), pjoin(run_dirs[i_rivet], "params.dat"))
+
+                contur_add = ""
+                if not (rivet_config["contur_add"] == "default" or rivet_config["contur_add"]  == None):
+                    contur_add = " " + rivet_config["contur_add"]
+
+                if rivet_config["weight_name"] == "None":
+                    contur_cmd = 'contur -g scan >> contur.log 2>&1\n'
+                else:
+                    contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
+
+                if rivet_config["draw_contur_heatmap"]:
+
+                    axis_log = ""
+                    if rivet_config["xaxis_log"]:
+                        axis_log = axis_log + " --xlog"
+                    if rivet_config["yaxis_log"]:
+                        axis_log = axis_log + " --ylog"
+
+                    axis_label = ""
+                    if rivet_config["xaxis_label"]:
+                        axis_label = axis_label + " -x " + rivet_config["xaxis_label"]
+                    if rivet_config["yaxis_label"]:
+                        axis_label = axis_label + " -y " + rivet_config["yaxis_label"]
+
+                    if rivet_config["xaxis_relvar"]:
+                        if rivet_config["xaxis_label"]:
+                            xaxis_var = rivet_config["xaxis_label"]
+                        else:
+                            xaxis_var = "xaxis_relvar"
+                    else:
+                        xaxis_var = rivet_config["xaxis_var"]
+                    if rivet_config["yaxis_relvar"]:
+                        if rivet_config["yaxis_label"]:
+                            yaxis_var = rivet_config["yaxis_label"]
+                        else:
+                            yaxis_var = "yaxis_relvar"
+                    else:
+                        yaxis_var = rivet_config["yaxis_var"]
+
+                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} {2} {3}' \
+                                                        .format(xaxis_var, yaxis_var,axis_label, axis_log)
+
+            wrapper = open(pjoin(self.me_dir, "Analysis", "contur", "run_contur.sh"), "w")
+            wrapper.write(set_env)
+ 
+            wrapper.write('{0}\n'.format(contur_cmd))
+            wrapper.close()
+ 
+            misc.call(["run_contur.sh"], cwd=(pjoin(self.me_dir, "Analysis", "contur")))
+
+            logger.info("Contur outputs are stored in {0}".format(pjoin(self.me_dir, "Analysis", "contur","conturPlot")))
+            self.update_status("postprocessing contur done", level="rivet")
+
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling()
     def run_generate_events(self, switch_mode, args):
@@ -2580,10 +2668,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 # shower launches pgs/delphes if needed    
                 self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
                 self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+                self.exec_cmd('rivet --no_default', postcmd=False, printcmd=False)
                 self.store_result()
                         
             if self.allow_notification_center:    
-                misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
@@ -2797,6 +2886,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         self.ask_run_configuration('parton')
         self.banner = None
         self.Gdirs = None
+
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir))
@@ -2988,8 +3078,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            misc.gunzip('%s/%s/unweighted_events.lhe.gz' % 
-                                  (pjoin(self.me_dir,'Events'), self.run_name))
+            path = '%s/%s/unweighted_events.lhe.gz' % (pjoin(self.me_dir,'Events'), self.run_name)
+
+            if os.path.exists(path):
+                misc.gunzip(path)
 
             self.create_root_file('%s/unweighted_events.lhe' % self.run_name,
                                   '%s/unweighted_events.root' % self.run_name)
@@ -3104,7 +3196,8 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             else:
                 run_card = self.run_card
             self.run_card = run_card
-            self.cluster.modify_interface(self)
+            if self.cluster:
+                self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
@@ -3125,7 +3218,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                             if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
                                 raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
                                                                          mandatory_file,run_card['bias_module']))
-                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                        misc.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
                                                                      os.path.basename(run_card['bias_module'])))
                 
                 #check expected parameters for the module.
@@ -3359,7 +3452,23 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         elif self.run_card['hard_survey']:
             self.pass_in_difficult_integration_mode(self.run_card['hard_survey'])
-            
+
+        if self.proc_characteristics['hel_recycling'] and self.run_card['hel_recycling']:
+            jobs, P_zero_result = ajobcreator.get_helicity()
+        else:
+            for p in subproc:
+                for f in misc.glob('matrix*_orig.f', pjoin(self.me_dir, 'SubProcesses', p)):
+                    new_file = f.replace('_orig','_optim')
+                    files.cp(f, f.replace('_orig','_optim'))
+                    f = '%s.o' % f[:-2]
+                    if os.path.exists(f):
+                        files.cp(f, f.replace('_orig','_optim'))
+            try:
+                os.remove(pjoin(self.me_dir, 'SubProcesses', p, 'Hel', 'selection'))
+            except Exception as error:
+                logger.debug(error)
+                pass
+                                
         jobs, P_zero_result = ajobcreator.launch()
         # Check if all or only some fails
         if P_zero_result:
@@ -3370,7 +3479,9 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 logger.warning(''' %s SubProcesses doesn\'t have available phase-space.
             Please check mass spectrum.''' % ','.join(P_zero_result))
-                
+            self.get_Gdir()
+            for P in P_zero_result:
+                self.Gdirs[0][pjoin(self.me_dir,'SubProcesses',P)] = []
         
         self.monitor(run_type='All jobs submitted for survey', html=True)
         if not self.history or 'survey' in self.history[-1] or self.ninitial ==1  or \
@@ -3422,6 +3533,9 @@ Beware that this can be dangerous for local multicore runs.""")
         self.nb_refine += 1
         args = self.split_arg(line)
         treshold=None
+               
+
+        
         for a in args:
             if a.startswith('--treshold='):
                 treshold = float(a.split('=',1)[1])
@@ -3586,6 +3700,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         if self.run_card['gridpack'] and isinstance(self, GridPackCmd):
             return GridPackCmd.do_combine_events(self, line)
+
     
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -3602,7 +3717,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                 '%s_%s_banner.txt' % (self.run_name, tag)))
         
-        
+
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
         AllEvent.banner = self.banner
@@ -3615,15 +3730,20 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
+                sum_xsec += result.get('xsec')
+                sum_xerru.append(result.get('xerru'))
+                sum_axsec += result.get('axsec')
+
+                if self.run_card['gridpack'] or self.run_card['nevents']==0:
+                    os.remove(pjoin(Gdir, 'events.lhe'))
+                    continue
+
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec'),
                              result.get('xerru'),
                              result.get('axsec')
                              )
-                sum_xsec += result.get('xsec')
-                sum_xerru.append(result.get('xerru'))
-                sum_axsec += result.get('axsec')
-                
+ 
                 if len(AllEvent) >= 80: #perform a partial unweighting
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
                           get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
@@ -3653,7 +3773,7 @@ Beware that this can be dangerous for local multicore runs.""")
                    
         self.results.add_detail('nb_event', nb_event)
     
-        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
         
         
@@ -3935,7 +4055,7 @@ Beware that this can be dangerous for local multicore runs.""")
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                              cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
-            out = out.decode().replace('\n','')
+            out = out.decode(errors='ignore').replace('\n','')
             PY8_curr_version = out
             # In order to test that the version is correctly formed, we try to cast
             # it to a float
@@ -3974,16 +4094,52 @@ Beware that this can be dangerous for local multicore runs.""")
         tag = self.run_tag
         
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
-        if PY8_Card['HEPMCoutput:file'] in ['auto', 'autoremove']:
-            if PY8_Card['HEPMCoutput:file'] == 'autoremove':
-                self.to_store.append('nopy8')
-            elif 'nopy8' in self.to_store:
-                self.to_store.remove('nopy8')
-            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
-                                                  '%s_pythia8_events.hepmc'%tag)
+
+        hepmc_format = PY8_Card['HEPMCoutput:file'].lower()
+        if hepmc_format == "auto":
+            hepmc_format = "hepmc.gz"
+        elif hepmc_format == "autoremove":
+            hepmc_format = "hepmcremove"
+
+        # output format : hepmc/fifo
+        if hepmc_format.startswith("hepmc"):
+
+            hepmc_specs = hepmc_format.split('@')
+            hepmc_path = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia8_events.hepmc'%tag)
+
+            # In case @ is given (output path)
+            if len(hepmc_specs) > 1:
+                if os.path.isabs(hepmc_specs[1]):
+                    if os.path.exists(hepmc_specs[1]):
+                        os.mkdir(pjoin(hepmc_specs[1], self.run_name))
+                        self.to_store.append("moveHEPMC@" + pjoin(hepmc_specs[1], self.run_name))
+                    else:
+                        logger.warning("%s does not exist, using default output path"%hepmc_specs[1])
+                else:
+                    self.to_store.append("moveHEPMC@" + pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
+                    os.mkdir(pjoin(self.me_dir, 'Events', hepmc_specs[1], self.run_name))
+
+            # Compress if .gz is given
+            if hepmc_specs[0].endswith(".gz"):
+                if not 'compressHEPMC' in self.to_store:
+                    self.to_store.append('compressHEPMC')
+            else:
+                if 'compressHEPMC' in self.to_store:
+                    self.to_store.remove('compressHEPMC')
+
+            # Remove if remove is given
+            if hepmc_specs[0].endswith("remove"):
+                if not 'removeHEPMC' in self.to_store:
+                    self.to_store.append('removeHEPMC')
+            else:
+                if 'removeHEPMC' in self.to_store:
+                    self.to_store.remove('removeHEPMC')
+
+            HepMC_event_output=hepmc_path
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
-        elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
-            fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
+
+        elif hepmc_format.startswith('fifo'):
+            fifo_specs = hepmc_format.split('@')
             fifo_path  = None
             if len(fifo_specs)<=1:
                 fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8.hepmc.fifo')
@@ -4008,13 +4164,11 @@ already exists and is not a fifo file."""%fifo_path)
                 # Use defaultSet not to overwrite the current userSet status
                 PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
             HepMC_event_output=fifo_path    
-        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null','None']:
+        elif hepmc_format in ['','/dev/null','None']:
             logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
-            # Normalize the relative path if given as relative by the user.
-            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
-                                                   PY8_Card['HEPMCoutput:file'])
+            raise InvalidCmd("Unknow HEPMCoutput:file setting, hepmc/hepmc.gz/hepmcremove/fifo")
 
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
@@ -4057,15 +4211,17 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList, force=True)
+            
 
-            for scale in PY8_Card['SysCalc:qCutList']:
-                if scale<(1.5*self.run_card['xqcut']):
-                    logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
-        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
-        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
-        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
-        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+            if PY8_Card['SysCalc:qCutList']!='auto':
+                for scale in PY8_Card['SysCalc:qCutList']:
+                    if scale<(1.5*self.run_card['xqcut']):
+                        logger.error(
+            'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
+            " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+            "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+            ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+            'It would be better/safer to use a larger qCut or a smaller xqcut.')
                 
             # Specific MLM settings
             # PY8 should not implement the MLM veto since the driver should do it
@@ -4173,10 +4329,12 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
                         PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
-            
-            for scale in PY8_Card['SysCalc:tmsList']:
-                if scale<self.run_card[CKKW_cut]:
-                    logger.error(
+                #else:
+                #    PY8_Card.MadGraphSet('SysCalc:tmsList', [], force=True)
+            if PY8_Card['SysCalc:tmsList']!='auto':
+                for scale in PY8_Card['SysCalc:tmsList']:
+                    if float(scale)<float(self.run_card[CKKW_cut]):
+                        logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
@@ -4215,7 +4373,7 @@ already exists and is not a fifo file."""%fifo_path)
             args.remove('--no_default')
         else:
             no_default = False
-            
+
         if not self.run_name:
             self.check_pythia8(args)
             self.configure_directory(html_opening =False)
@@ -4372,9 +4530,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                 # Start a parallelization instance (stored in self.cluster)
                 self.configure_run_mode(self.options['run_mode'])
                 if self.options['run_mode']==1:
-                    n_cores = max(self.options['cluster_size'],1)
+                    n_cores = max(int(self.options['cluster_size']),1)
                 elif self.options['run_mode']==2:
-                    n_cores = max(self.cluster.nb_core,1)
+                    n_cores = max(int(self.cluster.nb_core),1)
                 
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
@@ -4432,6 +4590,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 shutil.copy(pythia_main,parallelization_dir)
                 # Add a safe card in parallelization
                 ParallelPY8Card = copy.copy(PY8_Card)
+                assert ParallelPY8Card['JetMatching:nJetMax'] ==  PY8_Card['JetMatching:nJetMax']
+
                 # Normalize the name of the HEPMCouput and lhe input
                 if HepMC_event_output:
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
@@ -5349,9 +5509,7 @@ tar -czf split_$1.tar.gz split_$1
 
         if not self.run_name:
             return
-        
-
-            
+ 
         if not self.to_store:
             return 
         
@@ -5382,13 +5540,23 @@ tar -czf split_$1.tar.gz split_$1
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
             self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
-                if 'nopy8' in self.to_store:
+                if 'removeHEPMC' in self.to_store:
                     os.remove(file_path)
-                else:   
-                    self.update_status('Storing Pythia8 files of previous run', 
-                                                         level='pythia', error=True)
+
+                self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
+                if 'compressHEPMC' in self.to_store:
                     misc.gzip(file_path,stdout=file_path)
-    
+                    hepmc_fileformat = ".gz"
+
+                moveHEPMC_in_to_store = None
+                for to_store in self.to_store:
+                    if "moveHEPMC" in to_store:
+                        moveHEPMC_in_to_store = to_store
+
+                if not moveHEPMC_in_to_store == None:
+                    move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
+                    os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
+
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
         
@@ -5655,6 +5823,13 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
             self.make_opts_var['lhapdf'] = ""
+
+            # this is the case of collision with dressed leptons
+            if abs(self.run_card['lpp1']) == abs(self.run_card['lpp2']) in [3,4]:
+                # copy the files for the chosen density
+                if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                    self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
+
             
         # set random number
         if self.run_card['iseed'] != 0:
@@ -5662,7 +5837,7 @@ tar -czf split_$1.tar.gz split_$1
             self.run_card['iseed'] = 0
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
-            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'), template=pjoin(self.me_dir, 'Cards','run_card.dat'))
             time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getmtime(pjoin(self.me_dir,'Cards','param_card.dat'))])
             self.configured = time_mod
@@ -5678,16 +5853,20 @@ tar -czf split_$1.tar.gz split_$1
         #set random seed for python part of the code
         if self.run_card['python_seed'] == -2: #-2 means same as run_card
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         elif self.run_card['python_seed'] >= 0:
             import random
-            random.seed(self.run_card['python_seed'])
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']  
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
-        self.update_make_opts()
+        self.update_make_opts(self.run_card)
         # reset list of Gdirectory
         self.Gdirs = None
             
@@ -5721,7 +5900,7 @@ tar -czf split_$1.tar.gz split_$1
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
                        cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode()
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0].decode(errors='ignore')
             if 'VALID' not in str(bias_module_valid).upper() or \
                'INVALID' in str(bias_module_valid).upper():
                 raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
@@ -5812,15 +5991,16 @@ tar -czf split_$1.tar.gz split_$1
     
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton', 'rivet'],
                        'pythia': ['pythia','pgs','delphes','madanalysis5_hadron'],
-                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron', 'rivet'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
                        'madanalysis5_parton':['madanalysis5_parton'],
                        'plot':[],
-                       'syscalc':[]}
+                       'syscalc':[],
+                       'rivet':['rivet']}
 
         if name == self.run_name:        
             if reload_card:
@@ -5921,7 +6101,9 @@ tar -czf split_$1.tar.gz split_$1
             raise MadGraph5Error('Random seed too large ' + str(self.random) + ' > 30081*30081')
         if self.run_card['python_seed'] == -2: 
             import random
-            random.seed(self.random)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.random)  
+                random.mg_seedset = self.random
             
     ############################################################################
     def save_random(self):
@@ -6208,8 +6390,10 @@ tar -czf split_$1.tar.gz split_$1
             cards.append('madanalysis5_parton_card.dat')
         if switch['analysis'].upper() in ['MADANALYSIS5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
-        if switch['analysis'].upper() in ['MADANALYSIS4']:
+        elif switch['analysis'].upper() in ['MADANALYSIS4']:
             cards.append('plot_card.dat')
+        elif switch['analysis'].upper() in ['RIVET']:
+            cards.append('rivet_card.dat')
 
         self.keep_cards(cards)
         
@@ -6515,10 +6699,14 @@ class GridPackCmd(MadEventCmd):
 
         if self.run_card['python_seed'] == -2:
             import random
-            random.seed(seed)
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(seed)  
+                random.mg_seedset = seed
         elif self.run_card['python_seed'] > 0:
             import random
-            random.seed(self.run_card['python_seed'])            
+            if not hasattr(random, 'mg_seedset'):
+                random.seed(self.run_card['python_seed'])  
+                random.mg_seedset = self.run_card['python_seed']         
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
         #misc.call([pjoin(self.me_dir,'bin','refine4grid'),
@@ -6531,11 +6719,12 @@ class GridPackCmd(MadEventCmd):
         if not self.readonly:
             self.exec_cmd('store_events')
             self.print_results_in_shell(self.results.current)
-            if self.run_card['systematics_program'] == 'systematics':
+            if self.run_card['systematics_program'] == 'systematics' and self.run_card['use_syst']:
                 self.exec_cmd('systematics %s --from_card' % self.run_name,
                                                postcmd=False,printcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
-        else:
+        elif self.run_card['use_syst'] and self.run_card['systematics_program'] == 'systematics':
+            self.options['nb_core']  = 1
             self.exec_cmd('systematics %s --from_card' % 
                           pjoin('Events', self.run_name, 'unweighted_events.lhe.gz'),
                                                postcmd=False,printcmd=False)
@@ -7050,9 +7239,13 @@ class MadLoopInitializer(object):
 
         # Setup parallelization
         if MG_options:
-            mcore = cluster.MultiCore(**MG_options)
+            if interface and  hasattr(interface, 'cluster') and isinstance(interface.cluster, cluster.MultiCore):
+                mcore = interface.cluster
+            else: 
+                mcore = cluster.MultiCore(**MG_options)
         else:
             mcore = cluster.onecore
+
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(

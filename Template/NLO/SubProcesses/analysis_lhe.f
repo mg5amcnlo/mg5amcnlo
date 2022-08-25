@@ -87,7 +87,7 @@ c
 c Auxiliary quantities used when writing events
       integer kwgtinfo
       integer i_wgt, kk, ii, jj, n, nn
-      character*140 buff
+      character*1000 buff
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),

@@ -40,6 +40,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 
+from tests import test_manager
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -55,9 +56,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    
     
     def setUp(self):
+        self.debugging = unittest.debug
         
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
@@ -343,7 +345,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-        self.assertFalse(self.debugging)
     
 
     def test_short_launch_amcatnlo_name(self):
@@ -562,7 +563,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         
         
-
+    @test_manager.bypass_for_py3
     def test_short_jet_veto_xsec(self):
         """tests the jet-veto cross section at NNLL+NLO"""    
 

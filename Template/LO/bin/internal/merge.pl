@@ -105,25 +105,33 @@ foreach $infile (@ARGV) {
   }
 
   # Store information for later
-  push(@infiles, [ $infile, $noevents, $xsec, [ @gzinit ], $lhe_version ]);
+  push(@infiles, [ $infile, $noevents, $gzinit[1][2], [ @gzinit ], $lhe_version , $xsec]);
 }
 
 
 ###########################################################################
 # Check/compute cross-sections, totals and unit weight
 ###########################################################################
-$oldxsec        = $infiles[0][2];
+$oldabsxsec        = $infiles[0][2]; # absolute x-section !
+$oldxsec = $infiles[0][5]; # actual cross-section
 @oldinit        = @{$infiles[0][3]};
 $oldlhe_version = $infiles[0][4];
-$totevents = 0;  $totxsec = 0.0;
+$totevents = 0;  $totxsec = 0.0; $totabsxsec = 0.0;
+$nb_files = 0;
 foreach $infile (@infiles) {
   print "Input file: $infile->[0]\n";
-  print " No. Events = $infile->[1], Cross-section = $infile->[2], LHE version = $infile->[4]\n";
-
+  print " No. Events = $infile->[1], Abs Cross-section = $infile->[2], cross-section = $infile->[5], LHE version = $infile->[4]\n";
+  $nb_files +=1;
   # Check that cross sections do not differ too much
-  $newxsec = $infile->[2];
+  $newabsxsec = $infile->[2];
+  if (abs(($newabsxsec - $oldabsxsec) / $newabsxsec) > 0.05 ) {
+    die(" WARNING ABSCross sections do not agree with a 5\% precision!\n: $newabsxsec $oldabsxsec");
+  }
+  $oldabsxsec = $newabsxsec;
+  # Check that cross sections do not differ too much
+  $newxsec = $infile->[5];
   if (abs(($newxsec - $oldxsec) / $newxsec) > 0.05 ) {
-    print " WARNING Cross sections do not agree with a 5\% precision!\n";
+    die(" WARNING Cross sections do not agree with a 5\% precision! $newxsec >< $oldxsec\n ");
   }
   $oldxsec = $newxsec;
 
@@ -157,34 +165,33 @@ foreach $infile (@infiles) {
     print " xsecup = $currinit[$i][0], xerrup = $currinit[$i][1]\n";
     print " xmaxup = $currinit[$i][2], lprup = $currinit[$i][3]\n";
 
+
     # XSECUP = sum(xsecup * no.events) / tot.events
     # XERRUP = sqrt( sum(sigma^2 * no.events^2) ) / tot.events
 
     # Here we temporarily store:
     #  sum(xsecup * no.events)
     #  sum(sigma^2 * no.events^2)
-    if (\$oldinit == \$currinit) {
+    if ($nb_files == 1) {
       $oldinit[$i][0] *= $infile->[1];
       $oldinit[$i][1] *= $oldinit[$i][1] * $infile->[1]**2;
-
     } else {
       $oldinit[$i][0] += ($currinit[$i][0] * $infile->[1]);
       $oldinit[$i][1] += $currinit[$i][1]**2 * $infile->[1]**2;
-
     }
-
     # XMAXUP = max(xmaxup)
-    $oldinit[$i][2] = max($oldinit[$i][2], $currinit[$i][2]);
+    #$oldinit[$i][2] = max($oldinit[$i][2], $currinit[$i][2]);
   }
 
   # Total number of events and total cross-section
   $totevents += $infile->[1];
-  $totxsec += ($infile->[1] * $infile->[2]);
+  $totxsec += ($infile->[1] * $infile->[5]);
+  $totabsxsec += ($infile->[1] * $infile->[2]);
+
 
   print "\n";
 }
 print "\n";
-
 # Finish calculation of XSECUP and XERRUP
 for ($i = 1; $i <= $#oldinit; $i++) {
   if ($oldinit[$i] =~ /^<generator/) { next; }
@@ -194,13 +201,17 @@ for ($i = 1; $i <= $#oldinit; $i++) {
   $oldinit[$i][1] = sqrt($oldinit[$i][1]);
   $oldinit[$i][1] /= $totevents;
   $oldinit[$i][1] = sprintf('%0.5E', $oldinit[$i][1]);
+
 }
 
 # Finish calculation of total xsec and new unit weight
 $totxsec /= $totevents;
+$totabsxsec /= $totevents;
 $dispxsec = sprintf('%0.5E', $totxsec);
-$uwgt = sprintf('%0.5E', $totxsec / $totevents);
-
+$uwgt = sprintf('%0.5E', $totabsxsec);
+for ($i = 1; $i <= $#oldinit; $i++) {
+     $oldinit[$i][2] = abs($uwgt)
+}
 # Display new information
 print "Banner file: $bannerfile\n";
 print "Output file: $outfile\n";

@@ -81,11 +81,12 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('input_format', 'auto', allowed=['auto','lhe', 'hepmc', 'lhe_no_banner'])
         self.add_param('frame_id', 6)
         self.add_param('global_order_coupling', '')
+        self.add_param('identical_particle_in_prod_and_decay', 'average')
         
     ############################################################################
     ##  Special post-processing of the options                                ## 
     ############################################################################
-    def post_set_ms_dir(self, value, change_userdefine, raiseerror):
+    def post_set_ms_dir(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set ms_dir """
         
         self.__setitem__('curr_dir', value, change_userdefine=change_userdefine)
@@ -94,23 +95,31 @@ class MadSpinOptions(banner.ConfigFile):
     def post_set_seed(self, value, change_userdefine, raiseerror):
         """ special handling for set seed """
         
-        random.seed(value)
+        if not hasattr(random, 'mg_seedset'):
+            random.seed(self['seed'])  
+            random.mg_seedset = self['seed']  
 
     ############################################################################        
-    def post_set_run_card(self, value, change_userdefine, raiseerror):
+    def post_set_run_card(self, value, change_userdefine, raiseerror, *opts):
         """ special handling for set run_card """
         
         if value == 'default':
             self.run_card = None
+        elif not value:
+            self.run_card = None
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
-            
-        args = value.split()
-        if  len(args) >2:
-            if not self.options['run_card']:
-                self.run_card =  banner.RunCardLO()
-                self.run_card.remove_all_cut()
-            self.run_card[args[0]] = ' '.join(args[1:])
+        else:
+            misc.sprint(value)
+            args = value.split()
+            if  len(args) >1:
+                if not hasattr(self, 'run_card'):
+                    misc.sprint("init run_card")
+                    self.run_card =  banner.RunCardLO()
+                    self.run_card.remove_all_cut()
+                self.run_card[args[0]] = ' '.join(args[1:])
+            else:
+                raise Exception("wrong syntax for \"set run_card %s\"" % value)
             
         
     ############################################################################
@@ -121,6 +130,11 @@ class MadSpinOptions(banner.ConfigFile):
             logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
             logger.warning('Not all functionalities of MadSpin handle this mode correctly (only onshell mode so far).')
 
+    ############################################################################
+    def post_identical_in_prod_and_decay(self, value, change_userdefine, raiseerror):
+        """ special handling for set fixed_order """
+        if value not in ["crash", 'average', 'max', 'first']:
+            raise Exception("value %s not supported for this parameter identical_in_prod_and_decay")
 
 class MadSpinInterface(extended_cmd.Cmd):
     """Basic interface for madspin"""
@@ -241,6 +255,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.options['nb_sigma'] = N_sigma
             if self.options['BW_cut'] == -1:
                 self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+                if self.options['BW_cut'] > 25:
+                    logger.critical("value of bwcutoff set to %s from the input file. This is much too large value for Madspin and the validity of the Narrow-width-Approximation. Please ensure that you overwrite that value via \"set BW_cut X\"  to a smaller value (like X=10)", self.options['BW_cut'])
             
             if isinstance(run_card, banner.RunCardLO):
                 run_card.update_system_parameter_for_include()
@@ -451,14 +467,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             except ValueError:
                 raise self.InvalidCmd('second argument should be a real number.')
         
-        elif args[0] == 'BW_effect':
-            if args[1] in [0, False,'.false.', 'F', 'f', 'False', 'no']:
-                args[1] = 0
-            elif args[1] in [1, True,'.true.', 'T', 't', 'True', 'yes']:
-                args[1] = 1
-            else:
-                raise self.InvalidCmd('second argument should be either T or F.')
-        
         elif args[0] == 'curr_dir':
             if not os.path.isdir(args[1]):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
@@ -499,8 +507,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             opts = list(self.options.keys()) + ['seed', "spinmode"]
             return self.list_completion(text, opts) 
         elif len(args) == 2:
-            if args[1] == 'BW_effect':
-                return self.list_completion(text, ['True', 'False']) 
             if args[1] == 'ms_dir':
                 return self.path_completion(text, '.', only_dirs = True)
         elif args[1] == 'ms_dir':
@@ -517,8 +523,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         print('')
         print('-- assign to a given option a given value')
         print('   - set max_weight VALUE: pre-define the maximum_weight for the reweighting')
-        print('   - set BW_effect True|False: [default:True] reshuffle the momenta to describe')
-        print('       corrrectly the Breit-Wigner of the decayed particle')
         print('   - set seed VALUE: fix the value of the seed to a given value.')
         print('       by default use the current time to set the seed. random number are')
         print('       generated by the python module random using the Mersenne Twister generator.')
@@ -637,9 +641,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if pid in self.final_state:
                     break
         else:
-            logger.info("Nothing to decay ...")
-            return
+            if not self.options['onlyhelicity']:
+                logger.info("Nothing to decay ...")
+                return
         
+        if self.options['BW_cut'] > 100:
+            raise Exception("BW_cut parameter is much too large (>100) for narrow width approximation. Please set it up to a smaller value in your madspin_card.dat")
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
@@ -714,6 +721,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         import madgraph.iolibs.save_load_object as save_load_object
         
         generate_all = save_load_object.load_from_file(pjoin(self.options['ms_dir'], 'madspin.pkl'))
+        
+        #restore data passed to string to help pickle
+        generate_all.all_decay = eval(generate_all.all_decay)
+        for me in generate_all.all_ME:
+            for d in generate_all.all_ME[me]['decays']:
+                if isinstance(d['decay_struct'], str):
+                    d['decay_struct'] = eval(d['decay_struct'])
+
+
         # Re-create information which are not save in the pickle.
         generate_all.evtfile = self.events_file
         generate_all.curr_event = madspin.Event(self.events_file, self.banner ) 
@@ -1282,6 +1298,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if self.options["run_card"]:
                     if hasattr(self, 'run_card'):
                         run_card = self.run_card
+                    elif hasattr(self.options, 'run_card'):
+                        run_card = self.options.run_card
                     else:
                         self.run_card = banner.RunCard(self.options["run_card"])
                         run_card = self.run_card 
@@ -1703,12 +1721,28 @@ class MadSpinInterface(extended_cmd.Cmd):
             orig_order = self.all_me[tag]['order']
         pdir = self.all_me[tag]['pdir']
         if pdir in self.all_f2py:
-            p = event.get_momenta(orig_order)
-            p = rwgt_interface.ReweightInterface.invert_momenta(p)
-            if event[0].color1 == 599 and event.aqcd==0:
-                return self.all_f2py[pdir](p, 0.113, 0)
+            all_p = event.get_all_momenta(orig_order)
+            if self.options['identical_particle_in_prod_and_decay'] == "crash" and\
+                len(all_p)> 1:
+                raise Exception("Ambiguous particle in production and decay. crash as requested by 'identical_particle_in_prod_and_decay'")
+            out = 0
+            for p in all_p:
+                p = rwgt_interface.ReweightInterface.invert_momenta(p)
+                if event[0].color1 == 599 and event.aqcd==0:
+                    new_value = self.all_f2py[pdir](p, 0.113, 0)
+                else:
+                    new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                if self.options['identical_particle_in_prod_and_decay'] == "average":
+                    out += new_value
+                else:
+                    if abs(out)< abs(new_value):
+                        out = new_value
+                if self.options['identical_particle_in_prod_and_decay'] == 'first':
+                    return out
+            if self.options['identical_particle_in_prod_and_decay'] == "average":
+                return out/len(all_p)
             else:
-                return self.all_f2py[pdir](p, event.aqcd, 0)
+                return out
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))

@@ -259,8 +259,9 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
+      COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C GLOBAL VARIABLES
 C  
@@ -317,7 +318,7 @@ C don't chache for extra counterterms
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)   
+              BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))=BORNS(2-(1-ihel)/2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))   
           ENDDO
         ENDDO
         ENDDO
@@ -342,7 +343,7 @@ c          Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
           ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
         ENDDO
 	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
+        ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB_CNT%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))
         ENDDO
       ENDDO
       ENDDO

@@ -490,7 +490,7 @@ class BasicCmd(OriginalCmd):
             out = []
             for name, opt in dico.items():
                 out += opt
-            return list(set(out))
+            return misc.make_unique(out)
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
@@ -1510,20 +1510,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 stop = self.nice_user_error(error, line)
 
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Invalid Command: %s' % error.__class__.__name__)
 
         except self.ConfigurationError as error:
             stop = self.nice_config_error(error, line)
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Configuration error')
         except Exception as error:
             stop = self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Exception: %s' % error.__class__.__name__)
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
@@ -1633,7 +1633,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def compile(self, *args, **opts):
         """ """
-        
+        import multiprocessing
+        if not self.options['nb_core'] or self.options['nb_core'] == 'None':
+            self.options['nb_core'] = multiprocessing.cpu_count()
         return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):
@@ -2836,7 +2838,7 @@ class ControlSwitch(SmartQuestion):
                 rules = dict([(k, None) for k in self.switch])
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
-                rules = self.check_consistency_with_all(key2)
+                rules = self.check_consistency_with_all(key2, value2)
                         
             for key, replacement in rules.items():
                 if replacement:

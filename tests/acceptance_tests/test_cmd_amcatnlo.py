@@ -34,6 +34,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 from tests.parallel_tests.test_aloha import set_global
 import tests.IOTests as IOTests
 
+import madgraph
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
@@ -57,10 +58,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
     
     def setUp(self):
-        
+        self.debugging = unittest.debug
+    
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
             #if os.path.exists(self.tmpdir):
@@ -77,7 +78,6 @@ class MECmdShell(IOTests.IOTestManager):
     def tearDown(self):
         if not self.debugging:
             shutil.rmtree(self.tmpdir)
-        self.assertFalse(self.debugging)
     
     
     def generate(self, process, model, multiparticles=[]):
@@ -262,6 +262,34 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+
+    def test_gen_evt_onlygen(self):
+        """test that the event generation splitting works"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
+        self.do('generate_events -f')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+
+        # now re-generate with -o
+        self.do('generate_events -of')
+        self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/run_02_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
+
+
 
     def test_madspin_ON_and_onshell_atNLO(self):
 
@@ -529,6 +557,64 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
+    def test_eft_running_nlo(self):
+        """check that  gives the correct result"""
+        
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.run_cmd('set automatic_html_opening False --save')
+        mg_cmd.run_cmd('import model %s/tests/input_files/SMEFTatNLO_running-NLO' % madgraph.MG5DIR)
+        mg_cmd.run_cmd('generate p p > t t~ NP=2 NP^2==2 QCD=2 QED=0 [QCD]')
+        mg_cmd.run_cmd('output %s/'% self.path)
+        #self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.path)
+        #self.cmd_line.no_notification()
+        #self.cmd_line.exec_cmd('set automatic_html_opening False')
+        
+        #check validity of the default run_card
+        run_card = banner.RunCardNLO(pjoin(self.path, 'Cards','run_card.dat'))
+
+        #f = open(pjoin(self.path, 'Cards','run_card.dat'),'r')
+        #print(f.read())
+        self.assertTrue('fixed_extra_scale' not in run_card.user_set)
+        self.assertTrue('mue_ref_fixed' in run_card.user_set)
+        self.assertTrue('mue_over_ref' not in  run_card.user_set)
+        self.assertTrue(run_card['fixed_extra_scale'])
+        
+        
+
+        cwd = os.getcwd()
+        import subprocess
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
+
+        subprocess.call([pjoin(self.path, 'bin','generate_events'),'aMC@LO', '-p', '-f'],            
+                         cwd=pjoin(self.path),
+                         stdout=stdout,stderr=stdout)
+
+
+
+        results = self.load_result('run_01_LO')[0]
+
+
+        val1 = results['cross']
+        err1 = results['error']
+
+        target = 617.7542699925228
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
+
+
     def test_generate_events_lo_hw6_stdhep(self):
         """test the param_card created is correct"""
         
@@ -693,10 +779,45 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue('Number of events generated: 100' in data[i+3])
 
 
-    def load_result(self, run_name):
-        
+    def load_result(self, run_name='run_01'):
+
         import madgraph.iolibs.save_load_object as save_load_object
         import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
-        
+
         result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.path)
         return result[run_name]
+
+
+    def test_generate_taggedph_nloew(self):
+        """test the param_card created is correct"""
+        
+
+        text = """
+        import model loop_qcd_qed_sm_Gmu-a0
+        generate u u~ > !a! !a! [QED]
+        output %s
+        launch NLO
+        set lepphreco False
+        set quarkphreco False
+        """ % (self.path)
+        
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        
+        
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))

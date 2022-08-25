@@ -282,6 +282,18 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
+        if proc['perturbation_couplings'] and proc['orders'] and not proc['squared_orders']:
+            if any(val not in [0,99] for val in proc['orders'].values()):
+                message = "Potentially ambigious syntax detected. Note that the syntax of paper 1804.10017 (used in 3.0.x) is not used anymore (since version 3.1.0).\n" +\
+                    'If you want to follow the syntax of that paper, you can just replace "QED" by "aEW" and "QCD" by "aS".\n' +\
+                    'More information here: http://amcatnlo.cern.ch/co.htm\n'
+                if not self.options['acknowledged_v3.1_syntax']:
+                    raise Exception(message+ 'If you know the current meaning of the syntax you can bypass this crash by running (once per machine) this command:\n set acknowledged_v3.1_syntax True --global')
+
+
+
+
+
     def validate_model(self, loop_type='virtual',coupling_type=['QCD'], stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
@@ -715,8 +727,8 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             # For a unique output of multiple type of exporter model information
             # are save in memory
             if hasattr(self, 'previous_lorentz'):
-                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                wanted_lorentz = misc.make_unique(self.previous_lorentz + wanted_lorentz)
+                wanted_couplings = misc.make_unique(self.previous_couplings + wanted_couplings)
                 del self.previous_lorentz
                 del self.previous_couplings
             
@@ -803,6 +815,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         """Generate an amplitude for a given process and add to
         existing amplitudes
         """
+
         args = self.split_arg(line)
         # Check the validity of the arguments
         self.check_add(args)
@@ -907,6 +920,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                       amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
             (cpu_time2 - cpu_time1))
+            
 
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
@@ -961,7 +975,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if os.path.exists(pjoin(install_dir1, 'collier')):
                 self.code['collier'] =  pjoin(install_dir1, 'collier')
             if os.path.exists(pjoin(install_dir2, 'golem95')):
-                self.code['glem'] =  pjoin(install_dir2, 'golem95')
+                self.code['golem'] =  pjoin(install_dir2, 'golem95')
             if os.path.exists(pjoin(install_dir1, 'ninja')):
                 self.code['ninja'] =  pjoin(install_dir2, 'ninja','lib')
         

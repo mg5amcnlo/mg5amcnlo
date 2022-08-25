@@ -90,7 +90,7 @@ C LOCAL VARIABLES
 C  
       INTEGER I,J
       COMPLEX*16 ZTEMP
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
@@ -115,6 +115,6 @@ C ----------
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX%(proc_id)s = MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          MATRIX%(proc_id)s = MATRIX%(proc_id)s+ZTEMP*DCONJG(JAMP(I))   
       ENDDO
       END

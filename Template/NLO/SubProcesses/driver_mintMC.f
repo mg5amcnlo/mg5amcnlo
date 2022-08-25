@@ -133,7 +133,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      call initcluster
+      call fill_configurations_common
       call check_amp_split 
 c     
 c     Get user input
@@ -364,7 +364,7 @@ c Randomly pick the contribution that will be written in the event file
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
      $     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write)
+     $     +t_write+t_coupl)
       write(*,*) 'Time spent in Born : ',tBorn
       write(*,*) 'Time spent in PS_Generation : ',tGenPS
       write(*,*) 'Time spent in Reals_evaluation: ',tReal
@@ -383,6 +383,7 @@ c Randomly pick the contribution that will be written in the event file
       write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
       write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
       write(*,*) 'Time spent in Write_events : ',t_write
+      write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
@@ -422,6 +423,7 @@ c timing statistics
       data t_isum/0.0/
       data t_p_unw/0.0/
       data t_write/0.0/
+      data t_coupl/0.0/
       end
 
 
@@ -476,7 +478,14 @@ c
 c
 c To convert diagram number to configuration
 c
-      include 'born_conf.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs,0:fks_configs)
+      double precision pwidth(-nexternal:0,lmaxconfigs,0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common /c_configurations/pmass,pwidth,iforest,sprop,tprid
+     $     ,mapconfig
 c
 c MC counterterm stuff
 c
@@ -573,8 +582,8 @@ c These should be ignored (but kept for 'historical reasons')
          write (*,*) 'ERROR: invalid configuration number',dconfig
          stop 1
       endif
-      do i=1,mapconfig(0)
-         if (iconfig.eq.mapconfig(i)) then
+      do i=1,mapconfig(0,0)
+         if (iconfig.eq.mapconfig(i,0)) then
             iconfig=i
             exit
          endif
@@ -739,15 +748,19 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          else
             jac=0.5d0
          endif
+c Also the Born needs to be included in the Importance Sampling over the
+c FKS configurations (for the shower scale) (multiply by
+c     1/proc_map(0,0)*vol1)
+         jac=jac/(proc_map(0,0)*vol1)
          call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
          if (passcuts_nbody) then
             pass_cuts_check=.true.
-            if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
@@ -784,45 +797,32 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-c check if event or counter-event passes cuts
-            call set_cms_stuff(izero)
-            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-            call set_cms_stuff(mohdr)
-            passcuts_n1body=passcuts(p,rwgt)
-            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
-c Set the shower scales            
+c     Set the shower scales            
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(0,p) ! reset the FxFx scales
+            endif
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
+            if (ickkw.eq.3) then
+               call set_FxFx_scale(2,p1_cnt(0,1,0))
+            endif
             call set_cms_stuff(mohdr)
             call set_shower_scale_noshape(p,iFKS*2)
-c Compute the n1-body prefactors
-            call compute_prefactors_n1body(vegas_wgt,jac)
-c Include the FxFx Sudakov terms in the prefactors:
-c   CP : counter-event kinematics passes cuts
-c   EP : event kinematics passes cuts
-c   CE : counter-event kinematics exists
-c   EE : event kinematics exists
-c   CC : compute FxFx for counter-events kinematics
-c   EC : compute FxFx for event kinematics
-c
-c     CP  EP  CE  EE | CC  EC
-c     X   X   X   X  | X   X
-c     X       X   X  | X   X
-c         X   X   X  |     X
-c     X       X      | X   X
-c         X       X  |     X
-c
             if (ickkw.eq.3) then
-               call set_FxFx_scale(0,p)
-               if (passcuts_nbody .and. abrv.ne.'real') then
-                  call set_cms_stuff(izero)
-                  call set_FxFx_scale(2,p1_cnt(0,1,0))
-               endif
                if (p(0,1).gt.0d0) then
-                  call set_cms_stuff(mohdr)
                   call set_FxFx_scale(3,p)
                endif
-            endif               
+            endif              
+c Compute the n1-body prefactors
+            call compute_prefactors_n1body(vegas_wgt,jac)
+c check if event or counter-event passes cuts
+            call set_cms_stuff(izero)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (.not. (passcuts_nbody.or.passcuts_n1body)) cycle
             if (passcuts_nbody .and. abrv.ne.'real') then
                pass_cuts_check=.true.
 c Include the MonteCarlo subtraction terms
@@ -1134,7 +1134,6 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
-      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 

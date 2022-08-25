@@ -9,10 +9,10 @@ C     Return the sum of the split orders which are required in
 C      orders.inc (NLO_ORDERS)
 C     
 C     
-C     Process: u~ g > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c~ g > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d~ g > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s~ g > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u~ g > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c~ g > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d~ g > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s~ g > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
 C     
 C     CONSTANTS
@@ -111,10 +111,10 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u~ g > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c~ g > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d~ g > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s~ g > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u~ g > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c~ g > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d~ g > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s~ g > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -238,10 +238,10 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u~ g > t t~ u~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: c~ g > t t~ c~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: d~ g > t t~ d~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
-C     Process: s~ g > t t~ s~ [ real = QED QCD ] QCD^2<=6 QED^2<=0
+C     Process: u~ g > t t~ u~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: c~ g > t t~ c~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: d~ g > t t~ d~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
+C     Process: s~ g > t t~ s~ [ real = QCD QED ] QCD^2<=6 QED^2<=0
 C     
       IMPLICIT NONE
 C     
@@ -271,9 +271,10 @@ C
       INTEGER I,J,M,N
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
-      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      REAL*8  CF(NCOLOR,NCOLOR)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
+      COMPLEX*16 TMP_JAMP(0)
 C     
 C     FUNCTION
 C     
@@ -281,17 +282,21 @@ C
 C     
 C     COLOR DATA
 C     
-      DATA DENOM(1)/1/
-      DATA (CF(I,  1),I=  1,  4) /   12,    4,    0,    4/
+      DATA (CF(I,  1),I=  1,  4) /1.200000000000000D+01
+     $ ,4.000000000000000D+00,0.000000000000000D+00,4.000000000000000D
+     $ +00/
 C     1 T(1,4) T(2,3,5)
-      DATA DENOM(2)/1/
-      DATA (CF(I,  2),I=  1,  4) /    4,   12,    4,    0/
+      DATA (CF(I,  2),I=  1,  4) /4.000000000000000D+00
+     $ ,1.200000000000000D+01,4.000000000000000D+00,0.000000000000000D
+     $ +00/
 C     1 T(1,5) T(2,3,4)
-      DATA DENOM(3)/1/
-      DATA (CF(I,  3),I=  1,  4) /    0,    4,   12,    4/
+      DATA (CF(I,  3),I=  1,  4) /0.000000000000000D+00
+     $ ,4.000000000000000D+00,1.200000000000000D+01,4.000000000000000D
+     $ +00/
 C     1 T(2,1,4) T(3,5)
-      DATA DENOM(4)/1/
-      DATA (CF(I,  4),I=  1,  4) /    4,    0,    4,   12/
+      DATA (CF(I,  4),I=  1,  4) /4.000000000000000D+00
+     $ ,0.000000000000000D+00,4.000000000000000D+00,1.200000000000000D
+     $ +01/
 C     1 T(2,1,5) T(3,4)
 C     ----------
 C     BEGIN CODE
@@ -318,10 +323,16 @@ C     Amplitude(s) for diagram number 4
 C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,6),W(1,1),W(1,7),GC_11,AMP(5))
 C     JAMPs contributing to orders QCD=3 QED=0
-      JAMP(1,1)=+1D0/2D0*(+AMP(2)+IMAG1*AMP(4)+AMP(5))
-      JAMP(2,1)=+1D0/2D0*(-1D0/3D0*AMP(2)-1D0/3D0*AMP(3))
-      JAMP(3,1)=+1D0/2D0*(+AMP(1)+AMP(3)-IMAG1*AMP(4))
-      JAMP(4,1)=+1D0/2D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(5))
+      JAMP(1,1) = (5.000000000000000D-01)*AMP(2)+((0.000000000000000D
+     $ +00,5.000000000000000D-01))*AMP(4)+(5.000000000000000D-01)
+     $ *AMP(5)
+      JAMP(2,1) = (-1.666666666666667D-01)*AMP(2)+(-1.666666666666667D
+     $ -01)*AMP(3)
+      JAMP(3,1) = (5.000000000000000D-01)*AMP(1)+(5.000000000000000D
+     $ -01)*AMP(3)+((0.000000000000000D+00,-5.000000000000000D-01))
+     $ *AMP(4)
+      JAMP(4,1) = (-1.666666666666667D-01)*AMP(1)+(-1.666666666666667D
+     $ -01)*AMP(5)
 
       DO I=0,NSQAMPSO
         RES(I)=0D0
@@ -334,7 +345,7 @@ C     JAMPs contributing to orders QCD=3 QED=0
           ENDDO
           DO N = 1, NAMPSO
             RES(SQSOINDEX3(M,N)) = RES(SQSOINDEX3(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))/DENOM(I)
+     $       *DCONJG(JAMP(I,N))
           ENDDO
         ENDDO
       ENDDO

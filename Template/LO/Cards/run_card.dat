@@ -12,7 +12,7 @@
 #   mind the format:   value    = variable     ! comment             *
 #                                                                    *
 #   To display more options, you can type the command:               *
-#      update full_run_card                                          *
+#      update to_full                                                *
 #*********************************************************************
 #                                                                    
 #*********************************************************************
@@ -27,8 +27,9 @@
   %(iseed)s   = iseed   ! rnd seed (0=assigned automatically=default))
 #*********************************************************************
 # Collider type and energy                                           *
-# lpp: 0=No PDF, 1=proton, -1=antiproton, 2=photon from proton,      *
-#                3=photon from electron, 4=photon from muon          *
+# lpp: 0=No PDF, 1=proton, -1=antiproton, 2=elastic photon of proton,*
+#             +/-3=PDF of electron/positron beam                     *
+#             +/-4=PDF of muon/antimuon beam                         *
 #*********************************************************************
      %(lpp1)s        = lpp1    ! beam 1 type 
      %(lpp2)s        = lpp2    ! beam 2 type
@@ -37,37 +38,46 @@
 $beam_pol
 $frame
 #*********************************************************************
-# PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
+# PDF CHOICE: this automatically fixes alpha_s and its evol.         *
+# pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *
+#          iww=Improved Weizsaecker-Williams Approx.[hep-ph/9310350] *
+#          eva=Effective W/Z/A Approx.       [21yy.zzzzz]            *
+#          none=No PDF, same as lhapdf with lppx=0                   *
 #*********************************************************************
-     %(pdlabel)s    = pdlabel     ! PDF set                                     
+$pdlabel
      %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 $ion_pdf
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
  %(fixed_ren_scale)s = fixed_ren_scale  ! if .true. use fixed ren scale
- %(fixed_fac_scale)s        = fixed_fac_scale  ! if .true. use fixed fac scale
+$fixed_fact_scale
  %(scale)s  = scale            ! fixed ren scale
  %(dsqrt_q2fact1)s  = dsqrt_q2fact1    ! fixed fact scale for pdf1
  %(dsqrt_q2fact2)s  = dsqrt_q2fact2    ! fixed fact scale for pdf2
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
+$RUNNING
+ $eva_scale
 #*********************************************************************
 # Type and output format
 #*********************************************************************
   %(gridpack)s     = gridpack  !True = setting up the grid pack
   %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
   %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
-$MLM
-$CKKW
+$mlm
+$ckkw
 #*********************************************************************
 #
 #*********************************************************************
-# handling of the helicities:
-#  0: sum over all helicities
-#  1: importance sampling over helicities
+# Phase-Space Optimization strategy (basic options)
 #*********************************************************************
    %(nhel)s  = nhel          ! using helicities importance sampling or not.
+                             ! 0: sum over helicity, 1: importance sampling
+   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.00773)
+                             ! 1 is old strategy (using amp square)
+			     ! 2 is new strategy (using only the denominator)
+$psoptim			     
 #*********************************************************************
 # Generation bias, check the wiki page below for more information:   *
 #  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *
@@ -77,7 +87,8 @@ $CKKW
 #
 #*******************************                                                 
 # Parton level cuts definition *
-#*******************************                                     
+#*******************************
+  %(dsqrt_shat)s  = dsqrt_shat ! minimal shat for full process
 #                                                                    
 #
 #*********************************************************************
