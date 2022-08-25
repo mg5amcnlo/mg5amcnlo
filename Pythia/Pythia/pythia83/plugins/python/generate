@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (C) 2021 Torbjorn Sjostrand.
+# Copyright (C) 2022 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 # Author: Philip Ilten, August 2019.
@@ -238,7 +238,7 @@ sed -i.sed "s/$OLD/$NEW/g" $BINDER_SRC/pythia8.cpp
 
 # Include the module documentation.
 cat > $BINDER_DOC << BLOCKTEXT
-Copyright (C) 2021 Torbjorn Sjostrand.
+Copyright (C) 2022 Torbjorn Sjostrand.
 PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 Please respect the MCnet Guidelines, see GUIDELINES for details.
 

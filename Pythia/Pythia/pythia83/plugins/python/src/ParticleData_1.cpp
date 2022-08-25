@@ -7,6 +7,7 @@
 #include <Pythia8/PartonSystems.h>
 #include <Pythia8/ResonanceWidths.h>
 #include <Pythia8/Settings.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/StandardModel.h>
 #include <Pythia8/SusyCouplings.h>
@@ -44,7 +45,7 @@
 
 void bind_Pythia8_ParticleData_1(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
-	{ // Pythia8::ParticleData file:Pythia8/ParticleData.h line:420
+	{ // Pythia8::ParticleData file:Pythia8/ParticleData.h line:423
 		pybind11::class_<Pythia8::ParticleData, std::shared_ptr<Pythia8::ParticleData>> cl(M("Pythia8"), "ParticleData", "");
 		pybind11::handle cl_type = cl;
 

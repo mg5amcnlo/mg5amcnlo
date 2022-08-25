@@ -38,8 +38,8 @@ output.
  
 <p/> Please note that a detailed tutorial on merging in Pythia is available 
 from 
-<a href="http://home.thep.lu.se/Pythia/pythia8/mergingworksheet8160.pdf"> 
-http://home.thep.lu.se/Pythia/pythia8/mergingworksheet8160.pdf</a>. 
+<a href="https://pythia.org/download/pdf/mergingworksheet8160.pdf"> 
+https://pythia.org/download/pdf/mergingworksheet8160.pdf</a>. 
  
 <p/> Three very short LHE files (<code>w+_production_lhc_0.lhe</code>, 
 <code>w+_production_lhc_1.lhe</code>, <code>w+_production_lhc_2.lhe</code>) 
@@ -1345,4 +1345,4 @@ extract information necessary for the runtime interface of Pythia and aMC@NLO.
 
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

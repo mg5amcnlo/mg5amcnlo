@@ -1,5 +1,5 @@
 // SigmaQCD.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -25,7 +25,8 @@ public:
   Sigma0nonDiffractive() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaND();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaND();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 1);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol() {}
@@ -51,7 +52,8 @@ public:
   Sigma0AB2AB() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaEl();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaEl();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 2);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
@@ -77,7 +79,8 @@ public:
   Sigma0AB2XB() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaXB();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaXB();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 3);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
@@ -104,7 +107,8 @@ public:
   Sigma0AB2AX() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaAX();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaAX();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 4);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
@@ -131,7 +135,8 @@ public:
   Sigma0AB2XX() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaXX();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaXX();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 5);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();
@@ -159,7 +164,8 @@ public:
   Sigma0AB2AXB() {}
 
   // Evaluate sigma.
-  virtual double sigmaHat() {return sigmaTotPtr->sigmaAXB();}
+  virtual double sigmaHat() {if (!doVarE) return sigmaTotPtr->sigmaAXB();
+    return sigmaCmbPtr->sigmaPartial(idA, idB, infoPtr->eCM(), mA, mB, 6);}
 
   // Select flavour, colour and anticolour.
   virtual void setIdColAcol();

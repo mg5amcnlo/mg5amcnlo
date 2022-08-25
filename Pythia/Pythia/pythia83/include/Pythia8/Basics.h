@@ -1,5 +1,5 @@
 // Basics.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -361,6 +361,20 @@ public:
 
 //==========================================================================
 
+// RndmState class.
+// This class describes the configuration of a Rndm object.
+
+struct RndmState {
+  int    i97{}, j97{}, seed{0};
+  long   sequence{0};
+  double u[97]{}, c{}, cd{}, cm{};
+
+  // Test whether two random states would generate the same random sequence.
+  bool operator==(const RndmState& other) const;
+};
+
+//==========================================================================
+
 // Rndm class.
 // This class handles random number generation according to the
 // Marsaglia-Zaman-Tsang algorithm.
@@ -370,10 +384,10 @@ class Rndm {
 public:
 
   // Constructors.
-  Rndm() : initRndm(false), i97(), j97(), seedSave(0), sequence(0), u(), c(),
-    cd(), cm(), useExternalRndm(false), rndmEngPtr(0) { }
-  Rndm(int seedIn) : initRndm(false), i97(), j97(), seedSave(0), sequence(0),
-    u(), c(), cd(), cm(), useExternalRndm(false), rndmEngPtr(0) {init(seedIn);}
+  Rndm() : initRndm(false), stateSave(), useExternalRndm(false),
+    rndmEngPtr(0) { }
+  Rndm(int seedIn) : initRndm(false), stateSave(), useExternalRndm(false),
+    rndmEngPtr(0) {init(seedIn);}
 
   // Possibility to pass in pointer for external random number generation.
   bool rndmEnginePtr( RndmEngine* rndmEngPtrIn);
@@ -408,16 +422,18 @@ public:
   bool dumpState(string fileName);
   bool readState(string fileName);
 
+  // Get or set the state of the random number generator.
+  RndmState getState() const {return stateSave;}
+  void setState(const RndmState& state) {stateSave = state;}
+
+  // The default seed, i.e. the Marsaglia-Zaman random number sequence.
+  static constexpr int DEFAULTSEED = 19780503;
+
 private:
 
-  // Default random number sequence.
-  static const int DEFAULTSEED;
-
   // State of the random number generator.
-  bool   initRndm;
-  int    i97, j97, seedSave;
-  long   sequence;
-  double u[97], c, cd, cm;
+  bool      initRndm;
+  RndmState stateSave;
 
   // Pointer for external random number generation.
   bool   useExternalRndm;
@@ -490,6 +506,11 @@ public:
   void pyplotTable(ostream& os = cout, bool isHist = true) const ;
   void pyplotTable(string fileName, bool isHist = true) const {
     ofstream streamName(fileName.c_str()); pyplotTable(streamName, isHist);}
+
+  // Fill contents of a two-column (x,y) table, e.g. written by table() above.
+  void fillTable(istream& is = cin);
+  void fillTable(string fileName) { ifstream streamName(fileName.c_str());
+    fillTable(streamName);}
 
   // Print a table out of two histograms with same x axis.
   friend void table(const Hist& h1, const Hist& h2, ostream& os,

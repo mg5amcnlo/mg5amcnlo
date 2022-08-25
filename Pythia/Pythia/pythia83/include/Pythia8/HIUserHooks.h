@@ -1,5 +1,5 @@
 // HIUserHooks.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -733,78 +733,6 @@ protected:
 
   /// Optional mode for opacity.
   int opacityMode;
-
-};
-
-
-//==========================================================================
-
-/// A more complicated model where each nucleon has a fluctuating
-/// "radius" according to a Strikman-inspired distribution.
-
-class MultiRadial: public SubCollisionModel {
-
-public:
-
-  /// The default constructor simply lists the nucleon-nucleon cross
-  /// sections.
-  MultiRadial(int NrIn = 0)
-    : Nr(max(1, NrIn)) {
-    dR = T0 = c = phi = vector<double>(Nr, 0.0);
-  }
-
-  /// Virtual destructor,
-  virtual ~MultiRadial() {}
-
-  /// Take two vectors of Nucleons and an impact parameter vector and
-  /// produce the corrsponding sub-collisions. Note that states of the
-  /// nucleons may be changed.
-  virtual multiset<SubCollision>
-  getCollisions(vector<Nucleon> & proj, vector<Nucleon> & targ,
-                const Vec4 & bvec, double & T);
-
-  /// Return the elastic amplitude for a projectile and target state
-  /// and the impact parameter between the corresponding nucleons.
-  double Tpt(const Nucleon::State & p,
-             const Nucleon::State & t, double b) const {
-    return b < p[0] + t[0]? p[1]*t[1]: 0.0;
-  }
-
-  /// Calculate the cross sections for the given set of parameters.
-  SigEst getSig() const;
-
-  /// Set the parameters of this model.
-  virtual void setParm(const vector<double> &);
-
-  /// Return the current parameters and the minimum and maximum
-  /// allowed values for the parameters of this model.
-  virtual vector<double> getParm() const;
-  virtual vector<double> minParm() const;
-  virtual vector<double> maxParm() const;
-
-protected:
-
-  // Set the probabilities according to the angle parameters.
-  void setProbs();
-
-  /// Choose a radius.
-  int choose() const;
-
-  /// The number of radii.
-  int Nr;
-
-
-  /// The probability distribution.
-  vector<double> c;
-
-  /// The difference between radii.
-  vector<double> dR;
-
-  /// The opacity for different radii.
-  vector<double> T0;
-
-  /// The angles defining the probability distribution for the radii.
-  vector<double> phi;
 
 };
 

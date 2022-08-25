@@ -1,11 +1,12 @@
 // Info.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
 // Function definitions (not found in the header) for the Info class.
 
 #include "Pythia8/Info.h"
+#include "Pythia8/Settings.h"
 #include <limits>
 
 namespace Pythia8 {
@@ -21,11 +22,16 @@ namespace Pythia8 {
 // Constants: could be changed here if desired, but normally should not.
 // These are of technical nature, as described for each.
 
-// Number of times the same error message will be repeated at most.
-const int Info::TIMESTOPRINT = 1;
-
 // LHA convention with cross section in pb may require conversion from mb.
 const double Info::CONVERTMB2PB = 1e9;
+
+//--------------------------------------------------------------------------
+
+// Initialize settings for error printing.
+
+void Info::init() {
+  printErrors = settingsPtr->flag("Print:errors");
+}
 
 //--------------------------------------------------------------------------
 
@@ -196,10 +202,19 @@ void Info::errorMsg(string messageIn, string extraIn, bool showAlways) {
   int times = messages[messageIn];
   ++messages[messageIn];
 
-  // Print message the first few times.
-  if (times < TIMESTOPRINT || showAlways) cout << " PYTHIA "
+  // Print message the first time.
+  if ((times == 0 || showAlways) && printErrors) cout << " PYTHIA "
     << messageIn << " " << extraIn << endl;
 
+}
+
+//--------------------------------------------------------------------------
+
+// Add all errors from the other Info object to the counts of this object.
+
+void Info::errorCombine(const Info& other) {
+  for (pair<string, int> messageEntry : other.messages)
+    messages[messageEntry.first] += messageEntry.second;
 }
 
 //--------------------------------------------------------------------------

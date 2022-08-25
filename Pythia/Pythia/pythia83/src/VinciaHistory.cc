@@ -1,5 +1,5 @@
 // VinciaHistory.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -785,24 +785,30 @@ void HistoryNode::setClusterList(shared_ptr<VinciaMergingHooks>
         bool quarkClustering = false;
         if (isFSR) {
           // Is FF on?
-          if (!vinMergingHooksPtr->canClusFF()) {
+          if (clusterings.at(iHist).isFF() &&
+            !vinMergingHooksPtr->canClusFF()) {
             if (verboseIn >= DEBUG) {
               printOut(__METHOD_NAME__,
-                "Skipping FF clustering (turned off in shower).");
+                "Skipping FF clustering (turned off in shower)");
             }
             continue;
           }
 
-          // Skip RF clusterings for now.
-          // TODO: merging in RF
-          if (antFunType == QQemitRF || antFunType == QGemitRF ||
-              antFunType == XGsplitRF ) {
-            if (verboseIn >= REPORT) {
+          // Is RF on?
+          if (clusterings.at(iHist).isRF() &&
+            !vinMergingHooksPtr->canClusRF()) {
+            if (verboseIn >= NORMAL) {
               printOut(__METHOD_NAME__,
-                "Skipping RF clustering (not yet supported).");
+                "Skipping RF clustering (turned off in shower)");
             }
             continue;
           }
+          // For now warn if we do RF clusterings.
+          if (clusterings.at(iHist).isRF()) {
+            infoPtr->errorMsg("Warning in "+__METHOD_NAME__
+              +": Performing unvalidated resonance-final clustering");
+          }
+
           if (antFunType == GXsplitFF) quarkClustering = true;
           AntennaFunction* antPtr= antSetFSRptr->getAntFunPtr(antFunType);
           if (antPtr==nullptr) {
@@ -1537,10 +1543,18 @@ void VinciaHistory::findBestHistory() {
       continue;
     }
 
+    // Decide whether to save the current history.
+    bool saveHistory = !foundValidHistory;
+    // Always try to replace incomplete histories.
+    if (foundIncompleteHistory && !isIncomplete) saveHistory = true;
     // Want to select the most singular choice as best so far.
-    if (!foundValidHistory || ME2guessNow > ME2guessBest
-        || (foundIncompleteHistory && !isIncomplete)
-        || (foundIncompleteHistory && ME2guessNow > ME2guessBest) ) {
+    if (ME2guessNow > ME2guessBest) {
+      // Never replace complete histories by incomplete ones.
+      if (!foundIncompleteHistory && !isIncomplete) saveHistory = true;
+      if (foundIncompleteHistory) saveHistory = true;
+    }
+
+    if (saveHistory) {
       // Save this choice.
       foundValidHistory = true;
       failedMSCut = false;

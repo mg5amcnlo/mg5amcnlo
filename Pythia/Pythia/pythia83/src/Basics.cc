@@ -1,5 +1,5 @@
 // Basics.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -19,14 +19,6 @@ namespace Pythia8 {
 // Rndm class.
 // This class handles random number generation according to the
 // Marsaglia-Zaman-Tsang algorithm
-
-//--------------------------------------------------------------------------
-
-// Constants: could be changed here if desired, but normally should not.
-// These are of technical nature, as described for each.
-
-// The default seed, i.e. the Marsaglia-Zaman random number sequence.
-const int Rndm::DEFAULTSEED     = 19780503;
 
 //--------------------------------------------------------------------------
 
@@ -77,22 +69,22 @@ void Rndm::init(int seedIn) {
       if ( (l*m) % 64 >= 32) s += t;
       t *= 0.5;
     }
-    u[ii] = s;
+    stateSave.u[ii] = s;
   }
 
   // Initialize other variables.
   double twom24 = 1.;
   for (int i24 = 0; i24 < 24; ++i24) twom24 *= 0.5;
-  c   = 362436. * twom24;
-  cd  = 7654321. * twom24;
-  cm  = 16777213. * twom24;
-  i97 = 96;
-  j97 = 32;
+  stateSave.c   = 362436. * twom24;
+  stateSave.cd  = 7654321. * twom24;
+  stateSave.cm  = 16777213. * twom24;
+  stateSave.i97 = 96;
+  stateSave.j97 = 32;
 
   // Finished.
-  initRndm  = true;
-  seedSave  = seed;
-  sequence  = 0;
+  initRndm = true;
+  stateSave.seed = seed;
+  stateSave.sequence = 0;
 
 }
 
@@ -109,17 +101,17 @@ double Rndm::flat() {
   if (!initRndm) init(DEFAULTSEED);
 
   // Find next random number and update saved state.
-  ++sequence;
+  ++stateSave.sequence;
   double uni;
   do {
-    uni = u[i97] - u[j97];
+    uni = stateSave.u[stateSave.i97] - stateSave.u[stateSave.j97];
     if (uni < 0.) uni += 1.;
-    u[i97] = uni;
-    if (--i97 < 0) i97 = 96;
-    if (--j97 < 0) j97 = 96;
-    c -= cd;
-    if (c < 0.) c += cm;
-    uni -= c;
+    stateSave.u[stateSave.i97] = uni;
+    if (--stateSave.i97 < 0) stateSave.i97 = 96;
+    if (--stateSave.j97 < 0) stateSave.j97 = 96;
+    stateSave.c -= stateSave.cd;
+    if (stateSave.c < 0.) stateSave.c += stateSave.cm;
+    uni -= stateSave.c;
     if(uni < 0.) uni += 1.;
    } while (uni <= 0. || uni >= 1.);
   return uni;
@@ -181,18 +173,18 @@ bool Rndm::dumpState(string fileName) {
   }
 
   // Write the state of the generator on the file.
-  ofs.write((char *) &seedSave, sizeof(int));
-  ofs.write((char *) &sequence, sizeof(long));
-  ofs.write((char *) &i97,      sizeof(int));
-  ofs.write((char *) &j97,      sizeof(int));
-  ofs.write((char *) &c,        sizeof(double));
-  ofs.write((char *) &cd,       sizeof(double));
-  ofs.write((char *) &cm,       sizeof(double));
-  ofs.write((char *) &u,        sizeof(double) * 97);
+  ofs.write((char *) &stateSave.seed,     sizeof(int));
+  ofs.write((char *) &stateSave.sequence, sizeof(long));
+  ofs.write((char *) &stateSave.i97,      sizeof(int));
+  ofs.write((char *) &stateSave.j97,      sizeof(int));
+  ofs.write((char *) &stateSave.c,        sizeof(double));
+  ofs.write((char *) &stateSave.cd,       sizeof(double));
+  ofs.write((char *) &stateSave.cm,       sizeof(double));
+  ofs.write((char *) &stateSave.u,        sizeof(double) * 97);
 
   // Write confirmation on cout.
-  cout << " PYTHIA Rndm::dumpState: seed = " << seedSave
-       << ", sequence no = " << sequence << endl;
+  cout << " PYTHIA Rndm::dumpState: seed = " << stateSave.seed
+       << ", sequence no = " << stateSave.sequence << endl;
   return true;
 
 }
@@ -213,20 +205,38 @@ bool Rndm::readState(string fileName) {
   }
 
   // Read the state of the generator from the file.
-  ifs.read((char *) &seedSave, sizeof(int));
-  ifs.read((char *) &sequence, sizeof(long));
-  ifs.read((char *) &i97,      sizeof(int));
-  ifs.read((char *) &j97,      sizeof(int));
-  ifs.read((char *) &c,        sizeof(double));
-  ifs.read((char *) &cd,       sizeof(double));
-  ifs.read((char *) &cm,       sizeof(double));
-  ifs.read((char *) &u,        sizeof(double) *97);
+  ifs.read((char *) &stateSave.seed,     sizeof(int));
+  ifs.read((char *) &stateSave.sequence, sizeof(long));
+  ifs.read((char *) &stateSave.i97,      sizeof(int));
+  ifs.read((char *) &stateSave.j97,      sizeof(int));
+  ifs.read((char *) &stateSave.c,        sizeof(double));
+  ifs.read((char *) &stateSave.cd,       sizeof(double));
+  ifs.read((char *) &stateSave.cm,       sizeof(double));
+  ifs.read((char *) &stateSave.u,        sizeof(double) *97);
 
   // Write confirmation on cout.
-  cout << " PYTHIA Rndm::readState: seed " << seedSave
-       << ", sequence no = " << sequence << endl;
+  cout << " PYTHIA Rndm::readState: seed " << stateSave.seed
+       << ", sequence no = " << stateSave.sequence << endl;
   return true;
 
+}
+
+//==========================================================================
+
+// RndmState class.
+// This class describes the configuration of a Rndm object.
+
+//--------------------------------------------------------------------------
+
+// Test whether two random states would generate the same random sequence.
+bool RndmState::operator==(const RndmState& other) const {
+  if (i97 != other.i97 || j97 != other.j97 || sequence != other.sequence
+   || c != other.c || cd != other.cd || cm != other.cm)
+    return false;
+  for (int i = 0; i < 97; ++i)
+    if (u[i] != other.u[i])
+      return false;
+  return true;
 }
 
 //==========================================================================
@@ -1306,6 +1316,23 @@ void Hist::pyplotTable(ostream& os, bool isHist) const {
 
 //--------------------------------------------------------------------------
 
+// Fill histogram contents from a table, e.g. written by table() above.
+
+void Hist::fillTable(istream& is) {
+
+  // Read in one line at a time.
+  string line;
+  double xVal, yVal;
+  while ( getline(is, line) ) {
+    // Read contents of the line and fill in histogram.
+    istringstream splitLine(line);
+    splitLine >> xVal >> yVal;
+    fill( xVal, yVal);
+  }
+}
+
+//--------------------------------------------------------------------------
+
 // Print a table out of two histograms with same x axis  (e.g. for Gnuplot).
 
 void table(const Hist& h1, const Hist& h2, ostream& os, bool printOverUnder,
@@ -1453,7 +1480,7 @@ void Hist::normalize(double f, bool overflow) {
 // Normalize bin contents to given area, by default including overflow bins.
 
 void Hist::normalizeIntegral(double f, bool overflow) {
-  normalizeSpectrum(f / (overflow ? (under + inside + over) : inside));
+  normalizeSpectrum((overflow ? (under + inside + over) : inside) / f);
 }
 
 //--------------------------------------------------------------------------

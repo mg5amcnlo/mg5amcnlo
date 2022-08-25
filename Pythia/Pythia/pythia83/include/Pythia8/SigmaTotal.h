@@ -1,5 +1,5 @@
 // SigmaTotal.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -46,6 +46,9 @@ public:
   // Store pointers and initialize data members.
   virtual void init(Info*) = 0;
 
+  // Calculate total cros section only. Only implemented for SigmaSaSDL.
+  virtual bool calcTot( int, int, double) {return true;}
+
   // Calculate integrated total/elastic cross sections.
   // Usage: calcTotEl( idAin, idBin, sIn, mAin, mBin).
   virtual bool calcTotEl( int , int , double , double , double ) {return true;}
@@ -61,8 +64,8 @@ public:
   // Usage: calcDiff(  idAin, idBin, sIn, mAin, mBin).
   virtual bool calcDiff(  int , int , double , double , double ) {return true;}
 
-  // Store diffractive cross sections.
-  double sigXB, sigAX, sigXX, sigAXB;
+  // Store diffractive cross sections. Possibly also sigmaND.
+  double sigXB, sigAX, sigXX, sigAXB, sigNDtmp;
 
   // Differential single diffractive cross section,
   // xi * d(sigma_SD) / (dxi dt).
@@ -165,7 +168,7 @@ public:
   double bSlopeEl()     {return sigTotElPtr->bEl;}
   bool   hasCoulomb()   {return sigTotElPtr->hasCou;}
 
-  // Total elastic cross section.
+  // Total and elastic cross section.
   bool calcTotEl( int idAin, int idBin, double sIn, double mAin, double mBin) {
     return sigTotElPtr->calcTotEl( idAin, idBin, sIn, mAin, mBin); }
 
@@ -303,6 +306,10 @@ public:
   // Store pointers and initialize data members.
   virtual void init(Info* infoPtrIn);
 
+  // Fast method uniquely to return total cross section.
+  double sigmaTotal( int idAin, int idBin, double sIn, double mAin,
+    double mBin);
+
   // Calculate integrated total/elastic cross sections.
   virtual bool calcTotEl( int idAin, int idBin, double sIn, double mAin,
     double mBin);
@@ -333,7 +340,7 @@ private:
   static const int    IHADATABLE[], IHADBTABLE[], ISDTABLE[], IDDTABLE[], NVMD;
   static const double EPSILON, ETA, X[], Y[], BETA0[], BHAD[], ALPHAPRIME,
                       CONVERTSD, CONVERTDD, VMDMASS[4], GAMMAFAC[4],
-                      CSD[10][8], CDD[10][9];
+                      CSD[24][8], CDD[22][9], DIFFTHR, DIFFMULT;
 
   // Initialization data, normally only set once, and result of calculation.
   bool   doDampen, zeroAXB, swapped, sameSign;

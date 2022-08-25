@@ -1,5 +1,5 @@
 // SimpleSpaceShower.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -324,12 +324,11 @@ bool SimpleSpaceShower::limitPTmax( Event& event, double Q2Fac, double Q2Ren) {
   dopTlimit1 = dopTlimit2 = false;
   int nHeavyCol = 0;
   if (pTmaxMatch == 1) dopTlimit = dopTlimit1 = dopTlimit2 = true;
-
+  else if (pTmaxMatch == 2) dopTlimit = dopTlimit1 = dopTlimit2 = false;
   // Always restrict SoftQCD processes.
   else if (infoPtr->isNonDiffractive() || infoPtr->isDiffractiveA()
     || infoPtr->isDiffractiveB() || infoPtr->isDiffractiveC() )
     dopTlimit = dopTlimit1 = dopTlimit2 = true;
-
   // Look if any quark (u, d, s, c, b), gluon or photon in final state.
   // Also count number of heavy coloured particles, like top.
   else {
@@ -1371,7 +1370,7 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
     // If fallen into b threshold region, force g -> b + bbar.
     if (idMassive == 5 && pT2 < m2Threshold) {
-      pT2nearThreshold( beam, m2Massive, m2Threshold, xMaxAbs,
+      if (!isValence) pT2nearThreshold( beam, m2Massive, m2Threshold, xMaxAbs,
         zMinAbs, zMaxMassive, iColPartner );
       return;
 
@@ -1383,7 +1382,7 @@ void SimpleSpaceShower::pT2nextQCD( double pT2begDip, double pT2endDip) {
 
     // If fallen into c threshold region, force g -> c + cbar.
     } else if (idMassive == 4 && pT2 < m2Threshold) {
-      pT2nearThreshold( beam, m2Massive, m2Threshold, xMaxAbs,
+      if (!isValence) pT2nearThreshold( beam, m2Massive, m2Threshold, xMaxAbs,
         zMinAbs, zMaxMassive, iColPartner );
       return;
 
@@ -3260,6 +3259,8 @@ bool SimpleSpaceShower::branch( Event& event) {
   // Veto if necessary.
   // Return false if we decided to reject this branching.
   if ( !acceptEmission ) {
+    infoPtr->addCounter(40);
+
     // Restore kinematics before returning.
     event.popBack( event.size() - eventSizeOld);
     event[beamOff1].daughter1( ev1Dau1V);

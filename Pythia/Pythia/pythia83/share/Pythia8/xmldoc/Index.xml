@@ -36,6 +36,7 @@
 <aidx href="RandomNumberSeed">Random-Number Seed</aidx><br/> 
 <aidx href="Tunes">Tunes</aidx><br/> 
 <aidx href="ErrorChecks">Error Checks</aidx><br/> 
+<aidx href="Parallelism">Parallelism</aidx><br/> 
 </div> 
  
 <button class="expand" style="font-size:20px;">Beams</button> 
@@ -139,7 +140,7 @@ Hard Processes</button>
 &nbsp;&nbsp;--&nbsp;&nbsp; 
 <aidx href="CKKWLMerging">CKKW-L Merging</aidx><br/> 
 &nbsp;&nbsp;--&nbsp;&nbsp; 
-<aidx href="VinciaMerging">Sector Merging (VINCIA)</aidx><br/> 
+<aidx href="VinciaMerging">MESS Merging (VINCIA)</aidx><br/> 
 &nbsp;&nbsp;--&nbsp;&nbsp; 
 <aidx href="UMEPSMerging">UMEPS Merging</aidx><br/> 
 &nbsp;&nbsp;--&nbsp;&nbsp; 
@@ -226,4 +227,4 @@ Hard Processes</button>
 <script src="Expand.js"></script> 
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

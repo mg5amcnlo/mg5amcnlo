@@ -1,5 +1,5 @@
 # Makefile is a part of the PYTHIA event generator.
-# Copyright (C) 2021 Torbjorn Sjostrand.
+# Copyright (C) 2022 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 # Author: Philip Ilten, October 2019.
@@ -32,7 +32,7 @@ LIB_COMMON=-Wl,-rpath,$(TOP_LIB) -ldl $(GZIP_LIB) -Wl,-undefined,dynamic_lookup
 PYTHIA=$(TOP_LIB)/libpythia8$(LIB_SUFFIX)
 
 # Set the wrapper, determine the objects and targets.
-WRAPPER=ShowerMEsMadgraph
+WRAPPER=ExternalMEsMadgraph
 OBJECTS=$(addprefix $(LOCAL_TMP)/,$(patsubst %.cc,%.o,$(wildcard */*.cc)))
 TARGETS=$(patsubst %/,$(TOP_LIB)/libpythia8mg5%.so,$(LOCAL_DIRS))
 

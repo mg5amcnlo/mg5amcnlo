@@ -1,16 +1,16 @@
 # PYTHIA configuration file.
-# Generated on Wed Jul 27 18:23:44 CEST 2022 with the user supplied options:
-# --prefix=/cluster/home/cpreuss/workspace/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83
+# Generated on Thu Aug 25 12:03:28 PM CEST 2022 with the user supplied options:
+# --prefix=/home/leif/projects/2022/aMCatNLO-Delta/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83
 # --cxx-common=-ldl -fPIC -lstdc++ --std=c++14
 
 # Install directory prefixes.
-PREFIX_BIN=/cluster/home/cpreuss/workspace/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/bin
-PREFIX_INCLUDE=/cluster/home/cpreuss/workspace/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/include
-PREFIX_LIB=/cluster/home/cpreuss/workspace/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/lib
-PREFIX_SHARE=/cluster/home/cpreuss/workspace/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/share/Pythia8
+PREFIX_BIN=/home/leif/projects/2022/aMCatNLO-Delta/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/bin
+PREFIX_INCLUDE=/home/leif/projects/2022/aMCatNLO-Delta/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/include
+PREFIX_LIB=/home/leif/projects/2022/aMCatNLO-Delta/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/lib
+PREFIX_SHARE=/home/leif/projects/2022/aMCatNLO-Delta/PY8meetsMG5aMC_release/Pythia/Pythia/pythia83/share/Pythia8
 
 # Compilation flags (see ./configure --help for further documentation).
-CXX=/cluster/spack/apps/linux-centos7-x86_64/gcc-4.8.5/gcc-8.2.0-6xqov2fhvbmehix42slain67vprec3fs/bin/g++
+CXX=g++
 CXX_COMMON=-ldl -fPIC -lstdc++ --std=c++14
 CXX_SHARED=-shared
 CXX_SONAME=-Wl,-soname,

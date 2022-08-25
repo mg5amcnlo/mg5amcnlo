@@ -1,5 +1,5 @@
 // ResonanceDecayFilterHook.h is part of the PYTHIA event generator.
-// Copyright (C) 2021 Stephen Mrenna, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stephen Mrenna, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 // Author: Stephen Mrenna, January 2021.

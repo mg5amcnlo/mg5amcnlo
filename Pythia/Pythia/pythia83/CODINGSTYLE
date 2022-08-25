@@ -51,7 +51,7 @@ An incomplete list is as follows.
 
  8. Begin each code file with
 // (filename) is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
     to establish the legal structure. Follow that with specific

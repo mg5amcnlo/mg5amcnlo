@@ -200,7 +200,7 @@ zero to the sum of initial and final-state particles.
 </flag> 
 
 
-<h3>Variable collision energy</h3> 
+<h3>Variable collision energy and particle type</h3> 
  
 There are two different machineries that can provide an event-by-event 
 spread of collision energies. The one in this section is intended 
@@ -280,28 +280,29 @@ The current parameter is this <ei>e_width.</ei>
 </parm> 
  
 <p/> 
-To input the variable energy, the normal argument-less 
-<code>Pythia::next()</code> method has three siblings that take 
-relevent arguments as required by the <code>Beams:frameType</code>. 
+When variable energy is enabled, the <code>setKinematics</code> methods 
+can be used to change the beam energies. The method used must match the frame 
+type as specified by <code>Beams:frameType</code>. 
  
-<method name="bool Pythia::next(double eCM)"> 
-events created by the collision of two particles coming in along the 
-<ei>+-z</ei> axis in their common rest frame, with the CM energy as 
-argument, to be used for <code>Beams:frameType = 1</code>. 
-</method> 
+There is also a limited support for changing beam particles using the 
+<code>setBeamIDs</code> method. Using this method, <code>idA</code> can 
+be changed to any hadron, while <code>idB</code> must be a proton or a 
+neutron when using this feature. This is useful for example in 
+hadronic cascades in a medium. It is here assumed that only 
+the <code>SoftQCD</code> (and <code>LowEnergyQCD</code> if relevant) 
+hadron-nucleon processes are being used. 
  
-<method name="bool Pythia::next(double eA, double eB)"> 
-events created by the collision of two particles coming in along the 
-<ei>+-z</ei> axis, with the respective energies as arguments, to be 
-used for <code>Beams:frameType = 2</code>. 
-</method> 
+In order to change <code>idA</code> with any of the <code>next</code> 
+methods above, the beam configuration requires 
+additional setup. To limit the risks of inadvertent use, you need to 
+initialize with <code>Beams:allowIDAswitch = on</code>. The 
+functionality of <code>MultipartonInteractions:setAntiSame = true</code> 
+is used automatically to limit the number of cases to handle. 
  
-<method name="bool Pythia::next(double pxA, double pyA, double pzA, 
-double pxB, double pyB, double pzB)"> 
-events created by two incoming particles with arbitrary three-momenta, 
-to be used for <code>Beams:frameType = 3</code>. 
-</method> 
- 
+<flag name="Beams:allowIDAswitch" default="off"> 
+Switch to initialize for a range of possible projectile hadrons, to 
+hit a target of protons and neutrons. 
+</flag> 
  
 <h3>Beam momentum spread</h3> 
  
@@ -459,4 +460,4 @@ The time <ei>t</ei> of the interaction vertex is centered at this value.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

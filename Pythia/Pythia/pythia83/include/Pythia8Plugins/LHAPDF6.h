@@ -1,5 +1,5 @@
 // LHAPDF6.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -174,21 +174,17 @@ void LHAPDF6::xfUpdate(int, double x, double Q2) {
 
   // Update values.
   xg     = pdf->xfxQ2(21, x, Q2);
-  xu     = pdf->xfxQ2(2,  x, Q2);
   xd     = pdf->xfxQ2(1,  x, Q2);
-  xs     = pdf->xfxQ2(3,  x, Q2);
-  xubar  = pdf->xfxQ2(-2, x, Q2);
+  xu     = pdf->xfxQ2(2,  x, Q2);
   xdbar  = pdf->xfxQ2(-1, x, Q2);
-  xsbar  = pdf->xfxQ2(-3, x, Q2);
+  xubar  = pdf->xfxQ2(-2, x, Q2);
+  xs     = pdf->xfxQ2(3,  x, Q2);
   xc     = pdf->xfxQ2(4,  x, Q2);
   xb     = pdf->xfxQ2(5,  x, Q2);
+  xsbar  = sSymmetricSave ? xs : pdf->xfxQ2(-3, x, Q2);
+  xcbar  = cSymmetricSave ? xc : pdf->xfxQ2(-4, x, Q2);
+  xbbar  = bSymmetricSave ? xb : pdf->xfxQ2(-5, x, Q2);
   xgamma = pdf->xfxQ2(22, x, Q2);
-
-  // Subdivision of valence and sea.
-  xuVal  = xu - xubar;
-  xuSea  = xubar;
-  xdVal  = xd - xdbar;
-  xdSea  = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;

@@ -22,6 +22,7 @@
 #include <Pythia8/Settings.h>
 #include <Pythia8/SharedPointers.h>
 #include <Pythia8/ShowerModel.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaProcess.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/StandardModel.h>
@@ -61,7 +62,7 @@
 
 void bind_Pythia8_Pythia(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
-	{ // Pythia8::Pythia file:Pythia8/Pythia.h line:65
+	{ // Pythia8::Pythia file:Pythia8/Pythia.h line:69
 		pybind11::class_<Pythia8::Pythia, std::shared_ptr<Pythia8::Pythia>> cl(M("Pythia8"), "Pythia", "");
 		pybind11::handle cl_type = cl;
 
@@ -138,24 +139,35 @@ void bind_Pythia8_Pythia(std::function< pybind11::module &(std::string const &na
 		cl.def("setPartonVertexPtr", (bool (Pythia8::Pythia::*)(class std::shared_ptr<class Pythia8::PartonVertex>)) &Pythia8::Pythia::setPartonVertexPtr, "C++: Pythia8::Pythia::setPartonVertexPtr(class std::shared_ptr<class Pythia8::PartonVertex>) --> bool", pybind11::arg("partonVertexPtrIn"));
 		cl.def("init", (bool (Pythia8::Pythia::*)()) &Pythia8::Pythia::init, "C++: Pythia8::Pythia::init() --> bool");
 		cl.def("next", (bool (Pythia8::Pythia::*)()) &Pythia8::Pythia::next, "C++: Pythia8::Pythia::next() --> bool");
-		cl.def("next", (bool (Pythia8::Pythia::*)(double)) &Pythia8::Pythia::next, "C++: Pythia8::Pythia::next(double) --> bool", pybind11::arg("eCMin"));
-		cl.def("next", (bool (Pythia8::Pythia::*)(double, double)) &Pythia8::Pythia::next, "C++: Pythia8::Pythia::next(double, double) --> bool", pybind11::arg("eAin"), pybind11::arg("eBin"));
-		cl.def("next", (bool (Pythia8::Pythia::*)(double, double, double, double, double, double)) &Pythia8::Pythia::next, "C++: Pythia8::Pythia::next(double, double, double, double, double, double) --> bool", pybind11::arg("pxAin"), pybind11::arg("pyAin"), pybind11::arg("pzAin"), pybind11::arg("pxBin"), pybind11::arg("pyBin"), pybind11::arg("pzBin"));
+		cl.def("next", (bool (Pythia8::Pythia::*)(int)) &Pythia8::Pythia::next, "C++: Pythia8::Pythia::next(int) --> bool", pybind11::arg("procTypeIn"));
+		cl.def("setBeamIDs", [](Pythia8::Pythia &o, int const & a0) -> bool { return o.setBeamIDs(a0); }, "", pybind11::arg("idAin"));
+		cl.def("setBeamIDs", (bool (Pythia8::Pythia::*)(int, int)) &Pythia8::Pythia::setBeamIDs, "C++: Pythia8::Pythia::setBeamIDs(int, int) --> bool", pybind11::arg("idAin"), pybind11::arg("idBin"));
+		cl.def("setKinematics", (bool (Pythia8::Pythia::*)(double)) &Pythia8::Pythia::setKinematics, "C++: Pythia8::Pythia::setKinematics(double) --> bool", pybind11::arg("eCMIn"));
+		cl.def("setKinematics", (bool (Pythia8::Pythia::*)(double, double)) &Pythia8::Pythia::setKinematics, "C++: Pythia8::Pythia::setKinematics(double, double) --> bool", pybind11::arg("eAIn"), pybind11::arg("eBIn"));
+		cl.def("setKinematics", (bool (Pythia8::Pythia::*)(double, double, double, double, double, double)) &Pythia8::Pythia::setKinematics, "C++: Pythia8::Pythia::setKinematics(double, double, double, double, double, double) --> bool", pybind11::arg("pxAIn"), pybind11::arg("pyAIn"), pybind11::arg("pzAIn"), pybind11::arg("pxBIn"), pybind11::arg("pyBIn"), pybind11::arg("pzBIn"));
+		cl.def("setKinematics", (bool (Pythia8::Pythia::*)(class Pythia8::Vec4, class Pythia8::Vec4)) &Pythia8::Pythia::setKinematics, "C++: Pythia8::Pythia::setKinematics(class Pythia8::Vec4, class Pythia8::Vec4) --> bool", pybind11::arg("pAIn"), pybind11::arg("pBIn"));
 		cl.def("forceTimeShower", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2) -> int { return o.forceTimeShower(a0, a1, a2); }, "", pybind11::arg("iBeg"), pybind11::arg("iEnd"), pybind11::arg("pTmax"));
 		cl.def("forceTimeShower", (int (Pythia8::Pythia::*)(int, int, double, int)) &Pythia8::Pythia::forceTimeShower, "C++: Pythia8::Pythia::forceTimeShower(int, int, double, int) --> int", pybind11::arg("iBeg"), pybind11::arg("iEnd"), pybind11::arg("pTmax"), pybind11::arg("nBranchMax"));
 		cl.def("forceHadronLevel", [](Pythia8::Pythia &o) -> bool { return o.forceHadronLevel(); }, "");
 		cl.def("forceHadronLevel", (bool (Pythia8::Pythia::*)(bool)) &Pythia8::Pythia::forceHadronLevel, "C++: Pythia8::Pythia::forceHadronLevel(bool) --> bool", pybind11::arg("findJunctions"));
 		cl.def("moreDecays", (bool (Pythia8::Pythia::*)()) &Pythia8::Pythia::moreDecays, "C++: Pythia8::Pythia::moreDecays() --> bool");
+		cl.def("moreDecays", (bool (Pythia8::Pythia::*)(int)) &Pythia8::Pythia::moreDecays, "C++: Pythia8::Pythia::moreDecays(int) --> bool", pybind11::arg("index"));
 		cl.def("forceRHadronDecays", (bool (Pythia8::Pythia::*)()) &Pythia8::Pythia::forceRHadronDecays, "C++: Pythia8::Pythia::forceRHadronDecays() --> bool");
-		cl.def("doLowEnergyProcess", (bool (Pythia8::Pythia::*)(int, int, int)) &Pythia8::Pythia::doLowEnergyProcess, "C++: Pythia8::Pythia::doLowEnergyProcess(int, int, int) --> bool", pybind11::arg("i1"), pybind11::arg("i2"), pybind11::arg("type"));
-		cl.def("getLowEnergySigma", [](Pythia8::Pythia &o, int const & a0, int const & a1) -> double { return o.getLowEnergySigma(a0, a1); }, "", pybind11::arg("i1"), pybind11::arg("i2"));
-		cl.def("getLowEnergySigma", (double (Pythia8::Pythia::*)(int, int, int)) &Pythia8::Pythia::getLowEnergySigma, "C++: Pythia8::Pythia::getLowEnergySigma(int, int, int) --> double", pybind11::arg("i1"), pybind11::arg("i2"), pybind11::arg("type"));
-		cl.def("getLowEnergySigma", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2, double const & a3, double const & a4) -> double { return o.getLowEnergySigma(a0, a1, a2, a3, a4); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"));
-		cl.def("getLowEnergySigma", (double (Pythia8::Pythia::*)(int, int, double, double, double, int)) &Pythia8::Pythia::getLowEnergySigma, "C++: Pythia8::Pythia::getLowEnergySigma(int, int, double, double, double, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"), pybind11::arg("type"));
-		cl.def("getLowEnergySigma", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2) -> double { return o.getLowEnergySigma(a0, a1, a2); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"));
-		cl.def("getLowEnergySigma", (double (Pythia8::Pythia::*)(int, int, double, int)) &Pythia8::Pythia::getLowEnergySigma, "C++: Pythia8::Pythia::getLowEnergySigma(int, int, double, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("type"));
-		cl.def("getLowEnergySlope", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2, double const & a3, double const & a4) -> double { return o.getLowEnergySlope(a0, a1, a2, a3, a4); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"));
-		cl.def("getLowEnergySlope", (double (Pythia8::Pythia::*)(int, int, double, double, double, int)) &Pythia8::Pythia::getLowEnergySlope, "C++: Pythia8::Pythia::getLowEnergySlope(int, int, double, double, double, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"), pybind11::arg("type"));
+		cl.def("doLowEnergyProcess", (bool (Pythia8::Pythia::*)(int, int, int)) &Pythia8::Pythia::doLowEnergyProcess, "C++: Pythia8::Pythia::doLowEnergyProcess(int, int, int) --> bool", pybind11::arg("i1"), pybind11::arg("i2"), pybind11::arg("procTypeIn"));
+		cl.def("getSigmaTotal", (double (Pythia8::Pythia::*)()) &Pythia8::Pythia::getSigmaTotal, "C++: Pythia8::Pythia::getSigmaTotal() --> double");
+		cl.def("getSigmaTotal", [](Pythia8::Pythia &o, double const & a0) -> double { return o.getSigmaTotal(a0); }, "", pybind11::arg("eCM12"));
+		cl.def("getSigmaTotal", (double (Pythia8::Pythia::*)(double, int)) &Pythia8::Pythia::getSigmaTotal, "C++: Pythia8::Pythia::getSigmaTotal(double, int) --> double", pybind11::arg("eCM12"), pybind11::arg("mixLoHi"));
+		cl.def("getSigmaTotal", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2) -> double { return o.getSigmaTotal(a0, a1, a2); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"));
+		cl.def("getSigmaTotal", (double (Pythia8::Pythia::*)(int, int, double, int)) &Pythia8::Pythia::getSigmaTotal, "C++: Pythia8::Pythia::getSigmaTotal(int, int, double, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("mixLoHi"));
+		cl.def("getSigmaTotal", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2, double const & a3, double const & a4) -> double { return o.getSigmaTotal(a0, a1, a2, a3, a4); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"));
+		cl.def("getSigmaTotal", (double (Pythia8::Pythia::*)(int, int, double, double, double, int)) &Pythia8::Pythia::getSigmaTotal, "C++: Pythia8::Pythia::getSigmaTotal(int, int, double, double, double, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"), pybind11::arg("mixLoHi"));
+		cl.def("getSigmaPartial", (double (Pythia8::Pythia::*)(int)) &Pythia8::Pythia::getSigmaPartial, "C++: Pythia8::Pythia::getSigmaPartial(int) --> double", pybind11::arg("procTypeIn"));
+		cl.def("getSigmaPartial", [](Pythia8::Pythia &o, double const & a0, int const & a1) -> double { return o.getSigmaPartial(a0, a1); }, "", pybind11::arg("eCM12"), pybind11::arg("procTypeIn"));
+		cl.def("getSigmaPartial", (double (Pythia8::Pythia::*)(double, int, int)) &Pythia8::Pythia::getSigmaPartial, "C++: Pythia8::Pythia::getSigmaPartial(double, int, int) --> double", pybind11::arg("eCM12"), pybind11::arg("procTypeIn"), pybind11::arg("mixLoHi"));
+		cl.def("getSigmaPartial", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2, int const & a3) -> double { return o.getSigmaPartial(a0, a1, a2, a3); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("procTypeIn"));
+		cl.def("getSigmaPartial", (double (Pythia8::Pythia::*)(int, int, double, int, int)) &Pythia8::Pythia::getSigmaPartial, "C++: Pythia8::Pythia::getSigmaPartial(int, int, double, int, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("procTypeIn"), pybind11::arg("mixLoHi"));
+		cl.def("getSigmaPartial", [](Pythia8::Pythia &o, int const & a0, int const & a1, double const & a2, double const & a3, double const & a4, int const & a5) -> double { return o.getSigmaPartial(a0, a1, a2, a3, a4, a5); }, "", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"), pybind11::arg("procTypeIn"));
+		cl.def("getSigmaPartial", (double (Pythia8::Pythia::*)(int, int, double, double, double, int, int)) &Pythia8::Pythia::getSigmaPartial, "C++: Pythia8::Pythia::getSigmaPartial(int, int, double, double, double, int, int) --> double", pybind11::arg("id1"), pybind11::arg("id2"), pybind11::arg("eCM12"), pybind11::arg("m1"), pybind11::arg("m2"), pybind11::arg("procTypeIn"), pybind11::arg("mixLoHi"));
 		cl.def("LHAeventList", (void (Pythia8::Pythia::*)()) &Pythia8::Pythia::LHAeventList, "C++: Pythia8::Pythia::LHAeventList() --> void");
 		cl.def("LHAeventSkip", (bool (Pythia8::Pythia::*)(int)) &Pythia8::Pythia::LHAeventSkip, "C++: Pythia8::Pythia::LHAeventSkip(int) --> bool", pybind11::arg("nSkip"));
 		cl.def("stat", (void (Pythia8::Pythia::*)()) &Pythia8::Pythia::stat, "C++: Pythia8::Pythia::stat() --> void");

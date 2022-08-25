@@ -1,5 +1,5 @@
 // Vincia.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -19,7 +19,7 @@
 #include "Pythia8/PhaseSpace.h"
 #include "Pythia8/StandardModel.h"
 #include "Pythia8/ShowerModel.h"
-#include "Pythia8/ShowerMEs.h"
+#include "Pythia8/ExternalMEs.h"
 
 // Include Vincia headers.
 #include "Pythia8/VinciaAntennaFunctions.h"
@@ -90,7 +90,7 @@ public:
   MECs                  mecs{};
 
   // Auxiliary objects.
-  ShowerMEsPlugin       mg5mes{};
+  ExternalMEsPlugin     mg5mes{};
   Rambo                 rambo{};
 
   // Vectors of antenna functions.

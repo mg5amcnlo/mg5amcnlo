@@ -1,5 +1,5 @@
 // PythiaStdlib.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -17,10 +17,12 @@
 #include <memory>
 #include <functional>
 #include <limits>
+#include <utility>
 
 // Stdlib header files for strings and containers.
 #include <string>
 #include <vector>
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <deque>
@@ -37,6 +39,11 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+
+// Thread header files.
+#include <mutex>
+#include <atomic>
+#include <thread>
 
 // Define pi if not yet done.
 #ifndef M_PI
@@ -81,6 +88,7 @@ using std::make_pair;
 using std::string;
 using std::to_string;
 using std::vector;
+using std::array;
 using std::map;
 using std::multimap;
 using std::unordered_map;
@@ -118,8 +126,15 @@ using std::setprecision;
 // Pointers
 using std::shared_ptr;
 using std::weak_ptr;
+using std::unique_ptr;
 using std::dynamic_pointer_cast;
 using std::make_shared;
+
+// Threading.
+using std::queue;
+using std::mutex;
+using std::thread;
+using std::atomic;
 
 } // end namespace Pythia8
 

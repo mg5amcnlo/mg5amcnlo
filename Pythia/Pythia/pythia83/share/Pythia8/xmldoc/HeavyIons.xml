@@ -49,11 +49,14 @@ building up the heavy ion collision. The final event will be available in the
 primary <code>Pythia</code> object. 
  
 <flag name="HeavyIon:showInit" default="on"> 
-Output detailed initialization information from the heavy ion 
-model. Typically there will be several <code>Pythia</code> object initialised 
-in a heavy ion run, this flag can be used to reduce the amount of output. 
-If off, only the output from initialisation of the primary <code>Pythia</code> 
-object will be shown 
+<strong>Please note:</strong> this flag is not currently in use due to 
+conflicts with the <aloc href="Parallelism">Parallelism</aloc> 
+framework, but is expected to be reintroduced in the future. Output 
+detailed initialization information from the heavy ion 
+model. Typically there will be several <code>Pythia</code> object 
+initialised in a heavy ion run, this flag can be used to reduce the 
+amount of output.  If off, only the output from initialisation of the 
+primary <code>Pythia</code> object will be shown. 
 </flag> 
  
 <p/> 
@@ -400,4 +403,4 @@ complete the full nucleaus-nucleus collision.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

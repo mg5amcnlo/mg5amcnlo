@@ -1,5 +1,5 @@
 // main333.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -86,7 +86,7 @@ int main() {
   // Statistics.
   pythia.stat();
   leadingTrack/=sumW;
-  HistPlot hpl("test333plot");
+  HistPlot hpl("main333plot");
   hpl.frame("fig", "Leading track pT", "$p_{\\perp}$", "Prob");
   hpl.add( leadingTrack, "-,black" , "");
   hpl.plot();

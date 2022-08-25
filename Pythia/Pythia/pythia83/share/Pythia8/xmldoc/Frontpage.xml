@@ -118,7 +118,7 @@ e-mail: christian.preuss@monash.edu
 <b>Torbj&ouml;rn Sj&ouml;strand</b><br/> 
 Department of Astronomy and Theoretical Physics, Lund University, 
 S&ouml;lvegatan 14A, SE-223 62 Lund, Sweden<br/> 
-e-mail: torbjorn@thep.lu.se 
+e-mail: torbjorn.sjostrand@thep.lu.se 
  
 <p/> 
 <b>Peter Skands</b><br/> 
@@ -152,7 +152,7 @@ e-mail: r.verheyen@ucl.ac.uk
  
 <h3>Further contributions</h3> 
  
-Makefiles, configure scripts and HepMC interface by <b>Mikhail Kirsanov</b>. 
+HepMC interface by <b>Mikhail Kirsanov</b>. 
 <br/>Conversion of XML files to PHP ones by <b>Ben Lloyd</b>. 
 <br/>Simple Makefile for Win32/NMAKE by <b>Bertrand Bellenot</b>. 
 <br/>Extended Higgs sector partly implemented by <b>Marc Montull</b>. 
@@ -200,7 +200,8 @@ additional work by <b>O. Mattelaer</b>.
 <br/>Final-state sector showers in Vincia by <b>J. Lopez-Villarejo</b>. 
 <br/>Helicity-dependence in Vincia by <b>A. Larkoski</b>. 
 <br/>Interleaved resonance showers and work on 
-sector merging and QED+EW showers in Vincia by <b>H. Brooks</b>. 
+MESS merging and QED+EW showers in Vincia by <b>H. Brooks</b>. 
+<br/>Static code analysis tools provided by <b>PVS-Studio team</b>. 
 <br/> 
  
 <br/><b>Note</b>: in several cases modifications have been made to 
@@ -304,9 +305,8 @@ for Event Generator Authors and Users.
  
 <p/> 
 The program and the documentation is 
-Copyright &copy; 2019 Torbj&ouml;rn Sj&ouml;strand 
- 
+Copyright &copy; 2022 Torbj&ouml;rn Sj&ouml;strand 
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

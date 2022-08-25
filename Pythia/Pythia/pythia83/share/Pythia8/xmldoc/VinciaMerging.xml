@@ -1,23 +1,26 @@
 <chapter name="VINCIA Merging Settings"> 
  
-<h2>Sector Merging (VINCIA only)</h2> 
+<h2>Sector Merging (MESS) -- VINCIA only</h2> 
  
 <p/> 
-The Vincia sector shower employs its own CKKW-L merging scheme, which 
-differs from the one implemented for the simple showers or Dire.  The 
-biggest difference is that the Vincia sector shower only possesses a 
-single history (or branching tree), i.e., any given configuration 
-produced by it can be uniquely traced back to every intermediate state 
-the shower has produced on the way. Sector merging can therefore be 
-viewed as the midpoint between the CKKW-L and the CKKW scheme, as only 
-a single, deterministic history needs to be generated, which 
-nevertheless <bold>exactly</bold> reflects the shower history and 
-Sudakov factors are generated dynamically using trial showers.  As 
-such, it is specifically designed for merging with high-multiplicity 
+The VINCIA sector shower employs its own CKKW-L merging scheme, which 
+differs from the one implemented for the simple showers or Dire. 
+The biggest difference is that (for gluon emissions) the VINCIA sector 
+shower only possesses a single history (or branching tree), i.e., any 
+given configuration produced by it can be uniquely traced back to every 
+intermediate state the shower has produced on the way. 
+While for gluon splittings, all possible quark permutations need to be 
+taken into account, the VINCIA sector shower is still "maximally bijective", 
+i.e., it has the lowest possible number of histories. 
+MESS merging can therefore be viewed as a midpoint between the CKKW-L 
+and the CKKW scheme, as only a single, deterministic history needs to be 
+generated, which nevertheless <bold>exactly</bold> reflects the shower 
+history and Sudakov factors are generated dynamically using trial showers. 
+As such, it is specifically designed for merging with high-multiplicity 
 matrix elements. 
  
 <p/> 
-Sector merging may be enabled by using the VINCIA sector shower and 
+VINCIA's merging may be enabled by using the VINCIA sector shower and 
 switching merging on: 
  
 <pre> 
@@ -35,7 +38,7 @@ Vincia:kineMapFFsplit = 1
  
 <p/> 
 since the inverse kinematic map for other splitting maps are 
-not currently available.  We also advise running with 
+not currently available. We also advise running with 
  
 <pre> 
 Check:abortIfVeto = on 
@@ -48,11 +51,11 @@ events).
  
 <p/> 
 We note that, different to merging with the simple showers, 
-<code>Merging:doMerging</code> always has to be set to <code>on</code> 
+<code>Merging:doMerging</code> should always be set to <code>on</code> 
 to enable merging, no matter which merging scale definition is used. 
  
 <p/> 
-The sector merging can generally replace CKKW-L merging with the 
+MESS merging can generally replace CKKW-L merging with the 
 simple showers and is illustrated in the main program 
 <code>main280.cc</code>. However, also other <aidx 
 href="CKKWLMerging">tree-level merging main programs</aidx> can be used 
@@ -122,7 +125,7 @@ construction.
  
 <h3>Merging Scale</h3> 
  
-The sector merging presently supports three different merging scale 
+MESS merging presently supports three different merging scale 
 definitions. If only <code>Merging:doMerging = on</code> is set, the 
 shower evolution variable (a generalised <code>Ariadne</code> <ei>pT</ei>) is 
 used to define the merging scale. Additionally, the merging scale may be 
@@ -150,17 +153,17 @@ of a single jet and the minimal invariant mass <ei>Q<sub>ij</sub></ei>
 and minimal separation <ei>&Delta;R<sub>ij</sub></ei> of every pair of 
 jets, as used to generate the events. 
  
-<h3>Expert Settings</h3> 
+<h3>Merging in Resonance Systems (Unvalidated)</h3> 
  
 The Vincia sector shower supports dedicated merging in resonance 
-systems. At the current stage, it is, however, only an experimental 
-feature and should not yet be used for physics studies. 
+systems. At the current stage, however, this should be considered 
+an experimental  feature as it has yet to be validated. The 
+following settings are therefore mainly intended for expert users, for 
+instance in the context of getting started on performing such validations. 
  
-The expert user might want to experiment with the following settings. 
 <flag name="Vincia:MergeInResSystems" default="off"> 
-Experimental switch to enable merging of additional jets in resonance 
-decay systems. Currenly only handles colour-singlet resonances only. 
-Intended for expert users only! 
+Switch to enable merging of additional jets in resonance 
+decay systems. Currenly handles colour-singlet resonances only. 
 </flag> 
  
 <mode name="Vincia:MergeNJetMaxRes" default="0"  min="0"> 
@@ -190,5 +193,37 @@ constructing the shower history. If turned on, the hard process must
 explicitly contain a resonance, e.g. <code>Merging:Process = { p p > 
 Z0 }</code>. 
 </flag> 
+ 
+<h3>Treatment of QED (and other non-QCD) Corrections</h3> 
+ 
+Vincia's sector merging algorithm itself is so far restricted to 
+pure QCD corrections. Thus, it is not possible to include any matrix 
+elements with higher-order QED (or other non-QCD) corrections among the merged 
+samples. 
+<p/> 
+Vincia's QED showers can still be enabled, and will be on by default. 
+While no fixed-order QED corrections can be included in the merging at the 
+moment, QED showers can still be used to dress accepted events with 
+logarithmically enhanced radiation after the merging has taken place. 
+This means that the merging algorithm does not include QED 
+clusterings when constructing shower histories, and QED showers are 
+switched off during trial showers. In particular, QED branchings above 
+the (QCD) merging scale in showers off accepted events will always be 
+allowed, regardless of the jet multiplicity. 
+ 
+<p/> 
+Vincia's electroweak showers, on the other hand, are currently not 
+supported for merging and should not be switched on. 
+The reason is that the emission of electroweak bosons alters the 
+definition of the hard process, rendering the number of emissions 
+ambiguous. 
+An example is the process <code>p p > j j </code>, which may evolve 
+to <code>p p > j j W+</code> when electroweak showers are turned on. 
+From the point of view of the QCD showers, this process may now equally well 
+look like a Drell-Yan process <code>p p > W+ </code> with two QCD branchings. 
+It is therefore only sensible to allow for electroweak showers in the 
+merging when these are also taken into account in the construction 
+of shower histories. As this is currently not the case, electroweak showers 
+are not supported in the sector merging at the moment. 
  
 </chapter> 

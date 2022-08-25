@@ -1,5 +1,5 @@
 // PhysicsBase.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -103,8 +103,9 @@ protected:
   // Pointer to information on subcollision parton locations.
   PartonSystems* partonSystemsPtr = {};
 
-  // Pointer to the total/elastic/diffractive cross sections.
+  // Pointers to the total/elastic/diffractive cross sections.
   SigmaTotal*    sigmaTotPtr      = {};
+  SigmaCombined* sigmaCmbPtr      = {};
 
   // A set of sub objects that should have their information in sync
   // with This.

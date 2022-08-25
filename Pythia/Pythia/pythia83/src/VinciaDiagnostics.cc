@@ -1,5 +1,5 @@
 // VinciaDiagnstoics.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -91,7 +91,7 @@ void VinciaDiagnostics::print() {
     string fileName = name;
     // Remove last 2 characters () from name
     fileName.resize(fileName.size() - 2);
-    fileName += ".runtime";
+    fileName += ".dat";
     hRunTime[name].table(fileName, true);
     // Also print counters associated with the same method.
     if (counters.find(name) != counters.end()) {

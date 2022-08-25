@@ -1,5 +1,5 @@
 // PartonLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 // Hard diffraction added by Christine Rasmussen.
@@ -50,7 +50,9 @@ bool PartonLevel::init( TimeShowerPtr timesDecPtrIn,
   bool doSQ          = settings.flag("SoftQCD:all")
                     || settings.flag("SoftQCD:inelastic");
   bool doND          = settings.flag("SoftQCD:nonDiffractive");
-  bool doSD          = settings.flag("SoftQCD:singleDiffractive");
+  bool doSD          = settings.flag("SoftQCD:singleDiffractive")
+                    || settings.flag("SoftQCD:singleDiffractiveXB")
+                    || settings.flag("SoftQCD:singleDiffractiveAX");
   bool doDD          = settings.flag("SoftQCD:doubleDiffractive");
   bool doCD          = settings.flag("SoftQCD:centralDiffractive");
   doNonDiff          = doSQ || doND;
@@ -107,7 +109,8 @@ bool PartonLevel::init( TimeShowerPtr timesDecPtrIn,
   doMPIinit          = doMPI;
   doMPIgmgm          = doMPI;
   if (doNonDiff || doDiffraction)        doMPIinit = true;
-  if (!settings.flag("PartonLevel:all")) doMPIinit = false;
+  if (!settings.flag("ProcessLevel:all")
+    || !settings.flag("PartonLevel:all")) doMPIinit = false;
 
   // Nature of MPI matching also used here for one case.
   pTmaxMatchMPI      = settings.mode("MultipartonInteractions:pTmaxMatch");
@@ -228,6 +231,14 @@ bool PartonLevel::init( TimeShowerPtr timesDecPtrIn,
   if (timesPtr) timesPtr->init( beamAPtr, beamBPtr);
   if (doISR && spacePtr) spacePtr->init( beamAPtr, beamBPtr);
 
+  // Remove an existing MPI initialization file if to create a new one.
+  if (mode("MultipartonInteractions:reuseInit") == 1) {
+    string cppstring = word("MultipartonInteractions:initFile");
+    const char* cstring = cppstring.c_str();
+    remove( cstring);
+  }
+
+  // Initialize normal nondiffractive MPIs.
   doMPIMB  =  multiMB.init( doMPIinit, 0, beamAPtr, beamBPtr, partonVertexPtr);
 
   // Initialize MPIs for diffractive system, possibly photon beam from
@@ -2831,6 +2842,7 @@ bool PartonLevel::resonanceShowers( Event& process, Event& event,
       do {
         typeVetoStep = 0;
         double pTtimes = timesDecPtr->pTnext( event, pTmax, 0.);
+        infoPtr->setPTnow( pTtimes);
 
         // Allow a user veto. Only do it once, so remember to change pTveto.
         if (pTveto > 0. && pTveto > pTtimes) {
@@ -3289,6 +3301,7 @@ bool PartonLevel::wzDecayShowers( Event& event) {
         // Begin evolution down in pT from hard pT scale.
         do {
           double pTtimes = timesDecPtr->pTnext( event, pTmax, 0.);
+          infoPtr->setPTnow( pTtimes);
 
           // Do a final-state emission (if allowed).
           if (pTtimes > 0.) {

@@ -1,5 +1,5 @@
 // DireMerging.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -1611,12 +1611,11 @@ void DireMerging::tagHistories() {
     it != myHistory->goodBranches.end(); ++it )
     it->second->tagPath(it->second);
 
-  double sumAll(0.), sumFullAll(0.), lastp(0.);
+  double sumAll(0.), lastp(0.);
   for ( map<double, DireHistory*>::iterator it =
     myHistory->goodBranches.begin();
     it != myHistory->goodBranches.end(); ++it ) {
     sumAll     += it->second->prodOfProbs;
-    sumFullAll += it->second->prodOfProbsFull;
   }
 
   // Sum up signal and background probabilities.
@@ -1911,9 +1910,6 @@ int DireMerging::calculateWeights( double RNpath, bool useAll ) {
     sumFullAll += it->second->prodOfProbsFull;
   }
 
-  // Sum up signal and background probabilities.
-  double sumSignalProb(0.), sumBkgrndProb(0.);
-
   // New UNLOPS strategy based on UN2LOPS.
   bool doUNLOPS2 = false;
   int depth = -1;
@@ -1996,13 +1992,6 @@ int DireMerging::calculateWeights( double RNpath, bool useAll ) {
         indexNow);
 
       wgtsum += probPath*w;
-
-      // Sum up signal and background probabilities separately.
-      if (it->second->hasTag("higgs"))
-        sumSignalProb += it->second->prodOfProbsFull*w;
-      else
-        sumBkgrndProb += it->second->prodOfProbsFull*w;
-
     }
     wgt = wgtsum;
 

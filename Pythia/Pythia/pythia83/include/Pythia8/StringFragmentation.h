@@ -1,5 +1,5 @@
 // StringFragmentation.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -57,7 +57,7 @@ public:
     double xNegIn, int colIn);
 
   // Fragment off one hadron from the string system, in flavour and pT.
-  void newHadron(double nNSP = 0.0);
+  void newHadron(double nNSP = 0.0, bool forbidPopcornNow = false);
 
   // Fragment off one hadron from the string system, in momentum space,
   // by taking steps either from positive or from negative end.
@@ -145,11 +145,12 @@ private:
 
   // Initialization data, read from Settings.
   bool   closePacking, setVertices, constantTau, smearOn,
-         traceColours;
+         traceColours, forbidPopcorn, hardRemn;
   int    hadronVertex;
   double stopMass, stopNewFlav, stopSmear, eNormJunction,
          eBothLeftJunction, eMaxLeftJunction, eMinLeftJunction,
-         mJoin, bLund, pT20, xySmear, maxSmear, maxTau, kappaVtx, mc, mb;
+         mJoin, bLund, pT20, xySmear, maxSmear, maxTau, kappaVtx, mc, mb,
+         aRemn, bRemn;
 
   // Data members.
   bool   hasJunction, isClosed;

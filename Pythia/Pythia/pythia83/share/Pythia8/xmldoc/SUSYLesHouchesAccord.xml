@@ -192,6 +192,12 @@ particle, or you may include an SLHA <code>DECAY</code> table for it,
 with the width set explicitly to zero.) 
 </flag> 
  
+<flag name="SLHA:allowOnlyOffShell" default="off"> 
+Switch to allow a decay table with only off-shell decays. By default, 
+internal checks require particles to have at least one on-shell decay 
+mode. 
+</flag> 
+ 
 <mode name="SLHA:meMode" default="100" min="100" max="103"> 
 This value specifies how threshold, off-shell, and phase-space 
 weighting effects for SLHA decay channels should be treated, using the same 
@@ -313,4 +319,4 @@ recompute the EW parameters as best suited for the application at hand.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

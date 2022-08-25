@@ -1,5 +1,5 @@
 // DireSplittingsQED.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -53,6 +53,7 @@ void DireSplittingQED::init() {
   pT2min  = pow2(settingsPtr->parm("TimeShower:pTmin"));
   pT2minL = pow2(settingsPtr->parm("TimeShower:pTminChgL"));
   pT2minQ = pow2(settingsPtr->parm("TimeShower:pTminChgQ"));
+  pT2minA = min(pT2minL, pT2minQ);
 
 }
 
@@ -81,6 +82,8 @@ bool DireSplittingQED::aboveCutoff( double t, const Particle& radBef,
     if (particleDataPtr->isLepton(radBef.id()) && t < pT2minL )
       return false;
     if (particleDataPtr->isQuark(radBef.id())  && t < pT2minQ )
+      return false;
+    if (radBef.id() == 22 && t < pT2minA )
       return false;
     if ((iSys == 0 || partonSystemsPtr->hasInAB(iSys)) && t < pT2min)
       return false;

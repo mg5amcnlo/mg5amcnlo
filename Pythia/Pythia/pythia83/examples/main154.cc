@@ -1,5 +1,5 @@
 // main154.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -43,23 +43,23 @@ int main(int argc, char* argv[]) {
 
   // Basic cross sections: non-diffractive, elastic and diffractive.
   Hist sigND = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 1); },
+    [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 1); },
     "Non-diffractive", nBin, eMin, eMax);
   plt.add(sigND, "-");
 
   Hist sigEla = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 2); },
+    [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 2); },
     "Elastic", nBin, eMin, eMax);
   plt.add(sigEla, "-");
 
   Hist sigSD = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 3)
-                           + pythia.getLowEnergySigma(idA, idB, eCM, 4); },
+    [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 3)
+                           + pythia.getSigmaPartial(idA, idB, eCM, 4); },
     "Single diffractive", nBin, eMin, eMax);
   plt.add(sigSD, "-");
 
   Hist sigDD = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 5); },
+    [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 5); },
     "Double diffractive", nBin, eMin, eMax);
   plt.add(sigDD, "-");
 
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
    && (abs(idB) == 2212 || abs(idB) == 2112)
    && idA * idB > 0) {
     Hist sigEx = Hist::plotFunc(
-      [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 7); },
+      [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 7); },
       "Excitation", nBin, eMin, eMax);
     plt.add(sigEx, "-");
   }
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
   if (idA * idB < 0 && particleData.isBaryon(idA)
                     && particleData.isBaryon(idB)) {
     Hist sigAnn = Hist::plotFunc(
-      [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 8); },
+      [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 8); },
       "Annihilation", nBin, eMin, eMax);
     plt.add(sigAnn, "-");
   }
@@ -85,14 +85,14 @@ int main(int argc, char* argv[]) {
   // Add resonance cross sections if applicable.
   if (pythia.hadronWidths.hasResonances(idA, idB)) {
     Hist sigRes = Hist::plotFunc(
-      [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 9); },
+      [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 9); },
       "Resonant", nBin, eMin, eMax);
     plt.add(sigRes, "-");
   }
 
   // Add total cross section at the end.
   Hist sigTot = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM); },
+    [&](double eCM) { return pythia.getSigmaTotal(idA, idB, eCM); },
     "Total", nBin, eMin, eMax);
   plt.add(sigTot, "k-");
 

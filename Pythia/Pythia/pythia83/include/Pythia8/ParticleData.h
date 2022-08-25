@@ -1,5 +1,5 @@
 // ParticleData.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -324,9 +324,12 @@ public:
   bool   isGluon()        const { return (idSave == 21);}
   bool   isDiquark()      const { return (idSave > 1000 && idSave < 10000
          && (idSave/10)%10 == 0);}
+  // Identify Hidden Valley partons as partons.
   bool   isParton()       const { return ( idSave == 21
     || (idSave != 0 && idSave < 6)
-    || (idSave > 1000 && idSave < 5510 && (idSave/10)%10 == 0) );}
+    || (idSave > 1000 && idSave < 5510 && (idSave/10)%10 == 0)
+    || (idSave > 4900100 && idSave < 4900109)
+    || (idSave > 4901000 && idSave < 4909000 && (idSave/10)%10 == 0) );}
   bool   isHadron()       const;
   bool   isMeson()        const;
   bool   isBaryon()       const;

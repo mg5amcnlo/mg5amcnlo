@@ -1,5 +1,5 @@
 // StringFragmentation.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -58,7 +58,7 @@ void StringEnd::setUp(bool fromPosIn, int iEndIn, int idOldIn, int iMaxIn,
 
 // Fragment off one hadron from the string system, in flavour and pT.
 
-void StringEnd::newHadron(double nNSP) {
+void StringEnd::newHadron(double nNSP, bool forbidPopcornNow) {
 
   // In case we are using the thermal model or Gaussian with
   // mT2 suppression we have to pick the pT first.
@@ -73,10 +73,11 @@ void StringEnd::newHadron(double nNSP) {
     double pT2Had = pow2(pxHad) + pow2(pyHad);
 
     // Pick new flavour and form a new hadron.
+    // For forbidPopcornNow == true it must be a baryon.
     do {
       flavNew = flavSelPtr->pick( flavOld, sqrt(pT2Had), nNSP);
       idHad   = flavSelPtr->getHadronID( flavOld, flavNew);
-    } while (idHad == 0);
+    } while (idHad == 0 || (forbidPopcornNow && (abs(idHad)/1000)%10 == 0));
 
     // Get its mass and thereby define its transverse mass.
     mHad   = flavSelPtr->getHadronMassWin(idHad);
@@ -88,10 +89,11 @@ void StringEnd::newHadron(double nNSP) {
   else {
 
     // Pick new flavour and form a new hadron.
+    // For forbidPopcornNow == true it must be a baryon.
     do {
       flavNew = flavSelPtr->pick( flavOld);
       idHad   = flavSelPtr->combine( flavOld, flavNew);
-    } while (idHad == 0);
+    } while (idHad == 0 || (forbidPopcornNow && (abs(idHad)/1000)%10 == 0));
 
     // Pick its transverse momentum.
     pair<double, double> pxy = pTSelPtr->pxy(flavNew.id, nNSP);
@@ -649,6 +651,12 @@ void StringFragmentation::init(StringFlav* flavSelPtrIn,
   // Check for number of nearby string pieces (nNSP) or not.
   closePacking    = flag("StringPT:closePacking");
 
+  // Optionally hard baryon in beam remnant handling.
+  forbidPopcorn   = flag("BeamRemnants:forbidPopcorn");
+  hardRemn        = flag("BeamRemnants:hardRemnantBaryon");
+  aRemn           = parm("BeamRemnants:aRemnantBaryon");
+  bRemn           = parm("BeamRemnants:bRemnantBaryon");
+
 }
 
 //--------------------------------------------------------------------------
@@ -763,13 +771,32 @@ bool StringFragmentation::fragment( int iSub, ColConfig& colConfig,
            "failed to change hadronisation parameters.");
       }
 
-      // Construct trial hadron and check that energy remains.
-      nowEnd.newHadron(nNSP);
+      // Check whether to use special hard diquark handling in beam remnant.
+      bool forbidPopcornNow = false;
+      if (forbidPopcorn && !hasJunction && (nowEnd.hadSoFar == 0)) {
+        int iNow = (fromPos) ? iPos : iNeg;
+        if (event[iNow].isDiquark()) {
+          bool motherInBeam = (event[iNow].statusAbs() == 63);
+          bool grannyInBeam = (event[event[iNow].mother1()].statusAbs() == 63);
+          if (motherInBeam || grannyInBeam) forbidPopcornNow = true;
+        }
+      }
 
+      // Construct trial hadron and check that energy remains.
+      nowEnd.newHadron(nNSP, forbidPopcornNow);
       if ( energyUsedUp(fromPos) ) break;
 
+      // Optionally allow a hard baryon fragmentation in beam remnant.
+      bool useInputZ = false;
+      double zUse    = 0.5;
+      if (forbidPopcornNow && hardRemn) {
+        useInputZ = true;
+        zUse      = zSelPtr->zLund( aRemn, bRemn);
+      }
+
       // Construct kinematics of the new hadron and store it.
-      Vec4 pHad = nowEnd.kinematicsHadron(system, stringVertices);
+      Vec4 pHad = nowEnd.kinematicsHadron(system, stringVertices,
+        useInputZ, zUse);
       int statusHad = (fromPos) ? 83 : 84;
       nowEnd.hadSoFar += 1;
 

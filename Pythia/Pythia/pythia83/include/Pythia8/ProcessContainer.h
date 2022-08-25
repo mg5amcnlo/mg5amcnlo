@@ -1,5 +1,5 @@
 // ProcessContainer.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -78,6 +78,9 @@ public:
     if (sigmaProcessPtr != 0) sigmaProcessPtr->setLHAPtr(lhaUpPtr);
     if (phaseSpacePtr != 0) phaseSpacePtr->setLHAPtr(lhaUpPtr);}
 
+  // Switch to new beam particle identities; for similar hadrons only.
+  void updateBeamIDs() {phaseSpacePtr->updateBeamIDs();}
+
   // Update the CM energy of the event.
   void newECM(double eCM) {phaseSpacePtr->newECM(eCM);}
 
@@ -128,6 +131,10 @@ public:
     { if (nTry > nTryStat && doAccumulate) sigmaDelta(); return sigmaFin;}
   double deltaMC(    bool doAccumulate = true)
     { if (nTry > nTryStat && doAccumulate) sigmaDelta(); return deltaFin;}
+
+  // New value for switched beam identity or energy (for SoftQCD processes).
+  double sigmaMaxSwitch() {sigmaMx = phaseSpacePtr->sigmaMaxSwitch();
+    return sigmaMx;}
 
   // Some kinematics quantities.
   int    id1()         const {return sigmaProcessPtr->id(1);}

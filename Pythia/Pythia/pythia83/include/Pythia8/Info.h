@@ -1,5 +1,5 @@
 // Info.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -27,6 +27,7 @@ class CoupSUSY;
 class BeamParticle;
 class PartonSystems;
 class SigmaTotal;
+class SigmaCombined;
 class HadronWidths;
 
 // Forward declaration of HIInfo class.
@@ -67,7 +68,7 @@ public:
     BeamParticle* beamGamAPtrIn, BeamParticle*  beamGamBPtrIn,
     BeamParticle* beamVMDAPtrIn, BeamParticle*  beamVMDBPtrIn,
     PartonSystems* partonSystemsPtrIn, SigmaTotal* sigmaTotPtrIn,
-    HadronWidths* hadronWidthsPtrIn,
+    SigmaCombined* sigmaCmbPtrIn, HadronWidths* hadronWidthsPtrIn,
     WeightContainer* weightContainerPtrIn) {
     settingsPtr = settingsPtrIn; particleDataPtr = particleDataPtrIn;
     rndmPtr = rndmPtrIn; coupSMPtr = coupSMPtrIn; coupSUSYPtr = coupSUSYPtrIn;
@@ -76,7 +77,7 @@ public:
     beamGamAPtr = beamGamAPtrIn; beamGamBPtr = beamGamBPtrIn;
     beamVMDAPtr = beamVMDAPtrIn; beamVMDBPtr = beamVMDBPtrIn;
     partonSystemsPtr = partonSystemsPtrIn; sigmaTotPtr = sigmaTotPtrIn;
-    hadronWidthsPtr = hadronWidthsPtrIn;
+    sigmaCmbPtr = sigmaCmbPtrIn; hadronWidthsPtr = hadronWidthsPtrIn;
     weightContainerPtr = weightContainerPtrIn; }
 
   // Pointer to the settings database.
@@ -106,8 +107,9 @@ public:
   // Pointer to information on subcollision parton locations.
   PartonSystems* partonSystemsPtr{};
 
-  // Pointer to the total/elastic/diffractive cross sections.
+  // Pointers to the total/elastic/diffractive cross sections.
   SigmaTotal*    sigmaTotPtr{};
+  SigmaCombined* sigmaCmbPtr{};
 
   // Pointer to the hadron widths data table.
   HadronWidths*  hadronWidthsPtr;
@@ -120,6 +122,9 @@ public:
   HIInfo*        hiInfo{};
 
   WeightContainer* weightContainerPtr{};
+
+  // Initialize settings for error printing.
+  void   init();
 
   // Listing of most available information on current event.
   void   list() const;
@@ -303,6 +308,9 @@ public:
   // Print a message the first few times. Insert in database.
   void   errorMsg(string messageIn, string extraIn = " ",
     bool showAlways = false);
+
+  // Add all errors from the other Info object to the count of this object.
+  void   errorCombine(const Info& other);
 
   // Provide total number of errors/aborts/warnings experienced to date.
   int    errorTotalNumber() const;
@@ -491,9 +499,6 @@ public:
 
   // From here on what used to be the private part of the class.
 
-  // Number of times the same error message is repeated, unless overridden.
-  static const int TIMESTOPRINT;
-
   // Allow conversion from mb to pb.
   static const double CONVERTMB2PB;
 
@@ -549,6 +554,9 @@ public:
   // Map for all error messages.
   map<string, int> messages;
 
+  // Whether error messages should be printed the first time the error occurs.
+  bool printErrors;
+
   // Map for LHEF headers.
   map<string, string> headers;
 
@@ -569,6 +577,7 @@ public:
   };
 
   // Set info on the two incoming beams: only from Pythia class.
+  void setBeamIDs( int idAin, int idBin) { idASave = idAin; idBSave = idBin;}
   void setBeamA( int idAin, double pzAin, double eAin, double mAin) {
     idASave = idAin; pzASave = pzAin; eASave = eAin; mASave = mAin;}
   void setBeamB( int idBin, double pzBin, double eBin, double mBin) {

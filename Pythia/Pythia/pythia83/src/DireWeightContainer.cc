@@ -1,5 +1,5 @@
 // DireWeightContainer.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -29,7 +29,7 @@ void DireWeightContainer::setup() {
   string mePlugin = settingsPtr->word("Dire:MEplugin");
   if (mePlugin.size() > 0) {
     if (!hasMEs) {
-      matrixElements = ShowerMEsPlugin("libpythia8mg5" + mePlugin + ".so");
+      matrixElements = ExternalMEsPlugin("libpythia8mg5" + mePlugin + ".so");
     }
     hasMEs = matrixElements.initDire(infoPtr,card);
   }
@@ -491,17 +491,17 @@ double DireWeightContainer::getTrialEnhancement( double pT2key ) {
 //--------------------------------------------------------------------------
 
 bool DireWeightContainer::hasME(const Event& event) {
-  if (hasMEs) return matrixElements.isAvailableMEDire(event);
+  if (hasMEs) return matrixElements.isAvailable(event);
   return false;
 }
 
 bool DireWeightContainer::hasME(vector <int> in_pdgs, vector<int> out_pdgs) {
-  if (hasMEs) return matrixElements.isAvailableMEDire(in_pdgs, out_pdgs);
+  if (hasMEs) return matrixElements.isAvailable(in_pdgs, out_pdgs);
   return false;
 }
 
 double DireWeightContainer::getME(const Event& event) {
-  if (hasMEs) return matrixElements.calcMEDire(event);
+  if (hasMEs) return matrixElements.calcME2(event);
   return 0.0;
 }
 

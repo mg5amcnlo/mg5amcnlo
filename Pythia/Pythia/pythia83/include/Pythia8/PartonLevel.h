@@ -1,5 +1,5 @@
 // PartonLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -55,6 +55,16 @@ public:
     MergingHooksPtr mergingHooksPtr, PartonVertexPtr partonVertexPtrIn,
     StringIntPtr stringInteractionPtrIn,
     bool useAsTrial);
+
+  // Special setup to allow switching between beam PDFs for MPI handling.
+  // Not needed when MPI for incoming pomeron, since same for all beams.
+  void initSwitchID( const vector<int>& idAList) {
+    multiMB.initSwitchID(  idAList);
+    multiSDA.initSwitchID( idAList);}
+
+  // Switch to new beam particle identities; for similar hadrons only.
+  void setBeamID(int iPDFA = 0) {multiMB.setBeamID(iPDFA);
+    multiSDA.setBeamID(iPDFA);}
 
   // Generate the next parton-level process.
   bool next( Event& process, Event& event);

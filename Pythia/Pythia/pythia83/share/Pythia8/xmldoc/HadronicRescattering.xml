@@ -55,8 +55,8 @@ combinations without any need for a reinitialization.
 <p/> 
 Currently there are only a few options available: 
  
-<modepick name="Rescattering:impactModel" default="0" min="0" max="1"> 
-Impact-parameter shape of the opacity, i.e.\ rescattering 
+<modepick name="Rescattering:impactModel" default="1" min="0" max="1"> 
+Impact-parameter shape of the opacity, i.e. rescattering 
 probability, with a width determined such that the current 
 rescattering cross section is reproduced, given the maximal 
 opacity below. 
@@ -65,7 +65,7 @@ opacity below.
 <option value="1">Gaussian fall-off of the opacity.</option> 
 </modepick> 
  
-<parm name="Rescattering:opacity" default="1." min="0." max="1."> 
+<parm name="Rescattering:opacity" default="0.9" min="0." max="1."> 
 Gives the probability of scattering at impact parameter 0. 
 </parm> 
  
@@ -234,4 +234,4 @@ specified stream or file.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

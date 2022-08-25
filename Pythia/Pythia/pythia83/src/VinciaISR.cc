@@ -1,5 +1,5 @@
 // VinciaISR.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -3423,7 +3423,11 @@ bool VinciaISR::branch(Event& event) {
       // iNew3 b inherits mothers of B, daughters are B and j.
       event[iNew3].daughters(iNew2, i2sav);
       // iNew2 j gets a and b as mothers, no daughters.
-      event[iNew2].mothers(iNew1, iNew3);
+      // Ensure mother1 is the one that changed colour (collinear mother),
+      // used eg to determine vertex structure in HepMC output.
+      if (event[iNew3].col() == event[i2sav].col() && event[iNew3].acol()
+        == event[i2sav].acol()) event[iNew2].mothers(iNew1, iNew3);
+      else event[iNew2].mothers(iNew3, iNew1);
 
     // Gluon splitting or conversion in the initial state: side A.
     } else if (!isSwapped) {
@@ -3472,14 +3476,19 @@ bool VinciaISR::branch(Event& event) {
     event[iNew1].mothers(event[i1sav].mother1(), event[i1sav].mother2());
     // Gluon emission.
     if (event[iNew2].id()==21) {
-      // iNew1 a inherits mothers of A, daughters are A and j.
+      // iNew1 a inherits mothers of A, daughters are j and A.
       event[iNew1].daughters(iNew2, i1sav);
-      // i2sav K gets k and j as daughters, keeps its mothers.
+      // i2sav K gets j and k as daughters, keeps its mothers.
       event[i2sav].daughters(iNew2, iNew3);
       // iNew3 k gets K as mother, no daughters.
       event[iNew3].mothers(i2sav, 0);
       // iNew2 j gets a and K as mothers, no daughters.
-      event[iNew2].mothers(i2sav, iNew1);
+      // Ensure mother1 is the one that changed colour (collinear mother),
+      // used eg to determine vertex structure in HepMC output.
+      if (event[i1sav].col() == event[iNew1].col() &&
+        event[i1sav].acol() == event[iNew1].acol())
+        event[iNew2].mothers(i2sav, iNew1);
+      else event[iNew2].mothers(iNew1, i2sav);
 
     // Gluon splitting or conversion in the initial state
     } else if (antFunTypePhys == QXsplitIF || antFunTypePhys == GXconvIF) {
@@ -3895,12 +3904,18 @@ bool VinciaISR::branch(Event& event) {
     return false;
   }
 
-  // When merging, communicate to MergingHooks whether the event may be vetoed
-  // due to this branching.
+  // Merging: is this branching a candidate for a merging veto or not?
   if (doMerging && !isTrialShower) {
     // We only want to veto the event based on the first branching.
-    // Note: in principle, we could veto later emissions here as well.
-    if (nBranch[iSysWin] > 1)
+    // In principle, later emissions could be vetoed as well, but the
+    // current treatment assumes that if the first emission is below the
+    // merging scale, all subsequent ones are too.
+    // This could explicitly be checked by setting nBranchMergingVeto to
+    // a large number.
+    int nBranchMaxMergingVeto = 1;
+
+    // Merging veto should ignore branchings after the first.
+    if (nBranch[iSysWin] > nBranchMaxMergingVeto)
       mergingHooksPtr->doIgnoreStep(true);
   }
 

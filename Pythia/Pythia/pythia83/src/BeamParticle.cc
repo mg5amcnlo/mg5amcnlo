@@ -1,5 +1,5 @@
 // BeamParticle.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -159,86 +159,23 @@ void BeamParticle::initBeamKind() {
   gammaMode         = 0;
   isResUnres        = false;
 
-  // Check for leptons or DM beams.
+  // Leptons or DM beam.
   if ( (idBeamAbs > 10 && idBeamAbs < 17)
-    || (idBeamAbs > 50 && idBeamAbs < 60) ) {
-    nValKinds = 1;
-    nVal[0]   = 1;
-    idVal[0]  = idBeam;
+    || (idBeamAbs > 50 && idBeamAbs < 60) )
     isLeptonBeam = true;
-  }
-
-  // Valence content for photons.
-  if (idBeamAbs == 22) {
+  // Photon beam.
+  else if (idBeamAbs == 22) {
     isGammaBeam = true;
-    nValKinds = 2;
-    nVal[0]   = 1;
-    nVal[1]   = 1;
-    newValenceContent();
     iPosVal   = -1;
   }
+  // Pomeron or meson beam.
+  else if (particleDataPtr->isMeson(idBeamAbs) || idBeamAbs == 990)
+    isHadronBeam = isMesonBeam = true;
+  // Baryon beam.
+  else if (particleDataPtr->isBaryon(idBeamAbs))
+    isHadronBeam = isBaryonBeam = true;
 
-  //  Done if cannot be lowest-lying hadron state.
-  if (idBeamAbs < 101 || idBeamAbs > 9999) return;
-
-  // Resolve valence content for assumed Pomeron.
-  if (idBeamAbs == 990) {
-    isMesonBeam = true;
-    nValKinds = 2;
-    nVal[0]   = 1 ;
-    nVal[1]   = 1 ;
-    newValenceContent();
-
-  // Resolve valence content for assumed meson. Flunk unallowed codes.
-  } else if (idBeamAbs < 1000) {
-    int id1 = idBeamAbs/100;
-    int id2 = (idBeamAbs/10)%10;
-    if ( id1 > maxValQuark || id2 > maxValQuark ) return;
-    isMesonBeam = true;
-
-    // Store valence content of a confirmed meson.
-    nValKinds = 2;
-    nVal[0]   = 1 ;
-    nVal[1]   = 1;
-    if (id1%2 == 0) {
-      idVal[0] = id1;
-      idVal[1] = -id2;
-    } else {
-      idVal[0] = id2;
-      idVal[1] = -id1;
-    }
-    newValenceContent();
-
-  // Resolve valence content for assumed baryon. Flunk unallowed codes.
-  } else {
-    int id1 = idBeamAbs/1000;
-    int id2 = (idBeamAbs/100)%10;
-    int id3 = (idBeamAbs/10)%10;
-    if ( id1 > maxValQuark || id2 > maxValQuark || id3 > maxValQuark) return;
-    if (id2 > id1 || id3 > id1) return;
-    isBaryonBeam = true;
-
-    // Store valence content of a confirmed baryon.
-    nValKinds = 1; idVal[0] = id1; nVal[0] = 1;
-    if (id2 == id1) ++nVal[0];
-    else {
-      nValKinds = 2;
-      idVal[1]  = id2;
-      nVal[1]   = 1;
-    }
-    if (id3 == id1) ++nVal[0];
-    else if (id3 == id2) ++nVal[1];
-    else {
-      idVal[nValKinds] = id3;
-      nVal[nValKinds]  = 1;
-      ++nValKinds;
-    }
-  }
-
-  // Flip flavours for antimeson or antibaryon, and then done.
-  if (idBeam < 0) for (int i = 0; i < nValKinds; ++i) idVal[i] = -idVal[i];
-  isHadronBeam = true;
-  Q2ValFracSav = -1.;
+  newValenceContent();
 
 }
 
@@ -256,24 +193,34 @@ void BeamParticle::initUnres(PDFPtr pdfUnresInPtr) {
 
 //--------------------------------------------------------------------------
 
-// Dynamic choice of meson valence flavours for pi0, K0S, K0L, Pomeron.
+// Dynamic choice of meson valence flavours for pi0, eta, K0S, K0L, Pomeron.
 
 void BeamParticle::newValenceContent() {
 
-  // A pi0, rho and omega oscillates between d dbar and u ubar.
-  if (idBeam == 111 || idBeam == 113 || idBeam == 223) {
-    idVal[0] = (rndmPtr->flat() < 0.5) ? 1 : 2;
-    idVal[1] = -idVal[0];
+  int idqContent = (idBeamAbs / 10) % 1000;
+
+  // For leptons and DM, the valence content is just the beam.
+  if ( (idBeamAbs > 10 && idBeamAbs < 17)
+    || (idBeamAbs > 50 && idBeamAbs < 60) ) {
+    setValenceContent(idBeam);
+  }
+  // An eta or eta' oscillates between d dbar, u ubar and s sbar.
+  else if (idBeam == 221 || idBeam == 331) {
+    // Probability of getting d quark.
+    double p = (idBeam == 221) ? 0.2 : 0.3;
+    double r = rndmPtr->flat();
+    int idq = (r < p) ? 1 : (r < 2 * p) ? 2 : 3;
+    setValenceContent(idq, -idq);
+
+  // pi0-like and omega-like hadrons oscillate between d dbar and u ubar.
+  } else if (idqContent == 11 || idqContent == 22 || idBeam == 990) {
+    int idq = (rndmPtr->flat() < 0.5) ? 1 : 2;
+    setValenceContent(idq, -idq);
 
   // A K0S or K0L oscillates between d sbar and s dbar.
   } else if (idBeam == 130 || idBeam == 310) {
-    idVal[0] = (rndmPtr->flat() < 0.5) ?  1 :  3;
-    idVal[1] = (idVal[0] == 1)      ? -3 : -1;
-
-  // For a Pomeron split gluon remnant into d dbar or u ubar.
-  } else if (idBeam == 990) {
-    idVal[0] = (rndmPtr->flat() < 0.5) ? 1 : 2;
-    idVal[1] = -idVal[0];
+    int idq = (rndmPtr->flat() < 0.5) ?  1 :  3;
+    setValenceContent(idq, idq == 1 ? -3 : -1);
 
   // For photons a VMD content may be chosen, or the choice may be delayed.
   } else if (idBeam == 22) {
@@ -281,41 +228,66 @@ void BeamParticle::newValenceContent() {
       int idTmp = idVMD();
       // A rho and omega oscillates between a uubar and ddbar.
       if (idTmp == 113 || idTmp == 223) {
-        idVal[0] = (rndmPtr->flat() < 0.5) ? 1 : 2;
-        idVal[1] = -idVal[0];
+        int idq = (rndmPtr->flat() < 0.5) ? 1 : 2;
+        setValenceContent(idq, -idq);
+      }
       // A phi is an ssbar system.
-      } else if (idTmp == 333) {
-        idVal[0] = 3;
-        idVal[1] = -3;
+      else if (idTmp == 333)
+        setValenceContent(3, -3);
       // COR: A J/psi is an ccbar system.
-      } else if (idTmp == 443) {
-        idVal[0] = 4;
-        idVal[1] = -4;
-      } else return;
-    // For non-VMD photons set an usused code to indicate that the flavour
-    // is not chosen yet but will be done later.
+      else if (idTmp == 443)
+        setValenceContent(4, -4);
+
+    // For non-VMD photons do not set valence content but treat everything
+    // like sea until the flavour is sampled after ISR.
     } else {
-      idVal[0] = 10;
-      idVal[1] = -idVal[0];
+      setValenceContent(0);
     }
 
-  // If phi meson set content to s sbar.
-  } else if (idBeam == 333) {
-    idVal[0] = 3;
-    idVal[1] = -idVal[0];
+  // For all other cases, there is an unambiguous quark content.
+  } else {
+    // Decompose default valence content.
+    int idq1 = (idBeamAbs / 1000) % 10;
+    int idq2 = (idBeamAbs /  100) % 10;
+    int idq3 = (idBeamAbs /   10) % 10;
 
-  // COR: If J/Psi meson set content to c cbar.
-  } else if (idBeam == 443) {
-    idVal[0] = 4;
-    idVal[1] = -idVal[0];
+    // Shift content for meson, and determine which is the antiquark.
+    if (idq1 == 0) {
+      idq1 = idq2; idq2 = idq3; idq3 = 0;
+      if (idq1 % 2 == 0 || idq2 == idq1) idq2 = -idq2;
+      else                               idq1 = -idq1;
+    }
 
-  // Other hadrons so far do not require any event-by-event change.
-  } else return;
+    // Flip signs for antiparticle beam.
+    if (idBeam < 0) {
+      idq1 = -idq1; idq2 = -idq2; idq3 = -idq3;
+    }
+
+    // Set content.
+    setValenceContent(idq1, idq2, idq3);
+  }
+}
+
+//--------------------------------------------------------------------------
+
+void BeamParticle::setValenceContent(int idq1, int idq2, int idq3) {
+
+  // Insert in array.
+  nValKinds = 0;
+  idVal[0] = idVal[1] = idVal[2] = nVal[0] = nVal[1] = nVal[2] = 0;
+  for (int idq : { idq1, idq2, idq3 }) {
+    if (idq == 0) continue;
+    for (int i = 0; i <= 2; ++i) {
+      if (idVal[i] == 0) {nValKinds += 1; idVal[i] = idq; nVal[i] += 1; break;}
+      if (idVal[i] == idq) {nVal[i] += 1; break;}
+    }
+  }
+  Q2ValFracSav = -1.;
 
   // Propagate change to PDF routine(s).
-  pdfBeamPtr->newValenceContent( idVal[0], idVal[1]);
+  if (pdfBeamPtr != 0) pdfBeamPtr->setValenceContent(idq1, idq2, idq3);
   if (pdfHardBeamPtr != pdfBeamPtr && pdfHardBeamPtr != 0)
-    pdfHardBeamPtr->newValenceContent( idVal[0], idVal[1]);
+    pdfHardBeamPtr->setValenceContent(idq1, idq2, idq3);
 
 }
 
@@ -354,6 +326,7 @@ xfModPrepData BeamParticle::xfModPrep(int iSkip, double Q2) {
     double xValNow   = xValFrac(i, Q2);
     xfData.xValTot  += nVal[i] * xValNow;
     xfData.xValLeft += nValLeft[i] * xValNow;
+
   }
 
   // Calculate how much x is left overall.
@@ -361,7 +334,7 @@ xfModPrepData BeamParticle::xfModPrep(int iSkip, double Q2) {
   for (int i = 0; i < size(); ++i) if (i != iSkip) xUsed += resolved[i].x();
   xfData.xLeft = 1. - xUsed;
 
-   // Calculate total amount of x carried by unmatched companion quarks.
+  // Calculate total amount of x carried by unmatched companion quarks.
   for (int i = 0; i < size(); ++i) {
     if (i != iSkip && resolved[i].isUnmatched()) xfData.xCompAdded
       += xCompFrac( resolved[i].x() / (xfData.xLeft + resolved[i].x()) )
@@ -730,6 +703,7 @@ bool BeamParticle::gammaInitiatorIsVal(int iResolved, int idInit,
   if ( idInit == 0 || abs(idInit) == 21 ) {
     idVal[0] = pdfBeamPtr->sampleGammaValFlavor(Q2);
     idVal[1] = -idVal[0];
+    setValenceContent( idVal[0], idVal[1], 0);
     return false;
   } else {
 
@@ -737,7 +711,7 @@ bool BeamParticle::gammaInitiatorIsVal(int iResolved, int idInit,
     // correct PDFs and to store the choice. Changed by sampleGammaValFlavor.
     idVal[0] =  idInit;
     idVal[1] = -idInit;
-    pdfBeamPtr->newValenceContent( idVal[0], idVal[1]);
+    setValenceContent( idVal[0], idVal[1], 0);
 
     // If initiator from gamma->qqbar splitting then it is a valence quark.
     if ( iResolved == iGamVal ) {
@@ -761,6 +735,7 @@ bool BeamParticle::gammaInitiatorIsVal(int iResolved, int idInit,
       } else {
         idVal[0] = pdfBeamPtr->sampleGammaValFlavor(Q2);
         idVal[1] = -idVal[0];
+        pdfBeamPtr->setValenceContent( idVal[0], idVal[1], 0);
         return false;
       }
     }

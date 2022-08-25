@@ -1,5 +1,5 @@
 // DireSpace.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -670,8 +670,8 @@ private:
           : (beamBPtr != nullptr && particleDataPtr->isHadron(beamBPtr->id()))
             ? beamBPtr : nullptr;
       }
-      if (b == nullptr && beamAPtr != nullptr) *beam = *beamAPtr;
-      if (b == nullptr && beamBPtr != nullptr) *beam = *beamBPtr;
+      if (b == nullptr && beamAPtr != nullptr) b = beamAPtr;
+      if (b == nullptr && beamBPtr != nullptr) b = beamBPtr;
     }
 
     double scale2 = t;

@@ -1,5 +1,5 @@
 # Makefile is a part of the PYTHIA event generator.
-# Copyright (C) 2021 Torbjorn Sjostrand.
+# Copyright (C) 2022 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 # Author: Philip Ilten, October 2014 - November 2017.
@@ -151,6 +151,7 @@ clean:
 
 # Clean all temporary and generated files.
 distclean: clean
+	cd examples && make clean
 	find . -type f -name Makefile.inc -print0 | xargs -0 rm -f
 	find . -type f -name "*~" -print0 | xargs -0 rm -f
 	find . -type f -name "#*" -print0 | xargs -0 rm -f

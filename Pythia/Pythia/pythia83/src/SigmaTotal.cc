@@ -1,5 +1,5 @@
 // SigmaTotal.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -646,9 +646,18 @@ double SigmaTotOwn::dsigmaCD( double xi1, double xi2, double t1, double t2,
 // =  2 : pi+ + p;   =  3 : pi- + p;     =  4 : pi0/rho0 + p;
 // =  5 : phi + p;   =  6 : J/psi + p;
 // =  7 : rho + rho; =  8 : rho + phi;   =  9 : rho + J/psi;
-// = 10 : phi + phi; = 11 : phi + J/psi; = 12 : J/psi + J/psi.
+// = 10 : phi + phi; = 11 : phi + J/psi; = 12 : J/psi + J/psi;
 // = 13 : gamma + p (preliminary); 14 : gamma + gamma (preliminary);
-// = 15 : Pom + p (preliminary).
+// = 15 : Pom + p (preliminary);
+// = 16 : K+ + p; = 17 :  K- + p; = 18 : K0(bar) + p;
+// = 19 : eta + p; = 20: eta' + p; = 21 : D+/D0 + p; = 22 : Ds + p;
+// = 23 : B+/B0 + p; = 24 : Bs + p; = 25 : Bc + p; = 26 : Upsilon + p;
+// = 27(28) : Lambda + p(bar); = 29(30) : Xi + p(bar);
+// = 31(32) : Omega + p(bar);  33(34) : Lambda_c + p(bar);
+// = 35(36) : Xi_c + p(bar); = 37(38) : Omega_c + p(bar);
+// = 39(40) : Lambda_b + p(bar); = 41(42) : Xi_b + p(bar);
+// = 43(44) : Omega_b + p(bar).
+
 // For now a neutron is treated like a proton.
 
 //--------------------------------------------------------------------------
@@ -665,22 +674,35 @@ double SigmaTotOwn::dsigmaCD( double xi1, double xi2, double t1, double t2,
 const double SigmaSaSDL::EPSILON = 0.0808;
 const double SigmaSaSDL::ETA     = -0.4525;
 const double SigmaSaSDL::X[] = { 21.70, 21.70, 13.63, 13.63, 13.63,
-  10.01, 0.970, 8.56, 6.29, 0.609, 4.62, 0.447, 0.0434, 67.7e-3, 211e-6};
+  10.01, 3.33, 8.56, 6.29, 0.609, 4.62, 0.447, 0.0434, 67.7e-3, 211e-6,
+  0., 11.82, 11.82, 11.82, 12.18, 11.46, 8.48, 6.67, 7.70, 5.59, 2.25,
+  1.17, 18.81, 18.81, 15.91, 15.91, 13.02, 13.02, 15.91, 15.91, 13.02,
+  13.02, 10.13, 10.13, 14.97, 14.97, 12.08, 12.08, 9.19, 9.19};
 const double SigmaSaSDL::Y[] = { 56.08, 98.39, 27.56, 36.02, 31.79,
-  1.51, -0.146, 13.08, -0.62, -0.060, 0.030, -0.0028, 0.00028, 129e-3,
-  215e-6};
+  -1.51, -0.50, 13.08, -0.62, -0.060, 0.030, -0.0028, 0.00028, 129e-3,
+  215e-6, 0., 8.15, 26.36, 17.26, 19.68, 13.62, 15.65, -1.00, 15.81,
+  -0.85, -0.34, -0.18, 37.39, 65.59, 18.69, 32.80, 0., 0., 37.39, 65.59,
+  18.69, 32.80, 0., 0., 37.39, 65.59, 18.69, 32.80, 0., 0.};
 
 // Type of the two incoming hadrons as function of the process number:
-// = 0 : p/n ; = 1 : pi/rho/omega; = 2 : phi; = 3 : J/psi.
+// = 0 : p/n; = 1 : pi/rho/omega; = 2 : phi; = 3 : J/psi; = 4 : K;
+// = 5 : eta; = 6 : eta'; = 7 : D0/D+; = 8 : Ds; = 9 : B+/B0; = 10 : Bs;
+// = 11 : Bc; = 12 : Upsilon; = 13 : Lambda/Sigma; = 14 : Xi;
+// = 15 : Omega; = 16 : Lambda_c/Sigma_c; = 17 : Xi_c; = 18 : Omega_c;
+// = 19 : Lambda_b/Sigma_b; = 20 : Xi_b; = 21 : Omega_b.
 const int SigmaSaSDL::IHADATABLE[] = { 0, 0, 1, 1, 1, 2, 3, 1, 1,
-  1, 2, 2, 3};
+  1, 2, 2, 3, -1, -1, -1, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 const int SigmaSaSDL::IHADBTABLE[] = { 0, 0, 0, 0, 0, 0, 0, 1, 2,
-  3, 2, 3, 3};
+  3, 2, 3, 3, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21};
 
-// Hadron-Pomeron coupling beta(t) = beta(0) * exp(b*t).
-// 0 = Pom + p, 1 = Pom + pi/rho/omega, 2 = Pom + phi, 3 = Pom + J/psi.
-const double SigmaSaSDL::BETA0[] = { 4.658, 2.926, 2.149, 0.208};
-const double SigmaSaSDL::BHAD[]  = {   2.3,   1.4,   1.4,  0.23};
+// Hadron-Pomeron coupling beta(t) = beta(0) * exp(b*t). Code as above.
+const double SigmaSaSDL::BETA0[] = { 4.658, 2.926, 2.149, 0.715, 2.537,
+  2.615, 2.460, 1.821, 1.432, 1.589, 1.200, 0.483, 0.251,
+  4.038, 3.416, 2.795, 3.416, 2.795,2.715, 3.214, 2.593, 1.834};
+const double SigmaSaSDL::BHAD[]  = { 2.3, 1.4, 1.4, 0.7, 1.4, 1.4, 1.4,
+  1.4, 1.4, 1.4, 1.4, 0.5, 0.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3, 2.3};
 
 // Pomeron trajectory alpha(t) = 1 + epsilon + alpha' * t
 const double SigmaSaSDL::ALPHAPRIME = 0.25;
@@ -699,33 +721,65 @@ const double SigmaSaSDL::VMDMASS[4]  = {0.77549, 0.78265, 1.01946,
 
 // Parameters and coefficients for single diffractive scattering.
 const int SigmaSaSDL::ISDTABLE[] = { 0, 0, 1, 1, 1, 2, 3, 4, 5,
-  6, 7, 8, 9};
-const double SigmaSaSDL::CSD[10][8] = {
-  { 0.213, 0.0, -0.47, 150., 0.213, 0.0, -0.47, 150., } ,
-  { 0.213, 0.0, -0.47, 150., 0.267, 0.0, -0.47, 100., } ,
-  { 0.213, 0.0, -0.47, 150., 0.232, 0.0, -0.47, 110., } ,
-  { 0.213, 7.0, -0.55, 800., 0.115, 0.0, -0.47, 110., } ,
-  { 0.267, 0.0, -0.46,  75., 0.267, 0.0, -0.46,  75., } ,
-  { 0.232, 0.0, -0.46,  85., 0.267, 0.0, -0.48, 100., } ,
-  { 0.115, 0.0, -0.50,  90., 0.267, 6.0, -0.56, 420., } ,
-  { 0.232, 0.0, -0.48, 110., 0.232, 0.0, -0.48, 110., } ,
-  { 0.115, 0.0, -0.52, 120., 0.232, 6.0, -0.56, 470., } ,
-  { 0.115, 5.5, -0.58, 570., 0.115, 5.5, -0.58, 570.  } };
+  6, 7, 8, 9, -1, -1, -1, 10, 10, 10, 11, 12, 13, 13, 14, 14, 15, 16,
+  17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 21, 21, 22, 22, 23, 23, 23, 23};
+const double SigmaSaSDL::CSD[24][8] = {
+  { 0.213, 0.0, -0.47, 150., 0.213, 0.0, -0.47, 150. } ,
+  { 0.213, 0.0, -0.47, 150., 0.267, 0.0, -0.47, 100. } ,
+  { 0.213, 0.0, -0.47, 150., 0.232, 0.0, -0.47, 110. } ,
+  { 0.213, 7.0, -0.55, 800., 0.130, 0.0, -0.47, 110. } ,
+  { 0.267, 0.0, -0.46,  75., 0.267, 0.0, -0.46,  75. } ,
+  { 0.232, 0.0, -0.46,  85., 0.267, 0.0, -0.48, 100. } ,
+  { 0.115, 0.0, -0.50,  90., 0.267, 6.0, -0.56, 420. } ,
+  { 0.232, 0.0, -0.48, 110., 0.232, 0.0, -0.48, 110. } ,
+  { 0.115, 0.0, -0.52, 120., 0.232, 6.0, -0.56, 470. } ,
+  { 0.115, 5.5, -0.58, 570., 0.115, 5.5, -0.58, 570. } ,
+  { 0.213, 0.0, -0.47, 150., 0.250, 0.0, -0.47, 105. } ,
+  { 0.213, 0.0, -0.47, 150., 0.260, 0.0, -0.47, 104. } ,
+  { 0.213, 0.0, -0.47, 150., 0.230, 0.0, -0.47, 106. } ,
+  { 0.213, 0.0, -0.47, 150., 0.145, 0.0, -0.47, 110. } ,
+  { 0.213,20.0, -0.47,2000., 0.065, 0.0, -0.47, 500. } ,
+  { 0.213,25.0, -0.47,3000., 0.075,-4.0, -0.47, 350. } ,
+  { 0.213,70.0, -0.47,7000., 0.055,-4.0, -0.47, 500. } ,
+  { 0.190, 0.0, -0.47, 150., 0.213, 0.0, -0.47, 150. } ,
+  { 0.170, 0.0, -0.47, 150., 0.213, 0.0, -0.47, 200. } ,
+  { 0.140, 0.0, -0.47, 200., 0.213, 0.0, -0.47, 300. } ,
+  { 0.110, 0.0, -0.47, 250., 0.213, 5.0, -0.47, 450. } ,
+  { 0.100, 0.0, -0.47, 300., 0.213, 5.0, -0.47, 500. } ,
+  { 0.050, 0.0, -0.47, 700., 0.213,20.0, -0.47,2200. } ,
+  { 0.045, 0.0, -0.47, 700., 0.213,25.0, -0.47,2600. } };
 
 // Parameters and coefficients for double diffractive scattering.
 const int SigmaSaSDL::IDDTABLE[] = { 0, 0, 1, 1, 1, 2, 3, 4, 5,
-  6, 7, 8, 9};
-const double SigmaSaSDL::CDD[10][9] = {
-  { 3.11, -7.34,  9.71, 0.068, -0.42, 1.31, -1.37,  35.0,  118., } ,
-  { 3.11, -7.10,  10.6, 0.073, -0.41, 1.17, -1.41,  31.6,   95., } ,
-  { 3.12, -7.43,  9.21, 0.067, -0.44, 1.41, -1.35,  36.5,  132., } ,
-  { 3.13, -8.18, -4.20, 0.056, -0.71, 3.12, -1.12,  55.2, 1298., } ,
-  { 3.11, -6.90,  11.4, 0.078, -0.40, 1.05, -1.40,  28.4,   78., } ,
-  { 3.11, -7.13,  10.0, 0.071, -0.41, 1.23, -1.34,  33.1,  105., } ,
-  { 3.12, -7.90, -1.49, 0.054, -0.64, 2.72, -1.13,  53.1,  995., } ,
-  { 3.11, -7.39,  8.22, 0.065, -0.44, 1.45, -1.36,  38.1,  148., } ,
-  { 3.18, -8.95, -3.37, 0.057, -0.76, 3.32, -1.12,  55.6, 1472., } ,
-  { 4.18, -29.2,  56.2, 0.074, -1.36, 6.67, -1.14, 116.2, 6532.  } };
+  6, 7, 8, 9, -1, -1, -1, 10, 10, 10, 11, 12, 13, 13, 14, 14, 15, 16,
+  17, 17, 18, 18, 19, 19, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21};
+const double SigmaSaSDL::CDD[22][9] = {
+  { 3.11, -7.34,  9.71, 0.068, -0.42, 1.31, -1.37,  35.0,  118. } ,
+  { 3.11, -7.10,  10.6, 0.073, -0.41, 1.17, -1.41,  31.6,   95. } ,
+  { 3.12, -7.43,  9.21, 0.067, -0.44, 1.41, -1.35,  36.5,  132. } ,
+  { 3.13, -8.18, -4.20, 0.056, -0.71, 3.12, -1.12,  55.2, 1298. } ,
+  { 3.11, -6.90,  11.4, 0.078, -0.40, 1.05, -1.40,  28.4,   78. } ,
+  { 3.11, -7.13,  10.0, 0.071, -0.41, 1.23, -1.34,  33.1,  105. } ,
+  { 3.12, -7.90, -1.49, 0.054, -0.64, 2.72, -1.13,  53.1,  995. } ,
+  { 3.11, -7.39,  8.22, 0.065, -0.44, 1.45, -1.36,  38.1,  148. } ,
+  { 3.18, -8.95, -3.37, 0.057, -0.76, 3.32, -1.12,  55.6, 1472. } ,
+  { 4.18, -29.2,  56.2, 0.074, -1.36, 6.67, -1.14, 116.2, 6532. } ,
+  { 3.11, -7.26,   9.9, 0.070, -0.42, 1.29, -1.38,  34.1,  113. } ,
+  {3.114, -7.25, 10.04, 0.071, -0.42, 1.27, -1.39,  33.6,  110. } ,
+  {3.116, -7.28,  9.77, 0.069, -0.43, 1.31, -1.37,  34.5,  117. } ,
+  { 3.10, -7.80,  2.50, 0.075, -0.80, 3.00, -1.23,  46.0,  715. } ,
+  { 3.10, -9.00,-19.20, 0.080, -1.04, 4.55, -0.90,  74.0, 2464. } ,
+  { 3.19, -9.00,-19.20, 0.069, -1.04, 4.55, -0.40,  74.0, 2464. } ,
+  { 3.00, -9.00,-19.20, 0.066, -1.04, 4.55,  2.00,  74.0, 2464. } ,
+  { 3.09, -7.34,  9.71, 0.065, -0.42, 1.40, -1.20,  35.0,  118. } ,
+  { 3.07, -7.34,  9.71, 0.060, -0.42, 1.50, -1.00,  35.0,  118. } ,
+  { 3.05, -7.34,  9.71, 0.055, -0.42, 1.60, -0.80,  35.0,  118. } ,
+  { 3.08, -9.20,  9.45, 0.045, -0.42, 1.80, -0.80,  70.0,  110. } ,
+  { 3.08, -9.00,  9.00, 0.030, -0.42, 2.00, -0.80, 100.0,  110. } };
+
+// Diffractive cross section is extrapolated below THR + MULT * (mA + mB).
+const double SigmaSaSDL::DIFFTHR  = 7.;
+const double SigmaSaSDL::DIFFMULT = 2.;
 
 //--------------------------------------------------------------------------
 
@@ -769,6 +823,19 @@ void SigmaSaSDL::init(Info* infoPtrIn) {
   s0         = 1. / ALPHAPRIME;
 
 }
+//--------------------------------------------------------------------------
+
+// Calculate total cross section only, for fast decision.
+
+double SigmaSaSDL::sigmaTotal( int idAin, int idBin, double sIn,
+  double mAin, double mBin) {
+
+  // Minimum action needed for total cross section.
+  if (!findBeamComb( idAin, idBin, mAin, mBin)) return 0.;
+  if (iProc > 12 && iProc < 16) return 0.;
+  return X[iProc] * pow( sIn, EPSILON) + Y[iProc] * pow( sIn, ETA);
+
+}
 
 //--------------------------------------------------------------------------
 
@@ -787,7 +854,7 @@ bool SigmaSaSDL::calcTotEl( int idAin, int idBin, double sIn, double mAin,
   double sEta = pow( s, ETA);
 
   // Ordinary hadron-hadron collisions. Total cross section.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
     sigTot = X[iProc] * sEps + Y[iProc] * sEta;
 
     // Elastic slope parameter and cross section.
@@ -851,7 +918,7 @@ double SigmaSaSDL::dsigmaEl( double t, bool useCoulomb, bool ) {
 
   // Ordinary hadron-hadron collisions.
   double dsig = 0.;
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
     dsig = CONVERTEL * pow2(sigTot) * (1. + pow2(rhoOwn)) * exp(bEl * t);
 
   // gamma + p and p + gamma: loop over VMD states on side A.
@@ -918,12 +985,18 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
   if (!findBeamComb( idAin, idBin, mAin, mBin)) return false;
   sigXB = sigAX = sigXX = sigAXB = 0.;
 
+  // Use simple behaviour close to threshold; around 10 GeV for normal hadrons.
+  double eCM   = sqrt(s);
+  double eThr  = DIFFTHR + DIFFMULT * (mA + mB);
+  bool hasLowE = (eCM < eThr);
+  double sNow  = (hasLowE) ? pow2(eThr) : s;
+  double eNow  = (hasLowE) ? eThr : eCM;
+
   // Ordinary hadron-hadron collisions.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
     // Lookup coefficients for single and double diffraction.
     int iSD = ISDTABLE[iProc];
     int iDD = IDDTABLE[iProc];
-    double eCM = sqrt(s);
     double sum1, sum2, sum3, sum4;
 
     // Single diffractive scattering A + B -> X + B cross section.
@@ -933,11 +1006,17 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
     sResXB          = pow2(mResXB);
     double sRMavgXB = mResXB * mMinXB;
     double sRMlogXB = log1p(sResXB/sMinXB);
-    double sMaxXB   = CSD[iSD][0] * s + CSD[iSD][1];
-    double BcorrXB  = CSD[iSD][2] + CSD[iSD][3] / s;
-    sum1  = log( (2.*bB + alP2 * log(s/sMinXB))
-          / (2.*bB + alP2 * log(s/sMaxXB)) ) / alP2;
-    sum2  = cRes * sRMlogXB / (2.*bB + alP2 * log(s/sRMavgXB) + BcorrXB) ;
+    double sMaxXB   = CSD[iSD][0] * sNow + CSD[iSD][1];
+    double BcorrXB  = CSD[iSD][2] + CSD[iSD][3] / sNow;
+    sum1  = log( (2.*bB + alP2 * log(sNow/sMinXB))
+          / (2.*bB + alP2 * log(sNow/sMaxXB)) ) / alP2;
+    sum2  = cRes * sRMlogXB / (2.*bB + alP2 * log(sNow/sRMavgXB) + BcorrXB);
+    // Extension to low energies.
+    if (hasLowE) {
+      double ratio = max( 0., eCM - mMinXB - mB) / (eThr - mMinXB - mB);
+      sum1        *= pow(ratio, 0.3);
+      sum2        *= pow(ratio, 0.6);
+    }
     sigXB = CONVERTSD * X[iProc] * BETA0[iHadB] * max( 0., sum1 + sum2);
 
     // Single diffractive scattering A + B -> A + X cross section.
@@ -947,11 +1026,17 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
     sResAX          = pow2(mResAX);
     double sRMavgAX = mResAX * mMinAX;
     double sRMlogAX = log1p(sResAX/sMinAX);
-    double sMaxAX   = CSD[iSD][4] * s + CSD[iSD][5];
-    double BcorrAX  = CSD[iSD][6] + CSD[iSD][7] / s;
-    sum1  = log( (2.*bA + alP2 * log(s/sMinAX))
-          / (2.*bA + alP2 * log(s/sMaxAX)) ) / alP2;
-    sum2  = cRes * sRMlogAX / (2.*bA + alP2 * log(s/sRMavgAX) + BcorrAX) ;
+    double sMaxAX   = CSD[iSD][4] * sNow + CSD[iSD][5];
+    double BcorrAX  = CSD[iSD][6] + CSD[iSD][7] / sNow;
+    sum1  = log( (2.*bA + alP2 * log(sNow/sMinAX))
+          / (2.*bA + alP2 * log(sNow/sMaxAX)) ) / alP2;
+    sum2  = cRes * sRMlogAX / (2.*bA + alP2 * log(sNow/sRMavgAX) + BcorrAX) ;
+    // Extension to low energies.
+    if (hasLowE) {
+      double ratio = max( 0., eCM - mA - mMinAX) / (eThr - mA - mMinAX);
+      sum1        *= pow(ratio, 0.3);
+      sum2        *= pow(ratio, 0.6);
+    }
     sigAX = CONVERTSD * X[iProc] * BETA0[iHadA] * max( 0., sum1 + sum2);
 
     // Order single diffractive correctly.
@@ -964,23 +1049,32 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
     }
 
     // Double diffractive scattering A + B -> X1 + X2 cross section.
-    double y0min = log( s * SPROTON / (sMinXB * sMinAX) ) ;
-    double sLog  = log(s);
+    double y0min = log( sNow * SPROTON / (sMinXB * sMinAX) ) ;
+    double sLog  = log(sNow);
     double Delta0 = CDD[iDD][0] + CDD[iDD][1] / sLog
       + CDD[iDD][2] / pow2(sLog);
     sum1 = (y0min * (log( max( 1e-10, y0min/Delta0) ) - 1.) + Delta0)/ alP2;
     if (y0min < 0.) sum1 = 0.;
-    double sMaxXX = s * ( CDD[iDD][3] + CDD[iDD][4] / sLog
+    double sMaxXX = sNow * ( CDD[iDD][3] + CDD[iDD][4] / sLog
       + CDD[iDD][5] / pow2(sLog) );
-    double sLogUp = log( max( 1.1, s * s0 / (sMinXB * sRMavgAX) ));
-    double sLogDn = log( max( 1.1, s * s0 / (sMaxXX * sRMavgAX) ));
+    double sLogUp = log( max( 1.1, sNow * s0 / (sMinXB * sRMavgAX) ));
+    double sLogDn = log( max( 1.1, sNow * s0 / (sMaxXX * sRMavgAX) ));
     sum2   = cRes * log( sLogUp / sLogDn ) * sRMlogAX / alP2;
-    sLogUp = log( max( 1.1, s * s0 / (sMinAX * sRMavgXB) ));
-    sLogDn = log( max( 1.1, s * s0 / (sMaxXX * sRMavgXB) ));
+    sLogUp = log( max( 1.1, sNow * s0 / (sMinAX * sRMavgXB) ));
+    sLogDn = log( max( 1.1, sNow * s0 / (sMaxXX * sRMavgXB) ));
     sum3   = cRes * log(sLogUp / sLogDn) * sRMlogXB / alP2;
-    double BcorrXX =  CDD[iDD][6] + CDD[iDD][7] / eCM + CDD[iDD][8] / s;
+    double BcorrXX =  CDD[iDD][6] + CDD[iDD][7] / eNow + CDD[iDD][8] / sNow;
     sum4   = pow2(cRes) * sRMlogAX * sRMlogXB
-      / max( 0.1, alP2 * log( s * s0 / (sRMavgAX * sRMavgXB) ) + BcorrXX);
+      / max( 0.1, alP2 * log( sNow * s0 / (sRMavgAX * sRMavgXB) ) + BcorrXX);
+    // Extension to low energies.
+    if (hasLowE) {
+      double ratio = max( 0., eCM - mMinXB - mMinAX)
+        / (eThr - mMinXB - mMinAX);
+      sum1        *= pow(ratio, 1.5);
+      sum2        *= pow(ratio, 1.25);
+      sum3        *= pow(ratio, 1.25);
+      sum4        *= ratio;
+    }
     sigXX  = CONVERTDD * X[iProc] * max( 0., sum1 + sum2 + sum3 + sum4);
 
     // Central diffractive scattering A + B -> A + X + B, only p and pbar.
@@ -1013,7 +1107,6 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
       // Lookup coefficients for single and double diffraction.
       int iSD = ISDTABLE[iProcVP[iA]];
       int iDD = IDDTABLE[iProcVP[iA]];
-      double eCM = sqrt(s);
       double sum1, sum2, sum3, sum4;
 
       // Single diffractive scattering A + B -> X + B cross section.
@@ -1110,7 +1203,6 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
       // Lookup coefficients for single and double diffraction.
       int iSD = ISDTABLE[iProcVV[iA][iB]];
       int iDD = IDDTABLE[iProcVV[iA][iB]];
-      double eCM = sqrt(s);
       double sum1, sum2, sum3, sum4;
 
       // Single diffractive scattering A + B -> X + B cross section.
@@ -1158,7 +1250,7 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
                     + CDD[iDD][5] / pow2(sLog) );
       double sLogUp = log( max( 1.1, s * s0 / (sMinXB * sRMavgAX) ));
       double sLogDn = log( max( 1.1, s * s0 / (sMaxXX * sRMavgAX) ));
-      sum2   = cRes * log( sLogUp / sLogDn ) * sRMlogAX / alP2;
+      sum2   = cRes * log(sLogUp / sLogDn) * sRMlogAX / alP2;
       sLogUp = log( max( 1.1, s * s0 / (sMinAX * sRMavgXB) ));
       sLogDn = log( max( 1.1, s * s0 / (sMaxXX * sRMavgXB) ));
       sum3   = cRes * log(sLogUp / sLogDn) * sRMlogXB / alP2;
@@ -1185,6 +1277,9 @@ bool SigmaSaSDL::calcDiff(  int idAin, int idBin, double sIn, double mAin,
   // No diffractive scattering for Pomeron + p.
   } else return false;
 
+  // Assuming calcTotEl has already been called, nondiffractive can be found.
+  sigNDtmp = sigTot - sigEl - sigAX - sigXB - sigXX - sigAXB;
+
   // Done.
   return true;
 
@@ -1202,7 +1297,7 @@ double SigmaSaSDL::dsigmaSD(double xi, double t, bool isXB, int ) {
   double epsWt = pow( m2X, -epsSaS);
 
   // Ordinary hadron-hadron collisions.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
 
     // Separate XB and AX cases since A and B masses/couplings may differ.
     if (isXB) {
@@ -1306,7 +1401,7 @@ double SigmaSaSDL::dsigmaDD(double xi1, double xi2, double t, int ) {
   double epsWt = pow( m2X1 * m2X2, -epsSaS);
 
   // Ordinary hadron-hadron collisions.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
     if (mX1 < mMinXB || mX2 < mMinAX) return 0.;
 
     // Return differential AB -> X1X2 cross section value.
@@ -1384,7 +1479,7 @@ double SigmaSaSDL::dsigmaCD( double xi1, double xi2, double t1, double t2,
   int ) {
 
   // Ordinary hadron-hadron collisions.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
 
     // Calculate mass; checked to be above threshold.
     double m2X = xi1 * xi2 * s;
@@ -1421,8 +1516,8 @@ bool SigmaSaSDL::findBeamComb( int idAin, int idBin, double mAin,
   double mBin) {
 
   // Order flavour of incoming hadrons: idAbsA < idAbsB (restore later).
-  idAbsA = abs(idAin);
-  idAbsB = abs(idBin);
+  idAbsA = abs(idAin) % 10000;
+  idAbsB = abs(idBin) % 10000;
   mA = mAin;
   mB = mBin;
   swapped = false;
@@ -1434,15 +1529,54 @@ bool SigmaSaSDL::findBeamComb( int idAin, int idBin, double mAin,
   sameSign = (idAin * idBin > 0);
 
   // Find process number.
-  iProc                                           = -1;
+  iProc = -1;
+
+  // Baryon-baryon.
   if (idAbsA > 1000) {
-    iProc                                         = (sameSign) ? 0 : 1;
+    if (idAbsB < 3000) {
+      iProc = 0;
+    } else if (idAbsB < 4000) {
+      if (idAbsB < 3300) iProc = 27;
+      else if (idAbsB < 3330) iProc = 29;
+      else iProc = 31;
+    } else if (idAbsB < 5000) {
+      if (idAbsB < 4300) iProc = 33;
+      else if (idAbsB < 4330) iProc = 35;
+      else iProc = 37;
+    } else if (idAbsB < 6000) {
+      if (idAbsB < 5300) iProc = 39;
+      else if (idAbsB < 5330) iProc = 41;
+      else iProc = 43;
+    }
+    if (!sameSign) ++iProc;
+
+  // Meson-baryon.
   } else if (idAbsA > 100 && idAbsB > 1000) {
-    iProc                                         = (sameSign) ? 2 : 3;
-    if (idAbsA/10 == 11 || idAbsA/10 == 22) iProc = 4;
-    if (idAbsA > 300) iProc                       = 5;
-    if (idAbsA > 400) iProc                       = 6;
-    if (idAbsA > 900) iProc                       = 15;
+    if (idAbsA < 300) {
+      iProc                                         = (sameSign) ? 2 : 3;
+      if (idAbsB == 2112) iProc                     = 5 - iProc;
+      if (idAbsA/10 == 11 || idAbsA/10 == 22) iProc = 4;
+      if (idAbsA == 221) iProc                      = 19;
+      if (idAbsA == 130) iProc                      = 18;
+    } else if (idAbsA < 400) {
+      iProc                                         = (sameSign) ? 16 : 17;
+      if (idAbsA/10 == 33) iProc                    = 5;
+      if (idAbsA == 331) iProc                      = 20;
+      if (idAbsA == 310) iProc                      = 18;
+    } else if (idAbsA < 500) {
+      iProc                                         = 21;
+      if (idAbsA/10 == 43) iProc                    = 22;
+      if (idAbsA/10 == 44) iProc                    = 6;
+    } else if (idAbsA < 600) {
+      iProc                                         = 23;
+      if (idAbsA/10 == 53) iProc                    = 24;
+      if (idAbsA/10 == 54) iProc                    = 25;
+      if (idAbsA/10 == 55) iProc                    = 26;
+    } else if (idAbsA > 900) {
+      iProc                                         = 15;
+    }
+
+  // Meson-meson.
   } else if (idAbsA > 100) {
     iProc                                         = 7;
     if (idAbsB > 300) iProc                       = 8;
@@ -1450,6 +1584,7 @@ bool SigmaSaSDL::findBeamComb( int idAin, int idBin, double mAin,
     if (idAbsA > 300) iProc                       = 10;
     if (idAbsA > 300 && idAbsB > 400) iProc       = 11;
     if (idAbsA > 400) iProc                       = 12;
+  // gamma-p or gamma-gamma.
   } else if (idAbsA == 22 || idAbsB == 22) {
     if (idAbsA == idAbsB) iProc                   = 14;
     if (idAbsB > 1000)    iProc                   = 13;
@@ -1457,7 +1592,7 @@ bool SigmaSaSDL::findBeamComb( int idAin, int idBin, double mAin,
   if (iProc == -1) return false;
 
   // Set up global variables.
-  if (iProc < 13) {
+  if (iProc < 13 || iProc > 15) {
     iHadA = IHADATABLE[iProc];
     iHadB = IHADBTABLE[iProc];
     bA    = BHAD[iHadA];

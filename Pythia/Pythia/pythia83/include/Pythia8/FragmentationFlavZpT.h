@@ -1,5 +1,5 @@
 // FragmentationFlavZpT.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -137,6 +137,9 @@ public:
   // Combine two flavours to produce a hadron with lowest possible mass.
   virtual int combineToLightest( int id1, int id2);
 
+  // Lightest flavour-neutral meson.
+  virtual int idLightestNeutralMeson() { return 111; }
+
   // Return chosen hadron in case of thermal model.
   virtual int getHadronIDwin() { return hadronIDwin; }
 
@@ -251,6 +254,10 @@ public:
   // Fragmentation function: top-level to determine parameters.
   virtual double zFrag( int idOld, int idNew = 0, double mT2 = 1.);
 
+  // Fragmentation function: select z according to provided parameters.
+  virtual double zLund( double a, double b, double c = 1.);
+  virtual double zPeterson( double epsilon);
+
   // Parameters for stopping in the middle; overloaded for Hidden Valley.
   virtual double stopMass() {return stopM;}
   virtual double stopNewFlav() {return stopNF;}
@@ -274,10 +281,6 @@ protected:
   double mc2, mb2, aLund, bLund, aExtraSQuark, aExtraDiquark, rFactC,
          rFactB, rFactH, aNonC, aNonB, aNonH, bNonC, bNonB, bNonH,
          epsilonC, epsilonB, epsilonH, stopM, stopNF, stopS;
-
-  // Fragmentation function: select z according to provided parameters.
-  double zLund( double a, double b, double c = 1.);
-  double zPeterson( double epsilon);
 
 };
 

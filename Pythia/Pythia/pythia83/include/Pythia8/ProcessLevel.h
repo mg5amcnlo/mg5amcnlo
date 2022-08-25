@@ -1,5 +1,5 @@
 // ProcessLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -51,8 +51,11 @@ public:
   void setLHAPtr( LHAupPtr lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;
     if (iLHACont >= 0) containerPtrs[iLHACont]->setLHAPtr(lhaUpPtr);}
 
+  // Switch to new beam particle identities; for similar hadrons only.
+  void updateBeamIDs();
+
   // Generate the next "hard" process.
-  bool next( Event& process);
+  bool next( Event& process, int procTypeIn = 0);
 
   // Special case: LHA input of resonance decay only.
   bool nextLHAdec( Event& process);
@@ -89,11 +92,12 @@ private:
   static const int MAXLOOP;
 
   // Generic info for process generation.
-  bool   doSecondHard, doSameCuts, allHardSame, noneHardSame, someHardSame,
-         cutsAgree, cutsOverlap, doResDecays, doISR, doMPI, doWt2;
-  int    startColTag;
+  bool   doVarEcm, allowIDAswitch, doSecondHard, doSameCuts, allHardSame,
+         noneHardSame, someHardSame, cutsAgree, cutsOverlap, doResDecays,
+         doISR, doMPI, doWt2, switchedID, switchedEcm;
+  int    startColTag, procType;
   double maxPDFreweight, mHatMin1, mHatMax1, pTHatMin1, pTHatMax1, mHatMin2,
-         mHatMax2, pTHatMin2, pTHatMax2, sigmaND;
+         mHatMax2, pTHatMin2, pTHatMax2, sigmaND, eCMold;
 
   // Info for process generation with photon beams.
   bool   beamHasGamma;

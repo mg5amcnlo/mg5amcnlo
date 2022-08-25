@@ -1,5 +1,5 @@
 // LHAPDF5.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -251,21 +251,17 @@ void LHAPDF5::xfUpdate(int, double x, double Q2) {
 
   // Update values.
   xg     = xfArray[6];
-  xu     = xfArray[8];
   xd     = xfArray[7];
-  xs     = xfArray[9];
-  xubar  = xfArray[4];
   xdbar  = xfArray[5];
-  xsbar  = xfArray[3];
+  xu     = xfArray[8];
+  xubar  = xfArray[4];
+  xs     = xfArray[9];
   xc     = xfArray[10];
   xb     = xfArray[11];
+  xsbar  = sSymmetricSave ? xs : xfArray[3];
+  xcbar  = cSymmetricSave ? xc : xfArray[2];
+  xbbar  = bSymmetricSave ? xb : xfArray[1];
   xgamma = xPhoton;
-
-  // Subdivision of valence and sea.
-  xuVal  = xu - xubar;
-  xuSea  = xubar;
-  xdVal  = xd - xdbar;
-  xdSea  = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;

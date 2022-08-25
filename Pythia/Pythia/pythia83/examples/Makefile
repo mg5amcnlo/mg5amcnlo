@@ -1,5 +1,5 @@
 # Makefile is a part of the PYTHIA event generator.
-# Copyright (C) 2021 Torbjorn Sjostrand.
+# Copyright (C) 2022 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 # Author: Philip Ilten, September 2014.
@@ -33,7 +33,7 @@ PYTHIA=$(PREFIX_LIB)/libpythia8$(LIB_SUFFIX)
 ifeq ($(RIVET_USE),true)
   COMMA=,
   RIVET_LPATH=$(filter -L%,$(shell $(RIVET_BIN)$(RIVET_CONFIG) --ldflags))
-  RIVET_RPATH=$(subst -L,-Wl$(COMMA)-rpath=,$(RIVET_LPATH))
+  RIVET_RPATH=$(subst -L,-Wl$(COMMA)-rpath$(COMMA),$(RIVET_LPATH))
 endif
 
 ################################################################################
@@ -152,7 +152,7 @@ ifeq ($(RIVET_USE),true)
 	$(CXX) $@.cc -o $@ -w $(CXX_COMMON:c++11=c++14) -Wl,-rpath,./\
 	 $(if $(filter true,$(ROOT_USE)),main93.so -DPY8ROOT\
          $(ROOT_LIB) `$(ROOT_CONFIG) --cflags --glibs`)\
-	 `$(RIVET_BIN)$(RIVET_CONFIG) --cppflags --libs` $(RIVET_RPATH)
+	 $(RIVET_RPATH) `$(RIVET_BIN)$(RIVET_CONFIG) --cppflags --libs`
 else
 	$(error Error: $@ requires RIVET)
 endif
@@ -191,4 +191,5 @@ clean:
 	rm -f test[0-9][0-9][0-9]; rm -f *.dat;\
 	rm -f weakbosons.lhe; rm -f hist.root;\
 	rm -f *~; rm -f \#*; rm -f core*; rm -f *Dct.*; rm -f *.so;\
-	rm -f *.log; rm -f *plot.py; rm -f *.pcm;
+	rm -f *.log; rm -f *plot.py; rm -f *.pcm; rm -f *.mpi;\
+	rm -f *.hepmc; rm -f *.yoda; rm -f *.root;

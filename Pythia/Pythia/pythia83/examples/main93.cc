@@ -1,5 +1,5 @@
 // main93.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -71,10 +71,11 @@ int main(int argc, char* argv[]) {
       "\t \t Useful for eg. tuning studies.\n"
       "\t -s SEED \n\t\t Specify seed for the random number generator.\n"
       "\t -o OUT \n\t\t Specify output prefix. Rivet histograms becomes "
-      "OUTRivet.yoda.\n"
+      "OUT.yoda.\n"
       "\t -n NEVENTS\n\t\t Number of events.\n"
       "\t -l \n\t\t Silence the splash screen.\n"
       "\t -t \n\t\t Time event generation.\n"
+      "\t -v \n\t\t Print the Pythia version number and exit.\n"
         << endl;
      cout << "Additional options in cmnd file:\n"
        "A few extra commands can be added to the cmnd file, compared "
@@ -84,18 +85,28 @@ int main(int argc, char* argv[]) {
        "\t Main:analyses = ANALYSIS1,ANALYSIS2,...\n "
        "\t\tA comma separated list of desired Rivet analyses to be run.\n"
        "\t\tAnalyses can be post-fixed with Rivet analysis parameters:\n"
-        "\t\tANALYSIS:parm->value.\n"
-       "\t Main:rivetRunName = STRING \n\t\tAdd an optional run name to\n"
-       "\t\tthe Rivet analysis.\n"
-       "\t Main:rivetIgnoreBeams = on\n\t\t Ignore beams in Rivet. \n"
-       "\t Main:writeHepMC = on \n\t\tWrite HepMC output (requires\n"
-       "\t\ta working installation of HepMC, linked to main93.)\n"
-       "\t Main:writeRoot = on \n\t\tWrite a root tree defined in the\n"
-       "\t\tmain93.h header file. Requires a working installation of Root, \n"
-       "\t\tproperly linked to Pythia.\n"
-       "\t Main:outputLog = on\n\t\tRedirect output to a logfile called\n"
-       "\t\tpythia.log. Can be prefixed with -o on command line.\n"
+        "\t\tANALYSIS:parm->value:parm2->value2 etc.\n"
+       "\t Main:rivetRunName = STRING \n\t\tAdd an optional run name to "
+       "the Rivet analysis.\n"
+       "\t Main:rivetIgnoreBeams = on\n\t\tIgnore beams in Rivet. \n"
+       "\t Main:rivetDumpPeriod = NUMBER\n\t\tDump Rivet histograms "
+       "to file evert NUMBER of events.\n"
+       "\t Main:rivetDumpFile = STRING\n\t\t Specify alternative "
+       "name for Rivet dump file. Default = OUT.\n"
+       "\t Main:writeHepMC = on \n\t\tWrite HepMC output (requires "
+       "a linked installation of HepMC).\n"
+       "\t Main:writeRoot = on \n\t\tWrite a root tree defined in the "
+       "main93.h header file.\n\t\tRequires a working installation of Root, "
+       "linked to Pythia.\n"
+       "\t Main:outputLog = on\n\t\tRedirect output to a logfile. Default is "
+       "OUT prefix, ie. pythia.log.\n"
          << endl;
+    return 0;
+  }
+
+  // Print version number and exit.
+  if(ip.hasOption("-v") || ip.hasOption("--version")) {
+    cout << "PYTHIA version: " << PYTHIA_VERSION << endl;
     return 0;
   }
 
@@ -161,6 +172,8 @@ int main(int argc, char* argv[]) {
   pythia.settings.addFlag("Main:writeRoot",false);
   pythia.settings.addFlag("Main:runRivet",false);
   pythia.settings.addFlag("Main:rivetIgnoreBeams",false);
+  pythia.settings.addMode("Main:rivetDumpPeriod",-1, true, false, -1, 0);
+  pythia.settings.addWord("Main:rivetDumpFile", "");
   pythia.settings.addFlag("Main:outputLog",false);
   pythia.settings.addWVec("Main:analyses",vector<string>());
   pythia.settings.addWVec("Main:preload",vector<string>());
@@ -187,6 +200,8 @@ int main(int argc, char* argv[]) {
   const string rivetrName = pythia.settings.word("Main:rivetRunName");
   const vector<string> rAnalyses = pythia.settings.wvec("Main:analyses");
   const vector<string> rPreload = pythia.settings.wvec("Main:preload");
+  const int rivetDump = pythia.settings.mode("Main:rivetDumpPeriod");
+  const string rivetDumpName = pythia.settings.word("Main:rivetDumpFile");
   int nError = pythia.mode("Main:timesAllowErrors");
   const bool countErrors = (nError > 0 ? true : false);
   // HepMC conversion object.
@@ -196,6 +211,7 @@ int main(int argc, char* argv[]) {
   // Rivet initialization.
   Pythia8Rivet rivet(pythia,(out == "" ? "Rivet.yoda" : out + ".yoda"));
   rivet.ignoreBeams(ignoreBeams);
+  rivet.dump(rivetDump, rivetDumpName);
   for(int i = 0, N = rAnalyses.size(); i < N; ++i){
     string analysis = rAnalyses[i];
     size_t pos = analysis.find(":");

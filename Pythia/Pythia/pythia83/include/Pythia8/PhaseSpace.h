@@ -1,5 +1,5 @@
 // PhaseSpace.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -49,6 +49,11 @@ public:
   // Perform simple initialization and store pointers.
   void init(bool isFirst, SigmaProcess* sigmaProcessPtrIn);
 
+  // Switch to new beam particle identities; for similar hadrons only.
+  void updateBeamIDs() { idAold = idA; idBold = idB; idA = beamAPtr->id();
+    idB = beamBPtr->id(); mA = beamAPtr->m(); mB = beamBPtr->m();
+    sigmaProcessPtr->updateBeamIDs();}
+
   // Update the CM energy of the event.
   void newECM(double eCMin) {eCM = eCMin; s = eCM * eCM;}
 
@@ -76,6 +81,10 @@ public:
   double biasSelectionWeight()  const {return biasWt;}
   bool   newSigmaMax() const {return newSigmaMx;}
   void   setSigmaMax(double sigmaMaxIn) {sigmaMx = sigmaMaxIn;}
+
+  // New value for switched beam identity or energy (for SoftQCD processes).
+  double sigmaMaxSwitch() {sigmaNw = sigmaProcessPtr->sigmaHatWrap();
+    sigmaMx = sigmaNw; return sigmaMx;}
 
   // For Les Houches with negative event weight needs
   virtual double sigmaSumSigned() const {return sigmaMx;}
@@ -124,13 +133,12 @@ protected:
     increaseMaximum(), hasQ2Min(), gmZmodeGlobal(), mHatGlobalMin(),
     mHatGlobalMax(), pTHatGlobalMin(), pTHatGlobalMax(), Q2GlobalMin(),
     pTHatMinDiverge(), minWidthBreitWigners(), minWidthNarrowBW(), idA(),
-    idB(), idAgm(), idBgm(), mA(), mB(), eCM(), s(), sigmaMxGm(),
-    hasLeptonBeamA(), hasLeptonBeamB(), hasOneLeptonBeam(),
+    idB(), idAold(), idBold(), idAgm(), idBgm(), mA(), mB(), eCM(), s(),
+    sigmaMxGm(), hasLeptonBeamA(), hasLeptonBeamB(), hasOneLeptonBeam(),
     hasTwoLeptonBeams(), hasPointGammaA(), hasPointGammaB(),
-    hasOnePointParticle(), hasTwoPointParticles(), hasGamma(),
-    hasVMD(), newSigmaMx(),
-    canModifySigma(), canBiasSelection(), canBias2Sel(), gmZmode(),
-    bias2SelPow(), bias2SelRef(), wtBW(), sigmaNw(),
+    hasOnePointParticle(), hasTwoPointParticles(), hasGamma(), hasVMD(),
+    newSigmaMx(), canModifySigma(), canBiasSelection(), canBias2Sel(),
+    gmZmode(), bias2SelPow(), bias2SelRef(), wtBW(), sigmaNw(),
     sigmaMx(), sigmaPos(), sigmaNeg(), biasWt(), mHatMin(), mHatMax(),
     sHatMin(), sHatMax(), pTHatMin(), pTHatMax(), pT2HatMin(), pT2HatMax(),
     x1H(), x2H(), m3(), m4(), m5(), s3(), s4(), s5(), mHat(), sH(), tH(), uH(),
@@ -174,7 +182,7 @@ protected:
          Q2GlobalMin, pTHatMinDiverge, minWidthBreitWigners, minWidthNarrowBW;
 
   // Information on incoming beams.
-  int    idA, idB, idAgm, idBgm;
+  int    idA, idB, idAold, idBold, idAgm, idBgm;
   double mA, mB, eCM, s, sigmaMxGm;
   bool   hasLeptonBeamA, hasLeptonBeamB, hasOneLeptonBeam, hasTwoLeptonBeams,
          hasPointGammaA, hasPointGammaB, hasOnePointParticle,
@@ -431,6 +439,9 @@ private:
 
   // Initialization data.
   bool   isDiffA, isDiffB, isSD, splitxit;
+
+  // Pion mass, cached for efficiency.
+  double mPi;
 
   // Kinematics properties specific to 2 -> 2 diffraction.
   double m3ElDiff, m4ElDiff, s1, s2, xiMin, xiMax, xiNow, sigNow, sigMax,

@@ -1,5 +1,5 @@
 // main23.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -180,12 +180,6 @@ void Scaling::xfUpdate(int, double x, double ) {
   xs    = 0.08 * sea;
   xc    = 0.04 * sea;
   xb    = 0.02 * sea;
-
-  // Subdivision of valence and sea.
-  xuVal = uv;
-  xuSea = xubar;
-  xdVal = dv;
-  xdSea = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;

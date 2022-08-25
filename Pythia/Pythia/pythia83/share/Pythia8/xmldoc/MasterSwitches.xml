@@ -194,6 +194,11 @@ event; on/off = true/false. Further options are found
  
 <h3>Printing</h3> 
  
+<flag name="Print:errors" default="on"> 
+If on, error messages are printed to <code>cout</code> the first time each 
+of them occurs. 
+</flag> 
+ 
 <flag name="Print:quiet" default="off"> 
 Can be set on to avoid the printing during program execution, to the 
 largest extent possible. This flag acts by setting the relevant values 
@@ -208,10 +213,11 @@ for <code>Init:showProcesses</code>,
 <code>Next:numberCount</code>, 
 <code>Next:numberShowLHA</code>, 
 <code>Next:numberShowInfo</code>, 
-<code>Next:numberShowProcess</code>, and 
-<code>Next:numberShowEvent</code>. 
-The change is to off or 0 for <code>Print:quiet = off</code>, 
-and restores to the respective default value for <code>= on</code>. 
+<code>Next:numberShowProcess</code>, 
+<code>Next:numberShowEvent</code>, and 
+<code>Print:errors</code>. 
+The change is to off or 0 for <code>Print:quiet = on</code>, 
+and restores to the respective default value for <code>= off</code>. 
 Those changes take effect immediately, so individual settings can be 
 changed afterwards. 
 </flag> 
@@ -219,4 +225,4 @@ changed afterwards.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

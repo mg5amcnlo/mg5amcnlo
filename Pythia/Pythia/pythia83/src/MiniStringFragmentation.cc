@@ -1,5 +1,5 @@
 // MiniStringFragmentation.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -162,9 +162,61 @@ bool MiniStringFragmentation::ministring2two( int nTry, Event& event,
     if (mHadSum < mSum) break;
   }
 
+  // If not enough mass to create baryon-antibaryon pair in diquark-antidiquark
+  // system, force reconnect to mesonic topology.
+  if (mHadSum >= mSum && flav1.isDiquark() && flav2.isDiquark()) {
+    // Split up diquark into individual flavours.
+    int idTmp1 = flav2.id / 1000;
+    int idTmp2 = (flav2.id % 1000) / 100;
+    int idTmp3 = flav1.id / 1000;
+    int idTmp4 = (flav1.id % 1000) / 100;
+    // If findLowMass, select smallest mSum pairing, otherwise pick random one.
+    idHad1 = 0;
+    idHad2 = 0;
+    int idHad13, idHad14, idHad23, idHad24;
+    do {
+      if (findLowMass) {
+        idHad13 = flavSelPtr->combineToLightest( idTmp1, idTmp3);
+        idHad14 = flavSelPtr->combineToLightest( idTmp1, idTmp4);
+        idHad23 = flavSelPtr->combineToLightest( idTmp2, idTmp3);
+        idHad24 = flavSelPtr->combineToLightest( idTmp2, idTmp4);
+      } else {
+        FlavContainer flavTmp1(idTmp1), flavTmp2(idTmp2), flavTmp3(idTmp3),
+          flavTmp4(idTmp4);
+        idHad13 = flavSelPtr->combine( flavTmp1, flavTmp3 );
+        idHad14 = flavSelPtr->combine( flavTmp1, flavTmp4);
+        idHad23 = flavSelPtr->combine( flavTmp2, flavTmp3);
+        idHad24 = flavSelPtr->combine( flavTmp2, flavTmp4);
+      }
+      double mHad13 = particleDataPtr->mSel(idHad13);
+      double mHad14 = particleDataPtr->mSel(idHad14);
+      double mHad23 = particleDataPtr->mSel(idHad23);
+      double mHad24 = particleDataPtr->mSel(idHad24);
+      if ( ( findLowMass && mHad13 + mHad24 < mHad14 + mHad23)
+        || (!findLowMass && rndmPtr->flat() > 0.5 ) ) {
+        idHad1 = idHad13;
+        idHad2 = idHad24;
+        mHad1  = mHad13;
+        mHad2  = mHad24;
+      } else {
+        idHad1 = idHad14;
+        idHad2 = idHad23;
+        mHad1  = mHad14;
+        mHad2  = mHad23;
+      }
+    } while (idHad1 == 0 || idHad2 == 0);
+    // Randomise which is considered coming from + side and which from -.
+    if (rndmPtr->flat() > 0.5) {
+      swap(idHad1, idHad2);
+      swap(mHad1, mHad2);
+    }
+    mHadSum = mHad1 + mHad2;
+  }
+
   // As last resort keep original flavours and split off pi0. Else fail.
   if (mHadSum >= mSum && findLowMass && !isClosed) {
     idHad1 = flavSelPtr->combineToLightest( flav1.id, flav2.id);
+    if (idHad1 == 0) return false;
     idHad2 = 111;
     mHad1 = particleDataPtr->mSel(idHad1);
     mHad2 = particleDataPtr->mSel(idHad2);

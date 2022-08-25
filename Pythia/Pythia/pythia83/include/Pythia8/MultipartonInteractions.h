@@ -1,5 +1,5 @@
 // MultipartonInteractions.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -50,6 +50,11 @@ public:
   // Initialize list of processes.
   bool init(int inState, int processLevel, Info* infoPtr,
     BeamParticle* beamAPtr, BeamParticle* beamBPtr);
+
+  // Switch to new beam particle identities.
+  void updateBeamIDs() {
+    for (int i = 0; i < nChan; ++i) sigmaT[i]->updateBeamIDs();
+    for (int i = 0; i < nChan; ++i) sigmaU[i]->updateBeamIDs(); }
 
   // Calculate cross section summed over possibilities.
   double sigma( int id1, int id2, double x1, double x2, double sHat,
@@ -103,17 +108,18 @@ public:
 
   // Constructor.
   MultipartonInteractions() : allowRescatter(), allowDoubleRes(), canVetoMPI(),
-    doPartonVertex(), doVarEcm(), pTmaxMatch(), alphaSorder(), alphaEMorder(),
-    alphaSnfmax(), bProfile(), processLevel(), bSelScale(), rescatterMode(),
-    nQuarkIn(), nSample(), enhanceScreening(), pT0paramMode(), alphaSvalue(),
-    Kfactor(), pT0Ref(), ecmRef(), ecmPow(), pTmin(), coreRadius(),
-    coreFraction(), expPow(), ySepResc(), deltaYResc(), sigmaPomP(), mPomP(),
-    pPomP(), mMaxPertDiff(), mMinPertDiff(), a1(), a0now(), a02now(),
-    bstepNow(), a2max(), b2now(), enhanceBmax(), enhanceBnow(), id1Save(),
-    id2Save(), pT2Save(), x1Save(), x2Save(), sHatSave(), tHatSave(),
-    uHatSave(), alpSsave(), alpEMsave(), pT2FacSave(), pT2RenSave(),
-    xPDF1nowSave(), xPDF2nowSave(), scaleLimitPTsave(), dSigmaDtSelSave(),
-    vsc1(), vsc2(), hasBaryonBeams(), hasPomeronBeams(), hasLowPow(),
+    doPartonVertex(), doVarEcm(), setAntiSame(), setAntiSameNow(),
+    pTmaxMatch(), alphaSorder(),
+    alphaEMorder(), alphaSnfmax(), bProfile(), processLevel(), bSelScale(),
+    rescatterMode(), nQuarkIn(), nSample(), enhanceScreening(), pT0paramMode(),
+    alphaSvalue(), Kfactor(), pT0Ref(), ecmRef(), ecmPow(), pTmin(),
+    coreRadius(), coreFraction(), expPow(), ySepResc(), deltaYResc(),
+    sigmaPomP(), mPomP(), pPomP(), mMaxPertDiff(), mMinPertDiff(), a1(),
+    a0now(), a02now(), bstepNow(), a2max(), b2now(), enhanceBmax(),
+    enhanceBnow(), id1Save(), id2Save(), pT2Save(), x1Save(), x2Save(),
+    sHatSave(), tHatSave(), uHatSave(), alpSsave(), alpEMsave(), pT2FacSave(),
+    pT2RenSave(), xPDF1nowSave(), xPDF2nowSave(), scaleLimitPTsave(),
+    dSigmaDtSelSave(), vsc1(), vsc2(), hasPomeronBeams(), hasLowPow(),
     globalRecoilFSR(), iDiffSys(), nMaxGlobalRecoilFSR(), bSelHard(), eCM(),
     sCM(), pT0(), pT20(), pT2min(), pTmax(), pT2max(), pT20R(), pT20minR(),
     pT20maxR(), pT20min0maxR(), pT2maxmin(), sigmaND(), pT4dSigmaMax(),
@@ -122,23 +128,32 @@ public:
     radius2B(), radius2C(), fracA(), fracB(), fracC(), fracAhigh(),
     fracBhigh(), fracChigh(), fracABChigh(), expRev(), cDiv(), cMax(),
     enhanceBavg(), bIsSet(false), bSetInFirst(), isAtLowB(), pickOtherSel(),
-    id1(), id2(), i1Sel(), i2Sel(), id1Sel(), id2Sel(), bNow(), enhanceB(),
-    pT2(), pT2shift(), pT2Ren(), pT2Fac(), x1(), x2(), xT(), xT2(), tau(),
-    y(), sHat(), tHat(), uHat(), alpS(), alpEM(), xPDF1now(), xPDF2now(),
-    dSigmaSum(), x1Sel(), x2Sel(), sHatSel(), tHatSel(), uHatSel(), nStep(),
-    iStepFrom(), iStepTo(), eCMsave(), eStepMin(), eStepMax(), eStepSize(),
-    eStepSave(), eStepFrom(), eStepTo(), pT0Save(), pT4dSigmaMaxSave(),
-    pT4dProbMaxSave(), sigmaIntSave(), sudExpPTSave(), zeroIntCorrSave(),
-    normOverlapSave(), kNowSave(), bAvgSave(), bDivSave(), probLowBSave(),
-    fracAhighSave(), fracBhighSave(), fracChighSave(), fracABChighSave(),
-    cDivSave(), cMaxSave(), beamOffset(), mGmGmMin(), mGmGmMax(), hasGamma(),
-    isGammaGamma(), isGammaHadron(), isHadronGamma(),
-    partonVertexPtr(), sigma2Sel(), dSigmaDtSel() {}
+    id1(), id2(), i1Sel(), i2Sel(), id1Sel(), id2Sel(), iPDFA(), nPDFA(1),
+    idAList(), bNow(), enhanceB(), pT2(), pT2shift(), pT2Ren(), pT2Fac(), x1(),
+    x2(), xT(), xT2(), tau(), y(), sHat(), tHat(), uHat(), alpS(), alpEM(),
+    xPDF1now(), xPDF2now(), dSigmaSum(), x1Sel(), x2Sel(), sHatSel(),
+    tHatSel(), uHatSel(), iPDFAsave(), nStep(), iStepFrom(), iStepTo(),
+    eCMsave(), eStepMin(), eStepMax(), eStepSize(), eStepMix(), eStepFrom(),
+    eStepTo(), beamOffset(), mGmGmMin(), mGmGmMax(), hasGamma(),
+    isGammaGamma(), isGammaHadron(), isHadronGamma(), partonVertexPtr(),
+    sigma2Sel(), dSigmaDtSel() {}
 
   // Initialize the generation process for given beams.
   bool init( bool doMPIinit, int iDiffSysIn,
     BeamParticle* beamAPtrIn, BeamParticle* beamBPtrIn,
     PartonVertexPtr partonVertexPtrIn, bool hasGammaIn = false);
+
+  // Special setup to allow switching between beam PDFs for MPI handling.
+  void initSwitchID( const vector<int>& idAListIn) {
+    idAList = idAListIn; nPDFA = idAList.size();
+    mpis  = vector<MPIInterpolationInfo>(nPDFA);}
+
+    // Switch to new beam particle identities, and possibly PDFs.
+  void setBeamID(int iPDFAin) { iPDFA = iPDFAin;
+    sigma2gg.updateBeamIDs(); sigma2qg.updateBeamIDs();
+    sigma2qqbarSame.updateBeamIDs(); sigma2qq.updateBeamIDs();
+    setAntiSameNow = setAntiSame && particleDataPtr->hasAnti(infoPtr->idA())
+      && particleDataPtr->hasAnti(infoPtr->idB());}
 
   // Reset impact parameter choice and update the CM energy.
   void reset();
@@ -210,13 +225,15 @@ private:
                       SIGMAMBLIMIT;
 
   // Initialization data, read from Settings.
-  bool   allowRescatter, allowDoubleRes, canVetoMPI, doPartonVertex, doVarEcm;
+  bool   allowRescatter, allowDoubleRes, canVetoMPI, doPartonVertex, doVarEcm,
+         setAntiSame, setAntiSameNow, allowIDAswitch;
   int    pTmaxMatch, alphaSorder, alphaEMorder, alphaSnfmax, bProfile,
          processLevel, bSelScale, rescatterMode, nQuarkIn, nSample,
-         enhanceScreening, pT0paramMode;
+         enhanceScreening, pT0paramMode, reuseInit;
   double alphaSvalue, Kfactor, pT0Ref, ecmRef, ecmPow, pTmin, coreRadius,
          coreFraction, expPow, ySepResc, deltaYResc, sigmaPomP, mPomP, pPomP,
          mMaxPertDiff, mMinPertDiff;
+  string initFile;
 
   // x-dependent matter profile:
   // Constants.
@@ -251,7 +268,7 @@ private:
   int    vsc1, vsc2;
 
   // Other initialization data.
-  bool   hasBaryonBeams, hasPomeronBeams, hasLowPow, globalRecoilFSR;
+  bool   hasPomeronBeams, hasLowPow, globalRecoilFSR;
   int    iDiffSys, nMaxGlobalRecoilFSR, bSelHard;
   double eCM, sCM, pT0, pT20, pT2min, pTmax, pT2max, pT20R, pT20minR,
          pT20maxR, pT20min0maxR, pT2maxmin, sigmaND, pT4dSigmaMax,
@@ -263,19 +280,31 @@ private:
 
   // Properties specific to current system.
   bool   bIsSet, bSetInFirst, isAtLowB, pickOtherSel;
-  int    id1, id2, i1Sel, i2Sel, id1Sel, id2Sel;
+  int    id1, id2, i1Sel, i2Sel, id1Sel, id2Sel, iPDFA, nPDFA;
+  vector<int> idAList;
   double bNow, enhanceB, pT2, pT2shift, pT2Ren, pT2Fac, x1, x2, xT, xT2,
          tau, y, sHat, tHat, uHat, alpS, alpEM, xPDF1now, xPDF2now,
          dSigmaSum, x1Sel, x2Sel, sHatSel, tHatSel, uHatSel;
 
-  // Stored values for mass interpolation for diffractive systems.
-  int    nStep, iStepFrom, iStepTo;
-  double eCMsave, eStepMin, eStepMax, eStepSize, eStepSave, eStepFrom, eStepTo,
-         pT0Save[20], pT4dSigmaMaxSave[20], pT4dProbMaxSave[20],
-         sigmaIntSave[20], sudExpPTSave[20][101], zeroIntCorrSave[20],
-         normOverlapSave[20], kNowSave[20], bAvgSave[20], bDivSave[20],
-         probLowBSave[20], fracAhighSave[20], fracBhighSave[20],
-         fracChighSave[20], fracABChighSave[20], cDivSave[20], cMaxSave[20];
+  // Local values for beam particle switch and mass interpolation.
+  int    iPDFAsave, nStep, iStepFrom, iStepTo;
+  double eCMsave, eStepMin, eStepMax, eStepSize, eStepMix, eStepFrom, eStepTo;
+
+  // Stored values for mass interpolation. First index projectile particle.
+  struct MPIInterpolationInfo {
+    int nStepSave;
+    double eStepMinSave, eStepMaxSave, eStepSizeSave;
+    vector<double> pT0Save, pT4dSigmaMaxSave, pT4dProbMaxSave,
+         sigmaIntSave, zeroIntCorrSave, normOverlapSave, kNowSave,
+         bAvgSave, bDivSave, probLowBSave,
+         fracAhighSave, fracBhighSave, fracChighSave,
+         fracABChighSave, cDivSave, cMaxSave;
+    vector<array<double, 101> >  sudExpPTSave;
+
+    void init(int nStepIn);
+  };
+
+  vector<MPIInterpolationInfo> mpis;
 
   // Beam offset wrt. normal situation and other photon-related parameters.
   int    beamOffset;
@@ -306,6 +335,10 @@ private:
   // Integrate the parton-parton interaction cross section.
   void jetCrossSection();
 
+  // Read or write initialization data from/to file, to save startup time.
+  bool saveMPIdata();
+  bool loadMPIdata();
+
   // Evaluate "Sudakov form factor" for not having a harder interaction.
   double sudakov(double pT2sud, double enhance = 1.);
 
@@ -314,7 +347,7 @@ private:
 
   // Calculate the actual cross section, either for the first interaction
   // (including at initialization) or for any subsequent in the sequence.
-  double sigmaPT2scatter(bool isFirst = false);
+  double sigmaPT2scatter(bool isFirst = false, bool doSymmetrize = false);
 
   // Find the partons that may rescatter.
   void findScatteredPartons( Event& event);

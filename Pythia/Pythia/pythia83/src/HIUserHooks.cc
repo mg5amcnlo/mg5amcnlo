@@ -1,5 +1,5 @@
 // HIUserHooks.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -384,13 +384,11 @@ bool SubCollisionModel::evolve() {
     // Calculate Chi2 for each parameter set and order them.
     multimap<double, Parms> chi2map;
     double chi2max = 0.0;
-    double chi2sum = 0.0;
     for ( int i = 0; i < NPop; ++i ) {
       setParm(pop[i]);
       double chi2 = Chi2(getSig(), dim);
       chi2map.insert(make_pair(chi2, pop[i]));
       chi2max = max(chi2max, chi2);
-      chi2sum += chi2;
     }
 
     // Keep the best one, and move the other closer to a better one or
@@ -947,149 +945,6 @@ getCollisions(vector<Nucleon> & proj, vector<Nucleon> & targ,
 
 
   T = 1.0 - S;
-
-  return ret;
-}
-
-//==========================================================================
-
-// MultiRadial uses a number of different disk sizes with different
-// opacities. Like a discrete version of DoubleStrikman.
-
-//--------------------------------------------------------------------------
-
-// Numerically estimate the cross sections corresponding to the
-// current parameter setting.
-
-SubCollisionModel::SigEst MultiRadial::getSig() const {
-
-  SigEst s;
-
-  double sTpt = 0.0;
-  double sT2pt = 0.0;
-  //  double sTpt2 = 0.0;
-  double sTp2t = 0.0;
-  //  double sTt2p = 0.0;
-  double Rp = 0.0;
-  for ( int ip = 0; ip < Nr; ++ip ) {
-    Rp += dR[ip];
-    double Rt = 0.0;
-    for ( int it = 0; it < Nr; ++it ) {
-      Rt += dR[it];
-      sTpt += c[ip]*T0[ip]*c[it]*T0[it]*pow2(Rp + Rt)*sigTot();
-      sT2pt += c[ip]*pow2(T0[ip])*c[it]*pow2(T0[it])*pow2(Rp + Rt)*sigTot();
-      double rp = 0.0;
-      for ( int jp = 0; jp < Nr; ++jp ) {
-        rp += dR[jp];
-        double rt = 0.0;
-        for ( int jt = 0; jt < Nr; ++jt ) {
-          rt += dR[jt];
-          double fac = T0[ip]*T0[jp]*T0[it]*T0[jt]*pow2(min(Rp + Rt, rp + rt))
-            * sigTot();
-          if ( ip == jp ) sTp2t += c[ip]*c[it]*c[jt]*fac;
-        }
-      }
-    }
-
-  }
-
-  s.sig[0] /= double(NInt);
-  s.dsig2[0] = (s.dsig2[0]/double(NInt) - pow2(s.sig[0]))/double(NInt);
-
-  s.sig[1] /= double(NInt);
-  s.dsig2[1] = (s.dsig2[1]/double(NInt) - pow2(s.sig[1]))/double(NInt);
-
-  s.sig[2] /= double(NInt);
-  s.dsig2[2] = (s.dsig2[2]/double(NInt) - pow2(s.sig[2]))/double(NInt);
-
-  s.sig[3] /= double(NInt);
-  s.dsig2[3] = (s.dsig2[3]/double(NInt) - pow2(s.sig[3]))/double(NInt);
-
-  s.sig[4] /= double(NInt);
-  s.dsig2[4] = (s.dsig2[4]/double(NInt) - pow2(s.sig[4]))/double(NInt);
-
-  s.sig[6] /= double(NInt);
-  s.dsig2[6] = (s.dsig2[6]/double(NInt) - pow2(s.sig[6]))/double(NInt);
-
-  s.sig[5] /= double(NInt);
-  s.dsig2[5] /= double(NInt);
-
-  s.sig[7] /= double(NInt);
-  s.dsig2[7] /= double(NInt);
-  double bS = (s.sig[7]/s.sig[5])/(16.0*M_PI*pow2(0.19732697));
-  double b2S = pow2(bS)*(s.dsig2[7]/pow2(s.sig[7]) - 1.0 +
-                        s.dsig2[5]/pow2(s.sig[5]) - 1.0)/double(NInt);
-  s.sig[5] = 0.0;
-  s.dsig2[5] = 0.0;
-  s.sig[7] = bS;
-  s.dsig2[7] = b2S;
-
-  return s;
-
-}
-
-//--------------------------------------------------------------------------
-
-// Access funtions to parameters in the MultiRadial model.
-
-void MultiRadial::setParm(const vector<double> & p) {
-  unsigned int ip = 0;
-  for ( int i = 0; i < Nr; ++i ) {
-    if ( ip < p.size() ) dR[i] = p[ip++];
-    if ( ip < p.size() ) T0[i] = p[ip++];
-    if ( ip < p.size() ) phi[i] = p[ip++];
-  }
-}
-
-vector<double> MultiRadial::getParm() const {
-  vector<double> ret;
-  for ( int i = 0; i < Nr; ++i ) {
-    ret.push_back(dR[i]);
-    ret.push_back(T0[i]);
-    if ( i < Nr -1 ) ret.push_back(phi[i]);
-  }
-  return ret;
-}
-
-vector<double> MultiRadial::minParm() const {
-  return vector<double>(Nr*Nr*(Nr - 1), 0.0);
-}
-
-vector<double> MultiRadial::maxParm() const {
-  return vector<double>(Nr*Nr*(Nr - 1), 1.0);
-}
-
-void MultiRadial::setProbs() {
-  double rProj = 1.0;
-  for ( int i = 0; i < Nr - 1; ++i ) {
-    c[i] = rProj*cos(phi[i]*M_PI/2.0);
-    rProj *= sin(phi[i]*M_PI/2.0);
-  }
-  c[Nr - 1] = rProj;
-}
-
-int MultiRadial::choose() const {
-  double sum = 0.0;
-  double sel = rndPtr->flat();
-  for ( int i = 0; i < Nr - 1; ++i )
-    if ( sel < ( sum += c[i] ) ) return i;
-  return Nr - 1;
-}
-
-
-
-
-//--------------------------------------------------------------------------
-
-// Main function returning the possible sub-collisions.
-
-multiset<SubCollision> MultiRadial::
-getCollisions(vector<Nucleon> & proj, vector<Nucleon> & targ,
-              const Vec4 & bvec, double & T) {
-  // Always call base class to reset nucleons and shift them into
-  // position.
-  multiset<SubCollision> ret =
-    SubCollisionModel::getCollisions(proj, targ, bvec, T);
 
   return ret;
 }

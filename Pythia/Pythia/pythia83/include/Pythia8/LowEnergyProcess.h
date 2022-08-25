@@ -1,5 +1,5 @@
 // LowEnergyProcess.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -11,7 +11,7 @@
 #include "Pythia8/Basics.h"
 #include "Pythia8/Event.h"
 #include "Pythia8/FragmentationSystems.h"
-#include "Pythia8/LowEnergySigma.h"
+#include "Pythia8/SigmaLowEnergy.h"
 #include "Pythia8/MiniStringFragmentation.h"
 #include "Pythia8/HadronWidths.h"
 #include "Pythia8/NucleonExcitations.h"
@@ -35,7 +35,7 @@ public:
   // Initialize the class.
   void init( StringFlav* flavSelPtrIn, StringFragmentation* stringFragPtrIn,
     MiniStringFragmentation* ministringFragPtrIn,
-    LowEnergySigma* lowEnergySigmaPtrIn,
+    SigmaLowEnergy* sigmaLowEnergyPtrIn,
     NucleonExcitations* nucleonExcitationsPtrIn);
 
   // Produce outgoing primary hadrons from collision of incoming pair.
@@ -81,7 +81,7 @@ private:
   ColConfig simpleColConfig;
 
   // Cross sections for low-energy processes.
-  LowEnergySigma* lowEnergySigmaPtr;
+  SigmaLowEnergy* sigmaLowEnergyPtr;
 
   // Pointer to class for handling nucleon excitations
   NucleonExcitations* nucleonExcitationsPtr;

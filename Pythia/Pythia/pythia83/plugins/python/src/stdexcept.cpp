@@ -1,3 +1,4 @@
+#include <array>
 #include <functional>
 #include <iterator>
 #include <memory>

@@ -969,19 +969,44 @@ can be checked with the
 method. 
 </method> 
  
-<method name="bool Pythia::next(double eCM)"> 
+<method name="bool Pythia::next(int procType)"> 
+By default all initialized processes are generated, properly mixed. 
+By specifying a <code>procType</code>, it possible to force a specific 
+process type, assuming that you start out e.g. from <code>SoftQCD:all 
+= on</code>. The possible interaction <code>procType</code>s are (1) 
+inelastic nondiffractive, (2) elastic, (3, 4) single diffractive where 
+either the first or second hadron is broken up, (5) double 
+diffractive, and (6) central diffraction. This matches the order of 
+the <code>SoftQCD</code> process codes 101 - 106.<br/> If the 
+collision energy can be so low that the <code>LowEnergyQCD</code> 
+processes are used, then also the options (7) excitation, (8) 
+annihilation and (9) resonant can be used. Then all the input numbers 
+match the order of the <code>LowEnergQCD</code> codes 151 - 159. In 
+the higher-energy description process types 7 - 9 default back to the 
+0 mixed option. 
 </method> 
-<methodmore name="bool Pythia::next(double eA, double eB)"> 
+ 
+<method name="bool Pythia::setKinematics(double eCM)"> 
+</method> 
+<methodmore name="bool Pythia::setKinematics(double eA, double eB)"> 
 </methodmore> 
-<methodmore name="bool Pythia::next(double pxA, double pyA, double pzA, 
-double pxB, double pyB, double pzB)"> 
-These three methods can only be used when variable event-energy has been 
-switched on, see the <aloc href="BeamParameters">Beam Parameters</aloc> 
-description. Then they can be used to give in the new event CM energy, 
-the two back-to-back incoming particle energies, or the full 
-three-momentum of the incoming particles, for <code>Beams:frameType</code> 
-set to 1, 2 or 3, respectively. 
+<methodmore name="bool Pythia::setKinematics(double pxA, double pyA, 
+                  double pzA, double pxB, double pyB, double pzB)"> 
 </methodmore> 
+<methodmore name="bool Pythia::setKinematics(Vec4 pA, Vec4 pB)"> 
+When variable energy is set with 
+<code>Beams:allowVariableEnergy</code> change the beam energy. 
+</methodmore> 
+ 
+<method name="bool Pythia::setBeamIDs( int idAin, int idBin)"> 
+Provides limited support for changing beam particles. Using this 
+method, <code>idA</code> can be changed to any hadron, while 
+<code>idB</code> must be a proton or a neutron when using this 
+feature. This is useful for example in hadronic cascades in a 
+medium. It is here assumed that only the <code>SoftQCD</code> (and 
+<code>LowEnergyQCD</code> if relevant) hadron-nucleon processes are 
+being used. 
+</method> 
  
 <method name="int Pythia::forceTimeShower( int iBeg, int iEnd, 
 double pTmax, int nBranchMax = 0)"> 
@@ -1050,6 +1075,12 @@ Further details are found <aloc href="HadronLevelStandalone">here</aloc>.
 event record is then not consistent and should not be studied. 
 </method> 
  
+<method name="bool Pythia::moreDecays(int i)"> 
+perform decay of the particle at index <code>i</code> of the event record, 
+when possible. Sequential decays are not performed, but have to be taken 
+care of successively, if so desired. 
+</method> 
+ 
 <method name="bool Pythia::forceRHadronDecays()"> 
 perform decays of R-hadrons that were previously considered stable. 
 This could be if an R-hadron is sufficiently long-lived that 
@@ -1060,61 +1091,87 @@ its four-momentum is changed. Further details are found
 event record is then not consistent and should not be studied. 
 </method> 
  
-<method name="bool Pythia::doLowEnergyProcess(int i1, int i2, int type)"> 
+<method name="bool Pythia::doLowEnergyProcess(int i1, int i2, int procType)"> 
 allow two hadrons, located in positions <ei>i1</ei> and <ei>i2</ei> of 
 the normal event record to interact with each other and give rise to new 
 hadrons by 
 <aloc href="QCDLowEnergyProcesses">Low-energy QCD Processes</aloc>. 
-The possible interaction <code>type</code>s are 
+The possible interaction <code>procType</code>s are 
 (1) inelastic nondiffractive, (2) elastic, (3, 4) single diffractive 
 where either first or second hadron is broken up, (5) double diffractive, 
 (7) excitation, (8) annihilation and (9) resonant. It is also possible to 
-specify the formation of a specific resonance by setting <code>type</code> to 
-the id of that particle. No perturbative stage is applied in either case, 
-as relevent at low energies. It can be used e.g. to model 
-<aloc href="HadronicRescattering">Hadronic Rescattering</aloc> in the 
-final state, where partial cross sections are first calculated to provide 
-the relevant mix of different collision types. This method does not itself 
-decay unstable hadrons, but that could be achieved e.g. with a 
-<code>Pythia::moreDecays()</code> call. 
+specify the formation of a specific resonance by setting 
+<code>procType</code> to the id of that particle. No perturbative stage 
+is applied in either case, as relevent at low energies. It can be used 
+e.g. to model <aloc href="HadronicRescattering">Hadronic Rescattering</aloc> 
+in the final state, where partial cross sections are first calculated 
+to provide the relevant mix of different collision types. This method 
+does not itself decay unstable hadrons, but that could be achieved e.g. 
+with a <code>Pythia::moreDecays()</code> call. 
 </method> 
  
-<method name="double Pythia::getLowEnergySigma(int i1, int i2, int type = 0)"> 
-returns the cross section used internally for low-energy collisions, 
-with the same arguments and in particular the same <code>type</code> 
-classification as above, with default option 0 giving the total cross section. 
+<method name="double Pythia::getSigmaTotal()"> 
 </method> 
- 
-<method name="double Pythia::getLowEnergySigma(int id1, int id2, double eCM12, 
-double m1, double m2, int type = 0)"> 
-</method> 
-<methodmore name="double Pythia::getLowEnergySigma(int id1, int id2, 
-double eCM12, int type = 0)"> 
-returns the same low-energy cross sections as above, but with 
-arguments decoupled from the event record location of particles. 
+<methodmore name="double Pythia::getSigmaTotal(double eCM12, 
+int mixLoHi = 0)"> 
+</methodmore> 
+<methodmore name="double Pythia::getSigmaTotal(int id1, int id2, double eCM12, 
+int mixLoHi = 0)"> 
+</methodmore> 
+<methodmore name="double Pythia::getSigmaTotal(int id1, int id2, double eCM12, 
+double m1, double m2, int mixLoHi = 0)"> 
+these four methods return a total cross section for two hadrons to collide. 
+It can be useful to have this access for some applications, where one needs 
+to decide whether two hadrons should be allowed to collide or not before 
+calling Pythia. One example is for the already-mentioned 
+<aloc href="HadronicRescattering">Hadronic Rescattering</aloc>, 
+but it could also involve tracking a particle through a medium. 
+It combines separate low-energy and a high-energy descriptions, with a 
+reasonably transition. 
 <argument name="id1, id2"> 
-the identity codes of the two colliding hadrons. 
+the identity codes of the two colliding hadrons. If unspecified, 
+the ids are taken from the beam configuration of the 
+<code>Pythia</code> object. 
 </argument> 
 <argument name="eCM12"> 
-the collision center-of-mass energy. 
+the collision center-of-mass energy. If unspecified, the beam energy 
+is taken from the beam configuration of the <code>Pythia</code> object. 
 </argument> 
 <argument name="m1, m2"> 
 the masses of the two incoming hadrons. If unspecified, the particles are 
 assumed to be on-shell. 
 </argument> 
-<argument name="type"> 
-process classification as above, with 0 for the total cross section. 
+<argument name="mixLoHi"> 
+Gives a choice of cross section description. 
+<br/>Option <ei>-1</ei> gives the low-energy cross sections implemented 
+for hadronic rescattering in <ref>Sjo20</ref>. 
+<br/>Option <ei>1</ei> gives high-energy cross sections based on the 
+SaS/DL setup in <aloc href="TotalCrossSections">TotalCrossSections</aloc>, 
+as extended in <ref>Sjo21</ref>. 
+<br/>Default option <ei>0</ei> gives the former behaviour at low energies 
+and the latter at high, with a mix in between. 
 </argument> 
 </methodmore> 
  
-<method name="double Pythia::getLowEnergySlope(int id1, int id2, double eCM12, 
-double m1, double m2, int type = 2)"> 
-returns the elastic (<code>type</code> = 2) and diffractive 
-(<code>type</code> = 3, 4 or 5) slopes <ei>B</ei> of the <ei>t</ei> 
-dependence. Arguments as above, but note that <code>m1</code> and 
-<code>m2</code> refer to the current diffractive masses for 
-diffraction. 
+<method name="double Pythia::getSigmaPartial(int procType)"> 
 </method> 
+<methodmore name="double Pythia::getSigmaPartial(double eCM, int procType, 
+int mixLoHi = 0)"> 
+</methodmore> 
+<methodmore name="double Pythia::getSigmaPartial(int id1, int id2, 
+double eCM12, int procType, int mixLoHi = 0)"> 
+</methodmore> 
+<methodmore name="double Pythia::getSigmaPartial(int id1, int id2, 
+double eCM12, double m1, double m2, int procType, int mixLoHi = 0)"> 
+these two methods match the <code>getSigmaTotal</code> ones above, but 
+offers the total cross section split into interaction <code>procType</code>, 
+(1) inelastic nondiffractive, (2) elastic, (3, 4) single diffractive 
+where either first or second hadron is broken up, (5) double diffractive, 
+(7) excitation, (8) annihilation and (9) resonant. You can also get the 
+same total cross sections as in <code>getSigmaTotal</code> for 
+<code>procType = 0</code>, but with a larger time consumption if this is 
+the only number you want. 
+</methodmore> 
  
 <method name="void Pythia::LHAeventList()"> 
 list the Les Houches Accord information on the current event, see 
@@ -1267,4 +1324,4 @@ see <aloc href="AdvancedUsage">here</aloc> for further details.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

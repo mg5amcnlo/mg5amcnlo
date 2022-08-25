@@ -1,5 +1,5 @@
 // main151.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -22,7 +22,7 @@ int main() {
   int nEvent = 10000;
 
   // All subprocesses (0), nondiffractive (1) or single diffractive (2).
-  int pick = 2;
+  int pick = 1;
 
   // Histograms.
   Hist multCh0("n_charged(e_CM), simple",      32, 1., 10000., true);
@@ -60,12 +60,13 @@ int main() {
       // Iterate over thirty energies.
       for (int ie = 2; ie < 32; ++ie) {
         double eCM = pow( 10., (ie + 0.5) / 8.);
+        pythia.setKinematics(eCM);
 
         // Generate events. Update charged multiplicity.
         long nSuccess = 0;
         long nCharged = 0;
         for (int iEvent = 0; iEvent < nEvent; ++iEvent) {
-          if (!pythia.next(eCM)) continue;
+          if (!pythia.next()) continue;
           ++nSuccess;
           nCharged += event.nFinal(true);
         }

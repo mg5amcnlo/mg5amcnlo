@@ -3914,7 +3914,7 @@ The meaning of the various properties and the format used are explained
 </particle> 
  
 <particle id="5112" name="Sigma_b-" antiName="Sigma_bbar+" spinType="2" chargeType="-3" colType="0" 
-          m0="5.81550"> 
+          m0="5.81550" mWidth="0.0053"> 
  <channel onMode="1" bRatio="1.0000000" products="5122 -211"/> 
 </particle> 
  
@@ -4046,7 +4046,7 @@ The meaning of the various properties and the format used are explained
 </particle> 
  
 <particle id="5212" name="Sigma_b0" antiName="Sigma_bbar0" spinType="2" chargeType="0" colType="0" 
-          m0="5.80000"> 
+          m0="5.80000" mWidth="0.00515"> 
  <channel onMode="1" bRatio="1.0000000" products="5122 111"/> 
 </particle> 
  
@@ -4056,7 +4056,7 @@ The meaning of the various properties and the format used are explained
 </particle> 
  
 <particle id="5222" name="Sigma_b+" antiName="Sigma_bbar-" spinType="2" chargeType="3" colType="0" 
-          m0="5.81130"> 
+          m0="5.81130" mWidth="0.0050"> 
  <channel onMode="1" bRatio="1.0000000" products="5122 211"/> 
 </particle> 
  
@@ -10326,62 +10326,62 @@ The meaning of the various properties and the format used are explained
  <channel onMode="1" bRatio="0.0000000" products="16 16 -16"/> 
 </particle> 
  
-<particle id="4900001" name="Dv" antiName="Dvbar" spinType="2" chargeType="-1" colType="1" 
+<particle id="4900001" name="Dv" antiName="Dvbar" spinType="1" chargeType="-1" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="1 4900101"/> 
 </particle> 
  
-<particle id="4900002" name="Uv" antiName="Uvbar" spinType="2" chargeType="2" colType="1" 
+<particle id="4900002" name="Uv" antiName="Uvbar" spinType="1" chargeType="2" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="2 4900101"/> 
 </particle> 
  
-<particle id="4900003" name="Sv" antiName="Svbar" spinType="2" chargeType="-1" colType="1" 
+<particle id="4900003" name="Sv" antiName="Svbar" spinType="1" chargeType="-1" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="3 4900101"/> 
 </particle> 
  
-<particle id="4900004" name="Cv" antiName="Cvbar" spinType="2" chargeType="2" colType="1" 
+<particle id="4900004" name="Cv" antiName="Cvbar" spinType="1" chargeType="2" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="4 4900101"/> 
 </particle> 
  
-<particle id="4900005" name="Bv" antiName="Bvbar" spinType="2" chargeType="-1" colType="1" 
+<particle id="4900005" name="Bv" antiName="Bvbar" spinType="1" chargeType="-1" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="5 4900101"/> 
 </particle> 
  
-<particle id="4900006" name="Tv" antiName="Tvbar" spinType="2" chargeType="2" colType="1" 
+<particle id="4900006" name="Tv" antiName="Tvbar" spinType="1" chargeType="2" colType="1" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="6 4900101"/> 
 </particle> 
  
-<particle id="4900011" name="Ev" antiName="Evbar" spinType="2" chargeType="-3" colType="0" 
+<particle id="4900011" name="Ev" antiName="Evbar" spinType="1" chargeType="-3" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="11 4900101"/> 
 </particle> 
  
-<particle id="4900012" name="nuEv" antiName="nuEvbar" spinType="2" chargeType="0" colType="0" 
+<particle id="4900012" name="nuEv" antiName="nuEvbar" spinType="1" chargeType="0" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="12 4900101"/> 
 </particle> 
  
-<particle id="4900013" name="MUv" antiName="MUvbar" spinType="2" chargeType="-3" colType="0" 
+<particle id="4900013" name="MUv" antiName="MUvbar" spinType="1" chargeType="-3" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="13 4900101"/> 
 </particle> 
  
-<particle id="4900014" name="nuMUv" antiName="nuMUvbar" spinType="2" chargeType="0" colType="0" 
+<particle id="4900014" name="nuMUv" antiName="nuMUvbar" spinType="1" chargeType="0" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="14 4900101"/> 
 </particle> 
  
-<particle id="4900015" name="TAUv" antiName="TAUvbar" spinType="2" chargeType="-3" colType="0" 
+<particle id="4900015" name="TAUv" antiName="TAUvbar" spinType="1" chargeType="-3" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="15 4900101"/> 
 </particle> 
  
-<particle id="4900016" name="nuTAUv" antiName="nuTAUvbar" spinType="2" chargeType="0" colType="0" 
+<particle id="4900016" name="nuTAUv" antiName="nuTAUvbar" spinType="1" chargeType="0" colType="0" 
           m0="400.00000" mWidth="1.00000" mMin="50.00000" mMax="0.00000"> 
  <channel onMode="1" bRatio="1.0000000" meMode="103" products="16 4900101"/> 
 </particle> 
@@ -10419,14 +10419,49 @@ The meaning of the various properties and the format used are explained
  <channel onMode="1" bRatio="0.025" meMode="102" products="14 -14"/> 
  <channel onMode="1" bRatio="0.025" meMode="102" products="15 -15"/> 
  <channel onMode="1" bRatio="0.025" meMode="102" products="16 -16"/> 
- <channel onMode="1" bRatio="0.400" meMode="102" products="4900101 -4900101"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900101 -4900101"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900102 -4900102"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900103 -4900103"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900104 -4900104"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900105 -4900105"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900106 -4900106"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900107 -4900107"/> 
+ <channel onMode="1" bRatio="0.050" meMode="102" products="4900108 -4900108"/> 
 </particle> 
  
-<particle id="4900101" name="qv" antiName="qvbar" spinType="1" chargeType="0" colType="0" 
-          m0="100.00000"> 
+<particle id="4900101" name="qv1" antiName="qv1bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
 </particle> 
  
-<particle id="4900111" name="pivDiag" spinType="1" chargeType="0" colType="0" 
+<particle id="4900102" name="qv2" antiName="qv2bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900103" name="qv3" antiName="qv3bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900104" name="qv4" antiName="qv4bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900105" name="qv5" antiName="qv5bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900106" name="qv6" antiName="qv6bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900107" name="qv7" antiName="qv7bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900108" name="qv8" antiName="qv8bar" spinType="2" chargeType="0" colType="0" 
+          m0="5.00000"> 
+</particle> 
+ 
+<particle id="4900111" name="piv11" spinType="1" chargeType="0" colType="0" 
           m0="10.00000"> 
  <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
  <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
@@ -10441,7 +10476,7 @@ The meaning of the various properties and the format used are explained
  <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
 </particle> 
  
-<particle id="4900113" name="rhovDiag" spinType="3" chargeType="0" colType="0" 
+<particle id="4900113" name="rhov11" spinType="3" chargeType="0" colType="0" 
           m0="10.00000"> 
  <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
  <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
@@ -10456,16 +10491,478 @@ The meaning of the various properties and the format used are explained
  <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
 </particle> 
  
-<particle id="4900211" name="pivUp" antiName="pivDn" spinType="1" chargeType="0" colType="0" 
+<particle id="4900211" name="piv21" antiName="piv21bar" spinType="1" chargeType="0" colType="0" 
           m0="10.00000"> 
 </particle> 
  
-<particle id="4900213" name="rhovUp" antiName="rhovDn" spinType="3" chargeType="0" colType="0" 
+<particle id="4900213" name="rhov21" antiName="rhov21bar" spinType="3" chargeType="0" colType="0" 
           m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900221" name="piv22" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900223" name="rhov22" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900311" name="piv31" antiName="piv31bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900313" name="rhov31" antiName="rhov31bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900321" name="piv32" antiName="piv32bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900323" name="rhov32" antiName="rhov32bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900331" name="piv33" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900333" name="rhov33" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900411" name="piv41" antiName="piv41bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900413" name="rhov41" antiName="rhov41bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900421" name="piv42" antiName="piv42bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900423" name="rhov42" antiName="rhov42bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900431" name="piv43" antiName="piv43bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900433" name="rhov43" antiName="rhov43bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900441" name="piv44" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900443" name="rhov44" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900511" name="piv51" antiName="piv51bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900513" name="rhov51" antiName="rhov51bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900521" name="piv52" antiName="piv52bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900523" name="rhov52" antiName="rhov52bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900531" name="piv53" antiName="piv53bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900533" name="rhov53" antiName="rhov53bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900541" name="piv54" antiName="piv54bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900543" name="rhov54" antiName="rhov54bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900551" name="piv55" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900553" name="rhov55" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900611" name="piv61" antiName="piv61bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900613" name="rhov61" antiName="rhov61bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900621" name="piv62" antiName="piv62bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900623" name="rhov62" antiName="rhov62bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900631" name="piv63" antiName="piv63bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900633" name="rhov63" antiName="rhov63bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900641" name="piv64" antiName="piv64bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900643" name="rhov64" antiName="rhov64bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900651" name="piv65" antiName="piv65bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900653" name="rhov65" antiName="rhov65bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900661" name="piv66" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900663" name="rhov66" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900711" name="piv71" antiName="piv71bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900713" name="rhov71" antiName="rhov71bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900721" name="piv72" antiName="piv72bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900723" name="rhov72" antiName="rhov72bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900731" name="piv73" antiName="piv73bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900733" name="rhov73" antiName="rhov73bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900741" name="piv74" antiName="piv74bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900743" name="rhov74" antiName="rhov74bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900751" name="piv75" antiName="piv75bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900753" name="rhov75" antiName="rhov75bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900761" name="piv76" antiName="piv76bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900763" name="rhov76" antiName="rhov76bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900771" name="piv77" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900773" name="rhov77" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900811" name="piv81" antiName="piv81bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900813" name="rhov81" antiName="rhov81bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900821" name="piv82" antiName="piv82bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900823" name="rhov82" antiName="rhov82bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900831" name="piv83" antiName="piv83bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900833" name="rhov83" antiName="rhov83bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900841" name="piv84" antiName="piv84bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900843" name="rhov84" antiName="rhov84bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900851" name="piv85" antiName="piv85bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900853" name="rhov85" antiName="rhov85bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900861" name="piv86" antiName="piv86bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900863" name="rhov86" antiName="rhov86bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900871" name="piv87" antiName="piv87bar" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900873" name="rhov87" antiName="rhov87bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4900881" name="piv88" spinType="1" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="1.23e-6" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="4.96e-7" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.000492" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.079384" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.8679713" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="4.0e-9" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.000184" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.051967" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
+</particle> 
+ 
+<particle id="4900883" name="rhov88" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="1 -1"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="2 -2"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="3 -3"/> 
+ <channel onMode="0" bRatio="0.20" meMode="91" products="4 -4"/> 
+ <channel onMode="0" bRatio="0.05" meMode="91" products="5 -5"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="11 -11"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="12 -12"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="13 -13"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="14 -14"/> 
+ <channel onMode="0" bRatio="0.15" meMode="91" products="15 -15"/> 
+ <channel onMode="0" bRatio="0.00" meMode="91" products="16 -16"/> 
 </particle> 
  
 <particle id="4900991" name="ggv" spinType="1" chargeType="0" colType="0" 
           m0="1.00000"> 
+</particle> 
+ 
+<particle id="4901103" name="qv1qv1" antiName="qv1qv1bar" spinType="3" chargeType="0" colType="0" 
+          m0="10.00000"> 
+</particle> 
+ 
+<particle id="4901114" name="Deltav1" antiName="Deltav1bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4902114" name="Deltav2" antiName="Deltav2bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4903114" name="Deltav3" antiName="Deltav3bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4904114" name="Deltav4" antiName="Deltav4bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4905114" name="Deltav5" antiName="Deltav5bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4906114" name="Deltav6" antiName="Deltav6bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4907114" name="Deltav7" antiName="Deltav7bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
+</particle> 
+ 
+<particle id="4908114" name="Deltav8" antiName="Deltav8bar" spinType="4" chargeType="0" colType="0" 
+          m0="15.00000"> 
 </particle> 
  
 <particle id="5000023" name="Z_KK" spinType="3" chargeType="0" colType="0" 
@@ -10680,31 +11177,187 @@ The meaning of the various properties and the format used are explained
  <channel onMode="1" bRatio="0.0000000" products="9900024 9900024"/> 
 </particle> 
  
-<particle id="9900110" name="rho_diff0" spinType="0" chargeType="0" colType="0" 
+<particle id="9900110" name="rho_dif0" spinType="0" chargeType="0" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9900210" name="pi_diffr+" antiName="pi_diffr-" spinType="0" chargeType="3" colType="0" 
+<particle id="9900130" name="K_dif0" antiName="" spinType="0" chargeType="0" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9900220" name="omega_di" spinType="0" chargeType="0" colType="0" 
+<particle id="9900210" name="pi_dif+" antiName="pi_dif-" spinType="0" chargeType="3" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9900330" name="phi_diff" spinType="0" chargeType="0" colType="0" 
+<particle id="9900220" name="omega_dif" spinType="0" chargeType="0" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9900440" name="J/psi_di" spinType="0" chargeType="0" colType="0" 
+<particle id="9900310" name="K_dif0" antiName="Kbar_dif0" spinType="0" chargeType="0" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9902110" name="n_diffr0" antiName="n_diffrbar0" spinType="0" chargeType="0" colType="0" 
+<particle id="9900320" name="K_dif+" antiName="K_dif-" spinType="0" chargeType="3" colType="0" 
           m0="0.00000"> 
 </particle> 
  
-<particle id="9902210" name="p_diffr+" antiName="p_diffrbar-" spinType="0" chargeType="3" colType="0" 
+<particle id="9900330" name="phi_dif" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900410" name="D_dif+" antiName="D_dif-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900420" name="D_dif0" antiName="D_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900430" name="D_sdif+" antiName="D_sdif-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900440" name="J/psi_dif" antiName="" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900510" name="B_dif0" antiName="B_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900520" name="B_dif+" antiName="B_dif-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900530" name="B_sdif0" antiName="B_sdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900540" name="B_cdif+" antiName="B_cdif-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9900550" name="Upsilon_dif" antiName="" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9901110" name="Delta_dif-" antiName="Delta_difbar+" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9902110" name="n_dif0" antiName="n_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9902130" name="Lambda*_dif0" antiName="Lambda*_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9902210" name="p_dif+" antiName="p_difbar-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9902220" name="Delta_dif++" antiName="Delta_difbar--" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903110" name="Sigma_dif-" antiName="Sigma_difbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903120" name="Lambda_dif0" antiName="Lambda_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903210" name="Sigma_dif0" antiName="Sigma_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903220" name="Sigma_dif+" antiName="Sigma_difbar-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903310" name="Xi_dif-" antiName="Xi_difbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903320" name="Xi_dif0" antiName="Xi_difbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9903330" name="Omega_dif-" antiName="Omega_difbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904110" name="Sigma_cdif0" antiName="Sigma_cdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904120" name="Lambda_cdif+" antiName="Lambda_cdif-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904130" name="Xi_cdif0" antiName="Xi_cdif0" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904210" name="Sigma_cdif+" antiName="Sigma_cdifbar-" spinType="0" chargeType="6" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904220" name="Sigma_cdif++" antiName="Sigma_cdifbar--" spinType="0" chargeType="6" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904230" name="Xi_cdif+" antiName="Xi_cdif0" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904310" name="Xi'_cdif0" antiName="Xi'_cdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904320" name="Xi'_cdif+" antiName="Xi'_cdifbar-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9904330" name="Omega_cdif0" antiName="Omega_cdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905110" name="Sigma_bdif-" antiName="Sigma_bdifbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905120" name="Lambda_bdif0" antiName="Lambda_bdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905210" name="Sigma_bdif0" antiName="Sigma_bdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905220" name="Sigma_bdif+" antiName="Sigma_bdifbar-" spinType="0" chargeType="3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905130" name="Xi_bdif-" antiName="Xi_bdifbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905230" name="Xi_bdif0" antiName="Xi_bdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905310" name="Xi'_bdif-" antiName="Xi'_bdifbar+" spinType="0" chargeType="-3" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905320" name="Xi'_bdif0" antiName="Xi'_bdifbar0" spinType="0" chargeType="0" colType="0" 
+          m0="0.00000"> 
+</particle> 
+ 
+<particle id="9905330" name="Omega_bdif-" antiName="Omega_bdifbar+" spinType="0" chargeType="-3" colType="0" 
           m0="0.00000"> 
 </particle> 
  
@@ -10834,6 +11487,14 @@ The meaning of the various properties and the format used are explained
           spinType="1" chargeType="18" colType="0" m0="11.177929"> 
 </particle> 
  
+<particle id="1000070140" name="14N" antiName="14Nbar" 
+          spinType="1" chargeType="21" colType="0" m0="13.0475"> 
+</particle> 
+ 
+<particle id="1000080160" name="16O" antiName="16Obar" 
+          spinType="1" chargeType="24" colType="0" m0="14.9031"> 
+</particle> 
+ 
 <particle id="1000080160" name="16O" antiName="16Obar" 
           spinType="1" chargeType="24" colType="0" m0="14.899168"> 
 </particle> 
@@ -10856,4 +11517,4 @@ The meaning of the various properties and the format used are explained
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

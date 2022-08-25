@@ -1,5 +1,5 @@
 // HadronLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -115,11 +115,11 @@ bool HadronLevel::init( TimeShowerPtr timesDecPtr, RHadrons* rHadronsPtrIn,
   }
 
   // Initialize low-energy framework.
-  lowEnergyProcess.init(&flavSel, &stringFrag, &ministringFrag,
-    &lowEnergySigma, &nucleonExcitations);
+  lowEnergyProcess.init( &flavSel, &stringFrag, &ministringFrag,
+    &sigmaLowEnergy, &nucleonExcitations);
 
-  // Initialize low energy cross sections.
-  lowEnergySigma.init(&nucleonExcitations);
+  // Initialize low-energy cross sections.
+  sigmaLowEnergy.init( &nucleonExcitations);
 
   // Initialize rescattering settings if applicable.
   if (doRescatter) {
@@ -179,8 +179,8 @@ bool HadronLevel::next( Event& event) {
   // Store current event size to mark Parton Level content.
   event.savePartonLevelSize();
 
-  // Do Hidden-Valley fragmentation, if necessary.
-  if (useHiddenValley) hiddenvalleyFrag.fragment(event);
+  // Do Hidden-Valley fragmentation, if necessary and possible.
+  if (useHiddenValley && !hiddenvalleyFrag.fragment(event)) return false;
 
   // Colour-octet onia states must be decayed to singlet + gluon.
   if (!decayOctetOnia(event)) return false;
@@ -276,81 +276,14 @@ bool HadronLevel::next( Event& event) {
       return false;
     }
 
-    // Second part: sequential decays of short-lived particles (incl. K0).
+    // Second part: decays and hadronic rescattering.
 
-    // If rescattering is off, we don't care about the order of the decays.
-    if (doDecay && !doRescatter) {
+    // If rescattering is on, perform rescattering.
+    if (doRescatter) {
+      decaysCausedHadronization = rescatter(event);
+    // If rescattering is off, perform only decays.
+    } else if (doDecay) {
       decaysCausedHadronization = decays.decayAll(event, widthSepBE);
-
-    // If rescattering is on, decays/rescatterings must happen in order.
-    } else if (doRescatter) {
-
-      if (doBoost) {
-        if      (boostDir == 1) event.bst(tanh(boost), 0., 0.);
-        else if (boostDir == 2) event.bst(0., tanh(boost), 0.);
-        else                    event.bst(0., 0., tanh(boost));
-      }
-
-      // Queue potential decays and rescatterings.
-      priority_queue<PriorityNode> candidates;
-      queueDecResc(event, 0, candidates);
-      while (!candidates.empty()) {
-
-        // Get earliest decay/rescattering.
-        PriorityNode node = candidates.top();
-        candidates.pop();
-
-        // Skip if either particle has already interacted elsewhere.
-        if (!event[node.i1].isFinal()
-        || (!node.isDecay() && !event[node.i2].isFinal())) continue;
-
-        // Perform the queued action: decay.
-        int oldSize = event.size();
-        if (node.isDecay()) {
-          decays.decay(node.i1, event);
-          // @TODO If there is moreToDo, those things should also
-          // be handled in order?
-          if (decays.moreToDo()) decaysCausedHadronization = true;
-
-        // Perform the queued action: two-body collision.
-        } else {
-          Particle& hadA = event[node.i1];
-          Particle& hadB = event[node.i2];
-          double eCM = (hadA.p() + hadB.p()).mCalc();
-          int type = lowEnergySigma.pickProcess(hadA.id(), hadB.id(), eCM,
-            hadA.m(),  hadB.m());
-          if (type == 0) {
-            infoPtr->errorMsg("Error in HadronLevel::next: "
-              "no available rescattering processes", to_string(hadA.id())
-              + " + " + to_string(hadB.id()) + " @ " + to_string(eCM));
-            continue;
-          }
-          if (!lowEnergyProcess.collide(node.i1, node.i2, type, event,
-            node.origin, node.displaced1, node.displaced2)) continue;
-        }
-
-        // If multiple rescattering is on, check for new interactions.
-        if (scatterManyTimes) queueDecResc(event, oldSize, candidates);
-
-        // If multiple rescattering is off, decay new hadrons.
-        else if (doDecay) {
-          for (int i = oldSize; i < event.size(); ++i) {
-            if (event[i].isFinal() && event[i].isHadron()
-            && event[i].canDecay() && event[i].mayDecay()
-            && event[i].mWidth() > widthSepBE) {
-              decays.decay(i, event);
-              if (decays.moreToDo())
-                decaysCausedHadronization = true;
-            }
-          }
-        }
-      }
-
-     if (doBoost) {
-        if      (boostDir == 1) event.bst(-tanh(boost), 0., 0.);
-        else if (boostDir == 2) event.bst(0., -tanh(boost), 0.);
-        else                    event.bst(0., 0., -tanh(boost));
-      }
     }
 
     // Third part: include Bose-Einstein effects among current particles.
@@ -376,6 +309,12 @@ bool HadronLevel::next( Event& event) {
   // (e.g. Upsilon decay can cause create unstable hadrons).
   } while (decaysCausedHadronization);
 
+  if (userHooksPtr && !userHooksPtr->onEndHadronLevel(*this, event)) {
+    infoPtr->errorMsg("Error in HadronLevel::next: "
+      "user event onEndHadronLevel failed");
+    return false;
+  }
+
   // Done.
   return true;
 
@@ -394,8 +333,7 @@ bool HadronLevel::moreDecays( Event& event) {
   // Loop through all entries to find those that should decay.
   int iDec = 0;
   do {
-    if ( event[iDec].isFinal() && event[iDec].canDecay()
-      && event[iDec].mayDecay() ) decays.decay( iDec, event);
+    decay(iDec, event);
   } while (++iDec < event.size());
 
   // Done.
@@ -437,9 +375,9 @@ int HadronLevel::pickLowEnergyProcess(int idA, int idB, double eCM,
   // Chosen process.
   int procType;
 
-    // If all processes are on, just call LowEnergySigma directly.
+    // If all processes are on, just call SigmaLowEnergy directly.
   if (doNonPertAll) {
-    procType = lowEnergySigma.pickProcess(idA, idB, eCM, mA, mB);
+    procType = sigmaLowEnergy.pickProcess(idA, idB, eCM, mA, mB);
     if (procType == 0) {
       infoPtr->errorMsg("Error in HadronLevel::pickLowEnergyProcess: "
         "no available processes for specified particles and energy");
@@ -455,7 +393,7 @@ int HadronLevel::pickLowEnergyProcess(int idA, int idB, double eCM,
     vector<int> procs;
     vector<double> sigmas;
     for (int proc : nonPertProc) {
-      double sigma = lowEnergySigma.sigmaPartial(idA, idB, eCM, mA, mB, proc);
+      double sigma = sigmaLowEnergy.sigmaPartial(idA, idB, eCM, mA, mB, proc);
       if (sigma > 0.) {
         procs.push_back(proc);
         sigmas.push_back(sigma);
@@ -477,7 +415,7 @@ int HadronLevel::pickLowEnergyProcess(int idA, int idB, double eCM,
 
   // Pick specific resonance for proc == 9.
   if (procType == 9) {
-    procType = lowEnergySigma.pickResonance(idA, idB, eCM);
+    procType = sigmaLowEnergy.pickResonance(idA, idB, eCM);
     if (procType == 0) {
       infoPtr->errorMsg("Error in Pythia::nextNonPert: "
         "no available resonances for the given particles and energy");
@@ -580,6 +518,132 @@ bool HadronLevel::findSinglets(Event& event, bool keepJunctions) {
 
 //--------------------------------------------------------------------------
 
+// Extract rapidity pairs of string pieces.
+
+vector< vector< pair<double,double> > > HadronLevel::rapidityPairs(
+  Event& event) {
+
+  // Loop over all string systems in the event.
+  vector< vector< pair<double,double> > > rapPairs;
+  for (int iSub = 0; iSub < int(colConfig.size()); iSub++) {
+    vector< pair<double,double> > rapsNow;
+    vector<int> iPartons = colConfig[iSub].iParton;
+
+    // Special treatment for junction systems.
+    if (colConfig[iSub].hasJunction) {
+      // Pick smallest and largest rapidity parton.
+      double ymi = 1e10;
+      double yma = -1e10;
+      for (int iP = 0; iP < int(iPartons.size()); iP++) {
+        int iQ = iPartons[iP];
+        if (iQ < 0) continue;
+        if (event[iQ].id() == 21) continue;
+        double yNow = yMax(event[iQ], MTINY);
+        if (yNow > yma) yma = yNow;
+        if (yNow < ymi) ymi = yNow;
+      }
+      rapsNow.push_back( make_pair(ymi, yma) );
+
+    // Normal strings. For closed gluon loop include first-last pair.
+    } else {
+      int size = int(iPartons.size());
+      int end  = size - (colConfig[iSub].isClosed ? 0 : 1);
+      for (int iP = 0; iP < end; iP++) {
+        int    i1  = iPartons[iP];
+        int    i2  = iPartons[(iP+1)%size];
+        double y1  = yMax(event[i1], MTINY);
+        double y2  = yMax(event[i2], MTINY);
+        double ymi = min(y1, y2);
+        double yma = max(y1, y2);
+        rapsNow.push_back( make_pair(ymi, yma) );
+      }
+    }
+    rapPairs.push_back(rapsNow);
+  }
+  // Done.
+  return rapPairs;
+}
+
+//--------------------------------------------------------------------------
+
+// Perform rescattering. Return true if new strings must be hadronized.
+
+bool HadronLevel::rescatter(Event& event) {
+
+  if (doBoost) {
+    if      (boostDir == 1) event.bst(tanh(boost), 0., 0.);
+    else if (boostDir == 2) event.bst(0., tanh(boost), 0.);
+    else                    event.bst(0., 0., tanh(boost));
+  }
+
+  bool decaysCausedHadronization = false;
+
+  // Queue potential decays and rescatterings.
+  priority_queue<PriorityNode> candidates;
+  queueDecResc(event, 0, candidates);
+  while (!candidates.empty()) {
+
+    // Get earliest decay/rescattering.
+    PriorityNode node = candidates.top();
+    candidates.pop();
+
+    // Skip if either particle has already interacted elsewhere.
+    if (!event[node.i1].isFinal()
+    || (!node.isDecay() && !event[node.i2].isFinal())) continue;
+
+    // Perform the queued action: decay.
+    int oldSize = event.size();
+    if (node.isDecay()) {
+      decays.decay(node.i1, event);
+      // @TODO If there is moreToDo, those things should also
+      // be handled in order?
+      if (decays.moreToDo()) decaysCausedHadronization = true;
+
+    // Perform the queued action: two-body collision.
+    } else {
+      Particle& hadA = event[node.i1];
+      Particle& hadB = event[node.i2];
+      double eCM = (hadA.p() + hadB.p()).mCalc();
+      int procType = sigmaLowEnergy.pickProcess(hadA.id(), hadB.id(), eCM,
+        hadA.m(),  hadB.m());
+      if (procType == 0) {
+        infoPtr->errorMsg("Error in HadronLevel::next: "
+          "no available rescattering processes", to_string(hadA.id())
+          + " + " + to_string(hadB.id()) + " @ " + to_string(eCM));
+        continue;
+      }
+      if (!lowEnergyProcess.collide(node.i1, node.i2, procType, event,
+        node.origin, node.displaced1, node.displaced2)) continue;
+    }
+
+    // If multiple rescattering is on, check for new interactions.
+    if (scatterManyTimes) queueDecResc(event, oldSize, candidates);
+
+    // If multiple rescattering is off, decay new hadrons.
+    else if (doDecay) {
+      for (int i = oldSize; i < event.size(); ++i) {
+        if (event[i].isFinal() && event[i].isHadron()
+        && event[i].canDecay() && event[i].mayDecay()
+        && event[i].mWidth() > widthSepBE) {
+          decays.decay(i, event);
+          if (decays.moreToDo())
+            decaysCausedHadronization = true;
+        }
+      }
+    }
+  }
+
+  if (doBoost) {
+    if      (boostDir == 1) event.bst(-tanh(boost), 0., 0.);
+    else if (boostDir == 2) event.bst(0., -tanh(boost), 0.);
+    else                    event.bst(0., 0., -tanh(boost));
+  }
+
+  return decaysCausedHadronization;
+}
+
+//--------------------------------------------------------------------------
+
 // Calculate possible decays and rescatterings and add all to the queue.
 
 void HadronLevel::queueDecResc(Event& event, int iStart,
@@ -677,9 +741,9 @@ void HadronLevel::queueDecResc(Event& event, int iStart,
 
       // Calculate sigma and abort if impact parameter is too large.
       double eCM = (pA + pB).mCalc();
-      double sigma = lowEnergySigma.sigmaTotal(hadA.id(), hadB.id(), eCM,
+      double sigma = sigmaLowEnergy.sigmaTotal(hadA.id(), hadB.id(), eCM,
         hadA.m(),  hadB.m());
-      if (sigma < LowEnergySigma::TINYSIGMA)
+      if (sigma < SigmaLowEnergy::TINYSIGMA)
         continue;
 
       double b2Crit = MB2FMSQ * pow2(FM2MM) * sigma / (impactOpacity * M_PI);
@@ -706,54 +770,6 @@ void HadronLevel::queueDecResc(Event& event, int iStart,
         displacedB) );
     }
   }
-}
-
-//--------------------------------------------------------------------------
-
-// Extract rapidity pairs of string pieces.
-
-vector< vector< pair<double,double> > > HadronLevel::rapidityPairs(
-  Event& event) {
-
-  // Loop over all string systems in the event.
-  vector< vector< pair<double,double> > > rapPairs;
-  for (int iSub = 0; iSub < int(colConfig.size()); iSub++) {
-    vector< pair<double,double> > rapsNow;
-    vector<int> iPartons = colConfig[iSub].iParton;
-
-    // Special treatment for junction systems.
-    if (colConfig[iSub].hasJunction) {
-      // Pick smallest and largest rapidity parton.
-      double ymi = 1e10;
-      double yma = -1e10;
-      for (int iP = 0; iP < int(iPartons.size()); iP++) {
-        int iQ = iPartons[iP];
-        if (iQ < 0) continue;
-        if (event[iQ].id() == 21) continue;
-        double yNow = yMax(event[iQ], MTINY);
-        if (yNow > yma) yma = yNow;
-        if (yNow < ymi) ymi = yNow;
-      }
-      rapsNow.push_back( make_pair(ymi, yma) );
-
-    // Normal strings. For closed gluon loop include first-last pair.
-    } else {
-      int size = int(iPartons.size());
-      int end  = size - (colConfig[iSub].isClosed ? 0 : 1);
-      for (int iP = 0; iP < end; iP++) {
-        int    i1  = iPartons[iP];
-        int    i2  = iPartons[(iP+1)%size];
-        double y1  = yMax(event[i1], MTINY);
-        double y2  = yMax(event[i2], MTINY);
-        double ymi = min(y1, y2);
-        double yma = max(y1, y2);
-        rapsNow.push_back( make_pair(ymi, yma) );
-      }
-    }
-    rapPairs.push_back(rapsNow);
-  }
-  // Done.
-  return rapPairs;
 }
 
 //==========================================================================

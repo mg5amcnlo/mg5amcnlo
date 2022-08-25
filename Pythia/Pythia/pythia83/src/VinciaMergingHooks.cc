@@ -1,5 +1,5 @@
 // VinciaMergingHooks.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand, Peter Skands.
+// Copyright (C) 2022 Torbjorn Sjostrand, Peter Skands.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -42,13 +42,12 @@ void HardProcessParticleList::list() const {
        << "  Hard Process:\n\n  ";
   // Loop over levels.
   for (auto it = particles.begin(); it != particles.end(); ++it) {
+    if (it->first > 0) cout << " -->";
     // Loop over particles at this level and print.
     for (auto pit = it->second.begin(); pit != it->second.end(); ++pit) {
       cout << " "; pit->print();}
-    if (it->first == 0) cout << " -->";
-    else cout << "\n";
   }
-  cout << "\n";
+  cout << endl << endl;
 
 }
 
@@ -757,14 +756,14 @@ bool VinciaHardProcess::addParticle(ParticleData* particleDataPtr, int level,
     pData = particleDataPtr->findParticle(pid);
     if ( pData == nullptr) {
       if (verbose >= NORMAL) infoPtr->errorMsg("Error in " + __METHOD_NAME__
-        +": mismatch between Particle Database and "
+        +": Mismatch between Particle Database and "
         "VinciaHardProcess database.");
       return false;
     }
     isRes = pData->isResonance();
   } else {
     if (verbose >= NORMAL) infoPtr->errorMsg("Error in " + __METHOD_NAME__
-        +": particle '" + name + "' could not be found in database.");
+        +": Particle '" + name + "' could not be found in database.");
     return false;
   }
 
@@ -772,12 +771,12 @@ bool VinciaHardProcess::addParticle(ParticleData* particleDataPtr, int level,
     // Check if incoming is a beam particle.
     if (level == 0 && !isBeamID(pid)) {
       if (verbose >= NORMAL) infoPtr->errorMsg("Error in " + __METHOD_NAME__
-        +": particle '" + name + "' is not an allowed beam particle.");
+        +": Particle '" + name + "' is not an allowed beam particle.");
       return false;
     // Otherwise it should be a resonance.
     } else if (level > 0 && !isRes) {
       if (verbose >= NORMAL) infoPtr->errorMsg("Error in " + __METHOD_NAME__
-        +": particle '" + name + "' is not a known resonance.");
+        +": Particle '" + name + "' is not a known resonance.");
       return false;
     }
   }
@@ -815,8 +814,7 @@ void VinciaMergingHooks::init() {
   doFF = doFSR && settingsPtr->flag("Vincia:doFF");
   doII = doISR && settingsPtr->flag("Vincia:doII");
   doIF = doISR && settingsPtr->flag("Vincia:doIF");
-  // TODO merging in RF.
-  doRF = false;
+  doRF = doFSR && settingsPtr->flag("Vincia:doRF");
 
   // Merging settings.
   processSave           = settingsPtr->word("Merging:Process");
@@ -925,7 +923,7 @@ void VinciaMergingHooks::init() {
   // Extract the colour structure of the hard process
   // - the main thing we actually care about!
   if (!setColourStructure()) {
-    infoPtr->errorMsg("Error in "+__METHOD_NAME__+": colour structure of "
+    infoPtr->errorMsg("Error in "+__METHOD_NAME__+": Colour structure of "
       "hard process could not be initialised.");
     return;
   }
@@ -1141,20 +1139,20 @@ bool VinciaMergingHooks::setColourStructure() {
   if (hardProcess != nullptr) {
     if (!vinHardProcessPtr->initSuccess()) return false;
     vinHardProcessPtr->getColourStructure(colStructSav);
-    if (getNResHad() != nMergeResSys ) {
-      infoPtr->errorMsg("Error in " + __METHOD_NAME__+": mismatch in "
-        "settings Vincia:MergeNJetMaxRes and merging:Process.");
+    if (getNResHad() != nMergeResSys) {
+      infoPtr->errorMsg("Error in " + __METHOD_NAME__+": Mismatch in "
+        "settings Vincia:MergeNJetMaxRes and Merging:Process");
       return false;
     }
     if (getNResHad() == 0 && getNChainsMax() == 0) {
-      infoPtr->errorMsg("Error in "+__METHOD_NAME__+": no colour in "
-        "specified Merging:Process.");
+      infoPtr->errorMsg("Error in "+__METHOD_NAME__+": No colour in "
+        "specified Merging:Process");
       return false;
     }
     hasColStruct = true;
     if (verbose >= NORMAL) printColStruct();
   } else infoPtr->errorMsg("Error in "+__METHOD_NAME__
-    +": hard process pointer is null.");
+    +": Hard process pointer is null");
   return hasColStruct;
 }
 

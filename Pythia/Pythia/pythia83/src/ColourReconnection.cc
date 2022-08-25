@@ -1,5 +1,5 @@
 // ColourReconnection.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -42,10 +42,10 @@ void ColourDipole::list() {
        << iAcolLeg << setw(6) << isJun << setw(5) << isAntiJun  << setw(10)
        << p1p2 << " colDips: ";
   for (int i = 0;i < int(colDips.size());++i)
-    cout << setw(10) << colDips[i];
+    cout << setw(10) << colDips[i].lock();
   cout  <<  " acolDips: ";
   for (int i = 0;i < int(acolDips.size());++i)
-    cout << setw(10) << acolDips[i];
+    cout << setw(10) << acolDips[i].lock();
   cout << setw(3) << isActive << endl;
 
 }
@@ -267,10 +267,7 @@ bool ColourReconnection::next( Event& event, int iFirst) {
 bool ColourReconnection::nextNew( Event& event, int iFirst) {
 
   // Clear old records.
-  while (!dipoles.empty()) {
-    delete dipoles.back();
-    dipoles.pop_back();
-  }
+  dipoles.clear();
   particles.clear();
   junctions.clear();
   junTrials.clear();
@@ -309,7 +306,7 @@ bool ColourReconnection::nextNew( Event& event, int iFirst) {
     // Do inner loop for string reconnections
     for (int iInnerLoop = 0;dipTrials.size() > 0; ++iInnerLoop) {
 
-      // Break if too many reonnections are carried out.
+      // Break if too many reconnections are carried out.
       if (iInnerLoop > MAXRECONNECTIONS) {
         if (!alreadyWarned)
           infoPtr->errorMsg("Warning in ColourReconnection::nextNew:"
@@ -666,14 +663,14 @@ void ColourReconnection::setupDipoles( Event& event, int iFirst) {
         if (j == 0 && isAntiJun[i]) {
           int col = event.colJunction( - int(chains[i][j]/10) - 1,
                                        -chains[i][j] % 10);
-          dipoles.push_back(new ColourDipole(col, chains[i][j],
+          dipoles.push_back(make_shared<ColourDipole>(col, chains[i][j],
             chains[i][j+1], newCol));
           dipoles.back()->isAntiJun = true;
         }
 
         // Otherwise just make the dipole.
-        else dipoles.push_back(new ColourDipole(event[ chains[i][j] ].col(),
-          chains[i][j], chains[i][j+1], newCol));
+        else dipoles.push_back(make_shared<ColourDipole>(
+            event[chains[i][j]].col(), chains[i][j], chains[i][j+1], newCol));
 
         // If the chain in end a junction mark it.
         if (j == int(chains[i].size() - 2) && isJun[i])
@@ -696,7 +693,7 @@ void ColourReconnection::setupDipoles( Event& event, int iFirst) {
                 && !sameNeighbourCol) {
           newCol = int(rndmPtr->flat() * nReconCols);
         }
-        dipoles.push_back(new ColourDipole(event[ chains[i][j] ].col(),
+        dipoles.push_back(make_shared<ColourDipole>(event[chains[i][j]].col(),
           chains[i][j], chains[i][0], newCol));
 
         // Update links between dipoles.
@@ -745,8 +742,8 @@ void ColourReconnection::setupDipoles( Event& event, int iFirst) {
 
 // Calculate the string length of a dipole.
 
-double ColourReconnection::calculateStringLength(ColourDipole * dip,
-  vector<ColourDipole *> &dips) {
+double ColourReconnection::calculateStringLength(ColourDipolePtr dip,
+  vector<ColourDipolePtr> &dips) {
 
   // Check if dipole was already included.
   for (int i = 0; i < int(dips.size()); ++i)
@@ -830,7 +827,7 @@ void ColourReconnection::updateEvent( Event& event, int iFirst) {
 
 bool ColourReconnection::findJunctionParticles(int iJun,
   vector<int>& iParticles, vector<bool> &usedJuns, int &nJuns,
-  vector<ColourDipole*> &dips ) {
+  vector<ColourDipolePtr> &dips ) {
 
   // Mark current junction as used.
   usedJuns[iJun] = true;
@@ -925,8 +922,8 @@ double ColourReconnection::calculateDoubleJunctionLength( int i, int j,
 
 // Do a single trial emission.
 
-void ColourReconnection::singleReconnection(ColourDipole* dip1,
-      ColourDipole* dip2) {
+void ColourReconnection::singleReconnection(ColourDipolePtr dip1,
+      ColourDipolePtr dip2) {
 
   // Do nothing if it is the same dipole.
   if (dip1 == dip2) return;
@@ -959,8 +956,8 @@ void ColourReconnection::singleReconnection(ColourDipole* dip1,
 
 // Simple test swap between two dipoles.
 
-void ColourReconnection::swapDipoles(ColourDipole* dip1,
-  ColourDipole* dip2, bool back) {
+void ColourReconnection::swapDipoles(ColourDipolePtr dip1,
+  ColourDipolePtr dip2, bool back) {
 
   // Swap the anti colour of the dipoles.
   swap(dip1->iAcol, dip2->iAcol);
@@ -1012,8 +1009,8 @@ void ColourReconnection::swapDipoles(ColourDipole* dip1,
 
 // Do a single trial reconnection to form a junction.
 
-void ColourReconnection::singleJunction(ColourDipole* dip1,
-  ColourDipole* dip2) {
+void ColourReconnection::singleJunction(ColourDipolePtr dip1,
+  ColourDipolePtr dip2) {
 
    // Do nothing if it is the same dipole.
   if (dip1 == dip2)
@@ -1066,8 +1063,8 @@ void ColourReconnection::singleJunction(ColourDipole* dip1,
   }
 
   // Store two new dipoles, these will form the anti-junction.
-  ColourDipole* dip3 = dip1;
-  ColourDipole* dip4 = dip2;
+  ColourDipolePtr dip3 = dip1;
+  ColourDipolePtr dip4 = dip2;
 
   double lambdaDiff = getLambdaDiff(dip1, dip2, dip3, dip4, 0);
   if (lambdaDiff > MINIMUMGAINJUN) {
@@ -1158,8 +1155,8 @@ void ColourReconnection::singleJunction(ColourDipole* dip1,
 
 // Do a single trial reconnection to form a junction.
 
-void ColourReconnection::singleJunction(ColourDipole* dip1,
-  ColourDipole* dip2, ColourDipole* dip3) {
+void ColourReconnection::singleJunction(ColourDipolePtr dip1,
+  ColourDipolePtr dip2, ColourDipolePtr dip3) {
 
   // Do nothing if one of the dipoles is a junction or antijunction.
   if (dip1->isJun || dip1->isAntiJun) return;
@@ -1207,7 +1204,7 @@ void ColourReconnection::singleJunction(ColourDipole* dip1,
 
 // Form pseuparticle of a given dipole (or junction system).
 
-void ColourReconnection::makePseudoParticle(ColourDipole* dip , int status,
+void ColourReconnection::makePseudoParticle(ColourDipolePtr dip , int status,
   bool setupDone) {
 
   // If it is a normal dipole that needs to be combined.
@@ -1363,8 +1360,8 @@ void ColourReconnection::makePseudoParticle(ColourDipole* dip , int status,
     // Find junction index and first leg to combine.
     int iJun, i0, i1, i2, junLeg0, junLeg1, junLeg2;
     getJunctionIndices(dip, iJun, i0, i1, i2, junLeg0, junLeg1, junLeg2);
-    ColourDipole* dip2 = junctions[iJun].dips[junLeg1];
-    ColourDipole* dip3 = junctions[iJun].dips[junLeg2];
+    ColourDipolePtr dip2 = junctions[iJun].dips[junLeg1];
+    ColourDipolePtr dip3 = junctions[iJun].dips[junLeg2];
 
     // Add new particle.
     int iNew = particles.size();
@@ -1434,7 +1431,7 @@ void ColourReconnection::makePseudoParticle(ColourDipole* dip , int status,
 
     // Special case if it is J-J connection.
     if (i2 < 0) {
-      particles[iNew].dips.push_back(vector<ColourDipole *>());
+      particles[iNew].dips.push_back(vector<ColourDipolePtr>());
 
       // Find the real dipole to add to dipole list.
       for (int i = 0; i < int(dipoles.size()); ++i)
@@ -1554,7 +1551,7 @@ void ColourReconnection::makePseudoParticle(ColourDipole* dip , int status,
 
 // Help function to sort dipoles in right order.
 
-bool sortFunc(ColourDipole* a, ColourDipole* b) {
+bool sortFunc(ColourDipolePtr a, ColourDipolePtr b) {
     return (a->p1p2 < b->p1p2);
 }
 
@@ -1571,7 +1568,7 @@ void ColourReconnection::makeAllPseudoParticles( Event & event, int iFirst) {
   // Make new copy of all the dipoles.
   int oldSize = int(dipoles.size());
   for (int i = 0; i < oldSize; ++i) {
-    dipoles.push_back(new ColourDipole(*dipoles[i]));
+    dipoles.push_back(make_shared<ColourDipole>(*dipoles[i]));
     dipoles[i + oldSize]->iColLeg = 0;
     dipoles[i + oldSize]->iAcolLeg = 0;
     dipoles[i]->iColLeg = 0;
@@ -1595,19 +1592,19 @@ void ColourReconnection::makeAllPseudoParticles( Event & event, int iFirst) {
 
   // Set up the coldDips and acolDips.
   for (int i = 0; i < oldSize; ++i) {
-    if (dipoles[i]->leftDip != 0)
-    for (int j = 0; j < oldSize; ++j)
-    if (dipoles[i]->leftDip == dipoles[j]) {
-      dipoles[i + oldSize]->colDips.push_back(dipoles[j + oldSize]);
-      break;
-    }
+    if (dipoles[i]->leftDip.lock())
+      for (int j = 0; j < oldSize; ++j)
+        if (dipoles[i]->leftDip.lock() == dipoles[j]) {
+          dipoles[i + oldSize]->colDips.push_back(dipoles[j + oldSize]);
+          break;
+        }
 
-    if (dipoles[i]->rightDip != 0)
-    for (int j = 0; j < oldSize; ++j)
-    if (dipoles[i]->rightDip == dipoles[j]) {
-      dipoles[i + oldSize]->acolDips.push_back(dipoles[j + oldSize]);
-      break;
-    }
+    if (dipoles[i]->rightDip.lock())
+      for (int j = 0; j < oldSize; ++j)
+        if (dipoles[i]->rightDip.lock() == dipoles[j]) {
+          dipoles[i + oldSize]->acolDips.push_back(dipoles[j + oldSize]);
+          break;
+        }
   }
 
   // Start by copying event record to make pseudoparticles.
@@ -1615,7 +1612,7 @@ void ColourReconnection::makeAllPseudoParticles( Event & event, int iFirst) {
   for (int i = iFirst; i < event.size(); ++i)
   if (event[i].isFinal()) {
     particles.push_back(ColourParticle(event[i]));
-    particles.back().dips.resize(1,vector<ColourDipole *>());
+    particles.back().dips.resize(1,vector<ColourDipolePtr>());
 
     // Set up dipoles.
     for (int j = 0; j < int(dipoles.size()); ++j) {
@@ -1827,7 +1824,7 @@ void ColourReconnection::listAllChains() {
 
 // Print the chain containing the dipole.
 
-void ColourReconnection::listChain(ColourDipole *dip) {
+void ColourReconnection::listChain(ColourDipolePtr dip) {
 
   // Make sure not an empty pointer.
   if (dip == 0) return;
@@ -1837,14 +1834,14 @@ void ColourReconnection::listChain(ColourDipole *dip) {
     return;
   }
 
-  ColourDipole * colDip = dip;
+  ColourDipolePtr colDip = dip;
 
   // Try to reach one end of the chain.
   while (particles[colDip->iCol].dips.size() == 1 && findColNeighbour(colDip))
     if (dip == colDip)
       break;
 
-  ColourDipole * endDip = colDip;
+  ColourDipolePtr endDip = colDip;
   do {
     cout << colDip->iCol << " (" << colDip->p1p2 << ", " << colDip->col
          << ") (" << colDip->isActive << ") ";
@@ -1864,7 +1861,7 @@ void ColourReconnection::listChain(ColourDipole *dip) {
 
 // Return relevant indices for the junction.
 
-bool ColourReconnection::getJunctionIndices(ColourDipole * dip, int &iJun,
+bool ColourReconnection::getJunctionIndices(ColourDipolePtr dip, int &iJun,
   int &i0, int &i1, int &i2, int &junLeg0, int &junLeg1, int &junLeg2) {
 
   // Find junction index and first leg to combine.
@@ -1918,8 +1915,8 @@ bool ColourReconnection::getJunctionIndices(ColourDipole * dip, int &iJun,
 
 // Check whether up to four dipoles are 'causally' connected.
 
-bool ColourReconnection::checkTimeDilation(ColourDipole * dip1,
-  ColourDipole * dip2, ColourDipole * dip3, ColourDipole * dip4) {
+bool ColourReconnection::checkTimeDilation(ColourDipolePtr dip1,
+  ColourDipolePtr dip2, ColourDipolePtr dip3, ColourDipolePtr dip4) {
 
   if (timeDilationMode == 0) return true;
 
@@ -1994,7 +1991,7 @@ bool ColourReconnection::checkTimeDilation(ColourDipole * dip1,
 
 // Find the momentum of the dipole.
 
-Vec4 ColourReconnection::getDipoleMomentum(ColourDipole * dip) {
+Vec4 ColourReconnection::getDipoleMomentum(ColourDipolePtr dip) {
   vector<int> iPar, usedJuncs;
   if (!dip->isJun) iPar.push_back(dip->iAcol);
   else addJunctionIndices(dip->iAcol, iPar, usedJuncs);
@@ -2268,7 +2265,7 @@ void ColourReconnection::addJunctionIndices(int iSinglePar, vector<int> &iPar,
 
 // Calculate the invariant mass of a dipole.
 
-double ColourReconnection::mDip(ColourDipole* dip) {
+double ColourReconnection::mDip(ColourDipolePtr dip) {
 
   // If double junction no invariant mass is given.
   if (dip->isJun && dip->isAntiJun) return 1e9;
@@ -2655,7 +2652,7 @@ bool ColourReconnection::reconnectMPIs( Event&  event, int oldSize) {
 // Find the neighbour to the anticolour side. Return false if the dipole
 // is connected to a junction or the new particle has a junction inside of it.
 
-bool ColourReconnection::findAntiNeighbour(ColourDipole*& dip) {
+bool ColourReconnection::findAntiNeighbour(ColourDipolePtr& dip) {
   // If only one active dipole, it has to be an antiquark.
   if (int(particles[dip->iAcol].activeDips.size())  == 1)
     return false;
@@ -2694,7 +2691,7 @@ bool ColourReconnection::checkJunctionTrials() {
     if (junTrials[i].mode == 3)
       minus = 1;
     for (int j = 0;j < int(junTrials[i].dips.size()) - minus; ++j) {
-      ColourDipole* dip = junTrials[i].dips[j];
+      ColourDipolePtr dip = junTrials[i].dips[j];
       if (dip->isJun || dip->isAntiJun) {
         junTrials[i].list();
         return false;
@@ -2715,7 +2712,7 @@ bool ColourReconnection::checkJunctionTrials() {
 // Find the neighbour to the colour side. Return false if the dipole
 // is connected to a junction or the new particle has a junction inside of it.
 
-bool ColourReconnection::findColNeighbour(ColourDipole*& dip) {
+bool ColourReconnection::findColNeighbour(ColourDipolePtr& dip) {
   // If only one active dipole, it has to be an antiquark.
   if (int(particles[dip->iCol].activeDips.size())  == 1)
     return false;
@@ -2752,7 +2749,7 @@ void ColourReconnection::storeUsedDips(TrialReconnection& trial) {
   if (trial.mode == 5) {
 
     for (int i = 0;i < 2; ++i) {
-      ColourDipole* dip = trial.dips[i];
+      ColourDipolePtr dip = trial.dips[i];
       if (dip->iCol < 0)
         for (int j = 0;j < 3; ++j)
         usedDipoles.push_back(junctions[-(dip->iCol / 10 + 1)].getColDip(j));
@@ -2769,7 +2766,7 @@ void ColourReconnection::storeUsedDips(TrialReconnection& trial) {
       if (trial.mode == 3 && i == 3)
         continue;
       usedDipoles.push_back(trial.dips[i]);
-      ColourDipole* dip = trial.dips[i];
+      ColourDipolePtr dip = trial.dips[i];
 
 
       while (findAntiNeighbour(dip) && dip != trial.dips[i])
@@ -2786,11 +2783,11 @@ void ColourReconnection::storeUsedDips(TrialReconnection& trial) {
 
 // Calculate the difference between the old and new lambda for dipole swap.
 
-double ColourReconnection::getLambdaDiff(ColourDipole* dip1,
-  ColourDipole* dip2) {
+double ColourReconnection::getLambdaDiff(ColourDipolePtr dip1,
+  ColourDipolePtr dip2) {
 
   // Needed to make sure the same dipoles are compared.
-  vector<ColourDipole*> oldDips, newDips;
+  vector<ColourDipolePtr> oldDips, newDips;
 
   // Calculate old string length.
   double oldLambda = calculateStringLength(dip1, oldDips)
@@ -2817,8 +2814,9 @@ double ColourReconnection::getLambdaDiff(ColourDipole* dip1,
 
 // Calculate the difference between the old and new lambda.
 
-double ColourReconnection::getLambdaDiff(ColourDipole* dip1,
-  ColourDipole* dip2, ColourDipole* dip3, ColourDipole* dip4, int modeIn) {
+double ColourReconnection::getLambdaDiff(ColourDipolePtr dip1,
+  ColourDipolePtr dip2, ColourDipolePtr dip3, ColourDipolePtr dip4,
+  int modeIn) {
 
   // Calculate old lambda measure.
 
@@ -2875,8 +2873,8 @@ double ColourReconnection::getLambdaDiff(ColourDipole* dip1,
 void ColourReconnection::doDipoleTrial(TrialReconnection& trial) {
 
   // Store for easier use.
-  ColourDipole* dip1 = trial.dips[0];
-  ColourDipole* dip2 = trial.dips[1];
+  ColourDipolePtr dip1 = trial.dips[0];
+  ColourDipolePtr dip2 = trial.dips[1];
 
   // If both acols ends are normal particles.
   if (dip1->iAcol >= 0 && dip2->iAcol >= 0) {
@@ -2943,7 +2941,7 @@ void ColourReconnection::updateDipoleTrials() {
     }
 
   // Make list of active dipoles.
-  vector<ColourDipole*> activeDipoles;
+  vector<ColourDipolePtr> activeDipoles;
   for (int i = 0;i < int(dipoles.size()); ++i)
     if (dipoles[i]->isActive)
       activeDipoles.push_back(dipoles[i]);
@@ -2974,7 +2972,7 @@ void ColourReconnection::updateJunctionTrials() {
     }
 
   // Make list of active dipoles.
-  vector<ColourDipole*> activeDipoles;
+  vector<ColourDipolePtr> activeDipoles;
   for (int i = 0;i < int(dipoles.size()); ++i)
     if (dipoles[i]->isActive)
       activeDipoles.push_back(dipoles[i]);
@@ -3009,10 +3007,10 @@ void ColourReconnection::doJunctionTrial(Event& event,
   }
 
   // Store dipoles and numbers for easier acces.
-  ColourDipole* dip1 = juncTrial.dips[0];
-  ColourDipole* dip2 = juncTrial.dips[1];
-  ColourDipole* dip3 = juncTrial.dips[2];
-  ColourDipole* dip4 = juncTrial.dips[3];
+  ColourDipolePtr dip1 = juncTrial.dips[0];
+  ColourDipolePtr dip2 = juncTrial.dips[1];
+  ColourDipolePtr dip3 = juncTrial.dips[2];
+  ColourDipolePtr dip4 = juncTrial.dips[3];
 
   int iCol1 = dip1->iCol;
   int iCol2 = dip2->iCol;
@@ -3061,34 +3059,36 @@ void ColourReconnection::doJunctionTrial(Event& event,
   int iAntiJun = junctions.size() + 1;
 
   // Store real dipoles.
-  ColourDipole* dip3real = particles[iCol3].dips[dip3->iColLeg].back();
-  ColourDipole* dip4real = particles[iCol4].dips[dip4->iColLeg].back();
+  ColourDipolePtr dip3real = particles[iCol3].dips[dip3->iColLeg].back();
+  ColourDipolePtr dip4real = particles[iCol4].dips[dip4->iColLeg].back();
 
   // If the junction and antijunction are directly connected.
   int iActive1 = 0, iReal1 = 0;
   if (jtMode == 0) {
-    dipoles.push_back(new ColourDipole(newCol1, -( iAntiJun * 10 + 10 + 2) ,
+    dipoles.push_back(make_shared<ColourDipole>(
+      newCol1, -(iAntiJun*10 + 10 + 2),
       -( iJun * 10 + 10 + 2), junCol, true, true, false, true));
     iReal1 = dipoles.size() - 1;
-    dipoles.push_back(new ColourDipole(newCol1, -( iAntiJun * 10 + 10 + 2) ,
+    dipoles.push_back(make_shared<ColourDipole>(
+      newCol1, -(iAntiJun*10 + 10 + 2) ,
       -( iJun * 10 + 10 + 2), junCol, true, true));
     iActive1 = dipoles.size() - 1;
   } else if (jtMode == 1) {
     int iCol3real = particles[iCol3].dips[dip3->iColLeg].back()->iCol;
-     dipoles.push_back(new ColourDipole(newCol1, iCol3real ,
+     dipoles.push_back(make_shared<ColourDipole>(newCol1, iCol3real ,
       -( iJun * 10 + 10 + 2), junCol, true, false, false, true));
     iReal1 = dipoles.size() - 1;
     particles[iCol3].dips[dip3->iColLeg].back() = dipoles.back();
-    dipoles.push_back(new ColourDipole(newCol1, dip3->iCol,
+    dipoles.push_back(make_shared<ColourDipole>(newCol1, dip3->iCol,
       -( iJun * 10 + 10 + 2), junCol, true, false));
     iActive1 = dipoles.size() - 1;
   } else if (jtMode == 2) {
     int iCol4real = particles[iCol4].dips[dip4->iColLeg].back()->iCol;
-    dipoles.push_back(new ColourDipole(newCol1, iCol4real,
+    dipoles.push_back(make_shared<ColourDipole>(newCol1, iCol4real,
       -( iJun * 10 + 10 + 2), junCol, true, false, false, true));
     iReal1 = dipoles.size() - 1;
     particles[iCol4].dips[dip4->iColLeg].back() = dipoles.back();
-    dipoles.push_back(new ColourDipole(newCol1, dip4->iCol,
+    dipoles.push_back(make_shared<ColourDipole>(newCol1, dip4->iCol,
       -( iJun * 10 + 10 + 2), junCol, true, false));
     iActive1 = dipoles.size() - 1;
   }
@@ -3096,12 +3096,12 @@ void ColourReconnection::doJunctionTrial(Event& event,
   // Now make dipole between antijunction and iAcol1.
   // Start by finding real iAcol.
   int iAcol3real  = particles[iAcol3].dips[dip3->iAcolLeg].front()->iAcol;
-  dipoles.push_back(new ColourDipole(newCol2, -( iAntiJun * 10 + 10),
+  dipoles.push_back(make_shared<ColourDipole>(newCol2, -( iAntiJun * 10 + 10),
     iAcol3real, dip3->colReconnection, false, true, false, true));
   int iReal2 = dipoles.size() - 1;
   particles[iAcol3].dips[dip3->iAcolLeg].front() = dipoles.back();
 
-  dipoles.push_back(new ColourDipole(newCol2, -( iAntiJun * 10 + 10),
+  dipoles.push_back(make_shared<ColourDipole>(newCol2, -( iAntiJun * 10 + 10),
     iAcol3, dip3->colReconnection, false, true));
   dipoles.back()->iAcolLeg = dip3->iAcolLeg;
   int iActive2 = dipoles.size() - 1;
@@ -3109,12 +3109,12 @@ void ColourReconnection::doJunctionTrial(Event& event,
   // Now make dipole between antijunction and iAcol1.
   // Start by finding real iAcol.
   int iAcol4real = particles[iAcol4].dips[dip4->iAcolLeg].front()->iAcol;
-  dipoles.push_back(new ColourDipole(newCol3, -( iAntiJun * 10 + 10 + 1),
+  dipoles.push_back(make_shared<ColourDipole>(newCol3, -(iAntiJun*10 + 10 + 1),
     iAcol4real, dip4->colReconnection, false, true, false, true));
   int iReal3 = dipoles.size() - 1;
   particles[iAcol4].dips[dip4->iAcolLeg].front() = dipoles.back();
 
-  dipoles.push_back(new ColourDipole(newCol3, -( iAntiJun * 10 + 10 + 1),
+  dipoles.push_back(make_shared<ColourDipole>(newCol3, -(iAntiJun*10 + 10 + 1),
     iAcol4, dip4->colReconnection, false, true));
   dipoles.back()->iAcolLeg = dip4->iAcolLeg;
   int iActive3 = dipoles.size() - 1;
@@ -3369,9 +3369,9 @@ void ColourReconnection::doTripleJunctionTrial(Event& event,
   TrialReconnection& juncTrial) {
 
   // store information for easier acces.
-  ColourDipole* dip1 = juncTrial.dips[0];
-  ColourDipole* dip2 = juncTrial.dips[1];
-  ColourDipole* dip3 = juncTrial.dips[2];
+  ColourDipolePtr dip1 = juncTrial.dips[0];
+  ColourDipolePtr dip2 = juncTrial.dips[1];
+  ColourDipolePtr dip3 = juncTrial.dips[2];
 
   // Store indices.
   int iCol1 = dip1->iCol;
@@ -3397,12 +3397,12 @@ void ColourReconnection::doTripleJunctionTrial(Event& event,
   // Start by finding real iAcol.
   int iAcol1real
     = particles[iAcol1].dips[dip1->iAcolLeg].front()->iAcol;
-  dipoles.push_back(new ColourDipole(newCol1, -( iAntiJun * 10 + 10),
+  dipoles.push_back(make_shared<ColourDipole>(newCol1, -( iAntiJun * 10 + 10),
     iAcol1real, dip1->colReconnection, false, true, false, true));
   int iReal1 = dipoles.size() - 1;
   particles[iAcol1].dips[dip1->iAcolLeg].front() = dipoles.back();
 
-  dipoles.push_back(new ColourDipole(newCol1, -( iAntiJun * 10 + 10),
+  dipoles.push_back(make_shared<ColourDipole>(newCol1, -( iAntiJun * 10 + 10),
     iAcol1, dip1->colReconnection, false, true));
   dipoles.back()->iAcolLeg = dip1->iAcolLeg;
   int iActive1 = dipoles.size() - 1;
@@ -3411,12 +3411,12 @@ void ColourReconnection::doTripleJunctionTrial(Event& event,
   // Start by finding real iAcol2.
   int iAcol2real
     = particles[iAcol2].dips[dip2->iAcolLeg].front()->iAcol;
-  dipoles.push_back(new ColourDipole(newCol2, -( iAntiJun * 10 + 10 + 1),
-    iAcol2real, dip2->colReconnection, false, true, false, true));
+  dipoles.push_back(make_shared<ColourDipole>(newCol2, -(iAntiJun*10 + 10 + 1),
+      iAcol2real, dip2->colReconnection, false, true, false, true));
   int iReal2 = dipoles.size() - 1;
   particles[iAcol2].dips[dip2->iAcolLeg].front() = dipoles.back();
 
-  dipoles.push_back(new ColourDipole(newCol2, -( iAntiJun * 10 + 10 + 1),
+  dipoles.push_back(make_shared<ColourDipole>(newCol2, -(iAntiJun*10 + 10 + 1),
     iAcol2, dip2->colReconnection, false, true));
   dipoles.back()->iAcolLeg = dip2->iAcolLeg;
   int iActive2 = dipoles.size() - 1;
@@ -3425,12 +3425,12 @@ void ColourReconnection::doTripleJunctionTrial(Event& event,
   // Start by finding real iAcol3.
   int iAcol3real
     = particles[iAcol3].dips[dip3->iAcolLeg].front()->iAcol;
-  dipoles.push_back(new ColourDipole(newCol3, -( iAntiJun * 10 + 10 + 2),
+  dipoles.push_back(make_shared<ColourDipole>(newCol3, -(iAntiJun*10 + 10 + 2),
     iAcol3real, dip3->colReconnection, false, true, false, true));
   int iReal3 = dipoles.size() - 1;
   particles[iAcol3].dips[dip3->iAcolLeg].front() = dipoles.back();
 
-  dipoles.push_back(new ColourDipole(newCol3, -( iAntiJun * 10 + 10 + 2),
+  dipoles.push_back(make_shared<ColourDipole>(newCol3, -(iAntiJun*10 + 10 + 2),
     iAcol3, dip3->colReconnection, false, true));
   dipoles.back()->iAcolLeg = dip3->iAcolLeg;
   int iActive3 = dipoles.size() - 1;

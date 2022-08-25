@@ -1,5 +1,5 @@
 // HepMC2.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -286,14 +286,19 @@ inline bool Pythia8ToHepMC::fill_next_event( Pythia8::Event& pyev,
                        : hepevt_particles[mother];
       if ( !ppp->end_vertex() ) {
         prod_vtx->add_particle_in( ppp );
-
-      // Problem scenario: the mother already has a decay vertex which
-      // differs from the daughter's production vertex. This means there is
-      // internal inconsistency in the HEPEVT event record. Print an error.
-      // Note: we could provide a fix by joining the two vertices with a
-      // dummy particle if the problem arises often.
       } else if (ppp->end_vertex() != prod_vtx ) {
-       if ( m_print_inconsistency ) std::cout
+        // Problem scenario: the mother already has a decay vertex which
+        // differs from the daughter's production vertex.
+        // Can happen with Vincia showers since antenna emissions have two
+        // parents. In that case, let vertex structure be defined by first
+        // parent, ignoring second parent.
+        if ( (pyev[i].statusAbs() == 43 || pyev[i].statusAbs() == 51
+            || pyev[i].statusAbs() == 53) && mother >= 1) break;
+        // Otherwise this means there is internal inconsistency in the
+        // HEPEVT event record. Print an error.
+        // Note: we could provide a fix by joining the two vertices with a
+        // dummy particle if the problem arises often.
+        if ( m_print_inconsistency ) std::cout
           << " Pythia8ToHepMC::fill_next_event: inconsistent mother/daugher "
           << "information in Pythia8 event " << std::endl
           << "i = " << i << " mother = " << mother

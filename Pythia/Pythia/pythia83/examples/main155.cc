@@ -1,5 +1,5 @@
 // main155.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   // Plot all resonances.
   for (int res : resonances) {
     Hist sigRes = Hist::plotFunc( [&](double eCM) {
-      return pythia.getLowEnergySigma(idA, idB, eCM, res);
+      return pythia.getSigmaPartial(idA, idB, eCM, res);
     }, pythia.particleData.name(res), nBin, eMin, eMax);
 
     plt.add(sigRes, "-");
@@ -58,10 +58,12 @@ int main(int argc, char* argv[]) {
 
   // Add total and miscellaneous cross sections at the end.
   Hist sigTot = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 0); },
+    [&](double eCM) {
+      // type == 0 is equivalent to getSigmaTotal.
+      return pythia.getSigmaPartial(idA, idB, eCM, 0); },
     "Total", nBin, eMin, eMax);
   Hist sigTotRes = Hist::plotFunc(
-    [&](double eCM) { return pythia.getLowEnergySigma(idA, idB, eCM, 9); },
+    [&](double eCM) { return pythia.getSigmaPartial(idA, idB, eCM, 9); },
     "Sum of resonances", nBin, eMin, eMax);
   Hist sigOther = sigTot - sigTotRes;
 

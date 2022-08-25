@@ -1,5 +1,5 @@
 // SigmaProcess.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -28,6 +28,7 @@
 #include "Pythia8/BeamParticle.h"
 #include "Pythia8/Event.h"
 #include "Pythia8/Info.h"
+#include "Pythia8/SigmaLowEnergy.h"
 #include "Pythia8/LesHouches.h"
 #include "Pythia8/ParticleData.h"
 #include "Pythia8/PartonDistributions.h"
@@ -95,6 +96,10 @@ public:
 
   // Store or replace Les Houches pointer.
   void setLHAPtr( LHAupPtr lhaUpPtrIn) {lhaUpPtr = lhaUpPtrIn;}
+
+  // Switch to new beam particle identities; for similar hadrons only.
+  void updateBeamIDs() { idA = beamAPtr->id(); idB = beamBPtr->id();
+    mA = beamAPtr->m(); mB = beamBPtr->m();}
 
   // Initialize process. Only used for some processes.
   virtual void initProc() {}
@@ -274,12 +279,12 @@ public:
 protected:
 
   // Constructor.
-  SigmaProcess() : slhaPtr(0), lhaUpPtr(0), nQuarkIn(), renormScale1(),
-    renormScale2(), renormScale3(), renormScale3VV(), factorScale1(),
-    factorScale2(), factorScale3(), factorScale3VV(), Kfactor(), mcME(),
-    mbME(), mmuME(), mtauME(), renormMultFac(), renormFixScale(),
-    factorMultFac(), factorFixScale(), higgsH1parity(), higgsH2parity(),
-    higgsA3parity(), higgsH1eta(), higgsH2eta(), higgsA3eta(),
+  SigmaProcess() : slhaPtr(0), lhaUpPtr(0), doVarE(), nQuarkIn(),
+    renormScale1(), renormScale2(), renormScale3(), renormScale3VV(),
+    factorScale1(), factorScale2(), factorScale3(), factorScale3VV(),
+    Kfactor(), mcME(), mbME(), mmuME(), mtauME(), renormMultFac(),
+    renormFixScale(), factorMultFac(), factorFixScale(), higgsH1parity(),
+    higgsH2parity(), higgsA3parity(), higgsH1eta(), higgsH2eta(), higgsA3eta(),
     higgsH1phi(), higgsH2phi(), higgsA3phi(), idA(), idB(), mA(), mB(),
     isLeptonA(), isLeptonB(), hasLeptonBeams(), beamA2gamma(), beamB2gamma(),
     hasGamma(), mH(), sH(), sH2(), x1Save(), x2Save(), sigmaSumSave(),
@@ -301,6 +306,7 @@ protected:
   LHAupPtr        lhaUpPtr;
 
   // Initialization data, normally only set once.
+  bool   doVarE;
   int    nQuarkIn, renormScale1, renormScale2, renormScale3, renormScale3VV,
          factorScale1, factorScale2, factorScale3, factorScale3VV;
   double Kfactor, mcME, mbME, mmuME, mtauME, renormMultFac, renormFixScale,

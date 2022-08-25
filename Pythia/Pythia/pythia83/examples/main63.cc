@@ -1,5 +1,5 @@
 // main63.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -72,10 +72,10 @@ int main() {
 
   // Write histogram data to files.
   ofstream write;
-  write.open("PTA_0");
+  write.open("PTA_0.dat");
   gamNoEnh.table(write);
   write.close();
-  write.open("PTA_1");
+  write.open("PTA_1.dat");
   gamWithEnh.table(write);
   write.close();
 

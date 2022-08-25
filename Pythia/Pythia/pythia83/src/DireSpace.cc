@@ -1,5 +1,5 @@
 // DireSpace.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -2668,7 +2668,6 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
 
   // Variables used inside evolution loop. (Mainly dummy starting values.)
   int    nFlavour       = 3;
-  double Lambda2        = Lambda3flav2;
   int    idMother       = 0;
   int    idSister       = 0;
   double znow           = 0.;
@@ -2779,19 +2778,11 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
       kernelPDF = 0.;
 
       // Determine overestimated z range; switch at c and b masses.
-      if (tnow > m2b) {
-        nFlavour  = 5;
-        Lambda2   = Lambda5flav2;
-      } else if (tnow > m2c) {
-        nFlavour  = 4;
-        Lambda2   = Lambda4flav2;
-      } else {
-        nFlavour  = 3;
-        Lambda2   = Lambda3flav2;
-      }
+      if (tnow > m2b) nFlavour  = 5;
+      else if (tnow > m2c) nFlavour  = 4;
+      else nFlavour  = 3;
 
       // A change of renormalization scale expressed by a change of Lambda.
-      Lambda2    /= renormMultFac;
       zMinAbs     = (hasPDFdau) ? xDaughter : 0.;
       zMaxAbs     = 1.;
 
@@ -3004,6 +2995,7 @@ bool DireSpace::pT2nextQCD_II( double pT2begDip, double pT2sel,
     // More last resort.
     if (hasPDFdau && idDaughter == 21 && pdfScale2 == pT2min && pdfRatio>50.)
       pdfRatio = 0.;
+    if (isinf(pdfRatio) || isnan(pdfRatio)) pdfRatio = 0.;
 
     fullWeightNow  *= pdfRatio*jacobian;
 
@@ -3210,7 +3202,6 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
 
   // Variables used inside evolution loop. (Mainly dummy starting values.)
   int    nFlavour       = 3;
-  double Lambda2        = Lambda3flav2;
   int    idMother       = 0;
   int    idSister       = 0;
   double znow           = 0.;
@@ -3315,19 +3306,11 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
       kernelPDF = 0.;
 
       // Determine overestimated z range; switch at c and b masses.
-      if (tnow > m2b) {
-        nFlavour  = 5;
-        Lambda2   = Lambda5flav2;
-      } else if (tnow > m2c) {
-        nFlavour  = 4;
-        Lambda2   = Lambda4flav2;
-      } else {
-        nFlavour  = 3;
-        Lambda2   = Lambda3flav2;
-      }
+      if (tnow > m2b) nFlavour  = 5;
+      else if (tnow > m2c) nFlavour  = 4;
+      else nFlavour  = 3;
 
       // A change of renormalization scale expressed by a change of Lambda.
-      Lambda2    /= renormMultFac;
       zMinAbs     = (hasPDFdau) ? xDaughter : 0.;
       zMaxAbs     = 1.;
 
@@ -3624,6 +3607,7 @@ bool DireSpace::pT2nextQCD_IF( double pT2begDip, double pT2sel,
 
     // More last resort.
     if (idDaughter == 21 && pdfScale2 < 1.01 && pdfRatio > 50.) pdfRatio = 0.;
+    if (std::isinf(pdfRatio) || std::isnan(pdfRatio)) pdfRatio = 0.;
 
     fullWeightNow  *= pdfRatio;
     for ( unordered_map<string,double>::iterator it = fullWeightsNow.begin();

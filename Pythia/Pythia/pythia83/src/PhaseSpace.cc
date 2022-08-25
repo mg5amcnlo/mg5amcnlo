@@ -1,5 +1,5 @@
 // PhaseSpace.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -93,6 +93,8 @@ void PhaseSpace::init(bool isFirst, SigmaProcess* sigmaProcessPtrIn) {
   // Some commonly used beam information.
   idA             = beamAPtr->id();
   idB             = beamBPtr->id();
+  idAold          = idA;
+  idBold          = idB;
   mA              = beamAPtr->m();
   mB              = beamBPtr->m();
   eCM             = infoPtr->eCM();
@@ -2615,6 +2617,16 @@ bool PhaseSpace2to2elastic::setupSampling() {
 
 bool PhaseSpace2to2elastic::trialKin( bool, bool ) {
 
+  // Allow the possibility that incoming beam particles are switched.
+  if (idA != idAold || idB != idBold) {
+    s1           = mA * mA;
+    s2           = mB * mB;
+    m3           = mA;
+    m4           = mB;
+    s3           = s1;
+    s4           = s2;
+  }
+
   // Allow for possibility that energy varies from event to event.
   if (doEnergySpread) {
     eCM       = infoPtr->eCM();
@@ -2899,7 +2911,7 @@ bool PhaseSpace2to2diffractive::setupSampling() {
   // Masses of particles and minimal masses of diffractive states.
   // COR: Take VMD states into account already here, because of maximal cross
   // section calculation below. Minimal VMD mass is the rho mass.
-  double mPi   = particleDataPtr->m0(211);
+  mPi          = particleDataPtr->m0(211);
   double mRho  = particleDataPtr->m0(113);
   double mAtmp = (infoPtr->isVMDstateA()) ? mRho : mA;
   double mBtmp = (infoPtr->isVMDstateB()) ? mRho : mB;
@@ -2963,6 +2975,16 @@ bool PhaseSpace2to2diffractive::setupSampling() {
 
 bool PhaseSpace2to2diffractive::trialKin( bool, bool ) {
 
+  // Allow the possibility that incoming beam particles are switched.
+  if (idA != idAold || idB != idBold) {
+    m3ElDiff     = (isDiffA) ? mA + mPi : mA;
+    m4ElDiff     = (isDiffB) ? mB + mPi : mB;
+    s1           = mA * mA;
+    s2           = mB * mB;
+    s3           = pow2( m3ElDiff);
+    s4           = pow2( m4ElDiff);
+  }
+
   // Allow for possibility that energy varies from event to event.
   if (doEnergySpread) {
     eCM       = infoPtr->eCM();
@@ -3023,7 +3045,6 @@ bool PhaseSpace2to2diffractive::trialKin( bool, bool ) {
     // Now choose proper VMD mass. Special handling for minimal
     // diffractive mass for J/Psi as we require at least two D-mesons to
     // be produced by string breaking.
-    double mPi   = particleDataPtr->m0(211);
     double mD    = particleDataPtr->m0(411);
     mAtmp        = (infoPtr->isVMDstateA()) ? infoPtr->mVMDA() : mA;
     mBtmp        = (infoPtr->isVMDstateB()) ? infoPtr->mVMDB() : mB;
@@ -3245,6 +3266,14 @@ bool PhaseSpace2to3diffractive::setupSampling() {
 // Monte Carlo acceptance/rejection at this stage.
 
 bool PhaseSpace2to3diffractive::trialKin( bool, bool ) {
+
+  // Allow the possibility that incoming beam particles are switched.
+  if (idA != idAold || idB != idBold) {
+    s1           = mA * mA;
+    s2           = mB * mB;
+    s3           = s1;
+    s4           = s2;
+  }
 
   // Allow for possibility that energy varies from event to event.
   if (doEnergySpread) {

@@ -367,6 +367,17 @@ Pyplot, see below. The choice between the two methods is the same as
 above for the <code>table</code> methods. 
 </methodmore> 
  
+<method name="void Hist::fillTable(ostream&amp; os = cout)"> 
+</method> 
+<methodmore name="void Hist::fillTable(string fileName)"> 
+fill the contents of a two-column table into the histogram. The first 
+column should give the center of each bin and the second one the 
+corresponding bin contents to be filled. This is basically the inverse 
+of the <code>table</code> methods above, whereby a written histogram 
+contents can be read back in. Over- and underflow will be read back in 
+if provided, but the <code>xMidBin = false</code> option will not work. 
+</methodmore> 
+ 
 <method name="friend void table(const Hist&amp; h1, const Hist&amp; h2, 
 ostream& os = cout, bool printOverUnder = false, bool xMidBin = true)"> 
 </method> 
@@ -714,4 +725,4 @@ is almost the same, the exception being that the two compulsory arguments
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

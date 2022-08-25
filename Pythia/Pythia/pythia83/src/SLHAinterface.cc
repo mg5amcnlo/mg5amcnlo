@@ -1,5 +1,5 @@
 // SLHAinterface.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // Main authors of this file: N. Desai, P. Skands
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
@@ -64,16 +64,17 @@ bool SLHAinterface::initSLHA() {
   string infoPref = "Info from SLHAinterface::initSLHA: ";
 
   // Initial and settings values.
-  int    ifailLHE    = 1;
-  int    ifailSpc    = 1;
-  int    readFrom    = settingsPtr->mode("SLHA:readFrom");
-  string lhefFile    = settingsPtr->word("Beams:LHEF");
-  string lhefHeader  = settingsPtr->word("Beams:LHEFheader");
-  string slhaFile    = settingsPtr->word("SLHA:file");
-  int    verboseSLHA = settingsPtr->mode("SLHA:verbose");
-  bool   slhaUseDec  = settingsPtr->flag("SLHA:useDecayTable");
-  bool   noSLHAFile  = ( slhaFile == "none" || slhaFile == "void"
-                      || slhaFile == ""     || slhaFile == " " );
+  int    ifailLHE          = 1;
+  int    ifailSpc          = 1;
+  int    readFrom          = settingsPtr->mode("SLHA:readFrom");
+  string lhefFile          = settingsPtr->word("Beams:LHEF");
+  string lhefHeader        = settingsPtr->word("Beams:LHEFheader");
+  string slhaFile          = settingsPtr->word("SLHA:file");
+  int    verboseSLHA       = settingsPtr->mode("SLHA:verbose");
+  bool   slhaUseDec        = settingsPtr->flag("SLHA:useDecayTable");
+  bool   allowOnlyOffShell = settingsPtr->flag("SLHA:allowOnlyOffShell");
+  bool   noSLHAFile        = ( slhaFile == "none" || slhaFile == "void"
+    || slhaFile == ""     || slhaFile == " " );
 
   // Set internal data members
   meMode      = settingsPtr->mode("SLHA:meMode");
@@ -375,8 +376,9 @@ bool SLHAinterface::initSLHA() {
       + "using QNUMBERS for id codes < 1000000 may clash with SM.");
 
   // Import mass spectrum.
-  double minMassSM         = settingsPtr->parm("SLHA:minMassSM");
-  map<int,bool> idModified;
+  double minMassSM = settingsPtr->parm("SLHA:minMassSM");
+  map<int, bool> idModified;
+  vector<pair<int, double> > idMass;
   if (ifailSpc == 1 || ifailSpc == 0) {
 
     // Start at beginning of mass array
@@ -395,7 +397,7 @@ bool SLHAinterface::initSLHA() {
       for (unsigned int iq = 0; iq<isQnumbers.size(); ++iq)
         if (id == isQnumbers[iq]) isInternal = false;
 
-     // Ignore masses for known SM particles or particles with
+      // Ignore masses for known SM particles or particles with
       // default masses < minMassSM; overwrite masses for rest.
       // SM particles: (idRes < 25 || idRes > 80 && idRes < 1000000);
       // Top and Higgs (25) can be overwritten if mass > minMassSM
@@ -417,6 +419,7 @@ bool SLHAinterface::initSLHA() {
         }
         particleDataPtr->m0(id,mass);
         idModified[id] = true;
+        idMass.push_back(make_pair(id,mass));
         importMass.push_back(id);
         // If the mMin and mMax cutoffs on Breit-Wigner tails were not already
         // set by user, set default bounds to at most m0 +- m0/2.
@@ -606,7 +609,6 @@ bool SLHAinterface::initSLHA() {
 
     // Add to list of particles that have been modified
     idModified[idRes]=true;
-
   }
 
   // Give summary of imported/ignored DECAY tables, and state reason
@@ -645,66 +647,105 @@ bool SLHAinterface::initSLHA() {
       true);
   }
 
-  // Sanity check of all decay tables with modified MASS or DECAY info
-  map<int,bool>::iterator it;
-  for (it=idModified.begin(); it!=idModified.end(); ++it) {
+  // Sort the IDs by masses.
+  sort(idMass.begin(), idMass.end(), [](
+      const pair<int, double> &left, const pair<int, double> &right) {
+      return left.second < right.second;});
+
+  // Sanity check of all decay tables with modified MASS or DECAY info.
+  for (auto it = idMass.begin(); it != idMass.end(); ++it) {
     int id = it->first;
     if (idModified[id] == false) continue;
-    ostringstream idCode;
-    idCode << id;
-    ParticleDataEntryPtr particlePtr
-      = particleDataPtr->particleDataEntryPtr(id);
-    double m0  = particlePtr->m0();
-    double wid = particlePtr->mWidth();
-    // Always set massless particles stable
+    ParticleDataEntryPtr particlePtr(
+      particleDataPtr->particleDataEntryPtr(id));
+    double m0(particlePtr->m0()), wid(particlePtr->mWidth());
+    // Always set massless particles stable.
     if (m0 <= 0.0 && (wid > 0.0 || particlePtr->mayDecay())) {
       infoPtr->errorMsg(warnPref + "massless particle forced stable",
-        " id = " + idCode.str(), true);
+        " id = " + to_string(id), true);
       particlePtr->clearChannels();
       particlePtr->setMWidth(0.0);
       particlePtr->setMayDecay(false);
       particleDataPtr->isResonance(id,false);
       continue;
     }
-    // Declare zero-width particles to be stable (for now)
+    // Declare zero-width particles to be stable (for now).
     if (wid == 0.0 && particlePtr->mayDecay()) {
       particlePtr->setMayDecay(false);
       continue;
     }
-    // Check at least one on-shell channel is available
+    // Check at least one on-shell channel is available.
     double mSumMin = 10. * m0;
     int nChannels = particlePtr->sizeChannels();
-    if (nChannels >= 1) {
-      for (int iChannel=0; iChannel<nChannels; ++iChannel) {
-        DecayChannel channel = particlePtr->channel(iChannel);
-        if (channel.onMode() <= 0) continue;
-        int nProd = channel.multiplicity();
-        double mSum = 0.;
-        for (int iDa = 0; iDa < nProd; ++iDa) {
-          int idDa   = channel.product(iDa);
-          mSum += particleDataPtr->m0(idDa);
-        }
-        mSumMin = min(mSumMin, mSum);
+    if (nChannels < 1 ) continue;
+    // Check that at least one decay channel is on.
+    bool openModeCheck(false);
+
+    int readChannels = 0;
+    vector<DecayChannel> savedChannels;
+    for (int iChannel=0; iChannel<nChannels; ++iChannel) {
+      DecayChannel channel = particlePtr->channel(iChannel);
+      if (channel.onMode() <= 0) {
+        savedChannels.push_back(channel);
+        readChannels++;
+        continue;
       }
-      // Require at least one on-shell channel
-      if (mSumMin > m0 && particlePtr->id() != 25) {
-        infoPtr->errorMsg(warnPref + "particle forced stable"," id = "
-          + idCode.str() + " (no on-shell decay channels)", true);
+      // If at least one channel is open, then off-shell decays allowed.
+      int nProd = channel.multiplicity();
+      double mSum(0.), wSum(0.);
+      for (int iDa = 0; iDa < nProd; ++iDa) {
+        int idDa = channel.product(iDa);
+        mSum += particleDataPtr->m0(idDa);
+        wSum += particleDataPtr->mMin(idDa);
+      }
+      // Require that the fluctuation for this to occur is reasonable.
+      if (mSum > m0 && wSum > m0 && channel.bRatio() > 0.0) {
+        ostringstream errCode;
+        errCode << id <<" ->";
+        for (int jDa = 0; jDa < nProd; ++jDa)
+          errCode << " " << channel.product(jDa);
+        infoPtr->errorMsg(warnPref + "switched off DECAY mode",
+          ": " + errCode.str()+" (too far off shell)",true);
+        continue;
+      }
+      openModeCheck = true;
+      mSumMin = min(mSumMin, mSum);
+      savedChannels.push_back(channel);
+      readChannels++;
+    }
+    // Set only the allowed channels if necessary.
+    if (readChannels < nChannels) {
+      particlePtr->clearChannels();
+      for (auto chn : savedChannels )
+        particlePtr->addChannel(chn.onMode(), chn.bRatio(), chn.meMode(),
+          chn.product(0), chn.product(1), chn.product(2), chn.product(3),
+          chn.product(4), chn.product(5), chn.product(6), chn.product(7));
+    }
+    // No channels are open.
+    if (!openModeCheck) {
+      infoPtr->errorMsg(
+      warnPref + "particle forced stable"," id = " + to_string(id) +
+      " (no decay channels on)", true);
+    // Only off-shell channels.
+    } else if (mSumMin > m0) {
+      // Set particle stable if only off-shell channels and on-shell required.
+      if (!allowOnlyOffShell) {
+        infoPtr->errorMsg(
+          warnPref + "particle forced stable"," id = " + to_string(id) +
+          " (no on-shell decay channels and SLHA::allowOnly"
+          "OffShell is false)", true);
         particlePtr->setMWidth(0.0);
         particlePtr->setMayDecay(false);
         continue;
-      }
-      else if (mSumMin > m0 && particlePtr->id() == 25) {
-        infoPtr->errorMsg(warnPref
-          + "allowing particle with no on-shell decays ",
-          " id = " + idCode.str() , true);
-      }
-      else {
-        // mMin: lower cutoff on Breit-Wigner; see above.
-        // Increase minimum if needed to ensure at least one channel on shell
-        double mMin = max(mSumMin, particlePtr->mMin());
-        particlePtr->setMMin(mMin);
-      }
+      // Allow decay if only off-shell channels allowed.
+      } else infoPtr->errorMsg(
+        warnPref + "allowing particle with no on-shell decays ",
+        " id = " + to_string(id), true);
+    } else {
+      // mMin: lower cutoff on Breit-Wigner; see above.
+      // Increase minimum if needed to ensure at least one channel on shell
+      double mMin = max(mSumMin, particlePtr->mMin());
+      particlePtr->setMMin(mMin);
     }
   }
 

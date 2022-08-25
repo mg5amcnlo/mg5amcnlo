@@ -1,5 +1,5 @@
 // FragmentationFlavZpT.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -779,7 +779,7 @@ void StringFlav::init() {
         if ( (idIn1Abs < 10) && (idIn2Abs < 10) ) { // quark - quark
           idUse = ( (idIn1Abs > idIn2Abs) ? idIn1 : idIn2 );
         } else { // quark - diquark
-          // Check if diquark contains a heavier flavour then the quark.
+          // Check if diquark contains a heavier flavour than the quark.
           bool useDiquark = false;
           for (int plus = 1; plus < 5; plus++)
             if (particleDataPtr->nQuarksInCode(idIn2Abs, idIn1Abs + plus) > 0)
@@ -1149,16 +1149,18 @@ int StringFlav::combineToLightest( int id1, int id2) {
   int id2Abs = abs(id2);
   int idMax  = max(id1Abs, id2Abs);
   int idMin  = min(id1Abs, id2Abs);
+  int diqSgn = 0;
 
-  // Construct a meson. Preliminary code.
+  // Quark-antiquark to meson.
   if (idMax < 9) {
     int idMeson = 100 * idMax + 10 * idMin + 1;
 
     // For nondiagonal mesons distinguish particle/antiparticle.
     if (idMax != idMin) {
       int sign = (idMax%2 == 0) ? 1 : -1;
-      if ( (idMax == id1Abs && id1 < 0)
-        || (idMax == id2Abs && id2 < 0) ) sign = -sign;
+      if (diqSgn != 0) sign *= diqSgn;
+      else if ( (idMax == id1Abs && id1 < 0)
+          || (idMax == id2Abs && id2 < 0) ) sign = -sign;
       idMeson *= sign;
     }
 
@@ -1170,7 +1172,7 @@ int StringFlav::combineToLightest( int id1, int id2) {
     return idMeson;
   }
 
-  // Split up diquark and order quarks.
+  // Quark-diquark to baryon
   int idQQ1  = idMax / 1000;
   int idQQ2  = (idMax / 100) % 10;
   int idOrd1 = max( idMin, max( idQQ1, idQQ2) );
@@ -1183,9 +1185,8 @@ int StringFlav::combineToLightest( int id1, int id2) {
   else if (idOrd2 != idOrd1 && idOrd3 != idOrd2)
     idBaryon = 1000 * idOrd1 + 100 * idOrd3 + 10 * idOrd2 + 2;
 
-   // Finished for baryons.
-   return (id1 > 0) ? idBaryon : -idBaryon;
-
+  // Finished for baryons.
+  return (id1 > 0) ? idBaryon : -idBaryon;
 }
 
 //--------------------------------------------------------------------------

@@ -8,6 +8,212 @@ PYTHIA 8.243 version, which was the starting point for PYTHIA
 compatibility. The main change is that C++11 is now assumed. 
 The impact on existing used code should be mild, however. 
  
+<h3>8.307: 25 February 2022</h3> 
+ 
+<ul> 
+<li>New option with interpolation between the low-energy hadronic 
+cross sections, used for rescattering, and the more traditional 
+SaS/DL cross sections, used at high energies. The latter framework 
+has also been extended to include many more collinding hadron 
+pairs. The <code>Pythia::getSigmaTotal</code> and 
+<code>Pythia::getSigmaPartial</code> methods give the user direct 
+access to these cross sections. These extend and replace the 
+<code>Pythia::getLowEnergySigma</code> methods. See further on 
+<aloc href="TotalCrossSections">Total Cross Sections</aloc>.</li> 
+ 
+<li>New "SU21" PDFs for some 20 mesons and baryons, to be used e.g. 
+in the MPI scenarios in hadron-hadron collisions, e.g. in a cascade 
+in the atmosphere. The <ei>pi+</ei> default PDF has been upgraded 
+from GRV92 LO to GRS99 LO. The GJR07 LO set has been included as an 
+option for the proton. The default value of 
+<code>BeamRemnants:maxValQuark</code> has been updated to allow also 
+charm and bottom hadrons as incoming beam particles.</li> 
+ 
+<li>The framework for changing the beam kinematics between subsequent 
+<code>Pythia::next</code> calls when using variable collision energies 
+has been expanded. The <code>Pythia::setKinematics</code> methods 
+mirror the frame type options for the beams. See further on 
+<aloc href="ProgramFlow">Program Flow</aloc> and 
+<aloc href="BeamParameters">Beam Parameters</aloc>.</li> 
+ 
+<li>As a further extension of the above, a new option exists wherein 
+the first beam particle is initialized so it can be switched 
+event-by-event between essentially any incoming hadron, while the 
+second beam is restricted to be a proton or neutron. Again only 
+<code>SoftQCD</code> and <code>LowEnergyQCD</code> processes are 
+possible. To handle this feature, the code has been extended so that 
+some 20 different PDFs are initialized, each with a corresponding MPI 
+initialization and storage of required coefficients. See further 
+<aloc href="BeamParameters">Beam Parameters</aloc>.</li> 
+ 
+<li>Extended and improved handling of the Hidden Valley (HV) scenario. 
+<ul> 
+<li>Improved tracing of hidden-valley colours through a hidden-valley shower 
+evolution history, thereby avoiding problems for some topologies.</li> 
+<li>Introduced the possibility to bookkeep individual HV hadron types, 
+in particular HV-mesons, and thereby manange masses and decay 
+properties. The default remains the simpler scheme, where only a smaller set 
+of HV-hadron properties need to be defined. The detailed scenario also 
+involves a mass-dependent handling of the joining of hadronization chains, 
+or the collapse into a single hadron.</li> 
+<li>The list of Zv decays has been expanded to include further HV-quarks. 
+Some default masses have been modified.</li> 
+<li>It is possible to set different production rates for HV-quarks during 
+hadronization, and for HV-diquarks leading to HV-baryon production.</li> 
+<li>Introduced an option to suppress production of one flavour-diagonal 
+pseudoscalar state, representing the <ei>eta_1</ei> flavour singlet.</li> 
+<li>The <code>HiddenValley:spinFv</code> default value has been changed 
+from 1 to 0, to make it transparent that HV-quarks have spin 1/2 by 
+default.</li> 
+<li>Expanded the list of invisible particles accordingly.</li> 
+<li>A few minor bug fixes.</li> 
+<li>A significantly expanded description in 
+<aloc href="HiddenValleyProcesses">Hidden Valley Processes</aloc>.</li> 
+</ul> 
+Thanks to Matt Strassler and Suchita Kulkarni for useful input.</li> 
+ 
+<li>Added a new class <code>PythiaParallel</code> for easily making runs 
+in parallel. See main161, main162 and main163 for usage examples. NOTE: this 
+is an experimental feature. Feedback and bug reports should be sent to 
+authors@pythia.org.</li> 
+ 
+<li>New option introduced, where MPI initialization data can be stored 
+on file and reused in a later run, to save time. See further on 
+<code>MultipartonInteractions:reuseInit</code> and 
+<code>MultipartonInteractions:initFile</code>. Also option to 
+symmetrize the MPI rate between e.g. <ei>pi^+ p</ei> and <ei>pi^- p</ei>, 
+see <code>MultipartonInteractions:setAntiSame</code>.</li> 
+ 
+<li>New options allow a harder fragmentation function for a 
+beam-remnant diquark, by a separate choice of the <ei>a</ei> and <ei>b</ei> 
+parameters, and also forbid the popcorn mechanism for it. See further 
+<aloc href="BeamRemnants">Beam Remnants</aloc>.</li> 
+ 
+<li>New diffractive states introduced, to cover all five-flavour 
+mesonic states, and all baryonic ones with at most one <ei>c</ei> or 
+<ei>b</ei> quarks. Furthermore, nitrogen and oxygen have been added to 
+the set of nuclei</li> 
+ 
+<li>New processes <code>SoftQCD:singleDiffractiveXB</code> and 
+<code>SoftQCD:singleDiffractiveAX</code> allow to set single 
+diffraction to occur only by <ei>A B &rarr; X B</ei> or only by 
+<ei>A B &rarr; A X</ei>.</li> 
+ 
+<li>Reorganised and consolidated the interface to external matrix element 
+generators. Renamed <code>ShowerMEs</code> to <code>ExternalMEs</code> and 
+<code>ShowerMEsMadgraph</code> to <code>ExternalMEsMadgraph</code>. 
+Introduced new <code>HelicitySampler</code> class to sample helicities 
+using external matrix elements.</li> 
+ 
+<li>New options to get and set the state of the random number generator, 
+<code>Rndm::getState</code> and <code>Rndm::setState</code>, as a 
+direct-transfer option to the file-based <code>dumpState/readState</code> 
+methods.</li> 
+ 
+<li>New methods <code>Hist::fillTable</code> to read back in a table 
+of histogram data, specifically as written by the <code>Hist::table</code> 
+methods.</li> 
+ 
+<li>Some minor rearrangements in <code>HadronLevel</code> to better 
+structure the interleaving of hadronic rescattering and particle 
+decays. New method <code>Pythia::moreDecays(int i)</code> to perform 
+the decay of a single specified particle.</li> 
+ 
+<li>Switched tunes to by default prefer LHAPDF 6 PDFs over LHAPDF 5 
+ones, via the setting <code>Tune:preferLHAPDF</code>.</li> 
+ 
+<li>New <code>LHAPDF:xSymmetric</code> parameters allow the user to 
+choose to use symmetric PDFs for <ei>s</ei>, <ei>c</ei>, and 
+<ei>b</ei> quarks when using LHAPDF for a performance boost. By 
+default, <ei>c</ei> and <ei>b</ei> are taken as symmetric (this 
+matches the previous behaviour).</li> 
+ 
+<li><code>Info::pTnow()</code> can now also be used for showers during 
+resonance decays, and when using the <code>shower()</code> method. The 
+latter so far only for the Simple and Vincia shower models.</li> 
+ 
+<li>Corrected a bug that mainly affects beam-remnant fragmentation in 
+the QCD CR model. Previously, diquark-antidiquark systems with 
+invariant masses below the threshold for baryon-antibaryon production 
+would be combined into tetraquark-like states that do not exist in 
+PYTHIA, resulting in errors with unknown particle codes and charge 
+non-conservation. Now, 
+<code>MiniStringFragmentation::ministring2two()</code> instead 
+reconnects such topologies into two mesons, noting that this is 
+consistent with the colour structure. Further motivation comes from 
+studies of low-mass junction-antijunction systems in <ref>Sjo03</ref>. 
+</li> 
+ 
+<li>Introduced fix to prevent the central description of Les Houches 
+events showered with global recoil from shifting when shower 
+variations are enabled.</li> 
+ 
+<li>Fixed a few issues in Vincia's sector merging. Specifically, 
+while the merging itself still only handles QCD corrections, 
+Vincia's QED showers can now be left on during merging. 
+Also corrected a bug leading to incomplete histories replacing complete 
+ones with smaller probability, and fixed an inconsistent treatment 
+of trial showers in systems with coloured resonances.</li> 
+ 
+<li>When running Angantyr at very low energies, initialization would 
+abort due to an incorrect initialization of the high-mass diffraction 
+MPI machinery. Logic has been introduced to prevent this 
+initializatoin.</li> 
+ 
+<li>Fixed memory leaks in the <code>ColourReconnection</code> class.</li> 
+ 
+<li>Fixed some recent compiler warnings and errors; thanks to Mattias 
+Ellert</li> 
+ 
+<li>Removed the deprecated <code>SubCollisionModel</code> called 
+<code>MultiRadial</code> from the heavy ion machinery.</li> 
+ 
+<li>Added an abort in Pythia initialization to prevent using a low 
+energy process with a hard process. Thanks to Jenna Bacon.</li> 
+ 
+<li>Broke a circular shared pointer reference in 
+<code>ResonanceWidths</code> and <code>ParticleDataEntry</code> which 
+caused a small memory leak. Thanks to Gabriele Inghirami.</li> 
+ 
+<li>Minor fix to avoid unnecessary (attempted) MPI initialization.</li> 
+ 
+<li>Fixed issue with Dire getting stuck when showering soft QCD 
+events. Note, Dire has not been validated for these types of 
+events. Thanks to Giancarlo Panizzo and Marvin Flores for reporting 
+the issue.</li> 
+</ul> 
+ 
+<h3>8.306: 28 June 2021</h3> 
+ 
+<ul> 
+<li>Introduced ability to write intermediate output with RIVET, as 
+demonstrated in the updated <code>main93.cc</code>.</li> 
+ 
+<li>Fixed the incorrect scale being set when applying the POWHEG veto, 
+i.e. <code>main31.cc</code>. Note that the number of emissions is 
+correct in 8.303, but is incorrect in 8.304 and 8.305. Thanks to 
+Mikhail Kirsanov.</li> 
+ 
+<li>Fixed repeated initialization causing an ever expanding physics 
+pointer list in the main <code>Pythia</code> class.</li> 
+ 
+<li>Fixed issue for HepMC output from Vincia, which would previously 
+issue warnings about inconsistent mother/daughter relationships, 
+caused by Vincia's antenna-style bookkeeping by which emitted partons 
+have two mothers instead of one. For status codes 43, 51, and 53, the 
+HepMC interface now ignores the second parent, always using just the 
+first one to define the vertex structure. Minor modifications to 
+Vincia's QCD shower to ensure that the first mother is the one that 
+changed colour and hence would be identified with the "radiator" in a 
+collinear context. Analogous modifications in the QED module so the 
+most collinear parent is the first mother. 
+</li> 
+ 
+<li>Removed <code>assert</code> statements from Angantyr.</li> 
+ 
+<li>Shortened Pythia constructor header.</li> 
+</ul> 
+ 
 <h3>8.305: 03 May 2021</h3> 
  
 <ul> 
@@ -128,7 +334,7 @@ charm and bottom end quarks, to allow an increased few-body fraction
 further above threshold. Thanks to Andy Buckley.</li> 
  
 <li> Added <code>ResonanceDecayFilterHook</code> and example <code> 
-main103.cc </code> to demonstrate how to select specific final states 
+main103.cc</code> to demonstrate how to select specific final states 
 from resonance decays.</li> 
  
 <li>Fixed vertex smearing in heavy ion events.</li> 
@@ -706,4 +912,4 @@ so desired.</li>
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

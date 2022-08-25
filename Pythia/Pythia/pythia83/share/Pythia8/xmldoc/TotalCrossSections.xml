@@ -737,6 +737,68 @@ is used in the own, SaS/DL and MBR models, where the hadronic cross
 section is modelled as a simple <ei>exp(B t)</ei>. 
 </parm> 
  
+<h3>Low-energy and combined cross sections</h3> 
+ 
+The above descriptions are mainly aimed for high-energy applications. 
+The SaS/DL and especially the ABMST ones still are intended to be used 
+down to reasonably low energies, say around or a bit below 10 GeV CM 
+energy, also for diffraction. 
+ 
+<p/> 
+In hadronic rescattering typical energy scales are much lower, and 
+extend all the way down to the kinematical threshold. For the studies 
+in <ref>Sjo20</ref> it was therefore necessary to implement separate 
+low-energy cross sections. This was done using data and/or models from 
+various sources. The Additive Quark Model was applied to extend the 
+expressions to unconstrained cross sections. These cross sections are 
+encoded in the <code>SigmaLowEnergy</code> class, which exists 
+separately from the other options on this page. 
+ 
+<p/> 
+There are other applications where it is necessary to have access to 
+cross sections at all energy scales. One example is a high-energy 
+particle cascading in a medium, giving rise to more and more particles 
+of lower and lower energy. A special <code>SigmaCombined</code> class 
+has therefore been created, that contains one <code>SigmaLowEnergy</code> 
+object and one <code>SigmaSaSDL</code> object. The latter class has been 
+extended to cover a wide range of incoming particles; see <ref>Sjo21</ref> 
+for details. For now, the medium is assumed to consist of a mix of 
+protons and neutrons, thereby somewhat limiting the list of 
+required hadron combinations. Output from the 
+<code>Pythia::getSigmaTotal</code> and <code>Pythia::getSigmaPartial</code> 
+methods provides user-access to these cross sections, see 
+<aloc href="ProgramFlow">Program Flow</aloc>. This output can be based 
+purely on the assumed low-energy or high-energy behaviour, but the default 
+is a mix of the two. This is done by a linear transition specified by 
+the following two parameters. 
+ 
+<parm name="SigmaCombined:eMinHigh" default="6." min="5." max="20."> 
+Energy below which the low-energy cross sections are used exclusively. 
+The number actually applies for collisions of hadrons with up to the 
+proton mass; to allow for heavier hadrons with masses <ei>m_A</ei> and 
+<ei>m_B</ei> the threshold is at 
+<ei>eMinHigh + max(0., m_A - m_p) + max(0., m_B - m_p)</ei>. 
+</parm> 
+ 
+<parm name="SigmaCombined:deltaEHigh" default="8." min="0." max="20."> 
+If the energy is above <ei>eMinHigh + deltaEHigh</ei> the high-energy 
+cross sections are used exclusively, while in between the two cross 
+sections are mixed, with a fraction <code>(e - eMinHigh) / deltaEHigh</code> 
+taken by the high-energy expressions. This applies for <ei>pp</ei> 
+collisions; otherwise there is an offset for <ei>eMinHigh</ei> as 
+already explained. 
+</parm> 
+ 
+<p/> 
+It is worth noting that the transition is far from perfect, and 
+typically worse for some partial cross sections than for the total ones. 
+In some cases the disagreement can be less than it seems, with 
+<ei>pp/pbarp</ei> as the prime example. The low-energy description 
+includes an explicit nucleon excitation term, which is absent in the 
+high-energy formulae. There, instead, the enhanced low-mass spectrum 
+in diffraction fills a similar function, but with a different 
+classification. 
+ 
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

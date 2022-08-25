@@ -457,6 +457,85 @@ as a potential rescatterer.
 </parm> 
  
  
+<h3>Initialization speed-up</h3> 
+ 
+The initialization of the MPI framework is the most time-consuming part 
+of the whole initialization step. This is because the jet cross section 
+has to be integrated numerically for the given <ei>pT0</ei> choice, and 
+shown to be larger than the total cross section of the relevant event 
+class (nondiffractive or diffractive). If not, the <ei>pT0</ei> value has 
+to be reduced. Sudakov factors also need to be tabulated for usage during 
+the generation. If the collision energy is kept fixed and diffraction is 
+not simulated, then the time usage is still hardly noticeable, at or below 
+the order of a second. For diffraction, however, the diffractive masses 
+vary between events, which requires a setup in a grid of masses for 
+subsequent interpolation. This is similar for nondiffractive events, if the 
+collision energy is allowed to vary. In total, this can give up to a 
+hundred process+energy/mass points to consider, requiring tens of seconds. 
+It can become problematic if additionally several different Pythia objects 
+are required to handle many different beam-particle combinations, or if 
+the <code>Beams:allowIDAswitch</code> is used to handle several 
+beam-particle combinations inside a single Pythia object. 
+ 
+<p/> 
+It is therefore possible to save the outcome of one initialization step 
+on file, and then read it back in for subsequent runs. This can save a 
+significant time, notably for short test runs. A warning is that all relevant 
+settings must be the same in the two runs. It is up to the user to 
+ensure that this is the case; it would be next-to-impossible to catch 
+any possible conflict. The most obvious aspects that must agree are 
+incoming beam particles and (maximum) collision energy, all MPI-related 
+settings and PDFs. Aspects that could be different without causing problems 
+include ISR and FSR, and all hadronization steps. 
+ 
+<p/> 
+This trick also works for the initialization of several particles. 
+Specifically, when the <code>Beams:allowIDAswitch</code> switch is 
+on, some 20 different incoming beam particles are initialized 
+in succession, and all of these can be saved and reused with the methods 
+below. Since we now need a few hundred seconds to initialize all of them, 
+the time savings can be considerable for repeated use. 
+ 
+<modepick name="MultipartonInteractions:reuseInit" default="0" 
+min="0" max="3"> 
+Action taken with respect to using MPI initialization data as above. 
+<option value="0">current run is self-contained.</option> 
+<option value="1">MPI initialization is done as usual, but afterwards 
+the results of this initialization are saved on file.</option> 
+<option value="2">initialization data is read in from a file, saved 
+from a previous initialization, thereby saving time. If the file is not 
+found, initialization fails.</option> 
+<option value="3">as option 2, but if the file is not found, it will be 
+generated and saved after normal initialization.</option> 
+</modepick> 
+ 
+<word name="MultipartonInteractions:initFile" default="pp14000.mpi"> 
+The file name used to store or read MPI initialization data. It is up 
+to the user to pick a suitable name (including path if relevant) for the 
+case at hand. 
+</word> 
+ 
+<p/> 
+Another possible speed-up, in some contexts, is to symmetrize the 
+description between particles and antiparticles, so that e.g. 
+<ei>pi^+ p</ei> and <ei>pi^- p</ei> are handled identically in the 
+MPI initialization, and thus could use the same initialization file. 
+This is used for the <code>Beams:allowIDAswitch = on</code> option, 
+to limit the number of options needed to cover, but can also be used 
+in other contexts. 
+ 
+<flag name="MultipartonInteractions:setAntiSame" default="off"> 
+The cross sections for particle-particle and particle-antiparticle 
+collisions are symmetrized at initialization. For the perturbative 
+cross section this is achieved by symmetrizing the PDFs of one 
+particle between quarks and antiquarks. For the nonperturbative 
+cross sections this is done by averaging two separate calls. If 
+either of the two particles is its own antiparticle the procedure 
+can be skipped. In the actual event generation the proper PDFs are 
+used for real parton-parton collisions, but combined with the 
+symmetrized Sudakov factor table and nondiffractive cross section. 
+</flag> 
+ 
 <h3>Further variables</h3> 
  
 These should normally not be touched. Their only function is for 
@@ -610,4 +689,4 @@ interactions.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

@@ -7,6 +7,7 @@
 #include <Pythia8/PartonSystems.h>
 #include <Pythia8/ResonanceWidths.h>
 #include <Pythia8/Settings.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/StandardModel.h>
 #include <Pythia8/SusyCouplings.h>

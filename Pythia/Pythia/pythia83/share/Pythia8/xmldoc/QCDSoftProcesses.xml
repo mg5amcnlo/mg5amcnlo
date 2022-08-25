@@ -59,12 +59,20 @@ Code 102. It is possible to include <aloc href="TotalCrossSections">
 Coulomb corrections</aloc>, but by default this is off. 
 </flag> 
  
+<flag name="SoftQCD:singleDiffractiveXB" default="off"> 
+Single diffractive scattering <ei>A B &rarr; X B</ei>. 
+See pages on <aloc href="TotalCrossSections">Total Cross Sections</aloc> 
+and <aloc href="Diffraction">Diffraction</aloc> for details. Code 103. 
+</flag> 
+ 
+<flag name="SoftQCD:singleDiffractiveAX" default="off"> 
+Single diffractive scattering <ei>A B &rarr; A X</ei>. 
+See pages on <aloc href="TotalCrossSections">Total Cross Sections</aloc> 
+and <aloc href="Diffraction">Diffraction</aloc> for details. Code 104. 
+</flag> 
+ 
 <flag name="SoftQCD:singleDiffractive" default="off"> 
-Single diffractive scattering <ei>A B &rarr; X B</ei> and 
-<ei>A B &rarr; A X</ei>. See pages on 
-<aloc href="TotalCrossSections">Total Cross Sections</aloc> 
-and <aloc href="Diffraction"> Diffraction</aloc> for details. 
-Codes 103 and 104. 
+Both of the above single diffractive processes. Codes 103 and 104. 
 </flag> 
  
 <flag name="SoftQCD:doubleDiffractive" default="off"> 
@@ -105,4 +113,4 @@ to use the nonDiffractive subprocess only.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

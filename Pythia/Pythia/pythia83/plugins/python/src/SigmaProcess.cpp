@@ -38,7 +38,7 @@
 	PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>);
 #endif
 
-// Pythia8::SigmaProcess file:Pythia8/SigmaProcess.h line:85
+// Pythia8::SigmaProcess file:Pythia8/SigmaProcess.h line:86
 struct PyCallBack_Pythia8_SigmaProcess : public Pythia8::SigmaProcess {
 	using Pythia8::SigmaProcess::SigmaProcess;
 
@@ -683,7 +683,7 @@ struct PyCallBack_Pythia8_SigmaProcess : public Pythia8::SigmaProcess {
 
 void bind_Pythia8_SigmaProcess(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
-	{ // Pythia8::SigmaProcess file:Pythia8/SigmaProcess.h line:85
+	{ // Pythia8::SigmaProcess file:Pythia8/SigmaProcess.h line:86
 		pybind11::class_<Pythia8::SigmaProcess, std::shared_ptr<Pythia8::SigmaProcess>, PyCallBack_Pythia8_SigmaProcess> cl(M("Pythia8"), "SigmaProcess", "");
 		pybind11::handle cl_type = cl;
 
@@ -691,6 +691,7 @@ void bind_Pythia8_SigmaProcess(std::function< pybind11::module &(std::string con
 		cl.def( pybind11::init( [](PyCallBack_Pythia8_SigmaProcess const &o){ return new PyCallBack_Pythia8_SigmaProcess(o); } ) );
 		cl.def( pybind11::init( [](Pythia8::SigmaProcess const &o){ return new Pythia8::SigmaProcess(o); } ) );
 		cl.def_readwrite("lhaUpPtr", &Pythia8::SigmaProcess::lhaUpPtr);
+		cl.def_readwrite("doVarE", &Pythia8::SigmaProcess::doVarE);
 		cl.def_readwrite("nQuarkIn", &Pythia8::SigmaProcess::nQuarkIn);
 		cl.def_readwrite("renormScale1", &Pythia8::SigmaProcess::renormScale1);
 		cl.def_readwrite("renormScale2", &Pythia8::SigmaProcess::renormScale2);
@@ -761,6 +762,7 @@ void bind_Pythia8_SigmaProcess(std::function< pybind11::module &(std::string con
 		cl.def_readwrite("phiT", &Pythia8::SigmaProcess::phiT);
 		cl.def_readwrite("swapTU", &Pythia8::SigmaProcess::swapTU);
 		cl.def("setLHAPtr", (void (Pythia8::SigmaProcess::*)(class std::shared_ptr<class Pythia8::LHAup>)) &Pythia8::SigmaProcess::setLHAPtr, "C++: Pythia8::SigmaProcess::setLHAPtr(class std::shared_ptr<class Pythia8::LHAup>) --> void", pybind11::arg("lhaUpPtrIn"));
+		cl.def("updateBeamIDs", (void (Pythia8::SigmaProcess::*)()) &Pythia8::SigmaProcess::updateBeamIDs, "C++: Pythia8::SigmaProcess::updateBeamIDs() --> void");
 		cl.def("initProc", (void (Pythia8::SigmaProcess::*)()) &Pythia8::SigmaProcess::initProc, "C++: Pythia8::SigmaProcess::initProc() --> void");
 		cl.def("initFlux", (bool (Pythia8::SigmaProcess::*)()) &Pythia8::SigmaProcess::initFlux, "C++: Pythia8::SigmaProcess::initFlux() --> bool");
 		cl.def("set1Kin", (void (Pythia8::SigmaProcess::*)(double, double, double)) &Pythia8::SigmaProcess::set1Kin, "C++: Pythia8::SigmaProcess::set1Kin(double, double, double) --> void", pybind11::arg(""), pybind11::arg(""), pybind11::arg(""));

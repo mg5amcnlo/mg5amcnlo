@@ -1,5 +1,5 @@
 // VinciaAntennaFunctions.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -3745,7 +3745,7 @@ vector<enum AntFunType> AntennaSetISR::getAntFunTypes () {
 
 // Initialize pointers.
 
-void MECs::initPtr(Info* infoPtrIn, ShowerMEs* mg5mesPtrIn,
+void MECs::initPtr(Info* infoPtrIn, ExternalMEsPlugin* mg5mesPtrIn,
   VinciaCommon* vinComPtrIn, Resolution* resPtrIn) {
 
   infoPtr          = infoPtrIn;
@@ -3802,7 +3802,7 @@ void MECs::init() {
   // Initialise MG5 interface
   if (mg5mesPtr->initVincia()) {
     //TODO fix colour depth in MG5 interface.
-    mg5mesPtr->setColourDepthVincia(1);
+    mg5mesPtr->setColourMode(1);
   } else {
     if (verbose >= REPORT) printOut(__METHOD_NAME__,
       "Could not initialise VinciaMG5MEs interface.");
@@ -3821,8 +3821,10 @@ void MECs::init() {
       maxMECsMPI    = -1;
     }
   }
-  isInit = true;
+  // Pass MG5 and random number pointer to helicity sampler.
+  helSampler.initPtrs(mg5mesPtr, rndmPtr);
 
+  isInit = true;
   if (verbose >= DEBUG)
     printOut(__METHOD_NAME__, "end", dashLen);
 }
@@ -3974,8 +3976,8 @@ bool MECs::polarise(vector<Particle>& state, bool force) {
     if (nIn == 2) break;
   }
 
-  // Check if MG5MEs interface can do this.
-  return mg5mesPtr->selectHelicitiesVincia(state, nIn, force);
+  // Check if helicity sampler can do this.
+  return helSampler.selectHelicities(state, force);
 
 }
 
@@ -4053,8 +4055,7 @@ bool MECs::meAvailable(int iSys, const Event& event) {
     idIn.push_back(event[partonSystemsPtr->getInRes(iSys)].id());
   for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i)
     idOut.push_back(event[partonSystemsPtr->getOut(iSys, i)].id());
-  set<int> sChan;
-  bool avail = mg5mesPtr->hasProcessVincia(idIn, idOut, sChan);
+  bool avail = mg5mesPtr->isAvailable(idIn, idOut);
   if (verbose >= DEBUG) {
     stringstream ss;
     ss << "Matrix element for ";
@@ -4074,23 +4075,19 @@ bool MECs::meAvailable(const vector<Particle>& state) {
     if (!p.isFinal()) idIn.push_back(p.id());
     else idOut.push_back(p.id());
   }
-  set<int> sChan;
-  return mg5mesPtr->hasProcessVincia(idIn, idOut, sChan);
+  return mg5mesPtr->isAvailable(idIn, idOut);
 }
 
 //--------------------------------------------------------------------------
 
 // Get squared matrix element.
 
-double MECs::getME2(const vector<Particle>& state, int nIn) {
-  return mg5mesPtr->me2Vincia(state, nIn);}
+double MECs::getME2(const vector<Particle>& state, int ) {
+  return mg5mesPtr->calcME2(state);}
 
 double MECs::getME2(const int iSys, const Event& event) {
   vector<Particle> state = vinComPtr->makeParticleList(iSys, event);
-  bool isResDec = partonSystemsPtr->hasInRes(iSys);
-  return (isResDec) ?
-    mg5mesPtr->me2Vincia(state, 1 ) : mg5mesPtr->me2Vincia(state, 2);
-}
+  return mg5mesPtr->calcME2(state);}
 
 //--------------------------------------------------------------------------
 
@@ -4514,9 +4511,9 @@ double MECs::getColWeight(const vector<Particle>& state) {
 
   // Get LC colour summed ME2.
   // Temporarily set colourdepth to 0 in MG5 interface.
-  mg5mesPtr->setColourDepthVincia(0);
+  mg5mesPtr->setColourMode(0);
   double me2LC = getME2(state, true);
-  mg5mesPtr->setColourDepthVincia(1);
+  mg5mesPtr->setColourMode(1);
   if (verbose >= DEBUG) {
     stringstream ss;
     ss << "ME2(LC) = " << me2LC

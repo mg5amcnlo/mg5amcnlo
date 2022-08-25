@@ -253,7 +253,7 @@ are weighted up significantly, and multiplicites not included.
 </option> 
 </modepick> 
  
-<modepick name="Tune:preferLHAPDF" default="1" min="0" max="2"> 
+<modepick name="Tune:preferLHAPDF" default="2" min="0" max="2"> 
 Tunes made by experimental collaborations typically use the LHAPDF 
 package to obtain their PDF values, and so PYTHIA must be built 
 accordingly. See the <aloc href="PDFSelection">PDF 
@@ -403,4 +403,4 @@ in PYTHIA, so you must link LHAPDF.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

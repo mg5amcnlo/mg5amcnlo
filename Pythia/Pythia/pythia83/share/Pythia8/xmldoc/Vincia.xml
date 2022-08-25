@@ -5,67 +5,109 @@
 <h3>Overview</h3> 
  
 <p/> 
-The cornerstone of VINCIA is a pT-ordered model for QCD + EW/QED 
+The cornerstone of VINCIA is a pT-ordered model for QCD + QED/EW 
 showers based on the antenna formalism.  Originally developed as a 
 standalone plugin, it has been incorporated into the Pythia 8 source 
 code since Pythia version 8.300. 
  
 <p/> 
-<b>QCD:</b> VINCIA's QCD antenna functions incorporate both the 
+The main features are: 
+<ul> 
+<li><b>QCD:</b> VINCIA's QCD antenna functions incorporate both the 
 collinear (DGLAP) and soft (eikonal) limits of QCD matrix elements at 
 leading colour. They hence should exhibit improved colour-coherence 
 effects relative to Pythia's original (DGLAP-based) simple shower 
-model. 
+model. </li> 
  
-<p/> 
-<b>QED:</b> 
+<li><b>QED:</b> 
 VINCIA's default QED antenna-shower module is based on a fully coherent 
 (multipole) treatment of photon radiation, which is 
 interleaved with the QCD evolution. 
 Photon splittings to lepton-antilepton and quark-antiquark pairs are 
-also included. 
+also included. </li> 
  
-<p/> 
-<b>EW:</b> Optionally, the coherent QED shower can be replaced by a 
+<li><b>EW:</b> Optionally, the coherent QED shower can be replaced by a 
 full-fledged electroweak (EW) shower module, which allows for 
 branchings involving Z/W/h bosons as well, with antenna functions 
 capturing the collinear limits of the relevant matrix elements, 
 including ones involving gauge-boson self couplings. This can be used 
 to include weak corrections in electroweak Sudakov factors and to 
-resum multiple weak-boson emissions (and splittings). Note that, since 
-this module is based on collinar approximations, it does not exhibit 
-the full coherence of the pure-QED shower module. 
+resum multiple weak-boson emissions (and splittings). Note that 
+the module operates on helicity states, and helicity dependence must 
+therefore be enabled. Note also that, since 
+this module is based on collinear approximations, it does not exhibit 
+the full coherence of the pure-QED shower module. </li> 
  
-<p/> 
-<b>Mass Effects:</b> In all cases, the effects of final-state parton 
+<li><b>Mass Effects:</b> In all cases, the effects of final-state parton 
 masses (e.g., bottom and top quark masses) are systematically 
 included, and the massive antenna functions have the appropriate 
-quasi-collinear limits. 
+quasi-collinear limits. </li> 
  
-<p/> 
-When VINCIA's option for interleaved resonance decays is selected <a 
-href="#ResonanceDecays">(see below)</a>, resonance decays are 
+<li><b>Efficient Multi-jet Merging:</b> see the section 
+on <aidx href="VinciaMerging">Sector Merging (MESS)</aidx>.</li> 
+ 
+<li><b>Interleaved Resonance Decays:</b> By default, resonance decays are 
 interleaved with the rest of the perturbative evolution. This means 
 that each resonance in the hard process (or emitted by the EW shower) 
 is treated as stable until the evolution reaches a pT scale of order 
 the offshellness of that resonance, at which point the resonance is 
-replaced by its decay products and an internal ``resonance shower'' is 
+replaced by its decay products and an internal "resonance shower" is 
 performed in the decay system, starting from the invariant mass of the 
 decaying resonance and ending at the offshellness scale. The 
 decay+shower system is then merged back into the upstream system and 
 the evolution of the event continues, starting from the offshellness 
 scale. In case of sequential resonance decays, this procedure may be 
-carried out either iteratively or sequentially, depending on the 
+carried out either iteratively or in sequence, depending on the 
 offshellnesses involved. 
+</li> 
  
-<p/> 
-<b>Interleaved Evolution and MPI:</b> VINCIA's shower evolution is 
+<li><b>Interleaved Evolution and MPI:</b> VINCIA's shower evolution is 
 ordered in a measure of transverse momentum and is fully interleaved 
 with Pythia's treatment of multiple parton interactions (MPI). When 
 the Vincia shower model is selected, both the hard interaction and any 
 MPI are showered by Vincia. 
+</li> 
+</ul> 
  
-<h3>Main Switches</h3> 
+<p/> 
+The name VINCIA stands for "VIrtual Numerical Collider with 
+Interleaved Antennae". This reflects its main properties as a 
+numerical model for collider-physics processes based on 
+dipole-antennae and interleaved perturbative evolution.  It is also 
+intended to allude to a progression from PYTHIA, a name originating 
+in ancient Greece, to the renaissance era of Leonardo da Vinci. The 
+logo of VINCIA is the "Vitruvian Man", by da Vinci, a choice which 
+also reflects the combination of art and accuracy which is necessary 
+to write a good event generator. Classical antiquity is still 
+indirectly represented, via the namesake of the logo, Vitruvius, a 
+first-century (BC) Roman author, architect, and engineer. 
+ 
+<h3>Matching and Merging with VINCIA</h3> 
+ 
+<p/> 
+VINCIA has its own dedicated approach to merging with 
+higher-multiplicity tree-level matrix elements, called sector merging or MESS 
+(for <b>M</b>atrix <b>E</b>lements + <b>S</b>ector <b>S</b>howers). 
+It is similar in spirit to the CKKW(-L) approaches, but exploits the 
+maximally-bijective nature of VINCIA's sector shower to vastly reduce 
+the complexity of the merging procedure, so that merging especially 
+at high multiplicities becomes more efficient. 
+Settings for VINCIA's merging are described 
+<aidx href="VinciaMerging">here</aidx>. 
+ 
+<p/> 
+VINCIA also provides dedicated hooks for vetoed showers in POWHEG NLO matching 
+with input from the POWHEG-BOX program, attempting to correct for the mismatch 
+between the ordering variables in POWHEG-BOX and VINCIA. They are contained in 
+<code>include/Pythia8Plugins/PowhegHooksVincia.h</code>. The usage is the same 
+as for Pythia's <code>PowhegHooks</code> and described 
+<aidx href="POWHEGMerging">here</aidx>. 
+To use VINCIA with POWHEG-BOX input an existing main program 
+(e.g. <code>main31.cc</code>) that uses 
+POWHEG-BOX+Pythia can be adapted by replacing every occurence of 
+<code>PowhegHooks</code> with <code>PowhegHooksVincia</code>. 
+ 
+<h3>Main Shower Switches</h3> 
  
 <modepick name="Vincia:nFlavZeroMass" default="4" min="2" max="6"> 
 Controls the number of flavours that will be treated as massless by 
@@ -155,73 +197,209 @@ not using the factorisation scale as the starting scale, the generated
 Sudakov factor will effectively produce leftover PDF ratios in the 
 exclusive cross sections produced by the shower. 
  
-<h3>Further Shower Settings</h3> 
- 
-<ul> 
-<li>Settings for VINCIA's QCD antenna showers 
-are described <aidx href="VinciaQCD">here</aidx>.</li> 
-<li>Settings for VINCIA's QED and EW antenna showers 
-are described <aidx href="VinciaEW">here</aidx>. </li> 
-<li>Settings for VINCIA's matrix-element corrections (MECs) 
-are described <aidx href="VinciaMECs">here</aidx>. </li> 
-</ul> 
- 
-<h3>Merging with VINCIA</h3> 
+<h3>Kinematics and Recoils</h3> 
  
 <p/> 
-VINCIA has its own dedicated approach to merging with 
-higher-multiplicity tree-level matrix elements, called sector 
-merging. Similar in spirit to the CKKW(-L) approaches, it exploits the 
-unique bijective property of VINCIA's sector shower to vastly reduce 
-the complexity of the merging procedure, so that merging especially at 
-high multiplicities becomes more efficient. Settings for VINCIA's 
-sector merging are described <aidx href="VinciaMerging">here</aidx>. 
- 
-<h3>Interleaved Resonance Decays</h3> 
+While the CM momenta of a <ei>2&rarr;3</ei> branching are fixed by 
+the generated invariants (and hence by the antenna function), the 
+global orientation of the produced 3-parton system with respect to the rest of 
+the event (or, equivalently, with respect to the original 
+dipole-antenna axis) suffers from an ambiguity outside the LL limits, 
+which can be significant in regions where the leading logs are 
+suppressed or absent. 
  
 <p/> 
-Decays of resonances produced in the hard process can be interleaved 
-with the shower evolution (see also further comments under the equivalent 
-option for Pythia's <aidx href="TimelikeShowers">TimelikeShowers</aidx>). 
-In VINCIA, this setting is 
-controlled by the following switch: 
-<flag name="Vincia:interleaveResDec" default="on"> 
-When this flag is set to <code>on</code>, decays of hard-process 
-resonances are performed as part of the final-state shower when the 
-event evolution reaches the <ei>pT</ei> scale defined by 
-<code>VINCIA:resDecScaleChoice</code> below. An internal shower which 
-preserves the invariant mass of the resonance is then performed inside 
-the resonance-decay system (including nested sequential resonance 
-decays) until that system reaches the same overall <ei>pT</ei> scale 
-as the rest of the event, at which point the resonance-decay system is 
-merged back into the upstream system and the event evolution 
-continues.  When this flag is set to <code>off</code>, resonance 
-decays are only performed after the shower off the production process 
-has been completed. All of the subsequent FSR is carried out inside 
-the resonance, with preserved resonance mass. 
+To illustrate this ambiguity, consider the emissision of a gluon from 
+a qqbar antenna with some finite amount of transverse momentum 
+(meaning transverse to the original dipole-antenna axis, in the CM of the 
+dipole-antenna). The transverse momenta of the qqbar pair after the 
+branching must now add up to an equal, opposite amount, so that total 
+momentum is conserved, i.e., the emission generates a recoil. By an 
+overall rotation of the post-branching 3-parton system, it is possible 
+to align either the q or the qbar with the original axis, such that it 
+becomes the other one that absorbs the entire recoil (the default in 
+showers based on <ei>1&rarr;2</ei> branchings such as old-fashioned parton 
+showers and Catani-Seymour showers), or to align 
+both of them slightly off-axis, so that they share the recoil (the 
+default in VINCIA, see illustration below). 
+ 
+<p/> 
+<a href="http://home.fnal.gov/~skands/vincia/img/vincia-kin.png"> 
+  <img src="vincia-kins.png" align="right" border="0" hspace="20" 
+       vspace="20" width="300" height="254" alt="2to3-kinematics"/> </a> 
+ 
+<h4>Kinematics and Recoils for II Antennae </h4> 
+ 
+<p/> 
+The post-branching momenta are fixed by the following requirements: 
+<br/> 
+1) The direction of the initial state partons is aligned with the beam axis 
+(z-axis). 
+<br/> 
+2) The invariant mass and the rapidity of the final state recoiler are not 
+changed by the branching. This allows a direct construction of the 
+post-branching momenta in the lab frame. 
+ 
+<a name="kinematicsIF"></a> 
+<h4>Kinematics and Recoils for IF Antennae</h4> 
+<p/> 
+For IF branchings, Vincia contains implementations of two different 
+kinematics maps, called "local" and "global" in what follows. 
+ 
+<p/> 
+In the 
+"local map", the initial-state parton recoils 
+longitudinally, and there is no recoil imparted to any partons 
+that do not participate directly in the branching. (I.e., 
+recoil effects are absorbed locally within the branching antenna, and 
+no partons outside of it are affected.) This is equivalent to saying 
+that any transverse momentum associated with the emitted parton (j) is 
+absorbed by the other final-state parton (k). This 
+allows a simple construction  of the post-branching momenta in the 
+centre-of-mass frame of the initial-final antenna. 
+ 
+<p/> 
+The "global map" allows for an overall transverse recoil associated with the 
+initial-state leg to be imparted to the system of final-state partons 
+other than those participating directly in the branchings. This is 
+equivalent to saying that any transverse momentum associated with the 
+emitted parton (j) is absorbed by the initial-stage leg (a), after 
+which a Lorentz transformation brings it (plus the final-state system) 
+back to having beam-collinear kinematics. The recoil vanishes For 
+final-state collinear kinematicsbut is in general nonzero outside that 
+limit. 
+ 
+<p/> 
+Intuitively, the local map should be appropriate for final-state 
+splittings, while the global one would be appropriate for initial-state 
+ones. The full story is more complicated, partly since soft wide-angle 
+radiation intrinsically represents interference between the two cases, 
+and partly because the phase-space limits for the two maps (outside of 
+the strict soft and collinear limits) are different. (The x &lt; 1 
+constraint translates to slightly different constraints on the 
+branching invariants for the two maps, as does positivity of the Gram 
+determinant.) A probabilistic selection is therefore made between 
+the local and 
+global maps, using a form obtained by R. Verheyen based on comparisons 
+to DIS matrix elements, <ei>P(global) = (sAK - saj)^2/[ (sAK + sjk)^2 + 
+(sAK - saj)^2 ] * Theta( sAK - saj )</ei>, with Theta the unit step 
+function (since the momenta in the global map always become unphysical 
+for saj > sAK). 
+ 
+<p/> 
+<modepick name="Vincia:kineMapIF" default="1" min="1" max="3"> 
+<option value="1">Local recoil map.</option> 
+<option value="2">Gluon emissions use a probabilistic selection 
+between the global and local maps. Antennae that only contain 
+initial-state singularities always use the global one. Antennae that 
+only contain final-state singularities always use the local one.</option> 
+<option value="3">Probabilistic selection between the global and 
+and local maps, for all IF branchings irrespective of their 
+singularity structure.</option> 
+</modepick> 
+ 
+<p/> 
+When using the probabilistic selection, it is possible (in 
+phase-space regions well away from the strict soft and collinear 
+limits) that the selected kinematics map produces unphysical momenta 
+(with x &gt; 1 or negative energies) for the given branching 
+invariants, while the other map would give physical momenta. In such 
+cases, one has to choose whether the given phase-space point should be 
+vetoed, or whether the other map should be allowed to be used instead 
+to construct the kinematics. 
+<flag name="Vincia:kineMapIFretry" default="off"> 
+<option value="off">If the map selected according to the probabilistic 
+choice above returns unphysical momenta, the trial branching is 
+vetoed.</option> 
+<option value="on">If the map selected according to the probabilistic 
+choice above returns unphysical momenta, the other map is tried. Only 
+if both maps fail to produce physical momenta is the trial branching 
+vetoed.</option> 
 </flag> 
  
-<p/> 
-<a name="ResonanceDecays"></a> When decays of hard-process resonances are 
-interleaved with the shower evolution (and for any resonances produced 
-by VINCIA's electroweak shower), the evolution scale at which these 
-decays are performed (including showers and any nested resonance 
-decays at higher scales) is controlled by the following choice: 
-<modepick name="Vincia:resDecScaleChoice" default="1" min="0" max="2"> 
-<option value="0">Resonance decays are assigned a fixed scale equal to 
-the on-shell width of the given resonance. (This option is currently 
-not implemented for resonances produced by VINCIA's EW 
-shower.)</option> 
-<option value="1">Resonance decays are assigned a dynamical scale 
-given by <ei>|m<sup>2</sup> - m0<sup>2</sup>|/m0</ei>. This implies, 
-e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
-&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2) 
-&Gamma;</ei>.</option> 
-<option value="2">Resonance decays are assigned a dynamical scale 
-given by <ei>sqrt(|m<sup>2</sup> - m0<sup>2</sup>|)</ei>. This 
-implies, e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
-&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2 &Gamma; m0 
-)</ei>.</option> 
+<h4>Kinematics and Recoils for FF Antennae </h4> 
+ 
+<modepick name="Vincia:kineMapFFemit" default="3" min="1" max="3"> 
+Selects which method to use for choosing the Euler angle for the 
+global orientation of the post-branching kinematics construction for 
+gluon emissions. 
+<option value="1">The ARIADNE angle (see illustration). 
+The recoiling mothers share the recoil in 
+proportion to their energy fractions in the CM of the 
+dipole-antenna. Tree-level expansions of the VINCIA shower compared 
+to tree-level matrix elements through third order in alphaS have 
+shown this strategy to give the best overall approximation, 
+followed closely by the KOSOWER map below.</option> 
+<option value="2">LONGITUDINAL. The parton which has the smallest 
+invariant mass together with the radiated parton is taken to be the 
+"radiator". The remaining parton is taken to be the "recoiler". The 
+recoiler remains oriented along the dipole axis in the branching rest 
+frame and recoils longitudinally against the radiator + radiated 
+partons which have equal and opposite transverse momenta (transverse 
+to the original dipole-antenna axis in the dipole-antenna 
+CM). Comparisons to higher-order QCD matrix elements show this to be 
+by far the worst option of the ones so far implemented, hence it could 
+be useful as an extreme case for uncertainty estimates, but should 
+probably not be considered for central tunes. (Note: exploratory 
+attempts at improving the behaviour of this map, e.g., by selecting 
+probabilistically between the radiator and the recoiler according to 
+approximate collinear splitting kernels, only resulted in marginal 
+improvements. Since such variations would introduce additional 
+complications in the VINCIA matching formalism, they have not been 
+retained in the distributed version.)</option> 
+<option value="3">The KOSOWER map. Comparisons to higher-order QCD 
+matrix elements show only very small differences between this and 
+the ARIADNE map above, but since the KOSOWER map is sometimes used in 
+fixed-order contexts, we deem it interesting to include it as a 
+complementary possibility. (Note: the KOSOWER maps in fact represent a 
+whole family of kinematics maps. For experts, the specific choice 
+made here corresponds to using <ei>r=sij/(sij+sjk)</ei> in the 
+definition of the map.)</option> 
+</modepick> 
+<modepick name="Vincia:kineMapFFsplit" default="2" min="0" max="3"> 
+Selects which method to use for choosing the Euler angle for the 
+global orientation of the post-branching kinematics construction for 
+gluon splittings. 
+<option value="1">The ARIADNE angle (see illustration). 
+The recoiling mothers share the recoil in 
+proportion to their energy fractions in the CM of the 
+dipole-antenna. Tree-level expansions of the VINCIA shower compared 
+to tree-level matrix elements through third order in alphaS have 
+shown this strategy to give the best overall approximation, 
+followed closely by the KOSOWER map below.</option> 
+<option value="2">LONGITUDINAL. For gluon splittings, this choice 
+forces the recoiler to always recoil purely longitudinally (in the antenna 
+CM) regardless of the size of the branching invariants.</option> 
+<option value="3">The KOSOWER map. Comparisons to higher-order QCD 
+matrix elements show only very small differences between this and 
+the ARIADNE map above, but since the KOSOWER map is sometimes used in 
+fixed-order contexts, we deem it interesting to include it as a 
+complementary possibility. (Note: the KOSOWER maps in fact represent a 
+whole family of kinematics maps. For experts, the specific choice 
+made here corresponds to using <ei>r=sij/(sij+sjk)</ei> in the 
+definition of the map.)</option> 
+</modepick> 
+ 
+<h4>Kinematics and Recoils for RF Antennae </h4> 
+ 
+<modepick name="Vincia:kineMapRFemit" default="1" min="1" max="2"> 
+There is only one choice of kinematics map for resonance emissions. 
+However there is a freedom to choose the recoiler(s).  <option 
+value="1">Takes all non-colour-connected daughters in the resonance 
+decay system as the recoilers.</option> 
+<option value="2">Takes the original non-colour-connected daughter of 
+the resonance to always take the full recoil. E.g. in t->bW the 
+recoiler is always the W. This is equivalent to setting 
+TimeShower:recoilToColoured = off for Pythia.</option> 
+</modepick> 
+<modepick name="Vincia:kineMapRFsplit" default="1" min="1" max="2"> 
+Same as above, but for R-g splittings. 
+<option value="1">Takes all non-colour-connected daughters in the 
+resonance decay system as the recoilers.</option> 
+<option value="2">Takes the original non-colour-connected daughter of 
+the resonance to always take the full recoil. E.g. in t->bW the 
+recoiler is always the W. This is equivalent to setting 
+TimeShower:recoilToColoured = off for Pythia.</option> 
 </modepick> 
  
 <h3>Evolution with Enhanced (Biased) Kernels</h3> 
@@ -246,19 +424,16 @@ enhancement algorithm should not result in any negative weights.
  
 <flag name="Vincia:enhanceInHardProcess" default="on"> 
 This flag controls whether the enhancement factors are applied to 
-shower branchings in the hard-process system. 
-</flag> 
+shower branchings in the hard-process system.</flag> 
  
 <flag name="Vincia:enhanceInResonanceDecays" default="on"> 
 This flag controls whether the enhancement factors are applied to 
 shower branchings inside resonance-decay systems (like Z/W/H decays) 
-that are treated as factorised from the hard process. 
-</flag> 
+that are treated as factorised from the hard process.</flag> 
  
 <flag name="Vincia:enhanceInMPIshowers" default="off"> 
 This flag controls whether the enhancement factors are applied to 
-shower branchings in MPI systems. 
-</flag> 
+shower branchings in MPI systems.</flag> 
  
 <parm name="Vincia:enhanceFacAll" default="1.0" min="0.01" max="100.0"> 
 This enhancement factor is applied as a multiplicative factor common 
@@ -266,26 +441,81 @@ to all antenna functions, increasing the likelihood of all shower
 branchings by the same amount. Values greater than unity thus more 
 frequently yields "busy" events, with many shower branchings. Values 
 smaller than unity suppress additional branchings, yielding more 
-Sudakov-like events. 
-</parm> 
+Sudakov-like events.</parm> 
  
 <parm name="Vincia:enhanceFacBottom" default="1.0" min="1.0" max="100.0"> 
 This enhances the probability for all branchings that increase the 
 number of bottom quarks (i.e., FSR <ei>g&rarr;bb</ei> splittings and 
 the corresponding ISR flavour-excitation process). Note: this factor 
-is applied on top of <code>Vincia:biasAll</code>. 
-</parm> 
+is applied on top of <code>Vincia:biasAll</code>.</parm> 
  
 <parm name="Vincia:enhanceFacCharm" default="1.0" min="1.0" max="100.0"> 
 Same as <code>Vincia:enhanceFacBottom</code> but for charm quarks. 
-Note: this factor is applied on top of <code>Vincia:biasAll</code>. 
-</parm> 
+Note: this factor is applied on top of <code>Vincia:biasAll</code>.</parm> 
  
 <parm name="Vincia:enhanceCutoff" default="10.0" min="0.0" max="1000.0"> 
 Do not apply enhancement factors to branchings below this 
 scale. Intended to be used to focus on enhancements of hard branchings 
-only. 
-</parm> 
+only.</parm> 
+ 
+<h3>Interleaved Resonance Decays</h3> 
+ 
+<p/> 
+Decays of resonances produced in the hard process can be interleaved 
+with the shower evolution (see also further comments under the 
+equivalent option for Pythia's 
+<aidx href="TimelikeShowers">TimelikeShowers</aidx>). In VINCIA, this 
+setting is controlled by the following switch: 
+ 
+<flag name="Vincia:interleaveResDec" default="on"> 
+When this flag is set to <code>on</code>, decays of hard-process 
+resonances are performed as part of the final-state shower when the 
+event evolution reaches the <ei>pT</ei> scale defined by 
+<code>VINCIA:resDecScaleChoice</code> below. An internal shower which 
+preserves the invariant mass of the resonance is then performed inside 
+the resonance-decay system (including nested sequential resonance 
+decays) until that system reaches the same overall <ei>pT</ei> scale 
+as the rest of the event, at which point the resonance-decay system is 
+merged back into the upstream system and the event evolution 
+continues.  When this flag is set to <code>off</code>, resonance 
+decays are only performed after the shower off the production process 
+has been completed. All of the subsequent FSR is carried out inside 
+the resonance, with preserved resonance mass.</flag> 
+ 
+<p/> 
+<a name="ResonanceDecays"></a> When decays of hard-process resonances are 
+interleaved with the shower evolution (and for any resonances produced 
+by VINCIA's electroweak shower), the evolution scale at which these 
+decays are performed (including showers and any nested resonance 
+decays at higher scales) is controlled by the following choice: 
+ 
+<modepick name="Vincia:resDecScaleChoice" default="1" min="0" max="2"> 
+<option value="0">Resonance decays are assigned a fixed scale equal to 
+the on-shell width of the given resonance. (This option is currently 
+not implemented for resonances produced by VINCIA's EW 
+shower.)</option> 
+<option value="1">Resonance decays are assigned a dynamical scale 
+given by <ei>|m<sup>2</sup> - m0<sup>2</sup>|/m0</ei>. This implies, 
+e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
+&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2) 
+&Gamma;</ei>.</option> 
+<option value="2">Resonance decays are assigned a dynamical scale 
+given by <ei>sqrt(|m<sup>2</sup> - m0<sup>2</sup>|)</ei>. This 
+implies, e.g., that the decay of a resonance which has <ei>m = m0 &pm; 
+&Gamma;</ei> will be performed at a scale <ei>pT ~ sqrt(2 &Gamma; m0 
+)</ei>.</option> 
+</modepick> 
+ 
+<h3>Further Shower Settings</h3> 
+ 
+<ul> 
+<li>Settings for VINCIA's QCD antenna showers 
+are described <aidx href="VinciaQCD">here</aidx>.</li> 
+<li>Settings for VINCIA's QED and EW antenna showers 
+are described <aidx href="VinciaEW">here</aidx>.</li> 
+<li>Settings for VINCIA's matrix-element corrections (MECs) 
+are described <aidx href="VinciaMECs">here</aidx>.</li> 
+</ul> 
  
 <h3>VINCIA Tunes</h3> 
  
@@ -369,6 +599,7 @@ The parameter below controls the repartition ambiguity and gives the
 value of "half" the gluon splitting function on its finite end.  For 
 sector showers, this parameter has no effect, as the collinear 
 singularities are combined within a single antenna function. 
+ 
 <parm name="Vincia:octetPartitioning" default="0.0" min="0.0" max="1.0"> 
 Gluon-collinear &alpha; parameter. Only used for final-final global 
 antennae. Note: only the default value (0) is consistent with the 
@@ -378,8 +609,7 @@ Gehrmann-Gehrmann-de Ridder-Glover (GGG) partitioning, and &alpha;=1,
 which corresponds to the Gustafson (ARIADNE) partitioning. For the 
 sector shower, the <code>octetPartitioning</code> is forced to 
 &alpha;=1, to ensure positivity of the antenna function and as there 
-is no sensible meaning of the parameter anymore. 
-</parm> 
+is no sensible meaning of the parameter anymore.</parm> 
  
 <h4>Verbose Level</h4> 
 <modepick name="Vincia:verbose" default="1" min="-1" max="3"> 
@@ -392,7 +622,7 @@ printed.</option>
 printed, but no additional diagnostic output is given. Standard 
 initialisation and summary information is also printed.</option> 
 <option value="2">Report. Enhanced runtime output. As for =1, but 
- additional diagnostic information is printed, especially 
+additional diagnostic information is printed, especially 
 when/where errors occur, and additional self-consistency checks may 
 be performed. Full initialisation and summary information is 
 printed.</option> 
@@ -401,11 +631,13 @@ authors for debugging purposes.</option>
 </modepick> 
  
 <h4>Numerical Checks</h4> 
+ 
 <flag name="Vincia:CheckAntennae" default="on"> 
 By default, VINCIA checks antenna functions for positivity and absence 
 of dead zones. Switch to control whether to perform antenna 
 self-consistency checks or not. 
 </flag> 
+ 
 <modeopen name="Vincia:nPointsCheck" default="1000" min="0" max="1e6"> 
 Number of random points to check each antenna functions for 
 positivity. 
@@ -424,8 +656,7 @@ higher-order matching corrections, very small values of this parameter
 may result in weights greater than unity being generated, since the 
 corrections are multiplicative and large reweighting factors may be 
 needed to "make up" for any near-dead zones at the previous branching 
-step. 
-</parm> 
+step.</parm> 
  
 <h4>Shower Uncertainty Bands</h4> 
  
@@ -442,13 +673,15 @@ for Hadron Collisions</a> (for Sector Showers).</li>
 <li><a href="http://arxiv.org/abs/arXiv:1907.08980">Coherent Showers 
 in Decays of Coloured Resonances</a> (for showers in top quark 
 decays).</li> 
-<li><a href="http://arxiv.org/abs/arXiv:2008.09468">Efficient 
-Multi-Jet Merging with the VINCIA Sector Shower</a> (for Sector 
-Merging).</li> 
 <li><a href="http://arxiv.org/abs/arXiv:2002.04939">Multipole Photon 
 Radiation in the VINCIA Parton Shower</a> (for QED showers).</li> 
 <li><a href="https://arxiv.org/abs/2002.09248">Collinear electroweak 
 radiation in antenna parton showers</a> (for EW showers).</li> 
+<li><a href="http://arxiv.org/abs/arXiv:2008.09468">Efficient 
+Multi-Jet Merging with the VINCIA Sector Shower</a> (for MESS 
+Merging).</li> 
+<li><a href="https://arxiv.org/abs/2106.10987">Coherent QCD Radiation 
+in Vector-Boson-Fusion Higgs Production</a> (for POWHEG matching).</li> 
 </ul> 
  
 <h4>Authors and Contributions</h4> 
@@ -458,7 +691,7 @@ The authors of the current version, taking active responsibility for
 code development and day-to-day maintenance, are 
 <ul> 
 <li>P. Skands: Main author</li> 
-<li>C. T. Preuss: Sector Showers, Sector Merging, MG5 Interface.</li> 
+<li>C. T. Preuss: Sector Showers, Matching and Merging, MG5 Interface.</li> 
 <li>R. Verheyen: QED showers and EW showers.</li> 
 </ul> 
  
@@ -482,21 +715,5 @@ elements.</li>
 <li>M. Ritzmann: Mass corrections and initial-state antenna showers.</li> 
 <li>T. Sj&ouml;strand: Integration with PYTHIA 8.</li> 
 </ul> 
- 
- 
-<h4>About VINCIA</h4> 
- 
-<p/> 
-<b>The name VINCIA</b> stands for "VIrtual Numerical Collider with 
-Interleaved Antennae". This reflects its main properties as a 
-numerical model for collider-physics processes based on 
-dipole-antennae and interleaved perturbative evolution.  It is also 
-intended to allude to a progression from PYTHIA - a name originating 
-in ancient Greece - to the renaissance era of Leonardo da Vinci. The 
-logo of VINCIA is the "Vitruvian Man", by da Vinci, a choice which 
-also reflects the combination of art and accuracy which is necessary 
-to write a good event generator. Classical antiquity is still 
-indirectly represented, via the namesake of the logo, Vitruvius, a 
-first-century (BC) Roman author, architect, and engineer. 
  
 </chapter> 

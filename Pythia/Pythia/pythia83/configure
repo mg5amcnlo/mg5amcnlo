@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # configure is a part of the PYTHIA event generator.
-# Copyright (C) 2021 Torbjorn Sjostrand.
+# Copyright (C) 2022 Torbjorn Sjostrand.
 # PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 # Please respect the MCnet Guidelines, see GUIDELINES for details.
 # Author: Philip Ilten, October 2014 - November 2017.
@@ -310,7 +310,8 @@ if [ "$ARCH" != "LINUX" ] && [ "$ARCH" != "DARWIN" ]; then
 if [ -z "$CXX" ]; then warn "CXX not set, using g++."; CXX="g++"; fi
 if [ -z "$CXX_COMMON" ]; then
     CXX_COMMON="${ENABLE_DEBUG}${ENABLE_64BIT}"
-    CXX_COMMON="${CXX_COMMON}-std=c++11 -pedantic -W -Wall -Wshadow -fPIC"; fi
+    CXX_COMMON="${CXX_COMMON}-std=c++11 -pedantic -W -Wall -Wshadow -fPIC"
+    CXX_COMMON="${CXX_COMMON} -pthread"; fi
 if [ -z "$CXX_SHARED" ]; then
     if [ "$ARCH" = "LINUX" ];  then CXX_SHARED="-shared"; fi
     if [ "$ARCH" = "DARWIN" ]; then CXX_SHARED="-dynamiclib"; fi; fi

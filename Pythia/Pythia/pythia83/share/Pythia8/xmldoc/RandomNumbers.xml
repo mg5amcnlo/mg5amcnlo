@@ -166,6 +166,20 @@ set the state of the random number generator by reading in a binary
 file saved by the above command. Comments as above. 
 </method> 
  
+<method name="RndmState Rndm::getState()"> 
+save the current state of the random number generator as a 
+<code>struct RndmState</code>. This can then later be used within the 
+same run, e.g. as input to another <code>Pythia</code> instance. 
+It circumvents the intermediate file of <code>dumpState</code>, 
+but cannot be saved for a later run. 
+</method> 
+ 
+<method name="void Rndm::setState(RndmState&amp; state)"> 
+set the state of the random number generator by reading in a 
+<code>struct RndmState</code> saved by the above command. 
+Comments as above. 
+</method> 
+ 
 <method name="virtual double RndmEngine::flat()"> 
 if you want to construct an external random number generator 
 (or generator interface) then you must implement this method 
@@ -175,4 +189,4 @@ to give a random number between 0 and 1.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

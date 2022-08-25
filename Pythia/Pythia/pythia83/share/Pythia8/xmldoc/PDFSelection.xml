@@ -86,6 +86,34 @@ LHAPDF also offers an option with a smooth extrapolation outside
 the grid boundaries. 
  
 <p/> 
+Because the PDF sets are typically sampled heavily within PYTHIA, 
+small speed differences in sampling the PDFs can lead to large overall 
+changes in timing. In most PDF sets the <ei>c</ei>/<ei>cbar</ei> and 
+<ei>b</ei>/<ei>bbar</ei> PDF sets are symmetric. Consequently, when 
+updating the PDF for LHAPDF, by default the <ei>cbar</ei> PDF is not 
+queried, but instead set to the value of the <ei>c</ei>. The same is 
+done for the <ei>b</ei> and <ei>bbar</ei>. The following flags allow 
+this symmetrization to be turned off, with the explicit understanding 
+that there will be a reduction in performance. Additionally, the 
+<ei>s</ei> can also be symmtrezed when appropriate for further timing 
+gains. 
+ 
+<flag name="LHAPDF:sSymmetric" default="off"> 
+Assume the <ei>s</ei> and <ei>sbar</ei> PDF content is symmetric when 
+using LHAPDF PDF sets. 
+</flag> 
+ 
+<flag name="LHAPDF:cSymmetric" default="on"> 
+Assume the <ei>c</ei> and <ei>cbar</ei> PDF content is symmetric when 
+using LHAPDF PDF sets. 
+</flag> 
+ 
+<flag name="LHAPDF:bSymmetric" default="on"> 
+Assume the <ei>b</ei> and <ei>bbar</ei> PDF content is symmetric when 
+using LHAPDF PDF sets. 
+</flag> 
+ 
+<p/> 
 If you do not want to install LHAPDF, it is possible to use LHAPDF6 
 data grids natively in PYTHIA. This is based on a simplified 
 implementation of interpolation in a <code>.dat</code> "lhagrid1" 
@@ -189,6 +217,10 @@ been removed, as was forewarned.
 <ei>alpha_s(M_Z) = 0.118</ei>. Comments as for 21, but this set is at 
 NNLO rather than NLO. 
 </option> 
+<option value="23">GJR LO (2007). </option> 
+<option value="24">SU (2021). This is a simple parameterization based on the 
+same approach as other SU21 sets. It is intended for comparison with those 
+sets, but is too inaccurate to use for practical applications. </option> 
 <option value="LHAPDF5:set/member">Use an external LHAPDF set 
 where <code>set</code> is the name of the set to use 
 and <code>member</code> is the member of the set to use. The value 
@@ -373,10 +405,12 @@ not seen the need to allow separate parton densities for hard processes.
 When using LHAPDF the <code>PDF:extrapolateLHAPDF</code> switch of the 
 proton also applies to pions. 
  
-<word name="PDF:piSet" default="1"> 
+<word name="PDF:piSet" default="2"> 
 Parton densities that can be used for pion beams, currently with 
 only one internal choice. 
 <option value="1">GRV 92 L.</option> 
+<option value="2">GRS 99 L.</option> 
+<option value="3">SU 21.</option> 
 <option value="LHAPDF5:set/member">Use an external LHAPDF set 
 where <code>set</code> is the name of the set to use 
 and <code>member</code> is the member of the set to use. The value 
@@ -399,6 +433,42 @@ Parton density for <ei>pion beam B</ei>. If this option is set
 to <code>void</code> then the same PDF set as <code>PDF:piSet</code> 
 is used. 
 </word> 
+ 
+<h3>Parton densities for other hadrons</h3> 
+ 
+The SU21 family of PDFs <ref>Sjo21</ref> has been constructed to provide 
+PDFs for essentially all hadrons. By strong isospin symmetry, and 
+assuming no dependence on ordinary spin, this is reduced to some twenty 
+different sets. They are based on the Gl&uuml;ck-Reya philosophy of a 
+valence-like content at some very low <ei>Q</ei> scale, including 
+valence-like gluons and sea. At this scale also heavier valence quarks 
+are assumed to take a larger fraction of the momentum. They are evolved 
+to higher scales with the QCDNUM package, in the leading-order approach, 
+as is most relevent for applications to multiparton interactions. For 
+completeness also proton and pion PDFs are provided in the same simplified 
+ansatz, but especially the former obviously is a poor competitor to more 
+detailed fits. 
+ 
+<p/> 
+Normally the additional sets would come into play when the option of 
+allowing variable incoming beam particles is used, and then automatically 
+be loaded without any choice, except for the proton and pion switches 
+above. 
+ 
+<p/> 
+The PDFs are stored in the <code>LHAGrid1</code> format, 
+stretching between <ei>10^-9</ei> and 1 in <ei>x</ei> and between 
+0.51 and <ei>10^4</ei> GeV in <ei>Q</ei>. The file names are chosen 
+to associate with the base particle, which then can be rearranged 
+to be used also for isospin partners. They are 
+<code>piplus</code>,<code>eta</code>,<code>phi</code>, 
+<code>Kplus</code>,<code>Dzero</code>,<code>Dsplus</code>, 
+<code>Jpsi</code>,<code>Bplus</code>,<code>Bszero</code>, 
+<code>Bcplus</code>,<code>Upsilon</code>,<code>proton</code>, 
+<code>Sigmaplus</code>,<code>Xizero</code>,<code>Omega</code>, 
+<code>Sigmacplusplus</code>,<code>Xicplus</code>,<code>Omegac</code>, 
+<code>Sigmabplus</code>,<code>Xibzero</code> and<code>Omegab</code>, 
+all with the <code>.dat</code> suffix. 
  
 <h3>Parton densities for Pomerons</h3> 
  
@@ -739,4 +809,4 @@ partons, etc.
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

@@ -1,5 +1,5 @@
 // ProcessContainer.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -200,7 +200,7 @@ bool ProcessContainer::init(bool isFirst, ResonanceDecays* resDecaysPtrIn,
   sigmaSgn            = phaseSpacePtr->sigmaSumSigned();
 
   // Check maximum by a few events, and extrapolate a further increase.
-  if (physical & !isLHA) {
+  if (physical & !isLHA && !isSoftQCD()) {
     int nSample = (nFin < 3) ? N12SAMPLE : N3SAMPLE;
     for (int iSample = 0; iSample < nSample; ++iSample) {
       bool test = false;
@@ -1387,6 +1387,7 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
   // Set up requested objects for soft QCD processes.
   bool softQCD = settings.flag("SoftQCD:all");
   bool inelastic = settings.flag("SoftQCD:inelastic");
+  bool singleDiff = settings.flag("SoftQCD:singleDiffractive");
   if (softQCD || inelastic || settings.flag("SoftQCD:nonDiffractive")) {
     sigmaPtr = new Sigma0nonDiffractive;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
@@ -1395,9 +1396,13 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
     sigmaPtr = new Sigma0AB2AB;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   }
-  if (softQCD || inelastic || settings.flag("SoftQCD:singleDiffractive")) {
+  if ( softQCD || inelastic || singleDiff
+    || settings.flag("SoftQCD:singleDiffractiveXB")) {
     sigmaPtr = new Sigma0AB2XB;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
+  }
+  if ( softQCD || inelastic || singleDiff
+    || settings.flag("SoftQCD:singleDiffractiveAX") ) {
     sigmaPtr = new Sigma0AB2AX;
     containerPtrs.push_back( new ProcessContainer(sigmaPtr) );
   }
@@ -2680,6 +2685,7 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
 
   // Set spin of particles in the Hidden Valley scenario.
   int spinFv = settings.mode("HiddenValley:spinFv");
+  int nFlavV = settings.mode("HiddenValley:nFlav");
   for (int i = 1; i < 7; ++i) {
     if (particleDataPtr->spinType( 4900000 + i) != spinFv + 1)
         particleDataPtr->spinType( 4900000 + i,    spinFv + 1);
@@ -2687,12 +2693,14 @@ bool SetupContainers::init(vector<ProcessContainer*>& containerPtrs,
         particleDataPtr->spinType( 4900010 + i,    spinFv + 1);
   }
   if (spinFv != 1) {
-    if (particleDataPtr->spinType( 4900101) != 2)
-       particleDataPtr->spinType( 4900101, 2);
+    for (int i = 1; i <= nFlavV; ++i)
+      if (particleDataPtr->spinType( 4900100 + i) != 2)
+        particleDataPtr->spinType( 4900100 + i, 2);
   } else {
     int spinqv = settings.mode("HiddenValley:spinqv");
-    if (particleDataPtr->spinType( 4900101) != 2 * spinqv + 1)
-        particleDataPtr->spinType( 4900101,    2 * spinqv + 1);
+    for (int i = 1; i <= nFlavV; ++i)
+      if (particleDataPtr->spinType( 4900100 + i) != 2 * spinqv + 1)
+        particleDataPtr->spinType( 4900100 + i,    2 * spinqv + 1);
   }
 
   // Set up requested objects for HiddenValley processes.

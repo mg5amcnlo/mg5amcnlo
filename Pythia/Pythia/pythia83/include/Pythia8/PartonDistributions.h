@@ -1,5 +1,5 @@
 // PartonDistributions.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -53,33 +53,34 @@ public:
 
   // Constructor.
   PDF(int idBeamIn = 2212) : idBeam(idBeamIn), idBeamAbs(abs(idBeam)),
-    idVal1(), idVal2(), xsVal(), xcVal(), xbVal(), xsSea(), xcSea(), xbSea()
-    { setValenceContent();
-    idSav = 9; xSav = -1.; Q2Sav = -1.;
-    xu = 0.; xd = 0.; xs = 0.; xubar = 0.; xdbar = 0.; xsbar = 0.; xc = 0.;
-    xb = 0.; xg = 0.; xlepton = 0.; xgamma = 0.; xuVal = 0.; xuSea = 0.;
-    xdVal = 0.; xdSea = 0.; isSet = true; isInit = false;
-    hasGammaInLepton = false; }
+  idSav(9), xSav(-1), Q2Sav(-1.), isSet(true), isInit(false),
+  hasGammaInLepton(false) { resetValenceContent(); }
 
-  // Destructor.
+  // Virtual destructor.
   virtual ~PDF() {}
 
   // Confirm that PDF has been set up (important for LHAPDF and H1 Pomeron).
-  virtual bool isSetup() {return isSet;}
+  bool isSetup() {return isSet;}
 
-  // Dynamic choice of meson valence flavours for pi0, K0S, K0L, Pomeron.
-  virtual void newValenceContent(int idVal1In, int idVal2In) {
-    idVal1 = idVal1In; idVal2 = idVal2In;}
+  // Switch to new beam particle identities; for similar hadrons only.
+  virtual void setBeamID(int idBeamIn) { idBeam = idBeamIn;
+    idBeamAbs = abs(idBeam); idSav = 9; xSav = -1.; Q2Sav = -1.;
+    resetValenceContent();}
+
+  // Set valence content.
+  void resetValenceContent();
+  void setValenceContent(int idVal1In, int idVal2In, int idVal3In) {
+    idVal1 = idVal1In; idVal2 = idVal2In; idVal3 = idVal3In;}
 
   // Allow extrapolation beyond boundaries. This is optional.
   virtual void setExtrapolate(bool) {}
 
   // Read out parton density.
-  virtual double xf(int id, double x, double Q2);
+  double xf(int id, double x, double Q2);
 
   // Read out valence and sea part of parton densities.
-  virtual double xfVal(int id, double x, double Q2);
-  virtual double xfSea(int id, double x, double Q2);
+  double xfVal(int id, double x, double Q2);
+  double xfSea(int id, double x, double Q2);
 
   // Check whether x and Q2 values fall inside the fit bounds (LHAPDF6 only).
   virtual bool insideBounds(double, double) {return true;}
@@ -147,26 +148,46 @@ public:
   // Allow for new scaling factor for VMD PDFs.
   virtual void setVMDscale(double = 1.) {}
 
+  // Return if s/sbar, c/cbar, and b/bbar PDFs are symmetric.
+  bool sSymmetric() const { return sSymmetricSave; }
+  bool cSymmetric() const { return cSymmetricSave; }
+  bool bSymmetric() const { return bSymmetricSave; }
+
+  // Set s/sbar, c/cbar, and b/bbar PDFs symmetric.
+  void sSymmetric(bool sSymmetricIn) { sSymmetricSave = sSymmetricIn; }
+  void cSymmetric(bool cSymmetricIn) { cSymmetricSave = cSymmetricIn; }
+  void bSymmetric(bool bSymmetricIn) { bSymmetricSave = bSymmetricIn; }
+
 protected:
 
-  // Allow the LHAPDF class to access these methods.
+  // Allow the LHAPDF class to call xfUpdate on its loaded PDF object.
   friend class LHAPDF;
 
   // Store relevant quantities.
-  int    idBeam, idBeamAbs, idSav, idVal1, idVal2;
+  int idBeam, idBeamAbs, idSav, idVal1, idVal2, idVal3;
   double xSav, Q2Sav;
-  double xu, xd, xs, xubar, xdbar, xsbar, xc, xb, xg, xlepton, xgamma,
-         xuVal, xuSea, xdVal, xdSea;
+  // Stored quantities.
+  double xu, xd, xs, xubar, xdbar, xsbar, xc, xb, xcbar, xbbar,
+         xg, xlepton, xgamma;
   bool   isSet, isInit;
 
-  // More valence and sea flavors for photon PDFs.
-  double xsVal, xcVal, xbVal, xsSea, xcSea, xbSea;
+  // For hadrons, beamType defines special cases and determines how
+  // to handle isospin symmetries.
+  //  1: no rearrangement (e.g. p, Sigma+, Omega-, pi+)
+  // -1: switch u <-> d (e.g. n, Sigma-, Xi-, K0)
+  //  0: take average of u and d (e.g. Sigma0, Lambda0)
+  //  2/-2: Delta++/Delta-
+  //  111: pi0-like special case (pi0, rho0, omega, etc.)
+  //  221: Other diagonal meson cases (eta, eta', phi, J/psi, Upsilon, etc.)
+  //  130: K_S,L special cases
+  int beamType;
 
   // True if a photon beam inside a lepton beam, otherwise set false.
   bool hasGammaInLepton;
 
-  // Resolve valence content for assumed meson. Possibly modified later.
-  void setValenceContent();
+  // Whether to treat flavoured PDFs as symmetric, for efficiency.
+  bool sSymmetricSave = false;
+  bool cSymmetricSave = true, bSymmetricSave = true;
 
   // Update parton densities.
   virtual void xfUpdate(int id, double x, double Q2) = 0;
@@ -176,6 +197,13 @@ protected:
     if (infoPtr !=0) infoPtr->errorMsg(errMsg);
     else cout << errMsg << endl;
   }
+
+  // Get the raw stored value for the quark variable corresponding to the id.
+  double xfRaw(int id) const;
+
+  // Check whether the specified id is a valence quark.
+  bool isValence(int id) const {
+    return id != 0 && (id == idVal1 || id == idVal2 || id == idVal3); }
 
 };
 
@@ -188,66 +216,47 @@ class LHAPDF : public PDF {
 public:
 
   // Constructor and destructor.
-  LHAPDF(int idIn, string pSet, Info* infoPtrIn);
+  LHAPDF(int idIn, string pSet, Info* infoPtrIn,
+    Settings* settingsPtrIn = nullptr);
   ~LHAPDF();
 
   // Confirm that PDF has been set up.
   bool isSetup() {return pdfPtr != nullptr ? pdfPtr->isSetup() : false;}
 
-  // Dynamic choice of meson valence flavours for pi0, K0S, K0L, Pomeron.
-  void newValenceContent(int idVal1In, int idVal2In) {
-    if (pdfPtr != nullptr) pdfPtr->newValenceContent(idVal1In, idVal2In);}
-
   // Allow extrapolation beyond boundaries.
-  void setExtrapolate(bool extrapolate) {
+  void setExtrapolate(bool extrapolate) override {
     if (pdfPtr != nullptr) pdfPtr->setExtrapolate(extrapolate);}
 
-  // Read out parton density
-  double xf(int id, double x, double Q2) {
-    return pdfPtr != nullptr ? pdfPtr->xf(id, x, Q2) : 0;}
-
-  // Read out valence and sea part of parton densities.
-  double xfVal(int id, double x, double Q2) {
-    return pdfPtr != nullptr ? pdfPtr->xfVal(id, x, Q2) : 0;}
-  double xfSea(int id, double x, double Q2) {
-    return pdfPtr != nullptr ? pdfPtr->xfSea(id, x, Q2) : 0;}
-
   // Check whether x and Q2 values fall inside the fit bounds (LHAPDF6 only).
-  bool insideBounds(double x, double Q2) {
+  bool insideBounds(double x, double Q2) override {
     return pdfPtr != nullptr ? pdfPtr->insideBounds(x, Q2) : true;}
 
   // Access the running alpha_s of a PDF set (LHAPDF6 only).
-  double alphaS(double Q2) {
+  double alphaS(double Q2) override {
     return pdfPtr != nullptr ? pdfPtr->alphaS(Q2) : 1.;}
 
   // Return quark masses used in the PDF fit (LHAPDF6 only).
-  double mQuarkPDF(int idIn) {
+  double mQuarkPDF(int idIn) override {
     return pdfPtr != nullptr ? pdfPtr->mQuarkPDF(idIn) : -1.;}
 
   // Return quark masses used in the PDF fit (LHAPDF6 only).
-  int nMembers() {
+  int nMembers() override {
     return pdfPtr != nullptr ? pdfPtr->nMembers() : 1;}
 
-
   // Calculate PDF envelope.
-  void calcPDFEnvelope(int idNow, double xNow, double Q2Now, int valSea) {
+  void calcPDFEnvelope(int idNow, double xNow, double Q2Now,
+    int valSea) override {
     if (pdfPtr != nullptr)
       pdfPtr->calcPDFEnvelope(idNow, xNow, Q2Now, valSea);}
   void calcPDFEnvelope(pair<int,int> idNows, pair<double,double> xNows,
-    double Q2Now, int valSea) {
+    double Q2Now, int valSea) override {
     if (pdfPtr != nullptr) pdfPtr->calcPDFEnvelope(idNows,xNows,Q2Now,valSea);}
-  PDFEnvelope getPDFEnvelope() {
+  PDFEnvelope getPDFEnvelope() override {
     return pdfPtr != nullptr ? pdfPtr->getPDFEnvelope() : PDFEnvelope();}
 
 private:
 
-  // Resolve valence content for assumed meson.
-  void setValenceContent() {if (pdfPtr != nullptr)
-      pdfPtr->setValenceContent();}
-
-  // Update parton densities.
-  void xfUpdate(int id, double x, double Q2) {
-    if (pdfPtr != nullptr) pdfPtr->xfUpdate(id, x, Q2);}
+  void xfUpdate(int id, double x, double Q2) override;
 
   // Typedefs of the hooks used to access the plugin.
   typedef PDF* NewPDF(int, string, int, Info*);
@@ -292,7 +301,7 @@ public:
     delete[] pdfSlope;} };
 
   // Allow extrapolation beyond boundaries. This is optional.
-  void setExtrapolate(bool doExtraPolIn) {doExtraPol = doExtraPolIn;}
+  void setExtrapolate(bool doExtraPolIn) override {doExtraPol = doExtraPolIn;}
 
 private:
 
@@ -312,7 +321,7 @@ private:
   void init( istream& is, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int id, double x, double Q2) override;
 
   // Interpolation in the grid for a given PDF flavour.
   void xfxevolve(double x, double Q2);
@@ -334,7 +343,7 @@ public:
 private:
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // Auxiliary routines used during the updating.
   double grvv (double x, double n, double ak, double bk, double a,
@@ -361,7 +370,7 @@ public:
 private:
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
 };
 
@@ -412,7 +421,7 @@ private:
   void init( istream& is, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // Evaluate PDF of one flavour species.
   double parton(int flavour,double x,double q);
@@ -470,7 +479,7 @@ public:
     qLast() { init( is, isPdsGrid, infoPtr); }
 
   // Allow extrapolation beyond boundaries. This is optional.
-  void setExtrapolate(bool doExtraPolIn) {doExtraPol = doExtraPolIn;}
+  void setExtrapolate(bool doExtraPolIn) override {doExtraPol = doExtraPolIn;}
 
 private:
 
@@ -492,7 +501,7 @@ private:
   void init( istream& is, bool isPdsGrid, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int id, double x, double Q2) override;
 
   // Evaluate PDF of one flavour species.
   double parton6(int iParton, double x, double q);
@@ -522,7 +531,7 @@ private:
   static const double ALPHAEM, Q2MAX, Q20, A, B, C;
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // phi function from Q2 integration.
   double phiFunc(double x, double Q);
@@ -542,19 +551,45 @@ class GRVpiL : public PDF {
 public:
 
   // Constructor.
-  GRVpiL(int idBeamIn = 211, double rescaleIn = 1.) :
-    PDF(idBeamIn) {rescale = rescaleIn;}
+  GRVpiL(int idBeamIn = 211, double vmdScaleIn = 1.) :
+    PDF(idBeamIn) {vmdScale = vmdScaleIn;}
 
   // Allow for new rescaling factor of the PDF for VMD beams.
-  void setVMDscale(double rescaleIn = 1.) {rescale = rescaleIn;}
+  void setVMDscale(double vmdScaleIn = 1.) override {vmdScale = vmdScaleIn;}
 
 private:
 
   // Rescaling of pion PDF for VMDs.
-  double rescale;
+  double vmdScale;
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
+
+};
+
+//==========================================================================
+
+// Gives the GRS 1999 pi+ (leading order) parton distribution function set
+// in parametrized form. Authors: Glueck, Reya and Schienbein.
+
+class GRSpiL : public PDF {
+
+public:
+
+  // Constructor.
+  GRSpiL(int idBeamIn = 211, double vmdScaleIn = 1.) :
+    PDF(idBeamIn) {vmdScale = vmdScaleIn;}
+
+  // Allow for new rescaling factor of the PDF for VMD beams.
+  void setVMDscale(double vmdScaleIn = 1.) override {vmdScale = vmdScaleIn;}
+
+private:
+
+  // Rescaling of pion PDF for VMDs.
+  double vmdScale;
+
+  // Update PDF values.
+  void xfUpdate(int , double x, double Q2) override;
 
 };
 
@@ -586,7 +621,7 @@ private:
   void init();
 
   // Update PDF values.
-  void xfUpdate(int , double x, double);
+  void xfUpdate(int , double x, double) override;
 
 };
 
@@ -615,7 +650,7 @@ public:
     gluonGrid(), quarkGrid() { init( is, infoPtr); }
 
   // Allow extrapolation beyond boundaries. This is optional.
-  void setExtrapolate(bool doExtraPolIn) {doExtraPol = doExtraPolIn;}
+  void setExtrapolate(bool doExtraPolIn) override {doExtraPol = doExtraPolIn;}
 
 private:
 
@@ -633,7 +668,7 @@ private:
   void init( istream& is, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int , double x, double );
+  void xfUpdate(int , double x, double ) override;
 
 };
 
@@ -662,7 +697,7 @@ public:
     charmGrid() { init( is, infoPtr); }
 
   // Allow extrapolation beyond boundaries. This is optional.
-  void setExtrapolate(bool doExtraPolIn) {doExtraPol = doExtraPolIn;}
+  void setExtrapolate(bool doExtraPolIn) override {doExtraPol = doExtraPolIn;}
 
 private:
 
@@ -682,7 +717,7 @@ private:
   void init( istream& is, Info* infoPtr);
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double );
+  void xfUpdate(int id, double x, double ) override;
 
 };
 
@@ -709,7 +744,7 @@ public:
   ~PomHISASD() { }
 
   // (re-)Set the x_pomeron value.
-  void xPom(double xpom = -1.0) { xPomNow = xpom; }
+  void xPom(double xpom = -1.0) override { xPomNow = xpom; }
 
 private:
 
@@ -729,7 +764,7 @@ private:
   Info* infoPtr;
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
 };
 
@@ -751,7 +786,7 @@ public:
     infoPtr = infoPtrIn; rndmPtr = infoPtrIn->rndmPtr; }
 
   // Sample the Q2 value.
-  double sampleQ2gamma(double Q2min)
+  double sampleQ2gamma(double Q2min) override
     { return Q2min * pow(Q2maxGamma / Q2min, rndmPtr->flat()); }
 
 private:
@@ -760,7 +795,7 @@ private:
   static const double ALPHAEM, ME, MMU, MTAU;
 
   // Update PDF values.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int id, double x, double Q2) override;
 
   // The squared lepton mass, set at initialization.
   double m2Lep, Q2maxGamma;
@@ -787,7 +822,7 @@ public:
 private:
 
   // Update PDF values in trivial way.
-  void xfUpdate(int , double , double ) {xlepton = 1; xgamma = 0.;}
+  void xfUpdate(int , double , double ) override {xlepton = 1; xgamma = 0.;}
 
 };
 
@@ -806,7 +841,7 @@ public:
 private:
 
   // Update PDF values, with spin factor of 2.
-  void xfUpdate(int , double , double ) {xlepton = 2; xgamma = 0.;}
+  void xfUpdate(int , double , double ) override {xlepton = 2; xgamma = 0.;}
 
 };
 
@@ -825,14 +860,14 @@ public:
     rndmPtr = rndmPtrIn; }
 
   // Functions to approximate pdfs for ISR.
-  double gammaPDFxDependence(int id, double);
-  double gammaPDFRefScale(int);
+  double gammaPDFxDependence(int id, double) override;
+  double gammaPDFRefScale(int) override;
 
   // Set the valence content for photons.
-  int sampleGammaValFlavor(double Q2);
+  int sampleGammaValFlavor(double Q2) override;
 
   // The total x-integrated PDFs. Relevant for MPIs with photon beams.
-  double xfIntegratedTotal(double Q2);
+  double xfIntegratedTotal(double Q2) override;
 
 private:
 
@@ -843,7 +878,7 @@ private:
   Rndm *rndmPtr;
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // Functions for updating the point-like part.
   double pointlikeG(double x, double s);
@@ -882,13 +917,13 @@ public:
     infoPtr(infoPtrIn) { hasGammaInLepton = true; }
 
   // Overload the member function definitions where relevant.
-  void xfUpdate(int id, double x, double Q2);
-  double xGamma() { return xGm; }
-  double xfMax(int id, double x, double Q2);
-  double xfSame(int id, double x, double Q2);
+  void xfUpdate(int id, double x, double Q2) override;
+  double xGamma() override { return xGm; }
+  double xfMax(int id, double x, double Q2) override;
+  double xfSame(int id, double x, double Q2) override;
 
   // Sample the Q2 value.
-  double sampleQ2gamma(double Q2min)
+  double sampleQ2gamma(double Q2min) override
     { return Q2min * pow(Q2max / Q2min, rndmPtr->flat()); }
 
 private:
@@ -925,7 +960,7 @@ public:
 private:
 
   // Update PDF values in trivial way.
-  void xfUpdate(int , double , double ) { xgamma = 1.;}
+  void xfUpdate(int , double , double ) override { xgamma = 1.;}
 
 };
 
@@ -948,7 +983,7 @@ private:
   static const double ALPHAEM, Q20;
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
 };
 
@@ -966,7 +1001,7 @@ public:
   // Constructor.
  Nucleus2gamma(int idBeamIn, double bMinIn, double mNucleonIn) :
   PDF(idBeamIn), a(), z(), bMin(bMinIn), mNucleon(mNucleonIn)
-  { initNucleus(); }
+  { initNucleus(idBeamIn); }
 
 private:
 
@@ -974,10 +1009,10 @@ private:
   static const double ALPHAEM;
 
   // Initialize flux parameters.
-  void initNucleus();
+  void initNucleus(int idBeamIn);
 
   // Update PDF values.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // Mass number and electric charge.
   int a, z;
@@ -1005,24 +1040,24 @@ public:
     hasGammaInLepton = true; init(); }
 
   // Update PDFs.
-  void xfUpdate(int , double x, double Q2);
+  void xfUpdate(int , double x, double Q2) override;
 
   // External flux and photon PDFs, and approximated flux for sampling.
-  double xfFlux(int id, double x, double Q2 = 1.);
-  double xfGamma(int id, double x, double Q2);
-  double xfApprox(int id, double x, double Q2);
-  double intFluxApprox();
+  double xfFlux(int id, double x, double Q2 = 1.) override;
+  double xfGamma(int id, double x, double Q2) override;
+  double xfApprox(int id, double x, double Q2) override;
+  double intFluxApprox() override;
 
   // This derived class use approximated flux for sampling.
-  bool hasApproxGammaFlux()      { return true; }
+  bool hasApproxGammaFlux() override { return true; }
 
   // Kinematics.
-  double getXmin()          { return xMin; }
-  double getXhadr()         { return xHadr; }
+  double getXmin()  override { return xMin; }
+  double getXhadr() override { return xHadr; }
 
   // Sampling of the x and Q2 according to differential flux.
-  double sampleXgamma(double xMinIn);
-  double sampleQ2gamma(double )
+  double sampleXgamma(double xMinIn) override;
+  double sampleQ2gamma(double ) override
     { return Q2min * pow(Q2max / Q2min, rndmPtr->flat()); }
 
 private:
@@ -1062,16 +1097,16 @@ public:
   // Constructor.
   nPDF(int idBeamIn = 2212, PDFPtr protonPDFPtrIn = 0) : PDF(idBeamIn), ruv(),
     rdv(), ru(), rd(), rs(), rc(), rb(), rg(), a(), z(), za(), na(),
-    protonPDFPtr() { initNPDF(protonPDFPtrIn); }
+    protonPDFPtr() { initNPDF(idBeamIn, protonPDFPtrIn); }
 
   // Update parton densities.
-  void xfUpdate(int id, double x, double Q2);
+  void xfUpdate(int id, double x, double Q2) override;
 
   // Update nuclear modifications.
   virtual void rUpdate(int, double, double) = 0;
 
   // Initialize the nPDF-related members.
-  void initNPDF(PDFPtr protonPDFPtrIn = 0);
+  void initNPDF(int idBeamIn, PDFPtr protonPDFPtrIn = 0);
 
   // Return the number of protons and nucleons.
   int getA() {return a;}
@@ -1114,7 +1149,7 @@ public:
     : nPDF(idBeamIn, protonPDFPtrIn) {}
 
   // Only the Isospin effect so no need to do anything here.
-  void rUpdate(int , double , double ) {}
+  void rUpdate(int , double , double ) override {}
 };
 
 //==========================================================================
@@ -1133,7 +1168,7 @@ public:
     infoPtr(infoPtrIn) { init(iOrderIn, iSetIn, pdfdataPath);}
 
   // Update parton densities.
-  void rUpdate(int id, double x, double Q2);
+  void rUpdate(int id, double x, double Q2) override;
 
   // Use other than central set to study uncertainties.
   void setErrorSet(int iSetIn) {iSet = iSetIn;}
@@ -1175,7 +1210,7 @@ public:
     { init(iSetIn, pdfdataPath); }
 
   // Update parton densities.
-  void rUpdate(int id, double x, double Q2);
+  void rUpdate(int id, double x, double Q2) override;
 
   // Use other than central set to study uncertainties.
   void setErrorSet(int iSetIn) {iSet = iSetIn;}

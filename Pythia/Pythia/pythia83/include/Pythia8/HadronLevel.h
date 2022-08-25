@@ -1,5 +1,5 @@
 // HadronLevel.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -21,7 +21,7 @@
 #include "Pythia8/Info.h"
 #include "Pythia8/JunctionSplitting.h"
 #include "Pythia8/LowEnergyProcess.h"
-#include "Pythia8/LowEnergySigma.h"
+#include "Pythia8/SigmaLowEnergy.h"
 #include "Pythia8/MiniStringFragmentation.h"
 #include "Pythia8/NucleonExcitations.h"
 #include "Pythia8/ParticleData.h"
@@ -60,32 +60,30 @@ public:
   // Generate the next event.
   bool next(Event& event);
 
+  // Try to decay the specified particle. Returns false if decay failed.
+  bool decay( int iDec, Event& event) { return
+    (event[iDec].isFinal() && event[iDec].canDecay() && event[iDec].mayDecay())
+    ? decays.decay( iDec, event) : true;}
+
   // Special routine to allow more decays if on/off switches changed.
   bool moreDecays(Event& event);
+
+  // Perform rescattering. Return true if new strings must be hadronized.
+  bool rescatter(Event& event);
 
   // Prepare and pick process for a low-energy hadron-hadron scattering.
   bool initLowEnergyProcesses();
   int pickLowEnergyProcess(int idA, int idB, double eCM, double mA, double mB);
 
   // Special routine to do a low-energy hadron-hadron scattering.
-  bool doLowEnergyProcess(int i1, int i2, int type, Event& event) {
-    if (!lowEnergyProcess.collide( i1, i2, type, event)) {
+  bool doLowEnergyProcess(int i1, int i2, int procTypeIn, Event& event) {
+    if (!lowEnergyProcess.collide( i1, i2, procTypeIn, event)) {
       infoPtr->errorMsg("Error in HadronLevel::doLowEnergyProcess: "
         "Low energy collision failed");
       return false;
     }
     return true;
   }
-
-  // Routine to allow user access to low-energy cross sections.
-  double getLowEnergySigma( int idA, int idB, double eCM,  double mA,
-    double mB, int type = 0) {
-    return lowEnergySigma.sigmaPartial( idA, idB, eCM, mA, mB, type); }
-
-  // Give access to b slope in elastic and diffractive interactions.
-  double getLowEnergySlope( int idA, int idB, double eCM, double mA,
-    double mB, int type = 2) {
-    return lowEnergyProcess.bSlope( idA, idB, eCM, mA, mB, type); }
 
   // Tell if we did an early user-defined veto of the event.
   bool hasVetoedHadronize() const {return doHadronizeVeto; }
@@ -100,7 +98,7 @@ protected:
     registerSubObject(ministringFrag);
     registerSubObject(decays);
     registerSubObject(lowEnergyProcess);
-    registerSubObject(lowEnergySigma);
+    registerSubObject(sigmaLowEnergy);
     registerSubObject(nucleonExcitations);
     registerSubObject(boseEinstein);
     registerSubObject(hiddenvalleyFrag);
@@ -191,7 +189,7 @@ private:
   double impactOpacity{};
 
   // Cross sections for low-energy processes.
-  LowEnergySigma lowEnergySigma;
+  SigmaLowEnergy sigmaLowEnergy;
 
   // Nucleon excitations data.
   NucleonExcitations nucleonExcitations = {};

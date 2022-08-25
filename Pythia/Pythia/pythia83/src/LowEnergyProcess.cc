@@ -1,5 +1,5 @@
 // LowEnergyProcess.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -50,14 +50,14 @@ static constexpr double ALPHAPRIME = 0.25;
 void LowEnergyProcess::init( StringFlav* flavSelPtrIn,
   StringFragmentation* stringFragPtrIn,
   MiniStringFragmentation* ministringFragPtrIn,
-  LowEnergySigma* lowEnergySigmaPtrIn,
+  SigmaLowEnergy* sigmaLowEnergyPtrIn,
   NucleonExcitations* nucleonExcitationsPtrIn) {
 
   // Save pointers.
   flavSelPtr        = flavSelPtrIn;
   stringFragPtr     = stringFragPtrIn;
   ministringFragPtr = ministringFragPtrIn;
-  lowEnergySigmaPtr = lowEnergySigmaPtrIn,
+  sigmaLowEnergyPtr = sigmaLowEnergyPtrIn,
   nucleonExcitationsPtr = nucleonExcitationsPtrIn;
 
   // Relative fraction of s quark production in strin breaks.
@@ -127,9 +127,9 @@ bool LowEnergyProcess::collide( int i1, int i2, int typeIn, Event& event,
 
   // Pick K0/K0bar combination if both particles are K_S/K_L.
   if ((id1 == 310 || id1 == 130) && (id2 == 310 || id2 == 130)) {
-    double sigmaSame = lowEnergySigmaPtr->sigmaPartial(311,  311, eCM,
+    double sigmaSame = sigmaLowEnergyPtr->sigmaPartial(311,  311, eCM,
       m1, m2, type);
-    double sigmaMix  = lowEnergySigmaPtr->sigmaPartial(311, -311, eCM,
+    double sigmaMix  = sigmaLowEnergyPtr->sigmaPartial(311, -311, eCM,
       m1, m2, type);
     int choice = rndmPtr->pick({ 0.25 * sigmaSame, 0.25 * sigmaSame,
       0.50 * sigmaMix });
@@ -140,16 +140,16 @@ bool LowEnergyProcess::collide( int i1, int i2, int typeIn, Event& event,
 
   // Pick K0 or K0bar if either particle is K_S or K_L.
   if (id1 == 310 || id1 == 130) {
-    double sigmaK    = lowEnergySigmaPtr->sigmaPartial( 311, id2, eCM,
+    double sigmaK    = sigmaLowEnergyPtr->sigmaPartial( 311, id2, eCM,
       m1, m2, type);
-    double sigmaKbar = lowEnergySigmaPtr->sigmaPartial(-311, id2, eCM,
+    double sigmaKbar = sigmaLowEnergyPtr->sigmaPartial(-311, id2, eCM,
       m1, m2, type);
     id1 = (rndmPtr->pick({ sigmaK, sigmaKbar }) == 0) ? 311 : -311;
   }
   else if (id2 == 310 || id2 == 130) {
-    double sigmaK    = lowEnergySigmaPtr->sigmaPartial(id1,  311, eCM,
+    double sigmaK    = sigmaLowEnergyPtr->sigmaPartial(id1,  311, eCM,
       m1, m2, type);
-    double sigmaKbar = lowEnergySigmaPtr->sigmaPartial(id1, -311, eCM,
+    double sigmaKbar = sigmaLowEnergyPtr->sigmaPartial(id1, -311, eCM,
       m1, m2, type);
     id2 = (rndmPtr->pick({ sigmaK, sigmaKbar }) == 0) ? 311 : -311;
   }
@@ -353,7 +353,7 @@ bool LowEnergyProcess::eldiff() {
   bool excite2 = (type == 4 || type == 5);
 
   // Check if low-mass diffraction partly covered by excitation processes.
-  bool hasExcitation = lowEnergySigmaPtr->hasExcitation( id1, id2);
+  bool hasExcitation = sigmaLowEnergyPtr->hasExcitation( id1, id2);
 
   // Find excited mass ranges.
   mA           = m1;
@@ -1213,11 +1213,11 @@ double LowEnergyProcess::bSlope() {
   // Steeper slope for baryons than mesons.
   // Scale by AQM factor for strange, charm and bottom.
   if (id1 != id1sv) {
-    bA = lowEnergySigmaPtr->nqEffAQM(id1) * ((isBaryon1) ? 2.3/3. : 1.4/2.);
+    bA = sigmaLowEnergyPtr->nqEffAQM(id1) * ((isBaryon1) ? 2.3/3. : 1.4/2.);
     id1sv = id1;
   }
   if (id2 != id2sv) {
-    bB = lowEnergySigmaPtr->nqEffAQM(id2) * ((isBaryon1) ? 2.3/3. : 1.4/2.);
+    bB = sigmaLowEnergyPtr->nqEffAQM(id2) * ((isBaryon1) ? 2.3/3. : 1.4/2.);
     id2sv = id2;
   }
 

@@ -1,5 +1,5 @@
 // DireTimes.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -471,7 +471,7 @@ int DireTimes::shower( int iBeg, int iEnd, Event& event, double pTmax,
   pTLastBranch = 0.;
   do {
     double pTtimes = pTnext( event, pTmax, 0.);
-
+    infoPtr->setPTnow( pTtimes);
     // Do a final-state emission (if allowed).
     if (pTtimes > 0.) {
       if (branch( event)) {
@@ -1400,8 +1400,12 @@ bool DireTimes::appendDipole( const Event& state, int iRad, int iRec,
   }
 
   // Check and reset isr type.
-  if ( isrType == 0 && !state[iRec].isFinal() )
+  if ( isrType == 0 && !state[iRec].isFinal() ) {
     isrType = state[iRec].mother1();
+    while (isrType > 2 + beamOffset)
+      isrType = state[isrType].mother1();
+    if (isrType > 2) isrType -= beamOffset;
+  }
 
   // Check if designated color charge is connected.
   if (colType != 0) {
@@ -1684,10 +1688,13 @@ void DireTimes::checkDipoles(const Event& state) {
       dip->colType = colTypeNow;
     }
     // Check and reset isr type.
-    if ( dip->isrType == 0 && !state[iRec].isFinal() )
-      dip->isrType = state[iRec].mother1();
+    if ( dip->isrType == 0 && !state[iRec].isFinal() ) {
+      dip->isrType = state[iRec].mother1()          ;
+      while (dip->isrType > 2 + beamOffset)
+        dip->isrType = state[dip->isrType].mother1();
+      if (dip->isrType > 2) dip->isrType -= beamOffset;
+    }
   }
-
 }
 
 //--------------------------------------------------------------------------
@@ -2636,7 +2643,6 @@ void DireTimes::getNewSplitting( const Event& state, DireTimesEnd* dip,
 
   // Ensure positive weight.
   wt = abs(wt);
-
 }
 
 //--------------------------------------------------------------------------
@@ -3268,7 +3274,6 @@ bool DireTimes::pT2nextQCD_FF(double pT2begDip, double pT2sel,
   double zMinAbs       = 0.0;
   double zMaxAbs       = 1.0;
   double teval         = pT2begDip;
-  double Lambda2       = Lambda3flav2;
   double emitCoefTot   = 0.;
   double wt            = 0.;
   bool   mustFindRange = true;
@@ -3337,21 +3342,9 @@ bool DireTimes::pT2nextQCD_FF(double pT2begDip, double pT2sel,
     fullWeightNow = overWeightNow = auxWeightNow = 0.;
 
     if (mustFindRange) {
-
       newOverestimates.clear();
       teval       = tnow;
       emitCoefTot = 0.;
-
-      // Determine overestimated z range; switch at c and b masses.
-      if (tnow > m2b) {
-        Lambda2  = Lambda5flav2;
-      } else if (tnow > m2c) {
-        Lambda2  = Lambda4flav2;
-      } else {
-        Lambda2  = Lambda3flav2;
-      }
-      // A change of renormalization scale expressed by a change of Lambda.
-      Lambda2 /= renormMultFac;
 
       // Calculate and add user-defined overestimates.
       getNewOverestimates( &dip, event, tnow, 1., zMinAbs, zMaxAbs,
@@ -3668,10 +3661,6 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
   if (pT2begDip < pT2endDip) { dip.pT2 = 0.; return false; }
 
   BeamParticle& beam = (dip.isrType == 1) ? *beamAPtr : *beamBPtr;
-  /*double m2cPhys = (usePDFalphas) ? pow2(max(0.,beam.mQuarkPDF(4)))
-                 : alphaS.muThres2(4);
-  double m2bPhys = (usePDFalphas) ? pow2(max(0.,beam.mQuarkPDF(5)))
-                 : alphaS.muThres2(5);*/
 
   // Variables used inside evolution loop. (Mainly dummy start values.)
   dip.pT2              = pT2begDip;
@@ -3679,7 +3668,6 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
   double zMinAbs       = 0.0;
   double zMaxAbs       = 1.0;
   double teval         = pT2begDip;
-  double Lambda2       = Lambda3flav2;
   double xPDFrecoiler  = 0.;
   double emitCoefTot   = 0.;
   double wt            = 0.;
@@ -3781,27 +3769,11 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
 
     // Initialize evolution coefficients at the beginning and
     // reinitialize when crossing c and b flavour thresholds.
-    if (mustFindRange
-      || tnow < evalpdfstep(event[dip.iRecoiler].id(), tnow, m2cPhys, m2bPhys)*
-        teval) {
-
+    if (mustFindRange || tnow < evalpdfstep(event[dip.iRecoiler].id(),
+        tnow, m2cPhys, m2bPhys)*teval) {
       newOverestimates.clear();
       teval       = tnow;
       emitCoefTot = 0.;
-
-      // Determine overestimated z range; switch at c and b masses.
-      if (tnow > m2b) {
-        nFlavour = 5;
-        Lambda2  = Lambda5flav2;
-      } else if (tnow > m2c) {
-        nFlavour = 4;
-        Lambda2  = Lambda4flav2;
-      } else {
-        nFlavour = 3;
-        Lambda2  = Lambda3flav2;
-      }
-      // A change of renormalization scale expressed by a change of Lambda.
-      Lambda2 /= renormMultFac;
 
       // Parton density of daughter at current scale.
       pdfScale2    = (useFixedFacScale) ? fixedFacScale2 : factorMultFac*tnow;
@@ -4086,6 +4058,7 @@ bool DireTimes::pT2nextQCD_FI(double pT2begDip, double pT2sel,
     // More last resort.
     if ( idRecoiler == 21 && pdfScale2 == pT2colCut
       && pdfRatio > 50.) pdfRatio = 0.;
+    if (std::isinf(pdfRatio) || std::isnan(pdfRatio)) pdfRatio = 0.;
 
     fullWeightNow  *= pdfRatio*jacobian;
 
@@ -5448,6 +5421,9 @@ bool DireTimes::branch_FI( Event& event, bool trial,
   int iRadBef      = (!trial) ? dipSel->iRadiator : split->iRadBef;
   int iRecBef      = (!trial) ? dipSel->iRecoiler : split->iRecBef;
   int isrType      = event[iRecBef].mother1();
+  while (isrType > 2 + beamOffset)
+    isrType = event[isrType].mother1();
+  if (isrType > 2) isrType -= beamOffset;
 
   // Find their momenta, with special sum for global recoil.
   Vec4 pRadBef     = event[iRadBef].p();
@@ -6296,6 +6272,9 @@ void DireTimes::updateAfterFI( int iSysSelNow, int iSysSelRec,
 
   bool hasDipSel   = (dipSel != 0);
   int isrType      = (hasDipSel) ? dipSel->isrType : event[iRec].mother1();
+  while (isrType > 2 + beamOffset)
+    isrType = event[isrType].mother1();
+  if (isrType > 2) isrType -= beamOffset;
   bool inResonance = (partonSystemsPtr->getInA(iSysSelNow)==0) ? true : false;
   int idEmt        = event[iEmt].id();
   vector<int> iDipEndCorr;
@@ -6561,7 +6540,6 @@ void DireTimes::updateAfterFI( int iSysSelNow, int iSysSelRec,
     direInfoPtr->updateResPos(iRecBef,iRec);
   if ( particleDataPtr->isResonance(event[iEmt].id()) )
     direInfoPtr->addResPos(iEmt);
-
 
   // Done.
 }

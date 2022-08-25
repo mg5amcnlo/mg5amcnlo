@@ -1,5 +1,5 @@
 // Pythia8Rivet.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -40,7 +40,8 @@ public:
   // The constructor needs to have the main Pythia object, and the
   // name of the file where the histograms are dumped.
   Pythia8Rivet(Pythia & pytin, string fname)
-    : pythia(&pytin), filename(fname), rivet(0), igBeam(false) {}
+    : pythia(&pytin), filename(fname), rivet(0), igBeam(false), nDump(-1),
+      dumpFile("") {}
 
   // The destructor will write the histogram file if this has not
   // already been done.
@@ -56,6 +57,13 @@ public:
   // Set "ignore beams" flag.
   void ignoreBeams(bool flagIn) {igBeam = flagIn;}
 
+  // Set Rivet dump period and file name for intermittent histograms.
+  // If no dumpfile given, the default output file is used.
+  void dump(int period, string fname = "") {
+    nDump = period;
+    dumpFile = fname;
+  }
+
   // Add an attribute to the current event.
   void addAttribute(const string& name, double val) {
     eventAttributes[name] = val;}
@@ -63,12 +71,17 @@ public:
   // Add an (optional) run name for Rivet internal use.
   void addRunName(const string runname) {rname = runname;}
 
-
   // Initialize Rivet. Will do nothing if Rivet was already initialized
   void init() {
     if ( rivet ) return;
     rivet = new Rivet::AnalysisHandler(rname);
     rivet->setIgnoreBeams(igBeam);
+    if (nDump > 0) {
+      if (dumpFile == "")
+        rivet->dump(filename, nDump);
+      else
+        rivet->dump(dumpFile, nDump);
+    }
     initpath();
     for(int i = 0, N = preloads.size(); i < N; ++i)
       rivet->readData(preloads[i]);
@@ -137,6 +150,12 @@ private:
 
   // Ignore beams flag.
   bool igBeam;
+
+  // Dump period.
+  int nDump;
+
+  // Optional alternative dumpfile name.
+  string dumpFile;
 
   // Additional event attributes of double type to send to Rivet.
   map<const string, double> eventAttributes;

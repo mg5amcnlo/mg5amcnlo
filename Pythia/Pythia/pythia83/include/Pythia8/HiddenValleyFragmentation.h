@@ -1,5 +1,5 @@
 // HiddenValleyFragmentation.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -30,25 +30,33 @@ class HVStringFlav : public StringFlav {
 public:
 
   // Constructor.
-  HVStringFlav() : nFlav(), probVector() {}
+  HVStringFlav() : separateFlav(), nFlav(), probFlav(), probDiquark(),
+    probVector(), probKeepEta1(), sumProbFlav(), probKeepLast(),
+    probVecEta1() {}
 
   // Destructor.
   ~HVStringFlav() {}
 
   // Initialize data members.
-  void init();
+  void init() override;
 
   // Pick a new flavour (including diquarks) given an incoming one.
-  FlavContainer pick(FlavContainer& flavOld, double, double, bool);
+  FlavContainer pick(FlavContainer& flavOld, double, double, bool) override;
 
   // Combine two flavours (including diquarks) to produce a hadron.
-  int combine(FlavContainer& flav1, FlavContainer& flav2);
+  int combine(FlavContainer& flav1, FlavContainer& flav2) override;
+
+  // Lightest flavour-neutral meson.
+  int idLightestNeutralMeson() override { return 4900111; }
 
 private:
 
   // Initialization data, to be read from Settings.
+  bool   separateFlav;
   int    nFlav;
-  double probVector;
+  vector<double> probFlav;
+  double probDiquark, probVector, probKeepEta1, sumProbFlav, probKeepLast,
+    probVecEta1;
 
 };
 
@@ -67,7 +75,7 @@ public:
   ~HVStringPT() {}
 
   // Initialize data members.
-  void init();
+  void init() override;
 
 };
 
@@ -86,15 +94,15 @@ public:
   virtual ~HVStringZ() {}
 
   // Initialize data members.
-  void init();
+  void init() override;
 
   // Fragmentation function: top-level to determine parameters.
-  double zFrag( int idOld, int idNew = 0, double mT2 = 1.);
+  double zFrag( int idOld, int idNew = 0, double mT2 = 1.) override;
 
   // Parameters for stopping in the middle; for now hardcoded.
-  virtual double stopMass()    {return 1.5 * mhvMeson;}
-  virtual double stopNewFlav() {return 2.0;}
-  virtual double stopSmear()   {return 0.2;}
+  virtual double stopMass()    override {return 1.5 * mhvMeson;}
+  virtual double stopNewFlav() override {return 2.0;}
+  virtual double stopSmear()   override {return 0.2;}
 
 private:
 
@@ -113,8 +121,8 @@ class HiddenValleyFragmentation : public PhysicsBase {
 public:
 
   // Constructor.
-  HiddenValleyFragmentation() : doHVfrag(false), nFlav(), hvOldSize(),
-    hvNewSize(), mhvMeson(), mSys() {}
+  HiddenValleyFragmentation() : doHVfrag(false), separateFlav(), nFlav(),
+    hvOldSize(), hvNewSize(), idEnd1(), idEnd2(), mhvMeson(), mSys() {}
 
   // Initialize and save pointers.
   bool init();
@@ -135,9 +143,9 @@ protected:
 private:
 
   // Data mambers.
-  bool          doHVfrag;
-  int           nFlav, hvOldSize, hvNewSize;
-  double        mhvMeson, mSys;
+  bool          doHVfrag, separateFlav;
+  int           nFlav, hvOldSize, hvNewSize, idEnd1, idEnd2;
+  double        mhvMeson, mhvMin[9], mSys;
   vector<int>   ihvParton;
 
   // Configuration of colour-singlet systems.
@@ -157,8 +165,11 @@ private:
   HVStringPT   hvPTSel;
   HVStringZ    hvZSel;
 
-  // Extract HV-particles from event to hvEvent. Assign HV-colours.
+  // Extract HV-particles from event to hvEvent.
   bool extractHVevent(Event& event);
+
+  // Assign HV-colours to hidden partons.
+  bool assignHVevent();
 
   // Collapse of low-mass system to one HV-meson.
   bool collapseToMeson();

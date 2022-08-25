@@ -1,5 +1,5 @@
 // SusyLesHouches.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // Main authors of this file: N. Desai, P. Skands
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
@@ -65,17 +65,13 @@ namespace Pythia8 {
       ? true : false;};
 
     // Indexing with (). Output only.
-    T operator()() {
-      if (exists(0)) {return entry[0];} else {T dummy(0); return dummy;};
-    };
-    T operator()(int iIn) {
-      if (exists(iIn)) {return entry[iIn];} else {T dummy(0); return dummy;};
-    };
+    T operator()() {return exists(0) ? entry[0] : T();}
+    T operator()(int iIn) {return exists(iIn) ? entry[iIn] : T();}
 
-    // Size of map
+    // Size of map.
     int size() {return int(entry.size());};
 
-    // First and next key code
+    // First and next key code.
     int first() { idnow = entry.begin()->first; return idnow; };
     int next() {
       typename map<int,T>::iterator itnow;
@@ -84,7 +80,7 @@ namespace Pythia8 {
       return idnow = itnow->first;
     };
 
-    // Simple print utility
+    // Simple print utility.
     void list() {
       bool finished=false;
       int ibegin=first();
@@ -398,14 +394,14 @@ class SusyLesHouches {
 
 public:
 
-  //Constructor, with and without filename.
+  // Constructor, with and without filename.
   SusyLesHouches(int verboseIn=1) : verboseSav(verboseIn),
     headerPrinted(false), footerPrinted(false), filePrinted(false),
     slhaRead(false), lhefRead(false), lhefSlha(false), useDecay(true) {};
   SusyLesHouches(string filename, int verboseIn=1) : verboseSav(verboseIn),
     headerPrinted(false), footerPrinted(false), filePrinted(false),
-    slhaRead(true), lhefRead(false), lhefSlha(false), useDecay(true)
-    {readFile(filename);};
+    slhaRead(true), lhefRead(false), lhefSlha(false), useDecay(true) {
+    readFile(filename);};
 
   //***************************** SLHA FILE I/O *****************************//
   // Read and write SLHA files
@@ -413,7 +409,6 @@ public:
     bool useDecayIn=true);
   int readFile(istream& ,int verboseIn=1,
     bool useDecayIn=true);
-  //int writeFile(string filename): write SLHA file on filename
 
   //Output utilities
   void listHeader();   // print Header

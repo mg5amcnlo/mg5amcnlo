@@ -4,6 +4,7 @@
 #include <Pythia8/FragmentationFlavZpT.h>
 #include <Pythia8/FragmentationSystems.h>
 #include <Pythia8/GammaKinematics.h>
+#include <Pythia8/HadronLevel.h>
 #include <Pythia8/HadronWidths.h>
 #include <Pythia8/HiddenValleyFragmentation.h>
 #include <Pythia8/Info.h>
@@ -11,11 +12,11 @@
 #include <Pythia8/LHEF3.h>
 #include <Pythia8/LesHouches.h>
 #include <Pythia8/LowEnergyProcess.h>
-#include <Pythia8/LowEnergySigma.h>
 #include <Pythia8/MergingHooks.h>
 #include <Pythia8/MiniStringFragmentation.h>
 #include <Pythia8/NucleonExcitations.h>
 #include <Pythia8/ParticleData.h>
+#include <Pythia8/ParticleDecays.h>
 #include <Pythia8/PartonLevel.h>
 #include <Pythia8/PartonSystems.h>
 #include <Pythia8/PartonVertex.h>
@@ -25,6 +26,7 @@
 #include <Pythia8/ResonanceWidths.h>
 #include <Pythia8/SLHAinterface.h>
 #include <Pythia8/Settings.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaProcess.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/SpaceShower.h>
@@ -37,14 +39,12 @@
 #include <Pythia8/UserHooks.h>
 #include <Pythia8/Weights.h>
 #include <functional>
-#include <ios>
 #include <istream>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <sstream> // __str__
-#include <streambuf>
 #include <string>
 #include <utility>
 #include <vector>
@@ -67,7 +67,7 @@
 	PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>);
 #endif
 
-// Pythia8::UserHooks file:Pythia8/UserHooks.h line:31
+// Pythia8::UserHooks file:Pythia8/UserHooks.h line:32
 struct PyCallBack_Pythia8_UserHooks : public Pythia8::UserHooks {
 	using Pythia8::UserHooks::UserHooks;
 
@@ -1023,7 +1023,7 @@ struct PyCallBack_Pythia8_MergingHooks : public Pythia8::MergingHooks {
 
 void bind_Pythia8_UserHooks(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
-	{ // Pythia8::UserHooks file:Pythia8/UserHooks.h line:31
+	{ // Pythia8::UserHooks file:Pythia8/UserHooks.h line:32
 		pybind11::class_<Pythia8::UserHooks, std::shared_ptr<Pythia8::UserHooks>, PyCallBack_Pythia8_UserHooks> cl(M("Pythia8"), "UserHooks", "");
 		pybind11::handle cl_type = cl;
 

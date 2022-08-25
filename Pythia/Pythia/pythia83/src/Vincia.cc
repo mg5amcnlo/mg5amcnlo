@@ -1,5 +1,5 @@
 // VinciaCommon.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -51,10 +51,12 @@ bool Vincia::init(MergingPtr mrgPtrIn, MergingHooksPtr mrgHooksPtrIn,
   // Setup Vincia's merging if requested.
   if (doMerging) {
     // Ensure consistency in settings with merging.
-    if (mode("Vincia:ewMode") > 0) {
-      infoPtr->errorMsg("Warning from "+__METHOD_NAME__+": Switching off"
-        " QED/EW shower. Not yet supported by merging.");
-      settingsPtr->readString("Vincia:ewMode = 0");
+    if (mode("Vincia:ewMode") > 2) {
+      infoPtr->errorMsg("Warning from "+__METHOD_NAME__+": Reverting to"
+        " default QED mode. EW shower not yet supported by merging.");
+      // Use readString so change is reapplied after Vincia tune setting.
+      int ewModeDef = settingsPtr->modeDefault("Vincia:ewMode");
+      settingsPtr->readString("Vincia:ewMode = "+to_string(ewModeDef));
     }
     if (flag("Vincia:interleaveResDec")) {
       infoPtr->errorMsg("Warning from "+__METHOD_NAME__+": Switching off"
@@ -66,7 +68,7 @@ bool Vincia::init(MergingPtr mrgPtrIn, MergingHooksPtr mrgHooksPtrIn,
     }
     // TODO this could be fixed relatively easily.
     if (mode("Vincia:kineMapFFsplit") != 1) {
-      infoPtr->errorMsg("INFO from "+__METHOD_NAME__+": Forcing"
+      infoPtr->errorMsg("Info from "+__METHOD_NAME__+": Forcing"
         " kineMapFFsplit = 1. Others not yet supported"
         " by merging.");
       settingsPtr->readString("Vincia:kineMapFFsplit = 1");
@@ -84,8 +86,8 @@ bool Vincia::init(MergingPtr mrgPtrIn, MergingHooksPtr mrgHooksPtrIn,
     mergingHooksPtr->init();
 
     if (!mergingHooksPtr->initSuccess()) {
-      string msg= "MergingHooks initialisation failed.";
-      infoPtr->errorMsg("Error in "+__METHOD_NAME__,msg);
+      string msg= ": MergingHooks initialisation failed.";
+      infoPtr->errorMsg("Error in "+__METHOD_NAME__+msg);
       return false;
     }
 
@@ -194,13 +196,13 @@ bool Vincia::init(MergingPtr mrgPtrIn, MergingHooksPtr mrgHooksPtrIn,
   // Load the matrix element correction plugin.
   string melib = settingsPtr->word("Vincia:MEplugin");
   if (melib.size() > 0)
-    mg5mes = ShowerMEsPlugin("libpythia8mg5" + melib + ".so");
+    mg5mes = ExternalMEsPlugin("libpythia8mg5" + melib + ".so");
 
   // Pass pointers on to objects that require them.
   rambo.initPtr(rndmPtr);
   vinCom.initPtr(infoPtr);
   resolution.initPtr(settingsPtr, infoPtr, &vinCom);
-  mg5mes.initPtrVincia(infoPtr, slhaPtr, &vinCom);
+  mg5mes.initPtrs(infoPtr, slhaPtr);
   mecs.initPtr(infoPtr, &mg5mes, &vinCom, &resolution);
   colour.initPtr(infoPtr);
   vinWeights.initPtr(infoPtr, &vinCom);
@@ -346,7 +348,6 @@ void Vincia::setVerbose(int verboseIn) {
   timesPtr->setVerbose(verboseIn);
   spacePtr->setVerbose(verboseIn);
   colour.setVerbose(verboseIn);
-  mg5mes.setVerboseVincia(verboseIn);
   mecs.setVerbose(verboseIn);
   if (doMerging) {
     mergingHooksPtr->setVerbose(verboseIn);

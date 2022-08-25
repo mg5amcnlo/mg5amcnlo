@@ -2,9 +2,10 @@
  
 <h2>Hidden Valley Processes</h2> 
  
-This Hidden Valley (HV) scenario has been developed specifically 
-to allow the study of visible consequences of radiation in a 
-hidden sector, by recoil effect. A key aspect is therefore that 
+This Hidden Valley (HV) scenarios have been developed specifically 
+to allow the study of visible consequences of radiation and 
+hadronization in a hidden sector, by recoil effect and by decays 
+back into the visible sector. A key aspect therefore is that 
 the normal timelike showering machinery has been expanded with a 
 third kind of radiation, in addition to the QCD and QED ones. 
 These three kinds of radiation are fully interleaved, i.e. 
@@ -13,20 +14,29 @@ The scenario is described in <ref>Car10</ref>. Furthermore
 hadronization in the hidden sector has been implemented. 
 Three main scenarios for production into and decay out of the 
 hidden sector can be compared, in each case either for an 
-Abelian or a non-Abelian gauge group in the HV. For further details 
-see <ref>Car11</ref>. 
+Abelian or a non-Abelian gauge group in the HV. Further details 
+are found in <ref>Car11</ref>. It is strongly recommended that you 
+read this article, at least sections 2 and 3, and the appendix A, 
+before you begin any Hidden Valley simulation. The brief physics 
+paragraphs below are intended as a refresher for people with such 
+prior knowledge, not as a complete description. In addition, some 
+recent extensions are described, not (yet) documented elsewhere. 
  
-<note>Warning</note>: do not use the alternative hadronization 
-scenarios <code>StringPT:thermalModel = on</code> or 
-<code>StringPT:mT2suppression = on</code> in conjunction with 
-Hidden Valley processes, since they have not been constructed to 
-work together. 
+<br/> 
+<note>Warning</note>: several alternative hadronization scenarios 
+will not work in conjunction with Hidden Valley processes, which has 
+been developed exclusively on top of the default scenario. Known 
+examples of such incompatible alternatives include 
+<code>StringPT:thermalModel = on</code>, 
+<code>StringPT:mT2suppression = on</code> and 
+<code>Ropewalk:RopeHadronization = on</code>, but there may be more. 
  
 <h3>Particle content and properties</h3> 
  
-For simplicity we assume that the HV contains an unbroken <b>SU(N)</b> 
-gauge symmetry. This is used in the calculation of production cross 
-sections. These could be rescaled by hand for other gauge groups. 
+For simplicity we assume that the HV contains a broken <b>U(1)</b> 
+or an unbroken <b>SU(N)</b> gauge symmetry. This is used in the 
+calculation of production cross sections. These could be rescaled 
+by hand for other gauge groups. 
  
 <modeopen name="HiddenValley:Ngauge" default="3" min="1"> 
 is <b>U(1)</b> for <code>Ngauge = 1</code>, is <b>SU(N)</b> if 
@@ -83,8 +93,14 @@ Finally, for the basic HV scenario, there is a new massive particle
 with only HV charge sitting in the fundamental representation of the 
 HV gauge group: 
 <br/><code>qv</code>, identity 4900101. 
+<br/>Optionally up to eight different such flavours can be allowed in 
+the hidden sector, identities 4900101 - 4900108. The actual number 
+used is set by <code>HiddenValley:nFlav</code>, see further below. 
  
-<p/>The typical scenario would be for pair production of one of the 
+<p/>Currently there are two main production scenarios implemented. 
+ 
+<p/> 
+The first is for pair production of one of the 
 states presented first above, e.g. <ei>g g &rarr; Dv Dvbar</ei>. 
 Such a <ei>Dv</ei> can radiate gluons and photons like an SM quark, 
 but in addition HV-gluons or HV-photons in a similar fashion. 
@@ -92,16 +108,15 @@ Eventually the <ei>Dv</ei> will decay like <ei>Dv &rarr; d + qv</ei>.
 The strength of this decay is not set as such, but is implicit in 
 your choice of width for the <ei>Dv</ei> state. Thereafter the 
 <ei>d</ei> and <ei>qv</ei> can radiate further within their 
-respective sectors. The <ei>qv</ei>, <ei>gv</ei> or <ei>gammav</ei> 
-are invisible, so their fate need not be considered further. 
+respective sectors. The <ei>qv</ei>, <ei>gv</ei> and <ei>gammav</ei> 
+are invisible. 
  
 <p/> 
-While not part of the standard scenario, as an alternative there is 
-also a kind of <ei>Z'</ei> resonance: 
+The second is a variant of a <ei>Z'</ei> resonance: 
 <br/><code>Zv</code>, identity 4900023, a boson that can couple 
 both to pairs of Standard Model fermions and to <ei>qv qvbar</ei> 
 pairs. Mass, total width and branching ratios can be set as convenient. 
-<br/>This opens up for alternative processes 
+<br/>This opens up for other processes, notably 
 <ei>l^+l^-, q qbar &rarr; Zv &rarr; qv qvbar</ei>. 
  
 <p/> 
@@ -113,18 +128,30 @@ The <b>SU(N)</b> alternative remains unbroken, so confinement holds
 and the <ei>gv</ei> is massless. A string like 
 <ei>qv - gv - ... - gv - qvbar</ei> can break by the production of 
 new <ei>qv - qvbar</ei> pairs, which will produce <ei>qv-qvbar</ei> 
-mesons. It would be possible to build a rather sophisticated hidden 
-sector by trivial extensions of the HV flavour content. For now, 
-however, the <ei>qv</ei> can be duplicated in up to eight copies 
-with the same properties except for the flavour charge. These are 
-assigned codes 4900101 - 4900108. This gives a total of 64 possible 
-lowest-lying mesons. We also include a duplication of that, into two 
-multiplets, corresponding to the pseudoscalar and vector mesons of 
-QCD. For now, again, these are assumed to have the same mass and 
-other properties. By default, only the flavour-diagonal ones can 
-decay back into the Standard-Model sector, however, while the rest 
-remains in the hidden sector. It is therefore only necessary to 
-distinguish a few states: 
+mesons. For this kind of scenarios it makes sense to assume that 
+<ei>qv</ei> has spin 1/2, so that QCD provides some guidance. 
+It is possible to build a rather sophisticated hidden sector 
+by trivial extensions of the HV flavour content. In most contexts 
+this would be overkill, since much of the finer details would not 
+be observable in our sectior. The default therefore is a simplified 
+treatment. 
+ 
+<h4>Hidden Valley hadrons in a simple setup</h4> 
+ 
+<p/> 
+In the default HV-hadron option, 
+<code>HiddenValley:separateFlav = off</code>, 
+the <ei>qv</ei> can be duplicated in up to 
+eight copies, with identical properties except for the flavour charge. 
+Specifically, you can set the mass of the first <ei>qv</ei>, but 
+then that value is propagated to the other masses at initialization. 
+These are assigned codes 4900101 - 4900108. This gives a total of 64 
+possible lowest-lying mesons. We also include a duplication of that, 
+into two multiplets, corresponding to the pseudoscalar and vector 
+mesons of QCD. These are assumed to have the same mass and other 
+properties. Only the flavour-diagonal ones can decay back into the 
+Standard-Model sector, however, while the rest remain in the hidden 
+sector. It is therefore only necessary to distinguish a few states: 
 <br/><code>pivDiag</code>, identity 4900111, a flavour-diagonal 
 HV-meson with spin 0 that can decay back into the Standard-Model sector; 
 <br/><code>rhovDiag</code>, identity 4900113, a flavour-diagonal 
@@ -145,14 +172,122 @@ HV-meson on shell, and it therefore is assumed to de-excite by the
 emission of invisible <ei>gv-gv </ei> v-glueball bound states. 
  
 <p/> 
-By changing ParticleData, it is possible to allow decays even for the 
-off-diagonal Up/Dn mesons. 
+By changing <code>ParticleData</code>, it is possible to allow decays 
+also for the off-diagonal Up/Dn mesons, or make either diagonal state 
+stable.  Like for Standard Model particles, it is only necessary to 
+set the properties of the particle (<code>pivUp, rhovUp</code>), and 
+then the ones of the antiparticle (<code>pivDn, rhovDn</code>) are 
+mirrored as appropriate. That is, masses and most other properties are 
+set the same, while decay channels are inverted. 
+ 
+<p/> 
+Baryon production is more tricky than meson production, since it depends 
+strongly on the choice of the <b>SU(N)</b> gauge group, and since it is 
+not so well understood even in our sector. For <b>SU(2)</b>, 
+where the baryon would consist of two quarks, baryons could be as 
+common as mesons. No realistic detailed scenario exists for such a 
+setup. In <b>SU(3)</b> we could guess that baryons give of the order 
+a 10% correction to the particle production rates, like in our sector, 
+and that could be relevant for some phenomenology. For <b>SU(4)</b> 
+and higher, where more quarks are needed to form a baryon, one would 
+expect a production rate too small to be of any relevance. The current 
+handling therefore aims at <b>SU(3)</b> applications. (But if you 
+imagine a low production rate of triquarks, with net anticolour, 
+then the program will run also for <b>SU(4)</b>.) Again, in the 
+sprit of simplicity, one baryon is introduced in the default scenario: 
+<br/><code>Deltav</code>, identity 4901114, an HV-baryon, assumed to be 
+stable. Normally one would expect a spin 1/2 baryon to be the lightest, 
+but spin 3/2 here goes together with bookkeeping as if there is only 
+one flavour. Mass and decay properties can anyway be selected independent 
+of the spin displayed. 
+ 
+<h4>Hidden Valley hadrons in an extended setup</h4> 
+ 
+<p/> 
+The non-default and more detailed handling of HV-hadrons is switched on 
+with <code>HiddenValley:separateFlav = on</code>. In it, each 
+of the quark and meson flavours are shown explicitly. The quark names 
+are <code>qvi</code>, with <code>i</code> an integer in 
+the range between 1 and the number of flavours. Similarly, meson names 
+are <code>pivij</code> and <code>rhovij</code>, where <code>i = j</code> 
+are the flavour-diagonal mesons, else <code>i > j</code>, with 
+<code>j</code> representing the antiquark. The identity codes then are 
+4900<code>ij</code>1 for pseudoscalars and 4900<code>ij</code>3 for 
+vectors. An antimeson comes with an overall negative sign, and here 
+<code>i</code> gives the antiquark. 
+ 
+<p/> 
+You are now free to set masses separately for each quark and meson. 
+So as not have to code up the hadronization for alternative 
+mass orderings, it is assumed that the quarks are ordered in terms of 
+an increasing mass, and specifically that the first quark, 4900101, 
+is the lightest one. You are allowed to have some mass-degenerate states, 
+of course, and then the ordering between them is irrelevant. As a 
+consequence of the quark mass ordering, it is also assumed that the 
+lightest hadron is the one with lowest code, 4900111. 
+ 
+<p/> 
+The data tables by default contain identical properties for all diagonal 
+mesons in a multiplet. Currently there is no explicit implementation of 
+mixing between them, but the last pseudoscalar meson can be made to 
+represent a flavour singlet state <ei>eta_1</ei>, optionally with a 
+reduced production rate. The name remains of the <code>pivii</code> 
+type, whatever implicit association you make for this state. More generally, 
+it is possible to have both mass-degenerate and non-degenerate scenarios, 
+where in either it is useful to be able to set properties of some mesons 
+separately. All nondiagonal mesons of a multiplet are also assumed to be 
+identical and stable by default, although this can be modifed as desired. 
+While the <code>separateFlav = on</code> option gives more freedom, it also 
+comes with the need for a more detailed setup, with up to 72 different 
+meson states that can be given individual properties. (With 8 flavours 
+each multiplet has 8 diagonal mesons and 28 off-diagonal mesons. 
+The 28 off-diagonal antimesons have properties that follow from the 
+respective meson ones.) 
+ 
+<p/> 
+A corresponding HV-baryon setup for <b>SU(3)</b> would require 
+up to 168 spin 1/2 and 120 spin 3/2 states to be specified. As of now, 
+this appears to be vast overkill, in particular since these states 
+likely are stable. Therefore the <code>separateFlav = on</code> 
+option only extends the default model from one to at most eight 
+different HV-states, with names <code>Deltavi</code>, and identities 
+490<code>i</code>114. That is, we assume there is only one kind of 
+diquark being produced, 4901103, at a rate that is the sum of all 
+actual diquarks, but represented by the lightest of all these diquarks, 
+since this is the one most frequently produced. The use of code 11 should 
+not be taken literally; the 4901114 state is not assumed to be produced 
+with any different properties than the other seven states just because 
+of a seeming identity of all three HV-quarks (as would have been the 
+case in a picture with complete baryon multiplets). 
+ 
+<p/> 
+Some final notes on the <code>separateFlav = on</code> option. 
+Firstly, the code is not adapted to allow widely different mass scales 
+in the hadronization stage proper, but assume not much worse than the 
+Standard Model <ei>u/d/s</ei> sector. Further states like <ei>c/b</ei> 
+could be produced in the hard process but not during hadronization, 
+making use of the <code>probFlav</code> numbers described later. 
+Secondly, the <code>Zv</code> by default is set up to couple equally 
+to all existing HV-quark states, and also couples to all Standard Model 
+particles, while the <code>Fv</code> states are set up to couple only 
+to the first HV-quark flavour. You should remember to adjust decay modes 
+and branching ratios also for these particles in scenarios where the 
+HV-quarks are different. 
+ 
+<h4>Further particle properties</h4> 
  
 <p/> 
 Only the spin of the HV-gluon or HV-photon is determined unambiguously 
-to be unity, for the others you can make your choice. 
+to be unity, for the others you can make your choice. The emphasis on 
+the choice of <code>spinFv</code>, with  <code>spinqv</code> as derived 
+from that, comes from the originally studied scenarios in <ref>Car10</ref>. 
+In scenarios where a <code>Zv</code> is the main production mechanism 
+for <code>qv</code> you must still remember to set <code>spinFv</code> 
+even if no <ei>Fv</ei> are to be produced. Notably, HV-hadron multiplets 
+have been defined assuming that <ei>qv</ei> is spin 1/2, which is also 
+the default setup. 
  
-<modepick name="HiddenValley:spinFv" default="1" min="0" max="2"> 
+<modepick name="HiddenValley:spinFv" default="0" min="0" max="2"> 
 The spin of the HV partners of the SM fermions, e.g. 
 <ei>Dv</ei>, <ei>Uv</ei>, <ei>Ev</ei> and <ei>nuEv</ei>. 
 <option value="0">spin 0.</option> 
@@ -184,20 +319,55 @@ strength of kinetic mixing.
 </parm> 
  
 <p/> 
-You should set the <ei>Fv</ei> and <ei>qv</ei> masses appropriately, 
-with the latter smaller than the former two to allow decays. 
-When <b>U(1)</b> hadronization is switched on, you need to set the 
-<ei>gammav</ei> mass and decay modes. For <b>SU(N)</b> hadronization 
-the HV-meson masses should be set to match the <ei>qv</ei> ones. 
-The simplest is to assume that <ei>m_qv</ei> defines a constituent 
-mass, so that  <ei>m_HVmeson = 2 m_qv</ei>. The <ei>hvMesonDiag</ei> 
-decay modes also need to be set. 
+You should set the <ei>Fv/Zv</ei> and <ei>qv</ei> masses appropriately, 
+with the latter smaller than the former two (where relevant) to allow 
+decays. When <b>U(1)</b> hadronization is switched on, you need to set 
+the <ei>gammav</ei> mass and decay modes. In this case the <ei>qv</ei> 
+mass is a physical one, since there is no confinement. 
+ 
+<p/> 
+For <b>SU(N)</b> hadronization instead we need to operate with <ei>qv</ei> 
+constituent masses, and relate these to the HV-meson masses. The simplest 
+relation is that 
+<eq> 
+ m_ij = m_i + m_j + K * &lt;sigma_i * sigma_j&gt; / (m_i * m_j) 
+</eq> 
+where <ei>m_i, m_j</ei> are the constituent qark masses and 
+<ei>m_ij</ei> the meson one. The <ei>&lt;sigma_i * sigma_j&gt;</ei> 
+factor is the spin-spin expectation value, 1 for a vector and -3 for 
+a pseudoscalar. Even without knowing the constant <ei>K</ei> one thus 
+can conclude that 
+<eq> 
+m_i + m_j = (3 * m_ij,vector + m_ij, pseudoscalar) / 4 
+</eq> 
+which helps define the HV-quark masses. Note that some parameters, 
+in particular <code>HiddenValley:bmqv2</code>, have been given 
+default values based on a scaling related to the lightest HV-quark 
+mass defined by the equations above. It therefore is relevant to 
+work with consistently defined HV-quark masses. This still is based 
+on the lightest HV-quark having a constituent mass of the order of 
+<code>Lambda_HV</code>. If this is not the case then further thought 
+will be required. The HV-baryon masses should suitably be defined 
+as the sum of the the three constituent masses for <b>SU(3)</b>. 
+Furthermore decay modes also need to be set, and lifetimes if you want 
+to have displaced vertices. 
+ 
+<p/> 
+In the <code>separateFlav = on</code> option the number of properties 
+to be set can be very large. Insofar as these still have a somewhat 
+regular structure, it may be better to write suitable code to set up 
+all the properties rather than typing in a long command file by hand. 
  
 <h3>Production processes</h3> 
  
+There are two main HV production modes implemented, either via particles 
+charged both under SM and HV groups, or via Z boson coupling to both 
+sectors. 
+ 
 <flag name="HiddenValley:all" default="off"> 
-Common switch for the group of all hard Hidden Valley processes, 
-as listed separately in the following. 
+Common switch for the group of hard Hidden Valley processes, 
+as listed separately in the following. The last process is part 
+of another scenario and is not affected by this switch. 
 </flag> 
  
 <flag name="HiddenValley:gg2DvDvbar" default="off"> 
@@ -342,7 +512,7 @@ Code 4936.
 Production <ei>f fbar &rarr; Zv</ei> where <ei>Zv</ei> is a generic 
 resonance that couples both SM fermion pairs and a <ei>qv qvbar</ei> 
 pair. Not part of the framework of the above processes, but as an 
-alternative. Code 4941. 
+alternative, that currently is the more popular one. Code 4941. 
 </flag> 
  
 <h3>Timelike showers</h3> 
@@ -393,11 +563,14 @@ Order at which <ei>alpha_HV</ei> runs,
 <option value="0">zeroth order, i.e. <ei>alpha_HV</ei> is kept 
 fixed at the value <ei>alphaFSR</ei>.</option> 
 <option value="1">first order,</option> with the beta function based 
-on <ei>Ngauge</ei> and <ei>Nflav</ei>. 
+on <ei>Ngauge</ei> and <ei>Nflav</ei>. This option can not be used for 
+the <b>U(1)</b> case, but only for the <b>SU(N)</b> ones. 
 </modepick> 
  
 <parm name="HiddenValley:alphaFSR" default="0.1" min="0.0"> 
-fixed alpha scale of <ei>gv/gammav</ei> emission; corresponds to 
+fixed <ei>alpha_HV</ei> scale of <ei>gv/gammav</ei> emission, used 
+when <code>HiddenValley:alphaOrder = 0</code>, but not used when 
+it is <code>= 1</code>). It corresponds to 
 <ei>alpha_strong</ei> of QCD or <ei>alpha_em</ei> of QED. For 
 shower branchings such as <ei>Dv &rarr; Dv + gv</ei> the coupling is 
 multiplied by <ei>C_F = (N^2 - 1) / (2 * N)</ei> for an 
@@ -405,7 +578,10 @@ multiplied by <ei>C_F = (N^2 - 1) / (2 * N)</ei> for an
 </parm> 
  
 <parm name="HiddenValley:Lambda" default="0.4" min="0.1"> 
-the parameter used for the case of a running (first order) <ei>alpha_HV</ei>. 
+the <ei>Lambda_HV</ei> parameter used for the case of a running 
+(first order) <ei>alpha_HV(Q^2) = 12 * pi / ((11 * Ngauge - 2 * nFlav) 
+* ln(Q^2 / Lambda_HV^2) </ei>, 
+i.e. when <code>HiddenValley:alphaOrder = 1</code>. 
 </parm> 
  
 <parm name="HiddenValley:pTminFSR" default="0.44" min="0.1"> 
@@ -476,12 +652,15 @@ same flavour-diagonal species. Such an HV-meson can decay back to
 the normal sector, typically by whatever mediator particle allowed 
 production in the first place. In this framework the full energy put 
 into the HV sector will leak back to the normal one. To allow more 
-flexibility, an ad hoc possibility of <ei>n_Flav</ei> different 
-<ei>qv</ei> species is introduced. For now they are all assumed 
+flexibility, a possibility of <ei>n_Flav</ei> different 
+<ei>qv</ei> species is introduced. By default they are all assumed 
 to have the same mass and other properties, but distinguished by 
 some flavour-like property. Only the flavour-diagonal ones can decay, 
 meaning that only a fraction (approximately) <ei>1/n_Flav</ei> of the 
 HV-energy leaks back, while the rest remains in the hidden sector. 
+A more differential description of all the states can be set up 
+for the <code>HiddenValley:separateFlav = on</code> option, as 
+already noted. 
  
 <p/> 
 This scenario contains more parameters than the first one, for the 
@@ -489,12 +668,13 @@ This scenario contains more parameters than the first one, for the
 related to particle properties, both for <ei>qv</ei> and for the 
 two different kinds of HV-mesons, here labeled 4900111 and 4900113 
 for the diagonal ones, and +-4900211 and +-4900213 for the 
-off-diagonal ones. It makes sense to set the HV-meson masses to be 
-twice the <ei>qv</ei> one, as in a simple constituent mass context. 
-Furthermore the <ei>hvMesonDiag</ei> decay modes need to be set up. 
-Like with the 
-<ei>gammav</ei> in the <b>U(1)</b> option, the default decay table 
-is based on the branching ratios of an off-shell photon. 
+off-diagonal ones, plus optionally an 4901114 baryon. Furthermore the 
+<ei>hvMesonDiag</ei> decay modes need to be set up. Like with the 
+<ei>gammav</ei> in the <b>U(1)</b> option, the default 
+<code>rhovDiag</code> decay table is based on the branching ratios 
+of an off-shell photon, while the ones of the <code>pivDiag</code> 
+are assumed proportional to the squared mass, times a (HV-)colour 
+factor of 3 where relevant. 
  
 <p/> 
 The second set are fragmentation parameters that extend or replace 
@@ -517,11 +697,51 @@ produced HV-mesons being flavour-diagonal and capable to decay back
 to Standard Model particles. 
 </modeopen> 
  
+<flag name="HiddenValley:separateFlav" default="off"> 
+By the choice of <code>nFlav</code> above, a wide set of HV-mesons 
+are implied, and in principle all of their properties have to be 
+set separately. For the default <code>off</code> option it is assumed 
+that the dividing line goes between mesons with on- or off-diagonal 
+flavour content. Thus only four separate mesons need be defined 
+<code>pivDiag, rhovDiag, pivUp/pivDn, rhovUp/rhovDn</code>, 
+plus optionally a <code>Deltav</code> baryon, which greatly simplifies 
+the task of defining masses, decay modes, and branching ratios. 
+</flag> 
+ 
+<parm name="HiddenValley:probDiquark" default="0." min="0." max="1."> 
+probability that the string breaks by "diquark-antidiquark" production 
+rather than quark-antiquark one. This then leads to an adjacent 
+baryon-antibaryon pair in the flavour chain. Currently only one kind 
+of diquark is implemented, implying at most eight different baryons 
+if <code>separateFlav = on</code>, else only one. The value should be 
+in the ballpark of 0.1 for <b>SU(3)</b>, but should be kept at zero 
+for bigger gauge groups. It cannot be trusted for <b>SU(2)</b>, 
+so it may be better to keep it zero there as well. 
+</parm> 
+ 
+<pvec name="HiddenValley:probFlav" default="{1.,1.,1.,1.,1.,1.,1.,1.}" 
+min="0." max="1."> 
+production suppression at a string break for either of the 
+<code>nFlav</code> different flavour-antiflavour possibilities that 
+are allowed. Corresponds to the <ei>exp(-pi * m_q^2 / kappa)</ei> 
+tunneling suppression factor used in normal string fragmentation 
+to explain why <ei>s</ei> quarks are less frequently produced than 
+<ei>u,d</ei> ones. When <code>nFlav</code> is less than 8 the trailing 
+positions are not used, but they should still be set to ensure 
+consistent handling. 
+</pvec> 
+ 
 <parm name="HiddenValley:probVector" default="0.75" min="0." max="1."> 
 fraction of HV-mesons that are assigned spin 1 (vector), with the 
 remainder spin 0 (pseudoscalar). Assuming the <ei>qv</ei> have 
 spin <ei>1/2</ei> and the mass splitting is small, spin counting 
 predicts that <ei>3/4</ei> of the mesons should have spin 1. 
+</parm> 
+ 
+<parm name="HiddenValley:probKeepEta1" default="1.0" min="0." max="1."> 
+multiplicative factor suppressing the production rate of the diagonal 
+pseudoscalar meson with the largest code, for now assumed to be the 
+<ei>eta_1</ei> flavour-singlet state of the multiplet. 
 </parm> 
  
 <parm name="HiddenValley:aLund" default="0.3" min="0.0" max="2.0"> 
@@ -552,4 +772,4 @@ See the normal <aloc href="Fragmentation">fragmentation
  
 </chapter> 
  
-<!-- Copyright (C) 2021 Torbjorn Sjostrand --> 
+<!-- Copyright (C) 2022 Torbjorn Sjostrand --> 

@@ -1,5 +1,5 @@
 // VinciaAntennaFunctions.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -15,7 +15,7 @@
 #include "Pythia8/Basics.h"
 #include "Pythia8/Event.h"
 #include "Pythia8/PythiaStdlib.h"
-#include "Pythia8/ShowerMEs.h"
+#include "Pythia8/ExternalMEs.h"
 
 // Vincia headers.
 #include "Pythia8/VinciaCommon.h"
@@ -1263,7 +1263,7 @@ public:
   virtual ~MECs() {};
 
   // Initialize pointers.
-  void initPtr(Info* infoPtrIn, ShowerMEs* mg5mesPtrIn,
+  void initPtr(Info* infoPtrIn, ExternalMEsPlugin* mg5mesPtrIn,
     VinciaCommon* vinComPtrIn, Resolution* resPtrIn);
 
   // Initialize pointers to antenna sets.
@@ -1359,12 +1359,12 @@ private:
   bool isInitPtr, isInit;
 
   // Pointers to PYTHIA objects.
-  Info*          infoPtr;
-  Rndm*          rndmPtr;
-  ParticleData*  particleDataPtr;
-  PartonSystems* partonSystemsPtr;
-  Settings*      settingsPtr;
-  ShowerMEs*     mg5mesPtr;
+  Info*              infoPtr;
+  Rndm*              rndmPtr;
+  ParticleData*      particleDataPtr;
+  PartonSystems*     partonSystemsPtr;
+  Settings*          settingsPtr;
+  ExternalMEsPlugin* mg5mesPtr;
 
   // Pointers to VINCIA objects.
   Resolution*    resolutionPtr;
@@ -1373,6 +1373,9 @@ private:
   // Antenna sets.
   AntennaSetFSR* antSetFSR;
   AntennaSetISR* antSetISR;
+
+  // Helicity sampler.
+  HelicitySampler helSampler;
 
   // Matching settings.
   bool matchingFullColour, matchingScaleIsAbs;

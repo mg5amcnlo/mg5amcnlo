@@ -1,5 +1,5 @@
 // PartonDistributions.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -19,40 +19,100 @@ namespace Pythia8 {
 
 //--------------------------------------------------------------------------
 
-// Resolve valence content for assumed meson. Possibly modified later.
+// Set valence content to the default for the current beam.
 
-void PDF::setValenceContent() {
+void PDF::resetValenceContent() {
+  xu = xd = xs = xubar = xdbar = xsbar = xc = xb = xcbar = xbbar
+     = xg = xlepton = xgamma= 0;
 
-  // Subdivide meson by flavour content.
-  if ((idBeamAbs < 100 || idBeamAbs > 1000) && idBeamAbs != 22) return;
-  int idTmp1 = idBeamAbs/100;
-  int idTmp2 = (idBeamAbs/10)%10;
+  // Gluon has no valence.
+  if (idBeam == 21)
+    setValenceContent(0, 0, 0);
 
-  // Find which is quark and which antiquark.
-  if (idTmp1%2 == 0) {
-    idVal1 =  idTmp1;
-    idVal2 = -idTmp2;
-  } else {
-    idVal1 =  idTmp2;
-    idVal2 = -idTmp1;
-  }
-  if (idBeam < 0) {
-    idVal1 = -idVal1;
-    idVal2 = -idVal2;
-  }
+  // Photons can fluctuate. 22 indicates that valence has not been set.
+  else if (idBeam == 22)
+    setValenceContent(22, 0, 0);
 
-  // Special case for Pomeron, to start off.
-  if (idBeamAbs == 990) {
-    idVal1 =  1;
-    idVal2 = -1;
+  // Lepton.
+  else if (idBeamAbs == 11 || idBeamAbs == 13 || idBeamAbs == 15)
+    setValenceContent(idBeam, 0, 0);
+
+  // Pomeron is treated as pi0-like.
+  else if (idBeamAbs == 990) {
+    beamType = 111;
+    setValenceContent(1, -1, 0);
   }
 
-  // Photon not fixed until at Process-/PartonLevel.
-  if (idBeamAbs == 22) {
-    idVal1 =  10;
-    idVal2 = -10;
-  }
+  // Nuclear beams.
+  else if (idBeamAbs > 100000000)
+    setValenceContent(0, 0, 0);
 
+  // Generic hadron beams.
+  else {
+    // Decompose default valence content.
+    int idq1 = (idBeamAbs / 1000) % 10;
+    int idq2 = (idBeamAbs /  100) % 10;
+    int idq3 = (idBeamAbs /   10) % 10;
+
+    // For mesons, one quark is an antiquark.
+    if (idq1 == 0) {
+      if (idq2 % 2 == 0) idq3 = -idq3;
+      else               idq2 = -idq2;
+    }
+
+    // Flip signs for antiparticle beam.
+    if (idBeam < 0) {
+      idq1 = -idq1; idq2 = -idq2; idq3 = -idq3;
+    }
+
+    // Set valence content.
+    setValenceContent(idq1, idq2, idq3);
+
+    // Determine and store beam type.
+    // Diagonal meson special cases.
+    if (idq1 == 0 && (idq2 == -idq3)) {
+      // pi0-like are different from other diagonal mesons.
+      if (idq3 == 1 || (idq2 == 2 && idBeam != 221))
+        beamType = 111;
+      else
+        beamType = 221;
+    }
+    // K_S,L special case.
+    else if (idBeam == 130 || idBeam == 310)
+      beamType = 130;
+    // For other cases, beamType tells about isospin symmetries.
+    else {
+      // Count number of u/d quarks.
+      int nd = (abs(idq1) == 1) + (abs(idq2) == 1) + (abs(idq3) == 1);
+      int nu = (abs(idq1) == 2) + (abs(idq2) == 2) + (abs(idq3) == 2);
+      if      (nu == 3) beamType = 2;
+      else if (nd == 3) beamType = -2;
+      else if (nu > nd || nd == 0 || (idBeamAbs/10) % 1000 == 21) beamType = 1;
+      else if (nu < nd) beamType = -1;
+      else              beamType = 0;
+    }
+  }
+}
+
+//--------------------------------------------------------------------------
+
+// Get the raw value for the quark variable corresponding to the id.
+
+double PDF::xfRaw(int id) const {
+  if (id == 0 || id == 21) return xg;
+  if (id == 22) return xgamma;
+  if (id ==  1) return xd;
+  if (id == -1) return xdbar;
+  if (id ==  2) return xu;
+  if (id == -2) return xubar;
+  if (id ==  3) return xs;
+  if (id == -3) return xsbar;
+  if (id ==  4) return xc;
+  if (id == -4) return xcbar;
+  if (id ==  5) return xb;
+  if (id == -5) return xbbar;
+  if ((id == 11 || id == 13 || id == 15) && id == idBeam) return xlepton;
+  return 0.;
 }
 
 //--------------------------------------------------------------------------
@@ -64,120 +124,95 @@ double PDF::xf(int id, double x, double Q2) {
   // Need to update if flavour, x or Q2 changed.
   // Use idSav = 9 to indicate that ALL flavours are up-to-date.
   // Assume that flavour and antiflavour always updated simultaneously.
-  if ( (abs(idSav) != abs(id) && idSav != 9) || x != xSav || Q2 != Q2Sav)
+  int idAbs = abs(id), idNow = (idBeam < 0) ? -id : id;
+  if ( (abs(idSav) != idAbs && idSav != 9) || x != xSav || Q2 != Q2Sav)
     {idSav = id; xfUpdate(id, x, Q2); xSav = x; Q2Sav = Q2;}
 
-  // Baryon beams: only p and pbar for now.
-  if (idBeamAbs == 2212) {
-    int idNow = (idBeam > 0) ? id : -id;
-    int idAbs = abs(id);
-    if (idNow ==  0 || idAbs == 21) return max(0., xg);
-    if (idNow ==  1) return max(0., xd);
-    if (idNow == -1) return max(0., xdbar);
-    if (idNow ==  2) return max(0., xu);
-    if (idNow == -2) return max(0., xubar);
-    if (idNow ==  3) return max(0., xs);
-    if (idNow == -3) return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
+  // Photon/gluon content is always handled the same way.
+  if (id == 0 || id == 21) return max(0., xg);
+  if (id == 22)            return max(0., xgamma);
 
-  // Baryon beams: n and nbar by isospin conjugation of p and pbar.
-  } else if (idBeamAbs == 2112) {
-    int idNow = (idBeam > 0) ? id : -id;
-    int idAbs = abs(id);
-    if (idNow ==  0 || idAbs == 21) return max(0., xg);
-    if (idNow ==  1) return max(0., xu);
-    if (idNow == -1) return max(0., xubar);
-    if (idNow ==  2) return max(0., xd);
-    if (idNow == -2) return max(0., xdbar);
-    if (idNow ==  3) return max(0., xs);
-    if (idNow == -3) return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
-
-  // Nondiagonal meson beams: only pi+ and pi- for now.
-  // Some LHAPDF sets are stored with u d as valence, so use dbar = u.
-  } else if (idBeamAbs == 211) {
-    int idNow = (idBeam > 0) ? id : -id;
-    int idAbs = abs(id);
-    if (idNow ==  0 || idAbs == 21) return max(0., xg);
-    if (idNow ==  1) return max(0., xubar );
-    if (idNow == -1) return max(0., xu );
-    if (idNow ==  2) return max(0., xu);
-    if (idNow == -2) return max(0., xubar);
-    if (idNow ==  3) return max(0., xs);
-    if (idNow == -3) return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
-
-  // Diagonal meson beams: only pi0, Pomeron for now.
-  } else if (idBeam == 111 || idBeam == 990) {
-    int idAbs = abs(id);
-    if (id ==  0 || idAbs == 21) return max(0., xg);
-    if (id == idVal1 || id == idVal2) return max(0., xu);
-    if (idAbs <=  2) return max(0., xubar);
-    if (idAbs ==  3) return max(0., xs);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
-
-  // Photon beam.
-  } else if (idBeam == 22) {
-    int idAbs = abs(id);
-    if (id ==  0 || idAbs == 21) return max(0., xg);
-    if (id ==  1)    return max(0., xd);
-    if (id == -1)    return max(0., xdbar);
-    if (id ==  2)    return max(0., xu);
-    if (id == -2)    return max(0., xubar);
-    if (id ==  3)    return max(0., xs);
-    if (id == -3)    return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
-
-  // Photon beam inside lepton beam.
-  } else if ( ( idBeamAbs == 11 || idBeamAbs == 13 || idBeamAbs == 15 )
-    && hasGammaInLepton ) {
-    int idAbs = abs(id);
-    if (idAbs ==  0 || idAbs == 21) return max(0., xg);
-    if (idAbs ==  1) return max(0., xd);
-    if (idAbs ==  2) return max(0., xu);
-    if (idAbs ==  3) return max(0., xs);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
-
-  // Nuclear PDFs
-  } else if ( idBeamAbs > 100000000 ) {
-    int idAbs = abs(id);
-    if (idAbs ==  0 || idAbs == 21) return max(0., xg);
-    if (id ==  1)    return max(0., xd);
-    if (id == -1)    return max(0., xdbar);
-    if (id ==  2)    return max(0., xu);
-    if (id == -2)    return max(0., xubar);
-    if (id ==  3)    return max(0., xs);
-    if (id == -3)    return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0;
-
-  // Lepton beam.
-  } else {
-    if (id == idBeam ) return max(0., xlepton);
-    if (abs(id) == 22) return max(0., xgamma);
-    return 0.;
+  // Photon beam, always the full PDFs.
+  if (idBeam == 22) {
+    return max(0., xfRaw(idAbs));
   }
 
+  // Lepton beam.
+  if (idBeamAbs == 11 || idBeamAbs == 13 || idBeamAbs == 15) {
+    if (hasGammaInLepton) {
+      if (idAbs ==  1) return max(0., xd);
+      if (idAbs ==  2) return max(0., xu);
+      if (idAbs ==  3) return max(0., xs);
+      if (idAbs ==  4) return max(0., xc);
+      if (idAbs ==  5) return max(0., xb);
+      return 0.;
+    }
+    else
+      return (id == idBeam) ? max(0., xlepton) : 0.;
+  }
+
+  // Nuclear beam.
+  if ( idBeamAbs > 100000000 )
+    return max(0., xfRaw(idNow));
+
+  // Special treatment for pi0-like mesons, based on pi+ content.
+  if (beamType == 111) {
+    if (idAbs == 1 || idAbs == 2)
+      return max(0., isValence(id) ? (xu + xdbar) / 2. : (xubar + xd) / 2.);
+    else
+      return max(0., xfRaw(idAbs));
+  }
+
+  // For other diagonal mesons, q = sea + valence; qbar = sea.
+  if (beamType == 221)
+    return max(0., isValence(id) ? xfRaw(idAbs) : xfRaw(-idAbs));
+
+  // Special treatment of K_S/K_L, based on K+ content.
+  if (beamType == 130) {
+    if (idAbs == 1) return max(0., isValence(id) ? xu : xubar);
+    if (idAbs == 2) return max(0., xd);
+    if (idAbs == 3) return max(0., isValence(id) ? xsbar : xs);
+    else return max(0., xfRaw(idNow));
+  }
+
+  // For other hadrons, handle u/d through isospin symmetry.
+  if (idAbs == 1 || idAbs == 2) {
+    // No rearrangement necessary (e.g. p, Sigma+, Xi0, Omega-, pi+).
+    if (beamType == 1)
+      return max(0., xfRaw(idNow));
+    // Switch u <-> d (e.g. n, Sigma-, Xi-, K0, D+, B0).
+    else if (beamType == -1) {
+      if (idNow ==  1) return max(0., xu);
+      if (idNow == -1) return max(0., xubar);
+      if (idNow ==  2) return max(0., xd);
+      if (idNow == -2) return max(0., xdbar);
+    }
+    // Use average of u and d (e.g. Lambda0, Sigma0).
+    else if (beamType == 0) {
+      if (idNow > 0) return max(0., (xd + xu) / 2);
+      else           return max(0., (xdbar + xubar) / 2);
+    }
+    // Delta++: move d valence into u.
+    else if (beamType == 2) {
+      if (idNow ==  1) return max(0., xdbar);
+      if (idNow == -1) return max(0., xdbar);
+      if (idNow ==  2) return max(0., xu + (xd - xdbar));
+      if (idNow == -2) return max(0., xubar);
+    }
+    // Delta-: as Delta++, but switch u <-> d.
+    else if (beamType == -2) {
+      if (idNow ==  1) return max(0., xu + (xd - xdbar));
+      if (idNow == -1) return max(0., xubar);
+      if (idNow ==  2) return max(0., xdbar);
+      if (idNow == -2) return max(0., xdbar);
+    }
+  }
+  // s/c/b is always the same.
+  else
+     return max(0., xfRaw(idNow));
+
+  // None of the above cases work, e.g. id is not a valid particle.
+  return 0.;
 }
 
 //--------------------------------------------------------------------------
@@ -186,51 +221,77 @@ double PDF::xf(int id, double x, double Q2) {
 
 double PDF::xfVal(int id, double x, double Q2) {
 
-  // Need to update if flavour, x or Q2 changed.
-  // Use idSav = 9 to indicate that ALL flavours are up-to-date.
-  // Assume that flavour and antiflavour always updated simultaneously.
-  if ( (abs(idSav) != abs(id) && idSav != 9) || x != xSav || Q2 != Q2Sav)
+  // Check parton is valence.
+  if (!isValence(id)) return 0.;
+
+  // Update configuration if necessary.
+  int idAbs = abs(id);
+  int idNow = (idBeam > 0) ? id : -id;
+  if ( (abs(idSav) != idAbs && idSav != 9) || x != xSav || Q2 != Q2Sav)
     {idSav = id; xfUpdate(id, x, Q2); xSav = x; Q2Sav = Q2;}
 
-  // Baryon and nondiagonal meson beams: only p, pbar, n, nbar, pi+, pi-.
-  if (idBeamAbs == 2212) {
-    int idNow = (idBeam > 0) ? id : -id;
-    if (idNow == 1) return max(0., xdVal);
-    if (idNow == 2) return max(0., xuVal);
-    return 0.;
-  } else if (idBeamAbs == 2112) {
-    int idNow = (idBeam > 0) ? id : -id;
-    if (idNow == 1) return max(0., xuVal);
-    if (idNow == 2) return max(0., xdVal);
-    return 0.;
-  } else if (idBeamAbs == 211) {
-    int idNow = (idBeam > 0) ? id : -id;
-    if (idNow == 2 || idNow == -1) return max(0., xuVal);
-    return 0.;
-
-  // Diagonal meson beams: only pi0, Pomeron for now.
-  } else if (idBeam == 111 || idBeam == 990) {
-    if (id == idVal1 || id == idVal2) return max(0., xuVal);
-    return 0.;
-
-  // Photon beam.
-  } else if (idBeam == 22) {
-    int idAbs = abs(id);
-    if (id == idVal1 || id == idVal2) {
-      if (idAbs == 1) return max(0., xdVal);
-      if (idAbs == 2) return max(0., xuVal);
-      if (idAbs == 3) return max(0., xsVal);
-      if (idAbs == 4) return max(0., xcVal);
-      if (idAbs == 5) return max(0., xbVal);
+  // Photon beam, return non-zero valence content only if flavour set.
+  if (idBeam == 22) {
+    if (id == 22) {
+      return isValence(22) ? max(0., xgamma) : 0.;
+    } else {
+      if (isValence(id) ) {
+        return max(0., xfRaw(idAbs) - xfRaw(-idAbs));
+      } else {
+        return 0.;
+      }
     }
-    return 0.;
-
-  // Lepton beam.
-  } else {
-    if (id == idBeam) return max(0., xlepton);
-    return 0.;
   }
 
+  // Photon/gluon content is never valence.
+  if (id == 0 || id == 21 || id == 22)
+    return 0.;
+
+  // For lepton beams, the valence is the lepton content itself.
+  if (idBeamAbs == 11 || idBeamAbs == 13 || idBeamAbs == 15)
+    return (id == idBeam) ? max(0., xlepton) : 0.;
+
+  // Nuclear PDFs are not yet defined.
+  if ( idBeamAbs > 100000000 )
+    return 0;
+
+  // Special treatment for pi0-like mesons, based on pi+ content.
+  if (beamType == 111)
+    return max(0., (xu + xdbar - (xubar + xd)) / 2.);
+
+  // For other diagonal mesons, q = sea + valence; qbar = sea.
+  if (beamType == 221)
+    return max(0., xfRaw(idAbs) - xfRaw(-idAbs));
+
+  // Special treatment of K_S/K_L, based on K+ content.
+  if (beamType == 130) {
+    if (idAbs == 1) return max(0., xu - xubar);
+    if (idAbs == 3) return max(0., xsbar - xs);
+  }
+
+  // For other hadrons, handle u/d through isospin symmetry.
+  if (idAbs == 1 || idAbs == 2) {
+    // No rearrangement necessary (e.g. p, Sigma+, Xi0, Omega-, pi+).
+    if (beamType == 1)
+      return max(0., xfRaw(idNow) - xfRaw(-idNow));
+    // Switch u <-> d (e.g. n, Sigma-, Xi-, K0, D+, B0).
+    else if (beamType == -1) {
+      if (idAbs == 1) return max(0., abs(xu - xubar));
+      if (idAbs == 2) return max(0., abs(xd - xdbar));
+    }
+    // Use average of u and d (e.g. Lambda0, Sigma0).
+    else if (beamType == 0)
+      return max(0., abs(xd + xu - (xdbar + xubar)) / 2.);
+    // Delta++/-: take both d and u (we already checked that it's valence).
+    else if (beamType == 2 || beamType == -2)
+      return max(0., (xu - xubar) + (xd - xdbar));
+  }
+  // s/c/b is always the same.
+  else
+    return max(0., xfRaw(idNow) - xfRaw(-idNow));
+
+  // None of the above cases work, e.g. id is not a valid particle.
+  return 0.;
 }
 
 //--------------------------------------------------------------------------
@@ -239,66 +300,98 @@ double PDF::xfVal(int id, double x, double Q2) {
 
 double PDF::xfSea(int id, double x, double Q2) {
 
-  // Need to update if flavour, x or Q2 changed.
-  // Use idSav = 9 to indicate that ALL flavours are up-to-date.
-  // Assume that flavour and antiflavour always updated simultaneously.
-  if ( (abs(idSav) != abs(id) && idSav != 9) || x != xSav || Q2 != Q2Sav)
+  // Update configuration if necessary.
+  int idAbs = abs(id);
+  if ( (abs(idSav) != idAbs && idSav != 9) || x != xSav || Q2 != Q2Sav)
     {idSav = id; xfUpdate(id, x, Q2); xSav = x; Q2Sav = Q2;}
 
-  // Hadron beams.
-  if (idBeamAbs > 100) {
-    int idNow = (idBeam > 0) ? id : -id;
-    int idAbs = abs(id);
-    if (idNow == 0 || idAbs == 21) return max(0., xg);
-    if (idBeamAbs == 2212) {
-      if (idNow ==  1) return max(0., xdSea);
-      if (idNow == -1) return max(0., xdbar);
-      if (idNow ==  2) return max(0., xuSea);
-      if (idNow == -2) return max(0., xubar);
-    } else if (idBeamAbs == 2112) {
-      if (idNow ==  1) return max(0., xuSea);
-      if (idNow == -1) return max(0., xubar);
-      if (idNow ==  2) return max(0., xdSea);
-      if (idNow == -2) return max(0., xdbar);
-    } else {
-      if (idAbs <=  2) return max(0., xuSea);
-    }
-    if (idNow ==  3) return max(0., xs);
-    if (idNow == -3) return max(0., xsbar);
-    if (idAbs ==  4) return max(0., xc);
-    if (idAbs ==  5) return max(0., xb);
-    if (idAbs == 22) return max(0., xgamma);
-    return 0.;
+  // Gluon is always sea.
+  if (id == 0 || idAbs == 21) return max(0., xg);
 
   // Photon beam.
-  } else if (idBeamAbs == 22) {
-    int idAbs = abs(id);
-    if ( id == 0 || idAbs == 21 ) return max(0., xg);
-    if ( idAbs == 22 ) return max(0., xgamma);
+  if (idBeam == 22) {
+    if (id == 22) {
+      return max(0., isValence(22) ? 0. : xgamma);
 
     // If a valence parton return only the sea part.
     // Otherwise return the total PDF.
-    if ( id == idVal1 || id == idVal2 ) {
-      if (idAbs ==  1) return max(0., xdSea);
-      if (idAbs ==  2) return max(0., xuSea);
-      if (idAbs ==  3) return max(0., xsSea);
-      if (idAbs ==  4) return max(0., xcSea);
-      if (idAbs ==  5) return max(0., xbSea);
     } else {
-      if (idAbs ==  1) return max(0., xd);
-      if (idAbs ==  2) return max(0., xu);
-      if (idAbs ==  3) return max(0., xs);
-      if (idAbs ==  4) return max(0., xc);
-      if (idAbs ==  5) return max(0., xb);
+      if (isValence(id)) {
+        return max(0., xfRaw(-idAbs));
+      } else {
+        return max(0., xfRaw(idAbs));
+      }
     }
-    return 0.;
-
-  // Lepton beam.
-  } else {
-    if (abs(id) == 22) return max(0., xgamma);
-    return 0.;
   }
 
+  // Except in pointlike photon beams, gamma is always sea.
+  if (idAbs == 22) return max(0., xgamma);
+
+  // The only sea in leptons are photons.
+  if (idBeamAbs == 11 || idBeamAbs == 13 || idBeamAbs == 15)
+    return (idAbs == 22) ? max(0., xgamma) : 0.;
+
+  // Nuclear PDFs are not yet handled.
+  if ( idBeamAbs > 100000000 )
+    return 0.;
+
+  // Special treatment for pi0-like mesons, based on pi+ content.
+  if (beamType == 111) {
+    if (idAbs == 1 || idAbs == 2)
+      return max(0., (xubar + xd) / 2.);
+    else
+      return max(0., xfRaw(-idAbs));
+  }
+
+  // For other diagonal mesons, q = sea + valence; qbar = sea.
+  if (beamType == 221)
+    return max(0., xfRaw(-idAbs));
+
+  // Otherwise, if q is valence xor beam is an antiparticle, flip sign.
+  int idSea = (isValence(id) ^ (idBeam < 0)) ? -id : id;
+
+  // Special treatment of K_S/K_L, based on K+ content.
+  if (idBeam == 130 || idBeam == 310) {
+    if (idAbs == 1) return max(0., xubar);
+    if (idAbs == 2) return max(0., xdbar);
+    if (idAbs == 3) return max(0., xs);
+    return max(0., xfRaw(idSea));
+  }
+
+  // For other hadrons, handle u/d through isospin symmetry.
+  if (idAbs == 1 || idAbs == 2) {
+    // No rearrangement necessary (e.g. p, Sigma+, Xi0, Omega-, pi+).
+    if (beamType == 1)
+      return max(0., xfRaw(idSea));
+
+    // Switch u <-> d (e.g. n, Delta-, Sigma-, Xi-, K0, D+, B0).
+    else if (beamType == -1) {
+      if (idSea ==  1) return max(0., xu);
+      if (idSea == -1) return max(0., xubar);
+      if (idSea ==  2) return max(0., xd);
+      if (idSea == -2) return max(0., xdbar);
+    }
+    // Use average of u and d (e.g. Lambda0, Sigma0).
+    else if (beamType == 0) {
+      if (idSea > 0) return max(0., (xu + xd) / 2.);
+      else           return max(0., (xubar + xdbar) / 2.);
+    }
+    // For Delta++, always use qbar value.
+    else if (beamType == 2) {
+      if (idAbs == 1) return max(0., xdbar);
+      if (idAbs == 2) return max(0., xubar);
+    }
+    else if (beamType == -2) {
+      if (idAbs == 1) return max(0., xubar);
+      if (idAbs == 2) return max(0., xdbar);
+    }
+  }
+  // s/c/b is always the same.
+  else
+    return max(0., xfRaw(idSea));
+
+  // None of the above cases work, e.g. id is not a valid particle.
+  return 0.;
 }
 
 //==========================================================================
@@ -309,7 +402,8 @@ double PDF::xfSea(int id, double x, double Q2) {
 
 // Constructor.
 
-LHAPDF::LHAPDF(int idIn, string pSet, Info* infoPtrIn) :
+LHAPDF::LHAPDF(int idIn, string pSet, Info* infoPtrIn,
+  Settings* settingsPtrIn) :
   pdfPtr(nullptr), infoPtr(infoPtrIn), libPtr(nullptr) {
   isSet = false;
 
@@ -342,8 +436,39 @@ LHAPDF::LHAPDF(int idIn, string pSet, Info* infoPtrIn) :
   NewPDF* newPDF = (NewPDF*)libPtr->symbol("newPDF");
   if (!newPDF) return;
   pdfPtr = newPDF(idIn, set, mem, infoPtr);
+  if (settingsPtrIn != nullptr) {
+    pdfPtr->sSymmetric(settingsPtrIn->flag("LHAPDF:sSymmetric"));
+    pdfPtr->cSymmetric(settingsPtrIn->flag("LHAPDF:cSymmetric"));
+    pdfPtr->bSymmetric(settingsPtrIn->flag("LHAPDF:bSymmetric"));
+  }
   isSet = true;
 
+}
+
+//--------------------------------------------------------------------------
+
+// Update parton densities.
+
+void LHAPDF::xfUpdate(int id, double x, double Q2) {
+  if (pdfPtr != nullptr) {
+    pdfPtr->xfUpdate(id, x, Q2);
+    xu      = pdfPtr->xu;
+    xd      = pdfPtr->xd;
+    xs      = pdfPtr->xs;
+    xubar   = pdfPtr->xubar;
+    xdbar   = pdfPtr->xdbar;
+    xsbar   = pdfPtr->xsbar;
+    xc      = pdfPtr->xc;
+    xb      = pdfPtr->xb;
+    xcbar   = pdfPtr->xcbar;
+    xbbar   = pdfPtr->xbbar;
+    xg      = pdfPtr->xg;
+    xlepton = pdfPtr->xlepton;
+    xgamma  = pdfPtr->xgamma;
+  }
+
+  // idSav = 9 to indicate that all flavours reset.
+  idSav  = 9;
 }
 
 //--------------------------------------------------------------------------
@@ -407,6 +532,10 @@ void LHAGrid1::init(string pdfWord, string pdfdataPath, Info* infoPtr) {
     + "NNPDF31sx_nlonllx_as_0118_LHCb_luxqed_0000.dat";
   else if (pdfSet == 22) dataFile = pdfdataPath
     + "NNPDF31sx_nnlonllx_as_0118_LHCb_luxqed_0000.dat";
+  else if (pdfSet == 23) dataFile = pdfdataPath
+    + "GJR07LOproton.dat";
+  else if (pdfSet == 24) dataFile = pdfdataPath
+    + "SU21proton.dat";
 
   // Pomeron PDFs, currently the GKG18 sets.
   else if (pdfSet == 112) dataFile = pdfdataPath
@@ -460,6 +589,8 @@ void LHAGrid1::init(istream& is, Info* infoPtr) {
     isSet = false;
     return;
   }
+
+  // Read each subgrid.
   while (getline( is, line)) {
     ++nqSub;
 
@@ -577,8 +708,8 @@ void LHAGrid1::xfUpdate(int , double x, double Q2) {
 
   // No PDF values if not properly set up.
   if (!isSet) {
-    xg = xu = xd = xubar = xdbar = xs = xsbar = xc = xb = xgamma
-    = xuVal = xuSea = xdVal = xdSea = 0.;
+    xg = xu = xd = xubar = xdbar = xs = xsbar = xc = xb = xcbar = xbbar
+    = xgamma = 0.;
     return;
   }
 
@@ -587,21 +718,17 @@ void LHAGrid1::xfUpdate(int , double x, double Q2) {
 
   // Then transfer to Pythia8 notation.
   xg     = pdfVal[0];
-  xu     = pdfVal[2];
   xd     = pdfVal[1];
-  xubar  = pdfVal[7];
   xdbar  = pdfVal[6];
+  xu     = pdfVal[2];
+  xubar  = pdfVal[7];
   xs     = pdfVal[3];
   xsbar  = pdfVal[8];
-  xc     = 0.5 * (pdfVal[4] + pdfVal[9]);
-  xb     = 0.5 * (pdfVal[5] + pdfVal[10]);
+  xc     = pdfVal[4];
+  xcbar  = pdfVal[9];
+  xb     = pdfVal[5];
+  xbbar  = pdfVal[10];
   xgamma = pdfVal[11];
-
-  // Subdivision of valence and sea.
-  xuVal  = xu - xubar;
-  xuSea  = xubar;
-  xdVal  = xd - xdbar;
-  xdSea  = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav  = 9;
@@ -828,14 +955,8 @@ void GRV94L::xfUpdate(int , double x, double Q2) {
   xdbar = 0.5*(udb + del);
   xs    = sb;
   xsbar = sb;
-  xc    = chm;
-  xb    = bot;
-
-  // Subdivision of valence and sea.
-  xuVal = uv;
-  xuSea = xubar;
-  xdVal = dv;
-  xdSea = xdbar;
+  xc = xcbar = chm;
+  xb = xbbar = bot;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -1023,15 +1144,9 @@ void CTEQ5L::xfUpdate(int , double x, double Q2) {
     else if (i == 4) { xubar = sumUbarDbar / (1. + answer);
       xdbar = sumUbarDbar * answer / (1. + answer); }
     else if (i == 5) {xs = x * answer; xsbar = xs;}
-    else if (i == 6) xc = x * answer;
-    else if (i == 7) xb = x * answer;
+    else if (i == 6) xc = xcbar = x * answer;
+    else if (i == 7) xb = xbbar = x * answer;
   }
-
-  // Subdivision of valence and sea.
-  xuVal = xu - xubar;
-  xuSea = xubar;
-  xdVal = xd - xdbar;
-  xdSea = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -1419,15 +1534,11 @@ void MSTWpdf::xfUpdate(int , double x, double Q2) {
   xdbar  = dsea;
   xs     = str;
   xsbar  = sbar;
-  xc     = 0.5 * (chm + cbar);
-  xb     = 0.5 * (bot + bbar);
+  xc     = chm;
+  xcbar  = cbar;
+  xb     = bot;
+  xbbar  = bbar;
   xgamma = phot;
-
-  // Subdivision of valence and sea.
-  xuVal  = upv;
-  xuSea  = xubar;
-  xdVal  = dnv;
-  xdSea  = xdbar;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav  = 9;
@@ -1893,14 +2004,10 @@ void CTEQ6pdf::xfUpdate(int , double x, double Q2) {
   xs     = rescale * str;
   xsbar  = rescale * str;
   xc     = rescale * chm;
+  xcbar  = rescale * chm;
   xb     = rescale * bot;
+  xbbar  = rescale * bot;
   xgamma = 0.;
-
-  // Subdivision of valence and sea.
-  xuVal  = rescale * upv;
-  xuSea  = rescale * usea;
-  xdVal  = rescale * dnv;
-  xdSea  = rescale * dsea;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav  = 9;
@@ -2161,14 +2268,10 @@ void ProtonPoint::xfUpdate(int , double x, double /*Q2*/ ) {
   xs     = 0.;
   xsbar  = 0.;
   xc     = 0.;
+  xcbar  = 0.;
   xb     = 0.;
+  xbbar  = 0.;
   xgamma = fgm;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = 0;
-  xdVal = 0.;
-  xdSea = 0;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2229,14 +2332,10 @@ void Proton2gammaDZ::xfUpdate(int , double x, double Q2 ) {
   xs     = 0.;
   xsbar  = 0.;
   xc     = 0.;
+  xcbar  = 0.;
   xb     = 0.;
+  xbbar  = 0.;
   xgamma = fgm;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = 0;
-  xdVal = 0.;
-  xdSea = 0;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2256,11 +2355,11 @@ const double Nucleus2gamma::ALPHAEM = 0.00729735080;
 
 // Read in flux parameters.
 
-void Nucleus2gamma::initNucleus() {
+void Nucleus2gamma::initNucleus(int idBeamIn) {
 
   // Derive mass number and number of protons (charge).
-  a = (idBeam/10) % 1000;
-  z = (idBeam/10000) % 1000;
+  a = (idBeamIn/10) % 1000;
+  z = (idBeamIn/10000) % 1000;
 }
 
 // Update the photon flux.
@@ -2283,13 +2382,9 @@ void Nucleus2gamma::xfUpdate(int , double x, double ) {
   xs     = 0.;
   xsbar  = 0.;
   xc     = 0.;
+  xcbar  = 0.;
   xb     = 0.;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = 0;
-  xdVal = 0.;
-  xdSea = 0;
+  xbbar  = 0.;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2341,21 +2436,109 @@ void GRVpiL::xfUpdate(int , double x, double Q2) {
     + sqrt( (3.056 + 1.694 * s) * pow(s, 0.39) * xL) );
 
   // Update values.
-  xg    = rescale * gl;
-  xu    = rescale * (uv + ub);
-  xd    = rescale * ub;
-  xubar = rescale * ub;
-  xdbar = rescale * (uv + ub);
-  xs    = rescale * ub;
-  xsbar = rescale * ub;
-  xc    = rescale * chm;
-  xb    = rescale * bot;
+  xg    = vmdScale * gl;
+  xu    = vmdScale * (uv + ub);
+  xd    = vmdScale * ub;
+  xubar = vmdScale * ub;
+  xdbar = vmdScale * (uv + ub);
+  xs    = vmdScale * ub;
+  xsbar = vmdScale * ub;
+  xc    = vmdScale * chm;
+  xcbar = vmdScale * chm;
+  xb    = vmdScale * bot;
+  xbbar = vmdScale * bot;
 
-  // Subdivision of valence and sea.
-  xuVal = rescale * uv;
-  xuSea = rescale * ub;
-  xdVal = rescale * uv;
-  xdSea = rescale * ub;
+  // idSav = 9 to indicate that all flavours reset.
+  idSav = 9;
+
+}
+
+//==========================================================================
+
+// Gives the GRS 1999 pi+ (leading order) parton distribution function set
+// in parametrized form. See reference
+// M. Glueck, E. Reya and I. Schienbein, Eur. Phys. J. C 10, 313–317 (1999).
+// Allowed variable range: 0.50 GeV^2 < Q^2 < 10^5 GeV^2 and 10^-5 < x < 1.
+
+void GRSpiL::xfUpdate(int , double x, double Q2) {
+
+  // Constrain Q2 for which parametrization is valid.
+  if (Q2 < 0.50)
+    Q2 = 0.50;
+
+  // Common expressions.
+  double mu2  = 0.26;
+  double lam2 = 0.204 * 0.204;
+  double s    = log( log(Q2/lam2) / log(mu2/lam2) );
+  double s2   = s * s;
+  double sS   = sqrt(s);
+  double x1   = 1. - x;
+  double xL   = -log(x);
+  double xS   = sqrt(x);
+
+  // Valence and sea content.
+  double xVal, xSea;
+
+  // Valence:
+  {
+    double N = 1.212 + 0.498 * s + 0.009 * s2;
+    double a = 0.517 - 0.020 * s;
+    double A = -0.037 - 0.578 * s;
+    double B = 0.241 + 0.251 * s;
+    double D = 0.383 + 0.624 * s;
+    xVal = vmdScale * 0.5 * N * pow(x, a) * (1 + A * xS + B * x)
+      * pow(x1, D);
+  }
+
+  // Sea:
+  {
+    double alpha = 1.147, beta = 1.241;
+    double a = 0.309 - 0.134 * sS;
+    double b = 0.893 - 0.264 * sS;
+    double A = 0.219 - 0.054 * s;
+    double B = -0.593 + 0.240 * s;
+    double C = 1.100 - 0.452 * s;
+    double D = 3.526 + 0.491 * s;
+    double E = 4.521 + 1.583 * s;
+    double Ep = 3.102;
+    xSea = vmdScale * pow(x1, D) * ( pow(x, a) * (A + B * xS + C * x)
+      * pow(xL, b) + pow(s, alpha) * exp(-E + sqrt(Ep * pow(s, beta) * xL)) );
+  }
+
+  // light quarks
+  xu = xdbar = xVal + xSea;
+  xd = xubar = xSea;
+
+  // Glue:
+  {
+    double alpha = 0.504, beta = 0.226;
+    double a = 2.251 - 1.339 * sS;
+    double A = 2.668 - 1.265 * s + 0.156 * s2;
+    double B = -1.839 + 0.386 * s;
+    double C = -1.014 + 0.920 * s - 0.101 * s2;
+    double D = -0.077 + 1.466 * s;
+    double E = 1.245 + 1.833 * s;
+    double Ep = 0.510 + 3.844 * s;
+    xg = vmdScale * pow(x1, D) * ( pow(x, a) * (A + B * xS + C * x)
+      + pow(s, alpha) * exp(-E + sqrt(Ep * pow(s, beta) * xL)) );
+  }
+
+  // Sea s:
+  {
+    double alpha = 0.823, beta = 0.650;
+    double a = 1.036 - 0.709 * s;
+    double A = -1.245 + 0.713 * s;
+    double B = 5.580 - 1.281 * s;
+    double D = 2.746 - 0.191 * s;
+    double E = 5.101 + 1.294 * s;
+    double Ep = 4.854 - 0.437 * s;
+    xs = xsbar = vmdScale * pow(s, alpha) / pow(xL, a) * (1 + A * xS + B * x)
+      * pow(x1, D) * exp(-E + sqrt(Ep * pow(s, beta) * xL));
+  }
+
+  // No charm or bottom.
+  xc = xcbar = 0.0;
+  xb = xbbar = 0.0;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2397,14 +2580,8 @@ void PomFix::xfUpdate(int , double x, double) {
   xdbar = xu;
   xs    = PomStrangeSupp * xu;
   xsbar = xs;
-  xc    = 0.;
-  xb    = 0.;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = xu;
-  xdVal = 0.;
-  xdSea = xd;
+  xc = xcbar = 0.;
+  xb = xbbar = 0.;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2537,14 +2714,8 @@ void PomH1FitAB::xfUpdate(int , double x, double Q2) {
   xdbar = xu;
   xs    = xu;
   xsbar = xu;
-  xc    = 0.;
-  xb    = 0.;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = xu;
-  xdVal = 0.;
-  xdSea = xu;
+  xc = xcbar = 0.;
+  xb = xbbar = 0.;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2709,13 +2880,9 @@ void PomH1Jets::xfUpdate(int , double x, double Q2) {
   xs    = xu;
   xsbar = xu;
   xc    = rescale * ch * 9./8.;
+  xcbar = rescale * ch * 9./8.;
   xb    = 0.;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = xu;
-  xdVal = 0.;
-  xdSea = xd;
+  xbbar = 0.;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2739,16 +2906,10 @@ void PomHISASD::xfUpdate(int, double x, double Q2) {
   xd = xdbar = fac * pPDFPtr->xfSea(1, xx, Q2);
   xu = xubar = fac * pPDFPtr->xfSea(2, xx, Q2);
   xs = xsbar = fac * pPDFPtr->xfSea(3, xx, Q2);
-  xc =         fac * pPDFPtr->xfSea(4, xx, Q2);
-  xb =         fac * pPDFPtr->xfSea(5, xx, Q2);
+  xc = xcbar = fac * pPDFPtr->xfSea(4, xx, Q2);
+  xb = xbbar = fac * pPDFPtr->xfSea(5, xx, Q2);
   xg =         fac * pPDFPtr->xfSea(21, xx, Q2);
   xlepton = xgamma = 0.0;
-
-  // Subdivision of valence and sea.
-  xuVal = 0.;
-  xuSea = xu;
-  xdVal = 0.;
-  xdSea = xd;
 
   // idSav = 9 to indicate that all flavours reset.
   idSav = 9;
@@ -2796,13 +2957,18 @@ void Lepton::xfUpdate(int id, double x, double Q2) {
 
   // Photons with restricted virtuality.
   double sCM = infoPtr->s();
-  double m2s = 4 * m2Lep / sCM;
-  if (pow2(1. - x) - m2s <= 0.) xgamma = 0.;
+  if (sCM == 0)
+    xgamma = 0.;
   else {
-    double Q2minGamma = 2. * m2Lep * pow2(x)
-      / ( 1. - x - m2s + sqrt(1. - m2s) * sqrt( pow2(1. - x) - m2s ) );
-    xgamma = (Q2minGamma < Q2maxGamma) ? (0.5 * ALPHAEM / M_PI)
-      * (1. + pow2(1. - x)) * log( Q2maxGamma / Q2minGamma ) : 0.;
+    double m2s = 4 * m2Lep / sCM;
+    if (pow2(1. - x) - m2s <= 0.)
+      xgamma = 0.;
+    else {
+      double Q2minGamma = 2. * m2Lep * pow2(x)
+        / ( 1. - x - m2s + sqrt(1. - m2s) * sqrt( pow2(1. - x) - m2s ) );
+      xgamma = (Q2minGamma < Q2maxGamma) ? (0.5 * ALPHAEM / M_PI)
+        * (1. + pow2(1. - x)) * log( Q2maxGamma / Q2minGamma ) : 0.;
+    }
   }
 
   // idSav = 9 to indicate that all flavours reset.
@@ -2864,28 +3030,18 @@ void CJKL::xfUpdate(int , double x, double Q2) {
   double hlBottom  = hadronlikeB(x*xMaxB,s,Q2)*xMaxB;
 
   // Sum different contributions together.
-  xg     = ALPHAEM*( plLog*plGluon   + hlGluon );
-  xu     = ALPHAEM*( plLog*plUp      + 0.5*hlVal + hlSea );
-  xd     = ALPHAEM*( plLog*plDown    + 0.5*hlVal + hlSea );
-  xubar  = xu;
-  xdbar  = xd;
-  xs     = ALPHAEM*( plLog*plStrange + hlSea );
-  xsbar  = xs;
-  xc     = ALPHAEM*( plLog*plCharm   + hlCharm );
-  xb     = ALPHAEM*( plLog*plBottom  + hlBottom );
+  xg     = ALPHAEM * ( plLog*plGluon   + hlGluon );
   xgamma = 0;
-
-  // Subdivision of valence and sea.
-  xuVal = ALPHAEM*( plLog*plUp + 0.5*hlVal );
-  xuSea = ALPHAEM*( hlSea );
-  xdVal = ALPHAEM*( plLog*plDown + 0.5*hlVal );
-  xdSea = ALPHAEM*( hlSea );
-  xsVal = ALPHAEM*( plLog*plStrange );
-  xsSea = ALPHAEM*( hlSea );
-  xcVal = ALPHAEM*( plLog*plCharm );
-  xcSea = ALPHAEM*( hlCharm );
-  xbVal = ALPHAEM*( plLog*plBottom );
-  xbSea = ALPHAEM*( hlBottom );
+  xu     = ALPHAEM * ( plLog*plUp      + 0.5*hlVal + hlSea );
+  xd     = ALPHAEM * ( plLog*plDown    + 0.5*hlVal + hlSea );
+  xs     = ALPHAEM * ( plLog*plStrange + hlSea );
+  xc     = ALPHAEM * ( plLog*plCharm   + hlCharm );
+  xb     = ALPHAEM * ( plLog*plBottom  + hlBottom );
+  xubar  = ALPHAEM * hlSea;
+  xdbar  = ALPHAEM * hlSea;
+  xsbar  = ALPHAEM * hlSea;
+  xcbar  = ALPHAEM * hlCharm;
+  xbbar  = ALPHAEM * hlBottom;
 
   // When below valid Q^2 values approximate scale evolution with log(Q^2).
   // Approximation derived by integrating xf over x and calculating the
@@ -2902,17 +3058,9 @@ void CJKL::xfUpdate(int , double x, double Q2) {
     xs    *= logApprox;
     xsbar *= logApprox;
     xc    *= logApprox;
+    xcbar *= logApprox;
     xb    *= logApprox;
-    xuVal *= logApprox;
-    xuSea *= logApprox;
-    xdVal *= logApprox;
-    xdSea *= logApprox;
-    xsVal *= logApprox;
-    xsSea *= logApprox;
-    xcVal *= logApprox;
-    xcSea *= logApprox;
-    xbVal *= logApprox;
-    xbSea *= logApprox;
+    xbbar *= logApprox;
   }
 
   // idSav = 9 to indicate that all flavours reset.
@@ -3440,6 +3588,8 @@ void Lepton2gamma::xfUpdate(int , double x, double Q2) {
     xubar  = 0.;
     xdbar  = 0.;
     xsbar  = 0.;
+    xcbar  = 0.;
+    xbbar  = 0.;
     xGm    = 1.;
     return;
   }
@@ -3483,6 +3633,8 @@ void Lepton2gamma::xfUpdate(int , double x, double Q2) {
   xubar  = xu;
   xdbar  = xd;
   xsbar  = xs;
+  xcbar  = xc;
+  xbbar  = xb;
 
   // Photon inside electron not currently implemented (Use point-like lepton).
   xgamma = 0;
@@ -3678,6 +3830,8 @@ void EPAexternal::xfUpdate(int , double x, double Q2) {
     xdbar = xd;
     xubar = xu;
     xsbar = xs;
+    xcbar = xc;
+    xbbar = xb;
   }
 
   // idSav = 9 to indicate that all flavours reset.
@@ -3785,11 +3939,11 @@ double EPAexternal::intFluxApprox() {
 
 // Inherited class for nuclear PDFs. Needs a proton PDF as a baseline.
 
-void nPDF::initNPDF(PDFPtr protonPDFPtrIn) {
+void nPDF::initNPDF(int idBeamIn, PDFPtr protonPDFPtrIn) {
 
   // Derive mass number and number of protons.
-  a = (idBeam/10) % 1000;
-  z = (idBeam/10000) % 1000;
+  a = (idBeamIn/10) % 1000;
+  z = (idBeamIn/10000) % 1000;
 
   // Normalized number of protons and neutrons in nuclei.
   resetMode();
@@ -3837,8 +3991,8 @@ void nPDF::xfUpdate(int id, double x, double Q2) {
   xubar  = za * xfub * ru + na * xfdb * rd;
   xs     = rs * protonPDFPtr->xf( 3, x, Q2);
   xsbar  = rs * protonPDFPtr->xf(-3, x, Q2);
-  xc     = rc * protonPDFPtr->xf( 4, x, Q2);
-  xb     = rb * protonPDFPtr->xf( 5, x, Q2);
+  xc = xcbar = rc * protonPDFPtr->xf( 4, x, Q2);
+  xb = xbbar = rb * protonPDFPtr->xf( 5, x, Q2);
   xg     = rg * protonPDFPtr->xf(21, x, Q2);
   xgamma = 0.;
 

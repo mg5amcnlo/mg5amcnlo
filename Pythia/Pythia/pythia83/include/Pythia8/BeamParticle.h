@@ -1,5 +1,5 @@
 // BeamParticle.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -135,9 +135,9 @@ class BeamParticle : public PhysicsBase {
 public:
 
   // Constructor.
-  BeamParticle() : pdfBeamPtr(),
-    pdfHardBeamPtr(), pdfUnresBeamPtr(), pdfBeamPtrSave(),
-    pdfHardBeamPtrSave(), flavSelPtr(), allowJunction(), beamJunction(),
+  BeamParticle() : pdfBeamPtr(), pdfHardBeamPtr(), pdfUnresBeamPtr(),
+    pdfBeamPtrSave(), pdfHardBeamPtrSave(), pdfSavePtrs(),
+    pdfSaveIdx(-1), flavSelPtr(), allowJunction(), beamJunction(),
     maxValQuark(), companionPower(), valencePowerMeson(), valencePowerUinP(),
     valencePowerDinP(), valenceDiqEnhance(), pickQuarkNorm(), pickQuarkPower(),
     diffPrimKTwidth(), diffLargeMassSuppress(), beamSat(), gluonPower(),
@@ -159,6 +159,9 @@ public:
     PDFPtr pdfInPtr, PDFPtr pdfHardInPtr, bool isUnresolvedIn,
     StringFlav* flavSelPtrIn);
 
+  // Initialize only the id.
+  void initID( int idIn) { idBeam = idIn; initBeamKind();}
+
   // Initialize only the two pdf pointers.
   void initPDFPtr(PDFPtr pdfInPtr, PDFPtr pdfHardInPtr) {
     pdfBeamPtr = pdfInPtr; pdfHardBeamPtr = pdfHardInPtr; }
@@ -166,8 +169,21 @@ public:
   // Initialize additional PDF pointer for unresolved beam.
   void initUnres(PDFPtr pdfUnresInPtr);
 
+  // Initialize array of PDFs for switching between them.
+  void initSwitchID( const vector<PDFPtr>& pdfSavePtrsIn) {
+    pdfSavePtrs = pdfSavePtrsIn; }
+
   // For mesons like pi0 valence content varies from event to event.
   void newValenceContent();
+  void setValenceContent(int idq1, int idq2 = 0, int idq3 = 0);
+
+  // Switch to new beam particle identity; for similar hadrons only.
+  void setBeamID( int idIn, int iPDFin = -1) {idBeam = idIn;
+    if ( iPDFin >= 0 && iPDFin < int(pdfSavePtrs.size())
+      && iPDFin != pdfSaveIdx ) {
+      pdfBeamPtr = pdfSavePtrs[iPDFin]; pdfHardBeamPtr = pdfBeamPtr;
+      pdfSaveIdx = iPDFin; }
+    mBeam = particleDataPtr->m0(idIn); pdfBeamPtr->setBeamID(idIn); }
 
   // Set new pZ and E, but keep the rest the same.
   void newPzE( double pzIn, double eIn) {pBeam = Vec4( 0., 0., pzIn, eIn);}
@@ -458,6 +474,10 @@ private:
   PDFPtr          pdfUnresBeamPtr;
   PDFPtr          pdfBeamPtrSave;
   PDFPtr          pdfHardBeamPtrSave;
+
+  // Array of PDFs to be used when idA can be changed between events.
+  vector<PDFPtr>  pdfSavePtrs;
+  int             pdfSaveIdx;
 
   // Pointer to class for flavour generation.
   StringFlav*   flavSelPtr;

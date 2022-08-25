@@ -24,6 +24,7 @@
 #include <Pythia8/ResonanceWidths.h>
 #include <Pythia8/SLHAinterface.h>
 #include <Pythia8/Settings.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaProcess.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/SpaceShower.h>

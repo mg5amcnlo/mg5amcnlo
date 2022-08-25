@@ -1,5 +1,5 @@
 // MultipartonInteractions.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -363,10 +363,14 @@ bool MultipartonInteractions::init( bool doMPIinit, int iDiffSysIn,
   iDiffSys         = iDiffSysIn;
   partonVertexPtr  = partonVertexPtrIn;
   hasGamma         = hasGammaIn;
-  if (!doMPIinit) return false;
+  if (!doMPIinit) {
+    mpis = vector<MPIInterpolationInfo>(1);
+    mpis[0].init(1);
+    return false;
+  }
 
-  // If both beams are baryons then softer PDF's than for mesons/Pomerons.
-  hasBaryonBeams  = ( beamAPtr->isBaryon() && beamBPtr->isBaryon() );
+
+  // Identify either or both beams as pomerons.
   hasPomeronBeams = ( beamAPtr->id() == 990 || beamBPtr->id() == 990 );
 
   // Matching in pT of hard interaction to further interactions.
@@ -512,10 +516,21 @@ bool MultipartonInteractions::init( bool doMPIinit, int iDiffSysIn,
   doVarEcm    = flag("Beams:allowVariableEnergy");
   if (iDiffSys > 0 || hasGamma) doVarEcm = false;
 
+  // Special option with variable incoming projectile.
+  allowIDAswitch = flag("Beams:allowIDAswitch");
+  if (!allowIDAswitch || iDiffSys > 1) nPDFA = 1;
+  iPDFA     = 0;
+  iPDFAsave = -1;
+
   // Limits on invariant mass of gm+gm system.
   mGmGmMin     = parm("Photon:Wmin");
   mGmGmMax     = parm("Photon:Wmax");
   if ( mGmGmMax < mGmGmMin ) mGmGmMax = eCM;
+
+  // Optionally symmetrize particle-particle and particle-antiparticle.
+  setAntiSame    = flag("MultipartonInteractions:setAntiSame");
+  setAntiSameNow = setAntiSame && particleDataPtr->hasAnti(infoPtr->idA())
+    && particleDataPtr->hasAnti(infoPtr->idB());
 
   // Get the total inelastic and nondiffractive cross section.
   // Ensure correct cross sections for VMD photons.
@@ -527,265 +542,317 @@ bool MultipartonInteractions::init( bool doMPIinit, int iDiffSysIn,
   // Ensure correct cross sections also for non-VMD photon beams.
   else if  ( (isGammaGamma || isGammaHadron || isHadronGamma) && !hasGamma)
     sigmaTotPtr->calc(infoPtr->idA(), infoPtr->idB(), infoPtr->eCM());
-  if (!sigmaTotPtr->hasSigmaTot()) return false;
+  if (!sigmaTotPtr->hasSigmaTot()) {
+    infoPtr->errorMsg("Error in MultipartonInteractions::init: "
+      "no total cross section");
+    return false;
+  }
   bool isNonDiff = (iDiffSys == 0);
   sigmaND = sigmaTotPtr->sigmaND();
+  if (setAntiSameNow) {
+    sigmaTotPtr->calc(infoPtr->idA(), -infoPtr->idB(), infoPtr->eCM());
+    sigmaND = 0.5 * (sigmaND + sigmaTotPtr->sigmaND());
+  }
   double sigmaMaxViol = 0.;
 
-  // Output initialization info - first part.
-  bool showMPI = flag("Init:showMultipartonInteractions");
-  if (showMPI) {
-    cout << "\n *-------  PYTHIA Multiparton Interactions Initialization  "
-         << "---------* \n"
-         << " |                                                        "
-         << "          | \n";
-    if (!doVarEcm && isNonDiff && !hasGamma)
-      cout << " |                   sigmaNonDiffractive = " << setprecision(2)
-           << ((sigmaND > 1.) ? fixed : scientific) << setw(8) << sigmaND
-           << " mb              | \n";
-    else if (doVarEcm)
-      cout << " |                          non-diffractive               "
-           << "          | \n";
-    else if (iDiffSys == 1)
-      cout << " |                          diffraction XB                "
-           << "          | \n";
-    else if (iDiffSys == 2)
-      cout << " |                          diffraction AX                "
-           << "          | \n";
-    else if (iDiffSys == 3)
-      cout << " |                          diffraction AXB               "
-           << "          | \n";
-    else if ( hasGamma && isGammaGamma )
-      cout << " |                     A+B -> gamma+gamma -> X            "
-           << "          | \n";
-    else if ( hasGamma && isGammaHadron )
-      cout << " |                       A+B -> gamma+B -> X              "
-           << "          | \n";
-    else if ( hasGamma && isHadronGamma )
-      cout << " |                       A+B -> A+gamma -> X              "
-           << "          | \n";
-    cout << " |                                                        "
-         << "          | \n";
-  }
+  // Read or write initialization data from/to file, to save time.
+  reuseInit = mode("MultipartonInteractions:reuseInit");
+  initFile  = word("MultipartonInteractions:initFile");
+  int idBsave = infoPtr->idB();
+  bool reuseWorked = (reuseInit == 2 || reuseInit == 3) && loadMPIdata();
+  if (!reuseWorked)
+    mpis = vector<MPIInterpolationInfo>(nPDFA);
 
-  // Normally fixed collision cm energy.
-  nStep       = 1;
-  eStepMin    = 1.;
-  eStepMax    = 1.;
-  eStepSize   = 1.;
-  // For variable-energy beams cover range of cm energies.
-  if (doVarEcm || iDiffSys > 0 || hasGamma) {
-    if (doVarEcm) {
-      eStepMin  = parm("Beams:eMinPert");
-      eStepMax  = eCM;
-    // For diffraction cover range of diffractive masses.
-    } else if (iDiffSys > 0) {
-      eStepMin  = mMinPertDiff;
-      eStepMax  = mMaxPertDiff;
-    // For photons from lepton cover range of gm+gm invariant masses.
-    } else {
-      eStepMin  = mGmGmMin;
-      eStepMax  = mGmGmMax;
+  // Loop over multiple beam A initializations if necessary.
+  if (!reuseWorked)
+  for (int iPA = 0; iPA < nPDFA; ++iPA) {
+    // Do not switch for Pomeron beam.
+    if (nPDFA != 1 && iDiffSys < 2) {
+      beamAPtr->setBeamID( idAList[iPA], iPA);
+      infoPtr->setBeamIDs( idAList[iPA], idBsave);
     }
-    nStep     = min( 20, int( 2. + 2. * log( eStepMax / eStepMin)) );
-    eStepSize   = log( eStepMax / eStepMin) / (nStep - 1.);
-  }
 
-  // Loop over masses for which to initialize generation.
-  for (int iStep = 0; iStep < nStep; ++iStep) {
-    if (nStep > 1) {
-      eCM = eStepMin * pow( eStepMax / eStepMin, iStep / (nStep - 1.) );
-      sCM = eCM * eCM;
+    // Output initialization info - first part.
+    bool showMPI = flag("Init:showMultipartonInteractions");
+    if (showMPI) {
+      cout << "\n *-------  PYTHIA Multiparton Interactions Initialization  "
+          << "---------* \n"
+          << " |                                                        "
+          << "          | \n";
+      if (!doVarEcm && isNonDiff && !hasGamma)
+        cout << " |                   sigmaNonDiffractive = "
+            << setprecision(2) << ((sigmaND > 1.) ? fixed : scientific)
+            << setw(8) << sigmaND << " mb              | \n";
+      else if (!hasGamma) {
+        string diffTypeData[] = {"non-diffractive", "diffraction XB",
+          "diffraction AX", "diffraction AXB"};
+        string diffType = " |   " + diffTypeData[iDiffSys] + " for "
+          + particleDataPtr->name(infoPtr->idA()) + " on "
+          + particleDataPtr->name(infoPtr->idB());
+        string pad( max( 0, 67 - int(diffType.length())), ' ');
+        diffType += pad + " | \n";
+        cout << diffType;
+      } else if ( hasGamma && isGammaGamma )
+        cout << " |                     A+B -> gamma+gamma -> X            "
+            << "          | \n";
+      else if ( hasGamma && isGammaHadron )
+        cout << " |                       A+B -> gamma+B -> X              "
+            << "          | \n";
+      else if ( hasGamma && isHadronGamma )
+        cout << " |                       A+B -> A+gamma -> X              "
+            << "          | \n";
+      cout << " |                                                        "
+          << "          | \n";
+    }
 
-      // Nondiffractive cross section at current mass.
+    // Normally fixed collision cm energy.
+    nStep       = 1;
+    eStepMin    = 1.;
+    eStepMax    = 1.;
+    eStepSize   = 1.;
+    // For variable-energy beams cover range of cm energies.
+    if (doVarEcm || iDiffSys > 0 || hasGamma) {
       if (doVarEcm) {
-        sigmaTotPtr->calc( beamAPtr->id(), beamBPtr->id(), eCM );
-        sigmaND = sigmaTotPtr->sigmaND();
-        if (showMPI) cout << " |   collision energy = " << scientific
-          << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
-          << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
-          << setw(8) << sigmaND << " mb    | \n";
-
-      // MPI for diffractive events. Rescale Pom/p flux to use for Pom/gamma.
-      } else if (hasPomeronBeams) {
-        double gamPomRatio = 1.;
-        if (hasGamma) {
-          sigmaTotPtr->calc(22, 2212, eCM);
-          double sigGamP = sigmaTotPtr->sigmaTot();
-          sigmaTotPtr->calc(2212, 2212, eCM);
-          double sigPP   = sigmaTotPtr->sigmaTot();
-          gamPomRatio = sigGamP / sigPP;
-        }
-        sigmaND = gamPomRatio * sigmaPomP * pow( eCM / mPomP, pPomP);
-        if (showMPI) cout << " |   diffractive mass = " << scientific
-          << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
-          << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
-          << setw(8) << sigmaND << " mb    | \n";
-
-        // Keep track of pomeron momentum fraction.
-        if ( beamAPtr->id() == 990 && beamBPtr->id() == 990 ) {
-          beamAPtr->xPom(eCM/eCMsave);
-          beamBPtr->xPom(eCM/eCMsave);
-        }
-        else if ( beamAPtr->id() == 990 )
-          beamAPtr->xPom(pow2(eCM/eCMsave));
-        else if ( beamBPtr->id() == 990 )
-          beamBPtr->xPom(pow2(eCM/eCMsave));
-
-      // MPI with photons from leptons.
+        eStepMin  = parm("Beams:eMinPert");
+        eStepMax  = eCM;
+      // For diffraction cover range of diffractive masses.
+      } else if (iDiffSys > 0) {
+        eStepMin  = mMinPertDiff;
+        eStepMax  = mMaxPertDiff;
+      // For photons from lepton cover range of gm+gm invariant masses.
       } else {
+        eStepMin  = mGmGmMin;
+        eStepMax  = mGmGmMax;
+      }
+      nStep     = min( 20, int( 2. + 2. * log( eStepMax / eStepMin)) );
+      if ( eStepMax >= eStepMin )
+        eStepSize   = log( eStepMax / eStepMin) / (nStep - 1.);
+      else
+        nStep       = 0;
+    }
 
-        // Hadron-photon case.
-        if ( isHadronGamma ) {
-          sigmaTotPtr->calc( beamAPtr->id(), 22, eCM );
+    // Save for possible reuse.
+    mpis[iPA].nStepSave     = nStep;
+    mpis[iPA].eStepMinSave  = eStepMin;
+    mpis[iPA].eStepMaxSave  = eStepMax;
+    mpis[iPA].eStepSizeSave = eStepSize;
+    mpis[iPA].init(nStep);
+
+    // Loop over masses for which to initialize generation.
+    for (int iStep = 0; iStep < nStep; ++iStep) {
+      if (nStep > 1) {
+        eCM = eStepMin * pow( eStepMax / eStepMin, iStep / (nStep - 1.) );
+        sCM = eCM * eCM;
+
+        // Nondiffractive cross section at current mass.
+        if (doVarEcm) {
+          sigmaTotPtr->calc( beamAPtr->id(), beamBPtr->id(), eCM );
           sigmaND = sigmaTotPtr->sigmaND();
-          if (showMPI) cout << " |   hadron+gamma eCM = " << scientific
+          if (setAntiSameNow) {
+            sigmaTotPtr->calc( beamAPtr->id(), -beamBPtr->id(), eCM );
+            sigmaND = 0.5 * (sigmaND + sigmaTotPtr->sigmaND());
+          }
+          if (showMPI) cout << " |   collision energy = " << scientific
             << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
             << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
             << setw(8) << sigmaND << " mb    | \n";
 
-        // Photon-hadron case.
-        } else if ( isGammaHadron )  {
-          sigmaTotPtr->calc( 22, beamBPtr->id(), eCM );
-          sigmaND = sigmaTotPtr->sigmaND();
-          if (showMPI) cout << " |   gamma+hadron eCM = " << scientific
+        // MPI for diffractive events. Rescale Pom/p flux to use for Pom/gamma.
+        } else if (hasPomeronBeams) {
+          double gamPomRatio = 1.;
+          if (hasGamma) {
+            sigmaTotPtr->calc(22, 2212, eCM);
+            double sigGamP = sigmaTotPtr->sigmaTot();
+            sigmaTotPtr->calc(2212, 2212, eCM);
+            double sigPP   = sigmaTotPtr->sigmaTot();
+            if (setAntiSameNow) {
+              sigmaTotPtr->calc(2212, -2212, eCM);
+              sigPP   = 0.5 * (sigPP + sigmaTotPtr->sigmaTot());
+            }
+            gamPomRatio = sigGamP / sigPP;
+          }
+          sigmaND = gamPomRatio * sigmaPomP * pow( eCM / mPomP, pPomP);
+          if (showMPI) cout << " |   diffractive mass = " << scientific
             << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
             << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
             << setw(8) << sigmaND << " mb    | \n";
 
-        // Photon-photon case.
+          // Keep track of pomeron momentum fraction.
+          if ( beamAPtr->id() == 990 && beamBPtr->id() == 990 ) {
+            beamAPtr->xPom(eCM/eCMsave);
+            beamBPtr->xPom(eCM/eCMsave);
+          }
+          else if ( beamAPtr->id() == 990 )
+            beamAPtr->xPom(pow2(eCM/eCMsave));
+          else if ( beamBPtr->id() == 990 )
+            beamBPtr->xPom(pow2(eCM/eCMsave));
+
+        // MPI with photons from leptons.
         } else {
-          sigmaTotPtr->calc( 22, 22, eCM );
-          sigmaND = sigmaTotPtr->sigmaND();
-          if (showMPI) cout << " |    gamma+gamma eCM = " << scientific
-            << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
-            << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
-            << setw(8) << sigmaND << " mb    | \n";
+
+          // Hadron-photon case.
+          if ( isHadronGamma ) {
+            sigmaTotPtr->calc( beamAPtr->id(), 22, eCM );
+            sigmaND = sigmaTotPtr->sigmaND();
+            if (showMPI) cout << " |   hadron+gamma eCM = " << scientific
+              << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
+              << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
+              << setw(8) << sigmaND << " mb    | \n";
+
+          // Photon-hadron case.
+          } else if ( isGammaHadron )  {
+            sigmaTotPtr->calc( 22, beamBPtr->id(), eCM );
+            sigmaND = sigmaTotPtr->sigmaND();
+            if (showMPI) cout << " |   gamma+hadron eCM = " << scientific
+              << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
+              << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
+              << setw(8) << sigmaND << " mb    | \n";
+
+          // Photon-photon case.
+          } else {
+            sigmaTotPtr->calc( 22, 22, eCM );
+            sigmaND = sigmaTotPtr->sigmaND();
+            if (showMPI) cout << " |    gamma+gamma eCM = " << scientific
+              << setprecision(2) << setw(8) << eCM << " GeV and sigmaNorm = "
+              << ((sigmaND > SIGMAMBLIMIT) ? fixed : scientific)
+              << setw(8) << sigmaND << " mb    | \n";
+          }
+        }
+
+      }
+
+      // Set current pT0 scale according to chosed parametrization.
+      if (pT0paramMode == 0) pT0 = pT0Ref * pow(eCM / ecmRef, ecmPow);
+      else                   pT0 = pT0Ref + ecmPow * log (eCM / ecmRef);
+
+      // The pT0 value may need to be decreased, if sigmaInt < sigmaND.
+      double pT4dSigmaMaxBeg = 0.;
+      for ( ; ; ) {
+
+        // Derived pT kinematics combinations.
+        pT20         = pT0*pT0;
+        pT2min       = pTmin*pTmin;
+        pTmax        = 0.5*eCM;
+        pT2max       = pTmax*pTmax;
+        pT20R        = RPT20 * pT20;
+        pT20minR     = pT2min + pT20R;
+        pT20maxR     = pT2max + pT20R;
+        pT20min0maxR = pT20minR * pT20maxR;
+        pT2maxmin    = pT2max - pT2min;
+
+        // Provide upper estimate of interaction rate d(Prob)/d(pT2).
+        upperEnvelope();
+
+        // Setup binning in b for x-dependent matter profile.
+        if (bProfile == 4) {
+          sigmaIntWgt.resize(XDEP_BBIN);
+          sigmaSumWgt.resize(XDEP_BBIN);
+          bstepNow = XDEP_BSTEP;
+        }
+
+        // Integrate the parton-parton interaction cross section.
+        pT4dSigmaMaxBeg = pT4dSigmaMax;
+        jetCrossSection();
+
+        // If the overlap-weighted cross section has not fallen below
+        // cutoff, then increase bin size in b and reintegrate.
+        while (bProfile == 4
+          && sigmaIntWgt[XDEP_BBIN - 1] > XDEP_CUTOFF * sigmaInt) {
+          bstepNow += XDEP_BSTEPINC;
+          jetCrossSection();
+        }
+
+        // Sufficiently big SigmaInt or reduce pT0; maybe also pTmin.
+        if (sigmaInt > SIGMASTEP * sigmaND) break;
+        if (showMPI) cout << fixed << setprecision(2) << " |    pT0 = "
+          << setw(5) << pT0 << " gives sigmaInteraction = " << setw(8)
+          << ((sigmaInt > SIGMAMBLIMIT) ? fixed : scientific) << sigmaInt
+          << " mb: rejected    | \n";
+        if (pTmin > pT0) pTmin *= PT0STEP;
+        pT0 *= PT0STEP;
+
+        // Give up if pT0 and pTmin fall too low.
+        if ( max(pT0, pTmin) < max(PT0MIN, Lambda3) ) {
+          infoPtr->errorMsg("Error in MultipartonInteractions::init:"
+            " failed to find acceptable pT0 and pTmin");
+          infoPtr->setTooLowPTmin(true);
+          return false;
         }
       }
 
-    }
-
-    // Set current pT0 scale according to chosed parametrization.
-    if (pT0paramMode == 0) pT0 = pT0Ref * pow(eCM / ecmRef, ecmPow);
-    else                   pT0 = pT0Ref + ecmPow * log (eCM / ecmRef);
-
-    // The pT0 value may need to be decreased, if sigmaInt < sigmaND.
-    double pT4dSigmaMaxBeg = 0.;
-    for ( ; ; ) {
-
-      // Derived pT kinematics combinations.
-      pT20         = pT0*pT0;
-      pT2min       = pTmin*pTmin;
-      pTmax        = 0.5*eCM;
-      pT2max       = pTmax*pTmax;
-      pT20R        = RPT20 * pT20;
-      pT20minR     = pT2min + pT20R;
-      pT20maxR     = pT2max + pT20R;
-      pT20min0maxR = pT20minR * pT20maxR;
-      pT2maxmin    = pT2max - pT2min;
-
-      // Provide upper estimate of interaction rate d(Prob)/d(pT2).
-      upperEnvelope();
-
-      // Setup binning in b for x-dependent matter profile.
-      if (bProfile == 4) {
-        sigmaIntWgt.resize(XDEP_BBIN);
-        sigmaSumWgt.resize(XDEP_BBIN);
-        bstepNow = XDEP_BSTEP;
-      }
-
-      // Integrate the parton-parton interaction cross section.
-      pT4dSigmaMaxBeg = pT4dSigmaMax;
-      jetCrossSection();
-
-      // If the overlap-weighted cross section has not fallen below
-      // cutoff, then increase bin size in b and reintegrate.
-      while (bProfile == 4
-        && sigmaIntWgt[XDEP_BBIN - 1] > XDEP_CUTOFF * sigmaInt) {
-        bstepNow += XDEP_BSTEPINC;
-        jetCrossSection();
-      }
-
-      // Sufficiently big SigmaInt or reduce pT0; maybe also pTmin.
-      if (sigmaInt > SIGMASTEP * sigmaND) break;
+      // Output for accepted pT0.
       if (showMPI) cout << fixed << setprecision(2) << " |    pT0 = "
-        << setw(5) << pT0 << " gives sigmaInteraction = " << setw(8)
+        << setw(5) << pT0 << " gives sigmaInteraction = "<< setw(8)
         << ((sigmaInt > SIGMAMBLIMIT) ? fixed : scientific) << sigmaInt
-        << " mb: rejected    | \n";
-      if (pTmin > pT0) pTmin *= PT0STEP;
-      pT0 *= PT0STEP;
+        << " mb: accepted    | \n";
 
-      // Give up if pT0 and pTmin fall too low.
-      if ( max(pT0, pTmin) < max(PT0MIN, Lambda3) ) {
-        infoPtr->errorMsg("Error in MultipartonInteractions::init:"
-          " failed to find acceptable pT0 and pTmin");
-        infoPtr->setTooLowPTmin(true);
-        return false;
+      // Calculate factor relating matter overlap and interaction rate.
+      overlapInit();
+
+      // Maximum violation relative to first estimate.
+      sigmaMaxViol = max( sigmaMaxViol, pT4dSigmaMax / pT4dSigmaMaxBeg);
+
+      // Save values calculated.
+      if (nStep > 1 || reuseInit == 1 || reuseInit == 3) {
+        mpis[iPA].pT0Save[iStep]          = pT0;
+        mpis[iPA].pT4dSigmaMaxSave[iStep] = pT4dSigmaMax;
+        mpis[iPA].pT4dProbMaxSave[iStep]  = pT4dProbMax;
+        mpis[iPA].sigmaIntSave[iStep]     = sigmaInt;
+        for (int j = 0; j <= 100; ++j)
+          mpis[iPA].sudExpPTSave[iStep][j] = sudExpPT[j];
+        mpis[iPA].zeroIntCorrSave[iStep]  = zeroIntCorr;
+        mpis[iPA].normOverlapSave[iStep]  = normOverlap;
+        mpis[iPA].kNowSave[iStep]         = kNow;
+        mpis[iPA].bAvgSave[iStep]         = bAvg;
+        mpis[iPA].bDivSave[iStep]         = bDiv;
+        mpis[iPA].probLowBSave[iStep]     = probLowB;
+        mpis[iPA].fracAhighSave[iStep]    = fracAhigh;
+        mpis[iPA].fracBhighSave[iStep]    = fracBhigh;
+        mpis[iPA].fracChighSave[iStep]    = fracBhigh;
+        mpis[iPA].fracABChighSave[iStep]  = fracABChigh;
+        mpis[iPA].cDivSave[iStep]         = cDiv;
+        mpis[iPA].cMaxSave[iStep]         = cMax;
       }
+
+    // End of loop over energies or diffractive/invariant gamma+gamma masses.
     }
 
-    // Output for accepted pT0.
-    if (showMPI) cout << fixed << setprecision(2) << " |    pT0 = "
-      << setw(5) << pT0 << " gives sigmaInteraction = "<< setw(8)
-      << ((sigmaInt > SIGMAMBLIMIT) ? fixed : scientific) << sigmaInt
-      << " mb: accepted    | \n";
+    // Reset pomeron momentum fraction.
+    beamAPtr->xPom();
+    beamBPtr->xPom();
 
-    // Calculate factor relating matter overlap and interaction rate.
-    overlapInit();
+    // Output details for x-dependent matter profile.
+    if (bProfile == 4 && showMPI)
+      cout << " |                                              "
+          << "                    | \n"
+          << fixed << setprecision(2)
+          << " |  x-dependent matter profile: a1 = " << a1 << ", "
+          << "a0 = " << a0now * XDEP_SMB2FM << ", bStep = "
+          << bstepNow << "  | \n";
 
-    // Maximum violation relative to first estimate.
-    sigmaMaxViol = max( sigmaMaxViol, pT4dSigmaMax / pT4dSigmaMaxBeg);
+    // End initialization printout.
+    if (showMPI) cout << " |                                              "
+      << "                    | \n"
+      << " *-------  End PYTHIA Multiparton Interactions Initialization"
+      << "  -----* " << endl;
 
-    // Save values calculated.
-    if (nStep > 1) {
-      pT0Save[iStep]          = pT0;
-      pT4dSigmaMaxSave[iStep] = pT4dSigmaMax;
-      pT4dProbMaxSave[iStep]  = pT4dProbMax;
-      sigmaIntSave[iStep]     = sigmaInt;
-      for (int j = 0; j <= 100; ++j) sudExpPTSave[iStep][j] = sudExpPT[j];
-      zeroIntCorrSave[iStep]  = zeroIntCorr;
-      normOverlapSave[iStep]  = normOverlap;
-      kNowSave[iStep]         = kNow;
-      bAvgSave[iStep]         = bAvg;
-      bDivSave[iStep]         = bDiv;
-      probLowBSave[iStep]     = probLowB;
-      fracAhighSave[iStep]    = fracAhigh;
-      fracBhighSave[iStep]    = fracBhigh;
-      fracChighSave[iStep]    = fracBhigh;
-      fracABChighSave[iStep]  = fracABChigh;
-      cDivSave[iStep]         = cDiv;
-      cMaxSave[iStep]         = cMax;
-   }
+    // Amount of violation from upperEnvelope to jetCrossSection.
+    if (sigmaMaxViol > 1.) {
+      ostringstream osWarn;
+      osWarn << "by factor " << fixed << setprecision(3) << sigmaMaxViol;
+      infoPtr->errorMsg("Warning in MultipartonInteractions::init:"
+        " maximum increased", osWarn.str());
+    }
 
-  // End of loop over energies or diffractive/invariant gamma+gamma masses.
+  // End of internal initialization. Optionally store outcome for reuse.
   }
 
-  // Reset pomeron momentum fraction.
-  beamAPtr->xPom();
-  beamBPtr->xPom();
+  if (reuseInit == 1 || (reuseInit == 3 && !reuseWorked) ) saveMPIdata();
 
-  // Output details for x-dependent matter profile.
-  if (bProfile == 4 && showMPI)
-    cout << " |                                              "
-         << "                    | \n"
-         << fixed << setprecision(2)
-         << " |  x-dependent matter profile: a1 = " << a1 << ", "
-         << "a0 = " << a0now * XDEP_SMB2FM << ", bStep = "
-         << bstepNow << "  | \n";
-
-  // End initialization printout.
-  if (showMPI) cout << " |                                              "
-     << "                    | \n"
-     << " *-------  End PYTHIA Multiparton Interactions Initialization"
-     << "  -----* " << endl;
-
-  // Amount of violation from upperEnvelope to jetCrossSection.
-  if (sigmaMaxViol > 1.) {
-    ostringstream osWarn;
-    osWarn << "by factor " << fixed << setprecision(3) << sigmaMaxViol;
-    infoPtr->errorMsg("Warning in MultipartonInteractions::init:"
-      " maximum increased", osWarn.str());
+  // Restore to default setup with option 0. Does not apply for Pomeron beam.
+  if (nPDFA != 1 && iDiffSys < 2) {
+    beamAPtr->setBeamID( idAList[0], 0);
+    infoPtr->setBeamIDs( idAList[0], idBsave);
   }
 
   // Reset statistics.
@@ -827,27 +894,39 @@ void MultipartonInteractions::reset( ) {
   // Update CM energy. Done if not diffraction and not new energy.
   eCM = infoPtr->eCM();
   sCM = eCM * eCM;
-  if (nStep == 1 || abs( eCM / eCMsave - 1.) < ECMDEV) return;
+  if (nStep == 1 || (iPDFA == iPDFAsave && abs( eCM / eCMsave - 1.) < ECMDEV))
+    return;
 
   // For variable-energy collisions, including photons from leptons,
   // calculate sigmaND at updated collision CM energy.
   if (doVarEcm || hasGamma) {
     sigmaTotPtr->calc( beamAPtr->id(), beamBPtr->id(), eCM );
     sigmaND = sigmaTotPtr->sigmaND();
+    if (setAntiSameNow) {
+      sigmaTotPtr->calc( beamAPtr->id(), -beamBPtr->id(), eCM );
+      sigmaND = 0.5 * (sigmaND + sigmaTotPtr->sigmaND());
+    }
   // Set fictitious Pomeron-proton cross section for diffractive system.
   } else sigmaND = sigmaPomP * pow( eCM / mPomP, pPomP);
 
+  // Update interpolation data.
+  iPDFAsave = iPDFA;
+  nStep     = mpis[iPDFA].nStepSave;
+  eStepMin  = mpis[iPDFA].eStepMinSave;
+  eStepMax  = mpis[iPDFA].eStepMaxSave;
+  eStepSize = mpis[iPDFA].eStepSizeSave;
+
   // Current interpolation point.
   eCMsave   = eCM;
-  eStepSave = log(eCM / eStepMin)     / eStepSize;
-  iStepFrom = max( 0, min( nStep - 2, int( eStepSave) ) );
+  eStepMix  = log(eCM / eStepMin)     / eStepSize;
+  iStepFrom = max( 0, min( nStep - 2, int( eStepMix) ) );
   iStepTo   = iStepFrom + 1;
-  eStepTo   = max( 0., min( 1., eStepSave - iStepFrom) );
+  eStepTo   = max( 0., min( 1., eStepMix - iStepFrom) );
   eStepFrom = 1. - eStepTo;
 
   // Update pT0 and combinations derived from it.
-  pT0           = eStepFrom * pT0Save[iStepFrom]
-                + eStepTo   * pT0Save[iStepTo];
+  pT0           = eStepFrom * mpis[iPDFA].pT0Save[iStepFrom]
+                + eStepTo   * mpis[iPDFA].pT0Save[iStepTo];
   pT20          = pT0*pT0;
   pT2min        = pTmin*pTmin;
   pTmax         = 0.5*eCM;
@@ -859,41 +938,41 @@ void MultipartonInteractions::reset( ) {
   pT2maxmin     = pT2max - pT2min;
 
   // Update other parameters used in pT choice.
-  pT4dSigmaMax  = eStepFrom * pT4dSigmaMaxSave[iStepFrom]
-                + eStepTo   * pT4dSigmaMaxSave[iStepTo];
-  pT4dProbMax   = eStepFrom * pT4dProbMaxSave[iStepFrom]
-                + eStepTo   * pT4dProbMaxSave[iStepTo];
-  sigmaInt      = eStepFrom * sigmaIntSave[iStepFrom]
-                + eStepTo   * sigmaIntSave[iStepTo];
+  pT4dSigmaMax  = eStepFrom * mpis[iPDFA].pT4dSigmaMaxSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].pT4dSigmaMaxSave[iStepTo];
+  pT4dProbMax   = eStepFrom * mpis[iPDFA].pT4dProbMaxSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].pT4dProbMaxSave[iStepTo];
+  sigmaInt      = eStepFrom * mpis[iPDFA].sigmaIntSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].sigmaIntSave[iStepTo];
   for (int j = 0; j <= 100; ++j)
-    sudExpPT[j] = eStepFrom * sudExpPTSave[iStepFrom][j]
-                + eStepTo   * sudExpPTSave[iStepTo][j];
+    sudExpPT[j] = eStepFrom * mpis[iPDFA].sudExpPTSave[iStepFrom][j]
+                + eStepTo   * mpis[iPDFA].sudExpPTSave[iStepTo][j];
 
   // Update parameters related to the impact-parameter picture.
-  zeroIntCorr   = eStepFrom * zeroIntCorrSave[iStepFrom]
-                + eStepTo   * zeroIntCorrSave[iStepTo];
-  normOverlap   = eStepFrom * normOverlapSave[iStepFrom]
-                + eStepTo   * normOverlapSave[iStepTo];
-  kNow          = eStepFrom * kNowSave[iStepFrom]
-                + eStepTo   * kNowSave[iStepTo];
-  bAvg          = eStepFrom * bAvgSave[iStepFrom]
-                + eStepTo   * bAvgSave[iStepTo];
-  bDiv          = eStepFrom * bDivSave[iStepFrom]
-                + eStepTo   * bDivSave[iStepTo];
-  probLowB      = eStepFrom * probLowBSave[iStepFrom]
-                + eStepTo   * probLowBSave[iStepTo];
-  fracAhigh     = eStepFrom * fracAhighSave[iStepFrom]
-                + eStepTo   * fracAhighSave[iStepTo];
-  fracBhigh     = eStepFrom * fracBhighSave[iStepFrom]
-                + eStepTo   * fracBhighSave[iStepTo];
-  fracChigh     = eStepFrom * fracChighSave[iStepFrom]
-                + eStepTo   * fracChighSave[iStepTo];
-  fracABChigh   = eStepFrom * fracABChighSave[iStepFrom]
-                + eStepTo   * fracABChighSave[iStepTo];
-  cDiv          = eStepFrom * cDivSave[iStepFrom]
-                + eStepTo   * cDivSave[iStepTo];
-  cMax          = eStepFrom * cMaxSave[iStepFrom]
-                + eStepTo   * cMaxSave[iStepTo];
+  zeroIntCorr   = eStepFrom * mpis[iPDFA].zeroIntCorrSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].zeroIntCorrSave[iStepTo];
+  normOverlap   = eStepFrom * mpis[iPDFA].normOverlapSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].normOverlapSave[iStepTo];
+  kNow          = eStepFrom * mpis[iPDFA].kNowSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].kNowSave[iStepTo];
+  bAvg          = eStepFrom * mpis[iPDFA].bAvgSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].bAvgSave[iStepTo];
+  bDiv          = eStepFrom * mpis[iPDFA].bDivSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].bDivSave[iStepTo];
+  probLowB      = eStepFrom * mpis[iPDFA].probLowBSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].probLowBSave[iStepTo];
+  fracAhigh     = eStepFrom * mpis[iPDFA].fracAhighSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].fracAhighSave[iStepTo];
+  fracBhigh     = eStepFrom * mpis[iPDFA].fracBhighSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].fracBhighSave[iStepTo];
+  fracChigh     = eStepFrom * mpis[iPDFA].fracChighSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].fracChighSave[iStepTo];
+  fracABChigh   = eStepFrom * mpis[iPDFA].fracABChighSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].fracABChighSave[iStepTo];
+  cDiv          = eStepFrom * mpis[iPDFA].cDivSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].cDivSave[iStepTo];
+  cMax          = eStepFrom * mpis[iPDFA].cMaxSave[iStepFrom]
+                + eStepTo   * mpis[iPDFA].cMaxSave[iStepTo];
 
 }
 
@@ -1566,7 +1645,7 @@ void MultipartonInteractions::jetCrossSection() {
       pT2 = pT20min0maxR / (pT20minR + mappedPT2 * pT2maxmin) - pT20R;
 
       // Evaluate cross section dSigma/dpT2 in phase space point.
-      double dSigma = sigmaPT2scatter(true);
+      double dSigma = sigmaPT2scatter(true, setAntiSameNow);
 
       // Multiply by (pT2 + r * pT20)^2 to compensate for pT sampling. Sum.
       dSigma   *= pow2(pT2 + pT20R);
@@ -1608,6 +1687,156 @@ void MultipartonInteractions::jetCrossSection() {
     pT4dProbMax  = dSigmaMax / sigmaND;
   }
 
+}
+
+//--------------------------------------------------------------------------
+
+// Write initialization data to file, to save startup time.
+
+bool MultipartonInteractions::saveMPIdata() {
+
+  // Open file for writing.
+  const char* cstring = initFile.c_str();
+  ofstream os(cstring, std::ofstream::app);
+  if (!os.good()) {
+    infoPtr->errorMsg("Error in MultipartonInteractions::saveMPIdata:"
+      " could not open file", initFile);
+    return false;
+  }
+
+  // Header for this type of system (nondiffractive, diffractive, ...).
+  os << "======iDiffSys= " << iDiffSys << " nPDFA= " << nPDFA
+     << " ====== " << endl << scientific << setprecision(10);
+
+  // Loop over number of different PDF sets, and thereby projectiles.
+  for (int iPA = 0; iPA < nPDFA; ++iPA) {
+    MPIInterpolationInfo& mpiNow = mpis[iPA];
+    os << mpiNow.nStepSave << " " << mpiNow.eStepMinSave << " "
+       << mpiNow.eStepMaxSave << " " << mpiNow.eStepSizeSave << endl;
+    int nStepTmp = mpiNow.nStepSave;
+
+    // Loop over number of energies in grid and store info for each energy.
+    for (int iStep = 0; iStep < nStepTmp; ++iStep) {
+      os << mpiNow.pT0Save[iStep] << " " << mpiNow.pT4dSigmaMaxSave[iStep]
+         << " " << mpiNow.pT4dProbMaxSave[iStep] << " "
+         << mpiNow.sigmaIntSave[iStep] << " ";
+      for (int j = 0; j <= 100; ++j)
+        os << mpiNow.sudExpPTSave[iStep][j] << " ";
+      os << " " << mpiNow.zeroIntCorrSave[iStep] << " "
+         << mpiNow.normOverlapSave[iStep] << " " << mpiNow.kNowSave[iStep]
+         << " " << mpiNow.bAvgSave[iStep] << " " << mpiNow.bDivSave[iStep]
+         << " " << mpiNow.probLowBSave[iStep] << " "
+         << mpiNow.fracAhighSave[iStep] << " " << mpiNow.fracBhighSave[iStep]
+         << " " << mpiNow.fracChighSave[iStep] << " "
+         << mpiNow.fracABChighSave[iStep] << " " << mpiNow.cDivSave[iStep]
+         << " " << mpiNow.cMaxSave[iStep] << endl;
+    }
+  }
+
+  // Close file and done.
+  os.close();
+  return true;
+}
+
+//--------------------------------------------------------------------------
+
+// Load initialization data from file, to save startup time.
+
+bool MultipartonInteractions::loadMPIdata() {
+
+  // Open file for reading.
+  const char* cstring = initFile.c_str();
+  ifstream is(cstring);
+  if (!is.good()) {
+    infoPtr->errorMsg("Error in MultipartonInteractions::loadMPIdata:"
+      " could not open file", initFile);
+    return false;
+  }
+
+  // Read in one line at a time. Search for header of wanted iDiffSys.
+  bool foundMatch = false;
+  string line;
+  while ( getline(is, line) ) {
+    istringstream matchHeader(line);
+    string tag, tag2;
+    matchHeader >> tag;
+    if (tag != "======iDiffSys=") continue;
+    int iDiffSysIn;
+    matchHeader >> iDiffSysIn;
+    if (iDiffSysIn != iDiffSys) continue;
+    foundMatch = true;
+    matchHeader >> tag2 >> nPDFA;
+    break;
+  }
+  if (!foundMatch) return false;
+
+  // Need to set up minimal mpis array for iDiffSys = 2 or 3.
+  if (nPDFA == 1 && mpis.size() == 0)
+    mpis  = vector<MPIInterpolationInfo>(nPDFA);
+
+  // Loop over number of different PDF sets, and thereby projectiles.
+  for (int iPA = 0; iPA < nPDFA; ++iPA) {
+    MPIInterpolationInfo& mpiNow = mpis[iPA];
+    is >> mpiNow.nStepSave >> mpiNow.eStepMinSave >> mpiNow.eStepMaxSave
+       >> mpiNow.eStepSizeSave;
+    int nStepTmp = mpiNow.nStepSave;
+    mpiNow.init(nStepTmp);
+
+    // Loop over number of energies in grid and store info for each energy.
+    for (int iStep = 0; iStep < nStepTmp; ++iStep) {
+      is >> mpiNow.pT0Save[iStep] >> mpiNow.pT4dSigmaMaxSave[iStep]
+          >> mpiNow.pT4dProbMaxSave[iStep] >> mpiNow.sigmaIntSave[iStep];
+      for (int j = 0; j <= 100; ++j) is >> mpiNow.sudExpPTSave[iStep][j];
+      is >> mpiNow.zeroIntCorrSave[iStep] >> mpiNow.normOverlapSave[iStep]
+          >> mpiNow.kNowSave[iStep] >> mpiNow.bAvgSave[iStep]
+          >> mpiNow.bDivSave[iStep] >> mpiNow.probLowBSave[iStep]
+          >> mpiNow.fracAhighSave[iStep] >> mpiNow.fracBhighSave[iStep]
+          >> mpiNow.fracChighSave[iStep] >> mpiNow.fracABChighSave[iStep]
+          >> mpiNow.cDivSave[iStep] >> mpiNow.cMaxSave[iStep];
+    }
+  }
+
+  // Also store it in regular location at fixed or maximal (= eCMsave) energy.
+  iPDFAsave    = 0;
+  eCMsave      = mpis[0].eStepMaxSave;
+  nStep        = mpis[0].nStepSave;
+  eStepMin     = mpis[0].eStepMinSave;
+  eStepMax     = mpis[0].eStepMaxSave;
+  eStepSize    = mpis[0].eStepSizeSave;
+  pT0          = mpis[0].pT0Save[nStep - 1];
+  pT4dSigmaMax = mpis[0].pT4dSigmaMaxSave[nStep - 1];
+  pT4dProbMax  = mpis[0].pT4dProbMaxSave[nStep - 1];
+  sigmaInt     = mpis[0].sigmaIntSave[nStep - 1];
+  for (int j = 0; j <= 100; ++j)
+    sudExpPT[j] = mpis[0].sudExpPTSave[nStep - 1][j];
+  zeroIntCorr  = mpis[0].zeroIntCorrSave[nStep - 1];
+  normOverlap  = mpis[0].normOverlapSave[nStep - 1];
+  kNow         = mpis[0].kNowSave[nStep - 1];
+  bAvg         = mpis[0].bAvgSave[nStep - 1];
+  bDiv         = mpis[0].bDivSave[nStep - 1];
+  probLowB     = mpis[0].probLowBSave[nStep - 1];
+  fracAhigh    = mpis[0].fracAhighSave[nStep - 1];
+  fracBhigh    = mpis[0].fracBhighSave[nStep - 1];
+  fracBhigh    = mpis[0].fracChighSave[nStep - 1];
+  fracABChigh  = mpis[0].fracABChighSave[nStep - 1];
+  cDiv         = mpis[0].cDivSave[nStep - 1];
+  cMax         = mpis[0].cMaxSave[nStep - 1];
+
+  // Derived pT kinematics combinations and some others.
+  pT20         = pT0*pT0;
+  pT2min       = pTmin*pTmin;
+  pTmax        = 0.5*eCM;
+  pT2max       = pTmax*pTmax;
+  pT20R        = RPT20 * pT20;
+  pT20minR     = pT2min + pT20R;
+  pT20maxR     = pT2max + pT20R;
+  pT20min0maxR = pT20minR * pT20maxR;
+  pT2maxmin    = pT2max - pT2min;
+  normPi       = 1. / (2. * M_PI);
+
+  // Close file and done.
+  is.close();
+  return true;
 }
 
 //--------------------------------------------------------------------------
@@ -1657,9 +1886,10 @@ double MultipartonInteractions::fastPT2( double pT2beg) {
 // Select flavours and kinematics for interaction at given pT.
 // Slightly different treatment for first interaction and subsequent ones.
 
-double MultipartonInteractions::sigmaPT2scatter(bool isFirst) {
+double MultipartonInteractions::sigmaPT2scatter(bool isFirst,
+  bool doSymmetrize) {
 
-  // Derive recormalization and factorization scales, amd alpha_strong/em.
+  // Derive recormalization and factorization scales, and alpha_strong/em.
   pT2shift = pT2 + pT20;
   pT2Ren   = pT2shift;
   pT2Fac   = (SHIFTFACSCALE) ? pT2shift : pT2;
@@ -1705,6 +1935,13 @@ double MultipartonInteractions::sigmaPT2scatter(bool isFirst) {
       }
       xPDF1sum += xPDF1[id+10];
       xPDF2sum += xPDF2[id+10];
+    }
+
+    // Option to symmetrize quarks (only for Sudakov factor tabulation).
+    if (doSymmetrize)
+    for (int id = 1; id <= nQuarkIn; ++id) {
+      xPDF2[10+id] = 0.5 * (xPDF2[10+id] + xPDF2[10-id]);
+      xPDF2[10-id] = xPDF2[10+id];
     }
 
   // For subsequent interactions use rescaled densities.
@@ -2699,6 +2936,30 @@ void MultipartonInteractions::statistics(bool resetStat) {
   // Optionally reset statistics contents.
   if (resetStat) resetStatistics();
 
+}
+
+//--------------------------------------------------------------------------
+
+// Initialize MPIInterpolationInfo for a particular beam.
+
+void MultipartonInteractions::MPIInterpolationInfo::init(int nStepIn) {
+  pT0Save          = vector<double>(nStepIn);
+  pT4dSigmaMaxSave = vector<double>(nStepIn);
+  pT4dProbMaxSave  = vector<double>(nStepIn);
+  sigmaIntSave     = vector<double>(nStepIn);
+  zeroIntCorrSave  = vector<double>(nStepIn);
+  normOverlapSave  = vector<double>(nStepIn);
+  kNowSave         = vector<double>(nStepIn);
+  bAvgSave         = vector<double>(nStepIn);
+  bDivSave         = vector<double>(nStepIn);
+  probLowBSave     = vector<double>(nStepIn);
+  fracAhighSave    = vector<double>(nStepIn);
+  fracBhighSave    = vector<double>(nStepIn);
+  fracChighSave    = vector<double>(nStepIn);
+  fracABChighSave  = vector<double>(nStepIn);
+  cDivSave         = vector<double>(nStepIn);
+  cMaxSave         = vector<double>(nStepIn);
+  sudExpPTSave     = vector<array<double, 101>>(nStepIn);
 }
 
 //==========================================================================

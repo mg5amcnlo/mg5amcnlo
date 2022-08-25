@@ -1,5 +1,5 @@
 // DireWeightContainer.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Stefan Prestel, Torbjorn Sjostrand.
+// Copyright (C) 2022 Stefan Prestel, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -13,7 +13,7 @@
 #include "Pythia8/PythiaStdlib.h"
 #include "Pythia8/Settings.h"
 #include "Pythia8/DireBasics.h"
-#include "Pythia8/ShowerMEs.h"
+#include "Pythia8/ExternalMEs.h"
 
 namespace Pythia8 {
 
@@ -194,7 +194,7 @@ public:
 
   // MG5 matrix element access.
   string card;
-  ShowerMEsPlugin matrixElements;
+  ExternalMEsPlugin matrixElements;
   bool hasMEs;
 
   bool hasME(vector <int> in_pdgs = vector<int>(),

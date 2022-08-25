@@ -13,6 +13,7 @@
 #include <Pythia8/PhysicsBase.h>
 #include <Pythia8/ResonanceWidths.h>
 #include <Pythia8/Settings.h>
+#include <Pythia8/SigmaLowEnergy.h>
 #include <Pythia8/SigmaTotal.h>
 #include <Pythia8/StandardModel.h>
 #include <Pythia8/SusyCouplings.h>
@@ -101,31 +102,18 @@ struct PyCallBack_Pythia8_SlowJet : public Pythia8::SlowJet {
 struct PyCallBack_Pythia8_PDF : public Pythia8::PDF {
 	using Pythia8::PDF::PDF;
 
-	bool isSetup() override { 
+	void setBeamID(int a0) override { 
 		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "isSetup");
+		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "setBeamID");
 		if (overload) {
-			auto o = overload.operator()<pybind11::return_value_policy::reference>();
-			if (pybind11::detail::cast_is_temporary_value_reference<bool>::value) {
-				static pybind11::detail::overload_caster_t<bool> caster;
-				return pybind11::detail::cast_ref<bool>(std::move(o), caster);
-			}
-			else return pybind11::detail::cast_safe<bool>(std::move(o));
-		}
-		return PDF::isSetup();
-	}
-	void newValenceContent(int a0, int a1) override { 
-		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "newValenceContent");
-		if (overload) {
-			auto o = overload.operator()<pybind11::return_value_policy::reference>(a0, a1);
+			auto o = overload.operator()<pybind11::return_value_policy::reference>(a0);
 			if (pybind11::detail::cast_is_temporary_value_reference<void>::value) {
 				static pybind11::detail::overload_caster_t<void> caster;
 				return pybind11::detail::cast_ref<void>(std::move(o), caster);
 			}
 			else return pybind11::detail::cast_safe<void>(std::move(o));
 		}
-		return PDF::newValenceContent(a0, a1);
+		return PDF::setBeamID(a0);
 	}
 	void setExtrapolate(bool a0) override { 
 		pybind11::gil_scoped_acquire gil;
@@ -139,45 +127,6 @@ struct PyCallBack_Pythia8_PDF : public Pythia8::PDF {
 			else return pybind11::detail::cast_safe<void>(std::move(o));
 		}
 		return PDF::setExtrapolate(a0);
-	}
-	double xf(int a0, double a1, double a2) override { 
-		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "xf");
-		if (overload) {
-			auto o = overload.operator()<pybind11::return_value_policy::reference>(a0, a1, a2);
-			if (pybind11::detail::cast_is_temporary_value_reference<double>::value) {
-				static pybind11::detail::overload_caster_t<double> caster;
-				return pybind11::detail::cast_ref<double>(std::move(o), caster);
-			}
-			else return pybind11::detail::cast_safe<double>(std::move(o));
-		}
-		return PDF::xf(a0, a1, a2);
-	}
-	double xfVal(int a0, double a1, double a2) override { 
-		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "xfVal");
-		if (overload) {
-			auto o = overload.operator()<pybind11::return_value_policy::reference>(a0, a1, a2);
-			if (pybind11::detail::cast_is_temporary_value_reference<double>::value) {
-				static pybind11::detail::overload_caster_t<double> caster;
-				return pybind11::detail::cast_ref<double>(std::move(o), caster);
-			}
-			else return pybind11::detail::cast_safe<double>(std::move(o));
-		}
-		return PDF::xfVal(a0, a1, a2);
-	}
-	double xfSea(int a0, double a1, double a2) override { 
-		pybind11::gil_scoped_acquire gil;
-		pybind11::function overload = pybind11::get_overload(static_cast<const Pythia8::PDF *>(this), "xfSea");
-		if (overload) {
-			auto o = overload.operator()<pybind11::return_value_policy::reference>(a0, a1, a2);
-			if (pybind11::detail::cast_is_temporary_value_reference<double>::value) {
-				static pybind11::detail::overload_caster_t<double> caster;
-				return pybind11::detail::cast_ref<double>(std::move(o), caster);
-			}
-			else return pybind11::detail::cast_safe<double>(std::move(o));
-		}
-		return PDF::xfSea(a0, a1, a2);
 	}
 	bool insideBounds(double a0, double a1) override { 
 		pybind11::gil_scoped_acquire gil;
@@ -603,7 +552,7 @@ void bind_Pythia8_Analysis(std::function< pybind11::module &(std::string const &
 		pybind11::class_<Pythia8::PDF, std::shared_ptr<Pythia8::PDF>, PyCallBack_Pythia8_PDF> cl(M("Pythia8"), "PDF", "");
 		pybind11::handle cl_type = cl;
 
-		{ // Pythia8::PDF::PDFEnvelope file:Pythia8/PartonDistributions.h line:97
+		{ // Pythia8::PDF::PDFEnvelope file:Pythia8/PartonDistributions.h line:98
 			auto & enclosing_class = cl;
 			pybind11::class_<Pythia8::PDF::PDFEnvelope, std::shared_ptr<Pythia8::PDF::PDFEnvelope>> cl(enclosing_class, "PDFEnvelope", "");
 			pybind11::handle cl_type = cl;
@@ -627,6 +576,7 @@ void bind_Pythia8_Analysis(std::function< pybind11::module &(std::string const &
 		cl.def_readwrite("idSav", &Pythia8::PDF::idSav);
 		cl.def_readwrite("idVal1", &Pythia8::PDF::idVal1);
 		cl.def_readwrite("idVal2", &Pythia8::PDF::idVal2);
+		cl.def_readwrite("idVal3", &Pythia8::PDF::idVal3);
 		cl.def_readwrite("xSav", &Pythia8::PDF::xSav);
 		cl.def_readwrite("Q2Sav", &Pythia8::PDF::Q2Sav);
 		cl.def_readwrite("xu", &Pythia8::PDF::xu);
@@ -637,24 +587,22 @@ void bind_Pythia8_Analysis(std::function< pybind11::module &(std::string const &
 		cl.def_readwrite("xsbar", &Pythia8::PDF::xsbar);
 		cl.def_readwrite("xc", &Pythia8::PDF::xc);
 		cl.def_readwrite("xb", &Pythia8::PDF::xb);
+		cl.def_readwrite("xcbar", &Pythia8::PDF::xcbar);
+		cl.def_readwrite("xbbar", &Pythia8::PDF::xbbar);
 		cl.def_readwrite("xg", &Pythia8::PDF::xg);
 		cl.def_readwrite("xlepton", &Pythia8::PDF::xlepton);
 		cl.def_readwrite("xgamma", &Pythia8::PDF::xgamma);
-		cl.def_readwrite("xuVal", &Pythia8::PDF::xuVal);
-		cl.def_readwrite("xuSea", &Pythia8::PDF::xuSea);
-		cl.def_readwrite("xdVal", &Pythia8::PDF::xdVal);
-		cl.def_readwrite("xdSea", &Pythia8::PDF::xdSea);
 		cl.def_readwrite("isSet", &Pythia8::PDF::isSet);
 		cl.def_readwrite("isInit", &Pythia8::PDF::isInit);
-		cl.def_readwrite("xsVal", &Pythia8::PDF::xsVal);
-		cl.def_readwrite("xcVal", &Pythia8::PDF::xcVal);
-		cl.def_readwrite("xbVal", &Pythia8::PDF::xbVal);
-		cl.def_readwrite("xsSea", &Pythia8::PDF::xsSea);
-		cl.def_readwrite("xcSea", &Pythia8::PDF::xcSea);
-		cl.def_readwrite("xbSea", &Pythia8::PDF::xbSea);
+		cl.def_readwrite("beamType", &Pythia8::PDF::beamType);
 		cl.def_readwrite("hasGammaInLepton", &Pythia8::PDF::hasGammaInLepton);
+		cl.def_readwrite("sSymmetricSave", &Pythia8::PDF::sSymmetricSave);
+		cl.def_readwrite("cSymmetricSave", &Pythia8::PDF::cSymmetricSave);
+		cl.def_readwrite("bSymmetricSave", &Pythia8::PDF::bSymmetricSave);
 		cl.def("isSetup", (bool (Pythia8::PDF::*)()) &Pythia8::PDF::isSetup, "C++: Pythia8::PDF::isSetup() --> bool");
-		cl.def("newValenceContent", (void (Pythia8::PDF::*)(int, int)) &Pythia8::PDF::newValenceContent, "C++: Pythia8::PDF::newValenceContent(int, int) --> void", pybind11::arg("idVal1In"), pybind11::arg("idVal2In"));
+		cl.def("setBeamID", (void (Pythia8::PDF::*)(int)) &Pythia8::PDF::setBeamID, "C++: Pythia8::PDF::setBeamID(int) --> void", pybind11::arg("idBeamIn"));
+		cl.def("resetValenceContent", (void (Pythia8::PDF::*)()) &Pythia8::PDF::resetValenceContent, "C++: Pythia8::PDF::resetValenceContent() --> void");
+		cl.def("setValenceContent", (void (Pythia8::PDF::*)(int, int, int)) &Pythia8::PDF::setValenceContent, "C++: Pythia8::PDF::setValenceContent(int, int, int) --> void", pybind11::arg("idVal1In"), pybind11::arg("idVal2In"), pybind11::arg("idVal3In"));
 		cl.def("setExtrapolate", (void (Pythia8::PDF::*)(bool)) &Pythia8::PDF::setExtrapolate, "C++: Pythia8::PDF::setExtrapolate(bool) --> void", pybind11::arg(""));
 		cl.def("xf", (double (Pythia8::PDF::*)(int, double, double)) &Pythia8::PDF::xf, "C++: Pythia8::PDF::xf(int, double, double) --> double", pybind11::arg("id"), pybind11::arg("x"), pybind11::arg("Q2"));
 		cl.def("xfVal", (double (Pythia8::PDF::*)(int, double, double)) &Pythia8::PDF::xfVal, "C++: Pythia8::PDF::xfVal(int, double, double) --> double", pybind11::arg("id"), pybind11::arg("x"), pybind11::arg("Q2"));
@@ -686,10 +634,17 @@ void bind_Pythia8_Analysis(std::function< pybind11::module &(std::string const &
 		cl.def("xfSame", (double (Pythia8::PDF::*)(int, double, double)) &Pythia8::PDF::xfSame, "C++: Pythia8::PDF::xfSame(int, double, double) --> double", pybind11::arg("id"), pybind11::arg("x"), pybind11::arg("Q2"));
 		cl.def("setVMDscale", [](Pythia8::PDF &o) -> void { return o.setVMDscale(); }, "");
 		cl.def("setVMDscale", (void (Pythia8::PDF::*)(double)) &Pythia8::PDF::setVMDscale, "C++: Pythia8::PDF::setVMDscale(double) --> void", pybind11::arg(""));
-		cl.def("setValenceContent", (void (Pythia8::PDF::*)()) &Pythia8::PDF::setValenceContent, "C++: Pythia8::PDF::setValenceContent() --> void");
+		cl.def("sSymmetric", (bool (Pythia8::PDF::*)() const) &Pythia8::PDF::sSymmetric, "C++: Pythia8::PDF::sSymmetric() const --> bool");
+		cl.def("cSymmetric", (bool (Pythia8::PDF::*)() const) &Pythia8::PDF::cSymmetric, "C++: Pythia8::PDF::cSymmetric() const --> bool");
+		cl.def("bSymmetric", (bool (Pythia8::PDF::*)() const) &Pythia8::PDF::bSymmetric, "C++: Pythia8::PDF::bSymmetric() const --> bool");
+		cl.def("sSymmetric", (void (Pythia8::PDF::*)(bool)) &Pythia8::PDF::sSymmetric, "C++: Pythia8::PDF::sSymmetric(bool) --> void", pybind11::arg("sSymmetricIn"));
+		cl.def("cSymmetric", (void (Pythia8::PDF::*)(bool)) &Pythia8::PDF::cSymmetric, "C++: Pythia8::PDF::cSymmetric(bool) --> void", pybind11::arg("cSymmetricIn"));
+		cl.def("bSymmetric", (void (Pythia8::PDF::*)(bool)) &Pythia8::PDF::bSymmetric, "C++: Pythia8::PDF::bSymmetric(bool) --> void", pybind11::arg("bSymmetricIn"));
 		cl.def("xfUpdate", (void (Pythia8::PDF::*)(int, double, double)) &Pythia8::PDF::xfUpdate, "C++: Pythia8::PDF::xfUpdate(int, double, double) --> void", pybind11::arg("id"), pybind11::arg("x"), pybind11::arg("Q2"));
 		cl.def("printErr", [](Pythia8::PDF &o, class std::basic_string<char> const & a0) -> void { return o.printErr(a0); }, "", pybind11::arg("errMsg"));
 		cl.def("printErr", (void (Pythia8::PDF::*)(std::string, class Pythia8::Info *)) &Pythia8::PDF::printErr, "C++: Pythia8::PDF::printErr(std::string, class Pythia8::Info *) --> void", pybind11::arg("errMsg"), pybind11::arg("infoPtr"));
+		cl.def("xfRaw", (double (Pythia8::PDF::*)(int) const) &Pythia8::PDF::xfRaw, "C++: Pythia8::PDF::xfRaw(int) const --> double", pybind11::arg("id"));
+		cl.def("isValence", (bool (Pythia8::PDF::*)(int) const) &Pythia8::PDF::isValence, "C++: Pythia8::PDF::isValence(int) const --> bool", pybind11::arg("id"));
 		cl.def("assign", (class Pythia8::PDF & (Pythia8::PDF::*)(const class Pythia8::PDF &)) &Pythia8::PDF::operator=, "C++: Pythia8::PDF::operator=(const class Pythia8::PDF &) --> class Pythia8::PDF &", pybind11::return_value_policy::reference, pybind11::arg(""));
 	}
 }

@@ -1,5 +1,5 @@
 // VinciaQED.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -1347,6 +1347,10 @@ void QEDemitSystem::updateEvent(Event &event) {
   int x = eleTrial->x;
   int y = eleTrial->y;
 
+  // Invariants to determine order of photon mothers
+  double sxj = eleTrial->sxjSav;
+  double syj = eleTrial->syjSav;
+
   // Different procedures for dipoles and antennae.
   // 1) If it is a dipole:
   if (eleTrial->isDip) {
@@ -1465,7 +1469,8 @@ void QEDemitSystem::updateEvent(Event &event) {
     // Update everything.
     if (eleTrial->isII) {
       event[xNew].mothers(event[x].mother1(), event[x].mother2());
-      event[jNew].mothers(xNew, yNew);
+      if (sxj < syj) event[jNew].mothers(xNew, yNew);
+      else event[jNew].mothers(yNew, xNew);
       event[yNew].mothers(event[y].mother1(), event[y].mother2());
       event[x].mothers(xNew, 0);
       event[y].mothers(yNew, 0);
@@ -1530,7 +1535,8 @@ void QEDemitSystem::updateEvent(Event &event) {
 
     if (eleTrial->isIF) {
       event[xNew].mothers(event[x].mother1(), event[x].mother2());
-      event[jNew].mothers(y,xNew);
+      if (sxj < syj) event[jNew].mothers(xNew,y);
+      else event[jNew].mothers(y,xNew);
       event[yNew].mothers(y,0);
       event[x].mothers(xNew,0);
       event[xNew].daughters(jNew,x);
@@ -1563,7 +1569,8 @@ void QEDemitSystem::updateEvent(Event &event) {
 
     if (eleTrial->isFF) {
       event[xNew].mothers(x,0);
-      event[jNew].mothers(x,y);
+      if (sxj < syj) event[jNew].mothers(x,y);
+      else event[jNew].mothers(y,x);
       event[yNew].mothers(y,0);
       event[x].daughters(xNew, jNew);
       event[y].daughters(yNew, jNew);

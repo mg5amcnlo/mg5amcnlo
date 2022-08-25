@@ -1,5 +1,5 @@
 // LesHouches.h is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -554,8 +554,8 @@ public:
   LHEF3FromPythia8(Event* eventPtrIn, const Info* infoPtrIn,
     int pDigitsIn = 15, bool writeToFileIn = true) :
     eventPtr(eventPtrIn),infoPtr(infoPtrIn),
-    settingsPtr(infoPtrIn->settingsPtr),
-    particleDataPtr(infoPtrIn->particleDataPtr), writer(osLHEF),
+    particleDataPtr(infoPtrIn->particleDataPtr),
+    settingsPtr(infoPtrIn->settingsPtr), writer(osLHEF),
     pDigits(pDigitsIn), writeToFile(writeToFileIn) {}
 
   // Routine for reading, setting and printing the initialisation info.
@@ -576,11 +576,11 @@ public:
   HEPRUP heprup;
   HEPEUP hepeup;
 
-  // Constant info pointer, explicitly overwrites member from LHAup base class.
-  const Info* infoPtr;
-
   // Pointer to event that should be printed.
   Event* eventPtr;
+
+  // Constant info pointer, explicitly overwrites member from LHAup base class.
+  const Info* infoPtr;
 
   ParticleData* particleDataPtr;
 

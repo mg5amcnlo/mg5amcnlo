@@ -1,5 +1,5 @@
 // ProcessLevel.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -50,6 +50,10 @@ bool ProcessLevel::init( bool doLHA, SLHAinterface* slhaInterfacePtrIn,
   // Reference to Settings.
   Settings& settings = *settingsPtr;
 
+  // Provisions for variable collision energy or beam kind.
+  doVarEcm        = settings.flag("Beams:allowVariableEnergy");
+  allowIDAswitch  = flag("Beams:allowIDAswitch");
+
   // Check whether photon inside lepton and save the mode.
   bool beamA2gamma = settings.flag("PDF:beamA2gamma");
   bool beamB2gamma = settings.flag("PDF:beamB2gamma");
@@ -64,16 +68,26 @@ bool ProcessLevel::init( bool doLHA, SLHAinterface* slhaInterfacePtrIn,
   resonanceDecays.init();
 
   // Set up SigmaTotal. Store sigma_nondiffractive for future use.
-  int    idA = infoPtr->idA();
-  int    idB = infoPtr->idB();
-  double eCM = infoPtr->eCM();
+  int    idA  = infoPtr->idA();
+  int    idB  = infoPtr->idB();
+  double eCM  = infoPtr->eCM();
   if (beamHasGamma) {
     int idAin = beamA2gamma ? 22 : idA;
     int idBin = beamB2gamma ? 22 : idB;
     sigmaTotPtr->calc( idAin, idBin, eCM);
+    sigmaND   = sigmaTotPtr->sigmaND();
+  } else {
+    // Usage of both sigmaTotPtr and sigmaCmbPtr to be fixed in the future.
+    sigmaTotPtr->calc( idA, idB, eCM);
+    double mA = particleDataPtr->m0(idA);
+    double mB = particleDataPtr->m0(idB);
+    sigmaND   = sigmaCmbPtr->sigmaPartial(idA, idB, eCM, mA, mB, 1);
   }
-  else sigmaTotPtr->calc( idA, idB, eCM);
-  sigmaND = sigmaTotPtr->sigmaND();
+
+  // Starting values for potential future energy/beam switch.
+  switchedID  = false;
+  switchedEcm = false;
+  eCMold      = eCM;
 
   // Options to allow second hard interaction and resonance decays.
   doSecondHard   = settings.flag("SecondHard:generate");
@@ -348,9 +362,29 @@ bool ProcessLevel::init( bool doLHA, SLHAinterface* slhaInterfacePtrIn,
 
 //--------------------------------------------------------------------------
 
+// Switch to new beam particle identities.
+
+void ProcessLevel::updateBeamIDs() {
+
+  // Update beam identities for phase space selection.
+  for (int i = 0; i < int(containerPtrs.size()); ++i)
+    containerPtrs[i]->updateBeamIDs();
+  if (doSecondHard) {
+    for (int i2 = 0; i2 < int(container2Ptrs.size()); ++i2)
+      container2Ptrs[i2]->updateBeamIDs();
+  }
+  switchedID = true;
+
+}
+
+//--------------------------------------------------------------------------
+
 // Main routine to generate the hard process.
 
-bool ProcessLevel::next( Event& process) {
+bool ProcessLevel::next( Event& process, int procTypeIn) {
+
+  // Save procType. Is almost always = 0.
+  procType = procTypeIn;
 
   // Generate the next event with two or one hard interactions.
   bool physical = (doSecondHard) ? nextTwo( process) : nextOne( process);
@@ -459,13 +493,13 @@ void ProcessLevel::accumulate( bool doAccumulate) {
 
   // Cross section estimate for combination of first and second process.
   // Combine two possible ways and take average.
-  double sigmaComb  = 0.5 * (sigmaSum * sig2SelSum + sigSelSum * sigma2Sum);
-  sigmaComb        *= impactFac * maxPDFreweight / sigmaND;
-  if (allHardSame) sigmaComb *= 0.5;
-  double deltaComb  = (nAccSum == 0) ? 0. : sqrtpos(2. / nAccSum) * sigmaComb;
+  double sigmaCmb  = 0.5 * (sigmaSum * sig2SelSum + sigSelSum * sigma2Sum)
+                   * impactFac * maxPDFreweight / sigmaND;
+  if (allHardSame) sigmaCmb *= 0.5;
+  double deltaComb  = (nAccSum == 0) ? 0. : sqrtpos(2. / nAccSum) * sigmaCmb;
 
   // Store info and done.
-  infoPtr->setSigma( 0, "sum", nTrySum, nSelSum, nAccSum, sigmaComb,
+  infoPtr->setSigma( 0, "sum", nTrySum, nSelSum, nAccSum, sigmaCmb,
     deltaComb, weightSum);
 
 }
@@ -608,8 +642,22 @@ bool ProcessLevel::nextOne( Event& process) {
 
   // Update CM energy for phase space selection.
   double eCM = infoPtr->eCM();
-  for (int i = 0; i < int(containerPtrs.size()); ++i)
-    containerPtrs[i]->newECM(eCM);
+  if (eCM != eCMold && doVarEcm) {
+    for (int i = 0; i < int(containerPtrs.size()); ++i)
+      containerPtrs[i]->newECM(eCM);
+    eCMold      = eCM;
+    switchedEcm = true;
+  }
+
+  // New cross section values needed if switched id or updated energy.
+  if (switchedID || switchedEcm) {
+    sigmaMaxSum = 0.;
+    for (int i = 0; i < int(containerPtrs.size()); ++i) {
+      sigmaMaxSum += containerPtrs[i]->sigmaMaxSwitch();
+    }
+    switchedID  = false;
+    switchedEcm = false;
+  }
 
   // Outer loop in case of rare failures.
   bool physical = true;
@@ -621,11 +669,25 @@ bool ProcessLevel::nextOne( Event& process) {
     for ( ; ; ) {
 
       // Pick one of the subprocesses.
-      double sigmaMaxNow = sigmaMaxSum * rndmPtr->flat();
-      int iMax = containerPtrs.size() - 1;
-      iContainer = -1;
-      do sigmaMaxNow -= containerPtrs[++iContainer]->sigmaMax();
-      while (sigmaMaxNow > 0. && iContainer < iMax);
+      if (procType == 0) {
+        double sigmaMaxNow = sigmaMaxSum * rndmPtr->flat();
+        int iMax = containerPtrs.size() - 1;
+        iContainer = -1;
+        do sigmaMaxNow -= containerPtrs[++iContainer]->sigmaMax();
+        while (sigmaMaxNow > 0. && iContainer < iMax);
+
+      // Special forced subprocess. Only for variable-energy SoftQCD.
+      } else {
+        iContainer = -1;
+        for (int iC = 0; iC < int(containerPtrs.size()); ++iC)
+        if (containerPtrs[iC]->code() == 100 + procType)
+          iContainer = iC;
+        if (iContainer == -1) {
+          infoPtr->errorMsg("Error in ProcessLevel::nextOne: "
+          "requested procType unavailable");
+          continue;
+        }
+      }
 
       // Do a trial event of this subprocess; accept or not.
       if (containerPtrs[iContainer]->trialProcess()) break;

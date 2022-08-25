@@ -1,5 +1,5 @@
 // ResonanceWidths.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Torbjorn Sjostrand.
+// Copyright (C) 2022 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -54,7 +54,9 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
 
   // Pointer to particle species.
   particlePtr  = particleDataPtr->particleDataEntryPtr(idRes);
-  if (particlePtr->id() == 0) {
+  ParticleDataEntryPtr particleShr = particlePtr.lock();
+  if (particleShr == nullptr) return false;
+  if (particleShr->id() == 0) {
     infoPtr->errorMsg("Error in ResonanceWidths::init:"
       " unknown resonance identity code");
     return false;
@@ -66,9 +68,9 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
     || idRes/1000000 == 3) isGeneric = false;
 
   // Resonance properties: antiparticle, mass, width
-  hasAntiRes   = particlePtr->hasAnti();
-  mRes         = particlePtr->m0();
-  GammaRes     = particlePtr->mWidth();
+  hasAntiRes   = particleShr->hasAnti();
+  mRes         = particleShr->m0();
+  GammaRes     = particleShr->mWidth();
   m2Res        = mRes*mRes;
 
   // A resonance cannot be too light, in particular not = 0.
@@ -90,7 +92,7 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
 
   // Allow option where on-shell width is forced to current value.
   // Disable for mixes gamma*/Z0/Z'0
-  doForceWidth = particlePtr->doForceWidth();
+  doForceWidth = particleShr->doForceWidth();
   if (idRes == 23 && settingsPtr->mode("WeakZ0:gmZmode") != 2)
     doForceWidth = false;
   if (idRes == 33 && settingsPtr->mode("Zprime:gmZmode") != 3)
@@ -117,11 +119,11 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
   double openSecPos, openSecNeg;
 
   // Loop over all decay channels. Basic properties of channel.
-  for (int i = 0; i < particlePtr->sizeChannels(); ++i) {
+  for (int i = 0; i < particleShr->sizeChannels(); ++i) {
     iChannel    = i;
-    onMode      = particlePtr->channel(i).onMode();
-    meMode      = particlePtr->channel(i).meMode();
-    mult        = particlePtr->channel(i).multiplicity();
+    onMode      = particleShr->channel(i).onMode();
+    meMode      = particleShr->channel(i).meMode();
+    mult        = particleShr->channel(i).multiplicity();
     widNow      = 0.;
 
     // Warn if not relevant meMode.
@@ -136,8 +138,8 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
     if (meMode < 100 && allowCalcWidth) {
 
       // Read out information on channel: primarily use first two.
-      id1       = particlePtr->channel(i).product(0);
-      id2       = particlePtr->channel(i).product(1);
+      id1       = particleShr->channel(i).product(0);
+      id2       = particleShr->channel(i).product(1);
       id1Abs    = abs(id1);
       id2Abs    = abs(id2);
 
@@ -146,7 +148,7 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
 
       // Allow for third product to be treated in derived classes.
       if (mult > 2) {
-        id3     = particlePtr->channel(i).product(2);
+        id3     = particleShr->channel(i).product(2);
         id3Abs  = abs(id3);
 
         // Also order third into descending order of absolute values.
@@ -173,13 +175,13 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
     }
 
     // Channels with meMode >= 100 are calculated based on stored values.
-    else widNow = GammaRes * particlePtr->channel(i).bRatio();
+    else widNow = GammaRes * particleShr->channel(i).bRatio();
 
     // Find secondary open fractions of partial width.
     openSecPos  = 1.;
     openSecNeg  = 1.;
     if (widNow > 0.) for (int j = 0; j < mult; ++j) {
-      idNow     = particlePtr->channel(i).product(j);
+      idNow     = particleShr->channel(i).product(j);
       idAnti    = (particleDataPtr->hasAnti(idNow)) ? -idNow : idNow;
       // Secondary widths not yet initialized for heavier states,
       // so have to assume unit open fraction there.
@@ -191,9 +193,9 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
     }
 
     // Store partial widths and secondary open fractions.
-    particlePtr->channel(i).onShellWidth(widNow);
-    particlePtr->channel(i).openSec( idRes, openSecPos);
-    particlePtr->channel(i).openSec(-idRes, openSecNeg);
+    particleShr->channel(i).onShellWidth(widNow);
+    particleShr->channel(i).openSec( idRes, openSecPos);
+    particleShr->channel(i).openSec(-idRes, openSecNeg);
 
     // Update sum over all channnels and over open channels only.
     widTot     += widNow;
@@ -203,38 +205,38 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
 
   // If no decay channels are open then set particle stable and done.
   if (widTot < minWidth) {
-    particlePtr->setMayDecay(false, false);
-    particlePtr->setMWidth(0., false);
-    for (int i = 0; i < particlePtr->sizeChannels(); ++i)
-      particlePtr->channel(i).bRatio( 0., false);
+    particleShr->setMayDecay(false, false);
+    particleShr->setMWidth(0., false);
+    for (int i = 0; i < particleShr->sizeChannels(); ++i)
+      particleShr->channel(i).bRatio( 0., false);
     return true;
   }
 
   // Set lifetime for displaced vertex calculations (convert GeV^-1 to mm).
   // SLHA decay table should take precedence; decay length already set and
   // potentially over-written as per users request.
-  if (particlePtr->tauCalc()) {
+  if (particleShr->tauCalc()) {
     double decayLength = HBARC * FM2MM / widTot;
-    particlePtr->setTau0(decayLength, false);
+    particleShr->setTau0(decayLength, false);
   }
 
   // Normalize branching ratios to unity.
   double bRatio;
-  for (int i = 0; i < particlePtr->sizeChannels(); ++i) {
-    bRatio      = particlePtr->channel(i).onShellWidth() / widTot;
-    particlePtr->channel(i).bRatio( bRatio, false);
+  for (int i = 0; i < particleShr->sizeChannels(); ++i) {
+    bRatio      = particleShr->channel(i).onShellWidth() / widTot;
+    particleShr->channel(i).bRatio( bRatio, false);
   }
 
   // Optionally force total width by rescaling of all partial ones.
   if (doForceWidth) {
     forceFactor = GammaRes / widTot;
-    for (int i = 0; i < particlePtr->sizeChannels(); ++i)
-      particlePtr->channel(i).onShellWidthFactor( forceFactor);
+    for (int i = 0; i < particleShr->sizeChannels(); ++i)
+      particleShr->channel(i).onShellWidthFactor( forceFactor);
   }
 
   // Else update newly calculated partial width.
   else {
-    particlePtr->setMWidth(widTot, false);
+    particleShr->setMWidth(widTot, false);
     GammaRes    = widTot;
   }
 
@@ -247,14 +249,14 @@ bool ResonanceWidths::init(Info* infoPtrIn) {
   bool isHiggs = (idRes == 25 || idRes == 35 ||idRes == 36 ||idRes == 37);
   bool clipHiggsWings = settingsPtr->flag("Higgs:clipWings");
   if (isHiggs && clipHiggsWings) {
-    double mMinNow  = particlePtr->mMin();
-    double mMaxNow  = particlePtr->mMax();
+    double mMinNow  = particleShr->mMin();
+    double mMaxNow  = particleShr->mMax();
     double wingsFac = settingsPtr->parm("Higgs:wingsFac");
     double mMinWing = mRes - wingsFac * GammaRes;
     double mMaxWing = mRes + wingsFac * GammaRes;
-    if (mMinWing > mMinNow) particlePtr->setMMinNoChange(mMinWing);
+    if (mMinWing > mMinNow) particleShr->setMMinNoChange(mMinWing);
     if (mMaxWing < mMaxNow || mMaxNow < mMinNow)
-      particlePtr->setMMaxNoChange(mMaxWing);
+      particleShr->setMMaxNoChange(mMaxWing);
   }
 
   // Done.
@@ -279,22 +281,24 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
   double mfSum, psOnShell;
 
   // Loop over all decay channels. Basic properties of channel.
-  for (int i = 0; i < particlePtr->sizeChannels(); ++i) {
+  ParticleDataEntryPtr particleShr = particlePtr.lock();
+  if (particleShr == nullptr) return widSum;
+  for (int i = 0; i < particleShr->sizeChannels(); ++i) {
     iChannel    = i;
-    onMode      = particlePtr->channel(i).onMode();
-    meMode      = particlePtr->channel(i).meMode();
-    mult        = particlePtr->channel(i).multiplicity();
+    onMode      = particleShr->channel(i).onMode();
+    meMode      = particleShr->channel(i).meMode();
+    mult        = particleShr->channel(i).multiplicity();
 
     // Initially assume vanishing branching ratio.
     widNow      = 0.;
-    if (setBR) particlePtr->channel(i).currentBR(widNow);
+    if (setBR) particleShr->channel(i).currentBR(widNow);
 
     // Optionally only consider specific (two-body) decay channel.
     // Currently only used for Higgs -> q qbar, g g or gamma gamma.
     if (idOutFlav1 > 0 || idOutFlav2 > 0) {
       if (mult > 2) continue;
-      if (particlePtr->channel(i).product(0) != idOutFlav1) continue;
-      if (particlePtr->channel(i).product(1) != idOutFlav2) continue;
+      if (particleShr->channel(i).product(0) != idOutFlav1) continue;
+      if (particleShr->channel(i).product(1) != idOutFlav2) continue;
     }
 
     // Optionally only consider open channels.
@@ -307,8 +311,8 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
     if (meMode < 100) {
 
       // Read out information on channel: primarily use first two.
-      id1       = particlePtr->channel(i).product(0);
-      id2       = particlePtr->channel(i).product(1);
+      id1       = particleShr->channel(i).product(0);
+      id2       = particleShr->channel(i).product(1);
       id1Abs    = abs(id1);
       id2Abs    = abs(id2);
 
@@ -317,7 +321,7 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
 
       // Allow for third product to be treated in derived classes.
       if (mult > 2) {
-        id3     = particlePtr->channel(i).product(2);
+        id3     = particleShr->channel(i).product(2);
         id3Abs  = abs(id3);
 
         // Also order third into descending order of absolute values.
@@ -344,21 +348,21 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
 
     // Now on to meMode >= 100. First case: no correction at all.
     else if (meMode == 100)
-      widNow    = GammaRes * particlePtr->channel(i).bRatio();
+      widNow    = GammaRes * particleShr->channel(i).bRatio();
 
     // Correction by step at threshold.
     else if (meMode == 101) {
       mfSum     = 0.;
       for (int j = 0; j < mult; ++j) mfSum
-               += particleDataPtr->m0( particlePtr->channel(i).product(j) );
+               += particleDataPtr->m0( particleShr->channel(i).product(j) );
       if (mfSum + MASSMARGIN < mHat)
-        widNow  = GammaRes * particlePtr->channel(i).bRatio();
+        widNow  = GammaRes * particleShr->channel(i).bRatio();
     }
 
     // Correction by a phase space factor for two-body decays.
     else if ( (meMode == 102 || meMode == 103) && mult == 2) {
-      mf1       = particleDataPtr->m0( particlePtr->channel(i).product(0) );
-      mf2       = particleDataPtr->m0( particlePtr->channel(i).product(1) );
+      mf1       = particleDataPtr->m0( particleShr->channel(i).product(0) );
+      mf2       = particleDataPtr->m0( particleShr->channel(i).product(1) );
       mr1       = pow2(mf1 / mHat);
       mr2       = pow2(mf2 / mHat);
       ps        = (mHat < mf1 + mf2 + MASSMARGIN) ? 0.
@@ -367,22 +371,22 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
       mr2       = pow2(mf2 / mRes);
       psOnShell = (meMode == 102) ? 1. : max( minThreshold,
                   sqrtpos( pow2(1.- mr1 - mr2) - 4. * mr1 * mr2) );
-      widNow = GammaRes * particlePtr->channel(i).bRatio() * ps / psOnShell;
+      widNow = GammaRes * particleShr->channel(i).bRatio() * ps / psOnShell;
     }
 
     // Correction by simple threshold factor for multibody decay.
     else if (meMode == 102 || meMode == 103) {
       mfSum  = 0.;
       for (int j = 0; j < mult; ++j) mfSum
-               += particleDataPtr->m0( particlePtr->channel(i).product(j) );
+               += particleDataPtr->m0( particleShr->channel(i).product(j) );
       ps        = sqrtpos(1. - mfSum / mHat);
       psOnShell = (meMode == 102) ? 1. : max( minThreshold,
                   sqrtpos(1. - mfSum / mRes) );
-      widNow = GammaRes * particlePtr->channel(i).bRatio() * ps / psOnShell;
+      widNow = GammaRes * particleShr->channel(i).bRatio() * ps / psOnShell;
     }
 
     // Optionally multiply by secondary widths.
-    if (openOnly) widNow *= particlePtr->channel(i).openSec(idSgn);
+    if (openOnly) widNow *= particleShr->channel(i).openSec(idSgn);
 
     // Optionally include factor to force to fixed width.
     if (doForceWidth) widNow *= forceFactor;
@@ -393,7 +397,7 @@ double ResonanceWidths::width(int idSgn, double mHatIn, int idInFlavIn,
     widSum += widNow;
 
     // Optionally store partial widths for later decay channel choice.
-    if (setBR) particlePtr->channel(i).currentBR(widNow);
+    if (setBR) particleShr->channel(i).currentBR(widNow);
   }
 
   // Done.
@@ -1964,30 +1968,32 @@ void ResonanceLeptoquark::initConstants() {
   kCoup      = settingsPtr->parm("LeptoQuark:kCoup");
 
   // Check that flavour info in decay channel is correctly set.
-  int id1Now = particlePtr->channel(0).product(0);
-  int id2Now = particlePtr->channel(0).product(1);
+  ParticleDataEntryPtr particleShr = particlePtr.lock();
+  if (particleShr == nullptr) return;
+  int id1Now = particleShr->channel(0).product(0);
+  int id2Now = particleShr->channel(0).product(1);
   if (id1Now < 1 || id1Now > 6) {
     infoPtr->errorMsg("Error in ResonanceLeptoquark::init:"
       " unallowed input quark flavour reset to u");
     id1Now   = 2;
-    particlePtr->channel(0).product(0, id1Now);
+    particleShr->channel(0).product(0, id1Now);
   }
   if (abs(id2Now) < 11 || abs(id2Now) > 16) {
     infoPtr->errorMsg("Error in ResonanceLeptoquark::init:"
       " unallowed input lepton flavour reset to e-");
     id2Now   = 11;
-    particlePtr->channel(0).product(1, id2Now);
+    particleShr->channel(0).product(1, id2Now);
   }
 
   // Set/overwrite charge and name of particle.
-  bool changed  = particlePtr->hasChanged();
+  bool changed  = particleShr->hasChanged();
   int chargeLQ  = particleDataPtr->chargeType(id1Now)
                 + particleDataPtr->chargeType(id2Now);
-  particlePtr->setChargeType(chargeLQ);
+  particleShr->setChargeType(chargeLQ);
   string nameLQ = "LQ_" + particleDataPtr->name(id1Now) + ","
                 + particleDataPtr->name(id2Now);
-  particlePtr->setNames(nameLQ, nameLQ + "bar");
-  if (!changed) particlePtr->setHasChanged(false);
+  particleShr->setNames(nameLQ, nameLQ + "bar");
+  if (!changed) particleShr->setHasChanged(false);
 
 }
 

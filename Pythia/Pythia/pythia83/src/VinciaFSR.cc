@@ -1,5 +1,5 @@
 // VinciaFSR.cc is a part of the PYTHIA event generator.
-// Copyright (C) 2021 Peter Skands, Torbjorn Sjostrand.
+// Copyright (C) 2022 Peter Skands, Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
 
@@ -1526,6 +1526,7 @@ int VinciaFSR::shower(int iBeg, int iEnd, Event& event, double pTmax,
   do {
     // Do a final-state emission (if allowed).
     double pTtimes = pTnext(event, pTmax, 0.);
+    infoPtr->setPTnow( pTtimes);
     if (pTtimes > 0.) {
       if (branch(event)) ++nBranchNow;
       pTmax = pTtimes;
@@ -2054,7 +2055,7 @@ void VinciaFSR::prepare(int iSys, Event& event, bool) {
   if (verbose >= DEBUG) printOut(__METHOD_NAME__, "Finding branchers...");
   if (doFF || doRF) {
     // In merging, allow to only generate emissions inside resonance systems.
-    if ( isTrialShowerRes && !isResonanceSys[iSys]) {
+    if (isTrialShowerRes && !isResonanceSys[iSys]) {
       // Just clear what we've got.
       emittersRF.clear();
       splittersRF.clear();
@@ -2074,8 +2075,8 @@ void VinciaFSR::prepare(int iSys, Event& event, bool) {
     }
   }
 
-  // Set up QED/EW systems.
-  if (doQED) {
+  // Set up QED/EW systems. (Note: trial showers are pure QCD.)
+  if (doQED && !isTrialShower) {
     bool isHard = isHardSys[iSys] || isResonanceSys[iSys];
     if (isHard) {
       // Check if doing full EW or "just" QED.
@@ -2312,17 +2313,24 @@ double VinciaFSR::pTnext(Event& event, double pTevolBegAll,
   }
 
   // Generate next resonance gluon-emission trial and compare to current qWin.
-  if (!isTrialShower && doRF && emittersRF.size() > 0) {
+  if (doRF && emittersRF.size() > 0) {
+    // For now, issue a warning that merging in RF systems is not validated.
+    if (isTrialShower) infoPtr->errorMsg("Warning in "+__METHOD_NAME__
+      +": Merging in coloured-resonance systems not validated!");
     if ( !q2NextEmitResQCD(q2Begin, q2EndAll) ) return 0.;
   }
 
   // Generate nex resonance gluon-splitting trial and compare to current qWin.
-  if (!isTrialShower && doRF && splittersRF.size() > 0) {
+  if (doRF && splittersRF.size() > 0) {
+    // For now, issue a warning that merging in RF systems is not validated.
+    if (isTrialShower) infoPtr->errorMsg("Warning in "+__METHOD_NAME__
+      +": Merging in coloured-resonance systems not validated!");
     if ( !q2NextSplitResQCD(q2Begin, q2EndAll) ) return 0.;
   }
 
   // Generate next EW trial scale and compare to current qWin.
-  if (!isTrialShower && doQED) {
+  // (Trial showers are pure QCD.)
+  if (doQED && !isTrialShower) {
     double q2EW = 0.;
     // EW emissions in the hard system.
     if (ewHandlerHard->nBranchers() >= 1) {
@@ -2762,6 +2770,7 @@ bool VinciaFSR::resonanceShower(Event& process, Event& event,
       double pTtimes  = (doFSRinResonances) ? pTnext( event, pTmax, pTmerge)
         : -1.;
       double pTresDec = pTnextResDec();
+      infoPtr->setPTnow( max(pTtimes, pTresDec) );
 
       // Do a final-state emission.
       if ( pTtimes > 0. && pTtimes > max( pTresDec, pTmerge) ) {
@@ -3115,9 +3124,19 @@ void VinciaFSR::header() {
   }
   // Vincia Weak shower.
   else if (ewMode == 3) {
-    cout << " |    VINCIA EW       : Kleiss, Verheyen, "
-         << "EPJC80(2020)10,980 arXiv:2002.09248" << endl;
+    cout << " |    VINCIA EW       : Brooks, Skands, Verheyen, "
+         << "arXiv:2108.10786" << endl;
   }
+  // Vincia Merging.
+  if (doMerging) {
+    cout << " |    VINCIA Merging  : Brooks, Preuss, "
+         << "CPC264(2021)107985 arXiv:2008.09468" << endl;
+  }
+  // Vincia Powheg Hook
+#ifdef Pythia8_PowhegHooksVincia_H
+  cout << " |    VINCIA Powheg Hook : Hoche et al., "
+         << "arXiv:2106.10987" << endl;
+#endif
   // Pythia 8 main reference.
   cout << " |    PYTHIA 8        : Sjostrand et al., CPC191(2015)159, "
        << "arXiv:1410.3012" << endl;
@@ -3600,37 +3619,34 @@ bool VinciaFSR::setupQCDantennae(int iSys, Event& event) {
   // Store total invariant mass of the final state.
   mSystem[iSys] = mSys;
 
-  // Don't do RF or EW/QED branchings in trial showers.
-  if (!isTrialShower) {
-    // Find any resonance antennae.
-    if (colPartner > 0) {
-      // Get a copy of daughters.
-      vector<int> resSysAll = daughters;
-      if (acolPartner != colPartner && acolPartner > 0)
-        resSysAll.push_back(acolPartner);
+  // Find any resonance antennae.
+  if (colPartner > 0) {
+    // Get a copy of daughters.
+    vector<int> resSysAll = daughters;
+    if (acolPartner != colPartner && acolPartner > 0)
+      resSysAll.push_back(acolPartner);
 
-      // Insert col partner and res at front (just convention).
-      resSysAll.insert(resSysAll.begin(), colPartner);
-      resSysAll.insert(resSysAll.begin(), iMother);
-      unsigned int posRes(0), posPartner(1);
-      saveEmitterRF(iSys, event, resSysAll, posRes, posPartner, true);
-      if (event[colPartner].isGluon())
-        saveSplitterRF(iSys, event, resSysAll, posRes, posPartner, true);
-    }
-    if (acolPartner > 0) {
-      // Get a copy of daughters.
-      vector<int> resSysAll = daughters;
-      if (acolPartner != colPartner && colPartner > 0)
-        resSysAll.push_back(colPartner);
+    // Insert col partner and res at front (just convention).
+    resSysAll.insert(resSysAll.begin(), colPartner);
+    resSysAll.insert(resSysAll.begin(), iMother);
+    unsigned int posRes(0), posPartner(1);
+    saveEmitterRF(iSys, event, resSysAll, posRes, posPartner, true);
+    if (event[colPartner].isGluon())
+      saveSplitterRF(iSys, event, resSysAll, posRes, posPartner, true);
+  }
+  if (acolPartner > 0) {
+    // Get a copy of daughters.
+    vector<int> resSysAll = daughters;
+    if (acolPartner != colPartner && colPartner > 0)
+      resSysAll.push_back(colPartner);
 
-      // Insert col partner and res at front (just convention).
-      resSysAll.insert(resSysAll.begin(), acolPartner);
-      resSysAll.insert(resSysAll.begin(), iMother);
-      unsigned int posRes(0), posPartner(1);
-      saveEmitterRF(iSys, event, resSysAll, posRes, posPartner, false);
-      if (event[acolPartner].isGluon())
-        saveSplitterRF(iSys, event, resSysAll, posRes, posPartner, false);
-    }
+    // Insert col partner and res at front (just convention).
+    resSysAll.insert(resSysAll.begin(), acolPartner);
+    resSysAll.insert(resSysAll.begin(), iMother);
+    unsigned int posRes(0), posPartner(1);
+    saveEmitterRF(iSys, event, resSysAll, posRes, posPartner, false);
+    if (event[acolPartner].isGluon())
+      saveSplitterRF(iSys, event, resSysAll, posRes, posPartner, false);
   }
 
   // Find any f-f that are colour connected, but not directly to a
@@ -4073,12 +4089,18 @@ bool VinciaFSR::branchQCD(Event& event) {
     doMECsSys[iSysWin] = mecsPtr->doMEC(iSysWin, nBranch[iSysWin]+1);
   }
 
-  // When merging, communicate to MergingHooks whether the event may be vetoed
-  // due to this branching.
+  // Merging: is this branching a candidate for a merging veto or not?
   if (doMerging && !isTrialShower) {
     // We only want to veto the event based on the first branching.
-    //TODO: in principle, we could veto later emissions here as well.
-    if (nBranch[iSysWin] > 1)
+    // In principle, later emissions could be vetoed as well, but the
+    // current treatment assumes that if the first emission is below the
+    // merging scale, all subsequent ones are too.
+    // This could explicitly be checked by setting nBranchMaxMergingVeto
+    // to a large number.
+    int nBranchMaxMergingVeto = 1;
+
+    // Merging veto should ignore branchings after the first.
+    if (nBranch[iSysWin] > nBranchMaxMergingVeto)
       mergingHooksPtr->doIgnoreStep(true);
   }
 
@@ -4107,7 +4129,7 @@ bool VinciaFSR::branchQCD(Event& event) {
 
 //--------------------------------------------------------------------------
 
-// Perform an EW branching.
+// Perform a QED or EW branching.
 
 bool VinciaFSR::branchEW(Event& event) {
 
@@ -4220,6 +4242,11 @@ bool VinciaFSR::branchEW(Event& event) {
       }
     }
 
+    // Merging in Vincia so far only considers matrix elements with higher
+    // numbers of QCD branchings. QED/EW branchings should therefore never
+    // result in the event being vetoed.
+    if (doMerging && !isTrialShower) mergingHooksPtr->doIgnoreStep(true);
+
   }
   // Else EW trial failed.
   else {
@@ -4235,7 +4262,7 @@ bool VinciaFSR::branchEW(Event& event) {
 
 //--------------------------------------------------------------------------
 
-// Update systems of QCD antennae after an EW/ QED branching.
+// Update systems of QCD antennae after a QED or EW branching.
 
 bool VinciaFSR::updateAfterEW(Event& event, int sizeOld) {
   if (verbose >= DEBUG) printOut(__METHOD_NAME__, "begin", dashLen);
@@ -4877,11 +4904,14 @@ double VinciaFSR::getMEC(int iSys, const Event& event,
 
 //--------------------------------------------------------------------------
 
-// Update the event.
+// Update the event after a QCD FF or RF branching.
 
 bool VinciaFSR::updateEvent(Event& event, ResJunctionInfo& junctionInfoIn) {
 
+  // Append the particles in pNew to event record.
   for (unsigned int i = 0; i < pNew.size(); ++i) event.append(pNew[i]);
+
+  // Set daughter information for each mother and mark mother as decayed.
   map<int, pair<int,int> >::iterator it;
   for (it = winnerQCD->mothers2daughters.begin();
        it != winnerQCD->mothers2daughters.end(); ++it) {
@@ -4894,15 +4924,23 @@ bool VinciaFSR::updateEvent(Event& event, ResJunctionInfo& junctionInfoIn) {
     } else return false;
   }
 
-  // Add mothers to new daughters.
+  // Set mother information for each daughter.
   for (it = winnerQCD->daughters2mothers.begin();
       it != winnerQCD->daughters2mothers.end(); ++it) {
     int daughter = it->first;
     int mother1  = (it->second).first;
     int mother2  = (it->second).second;
-    if (daughter<event.size() && daughter > 0)
-      event[daughter].mothers(mother1, mother2);
-    else return false;
+    // Ensure mother1 is always the one whose colour (or anticolour) flowed
+    // onto the emitted parton. (This determines which mother is used to
+    // define collinear vertex structure eg in HepMC output.)
+    if (daughter<event.size() && daughter > 0) {
+      if (mother2 == 0) event[daughter].mothers(mother1, 0);
+      else if (mother1 == 0) event[daughter].mothers(mother2, 0);
+      else if (event[daughter].col() == event[mother1].col() ||
+        event[daughter].acol() == event[mother1].acol())
+        event[daughter].mothers(mother1, mother2);
+      else event[daughter].mothers(mother2, mother1);
+    } else return false;
   }
 
   // Tell Pythia if we used a colour tag.
@@ -4965,8 +5003,7 @@ bool VinciaFSR::updateEvent(Event& event, ResJunctionInfo& junctionInfoIn) {
           // Get daughter that isn't iNew.
           int m2after=event[m2].daughter1();
           if (m2after==iNew) m2after = event[m2].daughter2();
-          //Check, did this mother change colours or was it the
-          // recoiler?
+          // Did this mother change colours or was it the recoiler?
           int colBef    = event[m2].col();
           int acolBef   = event[m2].acol();
           int colAfter  = event[m2after].col();
