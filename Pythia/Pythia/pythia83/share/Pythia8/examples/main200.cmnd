@@ -1,0 +1,30 @@
+! File: main200.cmnd
+! This file contains commands to be read in for a PYTHIA8/VINCIA run.
+! Lines not beginning with a letter or digit are comments.
+! Names are case-insensitive  -  but spellings-sensitive!
+
+! 1) Settings that could be used in a main program, if desired.
+Beams:eCM =  91.188                ! CM energy of collision
+Beams:idA =  11                    ! e-
+Beams:idB = -11                    ! e+
+Main:numberOfEvents   = 10000      ! number of events to generate
+Next:numberCount      = 100        ! print message every n events
+Next:numberShowEvent  = 1          ! print event record n times
+Main:timesAllowErrors = 1
+
+! 2) Settings for process generation internal to PYTHIA8.
+WeakSingleBoson:ffbar2gmZ = on     ! process
+! Switch off all Z0 decays and then switch back on the desired channels
+23:onMode = off
+23:onIfAny = 1 2 3 4 5    ! Inclusive hadronic Z decays
+!23:onIfAny = 5           ! Decays to b quarks only, for mass tests
+!23:onIfAny = 11          ! Z decays to electrons, for QED tests
+
+! 3) Optionally switch on/off photon ISR and hadronization
+PDF:lepton = off
+SpaceShower:QEDshowerByL = off
+
+! 4) VINCIA settings
+PartonShowers:model   = 2   ! 1:old showers, 2:vincia, 3:dire
+Vincia:sectorShower   = on  ! whether the sector shower should be used
+Vincia:ewMode         = 0   ! 0:no EW, 1: QED dipoles, 2: QED multiples, 3: EW.

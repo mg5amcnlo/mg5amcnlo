@@ -1,0 +1,19 @@
+
+
+# Process specification. LowEnergyQCD options are as follows:
+# all, nonDiffractive, elastic, singleDiffractiveXB, singleDiffractiveAX,
+# doubleDiffractive, excitation, annihilation, resonant
+LowEnergyQCD:all = on
+
+# Beam specification
+Beams:idA = 2212
+Beams:idB = -211
+Beams:eCM = 2.0
+
+# Number of events
+Main:numberOfEvents  = 100000
+Next:numberCount     = 10000
+
+# Number of shown events; for LowEnergyQCD processes, events are typically
+# small, and it can make sense to show more than one.
+Next:numberShowEvent = 5

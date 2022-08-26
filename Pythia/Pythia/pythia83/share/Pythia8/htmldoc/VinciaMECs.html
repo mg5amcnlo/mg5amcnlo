@@ -1,0 +1,104 @@
+<html>
+<head>
+<title>VINCIA MEC Settings</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+ 
+<h2>Matrix Element Corrections</h2> 
+ 
+Tree-level Matrix element corrections (MECs) have not yet been 
+re-implemented in the VINCIA shower. This feature will become 
+available in the future.  But since both the QCD helicity shower and 
+the EW shower require polarised particles, matrix elements can be used 
+to select helicities for the Born process. 
+ 
+<p/> 
+Born-level helicity selection can be enabled by setting the 
+<code>modeMECs</code> and the respective <code>maxMECs</code> switches 
+(see below) to <code>0</code>. Additionally, 
+<code>Vincia:MEPlugin</code> must be set to a valid plugin library. By 
+default, these plugins are not built and can be enabled with 
+<code>./configure --enable-mg5mes</code>. Plugins exist as libraries 
+of the form <code>libpythia8mg5PLUGIN.so</code> in the Pythia library 
+directory where <code>PLUGIN</code> is the name of the plugin. A 
+specific plugin is set via <code>Vincia:MEplugin = 
+PLUGIN</code>. Further details on generating custom plugins can be 
+found in <a href="Madgraph5Processes.html" target="page">Madgraph5 Processes</a>. 
+Setting <code>modeMECs</code> to <code>-1</code> instead turns any use 
+of matrix elements off completely.  Setting the respective 
+<code>maxMECs</code> switches to <code>-1</code> only turns off the 
+usage of matrix elements for that specific process type (e.g. for all 
+2&rarr;1 processes when setting <code>maxMECs2to1 = -1</code>). 
+ 
+<p/> 
+The main MEC switch is given by: 
+<a name="anchor1"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:modeMECs &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the matrix element correction mode, with <code>0</code> 
+switching any MECs off. 
+<br/><code>option </code><strong> -1</strong> : Off. Pure LL shower without any matrix element 
+corrections.   
+<br/><code>option </code><strong> 0</strong> : No matrix element corrections, but allows to use 
+matrix elements to select helicities at Born level.   
+   
+ 
+<p/> 
+The matrix element library to be used has to be specified by: 
+<a name="anchor2"></a>
+<p/><code>word&nbsp; </code><strong> Vincia:MEplugin &nbsp;</strong> <br/>
+Name of the plugin library to use for matrix element corrections and 
+Born-level helicity selection. 
+   
+ 
+<a name="section0"></a> 
+<h3>Matching Orders</h3> 
+ 
+These modes select the order of tree-level matrix element corrections 
+for different process types. 
+ 
+<a name="anchor3"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:maxMECs2to1 &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;1 processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+   
+<a name="anchor4"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:maxMECs2to2 &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;2 processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+   
+<a name="anchor5"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:maxMECs2toN &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the order of tree-level matrix-element corrections for hard 
+2&rarr;N processes. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+   
+<a name="anchor6"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:maxMECsResDec &nbsp;</strong> 
+ (<code>default = <strong>0</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the order of tree-level matrix-element corrections in 
+resonance decays. The value <code>-1</code> is equivalent to 
+switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+   
+<a name="anchor7"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:maxMECsMPI &nbsp;</strong> 
+ (<code>default = <strong>-1</strong></code>; <code>minimum = -1</code>; <code>maximum = 0</code>)<br/>
+Selects the order of tree-level matrix-element corrections applied to 
+the hardest MPI in the event. The value <code>-1</code> is equivalent 
+to switching matrix-element corrections off while <code>0</code> still 
+allows to use matrix elements to select helicities at Born level. 
+   
+ 
+</body>
+</html>

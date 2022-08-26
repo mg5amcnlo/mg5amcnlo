@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Copyright (C) 2022 Torbjorn Sjostrand.
+# PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
+# Please respect the MCnet Guidelines, see GUIDELINES for details.
+
+# Script to run all the mainNN test programs. Example usage is:
+#     ./runmains --skip="01 02"
+# where the first two examples, main01 and main02, will be skipped. It
+# is also possible to run with multiple threads:
+#     ./runmains --threads=4
+# or to print the help:
+#     ./runmains --help
+
+################################################################################
+# VARIABLES: Global variables not defined via command line arguments.
+#     USAGE:   Text printed when the --help option is passed.
+#     OPTIONS: Available user options.
+#     LOGFILE: Global log file for running parallel jobs.
+#     mainXXX: Custom default main commands.
+################################################################################
+read -d "" USAGE << "BLOCKTEXT"
+Usage: ./runmains [OPTION]
+
+The available options are defined below. Arguments to the options are
+indicated in caps, i.e. SKIP.
+
+Configuration options.
+--help      : Print this message (also -h, --h, and -help).
+--threads=N : Number of threads to run the examples.
+--skip=SKIP : Examples to skip passed as a string, e.g. "01 02 03".
+--run=MAIN  : Opposite of --skip, only run these mains, e.g. "01 02 03".
+BLOCKTEXT
+OPTIONS="-h --h -help --threads --skip --run"
+LOGFILE="runmains.log"
+main16="main16.cmnd"
+main42="main42.cmnd hepmcout42.dat"
+main43="main43.cmnd hepmcout43.dat"
+main44="main44.cmnd hepmcout44.dat"
+main45="main44.cmnd hepmcout45.dat"
+main46="main46.cmnd ttbar.hdf5 main46.hepmc"
+main48="/hep/evtgen/share/DECAY_2010.DEC /hep/evtgen/share/evt.pdl "
+main48+=" /hep/evtgen/share/Pythia8/xmldoc/ true"
+main81="main81.cmnd w+_production_lhc_0.lhe histout81.dat"
+main82="main82.cmnd w+_production_lhc_0.lhe histout82.dat"
+main83="main83.cmnd w+_production_lhc_0.lhe histout83.dat"
+main84="main84.cmnd hepmcout84.dat 2 w+_production_lhc histout84.dat"
+main85="main85.cmnd w_production hepmcout85.dat"
+main86="main86.cmnd w_production hepmcout86.dat"
+main87="main87.cmnd w_production hepmcout87.dat"
+main88="main88.cmnd w_production hepmcout88.dat"
+main89="main89ckkwl.cmnd hepmcout89.dat"
+main93="-c main93.cmnd -n 1000 -o main93.out"
+main280="main280.cmnd w+_production_lhc_ output.hepmc"
+main300="--nevents 50 --setting \"WeakSingleBoson:ffbar2gmZ=on\""
+
+################################################################################
+# FUNCTION: Print warning message.
+################################################################################
+function warn() {
+    if ! type "tput" &> /dev/null; then echo -e $@
+    else echo -e $(tput setaf 0)$(tput setab 3)WARNING: $@$(tput sgr0); fi
+}
+
+################################################################################
+# FUNCTION: Compile and run a set of examples using a common lockfile.
+################################################################################
+function runmains() {
+    while [ -f "$LOGFILE" ]; do
+	read -a MAINS < $LOGFILE
+	if (("${#MAINS[@]}" > 1)); then echo "${MAINS[@]:1}" > $LOGFILE
+	else rm -f $LOGFILE; fi
+	MAIN=${MAINS[0]}
+	MAIN=${MAIN%.cc}
+	USE=true
+	for N in $SKIP; do
+	    if [ "$MAIN" = "main$N" ]; then USE=false; break; fi;
+	done
+	if [ ! -z "$RUN" ]; then USE=false; fi
+	for N in $RUN; do
+	    if [ "$MAIN" = "main$N" ]; then USE=true; break; fi;
+	done
+	if [ "$USE" = false ]; then continue; fi
+	eval ARGS=\$${MAIN}
+	make $MAIN
+	{ time ./$MAIN $ARGS ; } > $MAIN.log 2>&1
+    done
+}
+
+################################################################################
+# MAIN: The main execution of the runmains script.
+################################################################################
+
+# Check if help requested.
+for VAR in "$@"; do
+    if [ "$VAR" = "-h" ] || [ "$VAR" = "--h" ] || [ "$VAR" = "-help" ] \
+	   || [ "$VAR" = "--help" ]; then
+	echo -e "$USAGE"
+	exit
+    fi
+done
+
+# Parse the user arguments and evaluate each as a global variable.
+for VAR in "$@"; do
+    if ! [[ $OPTIONS =~ (^| )${VAR%%=*}($| ) ]]; then
+	warn "Ignoring invalid option \"${VAR%=*}\".";
+	continue;
+    fi
+    VAR=${VAR#--};
+    KEY=${VAR%%=*}; VAL=${VAR#$KEY}; VAL=${VAL#*=}; KEY=${KEY//"-"/"_"}
+    KEY=$(echo $KEY | awk '{print toupper($0)}');  VAL=$(eval echo $VAL)
+    eval $KEY=\"$VAL\"; eval ${KEY}_SET=true
+done
+
+# Build the parallel runs.
+MAINS=(main*.cc); THREAD=0
+echo "${MAINS[@]}" > $LOGFILE
+if [ -z $THREADS ]; then THREADS=1; fi
+while ((THREAD < THREADS)); do
+    ((THREAD++))
+    runmains &
+    sleep 1
+done
+wait

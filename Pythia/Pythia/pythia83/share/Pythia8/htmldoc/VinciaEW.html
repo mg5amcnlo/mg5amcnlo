@@ -1,0 +1,1153 @@
+<html>
+<head>
+<title>VINCIA QED and EW Antenna Shower Settings</title>
+<link rel="stylesheet" type="text/css" href="pythia.css"/>
+<link rel="shortcut icon" href="pythia32.gif"/>
+</head>
+<body>
+<h2>VINCIA QED and EW Antenna Shower Settings</h2> 
+<ol id="toc">
+  <li><a href="#section0">Main Switches</a></li>
+  <li><a href="#section1">QED Shower Settings</a></li>
+  <li><a href="#section2">EW Shower Settings</a></li>
+</ol>
+
+ 
+<p>Here, parameters specific to VINCIA's QED and EW antenna 
+showers are collected, including VINCIA's interleaved treatment of 
+resonance decays. See the <a href="Vincia.html" target="page">main VINCIA 
+antenna shower page</a> for more general parameters that are 
+common to both the QCD and QED/EW showers. 
+</p> 
+ 
+<a name="section0"></a> 
+<h3>Main Switches</h3> 
+ 
+<p>VINCIA contains two alternative implementations of QED/EW shower 
+effects. One is restricted to pure QED but allows for a fully coherent 
+(multipole) treatment of that sector. The other is limited to 
+dipole-style coherence in the photon sector but 
+includes a full set of electroweak (EW) branching kernels 
+with the appropriate (quasi-)collinear limits. 
+</p> 
+ 
+<a name="anchor1"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:EWmode &nbsp;</strong> 
+ (<code>default = <strong>2</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+Main switch for QED and Weak showers in VINCIA, in particular for the 
+hard process. (See <code>Vincia:EWmodeMPI</code> below for 
+the handling of QED corrections in MPI systems.) 
+<br/><code>option </code><strong> 0</strong> : No QED or weak showers at all. 
+   
+<br/><code>option </code><strong> 1</strong> : Dipole QED showers. Partially coherent, based on 
+maximally screening dipole pairs. 
+   
+<br/><code>option </code><strong> 2</strong> : Multipole QED showers. Fully coherent but somewhat 
+computationally slower than the dipole approximation. 
+   
+<br/><code>option </code><strong> 3</strong> : Dipole QED + Weak showers. All electroweak branchings 
+are enabled, comprising emissions, splittings, and 
+self-interactions of W, Z, and H bosons, in addition to QED. 
+Note that the weak shower operates on helicity 
+eigenstates; this is particularly relevant for W and Z 
+bosons for which the longitudinal polarisations have different 
+splitting amplitudes than the transverse ones. Typically, the hard 
+process does not provide helicity information for the in- and outgoing 
+legs in Pythia. In this case, VINCIA will attempt to use its MG5 
+matrix-element interface and its internal EW splitting amplitudes to 
+assign such helicities. 
+Note that this requires Pythia to be configured using the 
+<code>--with-mg5mes</code> option 
+(see also the <a href="SampleMainPrograms.html" target="page">example program</a> 
+<code>main203.cc</code>). If the given hard process is not available 
+in the linked MG5 library, or if the helicity assignment fails for any 
+other reason, then the QED dipole shower is used as a fallback. 
+   
+   
+ 
+<a name="anchor2"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:EWmodeMPI &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 0</code>; <code>maximum = 2</code>)<br/>
+  Treatment of QED showers for MPI systems. Note that 
+  <code>EWmodeMPI</code> is forced to be less than or equal to 
+  the main <code>EWmode</code> switch above so that the treatment of 
+  QED corrections for MPI cannot be more sophisticated than that of 
+  the hard interaction. Also note that there is 
+currently no option to include weak showers for MPI. 
+<br/><code>option </code><strong> 0</strong> : No QED showers in MPI systems. 
+   
+<br/><code>option </code><strong> 1</strong> : Dipole QED showers in MPI systems. 
+   
+<br/><code>option </code><strong> 2</strong> : Multipole QED showers in MPI systems. This is the 
+most advanced option, with full coherence, but is somewhat 
+computationally slower and would normally be overkill for MPI. 
+   
+   
+ 
+<a name="section1"></a> 
+<h3>QED Shower Settings</h3> 
+ 
+<a name="anchor3"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:nGammaToQuark &nbsp;</strong> 
+ (<code>default = <strong>5</strong></code>; <code>minimum = 0</code>; <code>maximum = 6</code>)<br/>
+Number of allowed quark flavours in final-state photon splitting. 
+   
+ 
+<a name="anchor4"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:nGammaToLepton &nbsp;</strong> 
+ (<code>default = <strong>3</strong></code>; <code>minimum = 0</code>; <code>maximum = 3</code>)<br/>
+Number of allowed lepton flavours in final-state photon splitting. 
+   
+ 
+<a name="anchor5"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:convertGammaToQuark &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Allow incoming photons to backwards-evolve into (anti)quarks during the 
+initial-state shower evolution. 
+   
+ 
+<a name="anchor6"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:convertQuarkToGamma &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Allow incoming (anti)quarks to backwards-evolve into photons during the 
+initial-state shower evolution. 
+   
+ 
+ 
+<h4>The QED coupling in the VINCIA Shower</h4> 
+<a name="anchor7"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:alphaEMorder &nbsp;</strong> 
+ (<code>default = <strong>1</strong></code>; <code>minimum = 0</code>; <code>maximum = 1</code>)<br/>
+<br/><code>option </code><strong> 0</strong> : zeroth order, i.e. <i>&alpha;<sub>em</sub></i> is kept 
+fixed. 
+   
+<br/><code>option </code><strong> 1</strong> : first order, i.e., one-loop running. 
+   
+   
+ 
+<a name="anchor8"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:alphaEM0 &nbsp;</strong> 
+ (<code>default = <strong>0.00729735</strong></code>; <code>minimum = 0.0072973</code>; <code>maximum = 0.0072974</code>)<br/>
+The <i>alpha_em</i> value at vanishing momentum transfer 
+(and also below <i>m_e</i>). 
+   
+ 
+<a name="anchor9"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:alphaEMmZ &nbsp;</strong> 
+ (<code>default = <strong>0.00781751</strong></code>; <code>minimum = 0.00780</code>; <code>maximum = 0.00783</code>)<br/>
+The <i>alpha_em</i> value at the <i>M_Z</i> mass scale. 
+   
+ 
+<h4>Lower Cutoffs for the QED evolution</h4> 
+<a name="anchor10"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QminChgQ &nbsp;</strong> 
+ (<code>default = <strong>0.5</strong></code>; <code>minimum = 0.1</code>; <code>maximum = 2.0</code>)<br/>
+Parton shower cut-off scale for photon coupling to coloured particles. 
+   
+ 
+<a name="anchor11"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:QminChgL &nbsp;</strong> 
+ (<code>default = <strong>1e-6</strong></code>; <code>minimum = 1e-10</code>; <code>maximum = 2.0</code>)<br/>
+Parton shower cut-off scale for pure QED branchings. Assumed smaller than 
+(or equal to) QminChgQ. 
+   
+ 
+<a name="anchor12"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:fullWkernel &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+Switch to incorporate the full antenna function for W radiation. If disabled, 
+a W radiates as if it were a lepton. 
+   
+ 
+<a name="anchor13"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:mMaxGamma &nbsp;</strong> 
+ (<code>default = <strong>10.</strong></code>; <code>minimum = 0.001</code>; <code>maximum = 5000.0</code>)<br/>
+Maximum invariant mass allowed for the created fermion pair by photon 
+splitting in the shower. 
+   
+ 
+ 
+<a name="section2"></a> 
+<h3>EW Shower Settings</h3> 
+ 
+<a name="anchor14"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:kineMapEWFinal &nbsp;</strong> 
+ (<code>default = <strong>3</strong></code>; <code>minimum = 1</code>; <code>maximum = 3</code>)<br/>
+  Kinematics Map for EW emissions (See <a 
+  href="#kinematics">section on kinematics.</a>) 
+<br/><code>option </code><strong> 1</strong> : The Ariadne angle   
+<br/><code>option </code><strong> 2</strong> : Longitudinal (dipole) map.   
+<br/><code>option </code><strong> 3</strong> : The Kosower map.   
+   
+ 
+<a name="anchor15"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:doBosonicInterference &nbsp;</strong> 
+ (<code>default = <strong>on</strong></code>)<br/>
+If switched on, apply an event weight to correct for interference 
+between $\gamma/Z_T$ and $h/Z_L$. 
+   
+ 
+<a name="anchor16"></a>
+<p/><code>mode&nbsp; </code><strong> Vincia:bwMatchingMode &nbsp;</strong> 
+ (<code>default = <strong>2</strong></code>; <code>minimum = 1</code>; <code>maximum = 3</code>)<br/>
+Whenever a resonance is produced as part of the hard process or as 
+part of the electroweak shower, its kinematic mass is distributed 
+according to a Breit-Wigner distribution.  When a shower branching of 
+a resonance type occurs, the Breit-Wigner-generated mass is replaced 
+with an off-shellness acquired through the shower as normal. 
+Otherwise, it is decayed in a regular $1 \rightarrow 2$ decay process. 
+<br/><code>option </code><strong> 1</strong> : Resonance-type branchings in the shower are 
+disabled. Resonances are instead decayed according to a Breit-Wigner 
+distribution exclusively.   <br/><code>option </code><strong> 2</strong> : A suppression 
+factor $\frac{Q^4}{(Q^2 + Q^2_{\mathrm{EW}})^2} is applied to the 
+resonance decay-type branchings in the shower.  Any resonance that 
+does not disappear due to a shower branching before its 
+Breit-Wigner-sampled off-shellness is instead decayed according to the 
+Breit-Wigner distribution.    <br/><code>option </code><strong> 3</strong> : No 
+off-shellness is sampled from a Breit-Wigner. Only the shower is ran 
+without suppression factor. Does not guarantee that all resonances 
+decay.   
+   
+ 
+<a name="anchor17"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:EWScale &nbsp;</strong> 
+ (<code>default = <strong>100.</strong></code>; <code>minimum = 80.</code>; <code>maximum = 175.</code>)<br/>
+  Determines the value of $Q_\mathrm{EW}$ used 
+  with <code>Vincia:bwMatchingMode = 2</code>. 
+   
+ 
+<a name="anchor18"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:EWoverlapVeto &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Settings to prevent double counting that may appear when running the 
+QCD and EW showers. 
+For example, configurations with 2 jets and 1 vector boson may be 
+reached by either an EW emission from pure QCD processes 
+or from QCD emissions from V + j processes. 
+If set to true, hard EW emissions off QCD processes and hard QCD 
+emissions off EW processes are vetoed, 
+as determined by the kT algorithm to prevent overlap in all regions of 
+phase space. 
+Note that the current implementation of the overlap veto does not 
+take interleaved resonance decays into account. This switch should 
+therefore only be set to <code>on</code> in conjunction with 
+<code>Vincia:interleaveResDec = off</code>. 
+   
+ 
+<a name="anchor19"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:EWoverlapVetoDeltaR &nbsp;</strong> 
+ (<code>default = <strong>0.6</strong></code>; <code>minimum = 0.1</code>)<br/>
+The deltaR parameter used in the kT clustering for the overlap veto 
+algorithm used to avoid double counting. 
+   
+ 
+<a name="anchor20"></a>
+<p/><code>flag&nbsp; </code><strong> Vincia:BWstrongOrdering &nbsp;</strong> 
+ (<code>default = <strong>off</strong></code>)<br/>
+Controls the treatment of resonance production with Breit-Wigner 
+generated off-shellness larger than the current shower scale. 
+If set to "off", resonances with such offshellness are immediately decayed. 
+If set to 'on', the branching that produces the resonance is vetoed. 
+   
+ 
+<a name="anchor21"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:EWheadroomF &nbsp;</strong> 
+ (<code>default = <strong>1.1</strong></code>; <code>minimum = 1.</code>; <code>maximum = 2.</code>)<br/>
+Multiplicative factor to increase overestimate function for final 
+state electroweak branchings. 
+   
+ 
+<a name="anchor22"></a>
+<p/><code>parm&nbsp; </code><strong> Vincia:EWheadroomI &nbsp;</strong> 
+ (<code>default = <strong>3</strong></code>; <code>minimum = 1.</code>; <code>maximum = 5.</code>)<br/>
+Multiplicative factor to increase overestimate function for initial 
+state electroweak branchings. 
+   
+ 
+<h4> Overestimate Determination for Electroweak Branchings</h4> 
+ 
+<p>As there are such a  very large number of electroweak branchings, 
+the technical problem of determining the overestimate function (used 
+for generating trial branchings) has been automated. 
+The  overestimate function is first parameterised in terms of four 
+functions; the coefficients of these are then extracted by 
+numerically minimising the difference between the corresponding 
+functional and the branching kernels themselves. The 
+coefficients determined by this procedure are collected in the XML 
+file and are read in during initialisation. 
+</p> 
+ 
+<!--  <h4>Final EW branchings data</h4> --> 
+ 
+<EWBranchingFinal idMot="1" idi="1" idj="22" polMot="1" c0="0" c1="0" c2="0.444439" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="1" idj="22" polMot="-1" c0="0" c1="0" c2="0.444429" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="1" idj="23" polMot="1" c0="0" c1="0" c2="0.127474" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="1" idj="23" polMot="-1" c0="0" c1="0" c2="4.18485" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="2" idj="-24" polMot="-1" c0="0" c1="0" c2="8.50923" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="4" idj="-24" polMot="-1" c0="0" c1="0" c2="0.462759" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="1" idi="6" idj="-24" polMot="-1" c0="0.000662314" c1="0" c2="0.000594383" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="2" idj="22" polMot="1" c0="0" c1="0" c2="1.77776" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="2" idj="22" polMot="-1" c0="0" c1="0" c2="1.77775" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="2" idj="23" polMot="1" c0="0" c1="0" c2="0.509913" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="2" idj="23" polMot="-1" c0="0" c1="0" c2="2.85155" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="1" idj="24" polMot="-1" c0="0" c1="0" c2="8.5085" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="3" idj="24" polMot="-1" c0="0" c1="0" c2="0.463132" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="2" idi="5" idj="24" polMot="-1" c0="0" c1="0" c2="0.0001407" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="22" polMot="1" c0="0" c1="0" c2="0.444431" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="22" polMot="-1" c0="0" c1="0" c2="0.444439" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="23" polMot="1" c0="0" c1="0" c2="0.127478" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="23" polMot="-1" c0="0" c1="0" c2="4.18487" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="2" idj="-24" polMot="1" c0="4.4796e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="2" idj="-24" polMot="-1" c0="0" c1="0" c2="0.463164" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="4" idj="-24" polMot="1" c0="8.977e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="4" idj="-24" polMot="-1" c0="0" c1="0" c2="8.49405" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="6" idj="-24" polMot="1" c0="1.50231e-07" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="6" idj="-24" polMot="-1" c0="0.0173795" c1="0" c2="0.0155311" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="25" polMot="1" c0="4.33796e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="3" idi="3" idj="25" polMot="-1" c0="4.33884e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="22" polMot="1" c0="0" c1="0" c2="1.77774" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="22" polMot="-1" c0="0" c1="0" c2="1.77769" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="23" polMot="1" c0="0" c1="0" c2="0.509915" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="23" polMot="-1" c0="0" c1="0" c2="2.85153" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="1" idj="24" polMot="1" c0="0" c1="0" c2="0" c3="0.0802956"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="1" idj="24" polMot="-1" c0="0" c1="0" c2="0.462757" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="3" idj="24" polMot="1" c0="0.00080101" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="3" idj="24" polMot="-1" c0="0" c1="0" c2="8.49382" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="5" idj="24" polMot="1" c0="1.39156e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="5" idj="24" polMot="-1" c0="0" c1="0" c2="0.0159862" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="25" polMot="1" c0="0.000390505" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="4" idi="4" idj="25" polMot="-1" c0="0.000390525" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="22" polMot="1" c0="0" c1="0" c2="0.44444" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="22" polMot="-1" c0="0" c1="0" c2="0.4444" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="23" polMot="1" c0="0.00375768" c1="0" c2="0.127478" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="23" polMot="-1" c0="0" c1="0" c2="4.1851" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="2" idj="-24" polMot="1" c0="1.25337e-07" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="2" idj="-24" polMot="-1" c0="0" c1="0" c2="0.000140703" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="4" idj="-24" polMot="1" c0="0" c1="0" c2="0" c3="0.00323654"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="4" idj="-24" polMot="-1" c0="0" c1="0" c2="0.0159864" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="6" idj="-24" polMot="1" c0="0.00798313" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="6" idj="-24" polMot="-1" c0="10.0788" c1="0" c2="8.95602" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="25" polMot="1" c0="0.00399877" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="5" idi="5" idj="25" polMot="-1" c0="0.00399904" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="22" polMot="1" c0="0" c1="0" c2="1.77777" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="22" polMot="-1" c0="0" c1="0" c2="1.77772" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="23" polMot="1" c0="5.06755" c1="0" c2="0.509774" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="23" polMot="-1" c0="5.02949" c1="0" c2="2.85146" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="25" polMot="1" c0="7.0062" c1="0" c2="0" c3="8.95829"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="6" idi="6" idj="25" polMot="-1" c0="7.22562" c1="0" c2="0" c3="8.50966"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="11" idi="11" idj="22" polMot="1" c0="0" c1="0" c2="3.99997" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="11" idi="11" idj="22" polMot="-1" c0="0" c1="0" c2="3.99998" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="11" idi="11" idj="23" polMot="1" c0="0" c1="0" c2="1.14731" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="11" idi="11" idj="23" polMot="-1" c0="0" c1="0" c2="1.77316" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="11" idi="12" idj="-24" polMot="-1" c0="0" c1="0" c2="8.97255" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="12" idi="12" idj="23" polMot="-1" c0="0" c1="0" c2="5.77298" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="12" idi="11" idj="24" polMot="-1" c0="0" c1="0" c2="8.97272" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="22" polMot="1" c0="0" c1="0" c2="3.99988" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="22" polMot="-1" c0="0" c1="0" c2="3.99992" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="23" polMot="1" c0="0" c1="0" c2="1.14729" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="23" polMot="-1" c0="0" c1="0" c2="1.77319" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="14" idj="-24" polMot="1" c0="3.87547e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="14" idj="-24" polMot="-1" c0="0" c1="0" c2="8.97274" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="25" polMot="1" c0="1.93778e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="13" idi="13" idj="25" polMot="-1" c0="1.93764e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="14" idi="14" idj="23" polMot="-1" c0="0" c1="0" c2="5.77298" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="14" idi="13" idj="24" polMot="-1" c0="0" c1="0" c2="8.97249" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="22" polMot="1" c0="0" c1="0" c2="4" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="22" polMot="-1" c0="0" c1="0" c2="3.99997" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="23" polMot="1" c0="0" c1="0" c2="1.14732" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="23" polMot="-1" c0="0" c1="0" c2="1.77315" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="16" idj="-24" polMot="1" c0="0.00119825" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="16" idj="-24" polMot="-1" c0="0" c1="0" c2="8.97259" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="25" polMot="1" c0="0.000547984" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="15" idi="15" idj="25" polMot="-1" c0="0.00054787" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="16" idi="16" idj="23" polMot="-1" c0="0" c1="0" c2="5.77318" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="16" idi="15" idj="24" polMot="-1" c0="0" c1="0" c2="8.97221" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-1" idj="22" polMot="1" c0="0" c1="0" c2="0.444439" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-1" idj="22" polMot="-1" c0="0" c1="0" c2="0.444414" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-1" idj="23" polMot="1" c0="0" c1="0" c2="4.18475" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-1" idj="23" polMot="-1" c0="0" c1="0" c2="0.127479" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-2" idj="24" polMot="1" c0="0" c1="0" c2="8.50912" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-4" idj="24" polMot="1" c0="0" c1="0" c2="0.462758" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-1" idi="-6" idj="24" polMot="1" c0="0.000663541" c1="0" c2="0.000594507" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-2" idj="22" polMot="1" c0="0" c1="0" c2="1.77776" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-2" idj="22" polMot="-1" c0="0" c1="0" c2="1.77778" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-2" idj="23" polMot="1" c0="0" c1="0" c2="2.85153" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-2" idj="23" polMot="-1" c0="0" c1="0" c2="0.509917" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-1" idj="-24" polMot="1" c0="0" c1="0" c2="8.50921" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-3" idj="-24" polMot="1" c0="0" c1="0" c2="0.463166" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-2" idi="-5" idj="-24" polMot="1" c0="0" c1="0" c2="0.000140704" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="22" polMot="1" c0="0" c1="0" c2="0.444421" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="22" polMot="-1" c0="0" c1="0" c2="0.444439" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="23" polMot="1" c0="0" c1="0" c2="4.18478" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="23" polMot="-1" c0="0" c1="0" c2="0.127478" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-2" idj="24" polMot="1" c0="0" c1="0" c2="0.46317" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-2" idj="24" polMot="-1" c0="4.47981e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-4" idj="24" polMot="1" c0="0" c1="0" c2="8.49383" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-4" idj="24" polMot="-1" c0="9.00134e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-6" idj="24" polMot="1" c0="0.0173824" c1="0" c2="0.0155339" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-6" idj="24" polMot="-1" c0="1.50244e-07" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="25" polMot="1" c0="4.33917e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-3" idi="-3" idj="25" polMot="-1" c0="4.339e-05" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="22" polMot="1" c0="0" c1="0" c2="1.77777" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="22" polMot="-1" c0="0" c1="0" c2="1.77777" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="23" polMot="1" c0="0" c1="0" c2="2.85156" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="23" polMot="-1" c0="0" c1="0" c2="0.509915" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-1" idj="-24" polMot="1" c0="0" c1="0" c2="0.462755" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-1" idj="-24" polMot="-1" c0="0" c1="0" c2="0" c3="0.0883594"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-3" idj="-24" polMot="1" c0="0" c1="0" c2="8.49398" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-3" idj="-24" polMot="-1" c0="0.000805182" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-5" idj="-24" polMot="1" c0="0" c1="0" c2="0.0159861" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-5" idj="-24" polMot="-1" c0="1.39144e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="25" polMot="1" c0="0.000390505" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-4" idi="-4" idj="25" polMot="-1" c0="0.000390533" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="22" polMot="1" c0="0" c1="0" c2="0.444445" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="22" polMot="-1" c0="0" c1="0" c2="0.444422" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="23" polMot="1" c0="0" c1="0" c2="4.18467" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="23" polMot="-1" c0="0.00393661" c1="0" c2="0.127477" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-2" idj="24" polMot="1" c0="0" c1="0" c2="0.0001407" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-2" idj="24" polMot="-1" c0="1.25344e-07" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-4" idj="24" polMot="1" c0="0" c1="0" c2="0.0159866" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-4" idj="24" polMot="-1" c0="0" c1="0" c2="0" c3="0.00290103"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-6" idj="24" polMot="1" c0="10.015" c1="0" c2="8.9555" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-6" idj="24" polMot="-1" c0="0.00798352" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="25" polMot="1" c0="0.00399833" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-5" idi="-5" idj="25" polMot="-1" c0="0.00399872" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="22" polMot="1" c0="0" c1="0" c2="1.77776" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="22" polMot="-1" c0="0" c1="0" c2="1.77776" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="23" polMot="1" c0="5.01679" c1="0" c2="2.8509" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="23" polMot="-1" c0="5.06456" c1="0" c2="0.509687" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="25" polMot="1" c0="6.06443" c1="0" c2="0" c3="10.9555"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-6" idi="-6" idj="25" polMot="-1" c0="7.08357" c1="0" c2="0" c3="8.83417"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-11" idi="-11" idj="22" polMot="1" c0="0" c1="0" c2="3.99987" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-11" idi="-11" idj="22" polMot="-1" c0="0" c1="0" c2="3.99964" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-11" idi="-11" idj="23" polMot="1" c0="0" c1="0" c2="1.77313" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-11" idi="-11" idj="23" polMot="-1" c0="0" c1="0" c2="1.14723" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-11" idi="-12" idj="24" polMot="1" c0="0" c1="0" c2="8.97275" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-12" idi="-12" idj="23" polMot="1" c0="0" c1="0" c2="5.77314" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-12" idi="-11" idj="-24" polMot="1" c0="0" c1="0" c2="8.97269" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="22" polMot="1" c0="0" c1="0" c2="3.99991" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="22" polMot="-1" c0="0" c1="0" c2="3.9998" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="23" polMot="1" c0="0" c1="0" c2="1.7732" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="23" polMot="-1" c0="0" c1="0" c2="1.14728" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-14" idj="24" polMot="1" c0="0" c1="0" c2="8.97252" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-14" idj="24" polMot="-1" c0="3.87531e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="25" polMot="1" c0="1.93776e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-13" idi="-13" idj="25" polMot="-1" c0="1.93735e-06" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-14" idi="-14" idj="23" polMot="1" c0="0" c1="0" c2="5.77302" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-14" idi="-13" idj="-24" polMot="1" c0="0" c1="0" c2="8.97258" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="22" polMot="1" c0="0" c1="0" c2="3.99988" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="22" polMot="-1" c0="0" c1="0" c2="3.99984" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="23" polMot="1" c0="0" c1="0" c2="1.77316" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="23" polMot="-1" c0="0" c1="0" c2="1.14727" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-16" idj="24" polMot="1" c0="0" c1="0" c2="8.9726" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-16" idj="24" polMot="-1" c0="0.00119182" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="25" polMot="1" c0="0.000547969" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-15" idi="-15" idj="25" polMot="-1" c0="0.000547935" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-16" idi="-16" idj="23" polMot="1" c0="0" c1="0" c2="5.77288" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-16" idi="-15" idj="-24" polMot="1" c0="0" c1="0" c2="8.97254" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="1" idj="-1" polMot="1" c0="1.30635" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="1" idj="-1" polMot="-1" c0="1.31077" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="2" idj="-2" polMot="1" c0="5.3056" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="2" idj="-2" polMot="-1" c0="5.27605" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="3" idj="-3" polMot="1" c0="1.30014" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="3" idj="-3" polMot="-1" c0="1.32116" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="4" idj="-4" polMot="1" c0="5.29038" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="4" idj="-4" polMot="-1" c0="5.30839" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="5" idj="-5" polMot="1" c0="1.30084" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="5" idj="-5" polMot="-1" c0="1.3217" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="6" idj="-6" polMot="1" c0="5.20243" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="6" idj="-6" polMot="-1" c0="5.21949" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="11" idj="-11" polMot="1" c0="3.96512" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="11" idj="-11" polMot="-1" c0="3.93844" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="13" idj="-13" polMot="1" c0="3.94893" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="13" idj="-13" polMot="-1" c0="3.97897" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="15" idj="-15" polMot="1" c0="3.9143" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="15" idj="-15" polMot="-1" c0="3.89777" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="24" idj="-24" polMot="1" c0="0" c1="3.99958" c2="3.99931" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="22" idi="24" idj="-24" polMot="-1" c0="0" c1="3.99966" c2="3.99992" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="6" idj="-6" polMot="1" c0="4.9858" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="6" idj="-6" polMot="0" c0="30.4529" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="6" idj="-6" polMot="-1" c0="5.01701" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="24" idj="-24" polMot="1" c0="0" c1="13.9443" c2="13.9442" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="24" idj="-24" polMot="0" c0="0" c1="4.48611" c2="4.48588" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="24" idj="-24" polMot="-1" c0="0" c1="13.9422" c2="13.9437" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="23" idj="25" polMot="1" c0="2.87095" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="23" idj="25" polMot="0" c0="3.13579" c1="5.77269" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="23" idi="23" idj="25" polMot="-1" c0="2.83155" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-1" polMot="1" c0="0.000891631" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-1" polMot="0" c0="0.0020178" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-1" polMot="-1" c0="0.00089142" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-3" polMot="1" c0="0.0232972" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-3" polMot="0" c0="0.0527264" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-3" polMot="-1" c0="0.0232863" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-5" polMot="1" c0="13.4345" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-5" polMot="0" c0="30.4221" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="6" idj="-5" polMot="-1" c0="13.433" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="22" polMot="1" c0="0" c1="3.99976" c2="3.99907" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="22" polMot="0" c0="0" c1="0" c2="3.99985" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="22" polMot="-1" c0="0" c1="3.99926" c2="3.99999" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="23" polMot="1" c0="0" c1="13.9443" c2="13.9385" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="23" polMot="0" c0="0" c1="4.48588" c2="1.77275" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="23" polMot="-1" c0="0" c1="13.9443" c2="13.9451" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="25" polMot="1" c0="2.23534" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="25" polMot="0" c0="2.44536" c1="4.48577" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="24" idi="24" idj="25" polMot="-1" c0="2.20129" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="1" idj="-6" polMot="1" c0="0.00089176" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="1" idj="-6" polMot="0" c0="0.0020178" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="1" idj="-6" polMot="-1" c0="0.000891757" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="3" idj="-6" polMot="1" c0="0.0233019" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="3" idj="-6" polMot="0" c0="0.0527264" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="3" idj="-6" polMot="-1" c0="0.0232636" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="5" idj="-6" polMot="1" c0="13.4331" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="5" idj="-6" polMot="0" c0="30.4221" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="5" idj="-6" polMot="-1" c0="13.4179" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="22" polMot="1" c0="0" c1="3.99983" c2="3.99994" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="22" polMot="0" c0="0" c1="0" c2="3.99994" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="22" polMot="-1" c0="0" c1="3.99868" c2="3.99991" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="23" polMot="1" c0="0" c1="13.9435" c2="13.9443" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="23" polMot="0" c0="0" c1="4.48571" c2="1.77297" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="23" polMot="-1" c0="0" c1="13.9452" c2="13.9448" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="25" polMot="1" c0="2.19068" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="25" polMot="0" c0="2.43529" c1="4.48617" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="-24" idi="-24" idj="25" polMot="-1" c0="2.21927" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="25" idi="6" idj="-6" polMot="0" c0="30.4529" c1="0" c2="0" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="25" idi="23" idj="23" polMot="0" c0="0" c1="5.77316" c2="5.77295" c3="0"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="25" idi="24" idj="-24" polMot="0" c0="0.975953" c1="4.48604" c2="4.48401" c3="0.633364"> 
+</EWBranchingFinal> 
+<EWBranchingFinal idMot="25" idi="25" idj="25" polMot="0" c0="0" c1="0" c2="0" c3="24.4089"> 
+</EWBranchingFinal> 
+ 
+ 
+<!-- <h4>Initial EW branchings data</h4> --> 
+ 
+<EWBranchingInitial idMot="1" idi="1" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="1" idi="1" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="1" idi="1" idj="23" polMot="1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="1" idi="1" idj="23" polMot="-1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="1" idi="2" idj="24" polMot="-1" c0="8.50926" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="1" idi="4" idj="24" polMot="-1" c0="0.462764" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="2" idj="22" polMot="1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="2" idj="22" polMot="-1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="2" idj="23" polMot="1" c0="0.509922" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="2" idj="23" polMot="-1" c0="2.85158" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="1" idj="-24" polMot="-1" c0="8.50926" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="2" idi="3" idj="-24" polMot="-1" c0="0.463172" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="3" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="3" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="3" idj="23" polMot="1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="3" idj="23" polMot="-1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="2" idj="24" polMot="-1" c0="0.463172" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="3" idi="4" idj="24" polMot="-1" c0="8.49406" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="4" idj="22" polMot="1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="4" idj="22" polMot="-1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="4" idj="23" polMot="1" c0="0.509922" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="4" idj="23" polMot="-1" c0="2.85158" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="1" idj="-24" polMot="-1" c0="0.462764" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="3" idj="-24" polMot="-1" c0="8.49406" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="4" idi="5" idj="-24" polMot="-1" c0="0.0159866" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="5" idi="5" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="5" idi="5" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="5" idi="5" idj="23" polMot="1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="5" idi="5" idj="23" polMot="-1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="11" idi="11" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="11" idi="11" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="11" idi="11" idj="23" polMot="1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="11" idi="11" idj="23" polMot="-1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="11" idi="12" idj="24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="12" idi="12" idj="23" polMot="-1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="12" idi="11" idj="-24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="13" idi="13" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="13" idi="13" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="13" idi="13" idj="23" polMot="1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="13" idi="13" idj="23" polMot="-1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="13" idi="14" idj="24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="14" idi="14" idj="23" polMot="-1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="14" idi="13" idj="-24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="15" idi="15" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="15" idi="15" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="15" idi="15" idj="23" polMot="1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="15" idi="15" idj="23" polMot="-1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="15" idi="16" idj="24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="16" idi="16" idj="23" polMot="-1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="16" idi="15" idj="-24" polMot="-1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-1" idi="-1" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-1" idi="-1" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-1" idi="-1" idj="23" polMot="1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-1" idi="-1" idj="23" polMot="-1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-2" idi="-2" idj="22" polMot="1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-2" idi="-2" idj="22" polMot="-1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-2" idi="-2" idj="23" polMot="1" c0="2.85158" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-2" idi="-2" idj="23" polMot="-1" c0="0.509922" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-3" idi="-3" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-3" idi="-3" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-3" idi="-3" idj="23" polMot="1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-3" idi="-3" idj="23" polMot="-1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-4" idi="-4" idj="22" polMot="1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-4" idi="-4" idj="22" polMot="-1" c0="1.77778" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-4" idi="-4" idj="23" polMot="1" c0="2.85158" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-4" idi="-4" idj="23" polMot="-1" c0="0.509922" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-5" idi="-5" idj="22" polMot="1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-5" idi="-5" idj="22" polMot="-1" c0="0.444444" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-5" idi="-5" idj="23" polMot="1" c0="4.18491" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-5" idi="-5" idj="23" polMot="-1" c0="0.12748" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-11" idi="-11" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-11" idi="-11" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-11" idi="-11" idj="23" polMot="1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-11" idi="-11" idj="23" polMot="-1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-11" idi="-12" idj="-24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-12" idi="-12" idj="23" polMot="1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-12" idi="-11" idj="24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-13" idi="-13" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-13" idi="-13" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-13" idi="-13" idj="23" polMot="1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-13" idi="-13" idj="23" polMot="-1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-13" idi="-14" idj="-24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-14" idi="-14" idj="23" polMot="1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-14" idi="-13" idj="24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-15" idi="-15" idj="22" polMot="1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-15" idi="-15" idj="22" polMot="-1" c0="4" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-15" idi="-15" idj="23" polMot="1" c0="1.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-15" idi="-15" idj="23" polMot="-1" c0="1.14732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-15" idi="-16" idj="-24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-16" idi="-16" idj="23" polMot="1" c0="5.7732" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+<EWBranchingInitial idMot="-16" idi="-15" idj="24" polMot="1" c0="8.97275" c1="0" c2="0" c3="0"> 
+</EWBranchingInitial> 
+ 
+<!-- <h4>Resonance EW branchings data</h4> --> 
+ 
+<EWBranchingRes idMot="6" idi="1" idj="24" polMot="1" c0="0.000710157" c1="0" c2="0" c3="0.000755321"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="6" idi="1" idj="24" polMot="-1" c0="0" c1="0" c2="0.000594523" c3="0.000539607"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="6" idi="3" idj="24" polMot="1" c0="0.0186498" c1="0" c2="0" c3="0.0197192"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="6" idi="3" idj="24" polMot="-1" c0="0" c1="0" c2="0.015535" c3="0.0141087"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="6" idi="5" idj="24" polMot="1" c0="0" c1="2.99395" c2="7.0414" c3="11.3736"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="6" idi="5" idj="24" polMot="-1" c0="0" c1="0" c2="8.96004" c3="8.12536"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-1" idj="-24" polMot="1" c0="0" c1="0" c2="0.000594497" c3="0.00054022"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-1" idj="-24" polMot="-1" c0="0.000684232" c1="0" c2="0" c3="0.000755209"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-3" idj="-24" polMot="1" c0="0" c1="0" c2="0.0155345" c3="0.0141023"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-3" idj="-24" polMot="-1" c0="0.0185274" c1="0" c2="0" c3="0.0197354"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-5" idj="-24" polMot="1" c0="0" c1="0" c2="8.95614" c3="8.12025"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-6" idi="-5" idj="-24" polMot="-1" c0="0" c1="7.76294" c2="1.99277" c3="11.3711"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="1" idj="-1" polMot="1" c0="6.44637" c1="0" c2="0" c3="6.46286"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="1" idj="-1" polMot="0" c0="0" c1="0" c2="0" c3="12.8312"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="1" idj="-1" polMot="-1" c0="6.42727" c1="0" c2="0" c3="6.42392"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="2" idj="-2" polMot="1" c0="4.92994" c1="0" c2="0" c3="5.02485"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="2" idj="-2" polMot="0" c0="0" c1="0" c2="0" c3="10.0096"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="2" idj="-2" polMot="-1" c0="4.97438" c1="0" c2="0" c3="5.01391"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="3" idj="-3" polMot="1" c0="6.43109" c1="0" c2="0" c3="6.45907"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="3" idj="-3" polMot="0" c0="0" c1="0" c2="0" c3="12.8493"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="3" idj="-3" polMot="-1" c0="6.45659" c1="0" c2="0" c3="6.41705"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="4" idj="-4" polMot="1" c0="4.99972" c1="0" c2="0" c3="5.01737"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="4" idj="-4" polMot="0" c0="0" c1="0" c2="0" c3="10.0209"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="4" idj="-4" polMot="-1" c0="5.03023" c1="0" c2="0" c3="5.01978"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="5" idj="-5" polMot="1" c0="6.42872" c1="0" c2="0" c3="6.40328"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="5" idj="-5" polMot="0" c0="0" c1="0" c2="0" c3="12.7504"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="5" idj="-5" polMot="-1" c0="6.44188" c1="0" c2="0" c3="6.39326"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="11" idj="-11" polMot="1" c0="1.42396" c1="0" c2="0" c3="1.45088"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="11" idj="-11" polMot="0" c0="0" c1="0" c2="0" c3="2.89808"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="11" idj="-11" polMot="-1" c0="1.41016" c1="0" c2="0" c3="1.44977"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="12" idj="-12" polMot="1" c0="2.88547" c1="0" c2="0" c3="2.88612"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="12" idj="-12" polMot="0" c0="0" c1="0" c2="0" c3="5.74079"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="12" idj="-12" polMot="-1" c0="2.88567" c1="0" c2="0" c3="2.87579"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="13" idj="-13" polMot="1" c0="1.45952" c1="0" c2="0" c3="1.45032"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="13" idj="-13" polMot="0" c0="0" c1="0" c2="0" c3="2.90702"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="13" idj="-13" polMot="-1" c0="1.43555" c1="0" c2="0" c3="1.45533"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="14" idj="-14" polMot="1" c0="2.87002" c1="0" c2="0" c3="2.88652"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="14" idj="-14" polMot="0" c0="0" c1="0" c2="0" c3="5.74068"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="14" idj="-14" polMot="-1" c0="2.93632" c1="0" c2="0" c3="2.87242"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="15" idj="-15" polMot="1" c0="1.45449" c1="0" c2="0" c3="1.45134"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="15" idj="-15" polMot="0" c0="0" c1="0" c2="0" c3="2.89124"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="15" idj="-15" polMot="-1" c0="1.43943" c1="0" c2="0" c3="1.44841"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="16" idj="-16" polMot="1" c0="2.88589" c1="0" c2="0" c3="2.88646"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="16" idj="-16" polMot="0" c0="0" c1="0" c2="0" c3="5.74294"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="23" idi="16" idj="-16" polMot="-1" c0="2.72337" c1="0" c2="0.131892" c3="2.87694"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-1" polMot="1" c0="11.5802" c1="1.04569" c2="0" c3="12.7669"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-1" polMot="0" c0="0" c1="0" c2="0" c3="25.3362"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-1" polMot="-1" c0="12.7576" c1="0" c2="0" c3="12.736"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-3" polMot="1" c0="0.694753" c1="0" c2="0" c3="0.694729"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-3" polMot="0" c0="0" c1="0" c2="0" c3="1.37746"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-3" polMot="-1" c0="0.866643" c1="0" c2="0" c3="0.681787"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-5" polMot="1" c0="0.000210957" c1="0" c2="0" c3="0.000210286"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-5" polMot="0" c0="0.00100953" c1="0" c2="0" c3="0.000402301"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="2" idj="-5" polMot="-1" c0="0.00132508" c1="0" c2="0" c3="0.000193696"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-1" polMot="1" c0="0.692552" c1="0" c2="0" c3="0.693593"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-1" polMot="0" c0="0.0209062" c1="0" c2="0" c3="1.36897"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-1" polMot="-1" c0="0.755843" c1="0" c2="0" c3="0.684964"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-3" polMot="1" c0="12.1742" c1="0.507575" c2="0" c3="12.7273"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-3" polMot="0" c0="0" c1="0" c2="0" c3="25.2119"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-3" polMot="-1" c0="12.5622" c1="0" c2="0.165704" c3="12.6707"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-5" polMot="1" c0="0.0239332" c1="0" c2="0" c3="0.0238765"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-5" polMot="0" c0="0.0503474" c1="0" c2="0" c3="0.0464087"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="4" idj="-5" polMot="-1" c0="0.138929" c1="0" c2="0" c3="0.0220998"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="12" idj="-11" polMot="1" c0="4.46995" c1="0" c2="0" c3="4.48609"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="12" idj="-11" polMot="0" c0="0" c1="0" c2="0" c3="8.89402"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="12" idj="-11" polMot="-1" c0="4.48567" c1="0" c2="0" c3="4.47077"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="14" idj="-13" polMot="1" c0="4.10638" c1="0.336686" c2="0" c3="4.48658"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="14" idj="-13" polMot="0" c0="0" c1="0" c2="0" c3="8.90765"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="14" idj="-13" polMot="-1" c0="4.47903" c1="0" c2="0" c3="4.46098"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="16" idj="-15" polMot="1" c0="4.47111" c1="0" c2="0" c3="4.48385"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="16" idj="-15" polMot="0" c0="0" c1="0" c2="0" c3="8.86471"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="24" idi="16" idj="-15" polMot="-1" c0="4.3279" c1="0" c2="0.126572" c3="4.4763"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-2" polMot="1" c0="11.1987" c1="1.37881" c2="0" c3="12.7796"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-2" polMot="0" c0="0" c1="0" c2="0" c3="25.3632"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-2" polMot="-1" c0="12.3749" c1="0" c2="0.384045" c3="12.679"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-4" polMot="1" c0="0.694145" c1="0" c2="0" c3="0.693797"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-4" polMot="0" c0="0" c1="0" c2="0" c3="1.37585"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="1" idj="-4" polMot="-1" c0="0.881523" c1="0" c2="0" c3="0.679655"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-2" polMot="1" c0="0.694394" c1="0" c2="0" c3="0.694493"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-2" polMot="0" c0="0" c1="0" c2="0" c3="1.37821"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-2" polMot="-1" c0="0.867674" c1="0" c2="0" c3="0.681432"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-4" polMot="1" c0="10.0213" c1="2.54141" c2="0" c3="12.7403"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-4" polMot="0" c0="0" c1="0" c2="0" c3="25.3586"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="3" idj="-4" polMot="-1" c0="12.1163" c1="0" c2="0.624985" c3="12.6548"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-2" polMot="1" c0="0.000195994" c1="1.36702e-05" c2="0" c3="0.000209552"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-2" polMot="0" c0="0.00169378" c1="0" c2="0" c3="0.000395608"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-2" polMot="-1" c0="0.00173229" c1="0" c2="0" c3="0.00018985"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-4" polMot="1" c0="0.023548" c1="0.000336733" c2="0" c3="0.0238012"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-4" polMot="0" c0="0.0663331" c1="0" c2="0" c3="0.0459017"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="5" idj="-4" polMot="-1" c0="0.147332" c1="0" c2="0" c3="0.0219398"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="11" idj="-12" polMot="1" c0="4.29645" c1="0.148645" c2="0" c3="4.48629"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="11" idj="-12" polMot="0" c0="0" c1="0" c2="0" c3="8.89801"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="11" idj="-12" polMot="-1" c0="4.49227" c1="0" c2="0" c3="4.46257"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="13" idj="-14" polMot="1" c0="4.43878" c1="0" c2="0" c3="4.48658"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="13" idj="-14" polMot="0" c0="0" c1="0" c2="0" c3="8.92411"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="13" idj="-14" polMot="-1" c0="4.44806" c1="0" c2="0" c3="4.46791"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="15" idj="-16" polMot="1" c0="4.33839" c1="0.12961" c2="0" c3="4.48194"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="15" idj="-16" polMot="0" c0="0" c1="0" c2="0" c3="8.90465"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="-24" idi="15" idj="-16" polMot="-1" c0="4.48362" c1="0" c2="0" c3="4.46358"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="3" idj="-3" polMot="0" c0="0.000260362" c1="0" c2="0" c3="0.000260353"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="4" idj="-4" polMot="0" c0="0.00234783" c1="0" c2="0" c3="0.00234256"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="5" idj="-5" polMot="0" c0="0.0240385" c1="0" c2="0" c3="0.0239234"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="11" idj="-11" polMot="0" c0="9.06478e-11" c1="0" c2="0" c3="0"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="13" idj="-13" polMot="0" c0="3.87558e-06" c1="0" c2="0" c3="3.87558e-06"> 
+</EWBranchingRes> 
+<EWBranchingRes idMot="25" idi="15" idj="-15" polMot="0" c0="0.00109658" c1="0" c2="0" c3="0.00109553"> 
+</EWBranchingRes> 
+ 
+</body>
+</html>
