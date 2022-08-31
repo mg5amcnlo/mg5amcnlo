@@ -916,6 +916,7 @@ C
 
       do nb_wrap=1, max_wrap
 
+      IPROC = IPROC_VEC(NB_WRAP)
       if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
         ICONFIG=SYMCONF(ICONF_VEC(nb_wrap))
         DO I=1,MAXSPROC
