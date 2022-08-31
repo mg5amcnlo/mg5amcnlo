@@ -3,7 +3,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 3.4.1 (XX/YY/22)
       MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
       RF: removed a write statement in the reweighting routine (to get scale and PDF uncertainties at NLO+PS runs) that cluttered the reweight_xsec_events.output log files.
-
+      ALL: including bug fix up to 2.9.12
+      
 3.4.0 (06/05/22)
       SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
           at the end of the scan. (Contribution from Sihyun Jeon)
@@ -100,6 +101,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
+2.9.11 (03/06/22)
+     OM: Fixing a bug on the color assignment for b-quark (that's leading to a crash of herwig)
+         This occur in five flavor model, if you do not force yourself the definition of the
+	 multi-particle "j" and "b". This bug was present since 2.3.1 (where the flipping of such
+	 multi-particle to 4/5 flavor was done automatically for the first time)
+	 
 2.9.10 (06/05/2022)
      OM: allow model with GC in their name to use helicity recycling
      OM: Forbid madspin to run with crazy value of BWcut

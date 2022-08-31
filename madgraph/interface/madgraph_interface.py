@@ -5893,6 +5893,8 @@ This implies that with decay chains:
                 photon = False
                 
         if scheme in [4,5] and not photon:
+            self.optimize_order(multi)
+            self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
