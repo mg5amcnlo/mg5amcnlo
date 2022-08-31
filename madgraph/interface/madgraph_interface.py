@@ -6305,7 +6305,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'https://madgraph.mi.infn.it/package_info.dat']
+                         'http://madgraph.mi.infn.it/package_info.dat']
+
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
@@ -7105,7 +7106,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
+                    path = "https://madgraph.mi.infn.it//binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file

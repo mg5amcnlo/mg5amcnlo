@@ -135,6 +135,8 @@ c
       integer ninvar, nconfigs
       double precision tau_m, tau_w, t1, t2
       double precision get_ee_expo
+
+      integer ninvar, nconfigs
       
 c
 c     External
