@@ -2575,6 +2575,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         #    logger.error('Could not cd to directory %s' % dirpath)
         #    return 0
 
+        print('3',dirpath)
         logger.info('Creating files in directory %s' % dirpath)
 
         # Extract number of external particles
@@ -3339,6 +3340,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         #    logger.error('Could not cd to directory %s' % dirpath)
         #    return 0
 
+        print('4',dirpath)
         logger.info('Creating files in directory %s' % dirpath)
 
         # Extract number of external particles
@@ -4005,6 +4007,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         #    logger.error('Could not cd to directory %s' % subprocdir)
         #    return 0
 
+        print('5',subprocdir)
         logger.info('Creating files in directory %s' % subprocdir)
         Ppath = pjoin(path, subprocdir)
         
@@ -5729,7 +5732,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         except os.error:
             logger.error('Could not cd to directory %s' % subprocdir)
             return 0
-
+        print(subprocdir)
         logger.info('Creating files in directory %s' % subprocdir)
 
         # Create the matrix.f files, auto_dsig.f files and all inc files
@@ -8788,7 +8791,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         except os.error as error:
             logger.warning(error.strerror + " " + subprocdir)
 
-
+        print('2',subprocdir)
         logger.info('Creating files in directory %s' % subprocdir)
         Ppath = pjoin(pathdir, subprocdir)
 
