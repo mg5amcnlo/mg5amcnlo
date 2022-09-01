@@ -5295,13 +5295,15 @@ RESTART = %(mint_mode)s
                 # this is if the PDFs from ePDF/eMELA are employed
                 self.make_opts_var['epdf'] = self.options['eMELA']
                 self.update_make_opts()
-
+                # link the LHAPDF libraries, but unset the corresponding keys in make_opts
+                self.link_lhapdf(libdir)
+                for kk in ['lhapdf', 'lhapdfversion', 'lhapdfsubversion', 'lhapdf_config']:
+                    self.make_opts_var[kk] = None
+                # and link eMELA
                 emela_info = self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
-                # MZ
-                # MZ this is only temporary for the MSbar runs!!!!!!!!!
-                # MZ
-                alpha = self.compile_and_run_printalpha()
+
                 # find the uv scheme of the model. if a file called 'TOYXS' exists, use msbar
+                #  (for testing purposes only) 
                 if os.path.exists(pjoin(self.me_dir, 'TOYXS')):
                     uvscheme = 0
                 else:
@@ -5311,7 +5313,8 @@ RESTART = %(mint_mode)s
                     except KeyError:
                         uvscheme = 1 # Alpha(mz) scheme
                 # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
-                emela_info.update_epdf_emela_variables(self.banner, uvscheme, alpha)
+                # alpharun is dummy 
+                emela_info.update_epdf_emela_variables(self.banner, uvscheme, alpharun=1.0)
                 self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
 

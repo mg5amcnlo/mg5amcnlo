@@ -93,3 +93,6 @@ c
 C stuff for alpha running in lepton collisions
       integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
       common/to_alphascheme/alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+
+      logical photons_from_lepton
+      common /to_afromee/ photons_from_lepton

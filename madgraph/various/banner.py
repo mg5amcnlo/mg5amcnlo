@@ -4825,10 +4825,11 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
+        self.add_param('photons_from_lepton', True)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         # stuff for lepton collisions 
         self.add_param('alphascheme', 0)
@@ -4926,6 +4927,16 @@ class RunCardNLO(RunCard):
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
+
+            if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
+                # for dressed lepton collisions, check that the lhaid is a valid one
+                if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
+                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+            
+            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                self['pdlabel']='nn23nlo'
+                self['reweight_pdf']=[False]
+                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
             if self['lpp1'] == 0  == self['lpp2']:
                 if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:

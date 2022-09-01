@@ -2705,7 +2705,8 @@ c local
       double complex resAoR0
 
       double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
       double precision omx1bar2, omx2bar2
       double precision ltau_born,e2ycm_born,em2ycm_born
 c external
@@ -2750,6 +2751,8 @@ c
       endif
 
       ! this is to overcome numerical instabilities in ee collisions
+      omx1_ee = omx_ee(1)
+      omx2_ee = omx_ee(2)
       if (1d0-tau_born.gt.stiny) then
         ltau_born = log(tau_born)
       else

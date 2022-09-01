@@ -1,25 +1,25 @@
-      double precision function pdg2pdf_timed(ih,ipdg,x,xmu)
+      double precision function pdg2pdf_timed(ih,ipdg,ibeam,x,xmu)
 c        function
          double precision pdg2pdf
          external pdg2pdf
 
 c        argument
 
-         integer ih, ipdg
+         integer ih, ipdg, ibeam
          DOUBLE  PRECISION x,xmu
 
 c timing statistics
          include "timing_variables.inc"
 
          call cpu_time(tbefore)
-         pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)
+         pdg2pdf_timed = pdg2pdf(ih,ipdg,ibeam,x,xmu)
          call cpu_time(tAfter)
          tPDF = tPDF + (tAfter-tBefore)
          return
 
       end
       
-      double precision function pdg2pdf(ih,ipdg,x,xmu)
+      double precision function pdg2pdf(ih,ipdg,ibeam,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM
 c***************************************************************************
@@ -28,7 +28,7 @@ c
 c     Arguments
 c
       DOUBLE  PRECISION x,xmu
-      INTEGER IH,ipdg
+      INTEGER IH,ipdg,ibeam
 C
 C     Include
 C
@@ -49,11 +49,10 @@ C
 C dressed lepton stuff
       include '../eepdf.inc'
       integer i_ee
-      integer ee_ibeam
-      common /to_ee_ibeam/ee_ibeam
       double precision call_epdf
       double precision tolerance
       parameter (tolerance=1.d-2)
+
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -78,7 +77,7 @@ c     instead of stopping the code, as this might accidentally happen.
 
 
 C     dressed leptons
-      if (abs(ih).eq.4) then
+      if (abs(ih).eq.3) then
         ! change e/mu/tau = 8/9/10 to 11/13/15 
         if (abs(ipdg).eq.8) then
           ipart = sign(1,ipdg) * 11
@@ -99,7 +98,7 @@ C     dressed leptons
 
         pdg2pdf = 0d0
         do i_ee = 1, n_ee 
-          ee_components(i_ee) = call_epdf(x,xmu,i_ee,ipart,ee_ibeam)
+          ee_components(i_ee) = call_epdf(x,xmu,i_ee,ipart,ibeam)
         enddo
         return
       endif
@@ -122,10 +121,10 @@ C     dressed leptons
 
 
 
-      double precision function call_epdf(x, xmu, n_ee, id, idbeam)
+      double precision function call_epdf(x, xmu, n_ee, id, ibeam)
       implicit none
       double precision x, xmu
-      integer n_ee, id, idbeam
+      integer n_ee, id, ibeam
 
       double precision xmu2
       double precision k_exp
@@ -137,22 +136,14 @@ C     dressed leptons
       double precision get_ee_expo
       double precision ps_expo
 
-      double precision omx_ee
-      common /to_ee_omx/omx_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 
-C ePDF specific parameters
-      integer base, sol
-      logical use_grid
-      integer id_epdf, idbeam_epdf
+C ePDF/eMELA specific parameters
+      integer id_epdf
+      double precision omx_ee_epdf
 
-      base = 0 ! physical base: e-, gamma, e+
-      sol = 0 ! 0: numerical+matching, 1: only numerical                   
-      use_grid = .true.
-
-      !!if (id.eq.7) then
-      !!  call_epdf = 0d0
-      !!  return
-      !!endif
+      omx_ee_epdf = omx_ee(ibeam)
 
       xmu2=xmu**2
 
@@ -162,12 +153,12 @@ C ePDF specific parameters
           return
       endif
 
-      if (id.eq.idbeam.and.abs(id).eq.11) then
+      if (abs(id).eq.11) then
           ! e+ in e+ / e- in e-
-          id_epdf = 1
-      else if (id.eq.7) then
+          id_epdf = 11
+      else if (id.eq.7.or.id.eq.22) then
           ! photon in e+/e-
-          id_epdf = 0
+          id_epdf = 22
       else
           ! this is tipically the case of e+ in e-, quarks in e-, etc
           ! for which we will return zero
@@ -183,13 +174,10 @@ C ePDF specific parameters
       ! the pdfq will return the pdf without the singular factor
       !  1/(1-x)^ps_expo, which is taken into account by the
       !  phase-space parameterization
-      !call pdfq(id_epdf,x,omx_ee,xmu,1d0-ps_expo,idbeam_epdf,base,sol,use_grid,call_epdf) 
       ! The first argument is 0 to use grids, 1 to evaluate the PDF
-      ! (much slower)
-      !call  elpdfq2(0,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
-      ! Second argument       1: electron, 0: photon, -1: positron
-      !call  elpdfq2(0,1,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
-      call  elpdfq2(0,id_epdf,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      ! The second argument is 11 electron, 22 photon, -11 positron
+      ! assuming an electron as incoming hadron
+      call  elpdfq2(0,id_epdf,x,omx_ee(ibeam),xmu2,1d0-ps_expo,call_epdf)
 
       return
       end

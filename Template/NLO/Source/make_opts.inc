@@ -100,6 +100,8 @@ EPDFLIBS=$(shell $(epdf) --ldflags)
 alfas_functions=alfas_functions
 CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
 llhapdf = $(shell $(epdf) --ldflags)
+# Add also LHAPDF to the libraries to be linked
+llhapdf+= -lLHAPDF
 else
   alfas_functions=alfas_functions
   llhapdf=

@@ -30,8 +30,7 @@ c     initialize the pdf set
          nloop=nloop+1  
          asmz=alphasPDF(zmass)
       else if (pdlabel.eq.'emela') then
-C         call initepdf_gridid(lhaid)
-         CALL INITgridmela_lhaid(LHAID)
+         call initfromgrid_lhaid(lhaid)
          nloop = 2 
          asmz = g**2/16d0/datan(1d0) 
       else
