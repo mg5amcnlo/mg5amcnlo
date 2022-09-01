@@ -1,8 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.4.1 (XX/YY/22)
+3.4.1 (01/09/22)
       MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
       RF: removed a write statement in the reweighting routine (to get scale and PDF uncertainties at NLO+PS runs) that cluttered the reweight_xsec_events.output log files.
+      OM: Fixing an issue with lhapdf when trying to use an pdf set not yet installed within the database
       All: in sync with bug fixing in LTS (version 2.9.12)
 
 3.4.0 (06/05/22)
