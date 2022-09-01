@@ -474,22 +474,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         (matrix_element.born_me.get('processes')[0].shell_string())
         os.mkdir(borndir)
         os.chdir(borndir)
-        print(borndir)
         logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
 
-        print(me_number)
-        print(me_ntot)
 ## write the files corresponding to the born process in the P* directory
         self.generate_born_fks_files(matrix_element,
                 fortran_model, me_number, path)
 
-        print('after born')
         # With NJET you want to generate the order file per subprocess and most
         # likely also generate it for each subproc.
         if OLP=='NJET':
             filename = 'OLE_order.lh'
             self.write_lh_order(filename, [matrix_element.born_me.get('processes')[0]], OLP)
-        print('goes into virt now')
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
                             matrix_element.virt_matrix_element, \
@@ -1036,7 +1031,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             max_links = max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
-                    print(links)
                     raise MadGraph5Error( "born_conf should be canonically ordered")
             real_configs = ', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
@@ -2145,7 +2139,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         sqsorders_list.append(nsqorders)
     
-        print('before color link lines')
         self.color_link_files = [] 
         for j in range(len(matrix_element.color_links)):
             filename = 'b_sf_%3.3d.f' % (j + 1)
@@ -2165,16 +2158,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # of ew corrections. 
         # First, the squared amplitudes involving the goldstones
 
-        print('before sud')
-        print(filename)
         filename = 'has_ewsudakov.inc'
         self.write_has_ewsudakov(writers.FortranWriter(filename), matrix_element.ewsudakov)
 
-        print('done')
         filename = 'ewsudakov_haslo.inc'
         has_lo = self.write_ewsud_has_lo(writers.FortranWriter(filename), matrix_element)
 
-        print('after sud')
         for j, sud_me in enumerate([me for me in matrix_element.sudakov_matrix_elements if me['type'] == 'goldstone']):
             filename = "ewsudakov_goldstone_me_%d.f" % (j + 1)
             self.write_sudakov_goldstone_me(writers.FortranWriter(filename),
@@ -2185,7 +2174,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             self.write_numder_me(writers.FortranWriter(filename),
                          j, fortran_model)
 
-        print('before if')
         if matrix_element.ewsudakov:
             # the file where the numeric derivative for the parameter renormalisation
             #   is computed for the born 
@@ -2395,7 +2383,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
-        print('files',name)
         logger.info('Creating files in directory %s' % name)
 
         # Extract number of external particles
@@ -3050,52 +3037,39 @@ Parameters              %(params)s\n\
         split_orders = \
                 matrix_element.born_me['processes'][0]['split_orders']
 
-        print(split_orders)
         # compute the born orders
         born_orders = []
         split_orders = matrix_element.born_me['processes'][0]['split_orders'] 
-        print(split_orders)
         for ordd in split_orders:
-            print(ordd)
             born_orders.append(matrix_element.born_me['processes'][0]['born_sq_orders'][ordd])
 
         # check that there is at most one coupling combination
         # that satisfies the born_orders constraints 
         # (this is a limitation of the current implementation of the EW sudakov
         nborn = 0
-        print(squared_orders_born)
         for orders in squared_orders_born:
-            print('orders',orders)
             if all([orders[i] <= born_orders[i] for i in range(len(born_orders))]):
                 nborn += 1
 
 
-        print('nborn',nborn)
         if nborn > 1:
             raise MadGraph5Error("ERROR: Sudakov approximation does not support cases where" + \
                     " the Born has more than one coupling combination, found %d)" % nborn)
 
-        print('So nborn is 1, great!')
         # now we can see if the process has a LO1
         has_lo1 = bool(nborn)
         if has_lo1:
-            print(has_lo1)
-            print(born_orders)
-            print(squared_orders_born)
             lo1_pos = squared_orders_born.index(tuple(born_orders)) + 1
         else:
             lo1_pos = -100
 
-        print(has_lo1)
         # now determine the LO2 orders
         lo2_orders = born_orders
         lo2_orders[split_orders.index('QCD')] += -2
         lo2_orders[split_orders.index('QED')] += 2
 
-        print('lo2',lo2_orders)
         has_lo2 = tuple(lo2_orders) in squared_orders_born
 
-        print(has_lo2)
         if has_lo2:
             lo2_pos = squared_orders_born.index(tuple(lo2_orders)) + 1
         else:
