@@ -53,6 +53,9 @@ C dressed lepton stuff
       double precision tolerance
       parameter (tolerance=1.d-2)
 
+      logical photons_from_lepton
+      common /to_afromee/ photons_from_lepton
+
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
          pdg2pdf=1d0
@@ -89,16 +92,18 @@ C     dressed leptons
           ipart = ipdg
         endif
 
-        !!! MZ Kill the photon
-        !!if (abs(ipart).ne.11) then
-        !!    pdg2pdf=0d0
-        !!    ee_components(:)=0d0
-        !!    return
-        !!endif
+        !Kill the photon if asked for
+        if ((ipart.eq.22.or.ipart.eq.7).and..not.photons_from_lepton) then
+            pdg2pdf=0d0
+            ee_components(:)=0d0
+            return
+        endif
 
         pdg2pdf = 0d0
         do i_ee = 1, n_ee 
-          ee_components(i_ee) = call_epdf(x,xmu,i_ee,ipart,ibeam)
+        ! we pass ih/abs(ih)*ipart as PDG id because
+        ! the eMELA/ePDF convention always refers as an electron beam
+          ee_components(i_ee) = call_epdf(x,xmu,i_ee,ih/abs(ih)*ipart,ibeam)
         enddo
         return
       endif
@@ -153,7 +158,7 @@ C ePDF/eMELA specific parameters
           return
       endif
 
-      if (abs(id).eq.11) then
+      if (id.eq.11) then
           ! e+ in e+ / e- in e-
           id_epdf = 11
       else if (id.eq.7.or.id.eq.22) then
