@@ -103,6 +103,7 @@ C     dressed leptons
         do i_ee = 1, n_ee 
         ! we pass ih/abs(ih)*ipart as PDG id because
         ! the eMELA/ePDF convention always refers as an electron beam
+        ! Note that the photon from the positron will have -7!!
           ee_components(i_ee) = call_epdf(x,xmu,i_ee,ih/abs(ih)*ipart,ibeam)
         enddo
         return
@@ -161,8 +162,9 @@ C ePDF/eMELA specific parameters
       if (id.eq.11) then
           ! e+ in e+ / e- in e-
           id_epdf = 11
-      else if (id.eq.7.or.id.eq.22) then
-          ! photon in e+/e-
+      else if (iabs(id).eq.7.or.abs(id).eq.22) then
+          ! photon in e+/e-; 
+          !  the abs comes because photon from positron has -7
           id_epdf = 22
       else
           ! this is tipically the case of e+ in e-, quarks in e-, etc
