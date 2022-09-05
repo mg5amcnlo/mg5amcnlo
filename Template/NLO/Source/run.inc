@@ -94,5 +94,7 @@ C stuff for alpha running in lepton collisions
       integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
       common/to_alphascheme/alphascheme, nlep_run, nupq_run, ndnq_run, w_run
 
-      logical photons_from_lepton
+      logical photons_from_lepton, has_bstrahl
       common /to_afromee/ photons_from_lepton
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      common /to_has_bs/ has_bstrahl

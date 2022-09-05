@@ -13,6 +13,9 @@ C
       double precision value(20)
       real*8 alphasPDF
       external alphasPDF
+      ! PDFs with beamstrahlung use specific initialisation/evaluation
+      logical has_bstrahl
+      common /to_has_bs/ has_bstrahl
 
 
 c-------------------
@@ -24,11 +27,14 @@ c     initialize the pdf set
       CALL SetPDFPath(LHAPath)
       value(1)=lhaid
       parm(1)='DEFAULT'
-      if (pdlabel.eq.'lhapdf') then
-         call pdfset(parm,value)
-         call GetOrderAs(nloop)
-         nloop=nloop+1  
-         asmz=alphasPDF(zmass)
+      if (pdlabel.eq.'emela') then
+         if (has_bstrahl) then
+            call bs_initfromgrid_lhaid(LHAID)
+         else
+            call initfromgrid_lhaid(lhaid)
+         endif
+         nloop = 2 
+         asmz = g**2/16d0/datan(1d0) 
       else
           write(*,*) 'Unknown PDLABEL', pdlabel
           stop 1

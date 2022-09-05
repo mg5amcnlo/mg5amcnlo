@@ -23,7 +23,7 @@ ifdef lhapdf
   endif
 else ifdef epdf
       CXXFLAGS+=-std=c++11    
-      PDF         = pdfwrap_lhapdf.o pdg2pdf_epdf_mela.o opendata.o
+      PDF         = pdfwrap_emela.o pdg2pdf_epdf_mela.o opendata.o
 else
   PDF         = Ctq4Fn.o Ctq5Par.o Ctq5Pdf.o CT14Pdf.o Partonx5.o Ctq6Pdf.o cteq3.o \
                 mrs98.o mrs98lo.o mrs98ht.o mrs99.o mrst2001.o mrst2002.o jeppe02.o \

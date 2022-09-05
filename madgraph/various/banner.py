@@ -4830,6 +4830,7 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
         self.add_param('photons_from_lepton', True)
+        self.add_param('has_bstrahl', False)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         # stuff for lepton collisions 
         self.add_param('alphascheme', 0)
@@ -5501,6 +5502,12 @@ class eMELA_info(dict):
             elif self['eMELA_FactorisationSchemeInt'] == 1:
                 # Delta
                 self.log_and_update(banner, 'run_card', 'pdfscheme', 6)
+
+        #beamstrahlung:
+        if 'beamspectrum_type' in self.keys() and self['beamspectrum_type']:
+            self.log_and_update(banner, 'run_card', 'has_bstrahl', True)
+        else:
+            self.log_and_update(banner, 'run_card', 'has_bstrahl', False)
 
 
 

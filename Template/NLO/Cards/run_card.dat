@@ -76,6 +76,9 @@
 	            ! 2->eta (leptonic); 3->beta (leptonic) 
 		    ! 4->mixed (leptonic); 6->delta (leptonic)
                     ! if pdlabel==emela, this is set automatically
+#***********************************************************************
+# The following block is specific to lepton collisions (lpp=+-3)       *
+#***********************************************************************
  True   = photons_from_lepton ! whether to include or not photons from 
                               ! lepton ISR
 #***********************************************************************

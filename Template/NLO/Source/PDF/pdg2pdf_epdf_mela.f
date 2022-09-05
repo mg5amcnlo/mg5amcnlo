@@ -149,15 +149,13 @@ C ePDF/eMELA specific parameters
       integer id_epdf
       double precision omx_ee_epdf
 
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      logical has_bstrahl
+      common /to_has_bs/ has_bstrahl
+
       omx_ee_epdf = omx_ee(ibeam)
 
       xmu2=xmu**2
-
-      ! at the moment we support only the first component (no beamstrahlung)
-      if (n_ee.ne.1) then
-          call_epdf = 0d0
-          return
-      endif
 
       if (id.eq.11) then
           ! e+ in e+ / e- in e-
@@ -178,13 +176,25 @@ C ePDF/eMELA specific parameters
       endif
 
       ps_expo = get_ee_expo()
-      ! the pdfq will return the pdf without the singular factor
+
+      ! the elpdfq2 call will return the pdf without the singular factor
       !  1/(1-x)^ps_expo, which is taken into account by the
       !  phase-space parameterization
-      ! The first argument is 0 to use grids, 1 to evaluate the PDF
-      ! The second argument is 11 electron, 22 photon, -11 positron
-      ! assuming an electron as incoming hadron
-      call  elpdfq2(0,id_epdf,x,omx_ee(ibeam),xmu2,1d0-ps_expo,call_epdf)
+      if (has_bstrahl) then
+        ! In this case the frist argument is the BS component
+        continue
+        !!!!!call  bs_elpdfq2(n_ee,id,id_epdf,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      else
+         ! w/o beamstrahlung, fill only the first component
+         if (n_ee.ne.1) then
+           call_epdf = 0d0
+           return
+         endif
+         ! The first argument is 0 to use grids, 1 to evaluate the PDF
+         ! The second argument is 11 electron, 22 photon, -11 positron
+         ! assuming an electron as incoming hadron
+         call elpdfq2(0,id_epdf,x,omx_ee(ibeam),xmu2,1d0-ps_expo,call_epdf)
+      endif
 
       return
       end

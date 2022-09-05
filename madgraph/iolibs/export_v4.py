@@ -563,9 +563,16 @@ class ProcessExporterFortran(VirtualExporter):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
+        # this is for LHAPDF
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.writelines(template % changer)
+
+        # this is for eMELA
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_emela.f"),"r").read()
         ff.writelines(template % changer)
         
         
