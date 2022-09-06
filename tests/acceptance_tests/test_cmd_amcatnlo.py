@@ -831,7 +831,6 @@ class MECmdShell(IOTests.IOTestManager):
         """
         
         text = """
-        set include_lepton_initiated_processes True
         import model loop_qcd_qed_sm_Gmu
         generate e+ e- > w+ w- [QED]
         output %s
@@ -891,7 +890,6 @@ class MECmdShell(IOTests.IOTestManager):
         """
         
         text = """
-        set include_lepton_initiated_processes True
         import model loop_qcd_qed_sm_Gmu
         define ep = e+ a
         define em = e- a
@@ -954,7 +952,6 @@ class MECmdShell(IOTests.IOTestManager):
         """
         
         text = """
-        set include_lepton_initiated_processes True
         import model loop_qcd_qed_sm
         generate e+ e- > t t~ [QED]
         output %s
