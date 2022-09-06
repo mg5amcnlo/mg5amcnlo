@@ -5406,13 +5406,17 @@ class eMELA_info(dict):
                 self[k.strip()] = v
 
 
-    def update_epdf_emela_variables(self, banner, uvscheme, alpharun):
+    def update_epdf_emela_variables(self, banner, uvscheme):
         """updates the variables of the cards according to those
         of the PDF set at hand (self) and the uvscheme employed
         for the hard matrix-element
         Uvscheme =0,1,2 for MSbar,a(mz),Gmu
-        Use alpharun for the paramcard only if in the PDFs alpha runs
         """
+
+        logger.warning("Please make sure that the value of alpha is consistent between PDFs and param_card;\n"
+                   +"In the case of PDFs in the MSbar ren. scheme, the contributions factoring different\n"
+                   +"powers of alpha should be reweighted a posteriori")
+
 
         logger.info('Updating variables according to %s' % self.path) 
         # Flavours in the running of alpha
@@ -5466,15 +5470,13 @@ class eMELA_info(dict):
                                 % ( qref, sqrts))
 
         # reference value of alpha
-        if uvscheme_pdf == 0:
-            aref = alpharun
-        else:
-            aref = self['eMELA_AlphaRef']
-        if uvscheme != 2:
-            self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
-        else:
-            logger.info('Gmu scheme: please set gmu by hand in the param_card to a value consistent with the PDFs')
-
+        #if uvscheme_pdf == 0:
+        #    aref = alpharun
+        #else:
+        #    aref = self['eMELA_AlphaRef']
+        #if uvscheme != 2:
+        #    self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
+        #else:
 
         # LL / NLL PDF (0/1)
         pdforder = self['eMELA_PerturbativeOrder']
@@ -5518,7 +5520,6 @@ class eMELA_info(dict):
         and print a log on the screen
         """
         logger.info(' Setting %s = %s in the %s' % (par, str(v), card))
-        #banner.set(card, par, v)
         if card != 'param_card':
             banner.set(card,par,v)
         else:

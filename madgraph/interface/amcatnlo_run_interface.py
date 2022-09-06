@@ -5313,8 +5313,7 @@ RESTART = %(mint_mode)s
                     except KeyError:
                         uvscheme = 1 # Alpha(mz) scheme
                 # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
-                # alpharun is dummy 
-                emela_info.update_epdf_emela_variables(self.banner, uvscheme, alpharun=1.0)
+                emela_info.update_epdf_emela_variables(self.banner, uvscheme)
                 self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
 

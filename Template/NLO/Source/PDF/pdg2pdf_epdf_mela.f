@@ -49,12 +49,18 @@ C
 C dressed lepton stuff
       include '../eepdf.inc'
       integer i_ee
-      double precision call_epdf
+      double precision call_epdf_bs, call_epdf_nobs
       double precision tolerance
       parameter (tolerance=1.d-2)
 
       logical photons_from_lepton
       common /to_afromee/ photons_from_lepton
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      logical has_bstrahl
+      common /to_has_bs/ has_bstrahl
+
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 
@@ -78,7 +84,6 @@ c     instead of stopping the code, as this might accidentally happen.
        endif
       endif
 
-
 C     dressed leptons
       if (abs(ih).eq.3) then
         ! change e/mu/tau = 8/9/10 to 11/13/15 
@@ -100,13 +105,24 @@ C     dressed leptons
         endif
 
         pdg2pdf = 0d0
-        do i_ee = 1, n_ee 
-        ! we pass ih/abs(ih)*ipart as PDG id because
-        ! the eMELA/ePDF convention always refers as an electron beam
-        ! Note that the photon from the positron will have -7!!
-          ee_components(i_ee) = call_epdf(x,xmu,i_ee,ih/abs(ih)*ipart,ibeam)
-        enddo
-        return
+        if (.not.has_bstrahl) then
+          ! pure ISR case
+          ! we pass ih/abs(ih)*ipart as PDG id because
+          ! the eMELA/ePDF convention always refers as an electron beam
+          ! Note that the photon from the positron will have -7!!
+          ee_components(1) = call_epdf_nobs(x,omx_ee(ibeam),xmu,ih/abs(ih)*ipart)
+          ee_components(2:n_ee) = 0d0
+        else
+          ! case with beamstrahlung. This case may not be symmetric
+          ! because of different beam parameters for e+ and e-; need to
+          ! pass both ih (transformed to +-1) and ipart
+          do i_ee = 1, n_ee 
+            ! we pass ih/abs(ih)*ipart as PDG id because
+            ! the eMELA/ePDF convention always refers as an electron beam
+            ! Note that the photon from the positron will have -7!!
+            ee_components(i_ee) = call_epdf_bs(x,omx_ee(ibeam),xmu,i_ee,abs(ih)/ih,ipart)
+          enddo
+        endif
       endif
 
       return
@@ -127,10 +143,10 @@ C     dressed leptons
 
 
 
-      double precision function call_epdf(x, xmu, n_ee, id, ibeam)
+      double precision function call_epdf_nobs(x, omx, xmu, id)
       implicit none
-      double precision x, xmu
-      integer n_ee, id, ibeam
+      double precision x, omx, xmu
+      integer id
 
       double precision xmu2
       double precision k_exp
@@ -142,18 +158,12 @@ C     dressed leptons
       double precision get_ee_expo
       double precision ps_expo
 
-      double precision omx_ee(2)
-      common /to_ee_omx1/ omx_ee
-
 C ePDF/eMELA specific parameters
       integer id_epdf
-      double precision omx_ee_epdf
 
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       logical has_bstrahl
       common /to_has_bs/ has_bstrahl
-
-      omx_ee_epdf = omx_ee(ibeam)
 
       xmu2=xmu**2
 
@@ -171,7 +181,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
       endif
 
       if (id_epdf.eq.-1) then
-          call_epdf = 0d0
+          call_epdf_nobs = 0d0
           return
       endif
 
@@ -180,21 +190,69 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
       ! the elpdfq2 call will return the pdf without the singular factor
       !  1/(1-x)^ps_expo, which is taken into account by the
       !  phase-space parameterization
-      if (has_bstrahl) then
-        ! In this case the frist argument is the BS component
-        continue
-        !!!!!call  bs_elpdfq2(n_ee,id,id_epdf,x,omx_ee,xmu2,1d0-ps_expo,call_epdf) 
+      ! The first argument is 0 to use grids, 1 to evaluate the PDF
+      ! The second argument is 11 electron, 22 photon, -11 positron
+      ! assuming an electron as incoming hadron
+      call elpdfq2(0,id_epdf,x,omx,xmu2,1d0-ps_expo,call_epdf_nobs)
+
+      return
+      end
+
+
+      double precision function call_epdf_bs(x, omx, xmu, i_ee, ih, id)
+      implicit none
+      double precision x, omx, xmu
+      integer id, i_ee, ih
+      ! i_ee is the BS component
+      ! ih is +-1 for electron/positron
+      ! ipart is the pdg id of the parton
+
+      double precision xmu2
+      double precision k_exp
+
+      double precision eps
+      parameter (eps=1e-20)
+
+      double precision eepdf_tilde, eepdf_tilde_power
+      double precision get_ee_expo
+      double precision ps_expo
+
+C ePDF/eMELA specific parameters
+      integer id_epdf
+
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      logical has_bstrahl
+      common /to_has_bs/ has_bstrahl
+
+      xmu2=xmu**2
+
+      if (id*ih.eq.11) then
+          ! e+ in e+ / e- in e-
+          id_epdf = id
+      else if (id.eq.7.or.id.eq.22) then
+          ! photon in e+/e-; 
+          !  the abs comes because photon from positron has -7
+          id_epdf = 22
       else
-         ! w/o beamstrahlung, fill only the first component
-         if (n_ee.ne.1) then
-           call_epdf = 0d0
-           return
-         endif
-         ! The first argument is 0 to use grids, 1 to evaluate the PDF
-         ! The second argument is 11 electron, 22 photon, -11 positron
-         ! assuming an electron as incoming hadron
-         call elpdfq2(0,id_epdf,x,omx_ee(ibeam),xmu2,1d0-ps_expo,call_epdf)
+          ! this is tipically the case of e+ in e-, quarks in e-, etc
+          ! for which we will return zero
+          id_epdf = -1
       endif
+
+      if (id_epdf.eq.-1) then
+          call_epdf_bs = 0d0
+          return
+      endif
+
+      ps_expo = get_ee_expo()
+
+      ! the elpdfq2 call will return the pdf without the singular factor
+      !  1/(1-x)^ps_expo, which is taken into account by the
+      !  phase-space parameterization
+      ! In this case the frist argument is the BS component
+      ! the second is the parton id 
+      ! the third is the beam_id (+-1 for electron/positron)
+      call bs_elpdfq2(i_ee,id_epdf,ih,x,omx,xmu2,1d0-ps_expo,call_epdf_bs) 
 
       return
       end
@@ -215,48 +273,3 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
       enddo
       return
       end
-
-
-
-      subroutine store_ibeam_ee(ibeam)
-      implicit none
-      ! just store the identity of beam ibeam 
-      ! in the common to_ee_ibeam using the information
-      ! from initial_states_map
-      integer ibeam
-
-      integer beams(2), idum
-      logical firsttime
-      data firsttime /.true./
-
-      integer ee_ibeam
-      common /to_ee_ibeam/ee_ibeam
-
-      double precision omx1_ee, omx2_ee
-      common /to_ee_omx1/ omx1_ee, omx2_ee
-
-      double precision omx_ee
-      common /to_ee_omx/omx_ee
-
-      save beams
-
-      if (firsttime) then
-        ! read till the end, because if photons are present,
-        ! they will be put before leptons
-        open (unit=71,status='old',file='initial_states_map.dat')
-        do while (.true.) 
-          read (71,*,end=66)idum,idum,beams(1),beams(2)
-        enddo
- 66     close (71)
-        firsttime = .false.
-      endif
-
-      ee_ibeam = beams(ibeam)
-
-      if (ibeam.eq.1) omx_ee = omx1_ee
-      if (ibeam.eq.2) omx_ee = omx2_ee
-
-      return
-      end
-
-
