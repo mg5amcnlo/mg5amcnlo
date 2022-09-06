@@ -2,7 +2,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 	
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
-	See 2207.03265 for details
+	See 2207.03265 for details. 
+	NNL-accurate parton distributions for lepton collisions are provied by eMELA 
+	https://github.com/gstagnit/eMELA/releases
 
 
 3.4.0 (06/05/22)
