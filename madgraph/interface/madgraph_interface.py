@@ -782,7 +782,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
         logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
-        logger.info(" > (default False) Do not include real emission with leptons in the initial state.")
+        logger.info(" > (default False) Do not include processes with leptons in the initial state (nlo gen. only).")
         logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
         logger.info(" > Note that pressing tab always stops the timer.")
