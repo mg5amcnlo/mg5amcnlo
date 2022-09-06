@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+	
+      VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
+	See 2207.03265 for details
 
 
 3.4.0 (06/05/22)
