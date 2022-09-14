@@ -1498,7 +1498,7 @@ class Model(PhysicsObject):
                                                   ('__%d'%(i+1) if i>0 else ''))
                 change[var.name] = new_name
                 var.name = new_name
-                to_change.append(var.name)
+                #to_change.append(var.name)
         assert 'zero' not in to_change
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
