@@ -3333,8 +3333,15 @@ This implies that with decay chains:
         
         #Need to do the work!!!        
         import models.usermod as usermod
-        base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
-        
+        try:
+            base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
+        except Exception:
+            base_model_tmp = usermod.UFOModel(self._curr_model.get('modelpath'))
+            with misc.TMP_variable(base_model_tmp, 'model',None):
+                base_model = copy.deepcopy(base_model_tmp)
+            base_model.model = base_model_tmp.model
+            del base_model_tmp
+                    
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
