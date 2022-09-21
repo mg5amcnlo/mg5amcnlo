@@ -6721,7 +6721,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
             try:
                 old_value = param_card.get('sminputs').get((3,)).value
-            except KeyError:
+            except (KeyError, AttributeError):
                 old_value = None
 
             if old_value is None:
