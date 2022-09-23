@@ -1041,8 +1041,12 @@ class CondorCluster(Cluster):
                                                          stderr=subprocess.PIPE)
         
         error = status.stderr.read().decode(errors='ignore')
-        if status.returncode or error:
+        if status.returncode and error:
             raise ClusterManagmentError('condor_q returns error: %s' % error)
+        elif status.returncode:
+            raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+        elif error:
+            sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
         return status.stdout.readline().decode(errors='ignore').strip()
     
@@ -1068,8 +1072,12 @@ class CondorCluster(Cluster):
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE)
             error = status.stderr.read().decode(errors='ignore')
-            if status.returncode or error:
+            if status.returncode and error:
                 raise ClusterManagmentError('condor_q returns error: %s' % error)
+            elif status.returncode:
+                raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+            elif error:
+                sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
             for line in status.stdout:
                 id, status = line.decode(errors='ignore').strip().split()
