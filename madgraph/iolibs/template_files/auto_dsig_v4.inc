@@ -316,6 +316,14 @@ c        Do not need those three here do I?
 c	 CM_RAP = ALL_CM_RAP(IVEC)
 	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
+C     Select a flavor combination (need to do here for right sign)
+       CALL RANMAR(R)
+       IPSEL=0
+       DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
+       ENDDO
+
 	 if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
          else
@@ -339,13 +347,6 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
 			endif
 			RETURN
 		 ENDIF
-C     Select a flavor combination (need to do here for right sign)
-         CALL RANMAR(R)
-         IPSEL=0
-         DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-            IPSEL=IPSEL+1
-            R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
-         ENDDO
 
 	 XBK(:) = ALL_XBK(:,IVEC)
 c	 CM_RAP = ALL_CM_RAP(IVEC)
@@ -356,7 +357,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-	 call restore_cl_val_to(ivec)
+C	 call restore_cl_val_to(ivec)
          DSIGUU=DSIGUU*REWGT(P1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)

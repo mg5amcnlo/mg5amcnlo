@@ -11,14 +11,14 @@ c     id_cl gives diagrams for propagators
       logical heavyrad(n_max_cg)
       common/cl_map/id_cl,heavyrad
 c     vectorised version
-      integer v_id_cl(maxsproc,n_max_cl,0:n_max_cg, nb_page)
-      logical v_heavyrad(n_max_cg,nb_page)
+      integer v_id_cl(maxsproc,n_max_cl,0:n_max_cg, 1)
+      logical v_heavyrad(n_max_cg,1)
       common/v_cl_map/v_id_cl,v_heavyrad
 c     resmap gives potential resonances for diagrams
       logical resmap(n_max_cl,n_max_cg)
       common/res_map/resmap
 c     vectorised version
-      logical v_resmap(n_max_cl,n_max_cg,nb_page)
+      logical v_resmap(n_max_cl,n_max_cg,1)
       common/v_res_map/v_resmap
 c     cl_val      
       double precision pt2ijcl(nexternal),zcl(nexternal),mt2ij(nexternal),mt2last
@@ -29,12 +29,12 @@ c     cl_val
       common/cl_val/pcl,pt2ijcl,zcl,mt2ij,mt2last,imocl,idacl,igraphs,ipdgcl,
      &    clustered
 c     vectorised_version
-      double precision v_pt2ijcl(nexternal,nb_page),v_zcl(nexternal,nb_page),v_mt2ij(nexternal,nb_page)
-      double precision v_mt2last(nb_page)
-      double precision v_pcl(0:4,n_max_cl,nb_page) ! 4 is mass**2
-      integer v_imocl(nexternal,nb_page), v_idacl(nexternal,2,nb_page), v_igraphs(0:n_max_cg,nb_page)
-      integer v_ipdgcl(n_max_cl,n_max_cg,maxsproc,nb_page)
-      logical v_clustered(nb_page)
+      double precision v_pt2ijcl(nexternal,1),v_zcl(nexternal,1),v_mt2ij(nexternal,1)
+      double precision v_mt2last(1)
+      double precision v_pcl(0:4,n_max_cl,1) ! 4 is mass**2
+      integer v_imocl(nexternal,1), v_idacl(nexternal,2,1), v_igraphs(0:n_max_cg,1)
+      integer v_ipdgcl(n_max_cl,n_max_cg,maxsproc,1)
+      logical v_clustered(1)
       common/v_cl_val/v_pcl,v_pt2ijcl,v_zcl,v_mt2ij,v_mt2last,v_imocl,v_idacl,v_igraphs,v_ipdgcl,
      &   v_clustered
 c     variable for keeping track of BWs
@@ -42,20 +42,20 @@ c     variable for keeping track of BWs
       logical isbw(n_max_cl)
       common/cl_isbw/nbw,isbw,ibwlist
 c     vectorized version
-      integer v_nbw(nb_page),v_ibwlist(2,nexternal,nb_page)
-      logical v_isbw(n_max_cl,nb_page)
+      integer v_nbw(1),v_ibwlist(2,nexternal,1)
+      logical v_isbw(n_max_cl,1)
       common/v_cl_isbw/v_nbw,v_isbw,v_ibwlist
 c     variable for LH output of clustering info (R,E,S,I)
       integer icluster(4,nexternal)
       common/cl_iclus/icluster
 c     vectorised version
-      integer v_icluster(4,nexternal,nb_page)
+      integer v_icluster(4,nexternal,1)
       common/v_cl_iclus/v_icluster
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
 c     vectorised version      
-      double precision v_ptclus(nexternal,nb_page)
+      double precision v_ptclus(nexternal,1)
       common/v_cl_jets/v_ptclus      
 c     parameters for sudakovs
       double precision m_colfac(-6:21),m_dlog(-6:21),m_slog(-6:21),
@@ -84,8 +84,8 @@ c      common/v_gamma_args/v_Q1,v_iipdg,v_iimode
 
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
-      integer v_jlast(2,nb_page)
-      integer v_njetstore(lmaxconfigs,nb_page),v_iqjetstore(nexternal-2,lmaxconfigs,nb_page)
-      real*8 v_q2bck(2,nb_page)
-      integer v_njets(nb_page),v_iqjets(nexternal,nb_page)
+      integer v_jlast(2,1)
+      integer v_njetstore(lmaxconfigs,1),v_iqjetstore(nexternal-2,lmaxconfigs,1)
+      real*8 v_q2bck(2,1)
+      integer v_njets(1),v_iqjets(nexternal,1)
       common /v_to_rw/v_jlast,v_njetstore,v_iqjetstore,v_njets,v_iqjets,v_q2bck

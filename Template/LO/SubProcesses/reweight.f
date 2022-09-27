@@ -1852,7 +1852,7 @@ c      save firsttime
             all_q2fact(1,i) = q2fact(1)
             all_q2fact(2,i) = q2fact(2)
          endif
-         call save_cl_val_to(i)
+c         call save_cl_val_to(i)
 c      endif
 
 c     Set couplings in model files
