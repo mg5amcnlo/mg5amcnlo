@@ -1118,6 +1118,12 @@ c Set all to negative values and exit
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
+
+      ! check that the starting PS point is meaningful
+      if (xjac0.lt.0d0) then
+         pass = .false.
+         return
+      endif
 c
 c Here we start with the FKS Stuff
 c
