@@ -4827,7 +4827,7 @@ This implies that with decay chains:
                     type = "<="
                 squared_orders[basename] = (value,type)
             else:
-                if name not in model_orders:
+                if name not in model_orders and name!='WEIGHTED':
                     valid = list(model_orders) + list(coupling_alias.keys())
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
