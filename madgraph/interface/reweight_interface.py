@@ -118,6 +118,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.exitted = False # Flag to know if do_quit was already called.
         self.keep_ordering = False
         self.use_eventid = False
+        self.inc_sudakov = False
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -421,6 +422,9 @@ class ReweightInterface(extended_cmd.Cmd):
             pass 
             # this line is meant to be parsed by common_run_interface and change the way this class is called.
             #It has no direct impact on this class.
+        elif args[0] == 'include_sudakov':
+            if args[1] == 'True':
+                self.inc_sudakov = True
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -480,7 +484,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
-        if not self.has_standalone_dir:                           
+        if not self.has_standalone_dir:      
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
                 if opts['rwgt_name']:
@@ -508,7 +512,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if not self.rwgt_dir:
                         self.rwgt_dir = self.me_dir
                     self.save_to_pickle()      
-        
+                    
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
         # get iterator over param_card and the name associated to the current reweighting.
@@ -553,13 +557,12 @@ class ReweightInterface(extended_cmd.Cmd):
         self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
+
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
                     running_time = misc.format_timer(time.time()-start)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
-
-
                 
             weight = self.calculate_weight(event)
             if not isinstance(weight, dict):
@@ -577,14 +580,37 @@ class ReweightInterface(extended_cmd.Cmd):
                     event.reweight_order.remove('%s%s'  % (tag_name,tag))
                 except ValueError:
                     continue
-            
             event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
             if self.output_type == "default":
                 for name in weight:
                     if 'orig' in name:
-                        continue             
+                        continue            
                     event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
-                    #write this event with weight
+
+                    ### Do the Sudakov reweighting here
+                    if self.inc_sudakov:
+                        mW=80.3
+                        alpha=0.001
+                        pi=3.141592653589
+                        pair = event.get_fks_pair()
+                        fks1=pair[0]
+                        fks2=pair[1]
+                        sudrat=0.0
+                        for ievt,evt in enumerate(event):
+                            for ievt2,evt2 in enumerate(event):
+                                inv = (evt.E+evt2.E)**2-(evt.px+evt2.px)**2-(evt.py+evt2.py)**2-(evt.pz+evt2.pz)**2
+                                if ((ievt == fks1) and (ievt2 == fks2)):
+                                    if (inv < mW**2):
+                                        sudrat = sudrat + 0.0
+                                    elif (inv > mW**2):
+                                        sudrat = sudrat + (alpha/(4.0*pi))*math.log(abs(inv)/(mW**2))
+                                else:
+                                    inv = (evt.E+evt2.E)**2-(evt.px+evt2.px)**2-(evt.py+evt2.py)**2-(evt.pz+evt2.pz)**2
+                                    if (inv > 0.0):
+                                        sudrat = sudrat + (alpha/(4.0*pi))*math.log(abs(inv)/(mW**2))
+                        event.rescale_weights(sudrat)
+
+                #write this event with weight
                 output.write(str(event))
             else:
                 for i,name in enumerate(weight):
@@ -607,7 +633,7 @@ class ReweightInterface(extended_cmd.Cmd):
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
-        
+    
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
             output.close()
@@ -714,10 +740,10 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-        
         if not '--keep_card' in args:
             if self.has_nlo and self.rwgt_mode != "LO":
                 rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
+            logger.info(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             with open(pjoin(rw_dir, 'Cards', 'param_card.dat'), 'w') as fsock:
                 fsock.write(self.banner['slha']) 
             out, cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
@@ -731,7 +757,6 @@ class ReweightInterface(extended_cmd.Cmd):
             new_card = self.new_param_card.write()
         else:
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-            
         # check for potential scan in the new card 
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
@@ -1039,7 +1064,6 @@ class ReweightInterface(extended_cmd.Cmd):
      
     def calculate_nlo_weight(self, event):
 
-
         type_nlo = self.get_weight_names()
         final_weight = {'orig': event.wgt}
             
@@ -1147,7 +1171,8 @@ class ReweightInterface(extended_cmd.Cmd):
              
         if '_lo' in type_nlo:
             w_orig = self.calculate_matrix_element(event, 0)
-            w_new =  self.calculate_matrix_element(event, 1)            
+            w_new =  self.calculate_matrix_element(event, 1)      
+            misc.sprint('editing weight in LO')      
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
             
@@ -1164,6 +1189,7 @@ class ReweightInterface(extended_cmd.Cmd):
                             c_wgt.pwgt = wgt_virt.pop(0)
             assert not to_write
             assert not wgt_tree
+
         return final_weight 
 
 
@@ -1425,7 +1451,7 @@ class ReweightInterface(extended_cmd.Cmd):
             raise
         
         commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
-        mgcmd.exec_cmd(commandline, precmd=True)        
+        mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
         

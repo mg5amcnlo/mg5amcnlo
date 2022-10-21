@@ -1458,12 +1458,12 @@ class Event(list):
                 particle.mother2 -= 1  
         # re-call the function for the next potential change   
         return self.reorder_mother_child()
-         
         
-        
-        
-        
-   
+
+
+
+
+
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
            {key: value}. If no group is define group should be '' """
@@ -1496,6 +1496,21 @@ class Event(list):
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type,
                                                threshold=threshold)
             return self.nloweight
+
+    def get_fks_pair(self, real_type=(1,11), threshold=None):
+        """ Gives the fks pair labels"""
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop:
+            text = self.tag[start+8:stop]
+            all_line = text.split('\n')
+            wgts = []
+            text = text.lower().replace('d','e')
+            all_line = text.split('\n')
+            for line in all_line:
+                data = line.split()
+                if len(data)>16:
+                    wgt = OneNLOWeight(line, real_type=real_type)
+        return wgt.to_merge_pdg
 
     def rewrite_nlo_weight(self, wgt=None):
         """get the string associate to the weight"""
