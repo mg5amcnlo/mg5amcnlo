@@ -590,7 +590,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     ### Do the Sudakov reweighting here
                     if self.inc_sudakov:
                         mW=80.3
-                        alpha=0.001
+                        alpha=1.0/129.0
                         pi=3.141592653589
                         pair = event.get_fks_pair()
                         fks1=pair[0]
@@ -603,11 +603,10 @@ class ReweightInterface(extended_cmd.Cmd):
                                     if (inv < mW**2):
                                         sudrat = sudrat + 0.0
                                     elif (inv > mW**2):
-                                        sudrat = sudrat + (alpha/(4.0*pi))*math.log(abs(inv)/(mW**2))
+                                        sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
                                 else:
-                                    inv = (evt.E+evt2.E)**2-(evt.px+evt2.px)**2-(evt.py+evt2.py)**2-(evt.pz+evt2.pz)**2
                                     if (inv > 0.0):
-                                        sudrat = sudrat + (alpha/(4.0*pi))*math.log(abs(inv)/(mW**2))
+                                        sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
                         event.rescale_weights(sudrat)
 
                 #write this event with weight
