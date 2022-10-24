@@ -598,8 +598,9 @@ class ReweightInterface(extended_cmd.Cmd):
                         sudrat=0.0
                         for ievt,evt in enumerate(event):
                             for ievt2,evt2 in enumerate(event):
+                              if (ievt2 > ievt):
                                 inv = (evt.E+evt2.E)**2-(evt.px+evt2.px)**2-(evt.py+evt2.py)**2-(evt.pz+evt2.pz)**2
-                                if ((ievt == fks1) and (ievt2 == fks2)):
+                                if ((ievt == fks1) and (ievt2 == fks2)) or ((ievt == fks2) and (ievt2 == fks1)):
                                     if (inv < mW**2):
                                         sudrat = sudrat + 0.0
                                     elif (inv > mW**2):
