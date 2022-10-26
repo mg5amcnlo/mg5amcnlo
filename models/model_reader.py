@@ -175,7 +175,6 @@ class ModelReader(loop_base_objects.LoopModel):
                     continue
                 for pid in parameter_dict[block]:
                     try:
-                        print('BB', block, pid)
                         value = param_card[block].get(pid).value
                     except:
                         if block == 'loop':
