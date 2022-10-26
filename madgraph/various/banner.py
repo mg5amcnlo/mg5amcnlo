@@ -2877,39 +2877,49 @@ class RunCard(ConfigFile):
                 if all(f in written for f in to_check):
                     continue
 
-                to_add = ['']
-                for line in b.get_template(self).split('\n'):               
-                    nline = line.split('#')[0]
-                    nline = nline.split('!')[0]
-                    nline = nline.split('=')
-                    if len(nline) != 2:
-                        to_add.append(line)
-                    elif nline[1].strip() in self:
-                        name = nline[1].strip().lower()
-                        value = self[name]
-                        if name in self.list_parameter:
-                            value = ', '.join([str(v) for v in value])
-                        if name in written:
-                            continue #already include before
+                # if none of the attribute of the block has been written already
+                # make the code to follow the template
+                if all(f not in written for f in to_check):
+                    to_add = b.get_template(self) % self
+                    to_add = to_add.split('\n')
+                    for f in to_check:
+                        if f in to_write:
+                            to_write.remove(f)
+                else:
+                    #partial writting -> add only what is needed
+                    to_add = []
+                    for line in b.get_template(self).split('\n'):               
+                        nline = line.split('#')[0]
+                        nline = nline.split('!')[0]
+                        nline = nline.split('=')
+                        if len(nline) != 2:
+                            to_add.append(line)
+                        elif nline[1].strip() in self:
+                            name = nline[1].strip().lower()
+                            value = self[name]
+                            if name in self.list_parameter:
+                                value = ', '.join([str(v) for v in value])
+                            if name in written:
+                                continue #already include before
+                            else:
+                                to_add.append(line % {nline[1].strip():value, name:value})
+                                written.add(name)                        
+        
+                            if name in to_write:
+                                to_write.remove(name)
                         else:
-                            to_add.append(line % {nline[1].strip():value, name:value})
-                            written.add(name)                        
-    
-                        if name in to_write:
-                            to_write.remove(name)
-                    else:
-                        raise Exception
+                            raise Exception
+                # try to detect the template that is not to be used anymore and replace it
                 template_off = b.get_unused_template(self)
                 if '%(' in template_off:
                     template_off = template_off % self
                     if template_off and template_off in text:
                         text = text.replace(template_off, '\n'.join(to_add))
                     else:
-                        template_off = template_off.replace(' ', '\s*')
-                        text, n = re.subn(template_off, '\n'.join(to_add), text)
+                        template_off = re.sub(r'[ \t]+','[ \t]*', template_off)
+                        text, n = re.subn(template_off, '\n'.join(to_add), text, count=1)
                         if not n:
                             text += '\n'.join(to_add)
-
                 elif template_off and template_off in text:
                     text = text.replace(template_off, '\n'.join(to_add))
                 else:
@@ -3039,7 +3049,7 @@ class RunCard(ConfigFile):
         """check that parameter missing in the card are set to the expected value"""
 
         for name, value in self.system_default.items():
-                self.set(name, value, changeifuserset=False)
+            self.set(name, value, changeifuserset=False)
         
 
         for name in self.includepath[False]:

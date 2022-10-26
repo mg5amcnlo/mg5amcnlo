@@ -6713,6 +6713,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           'ct14q14': 0.118,
                           'ct14q21':0.118}
 
+            # run_card full validity not run at this stage. 
+            # since we need the pdlabel here, just run that part of the check
+            if 'pdlabel' in run_card.parameter_in_block:
+                run_card.parameter_in_block['pdlabel'].check_validity(run_card)
             pdlabel = run_card['pdlabel']
             if pdlabel == 'mixed':
                 pdlabel1 = run_card['pdlabel1']
