@@ -1001,3 +1001,46 @@ class MECmdShell(IOTests.IOTestManager):
 
         check_html_page(self, pjoin(self.path, 'crossx.html'))
         check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+
+    def test_generate_eett_nlo_qcd_noisr(self):
+        """ we will test the generation of NLO QCD for ttbar production,
+        (without ISR, fixed beam energy
+        """
+        
+        text = """
+        import model loop_sm-no_b_mass
+        generate e+ e- > t t~ [QCD]
+        output %s
+        launch NLO
+        set ebeam1 500
+        set ebeam2 500
+        set lpp1 0 
+        set lpp2 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(1.745e-1, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))

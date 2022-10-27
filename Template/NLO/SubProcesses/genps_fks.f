@@ -993,7 +993,8 @@ c Trivial, but prevents loss of accuracy
       ! event-projection if use_evpr is set to false
       !(note that in e+e- collisions, if tau is generated with a BW
       ! then use_evpr is set to true)
-      if (lpp(1).eq.1.and.lpp(2).eq.1) then
+      if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
+     $   (lpp(1).eq.0.and.lpp(2).eq.0)) then
           use_evpr = .true.
       else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
      $         (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4)) then
