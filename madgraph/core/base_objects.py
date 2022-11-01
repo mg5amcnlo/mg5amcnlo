@@ -1672,6 +1672,11 @@ class Model(PhysicsObject):
                     for key, value in part.partial_widths.items():    
                         part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
+            # change running
+            if self['running_elements']:
+                for el in self['running_elements']:
+                    el.value = rep_pattern.sub(replace, el.value)
+
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
         self.get('particle_dict') 
