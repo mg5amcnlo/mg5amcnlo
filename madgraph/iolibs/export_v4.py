@@ -7743,6 +7743,22 @@ class UFO_model_to_mg4(object):
             data['mpinput']="INCLUDE 'mp_input.inc'"
             data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
                                     for i, name in enumerate(runparams)])
+            # add initialization for parameter that have coupling parameter
+            for i in range(data['size']):
+                for j in range(data['size']):
+                    if isinstance(mat1[i][j], str):
+                        towrite = mat1[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT1(%i,%i) = %s" % (i+1, j+1, mat1[i][j].replace('MDL_', 'MP__MDL_'))
+                    if isinstance(mat2[i][j], str):
+                        towrite = mat2[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
+                        
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
             text += template % data   
