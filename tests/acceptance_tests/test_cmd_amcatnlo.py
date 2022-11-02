@@ -1023,10 +1023,6 @@ class MECmdShell(IOTests.IOTestManager):
         interface = MGCmd.MasterCmd()
         interface.no_notification()
 
-        # skip if eMELA is not known to MG5_aMC
-        if not interface.options['eMELA']:
-            self.skipTest("Skipping test, eMELA not available")
-
         open(pjoin(self.tmpdir,'cmd'),'w').write(text)
         os.system('rm -rf %s/RunWeb' % self.path)
         os.system('rm -rf %s/Events/run_*' % self.path)
