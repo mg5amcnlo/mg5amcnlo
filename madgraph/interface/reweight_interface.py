@@ -555,7 +555,13 @@ class ReweightInterface(extended_cmd.Cmd):
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
         self.lhe_input.seek(0)
+        nofill=0
+        fill=0
+        fill_fks=0
+        nevents=0
+        n_is_fks=0
         for event_nb,event in enumerate(self.lhe_input):
+            nevents=nevents+1
             #control logger
 
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
@@ -596,18 +602,38 @@ class ReweightInterface(extended_cmd.Cmd):
                         fks1=pair[0]
                         fks2=pair[1]
                         sudrat=0.0
+                        min_inv=1000000.0
                         for ievt,evt in enumerate(event):
+                            if (ievt <= 2):
+                                sign1 = 1.0
+                            else:
+                                sign1 = -1.0
                             for ievt2,evt2 in enumerate(event):
+                              if (ievt2 <= 2):
+                                sign2 = 1.0
+                              else:
+                                sign2 = -1.0
                               if (ievt2 > ievt):
-                                inv = (evt.E+evt2.E)**2-(evt.px+evt2.px)**2-(evt.py+evt2.py)**2-(evt.pz+evt2.pz)**2
-                                if ((ievt == fks1) and (ievt2 == fks2)) or ((ievt == fks2) and (ievt2 == fks1)):
-                                    if (inv < mW**2):
+                                is_fks=False
+                                inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                       -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                                if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
+                                    is_fks = True
+                                    if (abs(inv) < mW**2):
                                         sudrat = sudrat + 0.0
-                                    elif (inv > mW**2):
+                                        nofill=nofill+1
+                                    elif (abs(inv) > mW**2):
                                         sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+                                        fill_fks=fill_fks+1
                                 else:
-                                    if (inv > 0.0):
-                                        sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+                                    sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+                                    fill=fill+1
+                                if (abs(inv) < min_inv):
+                                    min_inv=abs(inv)
+                                    if (not is_fks):
+                                        is_fks=False
+                        if (is_fks):
+                            n_is_fks=n_is_fks+1    
                         event.rescale_weights(sudrat)
 
                 #write this event with weight
@@ -623,6 +649,17 @@ class ReweightInterface(extended_cmd.Cmd):
                     new_evt.parse_reweight()
                     new_evt.reweight_data = {}  
                     output[(tag_name,name)].write(str(new_evt))
+
+        print('No filled:')
+        print(nofill)
+        print('Filled fks:')
+        print(fill_fks)
+        print('Filled other:')
+        print(fill)
+        print('Number events')
+        print(nevents)
+        print('Number times FKS inv is smallest among pairs:')
+        print(n_is_fks)
 
         # check normalisation of the events:
         if self.run_card and 'event_norm' in self.run_card:
