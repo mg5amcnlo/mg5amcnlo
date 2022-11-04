@@ -555,11 +555,12 @@ class ReweightInterface(extended_cmd.Cmd):
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
         self.lhe_input.seek(0)
-        nofill=0
-        fill=0
-        fill_fks=0
         nevents=0
         n_is_fks=0
+        n_s_event=0
+        n_h_event=0
+        fks_n1body=0
+        fks_nbody=0
         for event_nb,event in enumerate(self.lhe_input):
             nevents=nevents+1
             #control logger
@@ -595,45 +596,53 @@ class ReweightInterface(extended_cmd.Cmd):
 
                     ### Do the Sudakov reweighting here
                     if self.inc_sudakov:
+                        pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
                         mW=80.3
-                        alpha=1.0/129.0
-                        pi=3.141592653589
-                        pair = event.get_fks_pair()
+                        min_inv=1000000.0
                         fks1=pair[0]
                         fks2=pair[1]
-                        sudrat=0.0
-                        min_inv=1000000.0
-                        for ievt,evt in enumerate(event):
-                            if (ievt <= 2):
-                                sign1 = 1.0
-                            else:
-                                sign1 = -1.0
-                            for ievt2,evt2 in enumerate(event):
-                              if (ievt2 <= 2):
-                                sign2 = 1.0
-                              else:
-                                sign2 = -1.0
-                              if (ievt2 > ievt):
-                                is_fks=False
-                                inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                       -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                                if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
-                                    is_fks = True
-                                    if (abs(inv) < mW**2):
-                                        sudrat = sudrat + 0.0
-                                        nofill=nofill+1
-                                    elif (abs(inv) > mW**2):
-                                        sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
-                                        fill_fks=fill_fks+1
+                        if (len(event) == nexternal):
+                            H_event=True
+                            S_event=False
+                        else:
+                            H_event=False
+                            S_event=True                         
+                        if (H_event):
+                            n_h_event=n_h_event+1
+                            for ievt,evt in enumerate(event):
+                                if (ievt <= 2):
+                                    sign1 = 1.0
                                 else:
-                                    sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
-                                    fill=fill+1
-                                if (abs(inv) < min_inv):
-                                    min_inv=abs(inv)
-                                    if (not is_fks):
+                                    sign1 = -1.0
+                                for ievt2,evt2 in enumerate(event):
+                                    if (ievt <= 2):
+                                        sign2 = 1.0
+                                    else:
+                                        sign2 = -1.0
+                                    if (ievt2 > ievt):
                                         is_fks=False
+                                        inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                                -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                                        if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
+                                            is_fks=True
+                                            if (abs(inv) < mW**2):
+                                                sudrat = self.sudakov_reweight_nbody(H_event,event)
+                                                fks_nbody=fks_nbody+1
+                                            else:
+                                                sudrat = self.sudakov_reweight_n1body(H_event,event)
+                                                fks_n1body=fks_n1body+1
+                                        if (abs(inv) < min_inv):
+                                            min_inv=abs(inv)
+                                            if (not is_fks):
+                                                is_fks=False
+                        if (S_event):
+                            is_fks=False
+                            sudrat = self.sudakov_reweight_nbody(H_event,event)
+                            n_s_event=n_s_event+1
+
                         if (is_fks):
-                            n_is_fks=n_is_fks+1    
+                            n_is_fks=n_is_fks+1
+
                         event.rescale_weights(sudrat)
 
                 #write this event with weight
@@ -650,14 +659,14 @@ class ReweightInterface(extended_cmd.Cmd):
                     new_evt.reweight_data = {}  
                     output[(tag_name,name)].write(str(new_evt))
 
-        print('No filled:')
-        print(nofill)
-        print('Filled fks:')
-        print(fill_fks)
-        print('Filled other:')
-        print(fill)
-        print('Number events')
-        print(nevents)
+        print('Number of S events:')
+        print(n_s_event)
+        print('Number of H events:')
+        print(n_h_event)
+        print('FKS with n-body SUD:')
+        print(fks_nbody)
+        print('FKS with n+1-body SUD:')
+        print(fks_n1body)
         print('Number times FKS inv is smallest among pairs:')
         print(n_is_fks)
 
@@ -764,6 +773,70 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
+
+    def sudakov_reweight_nbody(self,H_event,event):
+        """ Get Sudakov reweight factor based on n-body kinematics"""
+        mW=80.3
+        alpha=1.0/129.0
+        pi=3.141592653589
+        sudrat = 0.0
+        if (H_event):
+            born_momenta = event.get_born_momenta()
+            for ievt,evt in enumerate(born_momenta[:-1]):
+                if (ievt <= 2):
+                    sign1 = 1.0
+                else:
+                    sign1 = -1.0
+                for ievt2,evt2 in enumerate(born_momenta[:-1]):
+                    if (ievt2 <= 2):
+                        sign2 = 1.0
+                    else:
+                        sign2 = -1.0
+                    if (ievt2 > ievt):
+                        mom1 = [float(el) for el in evt.split()]
+                        mom2 = [float(el) for el in evt2.split()]
+                        inv = (sign1*mom1[0]+sign2*mom2[0])**2-(sign1*mom1[1]+sign2*mom2[1])**2\
+                              -(sign1*mom1[2]+sign2*mom2[2])**2-(sign1*mom1[3]+sign2*mom2[3])**2
+                        if (inv != 0.0):
+                            sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+        else:            
+            for ievt,evt in enumerate(event):
+                if (ievt <= 2):
+                    sign1 = 1.0
+                else:
+                    sign1 = -1.0
+                for ievt2,evt2 in enumerate(event):
+                    if (ievt2 <= 2):
+                        sign2 = 1.0
+                    else:
+                        sign2 = -1.0
+                    if (ievt2 > ievt):
+                        inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                              -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                        sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+        return sudrat
+
+    def sudakov_reweight_n1body(self,H_event,event):
+        """ Get Sudakov reweight factor based on n+1-body kinematics"""
+        sudrat=0.0
+        mW=80.3
+        alpha=1.0/129.0
+        pi=3.141592653589
+        for ievt,evt in enumerate(event):
+            if (ievt <= 2):
+                sign1 = 1.0
+            else:
+                sign1 = -1.0
+            for ievt2,evt2 in enumerate(event):
+                if (ievt2 <= 2):
+                    sign2 = 1.0
+                else:
+                    sign2 = -1.0
+                if (ievt2 > ievt):
+                    inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                            -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                    sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+        return sudrat
 
 
     def handle_param_card(self, model_line, args, type_rwgt):

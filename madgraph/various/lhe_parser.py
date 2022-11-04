@@ -1503,14 +1503,30 @@ class Event(list):
         if start != -1 != stop:
             text = self.tag[start+8:stop]
             all_line = text.split('\n')
-            wgts = []
             text = text.lower().replace('d','e')
             all_line = text.split('\n')
             for line in all_line:
                 data = line.split()
                 if len(data)>16:
                     wgt = OneNLOWeight(line, real_type=real_type)
-        return wgt.to_merge_pdg
+        return wgt.to_merge_pdg,wgt.nexternal
+
+    def get_born_momenta(self,real_type=(1,11), threshold=None):
+        """ Gets the underlying n+1 body kinematics"""
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop:
+            text = self.tag[start+8:stop]
+            text = text.lower().replace('d','e')
+            all_line = text.split('\n')
+            for line in all_line:
+                data = line.split()
+                if len(data)>16:
+                    wgt = OneNLOWeight(line, real_type=real_type)
+            nexternal = wgt.nexternal
+            real_momenta = all_line[2:2+nexternal]
+        return real_momenta
+
+
 
     def rewrite_nlo_weight(self, wgt=None):
         """get the string associate to the weight"""
