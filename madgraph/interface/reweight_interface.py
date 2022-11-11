@@ -425,6 +425,7 @@ class ReweightInterface(extended_cmd.Cmd):
         elif args[0] == 'include_sudakov':
             if args[1] == 'True':
                 self.inc_sudakov = True
+                self.rwgt_mode = 'LO'
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -601,6 +602,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         min_inv=1000000.0
                         fks1=pair[0]
                         fks2=pair[1]
+                        min_inv_fks=False
                         if (len(event) == nexternal):
                             H_event=True
                             S_event=False
@@ -633,14 +635,16 @@ class ReweightInterface(extended_cmd.Cmd):
                                                 fks_n1body=fks_n1body+1
                                         if (abs(inv) < min_inv):
                                             min_inv=abs(inv)
-                                            if (not is_fks):
-                                                is_fks=False
+                                            if (is_fks):
+                                                min_inv_fks=True
+                                            else:
+                                                min_inv_fks=False
                         if (S_event):
                             is_fks=False
                             sudrat = self.sudakov_reweight_nbody(H_event,event)
                             n_s_event=n_s_event+1
 
-                        if (is_fks):
+                        if (min_inv_fks):
                             n_is_fks=n_is_fks+1
 
                         event.rescale_weights(sudrat)
