@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.13 (01/12/2022)
+     OM: Fixing display diagrams on MacOS Catalina
+
 2.9.12 (09/08/2022)
      OM: Fixing issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
          The coupling where assigned to the wrong lorentz structure
