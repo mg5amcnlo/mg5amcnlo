@@ -58,6 +58,7 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+misc = locals
    
 #===============================================================================
 # parse_info_str
@@ -1308,7 +1309,7 @@ class open_file(object):
             configuration = {'text_editor': None,
                              'eps_viewer':None,
                              'web_browser':None}
-        
+
         for key in configuration:
             if key == 'text_editor':
                 # Treat text editor ONLY text base editor !!
@@ -1332,13 +1333,24 @@ class open_file(object):
             elif key == 'eps_viewer':
                 if configuration[key]:
                     cls.eps_viewer = configuration[key]
-                    continue
+                if sys.platform == 'darwin':
+                    import platform
+                    ver, _, _ =  platform.mac_ver()
+                    # open does not support eps anymore since 13.0
+                    # pass by a converter first
+                    if int(ver.split('.')[0]) > 12: 
+                        if which('pstopdf'):
+                            cls.eps_viewer = 'pstopdf'
+                        elif  which('ps2pdf'):
+                            cls.eps_viewer = 'ps2pdf'
+
                 # else keep None. For Mac this will use the open command.
             elif key == 'web_browser':
                 if configuration[key]:
                     cls.web_browser = configuration[key]
                     continue
                 # else keep None. For Mac this will use the open command.
+
 
     @staticmethod
     def find_valid(possibility, program='program'):
@@ -1377,11 +1389,21 @@ class open_file(object):
 
     def open_mac_program(self, program, file_path):
         """ open a text with the text editor """
-        
+
         if not program:
             # Ask to mac manager
             os.system('open %s' % file_path)
-        elif which(program):
+        elif program == 'pstopdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, '-o', output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif program == 'ps2pdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif which(program): 
             # shell program
             arguments = program.split() # Allow argument in program definition
             arguments.append(file_path)
