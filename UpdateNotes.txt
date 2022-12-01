@@ -2,6 +2,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.9.13 (01/12/2022)
      OM: Fixing display diagrams on MacOS Catalina
+     OM: fixing issue within reweighting module where runname was not respected during scan
+     OM: remove unused thread which should allow large scan
+     OM: fix a compilation issue of IREGI
+     OM: fix auto-download of pdf
+     OM: fix systematics.py which was not called with the most appropriate default for matching/merging generation (MLM)
 
 2.9.12 (09/08/2022)
      OM: Fixing issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
