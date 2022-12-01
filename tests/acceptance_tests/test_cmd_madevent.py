@@ -766,7 +766,7 @@ class TestMEfromfile(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(self.path, 'mg5_cmd')],
                          #cwd=self.path,
                         stdout=stdout, stderr=stderr)
@@ -853,7 +853,7 @@ class TestMEfromfile(unittest.TestCase):
         """)
         fsock.close()
                 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(self.path, 'cmd')],
                          cwd=pjoin(_file_path, os.path.pardir),
                         stdout=stdout,stderr=stdout)     
@@ -904,7 +904,7 @@ class TestMEfromfile(unittest.TestCase):
                     {'dir_name': self.run_dir, 'mg5_path':pjoin(_file_path, os.path.pardir)})
         fsock.close()
 
-        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+        subprocess.call([sys.executable, pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(self.path, 'test_mssm_generation')],
                          #cwd=pjoin(self.path),
                         stdout=stdout,stderr=stdout)
