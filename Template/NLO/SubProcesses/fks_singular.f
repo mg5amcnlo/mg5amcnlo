@@ -2621,7 +2621,8 @@ c must do MC over FKS directories.
 
          if (itype(i).eq.1) then
 c     real
-            appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)*final_state_rescaling
+            appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)/bias_wgt(i)*
+     &                     final_state_rescaling
             appl_x1(1)=bjx(1,i)
             appl_x2(1)=bjx(2,i)
             appl_flavmap(1) = flavour_map(nFKS(i))
@@ -2630,7 +2631,8 @@ c     real
             appl_muF2(1)=scales2(3,i)
          elseif (itype(i).eq.2) then
 c     born
-            appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)*final_state_rescaling
+            appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)/bias_wgt(i)*
+     &                     final_state_rescaling
             appl_x1(2)=bjx(1,i)
             appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
@@ -2640,9 +2642,12 @@ c     born
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
      &           .or. itype(i).eq.15)then
 c     virtual, soft-virtual or soft-counter
-            appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)*final_state_rescaling
-            appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)*final_state_rescaling
-            appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)*final_state_rescaling
+            appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)/bias_wgt(i)*
+     &                     final_state_rescaling
+            appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)/bias_wgt(i)*
+     &                     final_state_rescaling
+            appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)/bias_wgt(i)*
+     &                     final_state_rescaling
             appl_x1(2)=bjx(1,i)
             appl_x2(2)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
@@ -2651,8 +2656,10 @@ c     virtual, soft-virtual or soft-counter
             appl_muF2(2)=scales2(3,i)
          elseif (itype(i).eq.5) then
 c     collinear counter            
-            appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)*final_state_rescaling
-            appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)*final_state_rescaling
+            appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)/bias_wgt(i)*
+     &                     final_state_rescaling
+            appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)/bias_wgt(i)*
+     &                     final_state_rescaling
             appl_x1(3)=bjx(1,i)
             appl_x2(3)=bjx(2,i)
             appl_flavmap(3) = flavour_map(nFKS(i))
@@ -2661,8 +2668,10 @@ c     collinear counter
             appl_muF2(3)=scales2(3,i)
          elseif (itype(i).eq.6) then
 c     soft-collinear counter            
-            appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)*final_state_rescaling
-            appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)*final_state_rescaling
+            appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)/bias_wgt(i)*
+     &                     final_state_rescaling
+            appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)/bias_wgt(i)*
+     &                     final_state_rescaling
             appl_x1(4)=bjx(1,i)
             appl_x2(4)=bjx(2,i)
             appl_flavmap(4) = flavour_map(nFKS(i))

@@ -376,18 +376,22 @@ class InteractionTest(unittest.TestCase):
     def test_representation(self):
         """Test interaction object string representation."""
 
-        goal = "{\n"
-        goal = goal + "    \'id\': %d,\n" % self.myinter['id']
-        goal = goal + "    \'particles\': [%s],\n" % \
-                            ','.join([str(self.mypart.get_pdg_code())]*4)
-        goal = goal + "    \'color\': [1 f(1,2,3), 1 d(1,2,3)],\n"
-        goal = goal + "    \'lorentz\': [\'L1\', \'L2\'],\n"
-        goal = goal + "    \'couplings\': %s,\n" % \
-                                    repr(self.myinter['couplings'])
-        goal = goal + "    \'orders\': %s,\n" % repr(self.myinter['orders'])
-        goal = goal + "    \'loop_particles\': [[]],\n"        
-        goal = goal + "    \'type\': \'base\',\n"
-        goal = goal + "    \'perturbation_type\': 'QCD'\n}"
+
+        goal = """{
+    'id': %(inter)d,
+    'particles': [6,6,6,6],
+    'color': [c0 = 1 f(1,2,3),c1 = 1 d(1,2,3)],
+    'lorentz': ['L1', 'L2'],
+    'couplings': {(c0, L1): g00,
+                  (c0, L2): g01,
+                  (c1, L1): g10,
+                  (c1, L2): g11}
+    'orders': {'QCD': 1, 'QED': 1},
+    'loop_particles': [[]],
+    'type': 'base',
+    'perturbation_type': 'QCD'
+}""" % {"inter": self.myinter['id']}
+
 
         self.assertEqual(goal, str(self.myinter))
 
