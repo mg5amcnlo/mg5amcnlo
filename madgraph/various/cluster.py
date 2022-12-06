@@ -1729,6 +1729,10 @@ class SLURMCluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'squeue j'+str(id)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                   stderr=open(os.devnull,'w'))
         
@@ -1748,7 +1752,11 @@ class SLURMCluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "squeue"
-        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
+        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE,env=env)
 
         me_dir = self.get_jobs_identifier(me_dir)
 
