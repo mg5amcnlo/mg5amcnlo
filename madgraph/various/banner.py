@@ -3199,6 +3199,10 @@ class RunCard(ConfigFile):
 template_on = \
 """#*********************************************************************
 # Heavy ion PDF / rescaling of PDF                                   *
+# Note that ebeam1 and ebeam2 are energies of the ion beams          *
+# instead of energies per nucleon in nuclei                          *
+# For instance, the LHC beam energy of 2510 GeV/nucleon in Pb208     *
+# should set 2510*208=522080 GeV for ebeam                           *
 #*********************************************************************
   %(nb_proton1)s    = nb_proton1 # number of proton for the first beam
   %(nb_neutron1)s    = nb_neutron1 # number of neutron for the first beam
