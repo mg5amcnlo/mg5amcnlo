@@ -23,7 +23,8 @@ MODULE ElasticPhotonPhotonFlux
   INTEGER,PARAMETER,PRIVATE::SUB_FACTOR=2
   LOGICAL,PRIVATE,SAVE::print_banner=.FALSE.
   INTEGER,PRIVATE,SAVE::nuclearA_beam1,nuclearA_beam2,nuclearZ_beam1,nuclearZ_beam2
-  REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam
+  ! energy in GeV per nucleon in each beam
+  REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam_PN
 CONTAINS
   FUNCTION PNOHAD_pp(bx,by,b0)
     ! the probability of no hardonic interaction at impact b=(bx,by)
@@ -848,7 +849,26 @@ CONTAINS
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
     IF(x1.LE.0d0.OR.x2.LE.0d0.OR.x1.GT.1d0.OR.x2.GT.1d0)THEN
@@ -1001,10 +1021,24 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
-       include "nuclearAZ.inc"
-       include "ebeam.inc"
-       gamma1_common=ebeam(1)/mproton
-       gamma2_common=ebeam(2)/mproton
+       IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+          nuclearA_beam1=0
+          nuclearZ_beam1=0
+       ELSE
+          nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+          nuclearZ_beam1=nb_proton(1)
+       ENDIF
+       IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+          nuclearA_beam2=0
+          nuclearZ_beam2=0
+       ELSE
+          nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+          nuclearZ_beam2=nb_proton(2)
+       ENDIF
+       ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+       ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
+       gamma1_common=ebeam_PN(1)/mproton
+       gamma2_common=ebeam_PN(2)/mproton
        IF(alphaem_elasticphoton.LT.0d0)THEN
           IF(aqedup.GT.0d0)THEN
              alpha=aqedup
@@ -1015,7 +1049,7 @@ CONTAINS
           alpha=alphaem_elasticphoton
        ENDIF
        ! get b0 from the DdE fit
-       cmenergy=2d0*DSQRT(ebeam(1)*ebeam(2)) ! in unit of GeV
+       cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2)) ! in unit of GeV
        b0_common=9.7511D0+0.222796D0*DLOG(cmenergy**2)&
             +0.0179103D0*DLOG(cmenergy**2)**2 ! in unit of GeV-2
        ! two Z are 1
@@ -1043,8 +1077,8 @@ CONTAINS
     ENDIF
     x1_common=x1
     x2_common=x2
-    E1_common=ebeam(1)*x1
-    E2_common=ebeam(2)*x2
+    E1_common=ebeam_PN(1)*x1
+    E2_common=ebeam_PN(2)*x2
     IF(.NOT.PRESENT(FORCEPNOHAD1))THEN
        force_pnohad1=.FALSE.
     ELSE
@@ -1168,7 +1202,26 @@ CONTAINS
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
     IF(x1.LE.0d0.OR.x2.LE.0d0.OR.x1.GT.1d0.OR.x2.GT.1d0)THEN
@@ -1323,14 +1376,28 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
-       include "nuclearAZ.inc"
-       include "ebeam.inc"
-       IF(nuclearA_beam1.NE.0)THEN
-          gamma1_common=ebeam(2)/mproton
-          gamma2_common=ebeam(1)/mN
+       IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+          nuclearA_beam1=0
+          nuclearZ_beam1=0
        ELSE
-          gamma1_common=ebeam(1)/mproton
-          gamma2_common=ebeam(2)/mN
+          nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+          nuclearZ_beam1=nb_proton(1)
+       ENDIF
+       IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+          nuclearA_beam2=0
+          nuclearZ_beam2=0
+       ELSE
+          nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+          nuclearZ_beam2=nb_proton(2)
+       ENDIF
+       ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+       ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
+       IF(nuclearA_beam1.NE.0)THEN
+          gamma1_common=ebeam_PN(2)/mproton
+          gamma2_common=ebeam_PN(1)/mN
+       ELSE
+          gamma1_common=ebeam_PN(1)/mproton
+          gamma2_common=ebeam_PN(2)/mN
        ENDIF
        IF(alphaem_elasticphoton.LT.0d0)THEN
           IF(aqedup.GT.0d0)THEN
@@ -1356,7 +1423,7 @@ CONTAINS
        WRITE(*,*)"INFO: Two photon UPCs in p+"//TRIM(Aname)//" collisions"
        CALL GetNuclearInfo(Aname,A_common,Z2,RA_common,aaval,wval)
        ! read the inelastic NN cross section
-       cmenergy=2d0*DSQRT(ebeam(1)*ebeam(2))
+       cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2))
        sigNN_inel_common=sigma_inelastic(cmenergy)
        sigNN_inel_common=sigNN_inel_common*0.1d0 ! from mb to fm^2
        ! 0.1973 is from fm to GeV-1
@@ -1375,13 +1442,13 @@ CONTAINS
        ! swap two beams
        x1_common=x2
        x2_common=x1
-       E1_common=ebeam(2)*x2
-       E2_common=ebeam(1)*x1
+       E1_common=ebeam_PN(2)*x2
+       E2_common=ebeam_PN(1)*x1
     ELSE
        x1_common=x1
        x2_common=x2
-       E1_common=ebeam(1)*x1
-       E2_common=ebeam(2)*x2
+       E1_common=ebeam_PN(1)*x1
+       E2_common=ebeam_PN(2)*x2
     ENDIF
     IF(.NOT.PRESENT(FORCEPNOHAD1))THEN
        force_pnohad1=.FALSE.
@@ -1506,7 +1573,26 @@ CONTAINS
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
     IF(x1.LE.0d0.OR.x2.LE.0d0.OR.x1.GT.1d0.OR.x2.GT.1d0)THEN
@@ -1661,14 +1747,28 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
-       include "nuclearAZ.inc"
-       include "ebeam.inc"
-       IF(nuclearA_beam1.NE.0)THEN
-          gamma1_common=ebeam(2)/mproton
-          gamma2_common=ebeam(1)/mN
+       IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+          nuclearA_beam1=0
+          nuclearZ_beam1=0
        ELSE
-          gamma1_common=ebeam(1)/mproton
-          gamma2_common=ebeam(2)/mN
+          nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+          nuclearZ_beam1=nb_proton(1)
+       ENDIF
+       IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+          nuclearA_beam2=0
+          nuclearZ_beam2=0
+       ELSE
+          nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+          nuclearZ_beam2=nb_proton(2)
+       ENDIF
+       ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+       ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
+       IF(nuclearA_beam1.NE.0)THEN
+          gamma1_common=ebeam_PN(2)/mproton
+          gamma2_common=ebeam_PN(1)/mN
+       ELSE
+          gamma1_common=ebeam_PN(1)/mproton
+          gamma2_common=ebeam_PN(2)/mN
        ENDIF
        IF(alphaem_elasticphoton.LT.0d0)THEN
           IF(aqedup.GT.0d0)THEN
@@ -1694,7 +1794,7 @@ CONTAINS
        WRITE(*,*)"INFO: Two photon UPCs in p+"//TRIM(Aname)//" collisions"
        CALL GetNuclearInfo(Aname,A_common,Z2,RA_common,aaVal_common,wVal_common)
        ! read the inelastic NN cross section
-       cmenergy=2d0*DSQRT(ebeam(1)*ebeam(2))
+       cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2))
        sigNN_inel_common=sigma_inelastic(cmenergy)
        sigNN_inel_common=sigNN_inel_common*0.1d0 ! from mb to fm^2
        ! 0.1973 is from fm to GeV-1
@@ -1723,13 +1823,13 @@ CONTAINS
        ! swap two beams
        x1_common=x2
        x2_common=x1
-       E1_common=ebeam(2)*x2
-       E2_common=ebeam(1)*x1
+       E1_common=ebeam_PN(2)*x2
+       E2_common=ebeam_PN(1)*x1
     ELSE
        x1_common=x1
        x2_common=x2
-       E1_common=ebeam(1)*x1
-       E2_common=ebeam(2)*x2
+       E1_common=ebeam_PN(1)*x1
+       E2_common=ebeam_PN(2)*x2
     ENDIF
     IF(.NOT.PRESENT(FORCEPNOHAD1))THEN
        force_pnohad1=.FALSE.
@@ -1873,7 +1973,26 @@ CONTAINS
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
     IF(x1.LE.0d0.OR.x2.LE.0d0.OR.x1.GT.1d0.OR.x2.GT.1d0)THEN
@@ -2026,14 +2145,28 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
-       include "nuclearAZ.inc"
-       include "ebeam.inc"
+       IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+          nuclearA_beam1=0
+          nuclearZ_beam1=0
+       ELSE
+          nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+          nuclearZ_beam1=nb_proton(1)
+       ENDIF
+       IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+          nuclearA_beam2=0
+          nuclearZ_beam2=0
+       ELSE
+          nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+          nuclearZ_beam2=nb_proton(2)
+       ENDIF
+       ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+       ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
           STOP
        ENDIf
-       gamma1_common=ebeam(1)/mN
-       gamma2_common=ebeam(2)/mN
+       gamma1_common=ebeam_PN(1)/mN
+       gamma2_common=ebeam_PN(2)/mN
        IF(alphaem_elasticphoton.LT.0d0)THEN
           IF(aqedup.GT.0d0)THEN
              alpha=aqedup
@@ -2058,7 +2191,7 @@ CONTAINS
        ENDIF
        WRITE(*,*)"INFO: Two photon UPCs in "//TRIM(Aname1)//"+"//TRIM(Aname2)//" collisions"
        ! read the inelastic NN cross section
-       cmenergy=2d0*DSQRT(ebeam(1)*ebeam(2))
+       cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2))
        sigNN_inel_common=sigma_inelastic(cmenergy)
        sigNN_inel_common=sigNN_inel_common*0.1d0 ! from mb to fm^2
        ! 0.1973 is from fm to GeV-1
@@ -2075,8 +2208,8 @@ CONTAINS
     ENDIF
     x1_common=x1
     x2_common=x2
-    E1_common=ebeam(1)*x1
-    E2_common=ebeam(2)*x2
+    E1_common=ebeam_PN(1)*x1
+    E2_common=ebeam_PN(2)*x2
     IF(.NOT.PRESENT(FORCEPNOHAD1))THEN
        force_pnohad1=.FALSE.
     ELSE
@@ -2200,7 +2333,26 @@ CONTAINS
     REAL(KIND(1d0))::pnohadval
     LOGICAL::force_pnohad1
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
     IF(x1.LE.0d0.OR.x2.LE.0d0.OR.x1.GT.1d0.OR.x2.GT.1d0)THEN
@@ -2357,14 +2509,28 @@ CONTAINS
        RETURN
     ENDIF
     IF(init.EQ.0)THEN
-       include "nuclearAZ.inc"
-       include "ebeam.inc"
+       IF(nb_proton(1).EQ.1.AND.nb_neutron(1).EQ.0)THEN
+          nuclearA_beam1=0
+          nuclearZ_beam1=0
+       ELSE
+          nuclearA_beam1=nb_proton(1)+nb_neutron(1)
+          nuclearZ_beam1=nb_proton(1)
+       ENDIF
+       IF(nb_proton(2).EQ.1.AND.nb_neutron(2).EQ.0)THEN
+          nuclearA_beam2=0
+          nuclearZ_beam2=0
+       ELSE
+          nuclearA_beam2=nb_proton(2)+nb_neutron(2)
+          nuclearZ_beam2=nb_proton(2)
+       ENDIF
+       ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+       ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
           STOP
        ENDIF
-       gamma1_common=ebeam(1)/mN
-       gamma2_common=ebeam(2)/mN
+       gamma1_common=ebeam_PN(1)/mN
+       gamma2_common=ebeam_PN(2)/mN
        IF(alphaem_elasticphoton.LT.0d0)THEN
           IF(aqedup.GT.0d0)THEN
              alpha=aqedup
@@ -2391,7 +2557,7 @@ CONTAINS
        ENDIF
        WRITE(*,*)"INFO: Two photon UPCs in "//TRIM(Aname1)//"+"//TRIM(Aname2)//" collisions"
        ! read the inelastic NN cross section
-       cmenergy=2d0*DSQRT(ebeam(1)*ebeam(2))
+       cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2))
        sigNN_inel_common=sigma_inelastic(cmenergy)
        sigNN_inel_common=sigNN_inel_common*0.1d0 ! from mb to fm^2
        ! 0.1973 is from fm to GeV-1
@@ -2420,8 +2586,8 @@ CONTAINS
     ENDIF
     x1_common=x1
     x2_common=x2
-    E1_common=ebeam(1)*x1
-    E2_common=ebeam(2)*x2
+    E1_common=ebeam_PN(1)*x1
+    E2_common=ebeam_PN(2)*x2
     IF(.NOT.PRESENT(FORCEPNOHAD1))THEN
        force_pnohad1=.FALSE.
     ELSE
@@ -2549,8 +2715,9 @@ CONTAINS
     INTEGER::collision_type_common,profile_type_common
     COMMON/Lgammagamma_UPC_com/collision_type_common,profile_type_common,&
          tau_common
-    include "ebeam.inc"
-    s=4d0*ebeam(1)*ebeam(2)
+    ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+    ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
+    s=4d0*ebeam_PN(1)*ebeam_PN(2)
     tau_common=scale**2/s
     collision_type_common=icoll
     profile_type_common=iprofile
@@ -2628,11 +2795,31 @@ CONTAINS
     REAL(KIND(1d0)),INTENT(IN)::scale ! scale=W
     REAL(KIND(1d0))::s
     IF(.NOT.print_banner)THEN
-       include "banner.inc"
+       WRITE(*,*)"==============================================================="
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|                       __    __  _______    ______           |"
+       WRITE(*,*)"|                      |  \  |  \|       \  /      \          |"
+       WRITE(*,*)"|   __      __         | $$  | $$| $$$$$$$\|  $$$$$$\         |"
+       WRITE(*,*)"|  |  \    /  \ ______ | $$  | $$| $$__/ $$| $$   \$$         |"
+       WRITE(*,*)"|   \$$ \/  $$ |      \| $$  | $$| $$    $$| $$               |"
+       WRITE(*,*)"|     \$$  $$   \$$$$$$| $$  | $$| $$$$$$$ | $$   __          |"
+       WRITE(*,*)"|      \$$$$           | $$__/ $$| $$      | $$__/  \         |"
+       WRITE(*,*)"|      | $$             \$$    $$| $$       \$$    $$         |"
+       WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions            |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"|    Please cite arXiv:2207.03012                             |"
+       WRITE(*,*)"|                                                             |"
+       WRITE(*,*)"==============================================================="
        print_banner=.TRUE.
     ENDIF
-    include "ebeam.inc"
-    s=4d0*ebeam(1)*ebeam(2)
+    ebeam_PN(1)=ebeamMG5(1)/(nb_proton(1)+nb_neutron(1))
+    ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
+    s=4d0*ebeam_PN(1)*ebeam_PN(2)
     dLgammagammadW_UPC=2d0*scale/s
     dLgammagammadW_UPC=dLgammagammadW_UPC*&
          Lgammagamma_UPC(scale,icoll,iprofile)

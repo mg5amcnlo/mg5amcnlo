@@ -1,4 +1,4 @@
-FC=gfortran
+FC=gfortran-mp-10
 FFLAGS = -O -fPIC
 HERE   = $(PWD)
 QLDIR  = $(HERE)/ql

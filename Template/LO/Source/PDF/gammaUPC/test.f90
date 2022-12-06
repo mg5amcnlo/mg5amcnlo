@@ -24,8 +24,8 @@ PROGRAM test
   nuclearZ_beam1=82
   nuclearA_beam2=208
   nuclearZ_beam2=82
-  ebeam(1)=2760d0
-  ebeam(2)=2760d0
+  ebeam_PN(1)=2760d0
+  ebeam_PN(2)=2760d0
   mass1=3.41475d0 ! chi_c0
   mass2=3.5562d0 ! chi_c2
   mass3=3.6389d0 ! etac(2S)

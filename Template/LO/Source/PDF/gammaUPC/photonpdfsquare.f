@@ -43,8 +43,8 @@ C
 
 c     collider configuration
       integer lpp(2)
-      double precision ebeam(2),xbk(2),q2fact(2)
-      common/to_collider/ebeam,xbk,q2fact,lpp
+      double precision ebeamMG5(2),xbk(2),q2fact(2)
+      common/to_collider/ebeamMG5,xbk,q2fact,lpp
 
       do i=1,2
          nb_hadron(i) = nb_proton(i)+nb_neutron(i)
