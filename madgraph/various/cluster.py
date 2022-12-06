@@ -1734,7 +1734,7 @@ class SLURMCluster(Cluster):
         if "SQUEUE_FORMAT" in env:
             del env["SQUEUE_FORMAT"]
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
+                                  stderr=open(os.devnull,'w'),env=env)
         
         for line in status.stdout:
             line = line.decode(errors='ignore').strip()
