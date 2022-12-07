@@ -15,6 +15,7 @@ c
       include 'PDF/pdf.inc'
       include 'run.inc'
       include 'alfas.inc'
+      include 'vector.inc'
       include 'MODEL/coupl.inc'
 
       double precision D

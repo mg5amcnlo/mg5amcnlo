@@ -71,16 +71,16 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
+      include 'vector.inc'
       include 'coupl.inc'
       include 'run.inc'
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
       INTEGER       LHAID
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
-      include 'vector.inc'
-       double precision RHEL, RCOL
-       integer selected_hel(VECSIZE_MAX)
-       integer selected_col(VECSIZE_MAX)       
+      double precision RHEL, RCOL
+      integer selected_hel(VECSIZE_MAX)
+      integer selected_col(VECSIZE_MAX)
 c
 c     local
 c

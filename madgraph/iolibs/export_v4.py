@@ -6892,8 +6892,10 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
 
-        includes=["include \'coupl.inc\'","include \'input.inc\'",
-                                              "include \'model_functions.inc\'"]
+        includes=["include \'../vector.inc\'",
+                  "include \'coupl.inc\'",
+                  "include \'input.inc\'",
+                  "include \'model_functions.inc\'"]
         if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
@@ -7456,6 +7458,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""logical updateloop
                             common /to_updateloop/updateloop
                             include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
@@ -7521,6 +7524,7 @@ class UFO_model_to_mg4(object):
                             """)
 
         fsock.writelines("""include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
@@ -7585,6 +7589,7 @@ class UFO_model_to_mg4(object):
                             'args_dep': ' integer vecid' if self.vector_size else ''
                             })
         fsock.writelines("""include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             double precision model_scale
                             common /model_scale/model_scale
@@ -7616,6 +7621,7 @@ class UFO_model_to_mg4(object):
         #                     double precision mu_r2, as2
         #                     include \'model_functions.inc\'""")
         # fsock.writelines("""include \'input.inc\'
+        #                     include \'../vector.inc\'
         #                     include \'coupl.inc\'
         #                     """)
         # fsock.writelines("""
@@ -7640,6 +7646,7 @@ class UFO_model_to_mg4(object):
                                     include \'mp_coupl.inc\'
                             """%self.mp_real_format)
             fsock.writelines("""include \'input.inc\'
+                                include \'../vector.inc\'
                                 include \'coupl.inc\'
                                 include \'actualize_mp_ext_params.inc\'
                                 READLHA = .false.
@@ -8000,6 +8007,7 @@ class UFO_model_to_mg4(object):
               parameter  (PI=3.141592653589793d0)
               parameter  (ZERO=0d0)
               include 'input.inc'
+              include '../vector.inc'
               include 'coupl.inc'""")
         if mp:
             fsock.writelines("""%s MP__PI, MP__ZERO
