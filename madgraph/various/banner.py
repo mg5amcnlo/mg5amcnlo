@@ -3370,6 +3370,16 @@ class PDLabelBlock(RunBlock):
         if self.status(card):
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
+            elif card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
+                if card['pdlabel1'] != card['pdlabel2']:
+                    if card['pdlabel1'] in ['edff','chff']:
+                        dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
+                        dict.__setitem__(card, 'pdlabel2',card['pdlabel1'])
+                    else:
+                        dict.__setitem__(card, 'pdlabel',card['pdlabel2'])
+                        dict.__setitem__(card, 'pdlabel1',card['pdlabel2'])
+                else:
+                    dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
             else:
                 if card['pdlabel1'] == card['pdlabel2']:
                     if card['pdlabel'] != card['pdlabel1']:
