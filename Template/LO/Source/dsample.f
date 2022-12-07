@@ -25,16 +25,16 @@ c
 c Local
 c
       double precision x(maxinvar),wgt,p(4*maxdim/3+14)
-      double precision all_p(4*maxdim/3+14,nb_page), all_wgt(nb_page), all_x(maxinvar,nb_page)
-      integer all_lastbin(maxdim, nb_page)
-      double precision bckp(nb_page)
+      double precision all_p(4*maxdim/3+14,VECSIZE_MAX), all_wgt(VECSIZE_MAX), all_x(maxinvar,VECSIZE_MAX)
+      integer all_lastbin(maxdim, VECSIZE_MAX)
+      double precision bckp(VECSIZE_MAX)
       double precision tdem, chi2, dum
       integer ievent,kevent,nwrite,iter,nun,luntmp,itsum
       integer jmax,i,j,ipole
       integer itmax_adjust
 
       integer imirror, iproc, iconf
-      integer ivec !position of the event in the vectorization # max is nb_page 
+      integer ivec !position of the event in the vectorization # max is VECSIZE_MAX 
 c
 c     External
 c
@@ -101,8 +101,8 @@ c      common /to_fx/   fx
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
 
 C     data for vectorization      
-      double precision all_xbk(2, nb_page), all_q2fact(2, nb_page), all_cm_rap(nb_page)
-      double precision all_fx(nb_page)
+      double precision all_xbk(2, VECSIZE_MAX), all_q2fact(2, VECSIZE_MAX), all_cm_rap(VECSIZE_MAX)
+      double precision all_fx(VECSIZE_MAX)
       
       
       LOGICAL CUTSDONE,CUTSPASSED
@@ -181,14 +181,14 @@ c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.nb_page)then
+               if (ivec.lt.VECSIZE_MAX)then
                   cycle
                endif
                ivec=0
-               if (nb_page.le.1) then
+               if (VECSIZE_MAX.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
                else
-               do i=1, nb_page
+               do i=1, VECSIZE_MAX
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
@@ -197,11 +197,11 @@ c                 need to restore common block
                   CUTSPASSED=.TRUE.
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
                enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, nb_page)
+               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_MAX)
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,nb_page)
+     &                          iconf, iproc, imirror, all_fx,VECSIZE_MAX)
 
-                do i=1, nb_page
+                do i=1, VECSIZE_MAX
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
@@ -214,17 +214,17 @@ c                  endif
 c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                enddo
                endif
-               do I=1, nb_page
+               do I=1, VECSIZE_MAX
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo
-               do i =1, nb_page
+               do i =1, VECSIZE_MAX
 c     if last paremeter is true -> allow grid update so only for a full page
                   lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
-c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.nb_page                   
-                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.nb_page) !Store result
+c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_MAX                   
+                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.VECSIZE_MAX) !Store result
                enddo
-               if (nb_page.ne.1.and.force_reset)then
+               if (VECSIZE_MAX.ne.1.and.force_reset)then
                   call reset_cumulative_variable()
                   force_reset=.false.
                endif
@@ -893,7 +893,7 @@ c      write(*,*) 'Forwarding random number generator'
 
 C     sanity check that we have a minimal number of event
       
-      if ( .not.MC_GROUPED_SUBPROC.or.nb_page.gt.1)then
+      if ( .not.MC_GROUPED_SUBPROC.or.VECSIZE_MAX.gt.1)then
          events = max(events, maxtries)
          MC_GROUPED_SUBPROC = .false.
       else 
