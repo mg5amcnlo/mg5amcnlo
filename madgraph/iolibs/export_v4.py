@@ -6977,7 +6977,12 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """double precision G, all_G%(vec)s
+        header = """C
+C NB: VECSIZE_MAX is defined in vector.inc
+C NB: vector.inc must be included before coupl.inc
+C
+
+                double precision G, all_G%(vec)s
                 common/strong/ G, all_G
                  
                 double complex gal(2)
