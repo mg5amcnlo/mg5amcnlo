@@ -6984,7 +6984,8 @@ class UFO_model_to_mg4(object):
                 double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
+                """   % {'vec': ("(VECSIZE_MAX)" if self.vector_size else '')}
+                ### % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
 
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
@@ -7072,7 +7073,8 @@ class UFO_model_to_mg4(object):
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
-            c_list = ['%s(%s)' %(coupl.name, max(1,self.vector_size)) for coupl in self.coups_dep]
+            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MAX") for coupl in self.coups_dep]
+            ###c_list = ['%s(%s)' %(coupl.name, max(1,self.vector_size)) for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         
