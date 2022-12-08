@@ -260,7 +260,7 @@ c         endif
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            do i =1, VECSIZE_MEMMAX
+            do i =1, VECSIZE_USED
                call update_as_param(i)
             enddo
          endif

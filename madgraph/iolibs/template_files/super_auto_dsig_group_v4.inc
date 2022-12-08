@@ -114,7 +114,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
       
-      SUBROUTINE select_grouping(imirror,  iproc, iconf, wgt, VECSIZE_MEMMAX)
+      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_USED)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 c     
@@ -122,15 +122,15 @@ c     INPUT (VIA COMMAND BLOCK)
 c       SELPROC 
 c       SUMPROB
 c     INPUT
-c       VECSIZE_MEMMAX (number of weight to update)
+c       VECSIZE_USED (number of weight to update)
 c     INPUT/OUTPUT
-c       WGTS(VECSIZE_MEMMAX) #multiplied by the associated jacobian      
+c       WGTS(VECSIZE_USED) #multiplied by the associated jacobian      
 c
 c     OUTPUT
 c
 c     iconf, iproc, imirror
 c
-      integer VECSIZE_MEMMAX
+      integer VECSIZE_USED
       double precision WGT(*)
       integer imirror, iproc, iconf
 
@@ -203,7 +203,7 @@ C      all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-	DO I=1, VECSIZE_MEMMAX
+	DO I=1, VECSIZE_USED
 	   WGT(i)=WGT(i)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
 	ENDDO	
 
@@ -211,7 +211,7 @@ C       Update weigth w.r.t SELPROC normalized to selection probability
 C       We are using the grouped_processes grid and it is initialized.
         CALL DS_GET_POINT('grouped_processes',R,LMAPPED
      $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
-     	DO I=1, VECSIZE_MEMMAX
+     	DO I=1, VECSIZE_USED
 	  WGT(i)=WGT(i)*MC_GROUPED_PROC_JACOBIAN
 	ENDDO	
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
@@ -219,19 +219,19 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
-      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk, all_q2fact, all_cm_rap, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_MEMMAX)
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk, all_q2fact, all_cm_rap, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_USED)
 c     ******************************************************
 c
-c     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_MEMMAX)
-c     INPUT/OUtpUT       ALL_WGT(VECSIZE_MEMMAX)
-c            VECSIZE_MEMMAX = vector size
-c     ALL_OUT(VECSIZE_MEMMAX)
+c     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_USED)
+c     INPUT/OUtpUT       ALL_WGT(VECSIZE_USED)
+c            VECSIZE_USED = vector size
+c     ALL_OUT(VECSIZE_USED)
 c            function (PDf*cross)
 c     ******************************************************
       USE DISCRETESAMPLER
       IMPLICIT NONE
 
-      integer VECSIZE_MEMMAX
+      integer VECSIZE_USED
       include 'genps.inc'
       double precision all_p(4*maxdim/3+14,*)
       double precision all_wgt(*)
@@ -295,7 +295,7 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
 
 c     set the running scale 
 c     and update the couplings accordingly
-      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, VECSIZE_MEMMAX)
+      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, VECSIZE_USED)
 
       IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
@@ -305,7 +305,7 @@ C       If we were in the initialization phase of the grid for MC over grouped p
       call DSIGPROC_vec(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF, IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
 
       
-      Do i =1,VECSIZE_MEMMAX
+      Do i =1,VECSIZE_USED
 c     Reset ALLOW_HELICITY_GRID_ENTRIES
 	  ALLOW_HELICITY_GRID_ENTRIES = .True. 
 
@@ -318,7 +318,7 @@ c		call DS_add_entry('grouped_processes',Lmapped,(ALL_OUT(i)/SELPROC(IMIRROR,IPR
 c	  ENDIF
 
 	  ENDDO
-      DO I=1, VECSIZE_MEMMAX
+      DO I=1, VECSIZE_USED
       	 IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
              SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DABS(ALL_OUT(I)*ALL_WGT(I))
@@ -812,7 +812,7 @@ c    not needed anymore ... can be removed ... set for debugging only
      endif
 c     set the running scale 
 c     and update the couplings accordingly
-      if (VECSIZE_MEMMAX.le.1) then
+      if (VECSIZE_USED.le.1) then
       call update_scale_coupling(pp, wgt)
       endif
 
@@ -915,7 +915,7 @@ C
         ENDDO
 
 C       Set momenta according to this permutation
-	do IVEC=1, VECSIZE_MEMMAX
+	do IVEC=1, VECSIZE_USED
 	   CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
 	    if (LAST_ICONF.ne.-1) then
@@ -930,7 +930,7 @@ C       Set momenta according to this permutation
 
 
       IF(IMIRROR.EQ.2)THEN
-             DO IVEC=1,VECSIZE_MEMMAX
+             DO IVEC=1,VECSIZE_USED
 C       Flip momenta (rotate around x axis)
         DO I=1,NEXTERNAL
           ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
@@ -949,7 +949,7 @@ C       Flip beam identity
       ALL_OUT(:)=0D0
 
 c      IF (PASSCUTS(P1)) THEN
-       DO IVEC=1,VECSIZE_MEMMAX
+       DO IVEC=1,VECSIZE_USED
       if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
@@ -960,7 +960,7 @@ c      ENDIF
 
 	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
 C       Flip back local momenta P1 if cached
-	DO IVEC=1,VECSIZE_MEMMAX
+	DO IVEC=1,VECSIZE_USED
         DO I=1,NEXTERNAL	
           ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
           ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)

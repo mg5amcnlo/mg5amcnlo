@@ -310,7 +310,7 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,VECSIZE_MEMMAX
+	 DO IVEC=1,VECSIZE_USED
 c        Do not need those three here do I?	 
 	 XBK(:) = ALL_XBK(:,IVEC)
 c	 CM_RAP = ALL_CM_RAP(IVEC)
@@ -337,7 +337,7 @@ C     Select a flavor combination (need to do here for right sign)
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 
-	 DO IVEC=1,VECSIZE_MEMMAX
+	 DO IVEC=1,VECSIZE_USED
 	 DSIGUU = ALL_OUT(IVEC)
 	 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -418,7 +418,7 @@ C
 
 !$OMP PARALLEL
 !$OMP DO
-      DO IVEC=1, VECSIZE_MEMMAX
+      DO IVEC=1, VECSIZE_USED
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
      &                           col_rand(IVEC),

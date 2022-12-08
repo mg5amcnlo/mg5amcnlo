@@ -1689,7 +1689,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,VECSIZE_MEMMAX\n"
+            pdf_lines = " DO iVEC=1,VECSIZE_USED\n"
 
 
         if ninitial == 1:
@@ -1846,7 +1846,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in processes:
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines += '\n   DO IVEC=1, VECSIZE_MEMMAX'
+                    pdf_lines += '\n   DO IVEC=1, VECSIZE_USED'
                     pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
                     for ibeam in [1, 2]:
                         initial_state = proc.get_initial_pdg(ibeam)

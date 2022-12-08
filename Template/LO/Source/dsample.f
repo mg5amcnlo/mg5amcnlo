@@ -181,14 +181,14 @@ c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.VECSIZE_MEMMAX)then
+               if (ivec.lt.VECSIZE_USED)then
                   cycle
                endif
                ivec=0
-               if (VECSIZE_MEMMAX.le.1) then
+               if (VECSIZE_USED.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
                else
-               do i=1, VECSIZE_MEMMAX
+               do i=1, VECSIZE_USED
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
@@ -197,11 +197,11 @@ c                 need to restore common block
                   CUTSPASSED=.TRUE.
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
                enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_MEMMAX)
+               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_USED)
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,VECSIZE_MEMMAX)
+     &                          iconf, iproc, imirror, all_fx,VECSIZE_USED)
 
-                do i=1, VECSIZE_MEMMAX
+                do i=1, VECSIZE_USED
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
@@ -214,17 +214,17 @@ c                  endif
 c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                enddo
                endif
-               do I=1, VECSIZE_MEMMAX
+               do I=1, VECSIZE_USED
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo
-               do i =1, VECSIZE_MEMMAX
+               do i =1, VECSIZE_USED
 c     if last paremeter is true -> allow grid update so only for a full page
                   lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
-c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_MEMMAX                   
-                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.VECSIZE_MEMMAX) !Store result
+c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_USED                   
+                  call sample_put_point(all_wgt(i),all_x(1,i),iter,ipole, i.eq.VECSIZE_USED) !Store result
                enddo
-               if (VECSIZE_MEMMAX.ne.1.and.force_reset)then
+               if (VECSIZE_USED.ne.1.and.force_reset)then
                   call reset_cumulative_variable()
                   force_reset=.false.
                endif
@@ -893,7 +893,7 @@ c      write(*,*) 'Forwarding random number generator'
 
 C     sanity check that we have a minimal number of event
       
-      if ( .not.MC_GROUPED_SUBPROC.or.VECSIZE_MEMMAX.gt.1)then
+      if ( .not.MC_GROUPED_SUBPROC.or.VECSIZE_USED.gt.1)then
          events = max(events, maxtries)
          MC_GROUPED_SUBPROC = .false.
       else 
