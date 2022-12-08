@@ -66,10 +66,10 @@ c     parameters for sudakovs
      &     m_as_factor,m_kfac,m_lastas,m_pca
 
 c     parameters for sudakovs vectorised version
-c      double precision v_m_colfac(-6:21,VECSIZE_MAX),v_m_dlog(-6:21,VECSIZE_MAX),v_m_slog(-6:21,VECSIZE_MAX),
-c     &     v_m_power(-6:21,3,2,VECSIZE_MAX),v_m_qmass(21,VECSIZE_MAX)
-c      double precision v_m_as_factor(VECSIZE_MAX),v_m_kfac(VECSIZE_MAX),v_m_lastas(VECSIZE_MAX)
-c      integer v_m_pca(-6:21,2,VECSIZE_MAX)
+c      double precision v_m_colfac(-6:21,VECSIZE_MEMMAX),v_m_dlog(-6:21,VECSIZE_MEMMAX),v_m_slog(-6:21,VECSIZE_MEMMAX),
+c     &     v_m_power(-6:21,3,2,VECSIZE_MEMMAX),v_m_qmass(21,VECSIZE_MEMMAX)
+c      double precision v_m_as_factor(VECSIZE_MEMMAX),v_m_kfac(VECSIZE_MEMMAX),v_m_lastas(VECSIZE_MEMMAX)
+c      integer v_m_pca(-6:21,2,VECSIZE_MEMMAX)
 c      common/v_cl_sud/v_m_colfac,v_m_dlog,v_m_slog,v_m_power,v_m_qmass,
 c     &    v_m_as_factor,v_m_kfac,v_m_lastas,v_m_pca
 
@@ -77,8 +77,8 @@ c     &    v_m_as_factor,v_m_kfac,v_m_lastas,v_m_pca
       integer iipdg,iimode
       common/gamma_args/Q1,iipdg,iimode
 c     vectorised version      
-c      double precision v_Q1(VECSIZE_MAX)
-c      integer v_iipdg(VECSIZE_MAX),v_iimode(VECSIZE_MAX)
+c      double precision v_Q1(VECSIZE_MEMMAX)
+c      integer v_iipdg(VECSIZE_MEMMAX),v_iimode(VECSIZE_MEMMAX)
 c      common/v_gamma_args/v_Q1,v_iipdg,v_iimode      
 
 

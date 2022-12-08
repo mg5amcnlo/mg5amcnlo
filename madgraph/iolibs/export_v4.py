@@ -1689,7 +1689,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,VECSIZE_MAX\n"
+            pdf_lines = " DO iVEC=1,VECSIZE_MEMMAX\n"
 
 
         if ninitial == 1:
@@ -1739,7 +1739,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "\n"
                 if vector:
                     pdf_definition_lines_vec += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d(VECSIZE_MAX)" % (pdf_codes[pdg],i+1) \
+                                       ",".join(["%s%d(VECSIZE_MEMMAX)" % (pdf_codes[pdg],i+1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
@@ -1760,7 +1760,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_data_lines_vec += "DATA " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
                                                  for pdg in initial_states[i]]) + \
-                                                 "/%s/" % ','.join(['VECSIZE_MAX*1D0']* len(initial_states[i])) + \
+                                                 "/%s/" % ','.join(['VECSIZE_MEMMAX*1D0']* len(initial_states[i])) + \
                                                  "\n"
 
 
@@ -1846,7 +1846,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in processes:
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines += '\n   DO IVEC=1, VECSIZE_MAX'
+                    pdf_lines += '\n   DO IVEC=1, VECSIZE_MEMMAX'
                     pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
                     for ibeam in [1, 2]:
                         initial_state = proc.get_initial_pdg(ibeam)
@@ -4976,7 +4976,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
 
-        text = [" integer VECSIZE_MAX\n"," parameter (VECSIZE_MAX=%i)\n" % vector_size]
+        text = [" integer VECSIZE_MEMMAX\n"," parameter (VECSIZE_MEMMAX=%i)\n" % vector_size]
 
         fsock.writelines(text)
         return vector_size
@@ -6978,7 +6978,7 @@ class UFO_model_to_mg4(object):
 
         # Write header
         header = """C
-C NB: VECSIZE_MAX is defined in vector.inc
+C NB: VECSIZE_MEMMAX is defined in vector.inc
 C NB: vector.inc must be included before coupl.inc
 C
 
@@ -6991,7 +6991,7 @@ C
                 double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec': ("(VECSIZE_MAX)" if self.vector_size else '')}
+                """   % {'vec': ("(VECSIZE_MEMMAX)" if self.vector_size else '')}
 
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
@@ -7079,7 +7079,7 @@ C
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
-            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MAX") for coupl in self.coups_dep]
+            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         

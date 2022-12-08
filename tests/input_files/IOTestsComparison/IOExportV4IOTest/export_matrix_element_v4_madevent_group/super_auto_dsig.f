@@ -117,7 +117,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
 
-      SUBROUTINE SELECT_GROUPING(IMIRROR,  IPROC, ICONF, WGT, VECSIZE_MAX)
+      SUBROUTINE SELECT_GROUPING(IMIRROR,  IPROC, ICONF, WGT, VECSIZE_MEMMAX)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 C     
@@ -125,15 +125,15 @@ C     INPUT (VIA COMMAND BLOCK)
 C     SELPROC 
 C     SUMPROB
 C     INPUT
-C     VECSIZE_MAX (number of weight to update)
+C     VECSIZE_MEMMAX (number of weight to update)
 C     INPUT/OUTPUT
-C     WGTS(VECSIZE_MAX) #multiplied by the associated jacobian      
+C     WGTS(VECSIZE_MEMMAX) #multiplied by the associated jacobian      
 C     
 C     OUTPUT
 C     
 C     iconf, iproc, imirror
 C     
-      INTEGER VECSIZE_MAX
+      INTEGER VECSIZE_MEMMAX
       DOUBLE PRECISION WGT(*)
       INTEGER IMIRROR, IPROC, ICONF
 
@@ -207,7 +207,7 @@ C     all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-        DO I=1, VECSIZE_MAX
+        DO I=1, VECSIZE_MEMMAX
           WGT(I)=WGT(I)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
         ENDDO
 
@@ -215,7 +215,7 @@ C       Update weigth w.r.t SELPROC normalized to selection probability
 C       We are using the grouped_processes grid and it is initialized.
         CALL DS_GET_POINT('grouped_processes',R,LMAPPED
      $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
-        DO I=1, VECSIZE_MAX
+        DO I=1, VECSIZE_MEMMAX
           WGT(I)=WGT(I)*MC_GROUPED_PROC_JACOBIAN
         ENDDO
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
@@ -224,19 +224,19 @@ C       We are using the grouped_processes grid and it is initialized.
       END
 
       SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,ALL_XBK, ALL_Q2FACT,
-     $  ALL_CM_RAP, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_MAX)
+     $  ALL_CM_RAP, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_MEMMAX)
 C     ******************************************************
 C     
-C     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_MAX)
-C     INPUT/OUtpUT       ALL_WGT(VECSIZE_MAX)
-C     VECSIZE_MAX = vector size
-C     ALL_OUT(VECSIZE_MAX)
+C     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_MEMMAX)
+C     INPUT/OUtpUT       ALL_WGT(VECSIZE_MEMMAX)
+C     VECSIZE_MEMMAX = vector size
+C     ALL_OUT(VECSIZE_MEMMAX)
 C     function (PDf*cross)
 C     ******************************************************
       USE DISCRETESAMPLER
       IMPLICIT NONE
 
-      INTEGER VECSIZE_MAX
+      INTEGER VECSIZE_MEMMAX
       INCLUDE 'genps.inc'
       DOUBLE PRECISION ALL_P(4*MAXDIM/3+14,*)
       DOUBLE PRECISION ALL_WGT(*)
@@ -302,7 +302,7 @@ C      entries to the grid for the MC over helicity configuration
 C     set the running scale 
 C     and update the couplings accordingly
       CALL UPDATE_SCALE_COUPLING_VEC(ALL_P, ALL_WGT, ALL_Q2FACT,
-     $  VECSIZE_MAX)
+     $  VECSIZE_MEMMAX)
 
       IF(GROUPED_MC_GRID_STATUS.EQ.0) THEN
 C       If we were in the initialization phase of the grid for MC over
@@ -316,7 +316,7 @@ C        the call DSIGPROC just below.
      $  IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
 
 
-      DO I =1,VECSIZE_MAX
+      DO I =1,VECSIZE_MEMMAX
 C       Reset ALLOW_HELICITY_GRID_ENTRIES
         ALLOW_HELICITY_GRID_ENTRIES = .TRUE.
 
@@ -333,7 +333,7 @@ C       OC(IMIRROR,IPROC,ICONF)))
 C       ENDIF
 
       ENDDO
-      DO I=1, VECSIZE_MAX
+      DO I=1, VECSIZE_MEMMAX
         IF(ALL_OUT(I).GT.0D0)THEN
 C         Update summed weight and number of events
           SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)
@@ -863,7 +863,7 @@ C
       ENDIF
 C     set the running scale 
 C     and update the couplings accordingly
-      IF (VECSIZE_MAX.LE.1) THEN
+      IF (VECSIZE_MEMMAX.LE.1) THEN
         CALL UPDATE_SCALE_COUPLING(PP, WGT)
       ENDIF
 
@@ -918,12 +918,12 @@ C     ****************************************************
 C     
 C     ARGUMENTS 
 C     
-      DOUBLE PRECISION ALL_P(4*MAXDIM/3+14,VECSIZE_MAX)
-      DOUBLE PRECISION ALL_XBK(2, VECSIZE_MAX)
-      DOUBLE PRECISION ALL_Q2FACT(2, VECSIZE_MAX)
-      DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MAX)
-      DOUBLE PRECISION ALL_WGT(VECSIZE_MAX)
-      DOUBLE PRECISION ALL_OUT(VECSIZE_MAX)
+      DOUBLE PRECISION ALL_P(4*MAXDIM/3+14,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_XBK(2, VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_Q2FACT(2, VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_WGT(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
       INTEGER SYMCONF(0:LMAXCONFIGS)
@@ -958,7 +958,7 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,VECSIZE_MAX),XDUM
+      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,VECSIZE_MEMMAX),XDUM
       INTEGER I,J,K,JC(NEXTERNAL)
       INTEGER PERMS(NEXTERNAL,LMAXCONFIGS)
       INCLUDE 'symperms.inc'
@@ -971,7 +971,7 @@ C
         ENDDO
 
 C       Set momenta according to this permutation
-        DO IVEC=1, VECSIZE_MAX
+        DO IVEC=1, VECSIZE_MEMMAX
           CALL SWITCHMOM(ALL_P(1,IVEC),ALL_P1(0,1,IVEC),PERMS(1
      $     ,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
@@ -987,7 +987,7 @@ C       Set momenta according to this permutation
 
 
       IF(IMIRROR.EQ.2)THEN
-        DO IVEC=1,VECSIZE_MAX
+        DO IVEC=1,VECSIZE_MEMMAX
 C         Flip momenta (rotate around x axis)
           DO I=1,NEXTERNAL
             ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
@@ -1006,7 +1006,7 @@ C         Flip beam identity
       ALL_OUT(:)=0D0
 
 C     IF (PASSCUTS(P1)) THEN
-      DO IVEC=1,VECSIZE_MAX
+      DO IVEC=1,VECSIZE_MEMMAX
         IF (IMODE.EQ.0D0.AND.NB_PASS_CUTS.LT.2**12.AND.ALL_WGT(IVEC)
      $   .NE.0D0)THEN
           NB_PASS_CUTS = NB_PASS_CUTS + 1
@@ -1021,7 +1021,7 @@ C     ENDIF
 
       IF (LAST_ICONF.NE.-1.AND.IMIRROR.EQ.2) THEN
 C       Flip back local momenta P1 if cached
-        DO IVEC=1,VECSIZE_MAX
+        DO IVEC=1,VECSIZE_MEMMAX
           DO I=1,NEXTERNAL
             ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
             ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
