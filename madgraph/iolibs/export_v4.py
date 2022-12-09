@@ -4977,7 +4977,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         vector_size = max(1, vector_size)
 
         text = [" integer VECSIZE_MEMMAX\n"," parameter (VECSIZE_MEMMAX=%i)\n" % vector_size]
-        text += [" integer VECSIZE_USED\n"," parameter (VECSIZE_USED=VECSIZE_MEMMAX)\n"]
 
         fsock.writelines(text)
         return vector_size
