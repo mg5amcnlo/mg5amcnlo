@@ -219,7 +219,7 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
-      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk, all_q2fact, all_cm_rap, ICONF,IPROC,IMIRROR, ALL_OUT,VECSIZE_USED)
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk,all_q2fact,all_cm_rap,ICONF,IPROC,IMIRROR,ALL_OUT,VECSIZE_USED)
 c     ******************************************************
 c
 c     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_USED)
@@ -302,7 +302,7 @@ C       If we were in the initialization phase of the grid for MC over grouped p
       	  ALLOW_HELICITY_GRID_ENTRIES = .False.
       endif
 
-      call DSIGPROC_vec(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF, IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0, ALL_OUT)
+      call DSIGPROC_vec(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0,ALL_OUT,VECSIZE_USED)
 
       
       Do i =1,VECSIZE_USED
@@ -841,7 +841,7 @@ C     ccccccccccccccccccccccccc
 C      vectorize version
 C     ccccccccccccccccccccccccc
 
-      subroutine DSIGPROC_VEC(ALL_P, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out)
+      subroutine DSIGPROC_VEC(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out,VECSIZE_USED)
 C     ****************************************************
 C     RETURNS DIFFERENTIAL CROSS SECTION 
 C     FOR A PROCESS
@@ -875,6 +875,7 @@ C
       INTEGER ICONF,IPROC,IMIRROR,IMODE
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      INTEGER VECSIZE_USED
 C     
 C     GLOBAL VARIABLES
 C     
