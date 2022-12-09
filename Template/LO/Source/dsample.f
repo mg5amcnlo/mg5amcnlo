@@ -34,7 +34,8 @@ c
       integer itmax_adjust
 
       integer imirror, iproc, iconf
-      integer ivec !position of the event in the vectorization # max is VECSIZE_MEMMAX 
+      integer ivec ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+
 c
 c     External
 c
