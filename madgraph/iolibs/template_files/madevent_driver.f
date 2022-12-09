@@ -73,7 +73,8 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
       include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
-      integer VECSIZE_USED
+      INTEGER VECSIZE_USED
+      DATA VECSIZE_USED/VECSIZE_MEMMAX/
 
 C-----
 C  BEGIN CODE
