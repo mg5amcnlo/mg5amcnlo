@@ -812,7 +812,7 @@ c    not needed anymore ... can be removed ... set for debugging only
      endif
 c     set the running scale 
 c     and update the couplings accordingly
-      if (VECSIZE_USED.le.1) then
+      IF (VECSIZE_MEMMAX.LE.1) THEN ! no-vector (NB not VECSIZE_USED!)
       call update_scale_coupling(pp, wgt)
       endif
 
