@@ -1805,7 +1805,7 @@ C      include 'maxparticles.inc'
       end
 
       
-      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED_in)
+      subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
       implicit none
 
 C
@@ -1823,7 +1823,7 @@ C      include 'maxparticles.inc'
       
       double precision all_p(4*maxdim/3+14,*), all_wgt(*)
       double precision all_q2fact(2,*)
-      integer i,j,k, VECSIZE_USED_in
+      integer i,j,k, VECSIZE_USED
 
       logical setclscales
       external setclscales
@@ -1837,7 +1837,7 @@ c      save firsttime
       if(.not.fixed_ren_scale) then
          scale = 0d0
       endif
-      do i =1, VECSIZE_USED_in
+      do i =1, VECSIZE_USED
 
          if(.not.fixed_ren_scale) then
             call set_ren_scale(all_p(1,i),scale)
