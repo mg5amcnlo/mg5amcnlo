@@ -256,11 +256,15 @@ c               fixed_ren_scale=.true.
 c               call set_ren_scale(P,scale)
 c            endif
 c         endif
-         
+
+c     If scale is fixed, update G-dependent couplings for VECSIZE_MEMMAX events
+c     This is called only once in the application (FIRSTTIME=.true.)
+c     Only VECSIZE_USED events are needed, but this variable is unknown here
+c     Using VECSIZE_MEMMAX is correct and has a negligible performance overhead
 
          if(fixed_ren_scale) then
             G = SQRT(4d0*PI*ALPHAS(scale))
-            do i =1, VECSIZE_USED
+            do i =1, VECSIZE_MEMMAX ! no need to use VECSIZE_USED here
                call update_as_param(i)
             enddo
          endif
