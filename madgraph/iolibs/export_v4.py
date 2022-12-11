@@ -4976,9 +4976,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
         text=["""C
-C Offloading ME to GPUs or vectorized C++ needs a vector API.
-C Fortran arrays in this API can hold up to VECSIZE_MEMMAX events.
-C These arrays are statically allocated at compile time.
+C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
+C this is designed for offloading MEs to GPUs or vectorized C++,
+C but it can also be used for computing MEs in Fortran.
+C If VECSIZE_MEMMAX equals 1, the old scalar API is used:
+C this can only be used for computing MEs in Fortran.
+C
+C Fortran arrays in the vector API can hold up to VECSIZE_MEMMAX
+C events and are statically allocated at compile time.
 C The constant value of VECSIZE_MEMMAX is fixed at codegen time
 C (output madevent ... --vector_size=<VECSIZE_MEMMAX>).
 C
