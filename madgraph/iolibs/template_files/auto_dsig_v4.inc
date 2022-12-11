@@ -404,6 +404,8 @@ C
      include 'nexternal.inc'
      include '../../Source/vector.inc' ! needed to define VECSIZE_MEMMAX
      include 'maxamps.inc'
+     INTEGER                 NCOMB
+     PARAMETER (             NCOMB=%(ncomb)d)
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
