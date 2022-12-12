@@ -32,7 +32,6 @@ BINARIES = $(BINDIR)gen_ximprove $(BINDIR)gensudgrid $(BINDIR)combine_runs
 
 all: %(libraries)s
 
-
 # Libraries
 
 $(LIBDIR)libdsample.$(libext): $(DSAMPLE)
@@ -41,7 +40,7 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 	$(call CREATELIB, $@, $^)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make; cd ..
-$(LIBDIR)libpdf.$(libext): PDF
+$(LIBDIR)libpdf.$(libext): PDF make_opts
 	cd PDF; make; cd ..
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
 	cd PDF/gammaUPC; make; cd ../../	

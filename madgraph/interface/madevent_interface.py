@@ -5810,9 +5810,17 @@ tar -czf split_$1.tar.gz split_$1
         self.check_nb_events()
 
         # this is in order to avoid conflicts between runs with and without
-        # lhapdf
-        misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
+        # lhapdf. not needed anymore the makefile handles it automaticallu
+        #misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
+        self.make_opts_var['pdlabel1'] = ''
+        self.make_opts_var['pdlabel2'] = ''
+        if self.run_card['pdlabel1'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel1'] = 'eva'
+        if self.run_card['pdlabel2'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel2'] = 'eva'     
+
+
         # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             self.make_opts_var['lhapdf'] = 'True'
@@ -5829,8 +5837,9 @@ tar -czf split_$1.tar.gz split_$1
                 # copy the files for the chosen density
                 if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
                     self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
-
-            
+                    self.make_opts_var['pdlabel1'] = 'ee'
+                    self.make_opts_var['pdlabel2'] = 'ee'
+        
         # set random number
         if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])

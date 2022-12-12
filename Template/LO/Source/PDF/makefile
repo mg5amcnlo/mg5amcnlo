@@ -10,28 +10,57 @@ LIBDIR        = ../../lib/
 
 include ../make_opts
 
+PDF = opendata.o PhotonFlux.o
+TOREMOVE =  # file that need to be remove since not linked in current library. important to force recompilation
+
+
+# check if we need to link to Electroweak PDF
+ifneq (,$(filter eva, $(pdlabel1) $(pdlabel2)))
+#  go trough here if pdlabel1 or pdlabel2 is on "eva"
+  TOREMOVE += ElectroweakFlux_dummy.o
+  # remove it to force recompilation of the library if back on it
+  PDF += ElectroweakFluxDriver.o ElectroweakFlux.o
+else
+#  go trough here if NEITHER pdlabel1 or pdlabel2 is on "eva"
+   PDF += ElectroweakFlux_dummy.o
+   TOREMOVE += ElectroweakFluxDriver.o
+endif
+
 ifdef lhapdf
+  TOREMOVE +=  pdfwrap.o
+  PDF         += pdfwrap_lhapdf.o pdg2pdf_lhapdf6.o
   ifeq ($(lhapdfversion),5)
     $(error Bad lhadpfversion version 6 is now required)
   else
     ifeq ($(lhapdfsubversion),1) # 6.1.X
-	PDF         = pdfwrap_lhapdf.o pdf_lhapdf6.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o ElectroweakFluxDriver.o ElectroweakFlux.o
+	PDF         += pdf_lhapdf6.o
+        TOREMOVE += pdf_lhapdf62.o
     else # 6.2.X
         CXXFLAGS+=-std=c++11
-	PDF         = pdfwrap_lhapdf.o pdf_lhapdf62.o pdg2pdf_lhapdf6.o opendata.o PhotonFlux.o ElectroweakFluxDriver.o ElectroweakFlux.o
+	PDF  += pdf_lhapdf62.o
+	TOREMOVE += pdf_lhapdf6.o
     endif    
   endif
 else
-  PDF         = Ctq6Pdf.o pdfwrap.o opendata.o pdf.o PhotonFlux.o pdg2pdf.o NNPDFDriver.o eepdf.o gridpdfaux.o dfint.o kerset.o ElectroweakFluxDriver.o ElectroweakFlux.o
+  TOREMOVE += pdfwrap_lhapdf.o
+  PDF += Ctq6Pdf.o pdfwrap.o pdf.o pdg2pdf.o NNPDFDriver.o eepdf.o gridpdfaux.o dfint.o kerset.o
 endif
 
-all: $(LIBDIR)$(LIBRARY) makefile_gammaUPC
+
+all: reset $(LIBDIR)$(LIBRARY) makefile_gammaUPC
+
+reset: 
+	echo "remove previous compilation $(TOREMOVE)"
+	echo "need to compile $(PDF)"
+	rm -rf $(TOREMOVE)
+
 
 $(LIBDIR)$(LIBRARY): $(PDF)
+	rm $(LIBDIR)$(LIBRARY) || echo "recompilation of $(LIBDIR)$(LIBRARY)"
 	$(call CREATELIB, $@, $^)
 
 makefile_gammaUPC:
-	(cd ./gammaUPC ; make clean ; make ; cd ../)
+	(cd ./gammaUPC ; make ; cd ../)
 
 clean:
 	@($(RM) *.o $(LIBDIR)$(LIBRARY))

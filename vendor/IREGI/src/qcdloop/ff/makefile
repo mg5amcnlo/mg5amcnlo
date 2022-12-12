@@ -1,4 +1,4 @@
-FC=gfortran-mp-10
+FC=gfortran
 FFLAGS        = -fPIC -std=legacy
 
 LFLAGS	      = $(FFLAGS)

@@ -1,5 +1,5 @@
 
-FC=gfortran-mp-10
+FC=gfortran
 qcdlooppath=$(PWD)/qcdloop
 QLDIR=$(qcdlooppath)/ql
 FFDIR=$(qcdlooppath)/ff
