@@ -367,7 +367,7 @@ class MECmdShell(IOTests.IOTestManager):
         works fine"""
         
         self.generate_production()
-        misc.call([pjoin('.','bin','calculate_xsect'), '-f'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','calculate_xsect'), '-f'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
@@ -401,7 +401,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path))
-        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path))
         # sanity check on the size
@@ -445,7 +445,7 @@ class MECmdShell(IOTests.IOTestManager):
         # to check that the cleaning of files work well
         os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
         self.do('quit')
-        misc.call([pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
