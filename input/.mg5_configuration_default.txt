@@ -67,7 +67,7 @@
 #!  Defines the path to the pythia8 installation directory (i.e. the
 #!  on containing the lib, bin and include directories) .
 #!  If using a relative path, that starts from the mg5 directory
-pythia8_path = ./Pythia/Pythia/pythia8245MultiscalesFix
+# pythia8_path = ./HEPTools/pythia8
 
 #! MG5aMC_PY8_interface path
 #!  Defines the path of the C++ driver file that is used by MG5_aMC to
