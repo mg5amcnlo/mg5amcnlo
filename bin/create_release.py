@@ -127,7 +127,13 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
+        import ssl
+        import urllib.request
+
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         last_message = int(text[1].strip())
