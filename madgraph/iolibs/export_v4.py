@@ -6992,7 +6992,9 @@ C
                 double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec': ("(VECSIZE_MEMMAX)" if self.vector_size else '')}
+                """   % {'vec': ('' if not self.vector_size else '(1)' if self.vector_size<=1 else '(VECSIZE_MEMMAX)')}
+                ###   % {'vec': ("(VECSIZE_MEMMAX)" if self.vector_size else '')}
+                ###   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
 
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
