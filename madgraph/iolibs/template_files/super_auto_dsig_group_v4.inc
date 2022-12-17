@@ -124,7 +124,7 @@ c       SUMPROB
 c     INPUT
 c       VECSIZE_USED (number of weight to update)
 c     INPUT/OUTPUT
-c       WGTS(VECSIZE_USED) #multiplied by the associated jacobian      
+c       WGT(VECSIZE_USED) #multiplied by the associated jacobian      
 c
 c     OUTPUT
 c
