@@ -411,7 +411,7 @@ C     Common blocks
       data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
       common /nb_hel_state/ nb_spin_state
 
-      include 'vector.inc'
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
       include 'run.inc'
 C   ICONFIG has this config number
@@ -726,7 +726,7 @@ C     ****************************************************
       include 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
 C     
@@ -859,7 +859,7 @@ C     ****************************************************
       include 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
 C     

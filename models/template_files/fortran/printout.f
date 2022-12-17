@@ -9,7 +9,7 @@ c************************************************************************
       subroutine printout
       implicit none
 
-      include '../vector.inc'
+      include '../vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
       include 'input.inc'
       

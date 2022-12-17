@@ -1799,7 +1799,7 @@ c     find the boost momenta --sum of particles--
       include 'nexternal.inc'
       include 'genps.inc'
       include 'maxamps.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
 c     include 'run.inc'
 

@@ -42,7 +42,7 @@ c     /* ********************************************************* *
 	parameter (eva_pi   = 3.141592653589793d0)
 	parameter (eva_sqr2 = 1.414213562373095d0)
 
-	include '../vector.inc'
+	include '../vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
 	include '../MODEL/coupl.inc'
 
 	logical first
