@@ -42,8 +42,13 @@ $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make; cd ..
 $(LIBDIR)libpdf.$(libext): PDF make_opts
 	cd PDF; make; cd ..
+ifneq (,$(filter edff chff, $(pdlabel1) $(pdlabel2)))
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-	cd PDF/gammaUPC; make; cd ../../	
+	cd PDF/gammaUPC; make ; cd ../../
+else
+$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
+        cd PDF/gammaUPC; make -f makefile_dummy; cd ../../
+endif	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make; cd ..
 # The bias library is here the dummy by default; compilation of other ones specified in the run_card will be done by MG5aMC directly.

@@ -5818,7 +5818,11 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['pdlabel1'] in ['eva', 'iww']:
             self.make_opts_var['pdlabel1'] = 'eva'
         if self.run_card['pdlabel2'] in ['eva', 'iww']:
-            self.make_opts_var['pdlabel2'] = 'eva'     
+            self.make_opts_var['pdlabel2'] = 'eva'
+        if self.run_card['pdlabel1'] in ['edff','chff']:
+            self.make_opts_var['pdlabel1'] = self.run_card['pdlabel1']
+        if self.run_card['pdlabel2'] in ['edff','chff']:
+            self.make_opts_var['pdlabel2'] = self.run_card['pdlabel2']
 
 
         # set  lhapdf.

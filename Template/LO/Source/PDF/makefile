@@ -12,6 +12,7 @@ include ../make_opts
 
 PDF = opendata.o PhotonFlux.o
 TOREMOVE =  # file that need to be remove since not linked in current library. important to force recompilation
+TOCOMPILE = # the libraries that should be compiled
 
 
 # check if we need to link to Electroweak PDF
@@ -24,6 +25,18 @@ else
 #  go trough here if NEITHER pdlabel1 or pdlabel2 is on "eva"
    PDF += ElectroweakFlux_dummy.o
    TOREMOVE += ElectroweakFluxDriver.o
+endif
+
+# check if we need to link to gammaUPC
+ifneq (,$(filter edff chff, $(pdlabel1) $(pdlabel2)))
+# go through here if pdflabel1 or pdlabel2 is on "edff" or "chff"
+   TOREMOVE += $(LIBDIR)libgammaUPC.$(libext)
+# remove it to force recompilation of the library if back on it
+   TOCOMPILE += makefile_gammaUPC
+else
+# go throught here if neither pdlabel1 or pdlabel2 is on "edff" or "chff"
+   TOCOMPILE += makefile_gammaUPC_dummy
+   TOREMOVE += $(LIBDIR)libgammaUPC.$(libext)
 endif
 
 ifdef lhapdf
@@ -47,7 +60,7 @@ else
 endif
 
 
-all: reset $(LIBDIR)$(LIBRARY) makefile_gammaUPC
+all: reset $(LIBDIR)$(LIBRARY) $(TOCOMPILE)
 
 reset: 
 	echo "remove previous compilation $(TOREMOVE)"
@@ -61,6 +74,9 @@ $(LIBDIR)$(LIBRARY): $(PDF)
 
 makefile_gammaUPC:
 	(cd ./gammaUPC ; make ; cd ../)
+
+makefile_gammaUPC_dummy:
+	(cd ./gammaUPC ; make -f makefile_dummy; cd ../)
 
 clean:
 	@($(RM) *.o $(LIBDIR)$(LIBRARY))
