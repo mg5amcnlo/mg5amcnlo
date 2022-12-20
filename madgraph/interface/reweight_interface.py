@@ -477,8 +477,12 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
+        logger.info('------------------')
+        
         args = self.split_arg(line)
         opts = self.check_launch(args)
+        mgcmd = self.mg5cmd
+        
         if opts['rwgt_name']:
             self.options['rwgt_name'] = opts['rwgt_name']
         if opts['rwgt_info']:
@@ -530,6 +534,7 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me')
                 
         start = time.time()
+        
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
@@ -560,8 +565,16 @@ class ReweightInterface(extended_cmd.Cmd):
         n_is_fks=0
         n_s_event=0
         n_h_event=0
+        h_event_n1body_no_comb = 0
+        h_event_n1body = 0
+        h_event_nbody = 0
+        inv_small = 0
         fks_n1body=0
         fks_nbody=0
+        fks_smallest = 0
+        fks_not_smallest_but_small = 0
+        fks_over_sudcut = 0
+        adjusted = 0
         for event_nb,event in enumerate(self.lhe_input):
             nevents=nevents+1
             #control logger
@@ -598,54 +611,120 @@ class ReweightInterface(extended_cmd.Cmd):
                     ### Do the Sudakov reweighting here
                     if self.inc_sudakov:
                         pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
-                        mW=80.3
+                        x = 1000.0
+                        sud_cut= x*80.3**2
                         min_inv=1000000.0
                         fks1=pair[0]
                         fks2=pair[1]
                         min_inv_fks=False
+                        inv_dict={}
+
                         if (len(event) == nexternal):
                             H_event=True
                             S_event=False
                         else:
                             H_event=False
-                            S_event=True                         
+                            S_event=True        
                         if (H_event):
                             n_h_event=n_h_event+1
                             for ievt,evt in enumerate(event):
-                                if (ievt <= 2):
+                                # Find the smallest abs(inv) and the corresponding pair
+                                if (ievt <= 1):
                                     sign1 = 1.0
                                 else:
                                     sign1 = -1.0
                                 for ievt2,evt2 in enumerate(event):
-                                    if (ievt <= 2):
+                                    if (ievt2 <= 1):
                                         sign2 = 1.0
                                     else:
                                         sign2 = -1.0
                                     if (ievt2 > ievt):
-                                        is_fks=False
                                         inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                                -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                                        if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
-                                            is_fks=True
-                                            if (abs(inv) < mW**2):
-                                                sudrat = self.sudakov_reweight_nbody(H_event,event)
-                                                fks_nbody=fks_nbody+1
-                                            else:
-                                                sudrat = self.sudakov_reweight_n1body(H_event,event)
-                                                fks_n1body=fks_n1body+1
+                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                                        inv_dict[(ievt,ievt2)] = abs(inv)
                                         if (abs(inv) < min_inv):
                                             min_inv=abs(inv)
-                                            if (is_fks):
-                                                min_inv_fks=True
-                                            else:
-                                                min_inv_fks=False
-                        if (S_event):
-                            is_fks=False
-                            sudrat = self.sudakov_reweight_nbody(H_event,event)
-                            n_s_event=n_s_event+1
+                                            min_i=ievt
+                                            min_j=ievt2
+                                    if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
+                                        if (ievt <= 1):
+                                            sign1 = 1.0
+                                        else:
+                                            sign1 = -1.0
+                                        if (ievt2 <= 1):
+                                            sign2 = 1.0
+                                        else:
+                                            sign2 = -1.0
+                                        fks_inv = abs((sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
 
-                        if (min_inv_fks):
-                            n_is_fks=n_is_fks+1
+                            inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
+                            tag, order = event.get_tag_and_order()
+                            order_all = [x for n in (order[0],order[1]) for x in n]
+                            matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()    
+                            ping = False
+                            for me in matrix_elements:
+                                for proc in me.get('processes'):
+                                    proc_tag = proc.get_tag()
+                                    if ((sorted(proc_tag[0]) == sorted(tag[0]))\
+                                        and (sorted(proc_tag[1]) == sorted(tag[1]))):
+                                        ping = True
+                                        legs = proc.get('legs')
+                                        comb_i = legs[min_i]
+                                        comb_j = legs[min_j]
+                                        comb_i = fks_common.to_fks_leg(comb_i,self.model)
+                                        comb_j = fks_common.to_fks_leg(comb_j,self.model)
+                                        ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+                                        if ij_comb == []:
+                                            ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
+                            if not ping:
+                                ij_comb = []
+                            if min_inv > sud_cut:
+                                h_event_n1body = h_event_n1body +1 
+                                sudrat = self.sudakov_reweight(event)
+                            else:
+                                if ((fks1 == min_i+1) and (fks2 == min_j+1)) or ((fks1 == min_j+1) and (fks2 == min_i+1)):
+                                    fks_smallest = fks_smallest + 1
+                                elif (fks_inv < sud_cut):
+                                    fks_not_smallest_but_small = fks_not_smallest_but_small + 1
+                                elif (fks_inv > sud_cut):
+                                    fks_over_sudcut = fks_over_sudcut + 1
+                                inv_small = inv_small +1
+
+                                if ij_comb == []:
+                                    h_event_n1body_no_comb = h_event_n1body_no_comb +1 
+                                    sudrat = self.sudakov_reweight(event)
+                                else:
+                                    if inv_dict_sort[list(inv_dict_sort.keys())[1]] < sud_cut:
+                                        logger.info('FOUND SECOND PAIR smaller')
+                                    h_event_nbody = h_event_nbody +1 
+                                    event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
+                                    if (fks_inv < sud_cut):
+                                        sudrat = self.sudakov_reweight(event_for_sud)
+                                        #sudrat = self.sudakov_reweight_nbody(H_event,event)
+                                    elif fks_inv > sud_cut:
+                                        sudrat1 = self.sudakov_reweight(event_for_sud)
+                                        #sudrat1 = self.sudakov_reweight_nbody(H_event,event)
+                                        #sudrat2 = self.sudakov_reweight(event) # n+1-body based sudakov
+                                        #sudrat = (sudrat1+sudrat2)/2.0
+                                        sudrat = sudrat1
+                                        adjusted = adjusted +1
+
+                                    #logger.info('Sudakov from mapped sud:')
+                                    #logger.info(sudrat)
+                                    #sudrat = self.sudakov_reweight_nbody(H_event,event)
+                                    #logger.info('Sudakov from Born-mapping:')
+                                    #logger.info(sudrat)
+                                    #sudrat = self.sudakov_reweight(event)
+                                    #logger.info('Sudakov from full n+1 event:')
+                                    #logger.info(sudrat)
+                                    #logger.info(event_for_sud)
+                                    #logger.info(sudrat)
+                                sudrat = 0.00001
+                        if (S_event):
+                            sudrat = self.sudakov_reweight(event)
+                            n_s_event=n_s_event+1
+                            fks_inv = 0.0
 
                         event.rescale_weights(sudrat)
 
@@ -667,12 +746,22 @@ class ReweightInterface(extended_cmd.Cmd):
         print(n_s_event)
         print('Number of H events:')
         print(n_h_event)
-        print('FKS with n-body SUD:')
-        print(fks_nbody)
-        print('FKS with n+1-body SUD:')
-        print(fks_n1body)
-        print('Number times FKS inv is smallest among pairs:')
-        print(n_is_fks)
+        print('Number H events with n-body reweight')
+        print(h_event_nbody)
+        print('Number H events with n+1-body reweight inv > mw2')
+        print(h_event_n1body)
+        print('Number H events with n+1-body due to no reasonable comb')
+        print(h_event_n1body_no_comb)
+        print('Number H evets with min_inv < mw2')
+        print(inv_small)
+        print('FKS smallest:')
+        print(fks_smallest)
+        print('FKS NOT smallest but < mW^2:')
+        print(fks_not_smallest_but_small)
+        print('min_inv but FKS > mW**2 ')
+        print(fks_over_sudcut)
+        print('Number of times an average was taken:')
+        print(adjusted)
 
         # check normalisation of the events:
         if self.run_card and 'event_norm' in self.run_card:
@@ -778,6 +867,28 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
+    def sudakov_reweight(self,event):
+        """ Get Sudakov reweight factor based on the event kinematics"""
+        mW=80.3
+        alpha=1.0/129.0
+        pi=3.141592653589
+        sudrat = 0.0
+        for ievt,evt in enumerate(event):
+            if (ievt <= 1):
+                sign1 = 1.0
+            else:
+                sign1 = -1.0
+            for ievt2,evt2 in enumerate(event):
+                if (ievt2 <= 1):
+                    sign2 = 1.0
+                else:
+                    sign2 = -1.0
+                if (ievt2 > ievt):
+                    inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                              -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                    sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
+        return sudrat
+
     def sudakov_reweight_nbody(self,H_event,event):
         """ Get Sudakov reweight factor based on n-body kinematics"""
         mW=80.3
@@ -787,12 +898,12 @@ class ReweightInterface(extended_cmd.Cmd):
         if (H_event):
             born_momenta = event.get_born_momenta()
             for ievt,evt in enumerate(born_momenta[:-1]):
-                if (ievt <= 2):
+                if (ievt <= 1):
                     sign1 = 1.0
                 else:
                     sign1 = -1.0
                 for ievt2,evt2 in enumerate(born_momenta[:-1]):
-                    if (ievt2 <= 2):
+                    if (ievt2 <= 1):
                         sign2 = 1.0
                     else:
                         sign2 = -1.0
@@ -805,12 +916,12 @@ class ReweightInterface(extended_cmd.Cmd):
                             sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
         else:            
             for ievt,evt in enumerate(event):
-                if (ievt <= 2):
+                if (ievt <= 1):
                     sign1 = 1.0
                 else:
                     sign1 = -1.0
                 for ievt2,evt2 in enumerate(event):
-                    if (ievt2 <= 2):
+                    if (ievt2 <= 1):
                         sign2 = 1.0
                     else:
                         sign2 = -1.0
@@ -820,27 +931,235 @@ class ReweightInterface(extended_cmd.Cmd):
                         sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
         return sudrat
 
-    def sudakov_reweight_n1body(self,H_event,event):
-        """ Get Sudakov reweight factor based on n+1-body kinematics"""
-        sudrat=0.0
-        mW=80.3
-        alpha=1.0/129.0
-        pi=3.141592653589
-        for ievt,evt in enumerate(event):
-            if (ievt <= 2):
-                sign1 = 1.0
-            else:
+
+    def merge_particles_kinematics(self, event, i,j, moth):
+        """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
+        
+        import copy
+        recoil = True
+        fks_type = False
+
+        #logger.info(event)
+
+        if recoil and not fks_type:
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            
+            merge_i = event[fks_i]
+            merge_j = event[fks_j]
+        
+            i_4mom = lhe_parser.FourMomentum(merge_i)
+            j_4mom = lhe_parser.FourMomentum(merge_j)
+            if (fks_i <= 1):
                 sign1 = -1.0
-            for ievt2,evt2 in enumerate(event):
-                if (ievt2 <= 2):
-                    sign2 = 1.0
-                else:
-                    sign2 = -1.0
-                if (ievt2 > ievt):
-                    inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                            -(sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                    sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
-        return sudrat
+            else:
+                sign1 = 1.0
+            mother_4mom = i_4mom + sign1*j_4mom
+        
+            new_event = copy.deepcopy(event)
+            new_event[fks_i].set_momentum(mother_4mom)
+
+            if fks_i <= 1: # initial-state recoil
+                new_E = 0.0
+                new_x = 0.0
+                new_y = 0.0
+                new_z = 0.0
+                for ip,part in enumerate(new_event):
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        new_E = new_E + part.E
+                        new_x = new_x + part.px
+                        new_y = new_y + part.py
+                        new_z = new_z + part.pz
+                #print(new_E,new_x,new_y,new_z)
+                #print(new_event)
+                
+                if fks_i == 0:
+                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_x-new_event[0].px,new_y-new_event[0].py,new_z-new_event[0].pz]))
+                elif fks_i == 1:
+                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_x-new_event[1].px,new_y-new_event[1].py,new_z-new_event[1].pz]))
+                
+                #print('initial')
+                #print(event)
+                #print(new_event)
+                #print(fks_i,fks_j)
+                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
+                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
+                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
+                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
+                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
+                new_event.pop(to_remove)
+                new_event.check_kinematics_only()
+                
+            if fks_i > 1: # final-state recoil
+                new_E = 0.0
+                for ip,part in enumerate(new_event):
+                    if (ip == fks_i):
+                        part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
+                        new_E = part.E
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        new_E = new_E + part.E
+                if fks_i == 0:
+                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
+                elif fks_i == 1:
+                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_event[0].px,new_event[0].py,new_event[0].pz]))
+                
+                print('final')
+                pz_1_new = self.recoil_eq(new_event[0],new_event[1])
+                pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
+                E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(new_event[1].mass**2 + new_event[1].px**2 + new_event[1].py**2 + pz_2_new **2)
+                new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
+                new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
+                new_event.pop(to_remove)
+                new_event.check_kinematics_only()
+              
+        elif fks_type and not recoil:        
+            ## Do it in a more FKS-style
+            if (i == moth[0].get('number')-1):
+                fks_i = i
+                fks_j = j
+            elif (j == moth[0].get('number')-1):
+                fks_i = j
+                fks_j = i
+            to_remove = fks_j
+            new_event = copy.copy(event)
+
+            if fks_i <= 1: # initial-state recoil
+                # First boost to partonic CM frame
+              
+                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
+                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
+                for ip,part in enumerate(new_event):
+                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+                    new_event[ip].set_momentum(vec.zboost(pboost=q))
+
+                k_tot = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E-new_event[fks_j].E,new_event[0].px+new_event[1].px-new_event[fks_j].px,\
+                            new_event[0].py+new_event[1].py-new_event[fks_j].py,new_event[0].pz+new_event[1].pz-new_event[fks_j].pz])
+
+                #logger.info('k tot inv mass')
+                #logger.info(k_tot**2)
+                #logger.info('k_tot rap after boost:')
+                #logger.info((k_tot.E+k_tot.pz)/(k_tot.E-k_tot.pz))
+
+                final = lhe_parser.FourMomentum([0,0,0,0])
+                for ip,part in enumerate(new_event):
+                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+                    if (ip != fks_i and ip != fks_j and ip >= 2):
+                        final = final + vec
+                #print('k tot:',k_tot)
+                #print('final',final)
+                        
+                s = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
+                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])**2
+                ksi = new_event[fks_j].E/(math.sqrt(s)/2.0)
+                y = new_event[fks_j].pz/new_event[fks_j].E
+                #x_plus = new_event[0].pz /math.sqrt(6500.0**2-0.938**2) ## Needs to be changed to current CMS energy!
+                #x_minus = new_event[1].pz /math.sqrt(6500.0**2-0.938**2)
+                #x_plus_bar =  x_plus *math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
+                #x_minus_bar = x_minus*math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
+
+                new_event[0].pz = new_event[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
+                new_event[0].E = math.sqrt(new_event[0].mass**2 + new_event[0].pz**2)
+                new_event[1].pz = new_event[1].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
+                new_event[1].E = math.sqrt(new_event[1].mass**2 + new_event[1].pz**2)
+
+                final = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
+                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
+
+                k_tot_1 = k_tot.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                k_tot_2 = k_tot_1.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                k_tot_3 = k_tot_2.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+
+                #logger.info('k tot inv mass after boost')
+                #logger.info(k_tot_3**2)
+                #logger.info('k_tot rap after boost:')
+                #logger.info((k_tot_3.E+k_tot_3.pz)/(k_tot_3.E-k_tot_3.pz))
+                #logger.info('k tot after boost')
+                #logger.info(k_tot_3)
+
+                for ip,part in enumerate(new_event):
+                    if (ip >= 2):
+                        vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+                        vec2 = vec.zboost(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        vec3 = vec2.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
+                        vec_new = vec3.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
+                        new_event[ip].set_momentum(lhe_parser.FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
+                
+                new_event.pop(to_remove)
+                new_event.check_kinematics_only()
+
+            else: # final-state recoil
+                logger.info('Final recoil')
+                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
+                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
+
+                for ip,part in enumerate(new_event):
+                    vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+                    new_event[ip].set_momentum(vec.zboost(pboost=q))
+            
+                q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
+                            new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
+
+                k = lhe_parser.FourMomentum([new_event[fks_i].E+new_event[fks_j].E,new_event[fks_i].px+new_event[fks_j].px,\
+                            new_event[fks_i].py+new_event[fks_j].py,new_event[fks_i].pz+new_event[fks_j].pz])
+
+                k_rec = lhe_parser.FourMomentum([0,0,0,0])
+                for ip,part in enumerate(new_event):
+                    if ip >= 2 and ip != fks_i and ip != fks_j: # add only final-states to the recoil and not the FKS pair
+                        k_rec = k_rec + lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
+
+                k_mom = math.sqrt(k_rec.px**2 + k_rec.py**2 + k_rec.pz**2)
+                beta = (q**2 - (k_rec.E+k_mom)**2)/(q**2 + (k_rec.E+k_mom)**2)
+                for ip,part in enumerate(new_event):
+                    if ip >= 2 and ip != fks_i and ip != fks_j:
+                        vec = lhe_parser.FourMomentum([new_event[ip].E,new_event[ip].px,new_event[ip].py,new_event[ip].pz])
+                        new_event[ip].set_momentum(vec.boost_beta(beta,k_rec))
+                    if ip == fks_i:
+                        new_event[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
+                new_event.pop(to_remove)
+                new_event.check_kinematics_only()
+            
+        else:
+            logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
+
+
+        return new_event
+
+    def recoil_eq(self,part1, part2):
+        thresh = 1e-6
+        import random
+        #print(part1)
+        #print(part2)
+        a = part1.mass**2 + part1.px**2 + part1.py**2
+        b = part2.mass**2 + part2.px**2 + part2.py**2
+        c = part1.pz + part2.pz
+        K = part1.E + part2.E
+        K2 = K**2
+        #print(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2)))
+        #print(a,b,c,K2)
+        #print(math.sqrt(a+0**2) + math.sqrt(b+(c-0)**2),K)
+        sol1 = (-a*c + c*b + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol2 = (-a*c + c*b + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
+            logger.critical('Error in recoil_eq solver 1')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.critical(math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))
+        if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
+            logger.critical('Error in recoil_eq solver 2')
+            logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
+            logger.info(K)
+        
+        if random.random() < 0.5:
+            return sol1
+        else: 
+            return sol2
 
 
     def handle_param_card(self, model_line, args, type_rwgt):

@@ -102,7 +102,7 @@ class Particle(object):
             self.rwgt = 0
             return
 
-                
+
         self.event = event
         self.event_id = len(event) #not yet in the event
         # LHE information
@@ -1926,7 +1926,49 @@ class Event(list):
         self.check_color_structure() 
         
         #3. check mass
-                   
+
+    def check_kinematics_only(self):
+        """check various property of the events - only kinematics"""
+        
+        # check that relative error is under control
+        threshold = 1e-5
+        
+        #1. Check that the 4-momenta are conserved
+        E, px, py, pz = 0,0,0,0
+        absE, abspx, abspy, abspz = 0,0,0,0
+        for particle in self:
+            coeff = 1
+            if particle.status == -1:
+                coeff = -1
+            elif particle.status != 1:
+                continue
+            E += coeff * particle.E
+            absE += abs(particle.E)
+            px += coeff * particle.px
+            py += coeff * particle.py
+            pz += coeff * particle.pz
+            abspx += abs(particle.px)
+            abspy += abs(particle.py)
+            abspz += abs(particle.pz)
+            # check mass
+            fourmass = FourMomentum(particle).mass
+            
+            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
+                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+                
+        if E/absE > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
+        if px/abspx > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
+        if py/abspy > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
+        if pz/abspz > threshold:
+            logger.critical(self)
+            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
+                 
          
     def assign_scale_line(self, line):
         """read the line corresponding to global event line
@@ -2636,7 +2678,7 @@ class FourMomentum(object):
         if isinstance(pboost, FourMomentum):
             E = pboost.E
             pz = pboost.pz
-        
+
         #beta = pz/E
         gamma = E / math.sqrt(E**2-pz**2)
         gammabeta = pz  / math.sqrt(E**2-pz**2)
@@ -2648,6 +2690,74 @@ class FourMomentum(object):
         
         if abs(out.pz) < 1e-6 * out.E:
             out.pz = 0
+        return out
+    
+    def zboost_inv(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only z boost applied).
+        """
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            pz = pboost.pz
+
+        #beta = pz/E
+        gamma = E / math.sqrt(E**2-pz**2)
+        gammabeta = pz  / math.sqrt(E**2-pz**2)
+        
+        out =  FourMomentum([gamma*self.E + gammabeta*self.pz,
+                            self.px,
+                            self.py,
+                            gamma*self.pz + gammabeta*self.E])
+        
+        if abs(out.pz) < 1e-6 * out.E:
+            out.pz = 0
+        return out
+
+
+    def pt_boost(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only pT boost applied).
+        """
+
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            px = pboost.px
+            py = pboost.py
+            mass = math.sqrt(E**2 - px**2 - py**2)
+
+        betax = px/E
+        betay = py/E
+        beta = math.sqrt(betax**2+betay**2)
+        gamma = 1 / math.sqrt(1.0-beta**2)
+        
+        out =  FourMomentum([gamma*self.E - gamma*betax*self.px - gamma*betay*self.py,
+                            -gamma*betax*self.E + (1.0 + (gamma-1.0)*betax**2/(beta**2))*self.px + (gamma-1.0)*betax*betay/(beta**2)*self.py,
+                            -gamma*betay*self.E + ((gamma-1.0)*betax*betay/(beta**2))*self.px + (1.0+(gamma-1.0)*(betay**2)/(beta**2))*self.py,
+                            self.pz])
+        
+        if abs(out.px) < 1e-6 * out.E:
+            out.px = 0
+        if abs(out.py) < 1e-6 * out.E:
+            out.py = 0
+        return out
+
+    def boost_beta(self,beta,mom):
+        """ Boost along the three-momentum of mom with a boost of size beta"""
+
+        unit = mom * (1.0/math.sqrt(mom.px**2+mom.py**2+mom.pz**2))
+        beta_vec = beta*unit
+        bx = beta_vec.px
+        by = beta_vec.py
+        bz = beta_vec.pz
+        gamma = 1.0 / math.sqrt(1.0-beta**2)
+
+        out =  FourMomentum([gamma*self.E - gamma*bx*self.px - gamma*by*self.py - gamma*bz*self.pz,
+                            -gamma*bx*self.E + (1.0 + (gamma-1.0)*bx**2/(beta**2))*self.px + (gamma-1.0)*bx*by/(beta**2)*self.py + (gamma-1.0)*bx*bz/(beta**2)*self.pz,
+                            -gamma*by*self.E + ((gamma-1.0)*bx*by/(beta**2))*self.px + (1.0+(gamma-1.0)*(by**2)/(beta**2))*self.py + (gamma-1.0)*by*bz/(beta**2)*self.pz,
+                            -gamma*bz*self.E + (gamma-1.0)*bx*bz/(beta**2)*self.px + (gamma-1.0)*(by*bz)/(beta**2)*self.py + (1.0+(gamma-1.0)*bz**2/(beta**2))*self.pz]) 
+
         return out
     
     def boost_to_restframe(self, pboost):
