@@ -82,10 +82,9 @@ C     Common blocks
       INTEGER       LHAID
       COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       include 'vector.inc'
-C     jamp2 information
-      DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)
-      COMMON/TO_JAMPS/       JAMP2
-
+       double precision RHEL, RCOL
+       integer selected_hel(nb_page)
+       integer selected_col(nb_page)       
 c
 c     local
 c
@@ -137,7 +136,10 @@ C     Continue only if IMODE is 0, 4 or 5
            P1 = PP
          endif
 
-         CALL SMATRIX%(proc_id)s(P1,0,iconfig,DSIGUU,JAMP2(0,1),1)
+	 channel = %(get_channel)s
+	 call ranmar(RHEL)
+	 call ranmar(RCOL)
+   CALL SMATRIX%(proc_id)s(P1,RHEL, RCOL,channel,1, DSIGUU, selected_hel(1), selected_col(1))
 
 		 IF (IMODE.EQ.5) THEN
             IF (DSIGUU.LT.1D199) THEN		 
@@ -173,7 +175,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(DSIG%(proc_id)s).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d,1)
+           CALL UNWGT(PP,DSIG%(proc_id)s*WGT,%(numproc)d,selected_hel(1), selected_col(1), 1)
         ENDIF
 %(passcuts_end)s
       END
@@ -274,16 +276,15 @@ C     MINCFIG has this config number
 C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
-C     jamp2 information      
-      Double Precision jamp2(0:maxflow, nb_page)
-      common/to_jamps/       jamp2
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
 
       double precision p_multi(0:3, nexternal, nb_page)
       double precision hel_rand(nb_page)
+      double precision col_rand(nb_page)
       integer selected_hel(nb_page)
+      integer selected_col(nb_page)
       
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -327,20 +328,23 @@ c        Do not need those three here do I?
 c	 CM_RAP = ALL_CM_RAP(IVEC)
 	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
 
+C     Select a flavor combination (need to do here for right sign)
+       CALL RANMAR(R)
+       IPSEL=0
+       DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
+       ENDDO
+
 	 if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
          else
            p_multi(:,:,IVEC) = ALL_PP(:,:,IVEC)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
-c         CALL SMATRIX%(proc_id)s(P1, RHEL, ICONFIG, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
+	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO
-
-c	 do IVEC=1, NB_PAGE
-c	 	 CALL SMATRIX%(proc_id)s(p_multi(0,1,IVEC), hel_rand(ivec), ICONFIG, ALL_OUT(IVEC), JAMP2(0, IVEC), IVEC)
-c	 enddo 
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONFIG , ALL_OUT , selected_hel, jamp2)
-
+   call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 	 DO IVEC=1,NB_PAGE
 	 DSIGUU = ALL_OUT(IVEC)
@@ -352,13 +356,6 @@ c	 enddo
 			endif
 			RETURN
 		 ENDIF
-C     Select a flavor combination (need to do here for right sign)
-         CALL RANMAR(R)
-         IPSEL=0
-         DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-            IPSEL=IPSEL+1
-            R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
-         ENDDO
 
 	 XBK(:) = ALL_XBK(:,IVEC)
 c	 CM_RAP = ALL_CM_RAP(IVEC)
@@ -369,7 +366,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
          else
            P1 = ALL_PP(:,:,IVEC)
          endif
-	 call restore_cl_val_to(ivec)
+C	 call restore_cl_val_to(ivec)
          DSIGUU=DSIGUU*REWGT(P1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
@@ -388,7 +385,7 @@ c           Set sign of dsig based on sign of PDF and matrix element
 C       Generate events only if IMODE is 0.
         IF(IMODE.EQ.0.AND.DABS(ALL_OUT(IVEC)).GT.0D0)THEN
 C       Call UNWGT to unweight and store events
-           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, IVEC)
+           CALL UNWGT(ALL_PP(0,1,IVEC), ALL_OUT(IVEC)*ALL_WGT(IVEC),%(numproc)d, selected_hel(IVEC), selected_col(IVEC), IVEC)
         ENDIF
 	ENDDO
 %(passcuts_end)s
@@ -403,27 +400,30 @@ C       Call UNWGT to unweight and store events
      end
 
 ## if(vectorize_code) {
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, ICONFIG, out , selected_hel, jamp2_multi)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out , selected_hel, selected_col)
 c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    input:
 c      p_multi: a list of momenta (nb of momenta nb_page)
 c      hel_rand: a list of random number (will be used to pick helicity)
+c.     col_rand: a list of random number (will be used to pick leading color)
 c      ICONFIG: channel of integration selected
 c      out: list of amplitude square (times multi-channel factor)
 c      selected_hel: list of selected helicity -> not used in practise. 
 c      jamp2_multi: return the list of jamp2 -> need to be changed to follow helicity setup
 c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     USE OMP_LIB comment openmp port for the moment
+     implicit none
 
      include 'nexternal.inc'
      include '../../Source/vector.inc'
      include 'maxamps.inc'
      double precision p_multi(0:3, nexternal, NB_PAGE)
      double precision hel_rand(nb_page)
-     integer ICONFIG
+     double precision col_rand(nb_page)
+     integer channel
      double precision out(nb_page)
      integer selected_hel(nb_page)
-     double precision jamp2_multi(0:MAXFLOW, nb_page)
+     integer selected_col(nb_page)
 
      integer ivec
 
@@ -433,11 +433,12 @@ c !$OMP DO
       DO IVEC=1, NB_PAGE
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
-     &				 ICONFIG,
+     &                           col_rand(IVEC),
+     &				 channel,
+     &                           IVEC,
      &				 out(IVEC),
-c     &				 selected_hel(IVEC),
-     &				 jamp2_multi(0,IVEC),
-     &				 IVEC
+     &				 selected_hel(IVEC),
+     &				 selected_col(IVEC)
      &				 )
       ENDDO
 c !$OMP END DO
