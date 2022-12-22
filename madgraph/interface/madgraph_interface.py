@@ -3333,8 +3333,15 @@ This implies that with decay chains:
         
         #Need to do the work!!!        
         import models.usermod as usermod
-        base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
-        
+        try:
+            base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
+        except Exception:
+            base_model_tmp = usermod.UFOModel(self._curr_model.get('modelpath'))
+            with misc.TMP_variable(base_model_tmp, 'model',None):
+                base_model = copy.deepcopy(base_model_tmp)
+            base_model.model = base_model_tmp.model
+            del base_model_tmp
+                    
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
@@ -3507,6 +3514,7 @@ This implies that with decay chains:
                     text += " "
                 text += " ".join(order + '=' + str(inter['orders'][order]) \
                                  for order in inter['orders'])
+                text += " " + (inter['type'] if 'type' in inter else '')
                 text += '\n'
             pydoc.pager(text)
 
@@ -3518,7 +3526,7 @@ This implies that with decay chains:
                     print('Special interactions which identify two particles')
                 else:
                     print("Interactions %s has the following property:" % arg)
-                    print(self._curr_model['interactions'][int(arg)-1])
+                    print(self._curr_model['interactions'][int(arg)-1].__str__(couplings=self._curr_model['couplings']))
 
         elif args[0] == 'interactions':
             request_part = args[1:]
@@ -3547,10 +3555,10 @@ This implies that with decay chains:
                         name += part['antiname']
                     name += " "
                 text += "\nInteractions %s has the following property:\n" % name
-                text += str(self._curr_model['interactions'][i])
+                text += self._curr_model['interactions'][i].__str__(couplings=self._curr_model['couplings'])
 
                 text += '\n'
-                print(name)
+                print("%s %s %s" % (name,  inter['orders'], inter['type'] if 'type' in inter else 'tree'))
             if text =='':
                 text += 'No matching for any interactions'
             pydoc.pager(text)
@@ -4819,7 +4827,7 @@ This implies that with decay chains:
                     type = "<="
                 squared_orders[basename] = (value,type)
             else:
-                if name not in model_orders:
+                if name not in model_orders and name!='WEIGHTED':
                     valid = list(model_orders) + list(coupling_alias.keys())
                     raise self.InvalidCmd("model order %s not valid for this model (valid one are: %s). Please correct" % (name, ', '.join(valid))) 
                 if type not in self._valid_amp_so_types:
@@ -5580,7 +5588,7 @@ This implies that with decay chains:
 
 
     # Import files
-    def do_import(self, line, force=False):
+    def do_import(self, line, force=False, options={}):
         """Main commands: Import files with external formats"""
 
         args = self.split_arg(line)
@@ -5611,7 +5619,8 @@ This implies that with decay chains:
                 
                 try:
                     self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
-                        complex_mass_scheme=self.options['complex_mass_scheme'])
+                        complex_mass_scheme=self.options['complex_mass_scheme'],
+                        options=options)
                 except ufomodels.UFOError as err:
                     model_path, _,_ = import_ufo.get_path_restrict(args[1])
                     if six.PY3 and self.options['auto_convert_model']:
@@ -5892,6 +5901,8 @@ This implies that with decay chains:
                 photon = False
                 
         if scheme in [4,5] and not photon:
+            self.optimize_order(multi)
+            self._multiparticles[qcd_container] = multi
             logger.warning("Pass the definition of \'j\' and \'p\' to %s flavour scheme." % scheme)
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
@@ -6301,7 +6312,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadSTR':['arXiv:1612.00440']}
     
     install_server = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.physics.illinois.edu/package_info.dat']
+                         'http://madgraph.mi.infn.it/package_info.dat']
+
     install_name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
@@ -7101,7 +7113,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     break
                 need_binary = apply_patch(filetext)
                 if need_binary:
-                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file%s.tgz" %(i+1)
+                    path = "https://madgraph.mi.infn.it//binary/binary_file%s.tgz" %(i+1)
                     name = "extra_file%i" % (i+1)
                     misc.wget(path, '%s.tgz' % name, cwd=MG5DIR)
                     # Untar the file
@@ -7496,7 +7508,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
     def post_install_RunningCoupling(self):
 
-        shutil.move('RunningCoupling', pjoin('Template', 'Running'))
+        shutil.move(pjoin(MG5DIR,'RunningCoupling'), pjoin(MG5DIR,'Template', 'Running'))
 
     def do_customize_model(self, line):
         """create a restriction card in a interactive way"""
@@ -7744,7 +7756,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info('Desactivate complex mass scheme.')
             if not self._curr_model:
                 return
-            self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            self.do_import("model %s" % self._curr_model.get('name'), options={'allow_qed_cms':True})
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded

@@ -401,7 +401,6 @@ c do the same as above for the counterevents
       n_proc=1
       call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
-         write(*,*)n_ctr_str(i)
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
      &        ,idum,(pdg(j,i),j=1,nexternal),orderstag(i),QCDpower(i),(bjx(j,i),j=1
      &        ,2),(scales2(j,i),j=1,3),g_strong(i),(momenta_conf(j),j=1
@@ -488,7 +487,7 @@ c add the weights to the array
      $                   *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
      $                   /mu2_q))*g(kr)**QCDpower(i)
                      wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
-     &                          sqrt(mu2_r(kr)),sqrt(scales2(2,i)))
+     &                          sqrt(mu2_r(kr)),sqrt(scales2(2,i)),wgtcpower)
                   enddo
                enddo
             enddo
@@ -539,7 +538,7 @@ c add the weights to the array
                wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
             enddo
          enddo
       enddo

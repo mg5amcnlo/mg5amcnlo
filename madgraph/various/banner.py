@@ -1478,6 +1478,8 @@ class ConfigFile(dict):
         return dict.__getitem__(self, name.lower())
 
     
+    get = __getitem__
+
     def set(self, name, value, changeifuserset=True, user=False, raiseerror=False):
         """convenient way to change attribute.
         changeifuserset=False means that the value is NOT change is the value is not on default.
@@ -2673,6 +2675,8 @@ class RunCard(ConfigFile):
                     for line in open(pjoin(check_dir, name, 'info')):
                         if 'identity:' in line:
                             identity = tuple([int(x) for x in line.split(':',1)[1].split(',')])
+            else:
+                continue
 
             if identity not in cls.allowed_lep_densities:
                 cls.allowed_lep_densities[identity] = [name]
@@ -2873,39 +2877,49 @@ class RunCard(ConfigFile):
                 if all(f in written for f in to_check):
                     continue
 
-                to_add = ['']
-                for line in b.get_template(self).split('\n'):               
-                    nline = line.split('#')[0]
-                    nline = nline.split('!')[0]
-                    nline = nline.split('=')
-                    if len(nline) != 2:
-                        to_add.append(line)
-                    elif nline[1].strip() in self:
-                        name = nline[1].strip().lower()
-                        value = self[name]
-                        if name in self.list_parameter:
-                            value = ', '.join([str(v) for v in value])
-                        if name in written:
-                            continue #already include before
+                # if none of the attribute of the block has been written already
+                # make the code to follow the template
+                if all(f not in written for f in to_check):
+                    to_add = b.get_template(self) % self
+                    to_add = to_add.split('\n')
+                    for f in to_check:
+                        if f in to_write:
+                            to_write.remove(f)
+                else:
+                    #partial writting -> add only what is needed
+                    to_add = []
+                    for line in b.get_template(self).split('\n'):               
+                        nline = line.split('#')[0]
+                        nline = nline.split('!')[0]
+                        nline = nline.split('=')
+                        if len(nline) != 2:
+                            to_add.append(line)
+                        elif nline[1].strip() in self:
+                            name = nline[1].strip().lower()
+                            value = self[name]
+                            if name in self.list_parameter:
+                                value = ', '.join([str(v) for v in value])
+                            if name in written:
+                                continue #already include before
+                            else:
+                                to_add.append(line % {nline[1].strip():value, name:value})
+                                written.add(name)                        
+        
+                            if name in to_write:
+                                to_write.remove(name)
                         else:
-                            to_add.append(line % {nline[1].strip():value, name:value})
-                            written.add(name)                        
-    
-                        if name in to_write:
-                            to_write.remove(name)
-                    else:
-                        raise Exception
+                            raise Exception
+                # try to detect the template that is not to be used anymore and replace it
                 template_off = b.get_unused_template(self)
                 if '%(' in template_off:
                     template_off = template_off % self
                     if template_off and template_off in text:
                         text = text.replace(template_off, '\n'.join(to_add))
                     else:
-                        template_off = template_off.replace(' ', '\s*')
-                        text, n = re.subn(template_off, '\n'.join(to_add), text)
+                        template_off = re.sub(r'[ \t]+','[ \t]*', template_off)
+                        text, n = re.subn(template_off, '\n'.join(to_add), text, count=1)
                         if not n:
                             text += '\n'.join(to_add)
-
                 elif template_off and template_off in text:
                     text = text.replace(template_off, '\n'.join(to_add))
                 else:
@@ -3035,7 +3049,7 @@ class RunCard(ConfigFile):
         """check that parameter missing in the card are set to the expected value"""
 
         for name, value in self.system_default.items():
-                self.set(name, value, changeifuserset=False)
+            self.set(name, value, changeifuserset=False)
         
 
         for name in self.includepath[False]:
@@ -4031,6 +4045,7 @@ class RunCardLO(RunCard):
           e+ e- beam -> lpp:0 ebeam:500
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
+          if "$" is used in syntax force sde_strategy to 1
          """
 
         for block in self.blocks:
@@ -4288,6 +4303,12 @@ class RunCardLO(RunCard):
             if self['ickkw']  == 1:
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
+
+        # forbid to use sde_strategy=1 with $ syntax
+        for proc_list in proc_def:
+            proc = proc_list[0]
+            if proc['forbidden_onsh_s_channels']:
+                self['sde_strategy'] = 1
             
         if 'fix_scale' in proc_characteristic['limitations']:
             self['fixed_ren_scale'] = 1
@@ -5281,7 +5302,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-8)
+        self.add_param("OSThres", 1.0e-13)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

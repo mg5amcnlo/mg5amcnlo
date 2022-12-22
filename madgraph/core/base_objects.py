@@ -876,7 +876,7 @@ class Interaction(PhysicsObject):
                           for key in self.get('orders')]))/ \
                max((len(self.get('particles'))-2), 1)
 
-    def __str__(self):
+    def __str__(self, couplings=None):
         """String representation of an interaction. Outputs valid Python 
         with improved format. Overrides the PhysicsObject __str__ to only
         display PDG code of involved particles."""
@@ -892,6 +892,32 @@ class Interaction(PhysicsObject):
             elif isinstance(self[prop], ParticleList):
                 mystr = mystr + '    \'' + prop + '\': [%s],\n' % \
                    ','.join([str(part.get_pdg_code()) for part in self[prop]])
+            elif prop == 'color':
+                mystr += '    \'' + prop + '\': ['
+                tmp = []
+                for i, col in enumerate(self['color']):
+                   tmp.append("c%i = %s" % (i, col))
+                mystr += "%s],\n" % ','.join(tmp)
+
+            elif prop == 'couplings':
+                mystr += '    \'' + prop + '\': {' 
+                tmp = []
+                for (c,l) in self[prop]:
+                    lorname = self['lorentz'][l]
+                    coupling = self[prop][(c,l)]
+                    if couplings:
+                        for running in couplings:
+                            for onecoup in couplings[running]:
+                                if onecoup.name == coupling:
+                                    coupling = "%s=%s" %(coupling, onecoup.expr.replace('mdl_', ''))
+                                    break
+                                else:
+                                    continue
+                            else: 
+                                continue
+                            break    
+                    tmp.append('(c%s, %s): %s' %(c,lorname,coupling))
+                mystr += ',\n                  '.join(tmp) + '}\n'
             else:
                 mystr = mystr + '    \'' + prop + '\': ' + \
                         repr(self[prop]) + ',\n'
@@ -1646,6 +1672,11 @@ class Model(PhysicsObject):
                     for key, value in part.partial_widths.items():    
                         part.partial_widths[key] = rep_pattern.sub(replace, value)
                 
+            # change running
+            if self['running_elements']:
+                for el in self['running_elements']:
+                    el.value = rep_pattern.sub(replace, el.value)
+
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
         self.get('particle_dict') 
@@ -1692,7 +1723,7 @@ class Model(PhysicsObject):
         
         return default
 
-    def change_electroweak_mode(self, mode):
+    def change_electroweak_mode(self, mode, **opt):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
 
@@ -1775,7 +1806,7 @@ class Model(PhysicsObject):
             else:
                 return False
 
-    def change_mass_to_complex_scheme(self, toCMS=True):
+    def change_mass_to_complex_scheme(self, toCMS=True, bypass_check=False):
         """modify the expression changing the mass to complex mass scheme"""
         
         # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
@@ -1832,7 +1863,7 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):
                     status = self.change_electroweak_mode(
-                                                   set(['mz','mw','alpha']))
+                                                   set(['mz','mw','alpha']), bypass_check)
                     # Use the newly defined parameter for the W mass
                     mass = self.get_parameter(particle.get('mass'))
                     if not status:
