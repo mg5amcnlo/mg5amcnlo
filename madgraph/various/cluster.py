@@ -28,13 +28,19 @@ from six.moves import input
 logger = logging.getLogger('madgraph.cluster') 
 
 try:
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, MG5DIR
     import madgraph.various.misc as misc
+    MADEVENT=False
 except Exception as error:
     if __debug__:
         print(str(error))
     from internal import MadGraph5Error
     import internal.misc as misc
+    MADEVENT=True
+    LOCALDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), os.path.pardir,
+                                                                os.path.pardir))
+
+
 
 pjoin = os.path.join
    
@@ -1683,8 +1689,14 @@ class SLURMCluster(Cluster):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = self.get_jobs_identifier(cwd, prog)
-        
-        
+        import sys
+        if prog == sys.executable:
+            argument.insert(0, prog)
+            if MADEVENT:
+                prog = pjoin(LOCALDIR,'bin','internal','eval.sh') 
+            else:
+                prog = pjoin(MG5DIR, 'Template','Common','bin','internal','eval.sh')
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
