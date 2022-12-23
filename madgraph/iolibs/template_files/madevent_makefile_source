@@ -47,7 +47,7 @@ $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
 	cd PDF/gammaUPC; make ; cd ../../
 else
 $(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-        cd PDF/gammaUPC; make -f makefile_dummy; cd ../../
+				cd PDF/gammaUPC; make -f makefile_dummy; cd ../../
 endif	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make; cd ..
