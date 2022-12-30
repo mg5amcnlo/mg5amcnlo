@@ -1487,6 +1487,7 @@ class LoopModel(base_objects.Model):
                 'lorentz','perturbation_couplings','conserved_charge']
 
     def change_electroweak_mode(self, mode, bypass_check=False):
+        bypass_check=True
         if not bypass_check:
             if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
                 raise Exception("can not change EW scheme for model handling EW correction")
