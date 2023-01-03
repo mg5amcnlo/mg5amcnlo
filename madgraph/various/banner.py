@@ -5505,7 +5505,7 @@ class eMELA_info(dict):
         #    4->mixed (leptonic); 5-> nobeta (leptonic); 6->delta (leptonic)
         # if LL, use nobeta scheme unless LEGACYLLPDF > 0
         if pdforder == 0:
-            if self['eMELA_LEGACYLLPDF'] in [-1, 0]:
+            if 'eMELA_LEGACYLLPDF' not in self.keys() or self['eMELA_LEGACYLLPDF'] in [-1, 0]:
                 self.log_and_update(banner, 'run_card', 'pdfscheme', 5)
             elif self['eMELA_LEGACYLLPDF'] == 1: 
                 # mixed
