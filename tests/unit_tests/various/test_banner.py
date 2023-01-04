@@ -330,7 +330,28 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(set(keys), set(self.config.keys()))
         self.assertTrue('upper' not in keys)
         self.assertTrue('UPPER' in keys)
-    
+
+
+    def test_guess_type(self):
+        """check the guess_type_from_value(value) static function"""
+
+        fct = bannermod.ConfigFile.guess_type_from_value
+        self.assertEqual(fct("1.0"), "float")
+        self.assertEqual(fct("1"), "int")
+        self.assertEqual(fct("35"), "int")
+        self.assertEqual(fct("35."), "float")
+        self.assertEqual(fct("True"), "bool")
+        self.assertEqual(fct("T"), "str")
+        self.assertEqual(fct("auto"), "str")
+        self.assertEqual(fct("my_name"), "str")
+        self.assertEqual(fct("import tensorflow; sleep(10)"), "str")
+
+        self.assertEqual(fct(1.0), "float")
+
+        self.assertEqual(fct("[1,2]"), "list")
+        self.assertEqual(fct("{1:2}"), "dict")
+
+
 #    def test_in(self):
 #        """actually tested in sum_object"""
 #       
@@ -504,6 +525,8 @@ Beams:LHEF='events_ouaf.lhe.gz'
         read_PY8Card=bannermod.PY8Card(out)
         self.assertEqual(modified_PY8Card, read_PY8Card)
 
+
+
 import shutil
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
@@ -654,6 +677,110 @@ class TestRunCard(unittest.TestCase):
         run_card.check_validity()  # no crashing anymore
         self.assertEqual(run_card['fixed_fac_scale1'], False)
         self.assertEqual(run_card['fixed_fac_scale2'], False)
+
+    def test_guess_entry_fromname(self):
+        """ check that the function guess_entry_fromname works as expected
+        """
+
+        run_card = bannermod.RunCardLO()
+        fct = run_card.guess_entry_fromname
+        input = ("STR_INCLUDE_PDF", "True ")
+        expected = ("str", "INCLUDE_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("INCLUDE_PDF", "True ")
+        expected = ("bool", "INCLUDE_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        # note MIN is case sensitive
+        input = ("min_PDF", "1.45")
+        expected = ("float", "min_PDF", {'cut':True})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("MIN_PDF", "12345")
+        expected = ("int", "MIN_PDF", {})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_list", "[1,2,3,4,5]")
+        expected = ("list", "test_list", {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_data", "[1,2,3,4,5]")
+        expected = ("list", "test_data",  {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
+        expected = ("list", "test_data",  {'typelist': int, 'cut':True, 'include':False , 'fortran_name':'input_2'})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("list_float_data", "[1,2,3,4,5]")
+        expected = ("list", "data",  {'typelist': float})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("list_data", "[1,2,3,4,5]")
+        expected = ("list", "data",  {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
+        input = ("data", "{'__type__':1.0, 'value':3.0}")
+        expected = ("dict", "data", {'autodef': False, 'include': False})
+        self.assertEqual(fct(*input), expected)
+
+    def test_add_unknown_entry(self):
+        """check that one can added complex structure via unknown entry functionality with the smart detection.
+        
+           note that the smart detection is done via guess_entry_fromname which is tested by
+           test_guess_entry_fromname. So this test is mainly to test that the output function of that function is corrrectly
+           linked to add_param as done in add_unknown_entry
+        """
+
+        run_card = bannermod.RunCardLO()
+        fct = run_card.add_unknown_entry
+
+        # simple one 
+        input = ("STR_INCLUDE_PDF", "True ")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "INCLUDE_PDF" 
+        self.assertEqual(run_card[name], "True")
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertIn(name.lower(), run_card.definition_path[True])
+
+        # complex case: list + metadata
+        input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "test_data"
+        self.assertEqual(run_card[name], [1,2,3,4,5]) # this check that list are correctly formatted
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertIn(name.lower(), run_card.definition_path[True])
+        # check that metadata was passed correctly
+        self.assertNotIn(name, run_card.includepath[True])
+        self.assertIn(name, run_card.cuts_parameter)
+        self.assertIn(name, run_card.fortran_name)
+        self.assertEqual(run_card.fortran_name[name], "input_2")
+        self.assertIn(name, run_card.list_parameter)
+        self.assertEqual(run_card.list_parameter[name], int)
+
+
+        # complex case: dictionary 
+        input = ("test_dict", "{'__type__':1.0, '6':3.0}")
+        fct(*input)
+        # check value and that parameter is hidden by default and in autodef
+        name = "test_dict"
+        self.assertEqual(run_card[name], {'__type__':1.0, '6':3.0}) # this check that list are correctly formatted
+        self.assertIn(name.lower(), run_card.hidden_param)
+        # default for dict is not to include in Fortran
+        self.assertNotIn(name.lower(), run_card.definition_path[True]) 
+        self.assertNotIn(name, run_card.includepath[True])
+
+    def test_add_definition(self):
+        """ check the functionality that add an entry to an include file.
+            This should also check that a warning is raised when this functionality is used.
+            The functionality to remove such entry is not automatic.
+        """
+
+
+        raise Exception("Not Implemented")
 
 
 

@@ -15,6 +15,7 @@
 
 from __future__ import division
 from __future__ import absolute_import
+import ast
 import collections
 import copy
 import logging
@@ -1352,6 +1353,23 @@ class ConfigFile(dict):
         return out
 
     @staticmethod
+    def guess_type_from_value(value):
+        "try to guess the type of the string --do not use eval as it might not be safe"
+        
+        if not isinstance(value, str):
+            return str(value.__class__.__name__)
+        
+        #use ast.literal_eval to be safe since value is untrusted
+        # add a timeout to mitigate infinite loop, memory stack attack
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            tmp = misc.timeout(ast.literal_eval, [value], default=None)
+        if tmp is not None:
+            return str(tmp.__class__.__name__)
+        else:
+            return "str"
+
+
+    @staticmethod
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
@@ -2634,6 +2652,8 @@ class RunCard(ConfigFile):
         self.hidden_param = []
         # in which include file the parameer should be written
         self.includepath = collections.defaultdict(list)
+        # in which include file the parameter should be define
+        self.definition_path = collections.defaultdict(list)
         #some parameters have a different name in fortran code
         self.fortran_name = {}
         #parameters which are not supported anymore. (no action on the code)
@@ -2684,7 +2704,8 @@ class RunCard(ConfigFile):
                 cls.allowed_lep_densities[identity].append(name)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
+                  hidden=False, legacy=False, cut=False, system=False, sys_default=None,
+                  autodef=False, 
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
@@ -2694,7 +2715,10 @@ class RunCard(ConfigFile):
         legacy: parameter that is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         sys_default: default used if the parameter is not in the card
-        
+        autodef: if True the fortran definition will be added automatically in run.inc
+                 If a path (Source/PDF/pdf.inc) the definition will be added within that file
+                 Default is False (does not add the definition)
+                 entry added in the run_card will automatically have this on True.
         options of **opts:
         - allowed: list of valid options. '*' means anything else should be allowed.
                  empty list means anything possible as well. 
@@ -2716,6 +2740,8 @@ class RunCard(ConfigFile):
             self.cuts_parameter[name] = cut
         if sys_default is not None:
             self.system_default[name] = sys_default
+        if autodef:
+            self.definition_path[autodef] = name
 
         
 
@@ -2739,9 +2765,9 @@ class RunCard(ConfigFile):
                 continue
             value, name = line
             name = name.lower().strip()
-            if name not in self and ('min' in name or 'max' in name):
-                #looks like an entry added by one user -> add it nicely
-                self.add_param(name, float(value), hidden=True, cut=True)
+            if name not in self:
+                #looks like an entry added by a user -> add it nicely
+                self.add_unknown_entry(name, value)
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
@@ -2753,6 +2779,40 @@ class RunCard(ConfigFile):
                         logger.warning(str(error))
                     else:
                         raise
+    def add_unknown_entry(self, name, value):
+        """function to add an entry to the run_card when the associated parameter does not exists.
+           This is based on the guess_entry_fromname for the various syntax providing input.
+           This then call add_param accordingly.
+
+           This function does not returns anything.  
+        """                
+        
+        vartype, name, opts = self.guess_entry_fromname(name, value)
+        # vartype is str, float, bool, int
+        # opts is a dictionary with options for add_param like {'cut':True}
+        # name can be strip of prefix/postfix that give type/options
+        for key in ['hidden', 'autodef']:
+            if key not in opts:
+                opts[key] = True
+
+        # first use a default value for the add_param to setup the code correctly
+        # and then set the value via string such that parser are use correctly
+        # this avoid to have to set a parser for add_param
+        default = {'int': 1,
+                   'float': 1.0,
+                   'str': value,
+                   'bool':True,
+                   'list': [],
+                   'dict': {}} # likely issue with missing __type__ here
+
+        # need to have an entry for the type.
+        if vartype == 'dict':
+            default_value = re.findall(':(.*?)[,}]', value)
+            default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
+
+        self.add_param(name, default[vartype], **opts)
+        self[name] = value
+
 
     def valid_line(self, line, tmp):
         template_options = tmp
@@ -2991,6 +3051,80 @@ class RunCard(ConfigFile):
             return 'dressed'
         else:
             return value
+
+
+
+    def guess_entry_fromname(self, name, value):
+        """
+        return (vartype, name, value, options)
+          - vartype: type of the variable
+          - name: name of the variable (stripped from metadata)
+          - options: additional options for the add_param
+        rules: 
+         - if name starts with str_, int_, float_, bool_, list_, dict_ then 
+            - vartype is set accordingly
+            - name is strip accordingly
+         - otherwise guessed from value (which is string)
+         - if name contains min/max
+            - vartype is set to float
+            - options has an added {'cut':True}
+         - suffixes like <cut=True> 
+            - will be removed from named
+            - will be added in options (for add_param) as {'cut':True}
+              see add_param documentation for the list of supported options
+
+        """
+        # local function 
+        def update_typelist(value, name,  opts):
+            """convert a string to a list and update opts to keep track of the type """
+            value = value.strip()
+            listtype = opts.get("typelist", None)
+            if listtype:
+                return name, opts
+            if value.startswith(("[","(")):
+                oneval = value[1:-1].split(",",1)[0]
+                listtype, name, _ = self.guess_entry_fromname(name, oneval)
+            opts['typelist'] = eval(listtype)
+            return  name, opts
+
+        #handle metadata
+        opts = {}
+        forced_opts = []
+        for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+            forced_opts.append(key)
+            if val in ['True', 'False']:
+                opts[key] = eval(val)
+            else:
+                opts[key] = val
+            name = name.replace("<%s=%s>" %(key,val), '')
+
+        # get vartype 
+        # first check that name does not force it
+        supported_type = ["str", "float", "int", "bool", "list", "dict"]
+        if "_" in name and name.split("_")[0].lower() in supported_type:
+            vartype, name = name.split("_",1)
+            vartype = vartype.lower()
+        else:
+            # try to guess from the value
+            vartype = ConfigFile.guess_type_from_value(value)
+        # update metadata/default for list/dict
+        if vartype == "list" and isinstance(value, str):
+            name, opts  = update_typelist(value, name, opts)
+        elif vartype == "dict":
+            if "autodef" not in forced_opts:
+                opts["autodef"] = False
+            if "include" not in forced_opts:
+                opts["include"] = False
+
+
+
+        #handle special case where min/max is in the name
+        if "min" in name or "max" in name:
+            vartype = "float"
+            value = float(value)
+            opts["cut"] = True
+
+        return vartype, name, opts
 
     @staticmethod
     def f77_formatting(value, formatv=None):
