@@ -1364,9 +1364,14 @@ class ConfigFile(dict):
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
             tmp = misc.timeout(ast.literal_eval, [value], default=None)
         if tmp is not None:
-            return str(tmp.__class__.__name__)
+            out = str(tmp.__class__.__name__)
         else:
-            return "str"
+            out =  "str"
+
+        if out in ["tuple", "set"]:
+           out = "list"
+
+        return out
 
 
     @staticmethod
@@ -2787,8 +2792,13 @@ class RunCard(ConfigFile):
            This then call add_param accordingly.
 
            This function does not returns anything.  
-        """                
-        
+        """        
+
+        if name == "bias_parameters" and not self.LO:
+            raise InvalidRunCard("Looks like you passed a LO run_card for a NLO run. Please correct")
+        elif name == "shower_scale_factor" and self.LO:
+            raise InvalidRunCard("Looks like you passed a NLO run_card for a LO run. Please correct")
+
         vartype, name, opts = self.guess_entry_fromname(name, value)
         # vartype is str, float, bool, int
         # opts is a dictionary with options for add_param like {'cut':True}
@@ -2805,11 +2815,14 @@ class RunCard(ConfigFile):
                    'str': value,
                    'bool':True,
                    'list': [],
+                   'tuple': [],
                    'dict': {}} # likely issue with missing __type__ here
 
         # need to have an entry for the type.
         if vartype == 'dict':
             default_value = re.findall(':(.*?)[,}]', value)
+            if len(default_value) == 0:
+                raise Exception("dictionary need to have at least one entry")
             default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
 
         self.add_param(name, default[vartype], **opts)
@@ -3086,7 +3099,11 @@ class RunCard(ConfigFile):
                 return name, opts
             if value.startswith(("[","(")):
                 oneval = value[1:-1].split(",",1)[0]
-                listtype, name, _ = self.guess_entry_fromname(name, oneval)
+            elif "," in value:
+                oneval = value.split(",",1)[0]
+            else:
+                oneval = value
+            listtype, name, _ = self.guess_entry_fromname(name, oneval)
             opts['typelist'] = eval(listtype)
             return  name, opts
 

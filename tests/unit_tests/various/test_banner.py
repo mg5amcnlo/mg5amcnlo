@@ -726,6 +726,10 @@ class TestRunCard(unittest.TestCase):
         expected = ("dict", "data", {'autodef': False, 'include': False})
         self.assertEqual(fct(*input), expected)
 
+        input = ("data", "1,2,3")
+        expected = ("list", "data", {'typelist': int})
+        self.assertEqual(fct(*input), expected)
+
     def test_add_unknown_entry(self):
         """check that one can added complex structure via unknown entry functionality with the smart detection.
         
@@ -843,6 +847,26 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("LOGICAL INCLUDE_PDF2", f.getvalue())
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
+
+    def test_autodef_nomissmatch(self):
+        """
+        check that the code detects LO/NLO cards missmatch and crash correctly in that case
+        """
+        
+        LO = bannermod.RunCardLO()
+        NLO = bannermod.RunCardNLO()
+        flo = StringIO.StringIO()
+        fnlo = StringIO.StringIO()
+        LO.write(flo)
+        NLO.write(fnlo)
+        loinput = flo.getvalue().split('\n')
+        nloinput = fnlo.getvalue().split('\n')
+        
+        # check that LO card  can not be used for NLO run
+        self.assertRaises(bannermod.InvalidRunCard, NLO.read, loinput)
+
+        # check that NLO card  can not be used for LO run    
+        self.assertRaises(bannermod.InvalidRunCard, LO.read, nloinput)
 
     def test_pdlabel_block(self):
         """ check that pdlabel handling is done correctly
