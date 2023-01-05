@@ -2610,6 +2610,7 @@ class RunCard(ConfigFile):
     allowed_lep_densities = {}    
     default_include_file = 'run_card.inc'
     default_autodef_file = 'run.inc'
+    donewarning = []
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -2824,6 +2825,16 @@ class RunCard(ConfigFile):
             if len(default_value) == 0:
                 raise Exception("dictionary need to have at least one entry")
             default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
+
+        if name not in RunCard.donewarning:
+            logger.warning("Found unexpected entry in run_card: \"%s\" with value \"%s\".\n"+\
+                "  The type was assigned to %s. \n"+\
+                "  The definition of that variable will %sbe automatically added to fortran file %s\n"+\
+                "  The value of that variable will %sbe passed to the fortran code via fortran file %s",\
+                name, value, vartype if vartype != "list" else "list of %s" %  opts.get('typelist').__name__, 
+                "" if opts.get('autodef', False) else "not", "" if  opts.get('autodef', False) in [True,False] else opts.get('autodef'),
+                "" if opts.get('include', True) else "not", "" if  opts.get('include', True) in [True,False] else opts.get('include'))
+            RunCard.donewarning.append(name)
 
         self.add_param(name, default[vartype], **opts)
         self[name] = value
@@ -3243,7 +3254,7 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
-        self.write_autodef(self, output_dir, output_file=None)
+        self.write_autodef(output_dir, output_file=None)
         
         for incname in self.includepath:
             if incname is True:
