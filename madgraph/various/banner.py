@@ -2603,6 +2603,8 @@ class RunCard(ConfigFile):
     blocks = []
     parameter_in_block = {}
     allowed_lep_densities = {}    
+    default_include_file = 'run_card.inc'
+    default_autodef_file = 'run.inc'
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -2741,7 +2743,7 @@ class RunCard(ConfigFile):
         if sys_default is not None:
             self.system_default[name] = sys_default
         if autodef:
-            self.definition_path[autodef] = name
+            self.definition_path[autodef].append(name)
 
         
 
@@ -3072,6 +3074,7 @@ class RunCard(ConfigFile):
             - will be removed from named
             - will be added in options (for add_param) as {'cut':True}
               see add_param documentation for the list of supported options
+         - if include is on False set autodef to False (i.e. enforce it False for future change)
 
         """
         # local function 
@@ -3116,7 +3119,8 @@ class RunCard(ConfigFile):
             if "include" not in forced_opts:
                 opts["include"] = False
 
-
+        if 'include' in opts and 'autodef' not in opts:
+            opts['autodef'] = opts['include']
 
         #handle special case where min/max is in the name
         if "min" in name or "max" in name:
@@ -3198,24 +3202,31 @@ class RunCard(ConfigFile):
         for block in self.blocks:
             block.check_validity(self)
                
-    default_include_file = 'run_card.inc'
+
 
     def update_system_parameter_for_include(self):
         """update hidden system only parameter for the correct writtin in the 
         include"""
         return
 
+    
+
     def write_include_file(self, output_dir, output_file=None):
         """Write the various include file in output_dir.
         The entry True of self.includepath will be written in run_card.inc
         The entry False will not be written anywhere
-        output_file allows testing by providing stream"""
+        output_file allows testing by providing stream.
+        This also call the function to add variable definition for the 
+        variable with autodef=True (handle by write_autodef function) 
+        """
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
         
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
+
+        self.write_autodef(self, output_dir, output_file=None)
         
         for incname in self.includepath:
             if incname is True:
@@ -3271,6 +3282,84 @@ class RunCard(ConfigFile):
                     fsock.writelines(line)
             if not output_file:
                 fsock.close()   
+
+    def write_autodef(self, output_dir, output_file=None):
+        """ Add the definition of variable to run.inc if the variable is set with autodef.
+            Other include file are possible to update but are more risky.
+            output_file allows testing by providing stream.
+        """
+
+        fortrantype = {'int': 'integer',
+                       'bool': 'logical',
+                       'float': 'double precision',
+                       'str': 'character'}
+
+        for incname in self.definition_path:
+            if incname is True:
+                pathinc = self.default_autodef_file
+            elif incname is False:
+                continue
+            else:
+                pathinc = incname
+
+            if output_file:
+                fsock = output_file
+                input = fsock.getvalue()
+                
+            else:
+                input = open(pjoin(output_dir,pathinc),'r').read()
+                # do not define fsock here since we might not need to overwrite it
+
+            # first get the name/type of line that are already added
+            re_pat = r"^\s+(.*)\s+([A-Za-z_]\w*)(\(?[\d:]*\)?) ! added by autodef\s*$"
+            previous = re.findall(re_pat, input, re.M)
+            # now check which one needed to be added (and remove those identicaly defined)
+            to_add = []
+            for key in self.definition_path[incname]:          
+                curr_type = self[key].__class__.__name__
+                length = ""
+                if curr_type in [list, "list"]:
+                    curr_type = self.list_parameter[key].__name__
+                    length = "(0:%i)" % len(self[key])
+                elif curr_type == "str":
+                    length = "(0:100)"
+                curr_type = curr_type
+
+                curr_type = fortrantype[curr_type].upper()
+                fname = key
+                if key in self.fortran_name:
+                    fname = self.fortran_name[key]
+                fname = fname.upper()
+
+                if (curr_type, fname, length) in previous:
+                    previous.remove((curr_type, fname, length))
+                    continue
+                else:
+                    to_add.append((curr_type, fname, length))
+            # now we have in previous the line to remove
+            # .        and in to_add the lines to add
+            if not previous and not to_add:
+                continue
+            if not output_file:
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))
+            else:
+                #reset stream
+                fsock.truncate(0)
+                fsock.seek(0)
+
+            # remove outdated lines            
+            lines = input.split('\n')
+            if previous:
+                out = [line for line in lines if not re.search(re_pat, line, re.M)  or re.search(re_pat, line, re.M).groups() not in previous]
+            else:
+                out = lines
+            # add new lines from to_add
+            for data in to_add:
+                out.append("      %s %s%s ! added by autodef" % data)
+            
+            fsock.write('\n'.join(out))
+            if not output_file:
+                fsock.close() 
 
     @staticmethod
     def get_idbmup(lpp):

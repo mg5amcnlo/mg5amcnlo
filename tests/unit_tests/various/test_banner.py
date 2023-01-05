@@ -710,7 +710,8 @@ class TestRunCard(unittest.TestCase):
         self.assertEqual(fct(*input), expected)
 
         input = ("test_data<cut=True><include=False><fortran_name=input_2>", "[1,2,3,4,5]")
-        expected = ("list", "test_data",  {'typelist': int, 'cut':True, 'include':False , 'fortran_name':'input_2'})
+        expected = ("list", "test_data",  
+        {'typelist': int, 'cut':True, 'include':False , 'fortran_name':'input_2', 'autodef':False})
         self.assertEqual(fct(*input), expected)
 
         input = ("list_float_data", "[1,2,3,4,5]")
@@ -752,7 +753,7 @@ class TestRunCard(unittest.TestCase):
         name = "test_data"
         self.assertEqual(run_card[name], [1,2,3,4,5]) # this check that list are correctly formatted
         self.assertIn(name.lower(), run_card.hidden_param)
-        self.assertIn(name.lower(), run_card.definition_path[True])
+        self.assertNotIn(name.lower(), run_card.definition_path[True]) # since include is False
         # check that metadata was passed correctly
         self.assertNotIn(name, run_card.includepath[True])
         self.assertIn(name, run_card.cuts_parameter)
@@ -773,6 +774,31 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn(name.lower(), run_card.definition_path[True]) 
         self.assertNotIn(name, run_card.includepath[True])
 
+        # check that one can overwritte hidden 
+        input = ("max_data<hidden=False>", "3.0")
+        fct(*input)
+        name = "max_data"
+        self.assertEqual(run_card[name], 3.0)
+        self.assertNotIn(name.lower(), run_card.hidden_param)
+
+        # check that one can overwritte autodef
+        input = ("max_data2<autodef=False>", "3")
+        fct(*input)
+        name = "max_data2"
+        self.assertEqual(run_card[name], 3.0)
+        self.assertNotIn(name.lower(), run_card.definition_path[True])
+        self.assertIn(name.lower(), run_card.hidden_param)
+
+        # check that one can overwritte include to False but autodef to True
+        # check that one can overwritte autodef
+        input = ("data3<autodef=True><include=False>", "True")
+        fct(*input)
+        name = "data3"
+        self.assertEqual(run_card[name], 1.0)
+        self.assertIn(name.lower(), run_card.definition_path[True])
+        self.assertIn(name.lower(), run_card.hidden_param)
+        self.assertNotIn(name, run_card.includepath[True])
+
     def test_add_definition(self):
         """ check the functionality that add an entry to an include file.
             This should also check that a warning is raised when this functionality is used.
@@ -780,7 +806,35 @@ class TestRunCard(unittest.TestCase):
         """
 
 
-        raise Exception("Not Implemented")
+        run_card = bannermod.RunCardLO()
+        run_card.add_unknown_entry("STR_INCLUDE_PDF", "True ")
+        f = StringIO.StringIO()
+        f.write("c .   this is a comment to test feature of missing end line ")
+        run_card.write_autodef(None,output_file=f)
+        self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+
+        # adding a second in place
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.write_autodef(None,output_file=f)
+        self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+
+        # reset, keep one , remove one and add a new one (keep same stream)
+        run_card = bannermod.RunCardLO()
+        run_card.add_unknown_entry("BOOL_INCLUDE_PDF2", "True ")
+        run_card.add_unknown_entry("test_list", "[1,2,3,4,5]")
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+
+        #change list size
+        run_card["test_list"] = [1,2,3,4,5,6,7]
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+        self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
 
 
 
