@@ -3294,7 +3294,12 @@ class RunCard(ConfigFile):
                        'float': 'double precision',
                        'str': 'character'}
 
-        for incname in self.definition_path:
+        filetocheck = dict(self.definition_path)
+        if True not in self.definition_path:
+            filetocheck[True] = []
+            
+
+        for incname in filetocheck:
             if incname is True:
                 pathinc = self.default_autodef_file
             elif incname is False:
@@ -3315,7 +3320,7 @@ class RunCard(ConfigFile):
             previous = re.findall(re_pat, input, re.M)
             # now check which one needed to be added (and remove those identicaly defined)
             to_add = []
-            for key in self.definition_path[incname]:          
+            for key in filetocheck[incname]:          
                 curr_type = self[key].__class__.__name__
                 length = ""
                 if curr_type in [list, "list"]:

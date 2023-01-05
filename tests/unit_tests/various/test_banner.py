@@ -836,7 +836,13 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
 
-
+        #check that cleaning is occuring correctly 
+        run_card = bannermod.RunCardLO()
+        run_card.write_autodef(None,output_file=f)
+        self.assertNotIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
+        self.assertNotIn("LOGICAL INCLUDE_PDF2", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
+        self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
 
     def test_pdlabel_block(self):
         """ check that pdlabel handling is done correctly
