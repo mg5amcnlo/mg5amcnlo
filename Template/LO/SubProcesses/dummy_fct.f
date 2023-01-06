@@ -96,3 +96,16 @@ c
       return
       end
       
+
+      double precision user_dynamical_scale(P)
+c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 to use it
+      implicit none
+      include 'nexternal.inc'
+      double precision P(0:3, nexternal)
+      stop 1
+      user_dynamical_scale = 0
+      return
+      end
+
+      
+      

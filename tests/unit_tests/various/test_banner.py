@@ -868,6 +868,99 @@ class TestRunCard(unittest.TestCase):
         # check that NLO card  can not be used for LO run    
         self.assertRaises(bannermod.InvalidRunCard, LO.read, nloinput)
 
+
+    def test_custom_fcts(self):
+        """check that the functionality to replace user_define function is 
+        working as expected"""
+
+        custom_contents1 = """
+      subroutine get_dummy_x1(sjac, X1, R, pbeam1, pbeam2, stot, shat)
+      implicit none
+      include 'maxparticles.inc'
+      include 'run.inc'
+c      include 'genps.inc'
+      double precision sjac ! jacobian. should be updated not reinit
+      double precision X1   ! bjorken X. output
+      double precision R    ! random value after grid transfrormation. between 0 and 1
+      double precision pbeam1(0:3) ! momentum of the first beam (input and/or output)
+      double precision pbeam2(0:3) ! momentum of the second beam (input and/or output)
+      double precision stot        ! total energy  (input and /or output)
+      double precision shat        ! output
+
+c     global variable to set (or not)
+      double precision cm_rap
+      logical set_cm_rap
+      common/to_cm_rap/set_cm_rap,cm_rap
+
+      set_cm_rap=.true. ! then cm_rap will be set as .5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+                         ! ebeam(1) and ebeam(2) are defined here thanks to 'run.inc'
+      shat = x1**2*ebeam(1)*ebeam(2)
+      CHECK1
+      return
+      end
+     """   
+        custom_contents2 = """
+     logical  function dummy_boostframe()
+      implicit none
+c
+c
+      dummy_boostframe = .true.
+      CHECK2
+      return
+      end
+        """
+        custom_contents = custom_contents1 + custom_contents2
+
+        # prepare simplify setup
+        os.mkdir(pjoin(self.tmpdir,'SubProcesses'))
+        import madgraph.iolibs.files as files
+        files.cp(pjoin(MG5DIR,'Template','LO','SubProcesses','dummy_fct.f'), pjoin(self.tmpdir,'SubProcesses'))
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents)
+        
+        #launch the function
+        LO = bannermod.RunCardLO()
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+        
+        #test the functionality
+        #check that .orig is indeed created
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+
+        #check that new function have been written
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECK1', new_text)
+        self.assertIn('CHECK2', new_text)
+        self.assertIn("DUMMY_CUTS=.TRUE.", new_text)
+        self.assertIn("SHAT = X(1)*X(2)*EBEAM(1)*EBEAM(2)", new_text)
+        self.assertIn("LOGICAL  FUNCTION DUMMY_BOOSTFRAME()", new_text)
+
+        # launch the function with only one editted
+        open(pjoin(self.tmpdir, 'custom'),'w').write(custom_contents1)
+        LO.edit_dummy_fct_from_file([pjoin(self.tmpdir, 'custom')], self.tmpdir)
+
+        #test the functionality
+        #check that .orig is still created
+        self.assertTrue(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        orig = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')).read()
+        self.assertNotIn('CHECK1', orig)
+        self.assertNotIn('CHECK2', orig)
+
+        #check that new function have been written
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertIn('CHECK1', new_text)
+        self.assertNotIn('CHECK2', new_text)
+        self.assertIn("DUMMY_CUTS=.TRUE.", new_text)
+        self.assertIn("SHAT = X(1)*X(2)*EBEAM(1)*EBEAM(2)", new_text)
+        self.assertIn("LOGICAL  FUNCTION DUMMY_BOOSTFRAME()", new_text)
+
+        # check that cleaning works
+        LO.edit_dummy_fct_from_file([], self.tmpdir)
+        self.assertFalse(os.path.exists(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f.orig')))
+        new_text = open(pjoin(self.tmpdir,'SubProcesses','dummy_fct.f')).read()
+        self.assertEqual(orig, new_text)
+        self.assertNotIn('CHECK1', new_text)
+        self.assertNotIn('CHECK2', new_text)
+
+
     def test_pdlabel_block(self):
         """ check that pdlabel handling is done correctly
             this include that check_validity works as expected for such parameter too """

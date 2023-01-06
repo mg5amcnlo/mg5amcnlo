@@ -3078,6 +3078,69 @@ class RunCard(ConfigFile):
         else:
             return value
 
+    def edit_dummy_fct_from_file(self, filelist, outdir):
+        """
+        filelist is a list of input files (given by the user)
+        containing a series of function to be placed in replacement of standard
+        (typically dummy) functions of the code.
+        This use LO/NLO class attribute that defines which function name need to 
+        be placed in which file. 
+
+        First time this is used, a backup of the original file is done in order to
+        recover if the user remove some of those files.   
+
+        The function present in the file are determined automatically via regular expression.
+        and only that function is replaced in the associated file.
+        """
+
+        if outdir is None:
+            #to let some unnitest to go trough
+            return
+
+        # step 1: extract all function name and function defintion
+        # structure is {filetomod:[[function_names], [function_defs]]}
+        with misc.TMP_directory() as tmpdir:
+            to_mod = {}
+            for path in filelist:
+                tmp = pjoin(tmpdir, os.path.basename(path))
+                text = open(path,'r').read()
+                #misc.sprint(text)
+                f77_type = ['real*8', 'integer', 'double precision', 'logical']
+                pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                                % {'type':'|'.join(f77_type)}, re.I+re.M)
+                for fct in pattern.findall(text):
+                    fsock = file_writers.FortranWriter(tmp,'w')
+                    function_text = fsock.remove_routine(text, fct)
+                    fsock.close()
+                    test = open(tmp,'r').read()
+                    if fct not in self.dummy_fct_file:
+                        raise InvalidRunCard("function %s is not designed for overwritting")
+                    writein = self.dummy_fct_file[fct]
+                    if writein not in to_mod:
+                        to_mod[writein]=[[fct], [function_text]]
+                    else:
+                        to_mod[writein][0].append(fct)
+                        to_mod[writein][1].append(function_text)
+
+        # step 2: write the new files
+        for path in to_mod:
+            if not os.path.exists(pjoin(outdir, path+'.orig')):
+                files.cp(pjoin(outdir, path), pjoin(outdir, path+'.orig'))
+            fsock = file_writers.FortranWriter(pjoin(outdir, path),'w')
+            starttext = open(pjoin(outdir, path+'.orig')).read()
+            fsock.remove_routine(starttext, to_mod[path][0])
+            for text in to_mod[path][1]:
+                fsock.writelines(text)
+            fsock.close()
+
+        # step 3: if some previously edited file are not in to_mod:
+        # .       remove the orginal file by the .orig and remove the .orig
+        all_files = set(self.dummy_fct_file.values())
+        for path in all_files:
+            if path not in to_mod and os.path.exists(pjoin(outdir,path+'.orig')):
+                files.mv(pjoin(outdir,path+'.orig'), pjoin(outdir, path))
+
+
 
 
     def guess_entry_fromname(self, name, value):
@@ -3758,6 +3821,12 @@ class RunCardLO(RunCard):
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
               pdlabel_block, fixedfacscale, running_block]
+
+    dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
+                      "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
+                      "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
+                      "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f")}
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -3827,6 +3896,7 @@ class RunCardLO(RunCard):
         self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True, hidden=True)
+        self.add_param("custom_fcts",[],typelist="str", include=False,           comment="list of files containing function that overwritte dummy function of the code (like adding cuts/...)")
         #format output / boost
         self.add_param("lhe_version", 3.0, hidden=True)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
@@ -4615,6 +4685,21 @@ class RunCardLO(RunCard):
                     for k1,k2 in ['bj', 'bl', 'al', 'jl', 'ab', 'aj']:
                         if self.cut_class.get(k1) and self.cut_class.get(k2):
                             hid_lines[k1+k2] = True
+
+        if not MADEVENT:
+            if isinstance(output_file, str):
+                MEDIR = os.path.dirname(os.path.dirname(output_file))
+            else:
+                #use for unittest
+                if 'MEDIR' in opt:
+                    MEDIR = opt['MEDIR']
+                    del opt['MEDIR']
+                elif not self["custom_fcts"]:
+                    MEDIR=None
+                else:
+                    raise Exception("no MEDIR directory defined but has to customize directory...") 
+        
+        self.edit_dummy_fct_from_file(self["custom_fcts"], MEDIR)
 
         super(RunCardLO, self).write(output_file, template=template,
                                     python_template=python_template, 
