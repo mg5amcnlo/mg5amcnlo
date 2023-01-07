@@ -61,7 +61,7 @@ c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
       logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
      $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
-
+      logical dummy_cuts
       passcuts_user=.true. ! event is okay; otherwise it is changed
 
 C***************************************************************
@@ -120,7 +120,11 @@ C***************************************************************
 C PUT HERE YOUR USER-DEFINED CUTS
 C***************************************************************
 C***************************************************************
-C
+C     advise way to implement user-defined cuts:
+C     define the function dummy_cuts in a file
+C      (template in SubProcesses/dummy_fct.f)
+C     then in the run_card set the custom_fct variable to [PATH_TO_THE_FILE_CONTAINING_THE_FCT]      
+      passcuts_user = dummy_cuts(P,istatus,ipdg)
 c$$$C EXAMPLE: cut on top quark pT
 c$$$C          Note that PDG specific cut are more optimised than simple user cut
 c$$$      do i=1,nexternal   ! loop over all external particles

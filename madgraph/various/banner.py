@@ -1178,7 +1178,7 @@ class ConfigFile(dict):
                     return self.warn(text, 'warning', raiseerror)                    
                 elif dropped:               
                     text = "some value for entry '%s' are not valid. Invalid items are: '%s'.\n" \
-                               % (value, name, dropped)
+                               % (name, dropped)
                     text += "value will be set to %s" % new_values
                     text += "allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])        
                     self.warn(text, 'warning')
@@ -2867,7 +2867,7 @@ class RunCard(ConfigFile):
                     
                 
     def write(self, output_file, template=None, python_template=False,
-                    write_hidden=False, template_options=None):
+                    write_hidden=False, template_options=None, **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -3038,6 +3038,21 @@ class RunCard(ConfigFile):
             fsock.close()
         else:
             output_file.write(text)
+
+        # check/fix status of customised functions
+        if not MADEVENT:
+            if isinstance(output_file, str):
+                MEDIR = os.path.dirname(os.path.dirname(output_file))
+            else:
+                #use for unittest
+                if 'MEDIR' in opt:
+                    MEDIR = opt['MEDIR']
+                    del opt['MEDIR']
+                elif not self["custom_fcts"]:
+                    MEDIR=None
+                else:
+                    raise Exception("no MEDIR directory defined but has to customize directory...") 
+        self.edit_dummy_fct_from_file(self["custom_fcts"], MEDIR)
 
 
     def get_default(self, name, default=None, log_level=None):
@@ -4717,21 +4732,6 @@ class RunCardLO(RunCard):
                         if self.cut_class.get(k1) and self.cut_class.get(k2):
                             hid_lines[k1+k2] = True
 
-        if not MADEVENT:
-            if isinstance(output_file, str):
-                MEDIR = os.path.dirname(os.path.dirname(output_file))
-            else:
-                #use for unittest
-                if 'MEDIR' in opt:
-                    MEDIR = opt['MEDIR']
-                    del opt['MEDIR']
-                elif not self["custom_fcts"]:
-                    MEDIR=None
-                else:
-                    raise Exception("no MEDIR directory defined but has to customize directory...") 
-        
-        self.edit_dummy_fct_from_file(self["custom_fcts"], MEDIR)
-
         super(RunCardLO, self).write(output_file, template=template,
                                     python_template=python_template, 
                                     template_options=hid_lines,
@@ -5193,6 +5193,10 @@ class RunCardNLO(RunCard):
     
     blocks = [running_block_nlo]
 
+    dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f")
+                      }
+                      
         
     def default_setup(self):
         """define the default value"""
@@ -5282,6 +5286,9 @@ class RunCardNLO(RunCard):
         self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
+        # customization
+        self.add_param("custom_fcts",[],typelist="str", include=False,           comment="list of files containing function that overwritte dummy function of the code (like adding cuts/...)")
+
         #internal variable related to FO_analyse_card
         self.add_param('FO_LHE_weight_ratio',1e-3, hidden=True, system=True)
         self.add_param('FO_LHE_postprocessing',['grouping','random'], 

@@ -84,7 +84,7 @@ $psoptim
 #*********************************************************************
  %(bias_module)s = bias_module  ! Bias type of bias, [None, ptj_bias, -custom_folder-]
  %(bias_parameters)s = bias_parameters ! Specifies the parameters of the module.
- %(custom_fcts)s = custom_fcts ! list of files containing custom functions to tune madevent
+ %(custom_fcts)s = custom_fcts ! List of files containing user hook function
 #
 #*******************************                                                 
 # Parton level cuts definition *
