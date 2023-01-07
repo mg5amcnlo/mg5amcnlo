@@ -3317,7 +3317,8 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
-        self.write_autodef(output_dir, output_file=None)
+        if output_dir:
+            self.write_autodef(output_dir, output_file=None)
         
         for incname in self.includepath:
             if incname is True:
@@ -3446,16 +3447,46 @@ class RunCard(ConfigFile):
             # remove outdated lines            
             lines = input.split('\n')
             if previous:
-                out = [line for line in lines if not re.search(re_pat, line, re.M)  or re.search(re_pat, line, re.M).groups() not in previous]
+                out = [line for line in lines if not re.search(re_pat, line, re.M)  or 
+                         re.search(re_pat, line, re.M).groups() not in previous]
             else:
                 out = lines
+
             # add new lines from to_add
             for data in to_add:
                 out.append("      %s %s%s ! added by autodef" % data)
+            # remove previous common block definition
+            if to_add or previous:
+                # remove previous definition of the commonblock
+                try:
+                    start = out.index('C START USER COMMON BLOCK')
+                except ValueError:
+                    pass
+                else:
+                    stop = out.index('C STOP USER COMMON BLOCK')
+                    out = out[:start]+ out[stop+1:]
+                #add new common-block
+                if self.definition_path[incname]: 
+                    out.append("C START USER COMMON BLOCK")
+                    if isinstance(pathinc , str):
+                        filename = os.path.basename(pathinc).split('.',1)[0]
+                    elif hasattr(pathinc , "name"):
+                        filename = os.path.basename(pathinc.name).split('.',1)[0]
+                    elif isinstance(pathinc , StringIO.StringIO):
+                        filename = 'iostring'
+                    else:
+                        misc.sprint(incname, pathinc )
+                    filename = filename.upper()
+                    out.append("        COMMON/USER_CUSTOM_%s/%s" %(filename,','.join( self.definition_path[incname])))
+                    out.append('C STOP USER COMMON BLOCK')
             
-            fsock.write('\n'.join(out))
             if not output_file:
+                fsock.writelines(out)
                 fsock.close() 
+            else:
+                # for iotest
+                out = ["%s\n" %l for l in out]
+                fsock.writelines(out)
 
     @staticmethod
     def get_idbmup(lpp):

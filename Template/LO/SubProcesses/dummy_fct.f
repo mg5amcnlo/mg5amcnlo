@@ -97,7 +97,7 @@ c
       end
       
 
-      double precision user_dynamical_scale(P)
+      double precision function user_dynamical_scale(P)
 c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 to use it
       implicit none
       include 'nexternal.inc'
