@@ -98,12 +98,16 @@ c
       
 
       double precision function user_dynamical_scale(P)
-c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 to use it
+c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 (or 10) to use it
       implicit none
       include 'nexternal.inc'
       double precision P(0:3, nexternal)
+c     Commmon to have access to all variable defined in the run_card      
+      include 'genps.inc'
+      include 'run.inc'
+      write(0,*) "dynamical scale set to 0  need to be defined via user_hook method"
       stop 1
-      user_dynamical_scale = 0
+c     fixed scale
       return
       end
 

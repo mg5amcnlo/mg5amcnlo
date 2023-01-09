@@ -1319,7 +1319,11 @@ class ConfigFile(dict):
         
         if allowed and allowed != ['*']:
             self.allowed_value[lower_name] = allowed
-            assert value in allowed or '*' in allowed
+            if lower_name in self.list_parameter:
+                for val in value:
+                    assert val in allowed or '*' in allowed
+            else:
+                assert value in allowed or '*' in allowed
         #elif isinstance(value, bool) and allowed != ['*']:
         #    self.allowed_value[name] = [True, False]
         
@@ -3922,8 +3926,8 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("mue_ref_fixed", 91.1880, hidden=True)
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n",
-                                                allowed=[-1,0,1,2,3,4])
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
+                                                allowed=[-1,0,1,2,3,4,10])
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
@@ -5234,7 +5238,8 @@ class RunCardNLO(RunCard):
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
         self.add_param('mue_ref_fixed', 91.118, hidden=True) 
-        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', 
+            allowed = [-2,-1,0,1,2,3,10],                                       comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2, '0' allows to use the user_hook definition (need to be defined via custom_fct entry) ")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
@@ -5399,7 +5404,7 @@ class RunCardNLO(RunCard):
         # make sure set have reweight_scale and dyn_scale_choice of length 1 when fixed scales:
         if self['fixed_ren_scale'] and self['fixed_fac_scale']:
             self['reweight_scale']=[self['reweight_scale'][0]]
-            self['dynamical_scale_choice']=[0]
+            self['dynamical_scale_choice']=[-2]
 
         # If there is only one reweight_pdf/reweight_scale, but
         # lhaid/dynamical_scale_choice are longer, expand the

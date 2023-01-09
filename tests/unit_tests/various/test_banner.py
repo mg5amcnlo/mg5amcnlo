@@ -174,6 +174,19 @@ class TestConfigFileCase(unittest.TestCase):
         #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
         #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
 
+        # check status with allowed (auto filtering) and correct check
+        self.config.add_param("list_a", [1], allowed=[0,1,2])
+        self.assertEqual(self.config['list_a'], [1])
+        self.config['list_a'] = "1 , 2"
+        self.assertEqual(self.config['list_a'],[1,2])
+        self.config['list_a'] = ["1"]
+        self.assertEqual(self.config['list_a'],[1])
+        self.config['list_a'] = "1,2,3"
+        self.assertEqual(self.config['list_a'],[1,2]) # dropping not valid entry
+        self.config['list_a'] = "3,4"
+        self.assertEqual(self.config['list_a'],[1,2]) #default is to keep previous value
+
+
     def test_handling_dict_of_values(self):
         """check that the read/write of a list of value works"""
         

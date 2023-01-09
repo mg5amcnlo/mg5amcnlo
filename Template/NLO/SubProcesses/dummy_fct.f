@@ -52,3 +52,24 @@ c$$$      enddo
 c
       return
       end
+
+      double precision function user_dynamical_scale(P)
+c     allow to define your own dynamical scale, need to set dynamical_scale_choice to 0 (or 10) to use it
+      implicit none
+      include 'nexternal.inc'
+      double precision P(0:3, nexternal)
+c This include file contains common blocks filled with the cuts defined
+c     in the run_card.dat (including custom set entry)
+      include 'run.inc'
+      
+      character*80 temp_scale_id
+      common/ctemp_scale_id/temp_scale_id
+
+c     default behavior: fixed scale (for retro compatibility)
+      user_dynamical_scale = muR_ref_fixed
+      temp_scale_id='fixed scale' ! use a meaningful string
+      return
+      end
+
+
+      
