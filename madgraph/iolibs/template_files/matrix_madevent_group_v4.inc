@@ -1,4 +1,4 @@
-SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, channel, IVEC, ANS, IHEL, ICOL)
+SUBROUTINE SMATRIX%(proc_id)s(P, RHEL, RCOL, iconfig, IVEC, ANS, IHEL, ICOL)
 C 
 %(info_lines)s
 C 
@@ -39,7 +39,7 @@ C
     REAL*8 P(0:3,NEXTERNAL),ANS
     double precision RHEL ! random number for selecting helicity
     double precision RCOL ! random number for selecting helicity
-    integer channel ! channel to keep for the multi-channel
+    integer iconfig ! channel to keep for the multi-channel
     integer ivec ! for using the correct coupling
 c
 c   output argument
@@ -248,7 +248,7 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
     ANS=ANS/DBLE(IDEN)
 
-    call select_color(rcol, jamp2, channel,%(proc_id)s,  icol)
+    call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol)
 
     END
 
