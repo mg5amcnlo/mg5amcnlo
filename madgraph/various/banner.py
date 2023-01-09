@@ -4110,7 +4110,7 @@ class RunCardLO(RunCard):
         self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
         self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
         self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
-        self.add_param('matrix_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -O3')        
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3')        
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -4706,6 +4706,12 @@ class RunCardLO(RunCard):
         model = proc_def[0][0].get('model')
         if model['running_elements']:
             self.display_block.append('RUNNING') 
+
+
+        # Read file input/default_run_card_lo.dat
+        # This has to be LAST !!
+        if os.path.exists(pjoin(MG5DIR,'input', 'default_run_card_lo.dat')):
+            self.read(pjoin(MG5DIR,'input', 'default_run_card_lo.dat'), consistency=False)
             
     def write(self, output_file, template=None, python_template=False,
               **opt):
@@ -5631,7 +5637,10 @@ class RunCardNLO(RunCard):
             self["jetradius"] = 1
             self["parton_shower"] = "PYTHIA8"
             
-    
+        # Read file input/default_run_card_nlo.dat
+        # This has to be LAST !!
+        if os.path.exists(pjoin(MG5DIR,'input', 'default_run_card_nlo.dat')):
+            self.read(pjoin(MG5DIR,'input', 'default_run_card_nlo.dat'), consistency=False)
     
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

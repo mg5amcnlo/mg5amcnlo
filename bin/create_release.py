@@ -206,6 +206,10 @@ if rev_nb:
 # 1. Copy the .mg5_configuration_default.txt to it's default path
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
             path.join(filepath, 'input','mg5_configuration.txt'))
+shutil.copy(path.join(filepath, 'input','.default_run_card_lo.dat'),
+            path.join(filepath, 'input','default_run_card_lo.dat'))
+shutil.copy(path.join(filepath, 'input','.default_run_card_nlo.dat'),
+            path.join(filepath, 'input','default_run_card_nlo.dat'))
 shutil.copy(path.join(filepath, 'input','proc_card_default.dat'), 
             path.join(filepath, 'proc_card.dat'))
 

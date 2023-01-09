@@ -7185,6 +7185,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         if not os.path.exists(config_path):
             files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'), config_path)
+        if not os.path.exists(pjoin(MG5DIR,'input','default_run_card_lo.dat')) and madgraph.ReadWrite:
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_lo.dat'), pjoin(MG5DIR,'input','default_run_card_lo.dat'))
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_nlo.dat'), pjoin(MG5DIR,'input','default_run_card_nlo.dat'))
+
         config_file = open(config_path)
 
         # read the file and extract information
