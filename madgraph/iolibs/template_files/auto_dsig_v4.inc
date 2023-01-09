@@ -89,6 +89,7 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
+      INTEGER CHANNEL
 C  
 C DATA
 C  
@@ -296,7 +297,7 @@ c     local
 c
 	   double precision P1(0:3, nexternal)
 	   integer ivec
-
+      INTEGER CHANNEL
 C  
 C DATA
 C  
@@ -344,7 +345,9 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO
-   call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
+
+         channel = %(get_channel)s
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
 
 	 DO IVEC=1,NB_PAGE
 	 DSIGUU = ALL_OUT(IVEC)
