@@ -400,18 +400,18 @@ C       Call UNWGT to unweight and store events
      end
 
 ## if(vectorize_code) {
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out , selected_hel, selected_col)
-c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col)
+c    ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c    input:
-c      p_multi: a list of momenta (nb of momenta nb_page)
-c      hel_rand: a list of random number (will be used to pick helicity)
-c.     col_rand: a list of random number (will be used to pick leading color)
-c      ICONFIG: channel of integration selected
-c      out: list of amplitude square (times multi-channel factor)
-c      selected_hel: list of selected helicity -> not used in practise. 
-c      jamp2_multi: return the list of jamp2 -> need to be changed to follow helicity setup
-c cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c     USE OMP_LIB comment openmp port for the moment
+c    p_multi: a list of momenta (nb of momenta nb_page)
+c    hel_rand: a list of random numbers (to pick helicity)
+c    col_rand: a list of random numbers (to pick leading color)
+c    channel: channel of integration selected
+c    out: list of amplitude square (times multi-channel factor)
+c    selected_hel: list of selected helicity -> not used in practise 
+c    jamp2_multi: return the list of jamp2 -> need to be changed to follow helicity setup
+c    ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c    USE OMP_LIB comment openmp port for the moment
      implicit none
 
      include 'nexternal.inc'
