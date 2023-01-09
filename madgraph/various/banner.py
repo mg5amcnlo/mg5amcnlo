@@ -5204,7 +5204,8 @@ class RunCardNLO(RunCard):
     blocks = [running_block_nlo]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
-                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f")
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "bias_weight_function": pjoin("SubProcesses","dummy_fct.f")
                       }
                       
         
