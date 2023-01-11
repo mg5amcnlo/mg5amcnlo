@@ -5393,7 +5393,7 @@ class MadLoopParam(ConfigFile):
             
         
         
-class eMELA_info(dict): 
+class eMELA_info(ConfigFile): 
     """ a class for eMELA (LHAPDF-like) info files
     """
     path = ''
@@ -5402,12 +5402,9 @@ class eMELA_info(dict):
         """initialise from finput.
         me_dir is stored to update the cards
         """
-
         self.me_dir = me_dir
-        if isinstance(finput, dict):
-            super(eMELA_info, self).__init__(finput)
-        else:
-            self.read(finput)
+        super(eMELA_info, self).__init__(finput)
+
 
     def read(self, finput):
         if isinstance(finput, file): 
@@ -5426,6 +5423,15 @@ class eMELA_info(dict):
             except (NameError, SyntaxError): 
                 self[k.strip()] = v
 
+    def default_setup(self):
+        self.add_param('eMELA_ActiveFlavoursAlpha', [3,2,3], typelist=int)
+        self.add_param('eMELA_Walpha', True)
+        self.add_param('eMELA_RenormalisationSchemeInt', 0)
+        self.add_param('eMELA_AlphaQref', 91.188)
+        self.add_param('eMELA_PerturbativeOrder', 1)
+        self.add_param('eMELA_LEGACYLLPDF', -1)
+        self.add_param('eMELA_FactorisationSchemeInt', 1)
+        self.add_param('beamspectrum_type', '')
 
     def update_epdf_emela_variables(self, banner, uvscheme):
         """updates the variables of the cards according to those
@@ -5489,15 +5495,6 @@ class eMELA_info(dict):
             if sqrts != qref:
                 logger.warning('Alpha in PDFs has reference scale != sqrts: %e, %e' \
                                 % ( qref, sqrts))
-
-        # reference value of alpha
-        #if uvscheme_pdf == 0:
-        #    aref = alpharun
-        #else:
-        #    aref = self['eMELA_AlphaRef']
-        #if uvscheme != 2:
-        #    self.log_and_update(banner, 'param_card', ['sminputs',1], 1/aref)
-        #else:
 
         # LL / NLL PDF (0/1)
         pdforder = self['eMELA_PerturbativeOrder']
