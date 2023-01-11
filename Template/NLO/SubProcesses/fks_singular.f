@@ -85,7 +85,6 @@ C in the LO cross section
       logical include_6to5_cnt 
       data include_6to5_cnt /.false./ 
 
-CMZMZ REMEMBER!!!!
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -1385,7 +1384,6 @@ C or when not doing event projection
 c use the Born computed with those as the mapping.
       enhance_real=1.d0
       if ((granny_is_res .or. .not.use_evpr).and. imode.eq.2) then
-      !!if (granny_is_res .and. imode.eq.2) then
          if (granny_is_res) p_born_used(:,:) = p_born_ev(:,:) 
          if (.not.use_evpr) p_born_used(:,:) = p_born_norad(:,:) 
          if (p_born_ev(0,1).gt.0d0) then
