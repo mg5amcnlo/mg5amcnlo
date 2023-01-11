@@ -5500,25 +5500,6 @@ RESTART = %(mint_mode)s
                 self.check_tests(test, this_dir)
 
 
-    def compile_and_run_printalpha(self):
-        this_dir = os.path.join(self.me_dir, 'SubProcesses')
-
-        input = pjoin(this_dir, 'printalpha.in')
-        infile = open(input, 'w')
-        infile.write('%d %e\n' % (self.run_card['lhaid'][0], self.run_card['ebeam1'] + self.run_card['ebeam2']))
-        infile.close()
-
-        misc.compile(['printalpha'], cwd = this_dir, job_specs = False)
-        misc.call(['./printalpha' ], cwd = this_dir, 
-                    stdin = open(input),
-                    stdout=open(pjoin(this_dir, 'printalpha.log'), 'w'),
-                    close_fds=True)
-
-        output = open(pjoin(this_dir, 'printalpha.log')).read()
-        return float(output.split('ALPHAVALUE')[1])
-
-
-
     def donothing(*args):
         pass
 
