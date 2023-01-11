@@ -5292,6 +5292,10 @@ RESTART = %(mint_mode)s
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
 
             elif self.run_card['pdlabel'].startswith('emela'):
+                logger.warning('For informations on the simulation of leptonic collisions at NLO accuracy')
+                logger.warning('please refer to arXiv:2207.03265 and to the FAQ')
+                logger.warning('https://answers.launchpad.net/mg5amcnlo/+faq/3324')
+
                 # this is if the PDFs from ePDF/eMELA are employed
                 self.make_opts_var['epdf'] = self.options['eMELA']
                 self.update_make_opts()
