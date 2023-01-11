@@ -5879,7 +5879,9 @@ tar -czf split_$1.tar.gz split_$1
         # Compile
         for name in [ 'all']:#, '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
-        
+
+        force_subproc_clean = False
+
         bias_name = os.path.basename(self.run_card['bias_module'])
         if bias_name.lower()=='none':
             bias_name = 'dummy'
@@ -5894,9 +5896,11 @@ tar -czf split_$1.tar.gz split_$1
         if self.proc_characteristics['bias_module']!=bias_name and \
              os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
                 os.remove(pjoin(self.me_dir, 'lib','libbias.a'))
+                force_subproc_clean = True
+
             
         # Finally compile the bias module as well
-        if self.run_card['bias_module']!='dummy':
+        if self.run_card['bias_module'] not in ['dummy',None]:
             logger.debug("Compiling the bias module '%s'"%bias_name)
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
@@ -5911,13 +5915,15 @@ tar -czf split_$1.tar.gz split_$1
         self.proc_characteristics['bias_module']=bias_name
         # Update the proc_characterstics file
         self.proc_characteristics.write(
-                   pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
-        # Make sure that madevent will be recompiled
-        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                             'subproc.mg'))]
-        for nb_proc,subdir in enumerate(subproc):
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
-            self.compile(['clean'], cwd=Pdir)
+                   pjoin(self.me_dir,'SubProcesses','proc_characteristics'))
+
+        if force_subproc_clean:
+            # Make sure that madevent will be recompiled
+            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                'subproc.mg'))]
+            for nb_proc,subdir in enumerate(subproc):
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+                self.compile(['clean'], cwd=Pdir)
 
         #see when the last file was modified
         time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),

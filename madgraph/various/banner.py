@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import ast
 import collections
 import copy
+import filecmp
 import logging
 import numbers
 import os
@@ -47,6 +48,7 @@ except ImportError:
     import internal.misc as misc
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
+    MG5DIR = None
 else:
     MADEVENT = False
     import madgraph.various.misc as misc
@@ -1382,6 +1384,10 @@ class ConfigFile(dict):
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
+        if isinstance(targettype, str):
+            if targettype in ['str', 'int', 'float', 'bool']:
+                targettype = eval(targettype)
+
         if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
@@ -2754,8 +2760,7 @@ class RunCard(ConfigFile):
             self.system_default[name] = sys_default
         if autodef:
             self.definition_path[autodef].append(name)
-
-        
+            self.user_set.add(name)
 
     def read(self, finput, consistency=True):
         """Read the input file, this can be a path to a file, 
@@ -3043,21 +3048,6 @@ class RunCard(ConfigFile):
         else:
             output_file.write(text)
 
-        # check/fix status of customised functions
-        if not MADEVENT:
-            if isinstance(output_file, str):
-                MEDIR = os.path.dirname(os.path.dirname(output_file))
-            else:
-                #use for unittest
-                if 'MEDIR' in opt:
-                    MEDIR = opt['MEDIR']
-                    del opt['MEDIR']
-                elif not self["custom_fcts"]:
-                    MEDIR=None
-                else:
-                    raise Exception("no MEDIR directory defined but has to customize directory...") 
-        self.edit_dummy_fct_from_file(self["custom_fcts"], MEDIR)
-
 
     def get_default(self, name, default=None, log_level=None):
         """return self[name] if exist otherwise default. log control if we 
@@ -3145,12 +3135,18 @@ class RunCard(ConfigFile):
         for path in to_mod:
             if not os.path.exists(pjoin(outdir, path+'.orig')):
                 files.cp(pjoin(outdir, path), pjoin(outdir, path+'.orig'))
-            fsock = file_writers.FortranWriter(pjoin(outdir, path),'w')
+            #avoid to systematically rewrite the file. -> write in tmp place
+            fsock = file_writers.FortranWriter(pjoin(outdir, path+'.tmp'),'w')
             starttext = open(pjoin(outdir, path+'.orig')).read()
             fsock.remove_routine(starttext, to_mod[path][0])
             for text in to_mod[path][1]:
                 fsock.writelines(text)
             fsock.close()
+            if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
+                files.mv(pjoin(outdir, path+'.tmp'), pjoin(outdir, path))
+            else:
+                os.remove(pjoin(outdir, path+'.tmp'))
+
 
         # step 3: if some previously edited file are not in to_mod:
         # .       remove the orginal file by the .orig and remove the .orig
@@ -3338,6 +3334,8 @@ class RunCard(ConfigFile):
 
         if output_dir:
             self.write_autodef(output_dir, output_file=None)
+            # check/fix status of customised functions
+            self.edit_dummy_fct_from_file(self["custom_fcts"], os.path.dirname(output_dir))
         
         for incname in self.includepath:
             if incname is True:
@@ -3350,7 +3348,7 @@ class RunCard(ConfigFile):
             if output_file:
                 fsock = output_file
             else:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))  
             for key in self.includepath[incname]:                
                 #define the fortran name
                 if key in self.fortran_name:
@@ -3392,7 +3390,13 @@ class RunCard(ConfigFile):
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
             if not output_file:
-                fsock.close()   
+                fsock.close()
+                path = pjoin(output_dir,pathinc)
+                if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
+                    files.mv(path+'.tmp', path)
+                else:
+                    os.remove(path+'.tmp')
+
 
     def write_autodef(self, output_dir, output_file=None):
         """ Add the definition of variable to run.inc if the variable is set with autodef.
@@ -3427,7 +3431,7 @@ class RunCard(ConfigFile):
                 # do not define fsock here since we might not need to overwrite it
 
             # first get the name/type of line that are already added
-            re_pat = r"^\s+(.*)\s+([A-Za-z_]\w*)(\(?[\d:]*\)?) ! added by autodef\s*$"
+            re_pat = r"^\s+(.*)\s+([A-Za-z_]\w*)(\(?[\d:]*\)?)\s*!\s*added by autodef\s*$"
             previous = re.findall(re_pat, input, re.M)
             # now check which one needed to be added (and remove those identicaly defined)
             to_add = []
@@ -3457,7 +3461,7 @@ class RunCard(ConfigFile):
             if not previous and not to_add:
                 continue
             if not output_file:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc),'w')
             else:
                 #reset stream
                 fsock.truncate(0)
@@ -3877,6 +3881,9 @@ class RunCardLO(RunCard):
                       "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
                       "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f")}
+    
+    if MG5DIR:
+        default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -4710,8 +4717,8 @@ class RunCardLO(RunCard):
 
         # Read file input/default_run_card_lo.dat
         # This has to be LAST !!
-        if os.path.exists(pjoin(MG5DIR,'input', 'default_run_card_lo.dat')):
-            self.read(pjoin(MG5DIR,'input', 'default_run_card_lo.dat'), consistency=False)
+        if os.path.exists(self.default_run_card):
+            self.read(self.default_run_card, consistency=False)
             
     def write(self, output_file, template=None, python_template=False,
               **opt):
@@ -5207,6 +5214,9 @@ class RunCardNLO(RunCard):
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
                       "bias_weight_function": pjoin("SubProcesses","dummy_fct.f")
                       }
+
+    if MG5DIR:
+        default_run_card = pjoin(MG5DIR, "internal", "default_run_card_nlo.dat")
                       
         
     def default_setup(self):
@@ -5640,8 +5650,8 @@ class RunCardNLO(RunCard):
             
         # Read file input/default_run_card_nlo.dat
         # This has to be LAST !!
-        if os.path.exists(pjoin(MG5DIR,'input', 'default_run_card_nlo.dat')):
-            self.read(pjoin(MG5DIR,'input', 'default_run_card_nlo.dat'), consistency=False)
+        if os.path.exists(self.default_run_card):
+            self.read(self.default_run_card, consistency=False)
     
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

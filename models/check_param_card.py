@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 import itertools
+import filecmp
 import xml.etree.ElementTree as ET
 import math
 
@@ -641,7 +642,7 @@ class ParamCard(dict):
             scales = []
 
             
-        fout = file_writers.FortranWriter(outpath)
+        fout = file_writers.FortranWriter(outpath+'.tmp')
         defaultcard = ParamCard(default)
         for line in open(identpath):
             if line.startswith('c  ') or line.startswith('ccccc'):
@@ -691,6 +692,13 @@ class ParamCard(dict):
         for block in scales:
             value = self[block].scale
             fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
+
+        fout.close()
+        # compare if we need to update the file (allowing to skip some recompilation)
+        if not os.path.exists(outpath) or not filecmp.cmp(outpath+'.tmp', outpath):
+            shutil.move(outpath+'.tmp', outpath)
+        else:
+            os.remove(outpath+'.tmp')
       
     def convert_to_complex_mass_scheme(self):
         """ Convert this param_card to the convention used for the complex mass scheme:
