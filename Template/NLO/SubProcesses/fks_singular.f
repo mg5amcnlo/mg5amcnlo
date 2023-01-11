@@ -10,24 +10,8 @@ c to the list of weights using the add_wgt subroutine
       integer orders(nsplitorders)
       integer iamp
 
-      ! stuff for the 6->5 flav scheme
-      double precision amp_split_6to5f(amp_split_size),
-     &                 amp_split_6to5f_muf(amp_split_size),
-     &                 amp_split_6to5f_mur(amp_split_size)
-      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
-     &                            amp_split_6to5f_mur
-
-      ! stuff for the alpha UV-scheme in lepton collisions
-      double precision amp_split_alpha(amp_split_size),
-     &                 amp_split_alpha_muf(amp_split_size),
-     &                 amp_split_alpha_mur(amp_split_size)
-      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
-     &                            amp_split_alpha_mur
-
       double precision wgt_c
       double precision wgt1
-      double precision wgt6f1,wgt6f2,wgt6f3
-      double precision wgtal1,wgtal2,wgtal3
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       double precision   xiimax_cnt(-2:2)
@@ -56,50 +40,6 @@ c to the list of weights using the add_wgt subroutine
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
 
-C This is the counterterm for the 6f->5f scheme change 
-C of parton distributions (e.g. NNPDF2.3). 
-C It is called in this function such that if is included
-C in the LO cross section
-      call compute_6to5flav_cnt()
-      do iamp=1, amp_split_size
-        if (amp_split_6to5f(iamp).eq.0d0.and.
-     $      amp_split_6to5f_mur(iamp).eq.0d0.and.
-     $      amp_split_6to5f_muf(iamp).eq.0d0) cycle
-        call amp_split_pos_to_orders(iamp, orders)
-        QCD_power=orders(qcd_pos)
-        g22=g**(QCD_power)
-        wgtcpower=0d0
-        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-        orders_tag=get_orders_tag(orders)
-        amp_pos=iamp
-        wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
-        wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
-        wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
-        call add_wgt(2,orders,wgt6f1,wgt6f2,wgt6f3)
-      enddo
-
-C This is the counterterm for the change of scheme
-C in the UV renormalisation for alpha in (leptonic) PDFs
-C wrt the hard matrix element. Relevant for lepton collisions. 
-C It is called in this function such that if is included
-C in the LO cross section
-      call compute_alpha_cnt()
-      do iamp=1, amp_split_size
-        if (amp_split_alpha(iamp).eq.0d0.and.
-     $      amp_split_alpha_mur(iamp).eq.0d0.and.
-     $      amp_split_alpha_muf(iamp).eq.0d0) cycle
-        call amp_split_pos_to_orders(iamp, orders)
-        QCD_power=orders(qcd_pos)
-        g22=g**(QCD_power)
-        wgtcpower=0d0
-        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
-        orders_tag=get_orders_tag(orders)
-        amp_pos=iamp
-        wgtal1=amp_split_alpha(iamp)*f_b/g**(qcd_power)
-        wgtal2=amp_split_alpha_mur(iamp)*f_b/g**(qcd_power)
-        wgtal3=amp_split_alpha_muf(iamp)*f_b/g**(qcd_power)
-        call add_wgt(2,orders,wgtal1,wgtal2,wgtal3)
-      enddo
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
       return
@@ -325,10 +265,6 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
             write(*,*) 'MUR too low, bottom threshold not implemented'
             stop 1
          endif
-         !write(*,*) 'BETA0', beta0
-         !write(*,*) 'BETA0/3pi', beta0/3d0/pi
-         !write(*,*) 'CONST', const
-         !write(*,*) 'CONST/3pi', const/3d0/pi
          alpha = dble(gal(1))**2/4d0/pi
          do iamp = 1, amp_split_size
            if (amp_split(iamp).eq.0d0) cycle
@@ -346,15 +282,8 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
      &           - jsign * alpha / 3d0 / pi * alphabpow * amp_split(iamp) * 
      &            (beta0 * dlog(qes2/mdl_mz**2) + 
      &             w_thresh * dlog(mdl_mw**2/mdl_mz**2) + const)
-CC             write(*,*) 'AMP_SPLIT_ALPHA',
-CC     &    amp_split_alpha(orders_to_amp_split_pos(orders)) / amp_split(iamp)
-CC             write(*,*) 'AMP_SPLIT_ALPHA / alpha/3pi',
-CC     &    amp_split_alpha(orders_to_amp_split_pos(orders)) / amp_split(iamp)
-CC     &        / (alpha / 3d0 / pi)
-CC             stop
            endif
          enddo
-      !else if (alphascheme.eq.2) then
       else 
          write(*,*) 'change of scheme factors for gmu not implemented'
          stop 1
@@ -391,6 +320,24 @@ c value to the list of weights using the add_wgt subroutine
       common /to_amp_split_bsv/amp_split_wgtnstmp,
      $                         amp_split_wgtwnstmpmuf,
      $                         amp_split_wgtwnstmpmur
+
+      ! stuff for the 6->5 flav scheme
+      double precision amp_split_6to5f(amp_split_size),
+     &                 amp_split_6to5f_muf(amp_split_size),
+     &                 amp_split_6to5f_mur(amp_split_size)
+      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
+     &                            amp_split_6to5f_mur
+
+      ! stuff for the alpha UV-scheme in lepton collisions
+      double precision amp_split_alpha(amp_split_size),
+     &                 amp_split_alpha_muf(amp_split_size),
+     &                 amp_split_alpha_mur(amp_split_size)
+      common /to_amp_split_alpha/ amp_split_alpha, amp_split_alpha_muf, 
+     &                            amp_split_alpha_mur
+
+      double precision wgt6f1,wgt6f2,wgt6f3
+      double precision wgtal1,wgtal2,wgtal3
+
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
      &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
@@ -490,6 +437,48 @@ c and not be part of the plots nor computation of the cross section.
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
         call add_wgt(14,orders,wgt1,0d0,0d0)
       enddo
+
+C This is the counterterm for the 6f->5f scheme change 
+C of parton distributions (e.g. NNPDF2.3). 
+      call compute_6to5flav_cnt()
+      do iamp=1, amp_split_size
+        if (amp_split_6to5f(iamp).eq.0d0.and.
+     $      amp_split_6to5f_mur(iamp).eq.0d0.and.
+     $      amp_split_6to5f_muf(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
+        wgt6f1=amp_split_6to5f(iamp)*f_nb/g**(qcd_power)
+        wgt6f2=amp_split_6to5f_mur(iamp)*f_nb/g**(qcd_power)
+        wgt6f3=amp_split_6to5f_muf(iamp)*f_nb/g**(qcd_power)
+        call add_wgt(3,orders,wgt6f1,wgt6f2,wgt6f3)
+      enddo
+
+C This is the counterterm for the change of scheme
+C in the UV renormalisation for alpha in (leptonic) PDFs
+C wrt the hard matrix element. Relevant for lepton collisions. 
+      call compute_alpha_cnt()
+      do iamp=1, amp_split_size
+        if (amp_split_alpha(iamp).eq.0d0.and.
+     $      amp_split_alpha_mur(iamp).eq.0d0.and.
+     $      amp_split_alpha_muf(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders)
+        amp_pos=iamp
+        wgtal1=amp_split_alpha(iamp)*f_nb/g**(qcd_power)
+        wgtal2=amp_split_alpha_mur(iamp)*f_nb/g**(qcd_power)
+        wgtal3=amp_split_alpha_muf(iamp)*f_nb/g**(qcd_power)
+        call add_wgt(3,orders,wgtal1,wgtal2,wgtal3)
+      enddo
+
       call cpu_time(tAfter)
       tIS=tIS+(tAfter-tBefore)
       return
