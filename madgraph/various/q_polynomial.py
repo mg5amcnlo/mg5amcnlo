@@ -590,7 +590,7 @@ C        ARGUMENTS
         lines.append("    DO K=0,%d"%(get_number_of_coefs_for_rank(r_2+r_1)-1))
         lines.append("      OUT(J,K,I)=%s"%self.czero)
         lines.append("    ENDDO")
-        lines.append("    DO K=1,IN_SIZE")
+        #lines.append("    DO K=1,IN_SIZE")
         
         # Now we write the lines defining the coefs of OUT(j,*,i) from those
         # of A(k,*,i) and B(j,*,k)
@@ -609,16 +609,26 @@ C        ARGUMENTS
                 except KeyError:
                     coef_expressions[new_position]=[new_term,]
         keys = sorted(list(coef_expressions.keys()))
+        max_innerloop = 50
+        line_in_inner = 0
         for coef in keys:
+            if line_in_inner == 0:
+                lines.append("    DO K=1,IN_SIZE")
             value = coef_expressions[coef]
             split=0
             while split<len(value):
                 lines.append("OUT(J,%d,I)=OUT(J,%d,I)+"%(coef,coef)+\
                              '+'.join(value[split:split+self.line_split]))
                 split=split+self.line_split
+                line_in_inner +=1
+                if line_in_inner == max_innerloop:
+                    line_in_inner = 0
+                    lines.append("    ENDDO")
+
                 
         # And now we simply close the enddo.
-        lines.append("    ENDDO")
+        if line_in_inner:
+            lines.append("    ENDDO")
         lines.append("  ENDDO")
         lines.append("ENDDO")
         lines.append("END")
