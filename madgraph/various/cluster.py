@@ -758,7 +758,7 @@ class MultiCore(Cluster):
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
             
-        self.demons.clear()               
+        self.demons[:] = [] 
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -1712,9 +1712,12 @@ class SLURMCluster(Cluster):
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
 
+
+
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
+
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
