@@ -466,6 +466,10 @@ c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
+      mg_rwgt_count=0
+        
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
@@ -577,6 +581,16 @@ c     find the start of a weightgroup
                  else
                     lpdfvar(lhaPDFid(0))=.false.
                  endif
+              elseif (index(string,"name='mg_reweighting").ne.0) then
+                      write(*,*) 'found mg'
+                      do
+                        read(ifile,'(a)')string
+                        if (index(string,'<weight id').ne.0) then
+                                 mg_rwgt_count=mg_rwgt_count+1
+                        endif
+                        if (index(string,'</weightgroup>').ne.0) exit
+                      enddo
+
               elseif (index(string,'</initrwgt').ne.0) then
                  exit
               endif
@@ -879,6 +893,8 @@ c
       common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
+      integer mg_rwgt_count
+      common/rwgt_count/mg_rwgt_count
 c
       read(ifile,'(a)')string
       nattr=0
@@ -980,13 +996,29 @@ c
                      endif
                   enddo
                endif
-               read(ifile,'(a)')string
+               if(mg_rwgt_count.ne.0) then
+                   do i=1,mg_rwgt_count
+                      read(ifile,'(a)')string
+                   enddo
+                   read(ifile,'(a)')string
+               else
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
+            else
+               if(mg_rwgt_count.ne.0) then
+                  read(ifile,'(a)')string ! this is for beginning <rwgt>
+                  do i=1,mg_rwgt_count
+                     read(ifile,'(a)')string
+                  enddo
+                  read(ifile,'(a)')string ! this is for closing <\rwgt>
+               endif
             endif
          endif
+
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
-         read(ifile,'(a)')string
+         read(ifile,'(a)')string ! This is for closing <\event>
       else
          if (ickkw.eq.3) then
             ptclusstring=buff
