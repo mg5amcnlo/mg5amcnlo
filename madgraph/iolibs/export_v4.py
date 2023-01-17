@@ -8675,6 +8675,18 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._export_dir, amcatnlo_options)
 
+    # Then treat the EW sudakov Standalone output     
+    elif output_type=='ewsudsa':
+        import madgraph.iolibs.export_fks as export_fks
+        ExporterClass=None
+        amcatnlo_options = dict(opt)
+        amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['mp'] = False
+        logger.info("Writing out the EW Sudakov approximation in a standalone format")
+        ExporterClass = export_fks.ProcessExporterEWSudakovSA
+        amcatnlo_options['export_format']='FKS5_optimized'
+        return ExporterClass(cmd._export_dir, amcatnlo_options)
+
 
     # Then the default tree-level output
     elif output_type=='default':

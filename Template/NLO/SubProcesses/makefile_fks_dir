@@ -34,7 +34,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
          $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
-	 momentum_reshuflling.o						\
+	 momentum_reshuffling.o						\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
@@ -42,6 +42,12 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 get_color.o iproc_map.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
+
+FILESSUD= \
+         $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
+         $(patsubst %.f,%.o,$(wildcard  numder*.f)) 			\
+	 born.o born_hel.o momentum_reshuffling.o			\
+ 	 splitorders_stuff.o sa_ewsudakov_dummyfcts.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
@@ -59,6 +65,9 @@ POLES= $(RUN) check_poles.o BinothLHA.o
 
 # Files for check_sudakov
 EWSUD= $(RUN) check_sudakov.o BinothLHA.o
+
+EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD) 
+EWSUDLIB = $(FILESSUD)
 
 # Files for check_sudakov_angle2
 EWSUD2= $(RUN) check_sudakov_angle2.o BinothLHA.o
@@ -110,6 +119,18 @@ test_soft_col_limits: $(TEST)
 check_sudakov: $(EWSUD) $(libmadloop)
 	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_sudakov
+
+ewsudakov_sa: $(EWSUDSA) 
+	$(FC) -o ewsudakov_sa $(EWSUDSA) $(LINKLIBS)  $(LDFLAGS)
+	strip ewsudakov_sa
+
+libsudpy: $(EWSUDLIB)
+	touch __init__.py
+	#$(FC) -shared -o libewsud.so  $(EWSUDLIB)  $(LINKLIBS)
+	ar rcs libewsud.$(libext) $(EWSUDLIB)
+	$(F2PY) libewsud.$(libext) -m ewsudpy -c sub_f2py_ewsudakov.f --f77exec=$(FC) --f77flags="-ffixed-line-length-132"  $(LINKLIBS)
+	#$ar rcs libewsudakov.$(libext) $(FILESSUD) $(LINKLIBS)
+
 
 check_sudakov_angle2: $(EWSUD2) $(libmadloop)
 	$(FC) -o check_sudakov_angle2 $(EWSUD2) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)

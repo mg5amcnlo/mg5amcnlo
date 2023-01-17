@@ -143,7 +143,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
                   
-        self._export_format = 'NLO'
+        if args[0] == 'ewsudakovsa':
+            self._export_format = 'ewsudsa'
+            args.pop(0)
+        else:
+            self._export_format = 'NLO'
+
         forbidden_formats = ['madevent', 'standalone']
         
 
@@ -723,15 +728,17 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # For NLO, the group_subprocesses is automatically set to false
         group_processes = False
         # initialize the writer
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO','ewsudsa']:
+            output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa'}
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                      output_type='amcatnlo',group_subprocesses=group_processes)
+                      output_type=output_type_dict[self._export_format],
+                      group_subprocesses=group_processes)
             
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['NLO']:
+               and self._export_format in ['NLO', 'ewsudsa']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be deleted and replaced.')
@@ -746,7 +753,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             self._curr_exporter.copy_fkstemplate()
 
         # Reset _done_export, since we have new directory
@@ -853,7 +860,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         path = self._export_dir
 
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             path = os.path.join(path, 'SubProcesses')
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
