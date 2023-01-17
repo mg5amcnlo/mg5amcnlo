@@ -754,7 +754,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Generate info page
         gen_infohtml.make_info_html_nlo(self.dir_path)
 
-
         return calls, amp_split_orders
 
     #===========================================================================
@@ -4938,6 +4937,30 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
     """exports the EW sudakov matrix element in a standalone format
     """
+    dirstopdg = []
+
+    def finalize(self, *args, **opts):
+        """do the usual finalize, then call the function that writes
+        the python module with all the calls
+        """
+        super(ProcessExporterEWSudakovSA, self).finalize(*args, **opts)
+        self.write_python_wrapper(os.path.join(self.dir_path, 'bin', 'internal', 'ewsud_pydispatcher.py'))
+
+    def write_python_wrapper(self, fname):
+        """write a wrapper to be able to call the Sudakov for a specific subfolder given its PDG"""
+        
+        template = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_pydispatcher.inc')).read()
+
+        replace_dict = {}
+        replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
+        replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
+        replace_dict['pdg2sud'] = ",\n".join([str(tuple(dd[1])) + ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+
+        outfile = open(fname ,'w')
+        outfile.write(template % replace_dict)
+        outfile.close()
+
 
     #===============================================================================
     # generate_directories_fks
@@ -5091,6 +5114,8 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         os.chdir(cwd)
         # Generate info page
         gen_infohtml.make_info_html_nlo(self.dir_path)
-
+        
+        # update the dirs to pdg information
+        self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']]) for pp in matrix_element.born_me['processes']])
 
         return calls, amp_split_orders
