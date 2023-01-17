@@ -476,9 +476,7 @@ class ReweightInterface(extended_cmd.Cmd):
     @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
-        
-        logger.info('------------------')
-        
+                
         args = self.split_arg(line)
         opts = self.check_launch(args)
         mgcmd = self.mg5cmd
@@ -575,6 +573,9 @@ class ReweightInterface(extended_cmd.Cmd):
         fks_not_smallest_but_small = 0
         fks_over_sudcut = 0
         adjusted = 0
+        count = 0
+
+
         for event_nb,event in enumerate(self.lhe_input):
             nevents=nevents+1
             #control logger
@@ -611,7 +612,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     ### Do the Sudakov reweighting here
                     if self.inc_sudakov:
                         pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
-                        x = 1000.0
+                        x = 1.0
+                        write_to_file = False
                         sud_cut= x*80.3**2
                         min_inv=1000000.0
                         fks1=pair[0]
@@ -658,6 +660,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                         fks_inv = abs((sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
                                                - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
 
+                            # Below finds the current process tag and tries to recombine the min_i and min_j
                             inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
                             tag, order = event.get_tag_and_order()
                             order_all = [x for n in (order[0],order[1]) for x in n]
@@ -679,9 +682,33 @@ class ReweightInterface(extended_cmd.Cmd):
                                             ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
                             if not ping:
                                 ij_comb = []
+                            
+                            # This just prints the different sudakov scales
+                            if not ij_comb == []:
+                                sudrat = self.sudakov_reweight(event)
+                                n1_body_wgt = sudrat
+                                event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
+                                sudrat = self.sudakov_reweight(event_for_sud)
+                                n_body_wgt = sudrat
+                                if (write_to_file):
+                                    with open("sudratio_file.txt", mode="a") as f:
+                                        f.write(str(min_inv/sud_cut))
+                                        f.write(" ")
+                                        f.write(str(n_body_wgt/n1_body_wgt))
+                                        f.write('\n')
+                                count = count + 1
+
+                            # For n+1-body reweighting
                             if min_inv > sud_cut:
                                 h_event_n1body = h_event_n1body +1 
                                 sudrat = self.sudakov_reweight(event)
+                                if (write_to_file):
+                                    with open("h_events_large_sudrat.txt", mode="a") as f:
+                                        f.write(str(sudrat))
+                                        f.write(" ")
+                                        f.write(str(min_inv/sud_cut))
+                                        f.write('\n')
+                            # For n-body reweighting
                             else:
                                 if ((fks1 == min_i+1) and (fks2 == min_j+1)) or ((fks1 == min_j+1) and (fks2 == min_i+1)):
                                     fks_smallest = fks_smallest + 1
@@ -691,40 +718,44 @@ class ReweightInterface(extended_cmd.Cmd):
                                     fks_over_sudcut = fks_over_sudcut + 1
                                 inv_small = inv_small +1
 
+                                # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
                                 if ij_comb == []:
                                     h_event_n1body_no_comb = h_event_n1body_no_comb +1 
                                     sudrat = self.sudakov_reweight(event)
+                                    if (write_to_file):
+                                        with open("no_rec_sudrat.txt", mode="a") as f:
+                                            f.write(str(sudrat))
+                                            f.write(" ")
+                                            f.write(str(min_inv/sud_cut))
+                                            f.write('\n')
+                                    #sudrat = 0.000000001
                                 else:
-                                    if inv_dict_sort[list(inv_dict_sort.keys())[1]] < sud_cut:
-                                        logger.info('FOUND SECOND PAIR smaller')
                                     h_event_nbody = h_event_nbody +1 
                                     event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
                                     if (fks_inv < sud_cut):
                                         sudrat = self.sudakov_reweight(event_for_sud)
-                                        #sudrat = self.sudakov_reweight_nbody(H_event,event)
                                     elif fks_inv > sud_cut:
-                                        sudrat1 = self.sudakov_reweight(event_for_sud)
-                                        #sudrat1 = self.sudakov_reweight_nbody(H_event,event)
-                                        #sudrat2 = self.sudakov_reweight(event) # n+1-body based sudakov
-                                        #sudrat = (sudrat1+sudrat2)/2.0
-                                        sudrat = sudrat1
+                                        sudrat = self.sudakov_reweight(event_for_sud)
                                         adjusted = adjusted +1
+                                    if (write_to_file):
+                                        with open("h_events_small_sudrat.txt", mode="a") as f:
+                                            f.write(str(sudrat))
+                                            f.write(" ")
+                                            f.write(str(min_inv/sud_cut))
+                                            f.write('\n')
+                            #sudrat = 10000.0 #10000.0 #0.0000001
 
-                                    #logger.info('Sudakov from mapped sud:')
-                                    #logger.info(sudrat)
-                                    #sudrat = self.sudakov_reweight_nbody(H_event,event)
-                                    #logger.info('Sudakov from Born-mapping:')
-                                    #logger.info(sudrat)
-                                    #sudrat = self.sudakov_reweight(event)
-                                    #logger.info('Sudakov from full n+1 event:')
-                                    #logger.info(sudrat)
-                                    #logger.info(event_for_sud)
-                                    #logger.info(sudrat)
-                                sudrat = 0.00001
+
                         if (S_event):
                             sudrat = self.sudakov_reweight(event)
-                            n_s_event=n_s_event+1
+                            n_s_event = n_s_event+1
                             fks_inv = 0.0
+                            if (write_to_file):
+                                with open("s_events_sudrat.txt", mode="a") as f:
+                                    f.write(str(sudrat))
+                                    f.write(" ")
+                                    f.write(str(min_inv/sud_cut))
+                                    f.write('\n')
 
                         event.rescale_weights(sudrat)
 
@@ -975,18 +1006,12 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_x = new_x + part.px
                         new_y = new_y + part.py
                         new_z = new_z + part.pz
-                #print(new_E,new_x,new_y,new_z)
-                #print(new_event)
                 
                 if fks_i == 0:
                     new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_x-new_event[0].px,new_y-new_event[0].py,new_z-new_event[0].pz]))
                 elif fks_i == 1:
                     new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_x-new_event[1].px,new_y-new_event[1].py,new_z-new_event[1].pz]))
                 
-                #print('initial')
-                #print(event)
-                #print(new_event)
-                #print(fks_i,fks_j)
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
                 pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
                 E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
@@ -1009,7 +1034,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 elif fks_i == 1:
                     new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_event[0].px,new_event[0].py,new_event[0].pz]))
                 
-                print('final')
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
                 pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
                 E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
@@ -1052,8 +1076,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
                     if (ip != fks_i and ip != fks_j and ip >= 2):
                         final = final + vec
-                #print('k tot:',k_tot)
-                #print('final',final)
                         
                 s = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
                             new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])**2
@@ -1134,16 +1156,11 @@ class ReweightInterface(extended_cmd.Cmd):
     def recoil_eq(self,part1, part2):
         thresh = 1e-6
         import random
-        #print(part1)
-        #print(part2)
         a = part1.mass**2 + part1.px**2 + part1.py**2
         b = part2.mass**2 + part2.px**2 + part2.py**2
         c = part1.pz + part2.pz
         K = part1.E + part2.E
         K2 = K**2
-        #print(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2)))
-        #print(a,b,c,K2)
-        #print(math.sqrt(a+0**2) + math.sqrt(b+(c-0)**2),K)
         sol1 = (-a*c + c*b + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
         sol2 = (-a*c + c*b + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
         

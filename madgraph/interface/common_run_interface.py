@@ -2086,6 +2086,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # ensure that the run_card is present
             if not hasattr(self, 'run_card'):
                 self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            # Below reads the run_card in the LHE file rather than the Cards/run_card
+            import madgraph.various.lhe_parser as lhe_parser
+            args_path = list(args)
+            self.check_decay_events(args_path) 
+            self.run_card = banner_mod.RunCard(lhe_parser.EventFile(args_path[0]).get_banner()['mgruncard'])
+
             
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
