@@ -221,7 +221,7 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
     @staticmethod
-    def get_LO_definition_from_NLO(proc, model, real_only=False):
+    def get_LO_definition_from_NLO(proc, model, real_only=False, ewsudakov=False):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
@@ -269,6 +269,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
+            if ewsudakov:
+                # EW sudakov reweight
+                # this is a NLO-type generation, so [LOonly=QCD] must be added, toghether
+                # with the proper flag for the EW sudakov.
+                # Also, --no_warning=duplicate can be removed
+                commandline = commandline.replace("--no_warning=duplicate", "[LOonly=QCD] --ewsudakov")
         elif order.startswith(('noborn')):
             # pass in sqrvirt=
             return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
@@ -515,6 +521,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if not self.rwgt_dir:
                         self.rwgt_dir = self.me_dir
                     self.save_to_pickle()      
+                # MZ MZ MZ UP TO HERE
                     
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
@@ -1867,12 +1874,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 has_nlo = True
                 if self.banner.get('run_card','ickkw') == 3:
                     if len(proc) == min([len(p.strip()) for p in data['processes']]):
-                        commandline += self.get_LO_definition_from_NLO(proc, self.model)
+                        commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
                     else:
                         commandline += self.get_LO_definition_from_NLO(proc,
-                                                     self.model, real_only=True)
+                                                     self.model, real_only=True, ewsudakov=self.inc_sudakov)
                 else:
-                    commandline += self.get_LO_definition_from_NLO(proc, self.model)
+                    commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
@@ -1901,6 +1908,9 @@ class ReweightInterface(extended_cmd.Cmd):
             raise
         
         commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
+        if self.inc_sudakov:
+            # in this case, the sudakov output format has to be changed
+            commandline = 'output ewsudakovsa %s --prefix=int' % pjoin(path_me,data['paths'][0])
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
@@ -2260,20 +2270,66 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.rwgt_dir
         
-        rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
-        for onedir in rwgt_dir_possibility:
-            if not os.path.isdir(pjoin(path_me,onedir)):
-                continue
-            pdir = pjoin(path_me, onedir, 'SubProcesses')
-            if self.mother:
-                nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
-            else:
+        if self.inc_sudakov:
+            # The case of EW sudakov is a bit different
+            # first, copy the run/param cards in the reweight process folder
+            sarw_path = pjoin(path_me, 'rw_me')
+            logger.info('Splitting the banner in %s' % os.path.join(sarw_path, 'Cards'))
+            self.banner.split(sarw_path)
+
+            logger.info('Compiling reweight Source dir')
+            sourcedir = pjoin(sarw_path, 'Source') 
+            # set the environmental variable ewsudsa in make_opts
+            common_run_interface.CommonRunCmd.update_make_opts_full(pjoin(sourcedir, 'make_opts'), {'ewsudsa': 'True'})
+            misc.compile(cwd=sourcedir)
+            logger.info('Compiling reweight P*dirs')
+            p_dirs = [d for d in \
+                open(pjoin(sarw_path, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
+            # determine the number of core to use for compilation
+            try:
+                import multiprocessing
+                try:
+                    nb_core = int(self.options['nb_core'])
+                except (TypeError, KeyError):
+                    nb_core = multiprocessing.cpu_count()
+            except ImportError: 
                 nb_core = 1
-            os.environ['MENUM'] = '2'
-            misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-            if not (self.second_model or self.second_process or self.dedicated_path):
-                os.environ['MENUM'] = '3'
-                misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
+
+            import copy
+            compile_options = copy.copy(self.options)
+            compile_options['nb_core'] = nb_core
+            compile_cluster = cluster.MultiCore(**compile_options)
+            logger.info('Compiling on %d cores...' % nb_core)
+
+            update_status = lambda i, r, f: (i,r,f) 
+            for p_dir in p_dirs:
+                compile_cluster.submit(prog = misc.compile, 
+                               argument = [['libsudpy'], pjoin(sarw_path, 'SubProcesses', p_dir) ])
+            try:
+                compile_cluster.wait(self.me_dir, update_status)
+            except Exception as  error:
+                logger.warning("Compilation of the Subprocesses failed")
+                if __debug__:
+                    raise
+                compile_cluster.remove()
+                self.do_quit('')
+            logger.info('...done')
+
+        else:
+            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+            for onedir in rwgt_dir_possibility:
+                if not os.path.isdir(pjoin(path_me,onedir)):
+                    continue
+                pdir = pjoin(path_me, onedir, 'SubProcesses')
+                if self.mother:
+                    nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+                else:
+                    nb_core = 1
+                os.environ['MENUM'] = '2'
+                misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
+                if not (self.second_model or self.second_process or self.dedicated_path):
+                    os.environ['MENUM'] = '3'
+                    misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
@@ -2288,6 +2344,14 @@ class ReweightInterface(extended_cmd.Cmd):
         for onedir in rwgt_dir_possibility:
             if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
+
+            # for the EW sudakov, just load the python dispatcher
+            if self.inc_sudakov:
+                import importlib
+                importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
+                logger.info('EW Sudakov reweight module imported')
+                return
+
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
                 with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
