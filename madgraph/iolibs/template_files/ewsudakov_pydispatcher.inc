@@ -12,9 +12,13 @@ pdg2ewsud_dict = {%(pdg2sud)s}
 
 def ewsudakov(pdgs, p, g):
     """wraps the call to the ewsudakov function of a 
-    given directory"""
+    given directory. The momenta are also transposed 
+    to match the fortran<>python convention"""
+
+    p_transp =np.array([[pp[i] for pp in p] for i in range(4)], order='F')
     res = np.array([0.,0.,0.], order='F')
 
-    pdg2ewsud_dict[pdgs].ewsudakov(p, g, res)
+    pdg2ewsud_dict[pdgs].ewsudakov(p_transp, g, res)
 
     return res
+
