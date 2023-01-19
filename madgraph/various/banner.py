@@ -4233,12 +4233,22 @@ class RunCardLO(RunCard):
         # interference case is already handle above
         # here pick strategy 2 if only one QCD color flow
         # and for pure multi-jet case
+        jet_id = [21] + list(range(1, self['maxjetflavor']+1))
         if proc_characteristic['single_color']:
             self['sde_strategy'] = 2
+            #for pure lepton final state go back to sde_strategy=1
+            pure_lepton=True
+            proton_initial=True
+            for proc in proc_def:
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                    pure_lepton = False
+                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
+                    proton_initial = False
+            if pure_lepton and proton_initial:
+                self['sde_strategy'] = 1
         else:
             # check if  multi-jet j 
             is_multijet = True
-            jet_id = [21] + list(range(1, self['maxjetflavor']+1))
             for proc in proc_def:
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
                     is_multijet = False

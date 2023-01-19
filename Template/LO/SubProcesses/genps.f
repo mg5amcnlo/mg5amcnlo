@@ -1881,7 +1881,7 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
             if(sde_strat.eq.2)then
                t = dot(ptemp(0,-i), ptemp(0,-i))
                Mass  = prmass(-i, config)
-               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass))**2
+               get_channel_cut = get_channel_cut / ((t-Mass)*(t+Mass)+stot*1d-10)**2
             endif
 c            write(*,*) i, "t, Mass, fact", t, Mass, ((t-Mass)*(t+Mass))**2,get_channel_cut
             t = t/stot 

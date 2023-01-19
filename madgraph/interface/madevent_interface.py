@@ -3764,6 +3764,14 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
+
+            if nb_event < self.run_card['nevents']:
+                logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
+                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", self.run_card['sde_strategy'] + 1 % 2)
+                logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
+                logger.warning("  - reduce the number of requested events (if set too high)")
+                logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+
         if partials:
             for i in range(partials):
                 try:
