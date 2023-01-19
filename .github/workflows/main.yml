@@ -2,8 +2,8 @@
 
 name: sync with bazaar
 
-# Controls when the workflow will run
-#    branches: [ 3.3.1_lo_vectorization ]
+ Controls when the workflow will run
+    branches: [ main LTS ]
 on:
   # Triggers the workflow on push or pull request events but only for the 3.4.0 branch
   push:
