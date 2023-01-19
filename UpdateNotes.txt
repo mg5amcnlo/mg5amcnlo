@@ -2,7 +2,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.4.2 ()
       ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
-
+      OM: fix issue with hepmcremove (thanks to franaln)
+      OM: fix some issue with addmodel
+      OM: fix issue with the update of the param_card to set the used value for alphas
+      OM: fix issue with wrong env variable for pythia8data (thanks pavel)
+      
 3.4.1 (01/09/22)
       MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
       RF: removed a write statement in the reweighting routine (to get scale and PDF uncertainties at NLO+PS runs) that cluttered the reweight_xsec_events.output log files.
