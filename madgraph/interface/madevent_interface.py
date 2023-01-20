@@ -3549,8 +3549,8 @@ Beware that this can be dangerous for local multicore runs.""")
                                  run_type='Refine number %s on %s (%s/%s)' % 
                                  (self.nb_refine, subdir, nb_proc+1, len(subproc)))
 
-        if self.total_jobs:
-            self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
+
+        self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
         
         self.update_status("Combining runs", level='parton')
