@@ -533,13 +533,23 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.me_dir 
             
+        if self.inc_sudakov:
+            import importlib
+            import numpy as np
+            rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
+            for onedir in rwgt_dir_possibility:
+                if not os.path.exists(pjoin(path_me,onedir)):
+                    continue 
+                sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
+            logger.info('EW Sudakov reweight module imported')
+            print('EW module loaded')
+        
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
             rw_dir = pjoin(path_me, 'rw_me')
                 
         start = time.time()
-        
         # initialize the collector for the various re-weighting
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
@@ -566,34 +576,19 @@ class ReweightInterface(extended_cmd.Cmd):
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
         self.lhe_input.seek(0)
-        nevents=0
-        n_is_fks=0
-        n_s_event=0
-        n_h_event=0
-        h_event_n1body_no_comb = 0
-        h_event_n1body = 0
-        h_event_nbody = 0
-        inv_small = 0
-        fks_n1body=0
-        fks_nbody=0
-        fks_smallest = 0
-        fks_not_smallest_but_small = 0
-        fks_over_sudcut = 0
-        adjusted = 0
-        count = 0
-
-
         for event_nb,event in enumerate(self.lhe_input):
-            nevents=nevents+1
             #control logger
-
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
                     running_time = misc.format_timer(time.time()-start)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
-                
-            weight = self.calculate_weight(event)
+
+            if self.inc_sudakov:
+                weight = self.calculate_weight(event, sud_mod)
+            else:
+                weight = self.calculate_weight(event)
+
             if not isinstance(weight, dict):
                 weight = {'':weight}
             
@@ -609,164 +604,14 @@ class ReweightInterface(extended_cmd.Cmd):
                     event.reweight_order.remove('%s%s'  % (tag_name,tag))
                 except ValueError:
                     continue
+            
             event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
             if self.output_type == "default":
                 for name in weight:
                     if 'orig' in name:
-                        continue            
+                        continue             
                     event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
-
-                    ### Do the Sudakov reweighting here
-                    if self.inc_sudakov:
-                        pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
-                        x = 1.0
-                        write_to_file = False
-                        sud_cut= x*80.3**2
-                        min_inv=1000000.0
-                        fks1=pair[0]
-                        fks2=pair[1]
-                        min_inv_fks=False
-                        inv_dict={}
-
-                        if (len(event) == nexternal):
-                            H_event=True
-                            S_event=False
-                        else:
-                            H_event=False
-                            S_event=True        
-                        if (H_event):
-                            n_h_event=n_h_event+1
-                            for ievt,evt in enumerate(event):
-                                # Find the smallest abs(inv) and the corresponding pair
-                                if (ievt <= 1):
-                                    sign1 = 1.0
-                                else:
-                                    sign1 = -1.0
-                                for ievt2,evt2 in enumerate(event):
-                                    if (ievt2 <= 1):
-                                        sign2 = 1.0
-                                    else:
-                                        sign2 = -1.0
-                                    if (ievt2 > ievt):
-                                        inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                                        inv_dict[(ievt,ievt2)] = abs(inv)
-                                        if (abs(inv) < min_inv):
-                                            min_inv=abs(inv)
-                                            min_i=ievt
-                                            min_j=ievt2
-                                    if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
-                                        if (ievt <= 1):
-                                            sign1 = 1.0
-                                        else:
-                                            sign1 = -1.0
-                                        if (ievt2 <= 1):
-                                            sign2 = 1.0
-                                        else:
-                                            sign2 = -1.0
-                                        fks_inv = abs((sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
-
-                            # Below finds the current process tag and tries to recombine the min_i and min_j
-                            inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
-                            tag, order = event.get_tag_and_order()
-                            order_all = [x for n in (order[0],order[1]) for x in n]
-                            matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()    
-                            ping = False
-                            for me in matrix_elements:
-                                for proc in me.get('processes'):
-                                    proc_tag = proc.get_tag()
-                                    if ((sorted(proc_tag[0]) == sorted(tag[0]))\
-                                        and (sorted(proc_tag[1]) == sorted(tag[1]))):
-                                        ping = True
-                                        legs = proc.get('legs')
-                                        comb_i = legs[min_i]
-                                        comb_j = legs[min_j]
-                                        comb_i = fks_common.to_fks_leg(comb_i,self.model)
-                                        comb_j = fks_common.to_fks_leg(comb_j,self.model)
-                                        ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
-                                        if ij_comb == []:
-                                            ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
-                            if not ping:
-                                ij_comb = []
-                            
-                            # This just prints the different sudakov scales
-                            if not ij_comb == []:
-                                sudrat = self.sudakov_reweight(event)
-                                n1_body_wgt = sudrat
-                                event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
-                                sudrat = self.sudakov_reweight(event_for_sud)
-                                n_body_wgt = sudrat
-                                if (write_to_file):
-                                    with open("sudratio_file.txt", mode="a") as f:
-                                        f.write(str(min_inv/sud_cut))
-                                        f.write(" ")
-                                        f.write(str(n_body_wgt/n1_body_wgt))
-                                        f.write('\n')
-                                count = count + 1
-
-                            # For n+1-body reweighting
-                            if min_inv > sud_cut:
-                                h_event_n1body = h_event_n1body +1 
-                                sudrat = self.sudakov_reweight(event)
-                                if (write_to_file):
-                                    with open("h_events_large_sudrat.txt", mode="a") as f:
-                                        f.write(str(sudrat))
-                                        f.write(" ")
-                                        f.write(str(min_inv/sud_cut))
-                                        f.write('\n')
-                            # For n-body reweighting
-                            else:
-                                if ((fks1 == min_i+1) and (fks2 == min_j+1)) or ((fks1 == min_j+1) and (fks2 == min_i+1)):
-                                    fks_smallest = fks_smallest + 1
-                                elif (fks_inv < sud_cut):
-                                    fks_not_smallest_but_small = fks_not_smallest_but_small + 1
-                                elif (fks_inv > sud_cut):
-                                    fks_over_sudcut = fks_over_sudcut + 1
-                                inv_small = inv_small +1
-
-                                # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
-                                if ij_comb == []:
-                                    h_event_n1body_no_comb = h_event_n1body_no_comb +1 
-                                    sudrat = self.sudakov_reweight(event)
-                                    if (write_to_file):
-                                        with open("no_rec_sudrat.txt", mode="a") as f:
-                                            f.write(str(sudrat))
-                                            f.write(" ")
-                                            f.write(str(min_inv/sud_cut))
-                                            f.write('\n')
-                                    #sudrat = 0.000000001
-                                else:
-                                    h_event_nbody = h_event_nbody +1 
-                                    event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
-                                    if (fks_inv < sud_cut):
-                                        sudrat = self.sudakov_reweight(event_for_sud)
-                                    elif fks_inv > sud_cut:
-                                        sudrat = self.sudakov_reweight(event_for_sud)
-                                        adjusted = adjusted +1
-                                    if (write_to_file):
-                                        with open("h_events_small_sudrat.txt", mode="a") as f:
-                                            f.write(str(sudrat))
-                                            f.write(" ")
-                                            f.write(str(min_inv/sud_cut))
-                                            f.write('\n')
-                            #sudrat = 10000.0 #10000.0 #0.0000001
-
-
-                        if (S_event):
-                            sudrat = self.sudakov_reweight(event)
-                            n_s_event = n_s_event+1
-                            fks_inv = 0.0
-                            if (write_to_file):
-                                with open("s_events_sudrat.txt", mode="a") as f:
-                                    f.write(str(sudrat))
-                                    f.write(" ")
-                                    f.write(str(min_inv/sud_cut))
-                                    f.write('\n')
-
-                        event.rescale_weights(sudrat)
-
-                #write this event with weight
+                    #write this event with weight
                 output.write(str(event))
             else:
                 for i,name in enumerate(weight):
@@ -779,27 +624,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     new_evt.parse_reweight()
                     new_evt.reweight_data = {}  
                     output[(tag_name,name)].write(str(new_evt))
-
-        print('Number of S events:')
-        print(n_s_event)
-        print('Number of H events:')
-        print(n_h_event)
-        print('Number H events with n-body reweight')
-        print(h_event_nbody)
-        print('Number H events with n+1-body reweight inv > mw2')
-        print(h_event_n1body)
-        print('Number H events with n+1-body due to no reasonable comb')
-        print(h_event_n1body_no_comb)
-        print('Number H evets with min_inv < mw2')
-        print(inv_small)
-        print('FKS smallest:')
-        print(fks_smallest)
-        print('FKS NOT smallest but < mW^2:')
-        print(fks_not_smallest_but_small)
-        print('min_inv but FKS > mW**2 ')
-        print(fks_over_sudcut)
-        print('Number of times an average was taken:')
-        print(adjusted)
 
         # check normalisation of the events:
         if self.run_card and 'event_norm' in self.run_card:
@@ -1000,7 +824,14 @@ class ReweightInterface(extended_cmd.Cmd):
             mother_4mom = i_4mom + sign1*j_4mom
         
             new_event = copy.deepcopy(event)
+
+            new_event[fks_i].pid = moth[0]['id']
             new_event[fks_i].set_momentum(mother_4mom)
+
+            #if moth[0]['is_part']:
+            #    new_event[fks_i].status = 1
+            #else:
+            #    new_event[fks_i].status = -1
 
             if fks_i <= 1: # initial-state recoil
                 new_E = 0.0
@@ -1474,49 +1305,183 @@ class ReweightInterface(extended_cmd.Cmd):
         return jac, new_event
     
     
-    def calculate_weight(self, event):
+    def calculate_weight(self, event, sud_mod=None):
         """space defines where to find the calculator (in multicore)"""
         
 
-        if self.has_nlo and self.rwgt_mode != "LO":
-            if not hasattr(self,'pdf'):
-                lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
-                self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
+        if not self.inc_sudakov:
+            if self.has_nlo and self.rwgt_mode != "LO":
+                if not hasattr(self,'pdf'):
+                    lhapdf = misc.import_python_lhapdf(self.mg5cmd.options['lhapdf'])
+                    self.pdf = lhapdf.mkPDF(self.banner.run_card.get_lhapdf_id())
                 
-            return self.calculate_nlo_weight(event)
+                return self.calculate_nlo_weight(event)
         
-        event.parse_reweight()                    
-        orig_wgt = event.wgt
-        # LO reweighting    
-        w_orig = self.calculate_matrix_element(event, 0)
+            event.parse_reweight()                    
+            orig_wgt = event.wgt
+            # LO reweighting    
+            w_orig = self.calculate_matrix_element(event, 0)
+            # reshuffle event for mass effect # external mass only
+            # carefull that new_event can sometimes be = to event 
+            # (i.e. change can be in place)
+            jac, new_event = self.change_kinematics(event)
         
-        # reshuffle event for mass effect # external mass only
-        # carefull that new_event can sometimes be = to event 
-        # (i.e. change can be in place)
-        jac, new_event = self.change_kinematics(event)
         
-        
-        if event.wgt != 0: # impossible reshuffling
-            w_new =  self.calculate_matrix_element(new_event, 1)
-        else:
-            w_new = 0
-
-        if w_orig == 0:
-            tag, order = event.get_tag_and_order()
-            orig_order, Pdir, hel_dict = self.id_to_path[tag]
-            misc.sprint(w_orig, w_new)
-            misc.sprint(event)
-            misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
-            misc.sprint(event.get_momenta(orig_order))
-            misc.sprint(event.aqcd)
-            hel_order = event.get_helicity(orig_order)
-            if self.helicity_reweighting and 9 not in hel_order:
-                nhel = hel_dict[tuple(hel_order)]
+            if event.wgt != 0: # impossible reshuffling
+                w_new =  self.calculate_matrix_element(new_event, 1)
             else:
-                nhel = 0
-            misc.sprint(nhel, Pdir, hel_dict)                        
-            raise Exception("Invalid matrix element for original computation (weight=0)")
+                w_new = 0
 
+            if w_orig == 0:
+                tag, order = event.get_tag_and_order()
+                orig_order, Pdir, hel_dict = self.id_to_path[tag]
+                misc.sprint(w_orig, w_new)
+                misc.sprint(event)
+                misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
+                misc.sprint(event.get_momenta(orig_order))
+                misc.sprint(event.aqcd)
+                hel_order = event.get_helicity(orig_order)
+                if self.helicity_reweighting and 9 not in hel_order:
+                    nhel = hel_dict[tuple(hel_order)]
+                else:
+                    nhel = 0
+                misc.sprint(nhel, Pdir, hel_dict)                        
+                raise Exception("Invalid matrix element for original computation (weight=0)")
+
+        else:
+
+            orig_wgt = event.wgt
+            w_orig= event.wgt
+            jac = 1
+
+            mgcmd = self.mg5cmd
+            import importlib
+            import numpy as np
+
+            pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
+            x = 1.0
+            write_to_file = False
+            sud_cut= x*80.3**2
+            min_inv=1000000.0
+            fks1=pair[0]
+            fks2=pair[1]
+            min_inv_fks=False
+            inv_dict={}
+
+            if (len(event) == nexternal):
+                    H_event=True
+                    S_event=False
+            else:
+                    H_event=False
+                    S_event=True        
+            if (H_event):
+                    for ievt,evt in enumerate(event):
+                        # Find the smallest abs(inv) and the corresponding pair
+                        if (ievt <= 1):
+                            sign1 = 1.0
+                        else:
+                            sign1 = -1.0
+                        for ievt2,evt2 in enumerate(event):
+                            if (ievt2 <= 1):
+                                sign2 = 1.0
+                            else:
+                                sign2 = -1.0
+                            if (ievt2 > ievt):
+                                inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
+                                inv_dict[(ievt,ievt2)] = abs(inv)
+                                if (abs(inv) < min_inv):
+                                    min_inv=abs(inv)
+                                    min_i=ievt
+                                    min_j=ievt2
+                            if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
+                                if (ievt <= 1):
+                                    sign1 = 1.0
+                                else:
+                                    sign1 = -1.0
+                                if (ievt2 <= 1):
+                                    sign2 = 1.0
+                                else:
+                                    sign2 = -1.0
+                                fks_inv = abs((sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
+
+                    # Below finds the current process tag and tries to recombine the min_i and min_j
+                    inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
+                    tag, order = event.get_tag_and_order()
+                    this_tag, order = event.get_tag_and_order()
+                    matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()    
+                    ping = False
+                    ij_comb= []
+                    for me in matrix_elements:
+                        for proc in me.get('processes'):
+                            proc_tag = proc.get_tag()
+                            if ((list(proc_tag[0]) == order[0])\
+                                and (sorted(proc_tag[1]) == sorted(order[1]))):
+                                ping = True
+                                legs = proc.get('legs')
+                                comb_i = legs[min_i]
+                                comb_j = legs[min_j]
+                                comb_i = fks_common.to_fks_leg(comb_i,self.model)
+                                comb_j = fks_common.to_fks_leg(comb_j,self.model)
+                                ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+                                if ij_comb == []:
+                                    ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
+                    if not ping:
+                        ij_comb = []
+                            
+
+                    # For n+1-body reweighting
+                    if min_inv > sud_cut:
+                        event_to_sud = event
+                        n_part = nexternal
+
+                    # For n-body reweighting
+                    else:
+                        # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
+                        if ij_comb == []:
+                            event_to_sud = event
+                            n_part = nexternal
+                        else:
+                            event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
+                            event_to_sud = event_for_sud
+                            n_part = nexternal - 1 
+
+            if (S_event):
+                    fks_inv = 0.0
+                    event_to_sud = event
+                    n_part = nexternal - 1 
+
+#############################      REAL SUDAKOV
+
+            # Boost to partonic CM frame if not already in one for the momentum reshuffling 
+            E, px, py, pz = 0,0,0,0
+            for i,particle in enumerate(event_to_sud):
+                    if particle.status == -1:
+                        E += particle.E
+                        px += particle.px
+                        py += particle.py
+                        pz += particle.pz
+
+            in_part_mom = lhe_parser.FourMomentum([E, px, py, pz])
+            if not ((abs(px) < 1e-8) and (abs(py) < 1e-8) and (abs(pz) < 1e-8)):
+                    event_to_sud.boost(in_part_mom)
+
+            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+
+            # Read in the event momenta into np array
+            p_in = np.zeros(shape=(n_part, 4))
+            for i,el in enumerate(event_to_sud):
+                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
+
+            gstr=1.1587268699383517
+            res, test = sud_mod.ewsudakov(mapped_tag, p_in, gstr)
+
+            # Do the rescaling 
+            sudrat = 1. + res[1]/res[0]
+            event.rescale_weights(sudrat)
+            w_new = w_orig * sudrat
+               
         return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
      
     def calculate_nlo_weight(self, event):
@@ -1697,9 +1662,12 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_retry, sleep = 5, 20 
         
         tag, order = event.get_tag_and_order()
+
         if self.keep_ordering:
             old_tag = tuple(tag)
             tag = (tag[0], tuple(order[1])) 
+        tag = (tag[0], tuple(order[1])) 
+        
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
             hypp_id = int(hypp_id[1:])
@@ -2337,20 +2305,23 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.rwgt_dir:
             path_me = self.me_dir
         else:
-            path_me = self.rwgt_dir        
+            path_me = self.rwgt_dir       
+
         self.id_to_path = {}
         self.id_to_path_second = {}
         rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
         for onedir in rwgt_dir_possibility:
             if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
-
             # for the EW sudakov, just load the python dispatcher
             if self.inc_sudakov:
+                ### TO CHANGE: put in total path, not the relative one to the dispatcher!!
                 import importlib
+                import numpy as np
                 importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
                 logger.info('EW Sudakov reweight module imported')
-                return
+                print('EW module loaded')
+                return 
 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:

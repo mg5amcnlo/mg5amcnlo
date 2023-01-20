@@ -1,4 +1,4 @@
-      subroutine ewsudakov(p_born_in, gstr_in, results) 
+      subroutine ewsudakov_py(p_born_in, gstr_in, results) 
 c**************************************************************************
 c     This is the driver for the whole calulation
 c**************************************************************************
