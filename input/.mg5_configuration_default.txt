@@ -176,6 +176,10 @@
 #!  If None: try to find one available on the system
 # fastjet = fastjet-config
 
+#! eMELA-config 
+#!  If None: try to find one available on the system
+# eMELA = eMELA-config
+
 #! MCatNLO-utilities 
 #!  relative path starting from main directory
 # MCatNLO-utilities_path = ./MCatNLO-utilities

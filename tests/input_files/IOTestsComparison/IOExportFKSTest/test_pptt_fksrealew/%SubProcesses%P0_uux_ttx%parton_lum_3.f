@@ -59,13 +59,7 @@ C
       DOUBLE PRECISION CX2_COMPONENTS(N_EE),UX2_COMPONENTS(N_EE)
 
       INTEGER I_EE
-C     
-C     
-C     
-C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      INCLUDE '../../Source/PDF/pdf.inc'
 C     
 C     DATA                                                            
 C         

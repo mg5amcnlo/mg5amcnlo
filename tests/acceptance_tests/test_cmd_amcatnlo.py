@@ -821,3 +821,222 @@ class MECmdShell(IOTests.IOTestManager):
 
         check_html_page(self, pjoin(self.path, 'crossx.html'))
         check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eeww_nlo_emela_noph(self):
+        """ we will test the generation of NLO EW for w+w- production,
+        using the gmu ren. scheme and the delta scheme for the factorisation 
+        of IR singularities
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm_Gmu
+        generate e+ e- > w+ w- [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137009
+        set photons_from_lepton False
+        set mw 80.379
+        set mz 91.1876
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(7.513, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eeww_nlo_emela_wph(self):
+        """ we will test the generation of NLO EW for w+w- production,
+        using the gmu ren. scheme and the delta scheme for the factorisation 
+        of IR singularities.
+        Photon in the initial state is included.
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm_Gmu
+        define ep = e+ a
+        define em = e- a
+        generate ep em > w+ w- [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137009
+        set photons_from_lepton True
+        set mw 80.379
+        set mz 91.1876
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(7.694, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+    def test_generate_eett_nlo_emela_bs(self):
+        """ we will test the generation of NLO EW for ttbar production,
+        using the alphamz ren. scheme and the delta scheme for the factorisation 
+        of IR singularities. (Actually, the amz scheme will be transformed 
+        internally to the MSbar one)
+        Beamstrahlung is included.
+        The expected generation/compilation/running time is about 5 mins with 8 cores
+        """
+        
+        text = """
+        import model loop_qcd_qed_sm
+        generate e+ e- > t t~ [QED]
+        output %s
+        launch NLO
+        set ebeam1 250
+        set ebeam2 250
+        set lpp1 -3
+        set lpp2 3
+        set fixed_ren_scale True
+        set fixed_fac_scale True
+        set req_acc_FO 0.0010
+        set muf_ref_fixed 500
+        set mur_ref_fixed 500
+        set pdlabel emela
+        set lhaid 137010
+        set photons_from_lepton False
+        set mw 80.379
+        set mz 91.1876
+        set mt 173.3
+        set wt 0
+        set ww 0
+        set wz 0
+        set wh 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # skip if eMELA is not known to MG5_aMC
+        if not interface.options['eMELA']:
+            self.skipTest("Skipping test, eMELA not available")
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(5.161e-1, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
+
+
+
+    def test_generate_eett_nlo_qcd_noisr(self):
+        """ we will test the generation of NLO QCD for ttbar production,
+        (without ISR, fixed beam energy
+        """
+        
+        text = """
+        import model loop_sm-no_b_mass
+        generate e+ e- > t t~ [QCD]
+        output %s
+        launch NLO
+        set ebeam1 500
+        set ebeam2 500
+        set lpp1 0 
+        set lpp2 0
+        """ % (self.path)
+
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        open(pjoin(self.tmpdir,'cmd'),'w').write(text)
+        os.system('rm -rf %s/RunWeb' % self.path)
+        os.system('rm -rf %s/Events/run_*' % self.path)
+        interface.exec_cmd('import command %s' % pjoin(self.tmpdir, 'cmd'))
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        # read the cross section
+        summary = open('%s/Events/run_01/summary.txt' % self.path).read()
+        xsect = summary.split("Total cross section:")[1].split(" +-")[0]
+        error = summary.split("Total cross section:")[1].split(" +-")[1].split()[0]
+
+        # check within 3 sigma
+        self.assertAlmostEqual(1.745e-1, float(xsect), delta=3*float(error))
+
+        check_html_page(self, pjoin(self.path, 'crossx.html'))
+        check_html_page(self, pjoin(self.path, 'HTML', 'run_01', 'results.html'))
