@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.4.2 ()
+3.4.2 (20/01/22)
       ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
       OM: fix issue with hepmcremove (thanks to franaln)
       OM: fix some issue with addmodel
