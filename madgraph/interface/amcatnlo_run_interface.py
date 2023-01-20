@@ -3910,8 +3910,8 @@ RESTART = %(mint_mode)s
             arg_list = [[shower, out_id, self.run_name]]
 
         self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
-        self.njobs = 1
-        self.wait_for_complete('shower')
+        #self.njobs = 1
+        #self.wait_for_complete('shower')
 
         # now collect the results
         message = ''
@@ -4739,7 +4739,8 @@ RESTART = %(mint_mode)s
                 [(cwd, exe)] = list(job_dict.items())
                 self.run_exe(exe, args, run_type, cwd)
         
-        self.wait_for_complete(run_type)
+        if self.njobs:
+            self.wait_for_complete(run_type)
 
 
 
