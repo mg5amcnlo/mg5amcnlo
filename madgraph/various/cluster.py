@@ -28,13 +28,19 @@ from six.moves import input
 logger = logging.getLogger('madgraph.cluster') 
 
 try:
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, MG5DIR
     import madgraph.various.misc as misc
+    MADEVENT=False
 except Exception as error:
     if __debug__:
         print(str(error))
     from internal import MadGraph5Error
     import internal.misc as misc
+    MADEVENT=True
+    LOCALDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), os.path.pardir,
+                                                                os.path.pardir))
+
+
 
 pjoin = os.path.join
    
@@ -752,7 +758,7 @@ class MultiCore(Cluster):
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
             
-        self.demons.clear()               
+        self.demons[:] = [] 
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -1691,8 +1697,14 @@ class SLURMCluster(Cluster):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = self.get_jobs_identifier(cwd, prog)
-        
-        
+        import sys
+        if prog == sys.executable:
+            argument.insert(0, prog)
+            if MADEVENT:
+                prog = pjoin(LOCALDIR,'bin','internal','eval.sh') 
+            else:
+                prog = pjoin(MG5DIR, 'Template','Common','bin','internal','eval.sh')
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -1708,9 +1720,12 @@ class SLURMCluster(Cluster):
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
 
+
+
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
+
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
