@@ -1350,6 +1350,8 @@ class ReweightInterface(extended_cmd.Cmd):
 
         else:
 
+            import copy
+            buff_event=copy.deepcopy(event)
             orig_wgt = event.wgt
             w_orig= event.wgt
             jac = 1
@@ -1358,7 +1360,7 @@ class ReweightInterface(extended_cmd.Cmd):
             import importlib
             import numpy as np
 
-            pair,nexternal = event.get_fks_pair() # nextneral is the number of the real-emission config
+            pair,nexternal = buff_event.get_fks_pair() # nextneral is the number of the real-emission config
             x = 1.0
             write_to_file = False
             sud_cut= x*80.3**2
@@ -1408,8 +1410,8 @@ class ReweightInterface(extended_cmd.Cmd):
 
                     # Below finds the current process tag and tries to recombine the min_i and min_j
                     inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
-                    tag, order = event.get_tag_and_order()
-                    this_tag, order = event.get_tag_and_order()
+                    tag, order = buff_event.get_tag_and_order()
+                    this_tag, order = buff_event.get_tag_and_order()
                     matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()    
                     ping = False
                     ij_comb= []
@@ -1433,23 +1435,23 @@ class ReweightInterface(extended_cmd.Cmd):
 
                     # For n+1-body reweighting
                     if min_inv > sud_cut:
-                        event_to_sud = event
+                        event_to_sud = buff_event
                         n_part = nexternal
 
                     # For n-body reweighting
                     else:
                         # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
                         if ij_comb == []:
-                            event_to_sud = event
+                            event_to_sud = buff_event
                             n_part = nexternal
                         else:
-                            event_for_sud = self.merge_particles_kinematics(event, min_i,min_j,ij_comb)
+                            event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
                             event_to_sud = event_for_sud
                             n_part = nexternal - 1 
 
             if (S_event):
                     fks_inv = 0.0
-                    event_to_sud = event
+                    event_to_sud = buff_event
                     n_part = nexternal - 1 
 
 #############################      REAL SUDAKOV
@@ -1478,7 +1480,8 @@ class ReweightInterface(extended_cmd.Cmd):
             res, test = sud_mod.ewsudakov(mapped_tag, p_in, gstr)
 
             # Do the rescaling 
-            sudrat = 1. + res[1]/res[0]
+            sudrat = 1. + res[2]/res[0]
+            #sudrat = 1.
             event.rescale_weights(sudrat)
             w_new = w_orig * sudrat
                
@@ -2313,16 +2316,8 @@ class ReweightInterface(extended_cmd.Cmd):
         for onedir in rwgt_dir_possibility:
             if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
-            # for the EW sudakov, just load the python dispatcher
             if self.inc_sudakov:
-                ### TO CHANGE: put in total path, not the relative one to the dispatcher!!
-                import importlib
-                import numpy as np
-                importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
-                logger.info('EW Sudakov reweight module imported')
-                print('EW module loaded')
-                return 
-
+                return
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
                 with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
