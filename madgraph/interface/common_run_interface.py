@@ -2161,6 +2161,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     nevt_job = self.run_card['nevt_job']
                 else:
                     nevt_job = max(2500, self.run_card['nevents']/self.options['nb_core'])
+                    ## TV: TO CHANGE!!!
+                    nevt_job = self.run_card['nevents']
                 logger.info("split the event file in bunch of %s events" % nevt_job)
                 nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
                 starttime = time.time()

@@ -525,8 +525,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names()
-        # get iterator over param_card and the name associated to the current reweighting.
-        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
         
         if self.rwgt_dir:
             path_me =self.rwgt_dir
@@ -543,6 +541,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
             print('EW module loaded')
+            type_rwgt = ['sud0','sud1']
+
+        # get iterator over param_card and the name associated to the current reweighting.
+        param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
         
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
@@ -1348,6 +1350,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 misc.sprint(nhel, Pdir, hel_dict)                        
                 raise Exception("Invalid matrix element for original computation (weight=0)")
 
+            return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
         else:
 
             import copy
@@ -1355,6 +1358,7 @@ class ReweightInterface(extended_cmd.Cmd):
             orig_wgt = event.wgt
             w_orig= event.wgt
             jac = 1
+            pi=3.141592653589
 
             mgcmd = self.mg5cmd
             import importlib
@@ -1364,7 +1368,7 @@ class ReweightInterface(extended_cmd.Cmd):
             x = 1.0
             write_to_file = False
             sud_cut= x*80.3**2
-            min_inv=1000000.0
+            min_inv=10000000.0
             fks1=pair[0]
             fks2=pair[1]
             min_inv_fks=False
@@ -1432,7 +1436,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if not ping:
                         ij_comb = []
                             
-
+                    print(ij_comb)
                     # For n+1-body reweighting
                     if min_inv > sud_cut:
                         event_to_sud = buff_event
@@ -1476,17 +1480,19 @@ class ReweightInterface(extended_cmd.Cmd):
             for i,el in enumerate(event_to_sud):
                 p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
 
-            gstr=1.1587268699383517
+            gstr=event.aqcd*2.*pi
             sorted_tag = (mapped_tag[0],tuple(sorted(list(mapped_tag[1]))))
             res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
 
             # Do the rescaling 
-            sudrat = 1. + res[2]/res[0]
+            sudrat0 = 1. + res[1]/res[0]
+            sudrat1 = 1. + res[2]/res[0]
             #sudrat = 1.
-            event.rescale_weights(sudrat)
-            w_new = w_orig * sudrat
-               
-        return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
+            event.rescale_weights(sudrat0)
+            w_new0 = w_orig * sudrat0
+            w_new1 = w_orig *sudrat1
+
+            return {'orig': orig_wgt, 'sud0': w_new0/w_orig*orig_wgt*jac, 'sud1': w_new1/w_orig*orig_wgt*jac}
      
     def calculate_nlo_weight(self, event):
 
@@ -2141,6 +2147,8 @@ class ReweightInterface(extended_cmd.Cmd):
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
                 mgcmd.exec_cmd("define %s = %s" % (name, content))
+
+        
         
         if  second and 'tree_path' in self.dedicated_path:
             files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
@@ -2229,8 +2237,8 @@ class ReweightInterface(extended_cmd.Cmd):
         if not second:
             self.has_nlo = has_nlo
             
-        
-        
+
+
     def compile(self):
         """compile the code"""
         
