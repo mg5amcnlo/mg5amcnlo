@@ -4948,6 +4948,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
 
     def write_python_wrapper(self, fname):
         """write a wrapper to be able to call the Sudakov for a specific subfolder given its PDG"""
+
         
         template = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_pydispatcher.inc')).read()
@@ -4955,11 +4956,20 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         replace_dict = {}
         replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
         replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
-        replace_dict['pdg2sud'] = ",\n".join([str(tuple(dd[1])) + ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+        replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2])) + \
+                ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
 
         outfile = open(fname ,'w')
         outfile.write(template % replace_dict)
         outfile.close()
+
+    def get_pdg_tuple(self, pdgs, nincoming):
+        """write a tuple of 2 tuple, with the incoming particles unsorted
+        and the outgoing ones sorted
+        """
+        incoming = pdgs[:nincoming]
+        outgoing = pdgs[nincoming:]
+        return (tuple(incoming), tuple(sorted(outgoing)))
 
 
     #===============================================================================
@@ -5116,6 +5126,6 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         gen_infohtml.make_info_html_nlo(self.dir_path)
         
         # update the dirs to pdg information
-        self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']]) for pp in matrix_element.born_me['processes']])
+        self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in matrix_element.born_me['processes']])
 
         return calls, amp_split_orders
