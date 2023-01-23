@@ -1477,7 +1477,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
 
             gstr=1.1587268699383517
-            res, test = sud_mod.ewsudakov(mapped_tag, p_in, gstr)
+            sorted_tag = (mapped_tag[0],tuple(sorted(list(mapped_tag[1]))))
+            res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
 
             # Do the rescaling 
             sudrat = 1. + res[2]/res[0]
