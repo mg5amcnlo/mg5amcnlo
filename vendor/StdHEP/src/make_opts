@@ -1,6 +1,6 @@
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
-  FC=gfortran
+  FC=gfortran-mp-10
 endif
 
 # Set MBITS to the number of bits used by the system (used for Darwin)

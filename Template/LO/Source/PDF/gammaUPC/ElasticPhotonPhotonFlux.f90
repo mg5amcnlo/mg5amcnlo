@@ -31,6 +31,7 @@ CONTAINS
     ! for pp collisions
     ! typical value of b0=19.8 GeV-2 at the LHC
     ! fitted by DdE is b0=9.7511+0.222796*log(s/GeV**2)+0.0179103*log(s/GeV**2)**2 GeV-2 from 10^1 to 10^5 GeV dsqrt(s)
+    ! a new one (see 2207.03012) b0=9.81+0.211*log(s/GeV**2)+0.0185*log(s/GeV**2)**2 GeV-2
     ! bx and by should be in unit of GeV-1
     IMPLICIT NONE
     REAL(KIND(1d0))::PNOHAD_pp
@@ -1050,8 +1051,11 @@ CONTAINS
        ENDIF
        ! get b0 from the DdE fit
        cmenergy=2d0*DSQRT(ebeam_PN(1)*ebeam_PN(2)) ! in unit of GeV
-       b0_common=9.7511D0+0.222796D0*DLOG(cmenergy**2)&
-            +0.0179103D0*DLOG(cmenergy**2)**2 ! in unit of GeV-2
+       !b0_common=9.7511D0+0.222796D0*DLOG(cmenergy**2)&
+       !     +0.0179103D0*DLOG(cmenergy**2)**2 ! in unit of GeV-2
+       !a new one (see 2207.03012) b0=9.81+0.211*log(s/GeV**2)+0.0185*log(s/GeV**2)**2 GeV-2
+       b0_common=9.81D0+0.211D0*DLOG(cmenergy**2)&
+            +0.0185D0*DLOG(cmenergy**2)**2 ! in unit of GeV-2
        ! two Z are 1
        Z1=1d0
        Z2=1d0
