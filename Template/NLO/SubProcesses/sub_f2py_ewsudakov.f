@@ -79,7 +79,6 @@ C-----
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+
      $        amp_split_ewsud_par(1))
-        write(*,*) 'EWSUDAKOV', sud_mod, wgt_born, wgt_sud
         results(1) = wgt_born
         results(2+sud_mod) = wgt_sud
       enddo
