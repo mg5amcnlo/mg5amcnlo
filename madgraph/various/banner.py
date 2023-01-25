@@ -3940,8 +3940,8 @@ class RunCardLO(RunCard):
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
         # Bias module options
-        self.add_param("bias_module", 'None', include=False)
-        self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc')
+        self.add_param("bias_module", 'None', include=False, hidden=True)
+        self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc', hidden=True)
                 
         #matching
         self.add_param("scalefact", 1.0)

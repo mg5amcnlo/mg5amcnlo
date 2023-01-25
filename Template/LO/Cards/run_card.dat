@@ -79,13 +79,10 @@ $ckkw
 			     ! 2 is new strategy (using only the denominator)
 $psoptim			     
 #*********************************************************************
-# Generation bias and customization (custom cuts/scale/...)          *
-#  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *
+# Customization (custom cuts/scale/bias/...)                         *
+# list of files containing fortran function that overwrite default   *
 #*********************************************************************
- %(bias_module)s = bias_module  ! Bias type of bias, [None, ptj_bias, -custom_folder-]
- %(bias_parameters)s = bias_parameters ! Specifies the parameters of the module.
  %(custom_fcts)s = custom_fcts ! List of files containing user hook function
-#
 #*******************************                                                 
 # Parton level cuts definition *
 #*******************************
