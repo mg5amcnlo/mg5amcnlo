@@ -814,10 +814,11 @@ C       Flip CM_RAP (to get rapidity right)
 
       DSIGPROC=0D0
 
-c    not needed anymore ... can be removed ... set for debugging only   
-     IF (.not.PASSCUTS(P1)) THEN
-        stop 1
-     endif
+c     not needed anymore ... can be removed ... set for debugging only   
+c     IF (.not.PASSCUTS(P1)) THEN
+c       stop 1
+c     endif
+
 c     set the running scale 
 c     and update the couplings accordingly
       IF (VECSIZE_MEMMAX.LE.1) THEN ! no-vector (NB not VECSIZE_USED!)
