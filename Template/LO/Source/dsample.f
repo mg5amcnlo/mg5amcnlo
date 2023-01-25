@@ -12,6 +12,8 @@ c     dsig           Function to be integrated
 c     ninvar         Number of invarients to keep grids on (s,t,u, s',t' etc)
 c     nconfigs       Number of different pole configurations 
 c     VECSIZE_USED   Number of events in parallel out of VECSIZE_MEMMAX
+c                    (NB this is the #events handled by the cudacpp bridge,
+c                    but the SIMD vector size and GPU warp size are smaller)
 c**************************************************************************
       implicit none
       include 'genps.inc'
@@ -169,7 +171,7 @@ c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
             CUTSDONE=.FALSE.
             CUTSPASSED=.FALSE.
-            if (passcuts(p)) then
+            if (passcuts(p,VECSIZE_USED)) then
                ivec=ivec+1
 c              write(*,*) 'pass_point ivec is ', ivec
                all_p(:,ivec) = p(:)
