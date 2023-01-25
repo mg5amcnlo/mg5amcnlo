@@ -2804,7 +2804,7 @@ class RunCard(ConfigFile):
            This function does not returns anything.  
         """        
 
-        if name == "bias_parameters" and not self.LO:
+        if name == "dsqrt_q2fact1" and not self.LO:
             raise InvalidRunCard("Looks like you passed a LO run_card for a NLO run. Please correct")
         elif name == "shower_scale_factor" and self.LO:
             raise InvalidRunCard("Looks like you passed a NLO run_card for a LO run. Please correct")
@@ -3100,6 +3100,9 @@ class RunCard(ConfigFile):
 
         The function present in the file are determined automatically via regular expression.
         and only that function is replaced in the associated file.
+
+        function in the filelist starting with user_ will also be include within the 
+        dummy_fct.f file
         """
 
         if outdir is None:
@@ -3121,9 +3124,12 @@ class RunCard(ConfigFile):
                     fsock = file_writers.FortranWriter(tmp,'w')
                     function_text = fsock.remove_routine(text, fct)
                     fsock.close()
-                    test = open(tmp,'r').read()
+                    test = open(tmp,'r').read()                        
                     if fct not in self.dummy_fct_file:
-                        raise InvalidRunCard("function %s is not designed for overwritting")
+                        if fct.startswith('user_'):
+                            self.dummy_fct_file[fct] = self.dummy_fct_file['user_']
+                        else:
+                            raise InvalidRunCard("function %s is not designed for overwritting")
                     writein = self.dummy_fct_file[fct]
                     if writein not in to_mod:
                         to_mod[writein]=[[fct], [function_text]]
@@ -3880,7 +3886,9 @@ class RunCardLO(RunCard):
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
                       "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
-                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f")}
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
+                      }
     
     if MG5DIR:
         default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
@@ -5212,7 +5220,8 @@ class RunCardNLO(RunCard):
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
-                      "bias_weight_function": pjoin("SubProcesses","dummy_fct.f")
+                      "bias_weight_function": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
 
     if MG5DIR:
