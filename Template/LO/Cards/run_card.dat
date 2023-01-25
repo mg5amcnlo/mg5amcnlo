@@ -77,7 +77,10 @@ $ckkw
    %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.00773)
                              ! 1 is old strategy (using amp square)
 			     ! 2 is new strategy (using only the denominator)
-$psoptim			     
+$psoptim
+   %(vectorized_size)s = vectorized_size ! for SIMD/GPU number of event in lock-step: nvidia gpu should be 32, amd gpu 64, and SIMD to number of double handle
+   %(batch_size)s = batch_size ! for evaluation per batch of events, set the batch size. Should be multiple of vectorised_size
+
 #*********************************************************************
 # Generation bias, check the wiki page below for more information:   *
 #  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *

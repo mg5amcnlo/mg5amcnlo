@@ -73,9 +73,6 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
       include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
-      INTEGER VECSIZE_USED
-      DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime
-
 C-----
 C  BEGIN CODE
 C----- 
@@ -184,7 +181,7 @@ c         itmin = itmin + 1
       endif
 
       write(*,*) "about to integrate ", ndim,ncall,itmax,itmin,ninvar,nconfigs
-      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs,VECSIZE_USED)
+      call sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs,VECSIZE_USED_ORIG)
 
 c
 c     Now write out events to permanent file

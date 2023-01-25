@@ -3542,6 +3542,10 @@ class RunCardLO(RunCard):
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
+        # vectorization option 
+        self.add_param("vectorized_size", 0 , fortran_name="VECSIZE_LOCKSTEP", comment="0 means decide automatically depending of the hardware")
+        self.add_param("batch_size", 0 , fortran_name="VECSIZE_USED_ORIG", comment="0 means decide automatically")
+        self.add_param("bias_module", 'None', include=False)
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
         self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc')
@@ -4007,7 +4011,16 @@ class RunCardLO(RunCard):
             self['mxxmin4pdg'] =[0.] 
             self['mxxpart_antipart'] = [False]
             
-                    
+
+        # need to check the validity of the vectorised parameter
+        # and the autoset of the vector parameter
+        # to check: if the run_card is overwritten or keep the 0 value
+        if self['vectorized_size'] == 0:
+            self['vectorized_size'] = self.get_locksize_step()
+        if self['batch_size'] == 0:
+             self['batch_size'] = self['vectorized_size']
+        if self['batch_size'] % self['vectorized_size']:
+            raise InvalidRunCard("batch size should be a multiple of the vectorised size")
            
     def create_default_for_process(self, proc_characteristic, history, proc_def):
         """Rules

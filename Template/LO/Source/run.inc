@@ -107,3 +107,17 @@ c
        integer sde_strat ! 1 means standard single diagram enhancement strategy,
 c                          2 means approximation by the denominator of the propagator
        common/TO_CHANNEL_STRAT/tmin_for_channel, sde_strat
+c
+c     variable related to the vectorization code
+c
+      integer VECSIZE_USED_ORIG, vectorized_size
+c
+c     value in the param_card for VECSIZE_USED (so original value)
+c     which gives the size of the batch for GPU/OpenMP/...
+c     VECSIZE_LOCKSTEP gives the size of number of element that need to
+c     setup to allow lock-step execution (for wrap/simd)
+c     Note Python will make the code to crash if those two are not a multiple
+c     of each other.
+c     VECSIZE_USED_ORIG allows hack for testing in production it will always
+c     be equal to VECSIZE_MEMMAX (that one need to be resize automatically)
+      common/to_vectorized_code/VECSIZE_USED_ORIG, VECSIZE_LOCKSTEP
