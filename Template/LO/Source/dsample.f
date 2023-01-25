@@ -1,16 +1,17 @@
-      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs)
+      subroutine sample_full(ndim,ncall,itmax,itmin,dsig,ninvar,nconfigs,VECSIZE_USED)
 c**************************************************************************
 c     Driver for sample which does complete integration
 c     This is done in double precision, and should be told the
 c     number of possible phasespace choices.
 c     Arguments:
-c     ndim       Number of dimensions for integral(number or random #'s/point)
-c     ncall      Number of times to evaluate the function/iteration
-c     itmax      Max number of iterations
-c     itmin      Min number of iterations
-c     ninvar     Number of invarients to keep grids on (s,t,u, s',t' etc)
-c     nconfigs   Number of different pole configurations 
-c     dsig       Function to be integrated
+c     ndim           Number of dimensions for integral(number or random #'s/point)
+c     ncall          Number of times to evaluate the function/iteration
+c     itmax          Max number of iterations
+c     itmin          Min number of iterations
+c     dsig           Function to be integrated
+c     ninvar         Number of invarients to keep grids on (s,t,u, s',t' etc)
+c     nconfigs       Number of different pole configurations 
+c     VECSIZE_USED   Number of events in parallel out of VECSIZE_MEMMAX
 c**************************************************************************
       implicit none
       include 'genps.inc'
@@ -19,6 +20,7 @@ c
 c Arguments
 c
       integer ndim,ncall,itmax,itmin,ninvar,nconfigs
+      integer VECSIZE_USED
       external         dsig
       double precision dsig
 c
@@ -141,7 +143,7 @@ c-----
 C     Fix for 2>1 process where ndim is 2 and not 1
       ninvar = max(2,ninvar)
 
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
+      call sample_init(ndim,ncall,itmax,ninvar,nconfigs,VECSIZE_USED)
       call graph_init
       do i=1,itmax
          xmean(i)=0d0
@@ -374,7 +376,7 @@ c
       ncall = ncall*4 ! / 2**(itmax-2)
       write(*,*) "Starting w/ ncall = ", ncall
       itmax = 8
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
+      call sample_init(ndim,ncall,itmax,ninvar,nconfigs,VECSIZE_USED)
       do i=1,itmax
          xmean(i)=0d0
          xsigma(i)=0d0
@@ -652,7 +654,7 @@ c     $     ntot/1000,'</th><th align=right>',teff,'</th></tr>'
 
 
 
-      subroutine sample_init(p1, p2, p3, p4, p5)
+      subroutine sample_init(p1, p2, p3, p4, p5, VECSIZE_USED)
 c************************************************************************
 c     Initialize grid and random number generators
 c************************************************************************
@@ -668,7 +670,7 @@ c
 c     Arguments
 c
       integer p1, p2, p3, p4, p5
-
+      integer VECSIZE_USED
 c
 c     Local
 c

@@ -4975,10 +4975,29 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             vector_size = 1
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
-
-        text = [" integer VECSIZE_MEMMAX\n"," parameter (VECSIZE_MEMMAX=%i)\n" % vector_size]
-        text += [" integer VECSIZE_USED\n"," parameter (VECSIZE_USED=VECSIZE_MEMMAX)\n"]
-
+        text=["""C
+C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
+C this is designed for offloading MEs to GPUs or vectorized C++,
+C but it can also be used for computing MEs in Fortran.
+C If VECSIZE_MEMMAX equals 1, the old scalar API is used:
+C this can only be used for computing MEs in Fortran.
+C
+C Fortran arrays in the vector API can hold up to VECSIZE_MEMMAX
+C events and are statically allocated at compile time.
+C The constant value of VECSIZE_MEMMAX is fixed at codegen time
+C (output madevent ... --vector_size=<VECSIZE_MEMMAX>).
+C
+C While the arrays can hold up to VECSIZE_MEMMAX events,
+C only VECSIZE_USED (<= VECSIZE_MEMAMX) are used in Fortran loops.
+C The value of VECSIZE_USED can be chosen at runtime
+C (typically 8k-16k for GPUs, 16-32 for vectorized C++).
+C
+C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
+C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
+C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
+C
+      INTEGER VECSIZE_MEMMAX
+      PARAMETER (VECSIZE_MEMMAX=%i)""" % vector_size]
         fsock.writelines(text)
         return vector_size
 
@@ -6334,7 +6353,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK, ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,VECSIZE_USED) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)

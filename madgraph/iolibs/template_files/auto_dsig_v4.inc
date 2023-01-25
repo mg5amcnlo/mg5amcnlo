@@ -179,7 +179,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT,IMODE, ALL_OUT)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -220,6 +220,7 @@ C
       DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
       INTEGER IMODE
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER VECSIZE_USED
 C ----------
 C BEGIN CODE
 C ----------
@@ -332,7 +333,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 ENDDO
 	 channel = %(get_channel)s
 
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO IVEC=1,VECSIZE_USED
@@ -396,13 +397,15 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out , selected_hel, selected_col)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col, VECSIZE_USED)
      USE OMP_LIB
      implicit none
 
      include 'nexternal.inc'
      include '../../Source/vector.inc' ! needed to define VECSIZE_MEMMAX
      include 'maxamps.inc'
+     INTEGER                 NCOMB
+     PARAMETER (             NCOMB=%(ncomb)d)
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
@@ -410,6 +413,7 @@ C
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
+     INTEGER VECSIZE_USED
 
      integer ivec
 
