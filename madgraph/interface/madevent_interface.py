@@ -3764,6 +3764,14 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
+
+            if nb_event < self.run_card['nevents']:
+                logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
+                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", self.run_card['sde_strategy'] + 1 % 2)
+                logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
+                logger.warning("  - reduce the number of requested events (if set too high)")
+                logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+
         if partials:
             for i in range(partials):
                 try:
@@ -5811,9 +5819,21 @@ tar -czf split_$1.tar.gz split_$1
         self.check_nb_events()
 
         # this is in order to avoid conflicts between runs with and without
-        # lhapdf
-        misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
+        # lhapdf. not needed anymore the makefile handles it automaticallu
+        #misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
+        self.make_opts_var['pdlabel1'] = ''
+        self.make_opts_var['pdlabel2'] = ''
+        if self.run_card['pdlabel1'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel1'] = 'eva'
+        if self.run_card['pdlabel2'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel2'] = 'eva'
+        if self.run_card['pdlabel1'] in ['edff','chff']:
+            self.make_opts_var['pdlabel1'] = self.run_card['pdlabel1']
+        if self.run_card['pdlabel2'] in ['edff','chff']:
+            self.make_opts_var['pdlabel2'] = self.run_card['pdlabel2']
+
+
         # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             self.make_opts_var['lhapdf'] = 'True'
@@ -5830,8 +5850,9 @@ tar -czf split_$1.tar.gz split_$1
                 # copy the files for the chosen density
                 if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
                     self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
-
-            
+                    self.make_opts_var['pdlabel1'] = 'ee'
+                    self.make_opts_var['pdlabel2'] = 'ee'
+        
         # set random number
         if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])

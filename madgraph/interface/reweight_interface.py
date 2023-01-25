@@ -694,10 +694,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
 
         # perform the scanning
+        reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
         if param_card_iterator:
+            reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
             for i,card in enumerate(param_card_iterator):
-                if self.options['rwgt_name']:
-                    self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
+                if reweight_name:
+                    self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)
                 self.new_param_card = card
                 #card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)

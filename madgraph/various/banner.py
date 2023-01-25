@@ -71,7 +71,7 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha','initrwgt','mggenerationinfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger','mgshowercard',
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard', 'foanalyse',
                      'ma5card_parton','ma5card_hadron','run_settings']
 
     capitalized_items = {
@@ -127,6 +127,7 @@ class Banner(dict):
       'mgdelphestrigger':'delphes_trigger.dat',
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
+      'foanalyse': 'FO_analyse_card.dat',
       'init': '',
       'mggenerationinfo':'',
       'scalesfunctionalform':'',
@@ -629,7 +630,7 @@ class Banner(dict):
     #convenient alias
     get = get_detail
     
-    def set(self, card, *args):
+    def set(self, tag, *args):
         """modify one of the cards"""
 
         if tag == 'param_card':
@@ -3556,7 +3557,7 @@ class RunCard(ConfigFile):
                 return lhaid
         else: 
             try:
-                return {'none': 0, 'iww': 0, 'eva':0,
+                return {'none': 0, 'iww': 0, 'eva':0, 'edff':0, 'chff':0,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
                     'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
                     }[pdf] 
@@ -3592,6 +3593,10 @@ class RunCard(ConfigFile):
 template_on = \
 """#*********************************************************************
 # Heavy ion PDF / rescaling of PDF                                   *
+# Note that ebeam1 and ebeam2 are energies of the ion beams          *
+# instead of energies per nucleon in nuclei                          *
+# For instance, the LHC beam energy of 2510 GeV/nucleon in Pb208     *
+# should set 2510*208=522080 GeV for ebeam                           *
 #*********************************************************************
   %(nb_proton1)s    = nb_proton1 # number of proton for the first beam
   %(nb_neutron1)s    = nb_neutron1 # number of neutron for the first beam
@@ -3759,6 +3764,18 @@ class PDLabelBlock(RunBlock):
         if self.status(card):
             if card['pdlabel1'] == 'lhapdf' or card['pdlabel2'] == 'lhapdf':
                 dict.__setitem__(card, 'pdlabel','lhapdf')
+            elif card['pdlabel1'] in ['edff','chff'] or card['pdlabel2'] in ['edff','chff']:
+                if card['pdlabel1'] != card['pdlabel2']:
+                    if card['pdlabel1'] in ['edff','chff']:
+                        dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
+                        dict.__setitem__(card, 'pdlabel2',card['pdlabel1'])
+                    else:
+                        dict.__setitem__(card, 'pdlabel',card['pdlabel2'])
+                        dict.__setitem__(card, 'pdlabel1',card['pdlabel2'])
+                else:
+                    dict.__setitem__(card, 'pdlabel',card['pdlabel1'])
+            elif card['pdlabel1'] == 'emela' or card['pdlabel2'] == 'emela':
+                dict.__setitem__(card, 'pdlabel','emela')
             else:
                 if card['pdlabel1'] == card['pdlabel2']:
                     if card['pdlabel'] != card['pdlabel1']:
@@ -3926,7 +3943,7 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
-        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','none','mixed']+\
+        valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         self.add_param("pdlabel", "nn23lo1", hidden=True, allowed=valid_pdf)
         self.add_param("pdlabel1", "nn23lo1", hidden=True, allowed=valid_pdf, fortran_name="pdsublabel(1)")
@@ -4241,7 +4258,7 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'none')
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
-                if self[pdlabelX] in ['eva', 'iww', 'none']:
+                if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
                     raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
                 if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
@@ -4249,9 +4266,9 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] != 'none':
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to none" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
-                    self.set(pdlabelX, 'none')
+                if self[pdlabelX] not in ['none','chff','edff']:
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    self.set(pdlabelX, 'edff')
                     mod = True
 
         if mod:
@@ -4306,7 +4323,7 @@ class RunCardLO(RunCard):
                     self['fixed_fac_scale2'] = self['fixed_fac_scale']
             elif self['lpp1'] !=0 or self['lpp2']!=0:
                 logger.warning('fixed_fac_scale1 not defined whithin your run_card. Using default value: %s', self['fixed_fac_scale1'])
-                logger.warning('fixed_fac_scale1 not defined whithin your run_card. Using default value: %s', self['fixed_fac_scale2'])
+                logger.warning('fixed_fac_scale2 not defined whithin your run_card. Using default value: %s', self['fixed_fac_scale2'])
 
         # check if lpp = 
         if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]):
@@ -4473,7 +4490,15 @@ class RunCardLO(RunCard):
                         self['lpp1'] = 1  
                         self['lpp2'] = 0  
                         self['ebeam1'] = '6500'  
-                        self['ebeam2'] = '1k'  
+                        self['ebeam2'] = '1k'
+
+                # UPC for p p collision
+                elif beam_id == [[22],[22]]:
+                    self['lpp1'] = 2
+                    self['lpp1'] = 2
+                    self['ebeam1'] = '6500'
+                    self['ebeam2'] = '6500'
+                    self['pdlabel'] = 'edff'
             
             elif any(id in beam_id for id in [11,-11,13,-13]):
                 self['lpp1'] = 0
@@ -4484,6 +4509,7 @@ class RunCardLO(RunCard):
                 if set([ abs(i) for i in beam_id_split[0]]) == set([ abs(i) for i in beam_id_split[1]]):
                     self.display_block.append('ecut')
                 self.display_block.append('beam_pol')
+
      
 
             # check for possibility of eva
@@ -4634,12 +4660,22 @@ class RunCardLO(RunCard):
         # interference case is already handle above
         # here pick strategy 2 if only one QCD color flow
         # and for pure multi-jet case
+        jet_id = [21] + list(range(1, self['maxjetflavor']+1))
         if proc_characteristic['single_color']:
             self['sde_strategy'] = 2
+            #for pure lepton final state go back to sde_strategy=1
+            pure_lepton=True
+            proton_initial=True
+            for proc in proc_def:
+                if any(abs(j.get('id')) not in [11,12,13,14,15,16] for j in proc[0]['legs'][2:]):
+                    pure_lepton = False
+                if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs'][:2]):
+                    proton_initial = False
+            if pure_lepton and proton_initial:
+                self['sde_strategy'] = 1
         else:
             # check if  multi-jet j 
             is_multijet = True
-            jet_id = [21] + list(range(1, self['maxjetflavor']+1))
             for proc in proc_def:
                 if any(abs(j.get('id')) not in jet_id for j in proc[0]['legs']):
                     is_multijet = False
@@ -5249,10 +5285,19 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
-        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
+        self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
+        self.add_param('pdfscheme', 0)
+        self.add_param('photons_from_lepton', True)
+        self.add_param('has_bstrahl', False)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
+        # stuff for lepton collisions 
+        self.add_param('alphascheme', 0)
+        self.add_param('nlep_run', -1)
+        self.add_param('nupq_run', -1)
+        self.add_param('ndnq_run', -1)
+        self.add_param('w_run', 1)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
@@ -5347,6 +5392,16 @@ class RunCardNLO(RunCard):
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
             if self['lpp1'] == 1 or self['lpp2']==1:
                 raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
+
+            if abs(self['lpp1']) == abs(self['lpp2']) in [3,4]:
+                # for dressed lepton collisions, check that the lhaid is a valid one
+                if self['pdlabel'] not in sum(self.allowed_lep_densities.values(),[]) + ['emela']:
+                    raise InvalidRunCard('pdlabel %s not allowed for dressed-lepton collisions' % self['pdlabel'])
+            
+            elif self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
+                self['pdlabel']='nn23nlo'
+                self['reweight_pdf']=[False]
+                logger.info('''Lepton-lepton collisions: ignoring PDF related parameters in the run_card.dat (pdlabel, lhaid, reweight_pdf, ...)''')
         
             if self['lpp1'] == 0  == self['lpp2']:
                 if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
@@ -5784,6 +5839,154 @@ class MadLoopParam(ConfigFile):
             
         
         
-        
-        
+class eMELA_info(ConfigFile): 
+    """ a class for eMELA (LHAPDF-like) info files
+    """
+    path = ''
+
+    def __init__(self, finput, me_dir):
+        """initialise from finput.
+        me_dir is stored to update the cards
+        """
+        self.me_dir = me_dir
+        super(eMELA_info, self).__init__(finput)
+
+
+    def read(self, finput):
+        if isinstance(finput, file): 
+            lines = finput.open().read().split('\n')
+            self.path = finput.name
+        else:
+            lines = open(finput).read().split('\n')
+            self.path = finput
+
+        for l in lines:
+            if not l.strip() or l.startswith('#'):
+                continue
+            k, v = l.split(':', 1) # ignore further occurrences of :
+            try:
+                self[k.strip()] = eval(v)
+            except (NameError, SyntaxError): 
+                self[k.strip()] = v
+
+    def default_setup(self):
+        self.add_param('eMELA_ActiveFlavoursAlpha', [3,2,3], typelist=int)
+        self.add_param('eMELA_Walpha', True)
+        self.add_param('eMELA_RenormalisationSchemeInt', 0)
+        self.add_param('eMELA_AlphaQref', 91.188)
+        self.add_param('eMELA_PerturbativeOrder', 1)
+        self.add_param('eMELA_LEGACYLLPDF', -1)
+        self.add_param('eMELA_FactorisationSchemeInt', 1)
+        self.add_param('beamspectrum_type', '')
+
+    def update_epdf_emela_variables(self, banner, uvscheme):
+        """updates the variables of the cards according to those
+        of the PDF set at hand (self) and the uvscheme employed
+        for the hard matrix-element
+        Uvscheme =0,1,2 for MSbar,a(mz),Gmu
+        """
+
+        logger.warning("Please make sure that the value of alpha is consistent between PDFs and param_card;\n"
+                   +"In the case of PDFs in the MSbar ren. scheme, the contributions factoring different\n"
+                   +"powers of alpha should be reweighted a posteriori")
+
+
+        logger.info('Updating variables according to %s' % self.path) 
+        # Flavours in the running of alpha
+        nd, nu, nl = self['eMELA_ActiveFlavoursAlpha']
+        self.log_and_update(banner, 'run_card', 'ndnq_run', nd)
+        self.log_and_update(banner, 'run_card', 'nupq_run', nu)
+        self.log_and_update(banner, 'run_card', 'nlep_run', nl)
+        wrun = self['eMELA_Walpha']
+        self.log_and_update(banner, 'run_card', 'w_run', wrun)
+
+        # alpha ren scheme in the PDFs
+        # 0->MSbar, w running; 1->MSbar, w/o running
+        # 2->alphaMZ; 3->Gmu
+        uvscheme_pdf = self['eMELA_RenormalisationSchemeInt']
+        # in the run card we have
+        #alphascheme ! UV scheme for alpha (not alpha_s!) in the PDFs
+	#	     ! 0: same as the model (no extra term included)
+	#	     ! 1: MSbar, model with alpha(MZ)
+	#            ! 2: MSbar, model with Gmu
+        ## note that -1 and -2 eschange ren scheme in model and in PDFs
+        if [uvscheme_pdf, uvscheme] in [[0,0], [1,0], [2,1], [3,2]]:
+            # no scheme-change factors needed
+            self.log_and_update(banner, 'run_card', 'alphascheme', 0)
+        elif uvscheme_pdf in [0,1] and uvscheme == 1:
+            # MSbar -> a(mz)
+            self.log_and_update(banner, 'run_card', 'alphascheme', 1)
+        elif uvscheme_pdf in [0,1] and uvscheme == 2:
+            # MSbar -> a(mz)
+            self.log_and_update(banner, 'run_card', 'alphascheme', 2)
+        elif uvscheme_pdf == 2 and uvscheme == 0:
+            # a(mz) -> MSbar
+            self.log_and_update(banner, 'run_card', 'alphascheme', -1)
+        elif uvscheme_pdf == 3 and uvscheme == 0:
+            # gmu -> MSbar
+            self.log_and_update(banner, 'run_card', 'alphascheme', -2)
+            raise Exception("Gmu not implemented, skipping")
+        else:
+            logger.warning('Cannot treat the following renormalisation schemes for ME and PDFs: %d, %d' \
+                            % (uvscheme, uvscheme_pdf))
+
+        # if PDFs use MSbar with fixed alpha, set the ren scale fixed to Qref 
+        # also check that the com energy is equal to qref, otherwise print a 
+        # warning
+        if uvscheme_pdf == 1:
+            qref = self['eMELA_AlphaQref']
+            self.log_and_update(banner, 'run_card', 'fixed_ren_scale', 1)
+            self.log_and_update(banner, 'run_card', 'muR_ref_fixed', qref)
+            sqrts = banner.get_detail('run_card', 'ebeam1') + banner.get_detail('run_card', 'ebeam2')
+            if sqrts != qref:
+                logger.warning('Alpha in PDFs has reference scale != sqrts: %e, %e' \
+                                % ( qref, sqrts))
+
+        # LL / NLL PDF (0/1)
+        pdforder = self['eMELA_PerturbativeOrder']
+        # pdfscheme = 0->MSbar; 1->DIS; 2->eta (leptonic); 3->beta (leptonic) 
+        #    4->mixed (leptonic); 5-> nobeta (leptonic); 6->delta (leptonic)
+        # if LL, use nobeta scheme unless LEGACYLLPDF > 0
+        if pdforder == 0:
+            if 'eMELA_LEGACYLLPDF' not in self.keys() or self['eMELA_LEGACYLLPDF'] in [-1, 0]:
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 5)
+            elif self['eMELA_LEGACYLLPDF'] == 1: 
+                # mixed
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 4)
+            elif self['eMELA_LEGACYLLPDF'] == 2: 
+                # eta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 2)
+            elif self['eMELA_LEGACYLLPDF'] == 3: 
+                # beta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 3)
+        elif pdforder == 1:
+            # for NLL, use eMELA_FactorisationSchemeInt = 0/1 
+            #  for delta/MSbar
+            if self['eMELA_FactorisationSchemeInt'] == 0:
+                # MSbar
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 0)
+            elif self['eMELA_FactorisationSchemeInt'] == 1:
+                # Delta
+                self.log_and_update(banner, 'run_card', 'pdfscheme', 6)
+
+        #beamstrahlung:
+        if 'beamspectrum_type' in self.keys() and self['beamspectrum_type']:
+            self.log_and_update(banner, 'run_card', 'has_bstrahl', True)
+        else:
+            self.log_and_update(banner, 'run_card', 'has_bstrahl', False)
+
+
+
     
+
+    def log_and_update(self, banner, card, par, v):
+        """update the card parameter par to value v
+        and print a log on the screen
+        """
+        logger.info(' Setting %s = %s in the %s' % (par, str(v), card))
+        if card != 'param_card':
+            banner.set(card,par,v)
+        else:
+            xcard = banner.charge_card(card)
+            xcard[par[0]].param_dict[(par[1],)].value = v
+            xcard.write(os.path.join(self.me_dir, 'Cards', '%s.dat' % card))
