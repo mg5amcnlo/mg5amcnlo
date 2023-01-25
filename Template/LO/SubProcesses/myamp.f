@@ -52,6 +52,7 @@ c
       logical             OnBW(-nexternal:0)     !Set if event is on B.W.
       common/to_BWEvents/ OnBW
       
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
 
       integer idup(nexternal,maxproc,maxsproc)
@@ -285,6 +286,7 @@ c
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 
+      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
       include 'coupl.inc'
       include 'cuts.inc'
 C

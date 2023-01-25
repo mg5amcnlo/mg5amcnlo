@@ -1689,7 +1689,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,NB_PAGE\n"
+            pdf_lines = " DO iVEC=1,VECSIZE_USED\n"
 
 
         if ninitial == 1:
@@ -1739,7 +1739,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "\n"
                 if vector:
                     pdf_definition_lines_vec += "DOUBLE PRECISION " + \
-                                       ",".join(["%s%d(nb_page)" % (pdf_codes[pdg],i+1) \
+                                       ",".join(["%s%d(VECSIZE_MEMMAX)" % (pdf_codes[pdg],i+1) \
                                                  for pdg in \
                                                  initial_states[i]]) + \
                                                  "\n"
@@ -1760,7 +1760,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_data_lines_vec += "DATA " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
                                                  for pdg in initial_states[i]]) + \
-                                                 "/%s/" % ','.join(['nb_page*1D0']* len(initial_states[i])) + \
+                                                 "/%s/" % ','.join(['VECSIZE_MEMMAX*1D0']* len(initial_states[i])) + \
                                                  "\n"
 
 
@@ -1846,7 +1846,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 for proc in processes:
                     process_line = proc.base_string()
                     pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
-                    pdf_lines += '\n   DO IVEC=1, NB_PAGE'
+                    pdf_lines += '\n   DO IVEC=1, VECSIZE_USED'
                     pdf_lines = pdf_lines + "\nALL_PD(IPROC,IVEC)="
                     for ibeam in [1, 2]:
                         initial_state = proc.get_initial_pdg(ibeam)
@@ -4976,7 +4976,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
 
-        text = [" integer nb_page\n"," parameter (nb_page=%i)\n" % vector_size]
+        text = [" integer VECSIZE_MEMMAX\n"," parameter (VECSIZE_MEMMAX=%i)\n" % vector_size]
+        text += [" integer VECSIZE_USED\n"," parameter (VECSIZE_USED=VECSIZE_MEMMAX)\n"]
 
         fsock.writelines(text)
         return vector_size
@@ -6892,8 +6893,10 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
 
-        includes=["include \'coupl.inc\'","include \'input.inc\'",
-                                              "include \'model_functions.inc\'"]
+        includes=["include \'../vector.inc\'",
+                  "include \'coupl.inc\'",
+                  "include \'input.inc\'",
+                  "include \'model_functions.inc\'"]
         if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
@@ -6975,7 +6978,12 @@ class UFO_model_to_mg4(object):
                                             format='fortran')
 
         # Write header
-        header = """double precision G, all_G%(vec)s
+        header = """C
+C NB: VECSIZE_MEMMAX is defined in vector.inc
+C NB: vector.inc must be included before coupl.inc
+C
+
+                double precision G, all_G%(vec)s
                 common/strong/ G, all_G
                  
                 double complex gal(2)
@@ -6984,7 +6992,9 @@ class UFO_model_to_mg4(object):
                 double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
+                """   % {'vec': ('' if not self.vector_size else '(1)' if self.vector_size<=1 else '(VECSIZE_MEMMAX)')}
+                ###   % {'vec': ("(VECSIZE_MEMMAX)" if self.vector_size else '')}
+                ###   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
 
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
@@ -7072,7 +7082,7 @@ class UFO_model_to_mg4(object):
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
-            c_list = ['%s(%s)' %(coupl.name, max(1,self.vector_size)) for coupl in self.coups_dep]
+            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         
@@ -7456,6 +7466,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""logical updateloop
                             common /to_updateloop/updateloop
                             include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             READLHA = .true.
                             include \'intparam_definition.inc\'""")
@@ -7521,6 +7532,7 @@ class UFO_model_to_mg4(object):
                             """)
 
         fsock.writelines("""include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
@@ -7585,6 +7597,7 @@ class UFO_model_to_mg4(object):
                             'args_dep': ' integer vecid' if self.vector_size else ''
                             })
         fsock.writelines("""include \'input.inc\'
+                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             double precision model_scale
                             common /model_scale/model_scale
@@ -7616,6 +7629,7 @@ class UFO_model_to_mg4(object):
         #                     double precision mu_r2, as2
         #                     include \'model_functions.inc\'""")
         # fsock.writelines("""include \'input.inc\'
+        #                     include \'../vector.inc\'
         #                     include \'coupl.inc\'
         #                     """)
         # fsock.writelines("""
@@ -7640,6 +7654,7 @@ class UFO_model_to_mg4(object):
                                     include \'mp_coupl.inc\'
                             """%self.mp_real_format)
             fsock.writelines("""include \'input.inc\'
+                                include \'../vector.inc\'
                                 include \'coupl.inc\'
                                 include \'actualize_mp_ext_params.inc\'
                                 READLHA = .false.
@@ -8000,6 +8015,7 @@ class UFO_model_to_mg4(object):
               parameter  (PI=3.141592653589793d0)
               parameter  (ZERO=0d0)
               include 'input.inc'
+              include '../vector.inc'
               include 'coupl.inc'""")
         if mp:
             fsock.writelines("""%s MP__PI, MP__ZERO
