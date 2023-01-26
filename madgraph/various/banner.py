@@ -15,8 +15,10 @@
 
 from __future__ import division
 from __future__ import absolute_import
+import ast
 import collections
 import copy
+import filecmp
 import logging
 import numbers
 import os
@@ -46,6 +48,7 @@ except ImportError:
     import internal.misc as misc
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
+    MG5DIR = None
 else:
     MADEVENT = False
     import madgraph.various.misc as misc
@@ -1178,7 +1181,7 @@ class ConfigFile(dict):
                     return self.warn(text, 'warning', raiseerror)                    
                 elif dropped:               
                     text = "some value for entry '%s' are not valid. Invalid items are: '%s'.\n" \
-                               % (value, name, dropped)
+                               % (name, dropped)
                     text += "value will be set to %s" % new_values
                     text += "allowed items in the list are: %s" % ', '.join([str(i) for i in self.allowed_value[lower_name]])        
                     self.warn(text, 'warning')
@@ -1319,7 +1322,11 @@ class ConfigFile(dict):
         
         if allowed and allowed != ['*']:
             self.allowed_value[lower_name] = allowed
-            assert value in allowed or '*' in allowed
+            if lower_name in self.list_parameter:
+                for val in value:
+                    assert val in allowed or '*' in allowed
+            else:
+                assert value in allowed or '*' in allowed
         #elif isinstance(value, bool) and allowed != ['*']:
         #    self.allowed_value[name] = [True, False]
         
@@ -1353,9 +1360,35 @@ class ConfigFile(dict):
         return out
 
     @staticmethod
+    def guess_type_from_value(value):
+        "try to guess the type of the string --do not use eval as it might not be safe"
+        
+        if not isinstance(value, str):
+            return str(value.__class__.__name__)
+        
+        #use ast.literal_eval to be safe since value is untrusted
+        # add a timeout to mitigate infinite loop, memory stack attack
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            tmp = misc.timeout(ast.literal_eval, [value], default=None)
+        if tmp is not None:
+            out = str(tmp.__class__.__name__)
+        else:
+            out =  "str"
+
+        if out in ["tuple", "set"]:
+           out = "list"
+
+        return out
+
+
+    @staticmethod
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
         
+        if isinstance(targettype, str):
+            if targettype in ['str', 'int', 'float', 'bool']:
+                targettype = eval(targettype)
+
         if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
@@ -2586,6 +2619,9 @@ class RunCard(ConfigFile):
     blocks = []
     parameter_in_block = {}
     allowed_lep_densities = {}    
+    default_include_file = 'run_card.inc'
+    default_autodef_file = 'run.inc'
+    donewarning = []
 
     @classmethod
     def fill_post_set_from_blocks(cls):
@@ -2635,6 +2671,8 @@ class RunCard(ConfigFile):
         self.hidden_param = []
         # in which include file the parameer should be written
         self.includepath = collections.defaultdict(list)
+        # in which include file the parameter should be define
+        self.definition_path = collections.defaultdict(list)
         #some parameters have a different name in fortran code
         self.fortran_name = {}
         #parameters which are not supported anymore. (no action on the code)
@@ -2685,7 +2723,8 @@ class RunCard(ConfigFile):
                 cls.allowed_lep_densities[identity].append(name)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
+                  hidden=False, legacy=False, cut=False, system=False, sys_default=None,
+                  autodef=False, 
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
@@ -2695,7 +2734,10 @@ class RunCard(ConfigFile):
         legacy: parameter that is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
         sys_default: default used if the parameter is not in the card
-        
+        autodef: if True the fortran definition will be added automatically in run.inc
+                 If a path (Source/PDF/pdf.inc) the definition will be added within that file
+                 Default is False (does not add the definition)
+                 entry added in the run_card will automatically have this on True.
         options of **opts:
         - allowed: list of valid options. '*' means anything else should be allowed.
                  empty list means anything possible as well. 
@@ -2717,8 +2759,9 @@ class RunCard(ConfigFile):
             self.cuts_parameter[name] = cut
         if sys_default is not None:
             self.system_default[name] = sys_default
-
-        
+        if autodef:
+            self.definition_path[autodef].append(name)
+            self.user_set.add(name)
 
     def read(self, finput, consistency=True):
         """Read the input file, this can be a path to a file, 
@@ -2740,9 +2783,9 @@ class RunCard(ConfigFile):
                 continue
             value, name = line
             name = name.lower().strip()
-            if name not in self and ('min' in name or 'max' in name):
-                #looks like an entry added by one user -> add it nicely
-                self.add_param(name, float(value), hidden=True, cut=True)
+            if name not in self:
+                #looks like an entry added by a user -> add it nicely
+                self.add_unknown_entry(name, value)
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
@@ -2754,6 +2797,58 @@ class RunCard(ConfigFile):
                         logger.warning(str(error))
                     else:
                         raise
+    def add_unknown_entry(self, name, value):
+        """function to add an entry to the run_card when the associated parameter does not exists.
+           This is based on the guess_entry_fromname for the various syntax providing input.
+           This then call add_param accordingly.
+
+           This function does not returns anything.  
+        """        
+
+        if name == "dsqrt_q2fact1" and not self.LO:
+            raise InvalidRunCard("Looks like you passed a LO run_card for a NLO run. Please correct")
+        elif name == "shower_scale_factor" and self.LO:
+            raise InvalidRunCard("Looks like you passed a NLO run_card for a LO run. Please correct")
+
+        vartype, name, opts = self.guess_entry_fromname(name, value)
+        # vartype is str, float, bool, int
+        # opts is a dictionary with options for add_param like {'cut':True}
+        # name can be strip of prefix/postfix that give type/options
+        for key in ['hidden', 'autodef']:
+            if key not in opts:
+                opts[key] = True
+
+        # first use a default value for the add_param to setup the code correctly
+        # and then set the value via string such that parser are use correctly
+        # this avoid to have to set a parser for add_param
+        default = {'int': 1,
+                   'float': 1.0,
+                   'str': value,
+                   'bool':True,
+                   'list': [],
+                   'tuple': [],
+                   'dict': {}} # likely issue with missing __type__ here
+
+        # need to have an entry for the type.
+        if vartype == 'dict':
+            default_value = re.findall(':(.*?)[,}]', value)
+            if len(default_value) == 0:
+                raise Exception("dictionary need to have at least one entry")
+            default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
+
+        if name not in RunCard.donewarning:
+            logger.warning("Found unexpected entry in run_card: \"%s\" with value \"%s\".\n"+\
+                "  The type was assigned to %s. \n"+\
+                "  The definition of that variable will %sbe automatically added to fortran file %s\n"+\
+                "  The value of that variable will %sbe passed to the fortran code via fortran file %s",\
+                name, value, vartype if vartype != "list" else "list of %s" %  opts.get('typelist').__name__, 
+                "" if opts.get('autodef', False) else "not", "" if  opts.get('autodef', False) in [True,False] else opts.get('autodef'),
+                "" if opts.get('include', True) else "not", "" if  opts.get('include', True) in [True,False] else opts.get('include'))
+            RunCard.donewarning.append(name)
+
+        self.add_param(name, default[vartype], **opts)
+        self[name] = value
+
 
     def valid_line(self, line, tmp):
         template_options = tmp
@@ -2782,7 +2877,7 @@ class RunCard(ConfigFile):
                     
                 
     def write(self, output_file, template=None, python_template=False,
-                    write_hidden=False, template_options=None):
+                    write_hidden=False, template_options=None, **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
 
@@ -2993,6 +3088,161 @@ class RunCard(ConfigFile):
         else:
             return value
 
+    def edit_dummy_fct_from_file(self, filelist, outdir):
+        """
+        filelist is a list of input files (given by the user)
+        containing a series of function to be placed in replacement of standard
+        (typically dummy) functions of the code.
+        This use LO/NLO class attribute that defines which function name need to 
+        be placed in which file. 
+
+        First time this is used, a backup of the original file is done in order to
+        recover if the user remove some of those files.   
+
+        The function present in the file are determined automatically via regular expression.
+        and only that function is replaced in the associated file.
+
+        function in the filelist starting with user_ will also be include within the 
+        dummy_fct.f file
+        """
+
+        if outdir is None:
+            #to let some unnitest to go trough
+            return
+
+        # step 1: extract all function name and function defintion
+        # structure is {filetomod:[[function_names], [function_defs]]}
+        with misc.TMP_directory() as tmpdir:
+            to_mod = {}
+            for path in filelist:
+                tmp = pjoin(tmpdir, os.path.basename(path))
+                text = open(path,'r').read()
+                #misc.sprint(text)
+                f77_type = ['real*8', 'integer', 'double precision', 'logical']
+                pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                                % {'type':'|'.join(f77_type)}, re.I+re.M)
+                for fct in pattern.findall(text):
+                    fsock = file_writers.FortranWriter(tmp,'w')
+                    function_text = fsock.remove_routine(text, fct)
+                    fsock.close()
+                    test = open(tmp,'r').read()                        
+                    if fct not in self.dummy_fct_file:
+                        if fct.startswith('user_'):
+                            self.dummy_fct_file[fct] = self.dummy_fct_file['user_']
+                        else:
+                            raise InvalidRunCard("function %s is not designed for overwritting")
+                    writein = self.dummy_fct_file[fct]
+                    if writein not in to_mod:
+                        to_mod[writein]=[[fct], [function_text]]
+                    else:
+                        to_mod[writein][0].append(fct)
+                        to_mod[writein][1].append(function_text)
+
+        # step 2: write the new files
+        for path in to_mod:
+            if not os.path.exists(pjoin(outdir, path+'.orig')):
+                files.cp(pjoin(outdir, path), pjoin(outdir, path+'.orig'))
+            #avoid to systematically rewrite the file. -> write in tmp place
+            fsock = file_writers.FortranWriter(pjoin(outdir, path+'.tmp'),'w')
+            starttext = open(pjoin(outdir, path+'.orig')).read()
+            fsock.remove_routine(starttext, to_mod[path][0])
+            for text in to_mod[path][1]:
+                fsock.writelines(text)
+            fsock.close()
+            if not filecmp.cmp(pjoin(outdir, path), pjoin(outdir, path+'.tmp')):
+                files.mv(pjoin(outdir, path+'.tmp'), pjoin(outdir, path))
+            else:
+                os.remove(pjoin(outdir, path+'.tmp'))
+
+
+        # step 3: if some previously edited file are not in to_mod:
+        # .       remove the orginal file by the .orig and remove the .orig
+        all_files = set(self.dummy_fct_file.values())
+        for path in all_files:
+            if path not in to_mod and os.path.exists(pjoin(outdir,path+'.orig')):
+                files.mv(pjoin(outdir,path+'.orig'), pjoin(outdir, path))
+
+
+
+
+    def guess_entry_fromname(self, name, value):
+        """
+        return (vartype, name, value, options)
+          - vartype: type of the variable
+          - name: name of the variable (stripped from metadata)
+          - options: additional options for the add_param
+        rules: 
+         - if name starts with str_, int_, float_, bool_, list_, dict_ then 
+            - vartype is set accordingly
+            - name is strip accordingly
+         - otherwise guessed from value (which is string)
+         - if name contains min/max
+            - vartype is set to float
+            - options has an added {'cut':True}
+         - suffixes like <cut=True> 
+            - will be removed from named
+            - will be added in options (for add_param) as {'cut':True}
+              see add_param documentation for the list of supported options
+         - if include is on False set autodef to False (i.e. enforce it False for future change)
+
+        """
+        # local function 
+        def update_typelist(value, name,  opts):
+            """convert a string to a list and update opts to keep track of the type """
+            value = value.strip()
+            listtype = opts.get("typelist", None)
+            if listtype:
+                return name, opts
+            if value.startswith(("[","(")):
+                oneval = value[1:-1].split(",",1)[0]
+            elif "," in value:
+                oneval = value.split(",",1)[0]
+            else:
+                oneval = value
+            listtype, name, _ = self.guess_entry_fromname(name, oneval)
+            opts['typelist'] = eval(listtype)
+            return  name, opts
+
+        #handle metadata
+        opts = {}
+        forced_opts = []
+        for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+            forced_opts.append(key)
+            if val in ['True', 'False']:
+                opts[key] = eval(val)
+            else:
+                opts[key] = val
+            name = name.replace("<%s=%s>" %(key,val), '')
+
+        # get vartype 
+        # first check that name does not force it
+        supported_type = ["str", "float", "int", "bool", "list", "dict"]
+        if "_" in name and name.split("_")[0].lower() in supported_type:
+            vartype, name = name.split("_",1)
+            vartype = vartype.lower()
+        else:
+            # try to guess from the value
+            vartype = ConfigFile.guess_type_from_value(value)
+        # update metadata/default for list/dict
+        if vartype == "list" and isinstance(value, str):
+            name, opts  = update_typelist(value, name, opts)
+        elif vartype == "dict":
+            if "autodef" not in forced_opts:
+                opts["autodef"] = False
+            if "include" not in forced_opts:
+                opts["include"] = False
+
+        if 'include' in opts and 'autodef' not in opts:
+            opts['autodef'] = opts['include']
+
+        #handle special case where min/max is in the name
+        if "min" in name or "max" in name:
+            vartype = "float"
+            value = float(value)
+            opts["cut"] = True
+
+        return vartype, name, opts
+
     @staticmethod
     def f77_formatting(value, formatv=None):
         """format the variable into fortran. The type is detected by default"""
@@ -3065,24 +3315,34 @@ class RunCard(ConfigFile):
         for block in self.blocks:
             block.check_validity(self)
                
-    default_include_file = 'run_card.inc'
+
 
     def update_system_parameter_for_include(self):
         """update hidden system only parameter for the correct writtin in the 
         include"""
         return
 
+    
+
     def write_include_file(self, output_dir, output_file=None):
         """Write the various include file in output_dir.
         The entry True of self.includepath will be written in run_card.inc
         The entry False will not be written anywhere
-        output_file allows testing by providing stream"""
+        output_file allows testing by providing stream.
+        This also call the function to add variable definition for the 
+        variable with autodef=True (handle by write_autodef function) 
+        """
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
         
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
+
+        if output_dir:
+            self.write_autodef(output_dir, output_file=None)
+            # check/fix status of customised functions
+            self.edit_dummy_fct_from_file(self["custom_fcts"], os.path.dirname(output_dir))
         
         for incname in self.includepath:
             if incname is True:
@@ -3095,7 +3355,7 @@ class RunCard(ConfigFile):
             if output_file:
                 fsock = output_file
             else:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))  
             for key in self.includepath[incname]:                
                 #define the fortran name
                 if key in self.fortran_name:
@@ -3137,7 +3397,126 @@ class RunCard(ConfigFile):
                     line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
             if not output_file:
-                fsock.close()   
+                fsock.close()
+                path = pjoin(output_dir,pathinc)
+                if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
+                    files.mv(path+'.tmp', path)
+                else:
+                    os.remove(path+'.tmp')
+
+
+    def write_autodef(self, output_dir, output_file=None):
+        """ Add the definition of variable to run.inc if the variable is set with autodef.
+            Other include file are possible to update but are more risky.
+            output_file allows testing by providing stream.
+        """
+
+        fortrantype = {'int': 'integer',
+                       'bool': 'logical',
+                       'float': 'double precision',
+                       'str': 'character'}
+
+        filetocheck = dict(self.definition_path)
+        if True not in self.definition_path:
+            filetocheck[True] = []
+            
+
+        for incname in filetocheck:
+            if incname is True:
+                pathinc = self.default_autodef_file
+            elif incname is False:
+                continue
+            else:
+                pathinc = incname
+
+            if output_file:
+                fsock = output_file
+                input = fsock.getvalue()
+                
+            else:
+                input = open(pjoin(output_dir,pathinc),'r').read()
+                # do not define fsock here since we might not need to overwrite it
+
+            # first get the name/type of line that are already added
+            re_pat = r"^\s+(.*)\s+([A-Za-z_]\w*)(\(?[\d:]*\)?)\s*!\s*added by autodef\s*$"
+            previous = re.findall(re_pat, input, re.M)
+            # now check which one needed to be added (and remove those identicaly defined)
+            to_add = []
+            for key in filetocheck[incname]:          
+                curr_type = self[key].__class__.__name__
+                length = ""
+                if curr_type in [list, "list"]:
+                    curr_type = self.list_parameter[key].__name__
+                    length = "(0:%i)" % len(self[key])
+                elif curr_type == "str":
+                    length = "(0:100)"
+                curr_type = curr_type
+
+                curr_type = fortrantype[curr_type].upper()
+                fname = key
+                if key in self.fortran_name:
+                    fname = self.fortran_name[key]
+                fname = fname.upper()
+
+                if (curr_type, fname, length) in previous:
+                    previous.remove((curr_type, fname, length))
+                    continue
+                else:
+                    to_add.append((curr_type, fname, length))
+            # now we have in previous the line to remove
+            # .        and in to_add the lines to add
+            if not previous and not to_add:
+                continue
+            if not output_file:
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc),'w')
+            else:
+                #reset stream
+                fsock.truncate(0)
+                fsock.seek(0)
+
+            # remove outdated lines            
+            lines = input.split('\n')
+            if previous:
+                out = [line for line in lines if not re.search(re_pat, line, re.M)  or 
+                         re.search(re_pat, line, re.M).groups() not in previous]
+            else:
+                out = lines
+
+            # add new lines from to_add
+            for data in to_add:
+                out.append("      %s %s%s ! added by autodef" % data)
+            # remove previous common block definition
+            if to_add or previous:
+                # remove previous definition of the commonblock
+                try:
+                    start = out.index('C START USER COMMON BLOCK')
+                except ValueError:
+                    pass
+                else:
+                    stop = out.index('C STOP USER COMMON BLOCK')
+                    out = out[:start]+ out[stop+1:]
+                #add new common-block
+                if self.definition_path[incname]: 
+                    out.append("C START USER COMMON BLOCK")
+                    if isinstance(pathinc , str):
+                        filename = os.path.basename(pathinc).split('.',1)[0]
+                    elif hasattr(pathinc , "name"):
+                        filename = os.path.basename(pathinc.name).split('.',1)[0]
+                    elif isinstance(pathinc , StringIO.StringIO):
+                        filename = 'iostring'
+                    else:
+                        misc.sprint(incname, pathinc )
+                    filename = filename.upper()
+                    out.append("        COMMON/USER_CUSTOM_%s/%s" %(filename,','.join( self.definition_path[incname])))
+                    out.append('C STOP USER COMMON BLOCK')
+            
+            if not output_file:
+                fsock.writelines(out)
+                fsock.close() 
+            else:
+                # for iotest
+                out = ["%s\n" %l for l in out]
+                fsock.writelines(out)
 
     @staticmethod
     def get_idbmup(lpp):
@@ -3519,6 +3898,17 @@ class RunCardLO(RunCard):
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_scale_block, mlm_block, ckkw_block, psoptim_block,
               pdlabel_block, fixedfacscale, running_block]
+
+    dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
+                      "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
+                      "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
+                      "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
+                      }
+    
+    if MG5DIR:
+        default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -3568,15 +3958,15 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("mue_ref_fixed", 91.1880, hidden=True)
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n",
-                                                allowed=[-1,0,1,2,3,4])
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
+                                                allowed=[-1,0,1,2,3,4,10])
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
                         comment='eva: 0 for EW pdf muf evolution by q^2; 1 for evo by pT^2')
         
         # Bias module options
-        self.add_param("bias_module", 'None', include=False)
-        self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc')
+        self.add_param("bias_module", 'None', include=False, hidden=True)
+        self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc', hidden=True)
                 
         #matching
         self.add_param("scalefact", 1.0)
@@ -3588,6 +3978,7 @@ class RunCardLO(RunCard):
         self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True, hidden=True)
+        self.add_param("custom_fcts",[],typelist="str", include=False,           comment="list of files containing function that overwritte dummy function of the code (like adding cuts/...)")
         #format output / boost
         self.add_param("lhe_version", 3.0, hidden=True)
         self.add_param("boost_event", "False", hidden=True, include=False,      comment="allow to boost the full event. The boost put at rest the sume of 4-momenta of the particle selected by the filter defined here. example going to the higgs rest frame: lambda p: p.pid==25")
@@ -3751,7 +4142,7 @@ class RunCardLO(RunCard):
         self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
         self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
         self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
-        self.add_param('matrix_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -O3')        
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3')        
         
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -4366,6 +4757,12 @@ class RunCardLO(RunCard):
         model = proc_def[0][0].get('model')
         if model['running_elements']:
             self.display_block.append('RUNNING') 
+
+
+        # Read file input/default_run_card_lo.dat
+        # This has to be LAST !!
+        if os.path.exists(self.default_run_card):
+            self.read(self.default_run_card, consistency=False)
             
     def write(self, output_file, template=None, python_template=False,
               **opt):
@@ -4857,6 +5254,15 @@ class RunCardNLO(RunCard):
     
     blocks = [running_block_nlo]
 
+    dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "bias_weight_function": pjoin("SubProcesses","dummy_fct.f"),
+                      "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
+                      }
+
+    if MG5DIR:
+        default_run_card = pjoin(MG5DIR, "internal", "default_run_card_nlo.dat")
+                      
         
     def default_setup(self):
         """define the default value"""
@@ -4903,7 +5309,8 @@ class RunCardNLO(RunCard):
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
         self.add_param('mue_ref_fixed', 91.118, hidden=True) 
-        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2")
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', 
+            allowed = [-2,-1,0,1,2,3,10],                                       comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2, '0' allows to use the user_hook definition (need to be defined via custom_fct entry) ")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
@@ -4955,6 +5362,9 @@ class RunCardNLO(RunCard):
         self.add_param('pineappl', False)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
+        # customization
+        self.add_param("custom_fcts",[],typelist="str", include=False,           comment="list of files containing function that overwritte dummy function of the code (like adding cuts/...)")
+
         #internal variable related to FO_analyse_card
         self.add_param('FO_LHE_weight_ratio',1e-3, hidden=True, system=True)
         self.add_param('FO_LHE_postprocessing',['grouping','random'], 
@@ -5075,7 +5485,7 @@ class RunCardNLO(RunCard):
         # make sure set have reweight_scale and dyn_scale_choice of length 1 when fixed scales:
         if self['fixed_ren_scale'] and self['fixed_fac_scale']:
             self['reweight_scale']=[self['reweight_scale'][0]]
-            self['dynamical_scale_choice']=[0]
+            self['dynamical_scale_choice']=[-2]
 
         # If there is only one reweight_pdf/reweight_scale, but
         # lhaid/dynamical_scale_choice are longer, expand the
@@ -5302,7 +5712,10 @@ class RunCardNLO(RunCard):
             self["jetradius"] = 1
             self["parton_shower"] = "PYTHIA8"
             
-    
+        # Read file input/default_run_card_nlo.dat
+        # This has to be LAST !!
+        if os.path.exists(self.default_run_card):
+            self.read(self.default_run_card, consistency=False)
     
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

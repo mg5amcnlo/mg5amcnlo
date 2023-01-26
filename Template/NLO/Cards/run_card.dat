@@ -124,6 +124,10 @@
 #***********************************************************************
  %(store_rwgt_info)s = store_rwgt_info ! Store info for reweighting in LHE file
 #***********************************************************************
+#  Customization of the code. List of files containing user hook function 
+#***********************************************************************
+ %(custom_fcts)s = custom_fcts ! List of files containing user hook function
+#***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *
 #   3: FxFx Merging - WARNING! Applies merging only at the hard-event  *
