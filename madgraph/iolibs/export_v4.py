@@ -7808,7 +7808,6 @@ class UFO_model_to_mg4(object):
                         towrite = towrite.replace('math.pi', 'MP__pi')
                         towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
                         data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
-                        
 
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])

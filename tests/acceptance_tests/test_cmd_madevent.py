@@ -1313,8 +1313,8 @@ class TestMEfromPdirectory(unittest.TestCase):
             ff = open('cmd.cmd','w')
             ff.write('set automatic_html_opening False --nosave\n')
             ff.write('set notification_center False --nosave\n')
-            ff.write('display options\n')
-            ff.write('display variable allow_notification_center\n')
+            #ff.write('display options\n')
+            #ff.write('display variable allow_notification_center\n')
             ff.write('generate_events -f \n') 
             ff.close()
             if logger.getEffectiveLevel() > 20:
