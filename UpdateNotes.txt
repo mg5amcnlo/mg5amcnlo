@@ -1,5 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+
+3.5.0 ()
+      OM: MadSpin has now a syntax for handling semi-leptonic decay
+          not supported in spinmode=onshel/none
+
 3.4.1 (01/09/22)
       MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
       RF: removed a write statement in the reweighting routine (to get scale and PDF uncertainties at NLO+PS runs) that cluttered the reweight_xsec_events.output log files.
