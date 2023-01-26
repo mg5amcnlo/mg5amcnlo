@@ -2864,7 +2864,10 @@ class decay_all_events(object):
                     for proc in processes:
                         if not proc.strip().startswith(('add','generate')):
                             proc = 'add process %s' % proc
-                        one_decay = decay_text + ', '.join(decay_text_correlated[key])
+                        if decay_text:
+                            one_decay = decay_text + ',' + ', '.join(decay_text_correlated[key])
+                        else:
+                            one_decay = ', '.join(decay_text_correlated[key])
                         commandline += self.get_proc_with_decay(proc, one_decay, mgcmd._curr_model, self.options)
                 commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
@@ -2919,6 +2922,8 @@ class decay_all_events(object):
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
+                if "@" in proc:
+                    proc = proc.split("@",1)[0]
                 commandline+="add process %s @%i --no_warning=duplicate;" % (proc,i)
                 i+=1        
         commandline = commandline.replace('add process', 'generate',1)
