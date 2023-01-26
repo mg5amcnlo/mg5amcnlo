@@ -15,7 +15,7 @@ olomod= avh_olo_foriregi.mod avh_olo_foriregi_dp_box.mod    avh_olo_foriregi_dp_
 mod= global.mod funlib.mod linear_algebra.mod kinematics.mod matrices.mod matrix_base.mod cmatrix_base.mod mis_warp.mod special_fun.mod pave_reduce.mod cpave_reduce.mod si_reduce.mod csi_reduce.mod ti_reduce.mod cti_reduce.mod gti_reduce.mod $(olomod)
 libiregi.a: make_ql $(obj) $(mod)
 	@rm -f libiregi.a
-	@ar csr libiregi.a  $(obj) $(mod) 
+	@ar csr libiregi.a  $(obj)
 #$(QLDIR)libqcdloop.a $(FFDIR)libff.a $(onelooppath)libavh_olo.a
 #-L$(QLDIR) -lqcdloop -L$(FFDIR) -lff -L$(onelooppath) -lavh_olo
 #       @ar cru libiregi.so $(obj)

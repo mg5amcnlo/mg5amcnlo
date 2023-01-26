@@ -93,6 +93,15 @@ ifneq ($(lhapdf),)
   endif
   llhapdf = $(shell $(lhapdf) --libs)
   reweight_xsec_events_pdf_dummy=
+
+else ifneq ($(epdf),)
+# option eMELA/ePDF
+EPDFLIBS=$(shell $(epdf) --ldflags)
+alfas_functions=alfas_functions
+CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
+llhapdf = $(shell $(epdf) --ldflags)
+# Add also LHAPDF to the libraries to be linked
+llhapdf+= -lLHAPDF
 else
   alfas_functions=alfas_functions
   llhapdf=
@@ -103,6 +112,7 @@ endif
 ifeq ($(origin CXX),default)
    CXX=$(DEFAULT_CPP_COMPILER) -std=c++11
 endif
+
 
 
 # Option PineAPPL

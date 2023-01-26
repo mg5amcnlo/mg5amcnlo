@@ -3715,6 +3715,7 @@ Parameters              %(params)s\n\
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\n" \
                                  % (ibeam)
 
+#                for iproc, initial_state in enumerate(init_states):
                 for initial_state in init_states:
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:

@@ -1,0 +1,103 @@
+      subroutine pdfwrap
+      implicit none
+C
+C     INCLUDE
+C
+      include 'pdf.inc'
+      include '../alfas.inc'
+      include '../coupl.inc'
+      real*8 zmass
+      data zmass/91.188d0/
+      Character*150 LHAPath
+      character*20 parm(20)
+      double precision value(20)
+      real*8 alphasPDF
+      external alphasPDF
+      ! PDFs with beamstrahlung use specific initialisation/evaluation
+      logical has_bstrahl
+      common /to_has_bs/ has_bstrahl
+
+
+c-------------------
+c     START THE CODE
+c-------------------      
+
+c     initialize the pdf set
+      call FindPDFPath(LHAPath)
+      CALL SetPDFPath(LHAPath)
+      value(1)=lhaid
+      parm(1)='DEFAULT'
+      if (pdlabel.eq.'emela') then
+         if (has_bstrahl) then
+            call bs_initfromgrid_lhaid(LHAID)
+         else
+            call initfromgrid_lhaid(lhaid)
+         endif
+         nloop = 2 
+         asmz = g**2/16d0/datan(1d0) 
+      else
+          write(*,*) 'Unknown PDLABEL', pdlabel
+          stop 1
+      endif
+      
+      return
+      end
+ 
+
+      subroutine FindPDFPath(LHAPath)
+c********************************************************************
+c generic subroutine to open the table files in the right directories
+c********************************************************************
+      implicit none
+c
+      Character LHAPath*150,up*3
+      data up/'../'/
+      logical exists
+      integer i, pos
+      character*300  tempname2
+      character*300 path ! path of the executable
+      integer fine2
+      character*30  upname ! sequence of ../
+
+c     first try in the current directory
+      LHAPath='./PDFsets'
+      Inquire(File=LHAPath, exist=exists)
+      if(exists)return
+      %(cluster_specific_path)s
+      do i=1,6
+         LHAPath=up//LHAPath
+         Inquire(File=LHAPath, exist=exists)
+         if(exists)return
+      enddo
+
+c      
+c     getting the path of the executable
+c
+      call getarg(0,path) !path is the PATH to the madevent executable (either global or from launching directory)
+      pos = index(path,'/',.true.)
+      path = path(:pos)
+      fine2=index(path,' ')-1	 
+
+
+c
+c     check path from the executable
+c
+      LHAPath='lib/PDFsets'
+      Inquire(File=LHAPath, exist=exists)
+      if(exists)return
+      upname='../../../../../../../'
+      do i=1,6
+          tempname2=path(:fine2)//upname(:3*i)//LHAPath
+c         LHAPath=up//LHAPath
+          Inquire(File=tempname2, exist=exists)
+         if(exists)then
+            LHAPath = tempname2
+            return
+         endif
+      enddo
+      print*,'Could not find PDFsets directory, quitting'
+      stop
+      
+      return
+      end
+
