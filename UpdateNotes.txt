@@ -3,9 +3,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 3.5.0 ()
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
-	See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
-	NNL-accurate parton distributions for lepton collisions are provied by eMELA 
-	https://github.com/gstagnit/eMELA/releases
+	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
+	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
+	      https://github.com/gstagnit/eMELA/releases
+      OM: MadSpin has now a syntax for handling semi-leptonic decay
+          not supported in spinmode=onshel/none
+      OM: possibility to install eMELA (install eMELA)
+      HS: Adding support of UPC
 
 3.4.2 (20/01/22)
       ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
