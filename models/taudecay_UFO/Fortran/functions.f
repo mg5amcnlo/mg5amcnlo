@@ -28,36 +28,40 @@
 
       double complex function FFCT2(S)
       implicit none
-      double complex S,Frho
+      double complex Frho
+      double precision S
       external Frho
-      S=real(S)
+
       FFCT2=Frho(S,1)
       return
       end
 
       double complex function FFCT3(S)
       implicit none
-      double complex S,Fa1
+      double complex Fa1
+      double precision S
       external Fa1
-      S=real(S)
+
       FFCT3=Fa1(S,1)
       return
       end
 
       double complex function FFCT3F1(S)
       implicit none
-      double complex S,Brho
+      double complex Brho
+      double precision S
       external Brho
-      S=real(S)
+
       FFCT3F1=Brho(S,1)
       return
       end
 
       double complex function FFCT3F0(S)
       implicit none
-      double complex S,Brho
+      double complex Brho
       external Brho
-      S=real(S)
+      double precision S
+
       FFCT3F0=Brho(S,0)
       return
       end

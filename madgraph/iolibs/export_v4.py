@@ -569,9 +569,16 @@ class ProcessExporterFortran(VirtualExporter):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
+        # this is for LHAPDF
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.writelines(template % changer)
+
+        # this is for eMELA
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_emela.f"),"r").read()
         ff.writelines(template % changer)
         
         
@@ -694,6 +701,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
@@ -1764,6 +1772,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "\n"
 
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -1806,6 +1830,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                         pdf_lines = pdf_lines + template % data
 
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            if 22 in initial_states[0] and 22 in initial_states[1]:
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             if not vector:
@@ -3439,6 +3466,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for gammaUPC")
+        misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
         misc.compile(arg=['../lib/libcernlib.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for GENERIC")
@@ -3750,7 +3779,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 
@@ -6369,7 +6398,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         printzeroamp = []
         for iproc in range(len(matrix_elements)):
             printzeroamp.append(\
-                "        call print_zero_amp_%i()" % ( iproc + 1))
+                "        call print_zero_amp%i()" % ( iproc + 1))
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
@@ -7286,20 +7315,22 @@ C
            this file only need the correct name for the mass for the W and Z
         """
 
-        
         try:
             fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
         except:
             logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
             return
 
-        masses = {}
+        masses = {'MZ': '0d0', 'MW': '0d0'}
+        count = 0
         for particle in self.model['particles']:
             if particle.get('pdg_code') == 24:
                 masses['MW'] = particle.get('mass')
+                count += 1
             elif particle.get('pdg_code') == 23:
                 masses['MZ'] =  particle.get('mass')
-            if len(masses) == 2:
+                count += 1
+            if count == 2:
                 break
 
         template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
@@ -7934,7 +7965,11 @@ C
                 id1 = runparams.index(sparams[0])
                 id2 = runparams.index(sparams[1])
                 assert to_update[id1][id2] == 0
-                to_update[id1][id2] = eval(elements.value)*prefact
+                try:
+                    to_update[id1][id2] = eval(elements.value)*prefact
+                except Exception:
+                    to_update[id1][id2] = '%s *( %s)' % (prefact, elements.value) 
+
                 for param in params:
                     scales.add(param.lhablock)
 
@@ -7989,8 +8024,25 @@ C
         
         
         
-        data['mat1'] = ",".join(["%e" % mat1[j][i] for i in range(data['size']) for j in range(data['size'])])
-        data['mat2'] = ",".join(["%e" % mat2[j][i] for i in range(data['size']) for j in range(data['size'])])
+        data['mat1'] = ",".join(["%e" % mat1[j][i] if not isinstance(mat1[j][i], str) else "%e" %0  for i in range(data['size']) for j in range(data['size'])])
+        data['mat2'] = ",".join(["%e" % mat2[j][i] if not isinstance(mat2[j][i], str) else "%e" %0 for i in range(data['size']) for j in range(data['size'])])
+        
+        # add initialization for parameter that have coupling parameter
+        for i in range(data['size']):
+            for j in range(data['size']):
+                if isinstance(mat1[i][j], str):
+                    towrite = mat1[i][j].replace('cmath.pi', 'pi')
+                    towrite = towrite.replace('cmath.sqrt(', 'SQRT(1d0*')
+                    towrite = towrite.replace('math.pi', 'pi')
+                    towrite = towrite.replace('math.sqrt(', 'SQRT(1d0*')
+                    data['initc0'] += "\n   MAT1(%i,%i) = %s" % (i+1, j+1, towrite)
+                if isinstance(mat2[i][j], str):
+                    towrite = mat2[i][j].replace('cmath.pi', 'pi')
+                    towrite = towrite.replace('cmath.sqrt(', 'SQRT(1d0*')
+                    towrite = towrite.replace('math.pi', 'pi')
+                    towrite = towrite.replace('math.sqrt(', 'SQRT(1d0*')
+                    data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, towrite)
+
         data['mpinput'] =''
         if any(mat1[i][j] for i,j in zip(range(size),range(size))):
             template = self.template_running_gs_gs2
@@ -8003,6 +8055,22 @@ C
             data['mpinput']="INCLUDE 'mp_input.inc'"
             data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
                                     for i, name in enumerate(runparams)])
+            # add initialization for parameter that have coupling parameter
+            for i in range(data['size']):
+                for j in range(data['size']):
+                    if isinstance(mat1[i][j], str):
+                        towrite = mat1[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT1(%i,%i) = %s" % (i+1, j+1, mat1[i][j].replace('MDL_', 'MP__MDL_'))
+                    if isinstance(mat2[i][j], str):
+                        towrite = mat2[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
+
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
             text += template % data   

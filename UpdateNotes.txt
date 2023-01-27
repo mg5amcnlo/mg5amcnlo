@@ -4,6 +4,29 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: Fixed a bug in the phase-space generation of MadSpin,
           relevant for processes with more than 1 t-channel.
 
+3.5.0.alpha (26/01/22)
+      VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
+	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
+	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
+	      https://github.com/gstagnit/eMELA/releases
+      OM: MadSpin has now a syntax for handling semi-leptonic decay
+          not supported in spinmode=onshel/none
+      OM: possibility to install eMELA (install eMELA)
+      HS: Adding support of UPC
+
+3.4.2 (20/01/22)
+      ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
+      OM: fix issue with hepmcremove (thanks to franaln)
+      OM: fix some issue with addmodel
+      OM: fix issue with the update of the param_card to set the used value for alphas
+      OM: fix issue with wrong env variable for pythia8data (thanks pavel)
+
+3.4.1 (01/09/22)
+      MZ+CS: PineAPPL now supports user-defined bias_wgt_functions.
+      RF: removed a write statement in the reweighting routine (to get scale and PDF uncertainties at NLO+PS runs) that cluttered the reweight_xsec_events.output log files.
+      OM: Fixing an issue with lhapdf when trying to use an pdf set not yet installed within the database
+      All: in sync with bug fixing in LTS (version 2.9.12)
+
 
 3.4.0 (06/05/22)
       SJ: Allowing to use RIVET/CONTUR from madgraph. In presence of scan, such running can also be done
@@ -101,6 +124,32 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
+2.9.13 (01/12/2022)
+     OM: Fixing display diagrams on MacOS Catalina
+     OM: fixing issue within reweighting module where runname was not respected during scan
+     OM: remove unused thread which should allow large scan
+     OM: fix a compilation issue of IREGI
+     OM: fix auto-download of pdf
+     OM: fix systematics.py which was not called with the most appropriate default for matching/merging generation (MLM)
+
+2.9.12 (09/08/2022)
+     OM: Fixing issue with model (like SMEFTatNLO) where some interactions where using more than 9 coupling
+         The coupling where assigned to the wrong lorentz structure
+     OM: Fixing another  issue for BSM model where an interaction is associated
+         to many coupling (detected for 10 coupling) where helicity recycling
+	 was discarding incorectly such type of interaction.
+     OM: Fixing an helicity recycling issue if during a benchmark scan a full
+         matrix-element did not had any contribution (all amplitude set to zero)
+	 but not in the following one. Those two runs were fine but any
+	 following points in the scan will automatically discard that
+	 matrix-element.
+
+2.9.11 (03/06/22)
+     OM: Fixing a bug on the color assignment for b-quark (that's leading to a crash of herwig)
+         This occur in five flavor model, if you do not force yourself the definition of the
+	 multi-particle "j" and "b". This bug was present since 2.3.1 (where the flipping of such
+	 multi-particle to 4/5 flavor was done automatically for the first time)
+	 
 2.9.10 (06/05/2022)
      OM: allow model with GC in their name to use helicity recycling
      OM: Forbid madspin to run with crazy value of BWcut
