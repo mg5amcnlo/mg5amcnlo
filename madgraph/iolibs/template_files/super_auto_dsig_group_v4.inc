@@ -114,7 +114,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
       
-      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_USED)
+      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_LOCKSTEP)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 c     
@@ -130,7 +130,7 @@ c     OUTPUT
 c
 c     iconf, iproc, imirror
 c
-      integer VECSIZE_USED
+      integer VECSIZE_LOCKSTEP
       double precision WGT(*)
       integer imirror, iproc, iconf
 
@@ -203,7 +203,7 @@ C      all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-	DO I=1, VECSIZE_USED
+	DO I=1, VECSIZE_LOCKSTEP
 	   WGT(i)=WGT(i)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
 	ENDDO	
 
