@@ -3966,7 +3966,6 @@ class RunCardLO(RunCard):
         # vectorization option 
         self.add_param("vectorized_size", 0 , fortran_name="VECSIZE_LOCKSTEP", comment="0 means decide automatically depending of the hardware")
         self.add_param("batch_size", 0 , fortran_name="VECSIZE_USED_ORIG", comment="0 means decide automatically")
-        self.add_param("bias_module", 'None', include=False)
         # Bias module options
         self.add_param("bias_module", 'None', include=False, hidden=True)
         self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc', hidden=True)

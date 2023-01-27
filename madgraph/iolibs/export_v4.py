@@ -4941,10 +4941,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             # Set lines for subprocess group version
             # Set define_iconfigs_lines
             replace_dict['define_subdiag_lines'] = \
-                 """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
+                 """\nINTEGER SUBDIAG(MAXSPROC, VECSIZE_MEMMAX),IB(2,VECSIZE_MEMMAX)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             replace_dict['cutsdone'] = ""
-            replace_dict['get_channel'] = "SUBDIAG(%s)" % proc_id
+            replace_dict['get_channel'] = "SUBDIAG(%s, IBLOCK)" % proc_id
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"

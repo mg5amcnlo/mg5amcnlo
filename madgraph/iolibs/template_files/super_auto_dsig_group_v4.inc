@@ -889,7 +889,7 @@ C     GLOBAL VARIABLES
 C     
 C     SUBDIAG is vector of diagram numbers for this config
 C     IB gives which beam is which (for mirror processes)
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      INTEGER SUBDIAG(MAXSPROC, VECSIZE_MEMMAX),IB(2, VECSIZE_MEMMAX)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
@@ -928,7 +928,7 @@ C
       if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF(IBLOCK)) then
         ICONFIG=SYMCONF(ICONF(IBLOCK)) ! WARNING check which iconfig this needs to be a list
         DO I=1,MAXSPROC
-          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF(IBLOCK))) -> check if need to pass to a list
+          SUBDIAG(I,IBLOCK) = CONFSUB(I,SYMCONF(ICONF(IBLOCK))) -> check if need to pass to a list
         ENDDO
 
 C       Set momenta according to this permutation
@@ -938,35 +938,42 @@ C       Set momenta according to this permutation
 	    if (LAST_ICONF.ne.-1) then
 		  LAST_ICONF = ICONF(IBLOCK)
 		endif
-	endif	
+	endif
 
+	IVEC =0
+	IBLOCK=1
+      do IGRID=1, VECSIZE_USED
+         IVEC = IVEC + 1
+	 if (IVEC.gt.VECSIZE_LOCKSTEP)then
+	    IBLOCK = IBLOCK + 1
+	    IVEC = 1
+	    IB(1, IBLOCK)=1
+      	    IB(2, IBLOCK)=2
+	 endif	
 
-
-      IB(1)=1
-      IB(2)=2
-
-
-      IF(IMIRROR.EQ.2)THEN
+         IF(IMIRROR(IBLOCK).EQ.2)THEN
 C       Flip momenta (rotate around x axis)
-        DO I=1,NEXTERNAL
-          ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
+          DO I=1,NEXTERNAL
+            ALL_P1(2,I, IGRID)=-ALL_P1(2,I,IGRID)
+            ALL_P1(3,I, IGRID)=-ALL_P1(3,I,IGRID)
 	enddo
-          XDUM=ALL_XBK(1, ivec)
-	  ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
-	  ALL_XBK(2, ivec) = XDUM
-	  all_cm_rap(ivec) = - all_cm_rap(ivec)
+          XDUM=ALL_XBK(1, igrid)
+	  ALL_XBK(1, igrid) = ALL_XBK(2, igrid)
+	  ALL_XBK(2, igrid) = XDUM
+	  all_cm_rap(igrid) = - all_cm_rap(igrid)
 C       Flip beam identity
-        IB(1)=2
-        IB(2)=1
-      ENDDO
+        IB(1,iblock)=2
+        IB(2,iblock)=1
       ENDIF
+      ENDDO
 
       ALL_OUT(:)=0D0
 
 c      IF (PASSCUTS(P1)) THEN
-       DO IVEC=1,VECSIZE_USED
-      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
+	IVEC =0
+	IBLOCK=1
+       DO IGRID=1,VECSIZE_USED
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(igrid).ne.0d0)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
       ENDDO
@@ -974,12 +981,19 @@ c      IF (PASSCUTS(P1)) THEN
 %(call_dsig_proc_lines_vec)s
 c      ENDIF
 
-	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
+	DO IGRID=1,VECSIZE_USED
+         IVEC = IVEC + 1
+	 if (IVEC.gt.VECSIZE_LOCKSTEP)then
+	    IBLOCK = IBLOCK + 1
+	    IVEC = 1
+	    IB(1, IBLOCK)=1
+      	    IB(2, IBLOCK)=2
+	 endif	
+	 IF (LAST_ICONF.ne.-1.and.IMIRROR(IBLOCK).EQ.2) then
 C       Flip back local momenta P1 if cached
-	DO IVEC=1,VECSIZE_USED
-        DO I=1,NEXTERNAL	
-          ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
+	DO I=1,NEXTERNAL		
+          ALL_P1(2,I,IGRID)=-ALL_P1(2,I,IGRID)
+          ALL_P1(3,I,IGRID)=-ALL_P1(3,I,IGRID)
         ENDDO
 	ENDDO
 	  endif
