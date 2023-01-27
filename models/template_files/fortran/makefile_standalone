@@ -44,5 +44,7 @@ couplings.f: ../maxparticles.inc ../run.inc ../cuts.inc
 	touch ../run.inc
 
 ../cuts.inc:
-	echo "        logical fixed_extra_scale\n        integer maxjetflavor\n        double precision mue_ref_fixed, mue_over_ref\n" > ../cuts.inc
+	echo "        logical fixed_extra_scale" > ../cuts.inc
+	echo "        integer maxjetflavor" >> ../cuts.inc
+	echo "        double precision mue_ref_fixed, mue_over_ref" >> ../cuts.inc
 	

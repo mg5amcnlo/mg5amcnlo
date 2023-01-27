@@ -28,13 +28,19 @@ from six.moves import input
 logger = logging.getLogger('madgraph.cluster') 
 
 try:
-    from madgraph import MadGraph5Error
+    from madgraph import MadGraph5Error, MG5DIR
     import madgraph.various.misc as misc
+    MADEVENT=False
 except Exception as error:
     if __debug__:
         print(str(error))
     from internal import MadGraph5Error
     import internal.misc as misc
+    MADEVENT=True
+    LOCALDIR = os.path.realpath(os.path.join(os.path.dirname(__file__), os.path.pardir,
+                                                                os.path.pardir))
+
+
 
 pjoin = os.path.join
    
@@ -603,6 +609,12 @@ class MultiCore(Cluster):
             self.nb_core = args[0]
         else:
             self.nb_core = 1
+        # flag controlling if one keep the thread open or not after a wait()
+        if 'keep_thread' in opt:
+            self.keep_thread = opt['keep_thread']
+        else:
+            self.keep_thread = False
+
         self.update_fct = None
         
         self.lock = threading.Event() # allow nice lock of the main thread
@@ -611,9 +623,6 @@ class MultiCore(Cluster):
         self.done_pid_queue = six.moves.queue.Queue()
         self.fail_msg = None
 
-        # starting the worker node
-        for _ in range(self.nb_core):
-            self.start_demon()
 
         
     def start_demon(self):
@@ -629,7 +638,7 @@ class MultiCore(Cluster):
         import six.moves._thread
         while not self.stoprequest.isSet():
             try:
-                args = self.queue.get()
+                args = self.queue.get(timeout=10)
                 tag, exe, arg, opt = args
                 try:
                     # check for executable case
@@ -694,6 +703,11 @@ class MultiCore(Cluster):
                log=None, required_output=[], nb_submit=0):
         """submit a job on multicore machine"""
         
+        # open threads if needed   
+        self.stoprequest.clear()     
+        if len(self.demons) < self.nb_core:
+            self.start_demon()
+        
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
     
@@ -742,7 +756,9 @@ class MultiCore(Cluster):
                 continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
-            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
+            out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
+            
+        self.demons[:] = [] 
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -827,9 +843,10 @@ class MultiCore(Cluster):
                     raise self.fail_msg
                 elif isinstance(self.fail_msg, str):
                     raise Exception(self.fail_msg)
-                else:
-                    misc.sprint(self.fail_msg)
+                elif self.fail_msg:
+                    # can happend that stoprequest is set bu not fail if no job have been resubmitted
                     six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                # self.fail_msg is None can happen when no job was submitted -> ignore
             # reset variable for next submission
             try:
                 self.lock.clear()
@@ -844,6 +861,7 @@ class MultiCore(Cluster):
             self.stoprequest.clear()
             self.id_to_packet = {}
 
+
         except KeyboardInterrupt:
             # if one of the node fails -> return that error
             if isinstance(self.fail_msg, Exception):
@@ -854,6 +872,10 @@ class MultiCore(Cluster):
                 six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
             # else return orignal error
             raise 
+
+        if not self.keep_thread:
+            self.stoprequest.set()
+            self.demons.clear()
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
@@ -1026,8 +1048,12 @@ class CondorCluster(Cluster):
                                                          stderr=subprocess.PIPE)
         
         error = status.stderr.read().decode(errors='ignore')
-        if status.returncode or error:
+        if status.returncode and error:
             raise ClusterManagmentError('condor_q returns error: %s' % error)
+        elif status.returncode:
+            raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+        elif error:
+            sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
         return status.stdout.readline().decode(errors='ignore').strip()
     
@@ -1053,8 +1079,12 @@ class CondorCluster(Cluster):
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                                              stderr=subprocess.PIPE)
             error = status.stderr.read().decode(errors='ignore')
-            if status.returncode or error:
+            if status.returncode and error:
                 raise ClusterManagmentError('condor_q returns error: %s' % error)
+            elif status.returncode:
+                raise ClusterManagmentError('condor_q fails with status code: %s' % status.returncode)
+            elif error:
+                sys.stderr.write("condor_q error (returncode was 0): %s" % error)
 
             for line in status.stdout:
                 id, status = line.decode(errors='ignore').strip().split()
@@ -1668,8 +1698,14 @@ class SLURMCluster(Cluster):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = self.get_jobs_identifier(cwd, prog)
-        
-        
+        import sys
+        if prog == sys.executable:
+            argument.insert(0, prog)
+            if MADEVENT:
+                prog = pjoin(LOCALDIR,'bin','internal','eval.sh') 
+            else:
+                prog = pjoin(MG5DIR, 'Template','Common','bin','internal','eval.sh')
+
         if cwd is None:
             cwd = os.getcwd()
         if stdout is None:
@@ -1685,9 +1721,12 @@ class SLURMCluster(Cluster):
                    '-J', me_dir, 
                    '-e', stderr, prog] + argument
 
+
+
         if self.cluster_queue and self.cluster_queue != 'None':
                 command.insert(1, '-p')
                 command.insert(2, self.cluster_queue)
+
 
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
@@ -1714,8 +1753,12 @@ class SLURMCluster(Cluster):
     def control_one_job(self, id):
         """ control the status of a single job with it's cluster id """
         cmd = 'squeue j'+str(id)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
+                                  stderr=open(os.devnull,'w'),env=env)
         
         for line in status.stdout:
             line = line.decode(errors='ignore').strip()
@@ -1733,7 +1776,11 @@ class SLURMCluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "squeue"
-        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE)
+        # Remove incompatible squeue formats 
+        env = os.environ.copy()
+        if "SQUEUE_FORMAT" in env:
+            del env["SQUEUE_FORMAT"]
+        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE,env=env)
 
         me_dir = self.get_jobs_identifier(me_dir)
 

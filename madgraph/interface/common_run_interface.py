@@ -4506,7 +4506,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     
                     
             #check that the pdfset is not already there
-            elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
+            if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
     
                 if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
@@ -6715,24 +6715,45 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           'ct14q14': 0.118,
                           'ct14q21':0.118}
 
+            # run_card full validity not run at this stage. 
+            # since we need the pdlabel here, just run that part of the check
+            if 'pdlabel' in run_card.parameter_in_block:
+                run_card.parameter_in_block['pdlabel'].check_validity(run_card)
             pdlabel = run_card['pdlabel']
             if pdlabel == 'mixed':
                 pdlabel1 = run_card['pdlabel1']
                 if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
                     pdlabel = pdlabel1
 
-            if pdlabel == 'lhapdf':
+            try:
+                old_value = param_card.get('sminputs').get((3,)).value
+            except (KeyError, AttributeError):
+                old_value = None
+
+            if old_value is None:
+                pass
+            elif pdlabel == 'lhapdf':
                 lhapdf = misc.import_python_lhapdf(lhapdfconfig)
+
                 if lhapdf:
+                    if isinstance(run_card['lhaid'], list):
+                        lhaid= run_card['lhaid'][0]
+                    else:
+                        lhaid = run_card['lhaid']
+
+                    # if supported check first that pdfset is installed (and do it if not)
+                    if hasattr(mecmd, 'copy_lhapdf_set'):
+                        pdfsetsdir = mecmd.get_lhapdf_pdfsetsdir()
+                        mecmd.copy_lhapdf_set([lhaid], pdfsetsdir)
+
                     old_value = param_card.get('sminputs').get((3,)).value
                     lhapdf.setVerbosity(0)
-                    pdf = lhapdf.mkPDF(run_card['lhaid'])
+                    pdf = lhapdf.mkPDF(lhaid)
                     new_value = pdf.alphasQ(91.1876)
                     param_card.get('sminputs').get((3,)).value = new_value
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
                     modify = True
             elif pdlabel in as_for_pdf:
-                old_value = param_card.get('sminputs').get((3,)).value
                 new_value = as_for_pdf[pdlabel]
                 if old_value != new_value:
                     param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]

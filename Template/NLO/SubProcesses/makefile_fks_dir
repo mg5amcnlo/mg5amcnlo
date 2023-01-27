@@ -49,7 +49,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
 
 # Files needed for mintFO & mintMC
-RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
+RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
 	fill_MC_mshell.o born_hel.o open_output_files.o			\
 	add_write_info.o madfks_plot.o
 
@@ -71,7 +71,7 @@ SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
+	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	get_color.o iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \

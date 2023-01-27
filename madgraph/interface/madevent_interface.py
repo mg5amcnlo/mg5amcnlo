@@ -3635,6 +3635,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                  run_type='Refine number %s on %s (%s/%s)' % 
                                  (self.nb_refine, subdir, nb_proc+1, len(subproc)))
 
+
         self.monitor(run_type='All job submitted for refine number %s' % self.nb_refine, 
                      html=True)
         
@@ -3764,6 +3765,14 @@ Beware that this can be dangerous for local multicore runs.""")
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
+
+            if nb_event < self.run_card['nevents']:
+                logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
+                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", self.run_card['sde_strategy'] + 1 % 2)
+                logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
+                logger.warning("  - reduce the number of requested events (if set too high)")
+                logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
+
         if partials:
             for i in range(partials):
                 try:
@@ -4463,7 +4472,8 @@ Please install this tool with the following MG5_aMC command:
             else:
                 preamble = misc.get_HEPTools_location_setter(
                                                  pjoin(MG5DIR,'HEPTools'),'lib')
-            
+        preamble += "\n unset PYTHIA8DATA\n"
+        
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
 !    %s %s
@@ -5542,20 +5552,20 @@ tar -czf split_$1.tar.gz split_$1
             if os.path.isfile(file_path):
                 if 'removeHEPMC' in self.to_store:
                     os.remove(file_path)
+                else:
+                    self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
+                    if 'compressHEPMC' in self.to_store:
+                        misc.gzip(file_path,stdout=file_path)
+                        hepmc_fileformat = ".gz"
 
-                self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
-                if 'compressHEPMC' in self.to_store:
-                    misc.gzip(file_path,stdout=file_path)
-                    hepmc_fileformat = ".gz"
+                    moveHEPMC_in_to_store = None
+                    for to_store in self.to_store:
+                        if "moveHEPMC" in to_store:
+                           moveHEPMC_in_to_store = to_store
 
-                moveHEPMC_in_to_store = None
-                for to_store in self.to_store:
-                    if "moveHEPMC" in to_store:
-                        moveHEPMC_in_to_store = to_store
-
-                if not moveHEPMC_in_to_store == None:
-                    move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
-                    os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
+                    if not moveHEPMC_in_to_store == None:
+                        move_hepmc_path = moveHEPMC_in_to_store.split("@")[1]
+                        os.system("mv " + file_path + hepmc_fileformat + " " + move_hepmc_path)
 
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         self.results.save()        
@@ -5810,9 +5820,21 @@ tar -czf split_$1.tar.gz split_$1
         self.check_nb_events()
 
         # this is in order to avoid conflicts between runs with and without
-        # lhapdf
-        misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
+        # lhapdf. not needed anymore the makefile handles it automaticallu
+        #misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
+        self.make_opts_var['pdlabel1'] = ''
+        self.make_opts_var['pdlabel2'] = ''
+        if self.run_card['pdlabel1'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel1'] = 'eva'
+        if self.run_card['pdlabel2'] in ['eva', 'iww']:
+            self.make_opts_var['pdlabel2'] = 'eva'
+        if self.run_card['pdlabel1'] in ['edff','chff']:
+            self.make_opts_var['pdlabel1'] = self.run_card['pdlabel1']
+        if self.run_card['pdlabel2'] in ['edff','chff']:
+            self.make_opts_var['pdlabel2'] = self.run_card['pdlabel2']
+
+
         # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             self.make_opts_var['lhapdf'] = 'True'
@@ -5829,8 +5851,9 @@ tar -czf split_$1.tar.gz split_$1
                 # copy the files for the chosen density
                 if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
                     self.copy_lep_densities(self.run_card['pdlabel'], pjoin(self.me_dir, 'Source'))
-
-            
+                    self.make_opts_var['pdlabel1'] = 'ee'
+                    self.make_opts_var['pdlabel2'] = 'ee'
+        
         # set random number
         if self.run_card['iseed'] != 0:
             self.random = int(self.run_card['iseed'])
@@ -5878,7 +5901,9 @@ tar -czf split_$1.tar.gz split_$1
         # Compile
         for name in [ 'all']:#, '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
-        
+
+        force_subproc_clean = False
+
         bias_name = os.path.basename(self.run_card['bias_module'])
         if bias_name.lower()=='none':
             bias_name = 'dummy'
@@ -5893,9 +5918,11 @@ tar -czf split_$1.tar.gz split_$1
         if self.proc_characteristics['bias_module']!=bias_name and \
              os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
                 os.remove(pjoin(self.me_dir, 'lib','libbias.a'))
+                force_subproc_clean = True
+
             
         # Finally compile the bias module as well
-        if self.run_card['bias_module']!='dummy':
+        if self.run_card['bias_module'] not in ['dummy',None]:
             logger.debug("Compiling the bias module '%s'"%bias_name)
             # Verify the compatibility of the specified module
             bias_module_valid = misc.Popen(['make','requirements'],
@@ -5910,13 +5937,15 @@ tar -czf split_$1.tar.gz split_$1
         self.proc_characteristics['bias_module']=bias_name
         # Update the proc_characterstics file
         self.proc_characteristics.write(
-                   pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
-        # Make sure that madevent will be recompiled
-        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                             'subproc.mg'))]
-        for nb_proc,subdir in enumerate(subproc):
-            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
-            self.compile(['clean'], cwd=Pdir)
+                   pjoin(self.me_dir,'SubProcesses','proc_characteristics'))
+
+        if force_subproc_clean:
+            # Make sure that madevent will be recompiled
+            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                'subproc.mg'))]
+            for nb_proc,subdir in enumerate(subproc):
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+                self.compile(['clean'], cwd=Pdir)
 
         #see when the last file was modified
         time_mod = max([os.path.getmtime(pjoin(self.me_dir,'Cards','run_card.dat')),

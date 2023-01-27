@@ -2834,23 +2834,42 @@ class decay_all_events(object):
             logger.info('generating the full matrix element squared (with decay)')
             start = time.time()
             to_decay = list(self.mscmd.list_branches.keys())
-            decay_text = []
+            decay_text_correlated = {'':[]}
             for decays in self.mscmd.list_branches.values():
                 for decay in  decays:
+                    correlated = ''
+                    if '@' in decay:
+                        decay, correlated = decay.split('@')
+                        correlated = correlated.strip()
+                        if correlated not in decay_text_correlated:
+                            decay_text_correlated[correlated] = []
+                    curr = decay_text_correlated[correlated]
                     if '=' not in decay:
                         decay += ' QCD=99'
                     if ',' in decay:
-                        decay_text.append('(%s)' % decay)
+                        curr.append('(%s)' % decay)
                     else:
-                        decay_text.append(decay)
-            decay_text = ', '.join(decay_text)
+                        curr.append(decay)
+            decay_text = ', '.join(decay_text_correlated[''])
+            del decay_text_correlated['']
             commandline = ''
-            for proc in processes:
-                if not proc.strip().startswith(('add','generate')):
-                    proc = 'add process %s' % proc
-                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
-                
-            commandline = commandline.replace('add process', 'generate',1)
+            if not decay_text_correlated:
+                for proc in processes:
+                    if not proc.strip().startswith(('add','generate')):
+                        proc = 'add process %s' % proc
+                    commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
+                commandline = commandline.replace('add process', 'generate',1)
+            else:
+                for key in decay_text_correlated:
+                    for proc in processes:
+                        if not proc.strip().startswith(('add','generate')):
+                            proc = 'add process %s' % proc
+                        if decay_text:
+                            one_decay = decay_text + ',' + ', '.join(decay_text_correlated[key])
+                        else:
+                            one_decay = ', '.join(decay_text_correlated[key])
+                        commandline += self.get_proc_with_decay(proc, one_decay, mgcmd._curr_model, self.options)
+                commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             # remove decay with 0 branching ratio.
@@ -2903,6 +2922,8 @@ class decay_all_events(object):
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
+                if "@" in proc:
+                    proc = proc.split("@",1)[0]
                 commandline+="add process %s @%i --no_warning=duplicate;" % (proc,i)
                 i+=1        
         commandline = commandline.replace('add process', 'generate',1)

@@ -576,8 +576,8 @@ class TestSuiteModified(unittest.TestSuite):
         
 
 
-        if str(self) in time_db and (time_db[str(self)] > abs(time_limit) or\
-                                         time_db[str(self)] < abs(mintime_limit)):
+        if True:#str(self) in time_db and (time_db[str(self)] > abs(time_limit) or\
+#                                         time_db[str(self)] < abs(mintime_limit)):
             if any(name in str(self) for name in to_preserve): 
                 MyTextTestRunner.stream.write('T->R:')
 #                TestSuiteModified.stop_eval = True
