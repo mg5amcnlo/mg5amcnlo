@@ -813,7 +813,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
         for ip,part in enumerate(event):
             if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (ip > 1):
-                print('FOUND IT',part.pid)
                 event[ip].mass = 0.
                 if ((ip + 2) <= len(event)):
                     second = ip +1
