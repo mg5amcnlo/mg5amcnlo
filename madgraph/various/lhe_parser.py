@@ -1955,7 +1955,7 @@ class Event(list):
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
                 raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
-                
+
         if E/absE > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))

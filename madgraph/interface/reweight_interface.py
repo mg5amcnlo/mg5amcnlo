@@ -586,6 +586,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
+            # This returns an error for events with light quarks or leptons!
+            #event.check_kinematics_only()
             if self.inc_sudakov:
                 weight = self.calculate_weight(event, sud_mod)
             else:
@@ -731,7 +733,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
-    def sudakov_reweight(self,event):
+    def toy_sudakov_reweight(self,event):
         """ Get Sudakov reweight factor based on the event kinematics"""
         mW=80.3
         alpha=1.0/129.0
@@ -753,7 +755,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
         return sudrat
 
-    def sudakov_reweight_nbody(self,H_event,event):
+    def toy_sudakov_reweight_nbody(self,H_event,event):
         """ Get Sudakov reweight factor based on n-body kinematics"""
         mW=80.3
         alpha=1.0/129.0
@@ -795,15 +797,53 @@ class ReweightInterface(extended_cmd.Cmd):
                         sudrat = sudrat + (alpha/(4.0*pi))*(math.log(abs(inv)/(mW**2)))**2
         return sudrat
 
+    def set_initial_mass_to_zero(self, event):
+
+        event[0].mass = 0.
+        event[1].mass = 0.
+        pz_1_new = self.recoil_eq(event[0],event[1])
+        pz_2_new = event[0].pz + event[1].pz - pz_1_new
+
+        E_1_new = math.sqrt(event[0].mass**2 + event[0].px**2 + event[0].py**2 + pz_1_new **2)
+        E_2_new = math.sqrt(event[1].mass**2 + event[1].px**2 + event[1].py**2 + pz_2_new **2)
+        event[0].set_momentum(lhe_parser.FourMomentum([E_1_new, event[0].px, event[0].py, pz_1_new]))
+        event[1].set_momentum(lhe_parser.FourMomentum([E_2_new, event[1].px, event[1].py, pz_2_new]))
+
+    def set_final_jet_mass_to_zero(self, event):
+
+        for ip,part in enumerate(event):
+            if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (ip > 1):
+                print('FOUND IT',part.pid)
+                event[ip].mass = 0.
+                if ((ip + 2) <= len(event)):
+                    second = ip +1
+                else:
+                    nincoming = 2
+                    second = nincoming + 1 - 1
+                tot_z = 0.
+                for ip2,part2 in enumerate(event):
+                    if (ip2 != ip) and (ip2 != second) and ip2 <= 1:
+                        tot_z = tot_z + part2.pz
+                    if (ip2 != ip) and (ip2 != second) and ip2 > 1:
+                        tot_z = tot_z - part2.pz
+
+                pz_1_new = self.recoil_eq(event[ip],event[second])
+                pz_2_new = tot_z - pz_1_new
+
+                E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + pz_1_new **2)
+                E_2_new = math.sqrt(event[second].mass**2 + event[second].px**2 + event[second].py**2 + pz_2_new **2)
+                event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, pz_1_new]))
+                event[second].set_momentum(lhe_parser.FourMomentum([E_2_new, event[second].px, event[second].py, pz_2_new]))
+        return event
+        
 
     def merge_particles_kinematics(self, event, i,j, moth):
         """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
-        
+        """ note!! kinematics (and id) mapping only! """
+
         import copy
         recoil = True
         fks_type = False
-
-        #logger.info(event)
 
         if recoil and not fks_type:
             if (i == moth[0].get('number')-1):
@@ -830,10 +870,11 @@ class ReweightInterface(extended_cmd.Cmd):
             new_event[fks_i].pid = moth[0]['id']
             new_event[fks_i].set_momentum(mother_4mom)
 
-            #if moth[0]['is_part']:
-            #    new_event[fks_i].status = 1
-            #else:
-            #    new_event[fks_i].status = -1
+            import numpy as np
+            n_part = len(event)
+            p_in = np.zeros(shape=(n_part, 4))
+            for i,el in enumerate(event):
+                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
 
             if fks_i <= 1: # initial-state recoil
                 new_E = 0.0
@@ -848,9 +889,11 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_z = new_z + part.pz
                 
                 if fks_i == 0:
-                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_x-new_event[0].px,new_y-new_event[0].py,new_z-new_event[0].pz]))
+                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E - new_event[0].E, new_x - new_event[0].px,\
+                                                                       new_y - new_event[0].py, new_z - new_event[0].pz]))
                 elif fks_i == 1:
-                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_x-new_event[1].px,new_y-new_event[1].py,new_z-new_event[1].pz]))
+                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E - new_event[1].E, new_x - new_event[1].px, \
+                                                                       new_y - new_event[1].py, new_z - new_event[1].pz]))
                 
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
                 pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
@@ -859,7 +902,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
                 new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
                 new_event.pop(to_remove)
-                new_event.check_kinematics_only()
+                #new_event.check_kinematics_only()
                 
             if fks_i > 1: # final-state recoil
                 new_E = 0.0
@@ -881,7 +924,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
                 new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
                 new_event.pop(to_remove)
-                new_event.check_kinematics_only()
+                #new_event.check_kinematics_only()
               
         elif fks_type and not recoil:        
             ## Do it in a more FKS-style
@@ -954,10 +997,9 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_event[ip].set_momentum(lhe_parser.FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
                 
                 new_event.pop(to_remove)
-                new_event.check_kinematics_only()
+                #new_event.check_kinematics_only()
 
             else: # final-state recoil
-                logger.info('Final recoil')
                 q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
                             new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
 
@@ -985,8 +1027,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if ip == fks_i:
                         new_event[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
                 new_event.pop(to_remove)
-                new_event.check_kinematics_only()
-            
+                #new_event.check_kinematics_only()
         else:
             logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
 
@@ -994,6 +1035,14 @@ class ReweightInterface(extended_cmd.Cmd):
         return new_event
 
     def recoil_eq(self,part1, part2):
+        """ In general, solves the equation
+        E1 + E2 = K 
+        p1 + p2 = c
+        E1^2 - p1^2 = a
+        E2^2 - p2^2 = b
+        and returns p1
+        """
+
         thresh = 1e-6
         import random
         a = part1.mass**2 + part1.px**2 + part1.py**2
@@ -1001,8 +1050,8 @@ class ReweightInterface(extended_cmd.Cmd):
         c = part1.pz + part2.pz
         K = part1.E + part2.E
         K2 = K**2
-        sol1 = (-a*c + c*b + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
-        sol2 = (-a*c + c*b + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol1 = (-a*c + b*c + c**3 - c*K2 - math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
+        sol2 = (-a*c + b*c + c**3 - c*K2 + math.sqrt(K2*(a**2 + (b + c**2 - K2)**2 - 2*a*(b - c**2 + K2))))/(2*(c**2-K2))
         
         if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - (math.sqrt(a+sol2**2) + math.sqrt(b+(c-sol2)**2))) > thresh:
             logger.critical('Error in recoil_eq solver 1')
@@ -1011,7 +1060,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if abs(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2) - K) > thresh:
             logger.critical('Error in recoil_eq solver 2')
             logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
-            logger.info(K)
+            logger.critical(K)
         
         if random.random() < 0.5:
             return sol1
@@ -1359,35 +1408,43 @@ class ReweightInterface(extended_cmd.Cmd):
             w_orig= event.wgt
             jac = 1
             pi=3.141592653589
+            mW = 80.3
 
             mgcmd = self.mg5cmd
             import importlib
             import numpy as np
 
+            ### FKS stuff, should be removed (nexternal can stay)
             pair,nexternal = buff_event.get_fks_pair() # nextneral is the number of the real-emission config
+
+            # Remove all propagator particles from the event to be passed to Sud module
+            for ip,part in enumerate(buff_event):
+                if (abs(part.status) != 1):
+                    buff_event.pop(ip)
+
             x = 1.0
             write_to_file = False
-            sud_cut= x*80.3**2
+            sud_cut= x*mW**2
             min_inv=10000000.0
             fks1=pair[0]
             fks2=pair[1]
             min_inv_fks=False
             inv_dict={}
 
-            if (len(event) == nexternal):
+            if (len(buff_event) == nexternal):
                     H_event=True
                     S_event=False
             else:
                     H_event=False
                     S_event=True        
             if (H_event):
-                    for ievt,evt in enumerate(event):
+                    for ievt,evt in enumerate(buff_event):
                         # Find the smallest abs(inv) and the corresponding pair
                         if (ievt <= 1):
                             sign1 = 1.0
                         else:
                             sign1 = -1.0
-                        for ievt2,evt2 in enumerate(event):
+                        for ievt2,evt2 in enumerate(buff_event):
                             if (ievt2 <= 1):
                                 sign2 = 1.0
                             else:
@@ -1400,6 +1457,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                     min_inv=abs(inv)
                                     min_i=ievt
                                     min_j=ievt2
+                            ### FKS stuff, should be removed
                             if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
                                 if (ievt <= 1):
                                     sign1 = 1.0
@@ -1413,13 +1471,14 @@ class ReweightInterface(extended_cmd.Cmd):
                                                - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
 
                     # Below finds the current process tag and tries to recombine the min_i and min_j
-                    inv_dict_sort = dict(sorted(inv_dict.items(), key=lambda item: item[1]))   
                     tag, order = buff_event.get_tag_and_order()
-                    this_tag, order = buff_event.get_tag_and_order()
-                    matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()    
+                    matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+
                     ping = False
                     ij_comb= []
+                    dirstopdg = []
                     for me in matrix_elements:
+                        dirstopdg.extend( [self.get_pdg_tuple([l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in me.born_me['processes']])
                         for proc in me.get('processes'):
                             proc_tag = proc.get_tag()
                             if ((list(proc_tag[0]) == order[0])\
@@ -1434,13 +1493,16 @@ class ReweightInterface(extended_cmd.Cmd):
                                 if ij_comb == []:
                                     ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
                     if not ping:
-                        ij_comb = []
-                            
-                    print(ij_comb)
+                        print('ERROR: process not found')
+                        print(order)
+                    
                     # For n+1-body reweighting
                     if min_inv > sud_cut:
+                        
                         event_to_sud = buff_event
                         n_part = nexternal
+                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+
 
                     # For n-body reweighting
                     else:
@@ -1448,20 +1510,26 @@ class ReweightInterface(extended_cmd.Cmd):
                         if ij_comb == []:
                             event_to_sud = buff_event
                             n_part = nexternal
+                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
                         else:
                             event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
                             event_to_sud = event_for_sud
                             n_part = nexternal - 1 
-
+                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                            # TV: TEMPORARY THING: map to n+1 body if recoil does not exist at Born level among processes
+                            if mapped_tag not in dirstopdg:
+                                event_to_sud = buff_event
+                                n_part = nexternal
+                                mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
             if (S_event):
                     fks_inv = 0.0
                     event_to_sud = buff_event
                     n_part = nexternal - 1 
+                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
 
-#############################      REAL SUDAKOV
 
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
-            E, px, py, pz = 0,0,0,0
+            E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
                     if particle.status == -1:
                         E += particle.E
@@ -1470,30 +1538,47 @@ class ReweightInterface(extended_cmd.Cmd):
                         pz += particle.pz
 
             in_part_mom = lhe_parser.FourMomentum([E, px, py, pz])
+
             if not ((abs(px) < 1e-8) and (abs(py) < 1e-8) and (abs(pz) < 1e-8)):
                     event_to_sud.boost(in_part_mom)
 
-            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+            # Set all initial masses to zero rather than the masses in the event files
+            self.set_initial_mass_to_zero(event_to_sud)
+
+            event_to_sud = self.set_final_jet_mass_to_zero(event_to_sud)
+
+            event_to_sud.check_kinematics_only()
+
 
             # Read in the event momenta into np array
             p_in = np.zeros(shape=(n_part, 4))
             for i,el in enumerate(event_to_sud):
                 p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
 
+
+            # Get the right Sudakov reweight factors
             gstr=event.aqcd*2.*pi
             sorted_tag = (mapped_tag[0],tuple(sorted(list(mapped_tag[1]))))
+
             res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
 
-            # Do the rescaling 
+            # Do the reewightings
             sudrat0 = 1. + res[1]/res[0]
             sudrat1 = 1. + res[2]/res[0]
-            #sudrat = 1.
             event.rescale_weights(sudrat0)
             w_new0 = w_orig * sudrat0
             w_new1 = w_orig *sudrat1
 
             return {'orig': orig_wgt, 'sud0': w_new0/w_orig*orig_wgt*jac, 'sud1': w_new1/w_orig*orig_wgt*jac}
      
+    def get_pdg_tuple(self, pdgs, nincoming):
+        """write a tuple of 2 tuple, with the incoming particles unsorted
+        and the outgoing ones sorted
+        """
+        incoming = pdgs[:nincoming]
+        outgoing = pdgs[nincoming:]
+        return (tuple(incoming), tuple(sorted(outgoing)))
+
     def calculate_nlo_weight(self, event):
 
         type_nlo = self.get_weight_names()

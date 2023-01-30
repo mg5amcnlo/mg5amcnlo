@@ -96,9 +96,9 @@ C this is for the orders of the counterterms
   nord_integrated_born = 0
   if (keep_order(i)) then
    nord_integrated_born = nord_integrated_born + 1
-   write(*,*) 'BORN: keeping split order ', i
-  else
-   write(*,*) 'BORN: not keeping split order ', i
+   !write(*,*) 'BORN: keeping split order ', i
+  !else
+   !write(*,*) 'BORN: not keeping split order ', i
   endif
  enddo
 

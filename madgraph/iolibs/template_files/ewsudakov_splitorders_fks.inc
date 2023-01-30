@@ -61,11 +61,11 @@ C this is for the orders of the born to integrate
    endif
   enddo
 
-  if (keep_order(i)) then
-   write(*,*) 'SDK%(ime)d: keeping split order ', i
-  else
-   write(*,*) 'SDK%(ime)d: not keeping split order ', i
-  endif
+  !if (keep_order(i)) then
+  ! write(*,*) 'SDK%(ime)d: keeping split order ', i
+  !else
+  ! write(*,*) 'SDK%(ime)d: not keeping split order ', i
+  !endif
  enddo
 
  firsttime = .false.
