@@ -1931,7 +1931,7 @@ class Event(list):
         """check various property of the events - only kinematics"""
         
         # check that relative error is under control
-        threshold = 1e-5
+        threshold = 1e-6
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1954,18 +1954,19 @@ class Event(list):
             fourmass = FourMomentum(particle).mass
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
+                logger.critical(self)
                 raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
 
-        if E/absE > threshold:
+        if abs(E/absE) > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
-        if px/abspx > threshold:
+        if abs(px/abspx) > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
-        if py/abspy > threshold:
+        if abs(py/abspy) > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
-        if pz/abspz > threshold:
+        if abs(pz/abspz) > threshold:
             logger.critical(self)
             raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
                  
@@ -2790,8 +2791,49 @@ class FourMomentum(object):
         out = out.zboost(E=pboost.E,pz=p)
         return out
         
+    def rotate_to_z(self,prot):
+
+        import math
+        import numpy as np
+
+        z = np.array([0.,0.,1.])
+
+        px = self.px
+        py = self.py
+        pz = self.pz
+
+        refx = prot.px 
+        refy = prot.py
+        refz = prot.pz
+
+        prot_mom = np.array([px, py, pz])
+        ref_mom = np.array([refx, refy, refz])
+
+        # Create normal vector
+        n = np.array([refy, -refx, 0.])
+        n = n * 1./math.sqrt(self.threedot(n,n))
+        t = prot_mom - self.threedot(n,prot_mom)*n
+        p = ref_mom - self.threedot(ref_mom,z)*z
+        p = p/math.sqrt(self.threedot(p,p))
+
+        t_pz = np.array([self.threedot(t,p), self.threedot(t,z), 0.])
+        costheta = self.threedot(ref_mom,z)* 1./math.sqrt(self.threedot(ref_mom, ref_mom))
+        sintheta=math.sqrt(1.-costheta**2)
+
+        sgn = 1.
+        t_pz_p = np.array([0., 0., 0.])
+        t_pz_p[0] = costheta*t_pz[0] + sgn*(-sintheta) * t_pz[1]
+        t_pz_p[1] = sgn*sintheta*t_pz[0] + costheta * t_pz[1]
+
+        out_mom = self.threedot(n,prot_mom)*n + t_pz_p[0]*p + t_pz_p[1]*z
+
+        out = FourMomentum([self.E,out_mom[0], out_mom[1], out_mom[2] ] )
+
+        return out
         
-        
+    def threedot(self,a,b):
+
+        return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
 
 class OneNLOWeight(object):
         

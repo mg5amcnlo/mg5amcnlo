@@ -828,12 +828,10 @@ class ReweightInterface(extended_cmd.Cmd):
 
                 pz_1_new = self.recoil_eq(event[ip],event[second])
                 pz_2_new = tot_z - pz_1_new
-
                 E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + pz_1_new **2)
                 E_2_new = math.sqrt(event[second].mass**2 + event[second].px**2 + event[second].py**2 + pz_2_new **2)
                 event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, pz_1_new]))
                 event[second].set_momentum(lhe_parser.FourMomentum([E_2_new, event[second].px, event[second].py, pz_2_new]))
-        return event
         
 
     def merge_particles_kinematics(self, event, i,j, moth):
@@ -869,12 +867,6 @@ class ReweightInterface(extended_cmd.Cmd):
             new_event[fks_i].pid = moth[0]['id']
             new_event[fks_i].set_momentum(mother_4mom)
 
-            import numpy as np
-            n_part = len(event)
-            p_in = np.zeros(shape=(n_part, 4))
-            for i,el in enumerate(event):
-                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
-
             if fks_i <= 1: # initial-state recoil
                 new_E = 0.0
                 new_x = 0.0
@@ -904,18 +896,23 @@ class ReweightInterface(extended_cmd.Cmd):
                 #new_event.check_kinematics_only()
                 
             if fks_i > 1: # final-state recoil
-                new_E = 0.0
+
+                # Re-scale the energy of fks_i to make it on-shell
                 for ip,part in enumerate(new_event):
                     if (ip == fks_i):
                         part.E = math.sqrt(part.mass**2 + part.px**2 + part.py**2 + part.pz**2)
                         new_E = part.E
-                    if (ip != fks_i and ip != fks_j and ip >= 2):
+
+                # Find the overall energy in the final state
+                new_E = 0.0
+                for ip,part in enumerate(new_event):
+                    if (ip != fks_j and ip >= 2):
                         new_E = new_E + part.E
-                if fks_i == 0:
-                    new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
-                elif fks_i == 1:
-                    new_event[0].set_momentum(lhe_parser.FourMomentum([new_E-new_event[1].E,new_event[0].px,new_event[0].py,new_event[0].pz]))
                 
+                # Use one of the initial states to absorb the energy change in the final state
+                new_event[1].set_momentum(lhe_parser.FourMomentum([new_E-new_event[0].E,new_event[1].px,new_event[1].py,new_event[1].pz]))
+                
+                # Change the initial state pz and E
                 pz_1_new = self.recoil_eq(new_event[0],new_event[1])
                 pz_2_new = new_event[0].pz + new_event[1].pz - pz_1_new
                 E_1_new = math.sqrt(new_event[0].mass**2 + new_event[0].px**2 + new_event[0].py**2 + pz_1_new **2)
@@ -1526,7 +1523,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     n_part = nexternal - 1 
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
 
-
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
             E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
@@ -1535,26 +1531,29 @@ class ReweightInterface(extended_cmd.Cmd):
                         px += particle.px
                         py += particle.py
                         pz += particle.pz
-
             in_part_mom = lhe_parser.FourMomentum([E, px, py, pz])
+            if not ((abs(px) < 1e-6 * E) and (abs(py) < 1e-6 * E) and (abs(pz) < 1e-6 * E)):
+                event_to_sud.boost(in_part_mom)
 
-            if not ((abs(px) < 1e-8) and (abs(py) < 1e-8) and (abs(pz) < 1e-8)):
-                    event_to_sud.boost(in_part_mom)
+            # Rotate system to a partonic CM along z-axis
+            initial = copy.deepcopy(event_to_sud[0])
+            if not ((abs(initial.px) < 1e-6 * initial.E) and (abs(initial.py) < 1e-6 * initial.E)):
+                for p in event_to_sud:
+                    p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
 
             # Set all initial masses to zero rather than the masses in the event files
             self.set_initial_mass_to_zero(event_to_sud)
 
-            event_to_sud = self.set_final_jet_mass_to_zero(event_to_sud)
+            # Set all light quarks and lepton masses to zero in event file
+            self.set_final_jet_mass_to_zero(event_to_sud)
 
             event_to_sud.check_kinematics_only()
-
 
             # Read in the event momenta into np array
             p_in = np.zeros(shape=(n_part, 4))
             for i,el in enumerate(event_to_sud):
                 p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
-
-
+            
             # Get the right Sudakov reweight factors
             gstr=event.aqcd*2.*pi
             sorted_tag = (mapped_tag[0],tuple(sorted(list(mapped_tag[1]))))
