@@ -1633,6 +1633,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         import multiprocessing
         if not self.options['nb_core'] or self.options['nb_core'] == 'None':
             self.options['nb_core'] = multiprocessing.cpu_count()
+        if hasattr(self, 'run_card'):
+            try:
+                dynamical_library = self.run_card['dynamical_library']
+                if not dynamical_library:
+                    raise Exception
+            except Exception:
+                pass
+            else:
+                # dynamical_library is in the run_card and set on True
+                if 'env' in opts:
+                     opts["env"] = opts["env"].copy()
+                     opts["env"]["dynamic"] = "true"
+                else:
+                    my_env = os.environ.copy()
+                    my_env["dynamic"] = "true"
+                    opts["env"] = my_env
+                misc.sprint(opts["env"]["dynamic"])
+
         return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):

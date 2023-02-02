@@ -76,14 +76,14 @@ endif
 ifdef dynamic
 ifeq ($(UNAME), Darwin)
 libext=dylib
-FFLAGS+= -fno-common
+FFLAGS+= -fcommon
 LDFLAGS += -bundle
 define CREATELIB
-$(FC) -dynamiclib -undefined dynamic_lookup -o $(1) $(2)
+$(FC) -dynamiclib -undefined dynamic_lookup -fcommon -o $(1) $(2) -install_name $(abspath $(1)) -Wl,-flat_namespace
 endef
 else
 libext=so
-FFLAGS+= -fPIC
+FFLAGS+= -fPIC -fcommon
 LDFLAGS += -shared
 define CREATELIB
 $(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)

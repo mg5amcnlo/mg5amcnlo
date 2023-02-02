@@ -1005,9 +1005,6 @@ class ConfigFile(dict):
             self.read(finput, **opt)
 
 
-
-
-
     def default_setup(self):
         pass
 
@@ -3181,6 +3178,7 @@ class RunCardLO(RunCard):
         self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False, comment="control how many Channel are integrated inside a single job on cluster/multicore")
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False, comment="control the maximal number of events for the first iteration of the refine (larger means less jobs)")
         self.add_param('small_width_treatment', 1e-6, hidden=True, comment="generation where the width is below VALUE times mass will be replace by VALUE times mass for the computation. The cross-section will be corrected assuming NWA. Not used for loop-induced process")
+        self.add_param('dynamical_library', False, hidden=True, include=False, comment='if True configure the code to use dynamical library instead of static library.')
         #hel recycling
         self.add_param('hel_recycling', True, hidden=True, include=False, comment='allowed to deactivate helicity optimization at run-time --code needed to be generated with such optimization--')
         self.add_param('hel_filtering', True,  hidden=True, include=False, comment='filter in advance the zero helicities when doing helicity per helicity optimization.')
