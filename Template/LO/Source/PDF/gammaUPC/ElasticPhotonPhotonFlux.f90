@@ -1941,7 +1941,7 @@ CONTAINS
        IF(nuclearA_beam1.NE.0)THEN
           Ngamma1=PhotonNumberDensity_ChargeFormFactor_WS(b1,E1_common,gamma1_common,&
                RR,wVal_common,aaa,3d0,0.7d0,1)
-          Ngamma2=PhotonNumberDensity_ChargeFormFactor_proton(b1,E1_common,gamma1_common)
+          Ngamma2=PhotonNumberDensity_ChargeFormFactor_proton(b2,E2_common,gamma2_common)
        ELSE
           Ngamma1=PhotonNumberDensity_ChargeFormFactor_proton(b1,E1_common,gamma1_common)
           Ngamma2=PhotonNumberDensity_ChargeFormFactor_WS(b2,E2_common,gamma2_common,&
