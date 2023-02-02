@@ -65,7 +65,7 @@ def load_model(name, decay=False):
 
     # remove any link to previous model
     for name in ['particles', 'object_library', 'couplings', 'function_library', 'lorentz', 'parameters', 'vertices', 'coupling_orders', 'write_param_card',
-                 'CT_couplings', 'CT_vertices', 'CT_parameters']:
+                 'CT_couplings', 'CT_vertices', 'CT_parameters', 'running']:
         try:
             del sys.modules[name]
         except Exception:

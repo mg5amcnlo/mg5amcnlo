@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # idea have 2 script
 # madweight.py -> direct submission 

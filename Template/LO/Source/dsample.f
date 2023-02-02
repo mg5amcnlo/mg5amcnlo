@@ -1478,7 +1478,9 @@ c       that they shouldn't be added here.
         endif
 
         if(pdlabel.eq.'dressed'.and.ee_picked.ne.-1) then
-          call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))           
+           if(ee_jacobian.ne.0d0) then
+              call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))
+           endif
        endif
        
       end subroutine add_entry_to_discrete_dimensions

@@ -29,9 +29,7 @@ C
 couplings needed to be evaluated points by points
 C     
       CALL COUP2()
-      CALL COUP3()
       CALL MP_COUP2()
-      CALL MP_COUP3()
 
       RETURN
       END
@@ -40,12 +38,28 @@ C
 
       IMPLICIT NONE
       DOUBLE PRECISION PI, ZERO
-      LOGICAL READLHA
+      LOGICAL READLHA, FIRST
+      DATA FIRST /.TRUE./
+      SAVE FIRST
       PARAMETER  (PI=3.141592653589793D0)
       PARAMETER  (ZERO=0D0)
       LOGICAL UPDATELOOP
       COMMON /TO_UPDATELOOP/UPDATELOOP
       INCLUDE 'model_functions.inc'
+      DOUBLE PRECISION GOTHER
+
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE
+
+
+      INCLUDE '../cuts.inc'
+      DATA MAXJETFLAVOR,FIXED_EXTRA_SCALE,MUE_OVER_REF,MUE_REF_FIXED 
+     $ /5,.FALSE.,1D0,91.188/
+      INCLUDE '../run.inc'
+
+      DOUBLE PRECISION ALPHAS
+      EXTERNAL ALPHAS
+
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
       READLHA = .FALSE.
@@ -53,11 +67,11 @@ C
       INCLUDE 'intparam_definition.inc'
 
 
+
 C     
 couplings needed to be evaluated points by points
 C     
       CALL COUP2()
-      CALL COUP3()
 
       RETURN
       END
@@ -71,8 +85,12 @@ C
       INCLUDE 'model_functions.inc'
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
+      DOUBLE PRECISION MODEL_SCALE
+      COMMON /MODEL_SCALE/MODEL_SCALE
 
-      IF (MU_R2.GT.0D0) MU_R = MU_R2
+
+      IF (MU_R2.GT.0D0) MU_R = DSQRT(MU_R2)
+      MODEL_SCALE = DSQRT(MU_R2)
       G = SQRT(4.0D0*PI*AS2)
       AS = AS2
 
@@ -104,7 +122,6 @@ C
 couplings needed to be evaluated points by points
 C     
       CALL MP_COUP2()
-      CALL MP_COUP3()
 
       RETURN
       END

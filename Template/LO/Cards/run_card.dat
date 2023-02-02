@@ -12,7 +12,7 @@
 #   mind the format:   value    = variable     ! comment             *
 #                                                                    *
 #   To display more options, you can type the command:               *
-#      update full_run_card                                          *
+#      update to_full                                                *
 #*********************************************************************
 #                                                                    
 #*********************************************************************
@@ -57,6 +57,7 @@ $fixed_fact_scale
  %(dsqrt_q2fact2)s  = dsqrt_q2fact2    ! fixed fact scale for pdf2
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
+$RUNNING
  $eva_scale
 #*********************************************************************
 # Type and output format
@@ -73,7 +74,7 @@ $ckkw
 #*********************************************************************
    %(nhel)s  = nhel          ! using helicities importance sampling or not.
                              ! 0: sum over helicity, 1: importance sampling
-   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.xxxxx)
+   %(sde_strategy)s  = sde_strategy  ! default integration strategy (hep-ph/2021.00773)
                              ! 1 is old strategy (using amp square)
 			     ! 2 is new strategy (using only the denominator)
 $psoptim			     

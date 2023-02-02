@@ -2942,11 +2942,13 @@ c include it here!
       return
       end
 
+      
       subroutine update_shower_scale_Sevents
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
 c need to update the shower starting scale (because it is not
-c necessarily the same for all of these summed FKS configurations).
+c necessarily the same for all of these summed FKS configurations and/or
+c folds).
       use weight_lines
       implicit none
       integer i
@@ -2985,13 +2987,15 @@ c average of shower scales for the FKS configurations.
          tmp_wgt(iFKS)=0d0
          tmp_scale(iFKS)=-1d0
       enddo
-c sum the weights that contribute to a single FKS configuration
+c sum the weights that contribute to a single FKS configuration for each
+c fold.
       do i=1,icontr
          if (H_event(i)) cycle
          if (icontr_sum(0,i).eq.0) cycle
          do j=1,icontr_sum(0,i)
             ict=icontr_sum(j,i)
-            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,i)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+
+     $           wgts(1,i)
             if (tmp_scale(nFKS(ict)).eq.-1d0) then
                tmp_scale(nFKS(ict))=shower_scale(ict)
 c check that all the shower starting scales are identical for all the

@@ -98,7 +98,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -239,6 +239,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We need to create the correct open_data for the pdf
         self.write_pdf_opendata()
+        
+        if model["running_elements"]:
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
+                raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
+                
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
+        
         
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
@@ -485,6 +494,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if OLP=='NJET':
             filename = 'OLE_order.lh'
             self.write_lh_order(filename, [matrix_element.born_me.get('processes')[0]], OLP)
+        
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
                             matrix_element.virt_matrix_element, \
@@ -528,11 +538,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'fks_info.inc'
         # write_fks_info_list returns a set of the splitting types
+        split_types = self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)
+
+        # update the splitting types
         self.proc_characteristic['splitting_types'] = list(\
                 set(self.proc_characteristic['splitting_types']).union(\
-                    self.write_fks_info_file(writers.FortranWriter(filename), 
-                                 matrix_element, 
-                                 fortran_model)))
+                    split_types))
 
         filename = 'leshouche_info.dat'
         nfksconfs,maxproc,maxflow,nexternal=\
@@ -617,7 +630,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'rescale_alpha_tagged.f'
         self.write_rescale_a0gmu_file(
                             writers.FortranWriter(filename),
-                            startfroma0, matrix_element)
+                            startfroma0, matrix_element, split_types)
 
         filename = 'orders.h'
         self.write_orders_c_header_file(
@@ -1031,6 +1044,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             max_links = max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
+                    print(links)
                     raise MadGraph5Error( "born_conf should be canonically ordered")
             real_configs = ', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
@@ -1125,9 +1139,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
-    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element):
+    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element, split_types):
         """writes the function that computes the rescaling factor needed in
-        the case of external photons
+        the case of external photons.
+        If split types does not contain [QED] or if there are not tagged photons,
+        dummy informations are filled
         """
 
         # get the model parameters
@@ -1136,7 +1152,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         bornproc = matrix_element.born_me['processes'][0]
         # this is to ensure compatibility with standard processes
-        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']])\
+                or 'QED' not in split_types:
             to_check = []
             expr = '1d0'
             conv_pol = '0d0'
@@ -1302,8 +1319,22 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
-        text += 'character*3 ordernames(nsplitorders)\n'
-        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+
+        text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
+        step = 5
+        if len(split_orders) < step:
+            text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        else:
+            # this file is linked from f77 and f90 so need to be smart about line splitting
+            text += "INTEGER ORDERNAMEINDEX\n"
+            for i in range(1,len(split_orders),step):
+                start = i
+                stop = i+step -1
+                data = ', '.join(['"%3s"' % o for o in split_orders[start-1: stop]])
+                if stop > len(split_orders):
+                    stop = len(split_orders)
+                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
+
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
@@ -1322,7 +1353,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
-
+        writer.line_length=132
         writer.writelines(text)
 
         return amp_split_orders, amp_split_size, amp_split_size_born
@@ -3349,6 +3380,13 @@ Parameters              %(params)s\n\
     
         return
 
+
+    def get_chargeprod(self, charge_list, ninitial, n, m):
+        """return the product of charges (as a string) of particles m and n.
+        Special sign conventions may be needed for initial/final state particles
+        """
+        return charge_list[n - 1] * charge_list[m - 1]
+
     
     #===============================================================================
     # write_b_sf_fks
@@ -4597,7 +4635,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -4784,6 +4822,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         self.write_pdf_opendata()
 
 
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         # Return to original PWD
         os.chdir(cwd)
         

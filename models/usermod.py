@@ -56,6 +56,7 @@ class UFOModel(object):
         as empty."""
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
+        self.model = model
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR('Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -239,6 +240,8 @@ class UFOModel(object):
             return 'L.%s' % repr(param)
         elif param.__class__.__name__ == 'Particle':
             return 'P.%s' % repr(param)
+        elif param.__class__.__name__ == 'Propagator':
+            return 'Propa.%s' % repr(param)        
         elif param is None:
             return 'None'
         else:
@@ -338,6 +341,9 @@ from object_library import all_particles, Particle
 import parameters as Param
 
 """
+        if self.propagators:
+            text += "import propagators as Propa\n"
+            
         text += self.create_file_content(self.particles)
         ff = open(os.path.join(outputdir, 'particles.py'), 'w')
         ff.writelines(text)
@@ -757,6 +763,7 @@ from object_library import all_propagators, Propagator
         same_name = next((p for p in self.couplings if p.name==name), None)
         if same_name:
             coupling.name = '%s%s' % (coupling.name, self.addon)
+            return self.add_coupling(coupling)
         
         if self.old_new:  
             pattern = re.compile(r'\b(%s)\b' % '|'.join(list(self.old_new.keys())))
@@ -966,7 +973,7 @@ from object_library import all_propagators, Propagator
         # + define identify_pid which keep tracks of the pdg_code identified
         identify_pid = {}
         if identify_particles:
-            for new, old in identify_particles.items():
+            for new, old in dict(identify_particles).items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
                 # secure agqinst lower/upper case problem
