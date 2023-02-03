@@ -27,11 +27,11 @@ endif
 ifdef dynamic
     # in dynamical library need to allow that many symbol are not linked (they are not used so fine)
     ifneq ($(UNAME), Darwin)
-	GENSYM_FLAG = -Wl,--unresolved-symbols,ignore-in-shared-libs
-        MADEVENT_FLAG = -Wl,-commons,use_dylibs
+        GENSYM_FLAG = -Wl,--unresolved-symbols=ignore-in-shared-libs -Wl,-rpath=$(LIBDIR)
+        MADEVENT_FLAG = -Wl,-rpath=$(LIBDIR):../$(LIBDIR):'$$ORIGIN'/$(LIBDIR):`pwd`/$(LIBDIR)
     else
         GENSYM_FLAG = -Wl,-undefined,dynamic_lookup
-	MADEVENT_FLAG = 
+	MADEVENT_FLAG = -Wl,-commons,use_dylibs
     endif	
     # add the Information of where the library is suppose to be (both in absolute and relative)
     GENSYM_FLAG += -Wl,-rpath,'$$ORIGIN'/$(LIBDIR)

@@ -83,7 +83,7 @@ $(FC) -dynamiclib -undefined dynamic_lookup -fcommon -o $(1) $(2) -install_name 
 endef
 else
 libext=so
-FFLAGS+= -fPIC -fcommon
+FFLAGS+= -fPIC
 LDFLAGS += -shared
 define CREATELIB
 $(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)
