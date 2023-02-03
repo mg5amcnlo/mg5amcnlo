@@ -67,6 +67,7 @@ C read the various information from the configs_and_props_info.dat file
       integer idup(nexternal,maxproc)
       integer mothup(2,nexternal,maxproc)
       integer icolup(2,nexternal,maxflow)
+      logical fopened
       include 'born_leshouche.inc'
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
@@ -95,7 +96,7 @@ c born_leshouche.inc file.
          endif
       endif
 
-      open(unit=78, file='leshouche_info.dat', status='old')
+      call  open_file(78, 'leshouche_info.dat', fopened)
       do while (.true.)
         read(78,'(a)',end=999) buff
         if (buff(:1).eq.'#') cycle

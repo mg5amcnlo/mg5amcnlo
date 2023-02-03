@@ -9,7 +9,7 @@ IREGIDIR= ./IREGI/src/
 STDHEPDIR= ./StdHEP/
 
 GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o	\
-	  run_printout.o dgauss.o ranmar.o setrun.o
+	  run_printout.o dgauss.o ranmar.o setrun.o open_file.o
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
