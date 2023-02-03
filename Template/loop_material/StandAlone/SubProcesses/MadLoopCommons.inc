@@ -172,6 +172,7 @@ C     when creating the BLHA2 dynamic library
 C     Try to automatically find the path
           prefix='./'
           call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=1, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -179,6 +180,7 @@ C     Try to automatically find the path
           close(1)
           prefix='./MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -186,6 +188,7 @@ C     Try to automatically find the path
           close(1)
           prefix='../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -221,6 +224,15 @@ c
           goto 10
  6        continue
           close(1)
+	  ! for NLO gridpack
+          prefix= path(:pos) // '/MadLoop5_resources/'
+          call joinPath(prefix,nameToCheck,fpath)
+	  write(*,*) 'test', fpath
+ 	  OPEN(1, FILE=fpath, ERR=7, STATUS='OLD',ACTION='READ')
+          MLPath=prefix
+          goto 10
+ 7        continue
+          close(1)	  
 
 c     We could not automatically find the auxiliary files
           write(*,*) '==='
