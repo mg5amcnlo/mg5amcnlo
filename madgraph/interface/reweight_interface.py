@@ -508,6 +508,10 @@ class ReweightInterface(extended_cmd.Cmd):
                     i+=5
                     print('wait for pickle')                  
                 print("loading from pickle")
+                # Load model: needed for the combine_ij function
+                model = self.banner.get('proc_card', 'model')
+                self.load_model( model, True, False)
+                
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
@@ -801,38 +805,26 @@ class ReweightInterface(extended_cmd.Cmd):
 
         event[0].mass = 0.
         event[1].mass = 0.
-        pz_1_new = self.recoil_eq(event[0],event[1])
-        pz_2_new = event[0].pz + event[1].pz - pz_1_new
-
-        E_1_new = math.sqrt(event[0].mass**2 + event[0].px**2 + event[0].py**2 + pz_1_new **2)
-        E_2_new = math.sqrt(event[1].mass**2 + event[1].px**2 + event[1].py**2 + pz_2_new **2)
-        event[0].set_momentum(lhe_parser.FourMomentum([E_1_new, event[0].px, event[0].py, pz_1_new]))
-        event[1].set_momentum(lhe_parser.FourMomentum([E_2_new, event[1].px, event[1].py, pz_2_new]))
+        tot_E=0.
+        for ip,part in enumerate(event):
+            if ip >=2 :
+                tot_E += part.E
+        if (event[0].pz > 0.and event[1].pz < 0):
+            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
+            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
+        elif (event[0].pz < 0.and event[1].pz > 0):
+            event[0].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, -tot_E/2.]))
+            event[1].set_momentum(lhe_parser.FourMomentum([tot_E/2., event[0].px, event[0].py, tot_E/2.]))
+        else:
+            logger.critical('ERROR: two incoming partons not back.-to-back')
 
     def set_final_jet_mass_to_zero(self, event):
 
         for ip,part in enumerate(event):
             if ((abs(part.pid) <= 5) or (abs(part.pid) == 11) or (abs(part.pid) == 12)) and (ip > 1):
                 event[ip].mass = 0.
-                if ((ip + 2) <= len(event)):
-                    second = ip +1
-                else:
-                    nincoming = 2
-                    second = nincoming + 1 - 1
-                tot_z = 0.
-                for ip2,part2 in enumerate(event):
-                    if (ip2 != ip) and (ip2 != second) and ip2 <= 1:
-                        tot_z = tot_z + part2.pz
-                    if (ip2 != ip) and (ip2 != second) and ip2 > 1:
-                        tot_z = tot_z - part2.pz
-
-                pz_1_new = self.recoil_eq(event[ip],event[second])
-                pz_2_new = tot_z - pz_1_new
-                E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + pz_1_new **2)
-                E_2_new = math.sqrt(event[second].mass**2 + event[second].px**2 + event[second].py**2 + pz_2_new **2)
-                event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, pz_1_new]))
-                event[second].set_momentum(lhe_parser.FourMomentum([E_2_new, event[second].px, event[second].py, pz_2_new]))
-        
+                E_1_new = math.sqrt(event[ip].mass**2 + event[ip].px**2 + event[ip].py**2 + event[ip].pz**2)
+                event[ip].set_momentum(lhe_parser.FourMomentum([E_1_new, event[ip].px, event[ip].py, event[ip].pz]))
 
     def merge_particles_kinematics(self, event, i,j, moth):
         """Map to an underlying n-body kinematics for two given particles i,j to be merged and a resulting moth"""
@@ -893,7 +885,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
                 new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
                 new_event.pop(to_remove)
-                #new_event.check_kinematics_only()
                 
             if fks_i > 1: # final-state recoil
 
@@ -920,7 +911,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_event[0].set_momentum(lhe_parser.FourMomentum([E_1_new,new_event[0].px,new_event[0].py,pz_1_new]))
                 new_event[1].set_momentum(lhe_parser.FourMomentum([E_2_new,new_event[1].px,new_event[1].py,pz_2_new]))
                 new_event.pop(to_remove)
-                #new_event.check_kinematics_only()
               
         elif fks_type and not recoil:        
             ## Do it in a more FKS-style
@@ -934,8 +924,8 @@ class ReweightInterface(extended_cmd.Cmd):
             new_event = copy.copy(event)
 
             if fks_i <= 1: # initial-state recoil
+
                 # First boost to partonic CM frame
-              
                 q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
                             new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])
                 for ip,part in enumerate(new_event):
@@ -944,11 +934,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
                 k_tot = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E-new_event[fks_j].E,new_event[0].px+new_event[1].px-new_event[fks_j].px,\
                             new_event[0].py+new_event[1].py-new_event[fks_j].py,new_event[0].pz+new_event[1].pz-new_event[fks_j].pz])
-
-                #logger.info('k tot inv mass')
-                #logger.info(k_tot**2)
-                #logger.info('k_tot rap after boost:')
-                #logger.info((k_tot.E+k_tot.pz)/(k_tot.E-k_tot.pz))
 
                 final = lhe_parser.FourMomentum([0,0,0,0])
                 for ip,part in enumerate(new_event):
@@ -960,10 +945,6 @@ class ReweightInterface(extended_cmd.Cmd):
                             new_event[0].py+new_event[1].py,new_event[0].pz+new_event[1].pz])**2
                 ksi = new_event[fks_j].E/(math.sqrt(s)/2.0)
                 y = new_event[fks_j].pz/new_event[fks_j].E
-                #x_plus = new_event[0].pz /math.sqrt(6500.0**2-0.938**2) ## Needs to be changed to current CMS energy!
-                #x_minus = new_event[1].pz /math.sqrt(6500.0**2-0.938**2)
-                #x_plus_bar =  x_plus *math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
-                #x_minus_bar = x_minus*math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0-y))/((2.0-ksi*(1.0+y))))
 
                 new_event[0].pz = new_event[0].pz * math.sqrt(1.0-ksi)*math.sqrt((2.0-ksi*(1.0+y))/((2.0-ksi*(1.0-y))))
                 new_event[0].E = math.sqrt(new_event[0].mass**2 + new_event[0].pz**2)
@@ -977,13 +958,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 k_tot_2 = k_tot_1.pt_boost(pboost=lhe_parser.FourMomentum([k_tot_1.E,k_tot_1.px,k_tot_1.py,k_tot_1.pz]))
                 k_tot_3 = k_tot_2.zboost_inv(pboost=lhe_parser.FourMomentum([k_tot.E,k_tot.px,k_tot.py,k_tot.pz]))
 
-                #logger.info('k tot inv mass after boost')
-                #logger.info(k_tot_3**2)
-                #logger.info('k_tot rap after boost:')
-                #logger.info((k_tot_3.E+k_tot_3.pz)/(k_tot_3.E-k_tot_3.pz))
-                #logger.info('k tot after boost')
-                #logger.info(k_tot_3)
-
                 for ip,part in enumerate(new_event):
                     if (ip >= 2):
                         vec = lhe_parser.FourMomentum([part.E,part.px,part.py,part.pz])
@@ -993,7 +967,6 @@ class ReweightInterface(extended_cmd.Cmd):
                         new_event[ip].set_momentum(lhe_parser.FourMomentum([vec_new.E,vec_new.px,vec_new.py,vec_new.pz]))
                 
                 new_event.pop(to_remove)
-                #new_event.check_kinematics_only()
 
             else: # final-state recoil
                 q = lhe_parser.FourMomentum([new_event[0].E+new_event[1].E,new_event[0].px+new_event[1].px,\
@@ -1023,7 +996,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     if ip == fks_i:
                         new_event[ip].set_momentum(q - k_rec.boost_beta(beta,k_rec))
                 new_event.pop(to_remove)
-                #new_event.check_kinematics_only()
         else:
             logger.info('Error in Sudakov Born mapping: no recoil scheme found!')
 
@@ -1058,10 +1030,8 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.critical(math.sqrt(a+sol1**2) + math.sqrt(b+(c-sol1)**2))
             logger.critical(K)
         
-        if random.random() < 0.5:
-            return sol1
-        else: 
-            return sol2
+        return sol1
+
 
 
     def handle_param_card(self, model_line, args, type_rwgt):
@@ -1470,35 +1440,26 @@ class ReweightInterface(extended_cmd.Cmd):
                     tag, order = buff_event.get_tag_and_order()
                     matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
 
-                    ping = False
                     ij_comb= []
-                    dirstopdg = []
-                    for me in matrix_elements:
-                        dirstopdg.extend( [self.get_pdg_tuple([l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in me.born_me['processes']])
-                        for proc in me.get('processes'):
-                            proc_tag = proc.get_tag()
-                            if ((list(proc_tag[0]) == order[0])\
-                                and (sorted(proc_tag[1]) == sorted(order[1]))):
-                                ping = True
-                                legs = proc.get('legs')
-                                comb_i = legs[min_i]
-                                comb_j = legs[min_j]
-                                comb_i = fks_common.to_fks_leg(comb_i,self.model)
-                                comb_j = fks_common.to_fks_leg(comb_j,self.model)
-                                ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
-                                if ij_comb == []:
-                                    ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
-                    if not ping:
-                        print('ERROR: process not found')
-                        print(order)
-                    
+                    if min_i <= 1:
+                        state = False
+                    else:
+                        state = True
+                    comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid,'number': min_i+1,'state': state})
+                    if min_j<= 1:
+                        state = False
+                    else:
+                        state = True
+                    comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid,'number': min_j+1,'state': state})
+                    ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+                    if ij_comb == []:
+                        ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
+           
                     # For n+1-body reweighting
                     if min_inv > sud_cut:
-                        
                         event_to_sud = buff_event
                         n_part = nexternal
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-
 
                     # For n-body reweighting
                     else:
@@ -1512,8 +1473,8 @@ class ReweightInterface(extended_cmd.Cmd):
                             event_to_sud = event_for_sud
                             n_part = nexternal - 1 
                             mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                            # TV: TEMPORARY THING: map to n+1 body if recoil does not exist at Born level among processes
-                            if mapped_tag not in dirstopdg:
+                            # map to n+1 body if recoil does not exist at Born level among processes
+                            if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
                                 event_to_sud = buff_event
                                 n_part = nexternal
                                 mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
@@ -1540,12 +1501,12 @@ class ReweightInterface(extended_cmd.Cmd):
             if not ((abs(initial.px) < 1e-6 * initial.E) and (abs(initial.py) < 1e-6 * initial.E)):
                 for p in event_to_sud:
                     p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
-
-            # Set all initial masses to zero rather than the masses in the event files
-            self.set_initial_mass_to_zero(event_to_sud)
-
+            
             # Set all light quarks and lepton masses to zero in event file
             self.set_final_jet_mass_to_zero(event_to_sud)
+
+            # Set finally all initial masses to zero rather than the masses in the event files
+            self.set_initial_mass_to_zero(event_to_sud)
 
             event_to_sud.check_kinematics_only()
 
