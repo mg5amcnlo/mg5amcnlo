@@ -55,6 +55,9 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
+
+      character(512) MLPath
+      common/MLPATH/MLPath
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -196,8 +199,11 @@ c exists, which should be the case when firsttime is false.
                    goto 203
                endif
                open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
-     $   status='old',action='read',iostat=IOErr, err=201)
-               hel(0)=0
+     $              status='old',action='read',iostat=IOErr, err=200)
+               goto 199
+ 200           open (unit=67,file=TRIM(MLPATH)//'HelFilter.dat',
+     $              status='old',action='read',iostat=IOErr, err=201)
+ 199           hel(0)=0
                j=0
 c optimized loop output
                do i=1,max_bhel
@@ -210,7 +216,7 @@ c optimized loop output
                  endif
                enddo
                goto 203
-201            continue
+ 201           continue
                if (IOErr.eq.2.and.IOErrCounter.lt.10) then
                  IOErrCounter = IOErrCounter+1
                  write(*,*) "File HelFilter.dat busy, retrying for"//
