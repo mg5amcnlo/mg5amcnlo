@@ -1932,7 +1932,7 @@ class Event(list):
         
         # check that relative error is under control
         threshold = 1e-6
-        
+       
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
         absE, abspx, abspy, abspz = 0,0,0,0

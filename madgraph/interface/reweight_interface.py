@@ -493,7 +493,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
-        if not self.has_standalone_dir:      
+        if not self.has_standalone_dir:     
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
                 if opts['rwgt_name']:
@@ -511,13 +511,16 @@ class ReweightInterface(extended_cmd.Cmd):
                 # Load model: needed for the combine_ij function
                 model = self.banner.get('proc_card', 'model')
                 self.load_model( model, True, False)
-                
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
                 self.load_module()
             else:
                 self.create_standalone_directory()
+                ## TV: load module if rw_me folder exists, needed for combine_ij function
+                if self.rwgt_dir:
+                    model = self.banner.get('proc_card', 'model')
+                    self.load_model( model, True, False)
                 self.compile()
                 self.load_module()  
                 if self.multicore == 'create':
@@ -2146,6 +2149,8 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir
+            ## TV: skip all output and generation of folder is rw_me exists already
+            return
         data['path'] = path_me
 
         for i in range(2):
