@@ -154,12 +154,12 @@ class WeightCalculator(object):
 
         self.pdlabel1_eva = False
         self.pdlabel2_eva = False
-        self.use_eva = (self.banner.run_card['pdlabel']=='eva')
+        self.use_eva = (run_card['pdlabel']=='eva')
         if not self.use_eva and is_lo:
-            self.pdlabel1_eva = (self.banner.run_card['pdlabel1']=='eva')
-            self.pdlabel2_eva = (self.banner.run_card['pdlabel2']=='eva')
+            self.pdlabel1_eva = (run_card['pdlabel1']=='eva')
+            self.pdlabel2_eva = (run_card['pdlabel2']=='eva')
         if self.use_eva or self.pdlabel1_eva or self.pdlabel2_eva:
-            self.ievo = self.banner.run_card['ievo_eva']
+            self.ievo = run_card['ievo_eva']
 
     def resetCache(self):
         self.pdfQ2 = {}

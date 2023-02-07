@@ -264,7 +264,7 @@ class TestWeightCalculator(unittest.TestCase):
                                                         "nb_neutron1":-1.0,
                                                         "nb_neutron2":-2.0,
                                                         "pdlabel":"other"},
-                                             False)
+                                             is_lo = False)
         pdf = DummyPDF()
         self.assertEqual(1 , wc.get_pdfQ(pdf, 0, 1., 1.))
 
@@ -287,7 +287,7 @@ class TestWeightCalculator(unittest.TestCase):
                                                         "nb_neutron1":-1.0,
                                                         "nb_neutron2":-2.0,
                                                         "pdlabel":"other"},
-                                             False)
+                                             is_lo = False)
         pdf = DummyPDF()
         self.assertEqual(1 , wc.get_pdfQ2(pdf, 0, 1., 1.))
 
