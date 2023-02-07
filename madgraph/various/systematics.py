@@ -43,12 +43,623 @@ import re
 import sys
 import time
 from six import StringIO
+import multiprocessing
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)
 
 class SystematicsError(Exception):
     pass
+
+class WeightsController(object):
+    """ Handles decisions related to weights
+    """
+    def __init__(self, remove_wgts, keep_wgts, start_id):
+        # Store which weight to keep/removed
+        self.remove_wgts = []
+        for id in remove_wgts:
+            if id == 'all':
+                self.remove_wgts = ['all']
+                break
+            elif ',' in id:
+                min_value, max_value = [int(v) for v in id.split(',')]
+                self.remove_wgts += [i for i in range(min_value, max_value+1)]
+            else:
+                self.remove_wgts.append(id)
+        self.keep_wgts = []
+        for id in keep_wgts:
+            if id == 'all':
+                self.keep_wgts = ['all']
+                break
+            elif ',' in id:
+                min_value, max_value = [int(v) for v in id.split(',')]
+                self.keep_wgts += [i for i in range(min_value, max_value+1)]
+            else:
+                self.keep_wgts.append(id)  
+                
+        # input to start the id in the weight
+        self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
+        self.has_wgts_pattern = False # tag to check if the pattern for removing
+                                      # the weights was computed already
+
+    def get_start_wgt_id(self):
+        """ returns starting id of the first weight"""
+
+        return self.start_wgt_id
+
+    def is_wgt_kept(self, name):
+        """ determine if we have to keep/remove such weight """
+        
+        if 'all' in self.keep_wgts or not self.remove_wgts:
+            return True
+
+        #start by checking what we want to keep        
+        if name in self.keep_wgts: 
+            return True
+        
+        # check for regular expression
+        if not self.has_wgts_pattern:
+            pat = r'|'.join(w for w in self.keep_wgts if any(letter in w for letter in '*?.([+\\'))
+            if pat:
+                self.keep_wgts_pattern = re.compile(pat)
+            else:
+                self.keep_wgts_pattern = None
+            pat = r'|'.join(w for w in self.remove_wgts if any(letter in w for letter in '*?.([+\\'))
+            if pat:
+                self.rm_wgts_pattern = re.compile(pat)
+            else:
+                self.rm_wgts_pattern = None                
+            self.has_wgts_pattern=True
+            
+        if self.keep_wgts_pattern and re.match(self.keep_wgts_pattern,name):
+            return True
+
+        #check what we want to remove
+        if 'all' in self.remove_wgts:
+            return False
+        elif name in self.remove_wgts:
+            return False
+        elif self.rm_wgts_pattern and re.match(self.rm_wgts_pattern, name):
+            return False
+        else:
+            return True
+
+    def remove_old_wgts(self, event):
+        """remove the weight as requested by the user"""
+        
+        rwgt_data = event.parse_reweight()
+        for name in list(rwgt_data.keys()):
+            if not self.is_wgt_kept(name):
+                del rwgt_data[name]
+                event.reweight_order.remove(name)
+
+    def will_remove_wgts(self):
+        """returns true if weight removal requested by the user"""
+        return bool(self.remove_wgts)
+
+class WeightCalculator(object):
+    def __init__(self, b1, b2, alpsrunner,pdfsets, only_beam, ion_scaling, orig_pdf, orig_ion_pdf,run_card, is_lo):
+        self.b1 = b1
+        self.b2 = b2
+        self.alpsrunner = alpsrunner
+        self.pdfsets = pdfsets
+        self.only_beam = only_beam
+        self.ion_scaling = ion_scaling
+        self.orig_pdf = orig_pdf
+        self.orig_ion_pdf = orig_ion_pdf
+        if self.orig_ion_pdf:
+            self.nb_p = [ run_card["nb_proton%s" % beam] for beam in range(1,3)]
+            self.nb_n = [ run_card["nb_neutron%s" % beam] for beam in range(1,3)]
+        self.pdfQ2 = {}
+
+        self.pdlabel1_eva = False
+        self.pdlabel2_eva = False
+        self.use_eva = (self.banner.run_card['pdlabel']=='eva')
+        if not self.use_eva and is_lo:
+            self.pdlabel1_eva = (self.banner.run_card['pdlabel1']=='eva')
+            self.pdlabel2_eva = (self.banner.run_card['pdlabel2']=='eva')
+        if self.use_eva or self.pdlabel1_eva or self.pdlabel2_eva:
+            self.ievo = self.banner.run_card['ievo_eva']
+
+    def resetCache(self):
+        self.pdfQ2 = {}
+
+    def get_nb_p(self, beam):
+        """returns nb_proton for the given beam. Allowed beam values are 1 or 2 """
+        return self.nb_p[beam-1]
+
+    def get_nb_n(self, beam):
+        """returns nb_neutron for the given beam. Allowed beam values are 1 or 2 """
+        return self.nb_n[beam-1]
+
+    def get_pdfQ(self, pdf, pdg, x, scale, beam=1):
+        
+        if pdg in [-21,-22]:
+            pdg = abs(pdg)
+        elif pdg == 0:
+            return 1
+
+        if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
+            return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
+        
+        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+            nb_p = self.get_nb_p(beam)
+            nb_n = self.get_nb_n(beam)
+
+
+            if pdg in [1,2]:
+                pdf1 =  pdf.xfxQ(1, x, scale)/x
+                pdf2 =  pdf.xfxQ(2, x, scale)/x
+                if pdg == 1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1
+            elif pdg in [-1,-2]:
+                pdf1 =  pdf.xfxQ(-1, x, scale)/x
+                pdf2 =  pdf.xfxQ(-2, x, scale)/x
+                if pdg == -1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1                    
+            else: 
+                f = (nb_p + nb_n) * pdf.xfxQ(pdg, x, scale)/x
+                
+            f = f * (nb_p+nb_n) 
+        else:
+            f = pdf.xfxQ(pdg, x, scale)/x
+#        if f == 0 and pdf.memberID ==0:
+#            pdfset = pdf.set()
+#            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
+#            f = pdfset.uncertainty(allnumber).central /x
+        return f
+
+    def get_pdfQ2(self, pdf, pdg, x, scale, beam=1):
+
+        if pdg in [-21,-22]:
+            pdg = abs(pdg)
+        elif pdg == 0:
+            return 1
+      
+        if (pdf, pdg,x,scale, beam) in self.pdfQ2:
+            return self.pdfQ2[(pdf, pdg,x,scale,beam)]
+
+        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
+            nb_p = self.get_nb_p(beam)
+            nb_n = self.get_nb_n(beam)
+
+            if pdg in [1,2]:
+                pdf1 =  pdf.xfxQ2(1, x, scale)/x
+                pdf2 =  pdf.xfxQ2(2, x, scale)/x
+                if pdg == 1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1
+            elif pdg in [-1,-2]:
+                pdf1 =  pdf.xfxQ2(-1, x, scale)/x
+                pdf2 =  pdf.xfxQ2(-2, x, scale)/x
+                if pdg == -1:
+                    f = nb_p * pdf1 + nb_n * pdf2
+                else:
+                    f = nb_p * pdf2 + nb_n * pdf1                    
+            else: 
+                f = (nb_p + nb_n) * pdf.xfxQ2(pdg, x, scale)/x
+                
+            f = f * (nb_p+nb_n)      
+        else:
+            f = pdf.xfxQ2(pdg, x, scale)/x
+        self.pdfQ2[(pdf, pdg,x,scale,beam)] = f
+        return f        
+        
+        
+        
+        #one method to handle the nnpd2.3 problem -> now just move to central
+        if f == 0 and pdf.memberID ==0:
+            # to avoid problem with nnpdf2.3 in lhapdf6.1.6
+            #print 'central pdf returns 0', pdg, x, scale
+            #print self.pdfsets
+            pdfset = pdf.set()
+            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
+            f = pdfset.uncertainty(allnumber).central
+        self.pdfQ2[(pdf, pdg,x,scale)] = f
+        return f
+                
+    def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
+        """ 
+        pdf is a lhapdf object!"""
+        
+        loinfo = event.parse_lo_weight()
+
+        if dyn == -1:
+            mur = loinfo['ren_scale']
+            if self.b1 != 0 and loinfo['pdf_pdg_code1']:
+                muf1 = loinfo['pdf_q1'][-1]
+            else:
+                muf1 =0
+            if self.b2 != 0 and loinfo['pdf_pdg_code2']: 
+                muf2 = loinfo['pdf_q2'][-1]
+            else:
+                muf2 =0
+        else:
+            if dyn == 1: 
+                mur = event.get_et_scale(1.)
+#                print(1,mur)
+            elif dyn == 2:
+                mur = event.get_ht_scale(1.)
+#                print(2,mur)
+            elif dyn == 3:
+                mur = event.get_ht_scale(0.5)
+#                print(3,mur)
+            elif dyn == 4:
+                mur = event.get_sqrts_scale(1.)
+#                print(4,mur)
+#            print(mur)
+            if math.isnan(mur):
+                return mur
+            muf1 = mur
+            muf2 = mur
+            loinfo = dict(loinfo)
+            # security for elastic photon from proton
+            if not loinfo['pdf_pdg_code1']:
+                muf1 = 0
+            else:
+                loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
+            if not loinfo['pdf_pdg_code2']:
+                muf2 = 0                
+            else:
+                loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
+            
+        # MUR part
+        if self.b1 == 0 == self.b2 or self.use_eva:
+            if loinfo['n_qcd'] != 0:
+                wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+            else:
+                wgt = 1.0
+        else:
+            wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
+
+        # MUF/PDF part
+        if self.b1 and muf1:
+            if self.use_eva or self.pdlabel1_eva:
+                vPol = event[0].helicity
+                vPID = event[0].pid
+                if self.ievo != 0 and len(loinfo['pdf_x1']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
+                xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
+                if abs(vPID) in [7,22,23,24]:
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,self.ievo)
+            else:
+                wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
+        if self.b2 and muf2: 
+            if self.use_eva or self.pdlabel2_eva:
+                vPol = event[1].helicity
+                vPID = event[1].pid
+                if self.ievo != 0 and len(loinfo['pdf_x2']) != 1:
+                    raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
+                xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
+                if abs(vPID) in [7,22,23,24]:
+                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,self.ievo)
+            else:
+                wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2)
+
+        for scale in loinfo['asrwt']:
+            if self.b1 == 0 == self.b2 or self.use_eva:
+                wgt = self.alpsrunner(Dalps*scale)
+            else:
+                wgt *= pdf.alphasQ(Dalps*scale)
+        
+        # ALS part
+        for i in range(loinfo['n_pdfrw1']-1):
+            scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
+            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale, beam=1)
+            wgt /= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale, beam=1)
+
+        for i in range(loinfo['n_pdfrw2']-1):
+            scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
+            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale, beam=2)
+            wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale, beam=2)            
+        
+#        print(wgt)
+        return wgt
+
+    def get_nlo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
+        """return the new weight for NLO event --with weight information-- """
+        
+        wgt = 0 
+        nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
+        for cevent in nloinfo.cevents:
+            if dyn == 1: 
+                mur2 = max(1.0, cevent.get_et_scale(1.)**2) 
+            elif dyn == 2:
+                mur2 = max(1.0, cevent.get_ht_scale(1.)**2)
+            elif dyn == 3:
+                mur2 = max(1.0, cevent.get_ht_scale(0.5)**2)
+            elif dyn == 4:
+                mur2 = cevent.get_sqrts_scale(event,1)**2
+            else:
+                mur2 = 0
+            muf2 = mur2
+            
+            for onewgt in cevent.wgts:
+                if not __debug__ and (dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf):
+                    wgt += onewgt.ref_wgt 
+                    continue
+                
+                if dyn == -1:
+                    mur2 = onewgt.scales2[1]
+                    muf2 = onewgt.scales2[2]
+                Q2 = onewgt.scales2[0] # Ellis-Sexton scale
+                
+                wgtpdf = self.get_pdfQ2(pdf, self.b1*onewgt.pdgs[0], onewgt.bjks[0],
+                                      Dmuf**2 * muf2)
+                wgtpdf *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
+                                      Dmuf**2 * muf2)
+                
+                tmp = onewgt.pwgt[0]
+                tmp += onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
+                tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
+                
+                if self.b1 == 0 == self.b2:
+                    alps = self.alpsrunner(Dmur*math.sqrt(mur2))
+                else:
+                    alps = pdf.alphasQ2(Dmur**2*mur2)
+                
+                tmp *= math.sqrt(4*math.pi*alps)**onewgt.qcdpower
+                
+                if wgtpdf == 0: #happens for nn23pdf due to wrong set in lhapdf
+                    key = (self.b1*onewgt.pdgs[0], self.b2*onewgt.pdgs[1], onewgt.bjks[0],onewgt.bjks[1], muf2)
+                    if dyn== -1 and Dmuf==1 and Dmur==1 and pdf==self.orig_pdf:
+                        wgtpdf = onewgt.ref_wgt / tmp
+                        self.pdfQ2[key] = wgtpdf
+                    elif key in self.pdfQ2:
+                        wgtpdf = self.pdfQ2[key]
+                    else:
+                        # real zero!
+                        wgtpdf = 0
+
+                tmp *= wgtpdf                
+                wgt += tmp
+                
+                
+                if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
+                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=1):
+                        misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
+                        misc.sprint(onewgt)
+                        misc.sprint(cevent)
+                        misc.sprint(mur2,muf2)
+                        raise Exception('not enough agreement between stored value and computed one')
+                
+        return wgt
+
+    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
+        if abs(vPol) == 1:
+            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
+        elif vPol == 0:
+            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
+        else:
+            raise SystematicsError("unknow EVA vPol %s " % vPol)
+
+    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        return 1e0
+
+    def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
+        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
+        if ievo != 0:
+            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
+        if(mufMin<0):
+            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
+        elif(muf < mufMin*1.001):
+            return 0e0
+        else:
+            return math.log(muf/mufMin) 
+
+    def call_eva_get_mufMin_byPID(self, vPID, fPID):
+        return {
+            7:  self.call_eva_get_mf_by_PID(fPID),
+            22: self.call_eva_get_mf_by_PID(fPID),
+            23: self.call_eva_get_mv_by_PID(vPID),
+            24: self.call_eva_get_mv_by_PID(vPID)
+        }.get(abs(vPID),-1)
+
+    def call_eva_get_mf_by_PID(self, fPID):
+        # these must be the same as in ElectroweakFlux.inc
+        return {
+            1:  4.67e-3,
+            2:  2.16e-3,
+            3:  93.0e-3,
+            4:  1.27e0,
+            5:  4.18e0,
+            6:  172.76e0,
+            11: 0.5109989461e-3,
+            13: 105.6583745e-3,
+            15: 1.77686e0
+        }.get(abs(fPID),-1)
+
+    def call_eva_get_mv_by_PID(self, vPID):
+        # these must be the same as in ElectroweakFlux.inc
+         return {
+            7:      0e0,
+            22:     0e0,
+            23:     91.1876e0,
+            24:     80.379e0
+        }.get(abs(vPID),-1)
+
+
+class EventUpdater(object):
+    """Handles updating the weights within a given event"""
+    def __init__(self, wgts, wgts_calc, is_lo, args, wgt_name_func):
+        self.wgts=wgts
+        self.wgts_calc = wgts_calc
+        self.args = args
+        if is_lo:
+            self.get_wgt = self.wgts_calc.get_lo_wgt
+        else:
+            self.get_wgt = self.wgts_calc.get_nlo_wgt
+        self.ids = [wgt_name_func(i) for i in range(len(self.args)-1)]
+
+    def update_event(self, event):
+        """Updates the event weights and returns both the modified event and the new cross"""
+        self.wgts_calc.resetCache()
+        self.wgts.remove_old_wgts(event)
+        wgts = [self.get_wgt(event, *arg) for arg in self.args]
+            
+        if wgts[0] == 0:
+            print(wgts)
+            print(event)
+            raise Exception
+            
+        wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
+        
+        rwgt_data = event.parse_reweight()
+        rwgt_data.update(list(zip(self.ids, wgt)))
+        event.reweight_order += self.ids
+        return (event, wgt)
+
+class ParallelExecutor(object):
+    """An Executor which uses multiple processes to run the methods.
+  The event_updator methods are replicated and run in their own processes with
+    one process per core.
+  The accumulator and finish_accumulate methods are run in the same process
+    which is separate from the original process.
+
+    To use the Executor
+      - first call set_functions to set the different methods
+      - for each event, call process
+      - when all events are done, call finish
+    """
+    def __init__(self, ncores):
+        self.ncores = ncores
+
+        self.toProcessQueue = multiprocessing.Queue()
+        self.doneProcessQueue = multiprocessing.Queue()
+        self.finishReturnQueue = multiprocessing.Queue()
+        self.finishArgQueue = multiprocessing.Queue()
+
+    def set_functions(self,event_updater, init_accumulate, accumulator, finish_accumulate):
+        """sets the functions to be used to do the work. The different functions are
+  event_updater : takes the event as arguments and returns values to be passed to accumulor
+  init_accumulate : function taking no arguments that returns the starting point for the
+    accumulator. These values will be passed to each call to accumulator.
+  accumulator : function taking the output of event_updater and the item being accumulated.
+       returns the new accumulated item. The order in which results from event_updater are
+       passed to accumulator is NOT guaranteed to be the same order as the calls to process().
+  finish_accumulate: function taking as argument the item passed to the call to 'finish' and
+       the accumulated item. The value retured from finish_accumulate() is then returned by
+       'finish'
+"""
+
+        self.accumulate_process = multiprocessing.Process(target =ParallelExecutor._accumulate_process, 
+                                                          args=(self.doneProcessQueue, 
+                                                                self.finishReturnQueue, 
+                                                                self.finishArgQueue, 
+                                                                init_accumulate(), 
+                                                                accumulator, 
+                                                                finish_accumulate, 
+                                                                self.ncores))
+        self.accumulate_process.start()
+
+        self.processes = [multiprocessing.Process(target=ParallelExecutor._update_event_process, 
+                                                  args=(self.toProcessQueue,self.doneProcessQueue,event_updater)) 
+                          for x in range(0,self.ncores)]
+        for p in self.processes:
+            p.start()
+
+
+    def process(self, event):
+        """Distributes the event to other processes which run the event_updater function.
+  The results of the event_updater will be passed onto the accumulator in a serial manner.
+        """
+        self.toProcessQueue.put(event, timeout=60)
+
+    def finish(self, shouldWriteEventEnd):
+        for p in self.processes:
+            self.toProcessQueue.put(None,timeout=60)
+        self.finishArgQueue.put(shouldWriteEventEnd,timeout=60)
+        all_cross = self.finishReturnQueue.get(timeout=60)
+        for p in self.processes:
+            p.join()
+        self.accumulate_process.join()
+        return all_cross
+
+    @staticmethod
+    def _update_event_process(inQueue, outQueue, updator):
+        try:
+            keepProcess = True
+            while True:
+                e = inQueue.get(timeout=60)
+                if e is None:
+                    break            
+                if keepProcess:
+                    try:
+                        updated = updator(e)
+                        outQueue.put(updated, timeout=60)
+                    except Exception as e: 
+                        print("event_updator failed: %s" % str(e))
+                        keepProcess = False
+                        #drain the queue
+        finally:
+            outQueue.put(None, timeout=60)
+
+    @staticmethod
+    def _accumulate_process(inQueue, outQueue, argQueue, accumulate, accumulator, finisher, nProcessors):
+        from operator import add
+
+        try:
+            keepAccumulating = True
+            while True:
+                e = inQueue.get(timeout=60)
+                if e is None:
+                    nProcessors -= 1
+                    if nProcessors == 0:
+                        break
+                    else:
+                        continue
+                if keepAccumulating:
+                    try:
+                        accumulate = accumulator(e, accumulate)
+                    except Exception as e: 
+                        print("accumulator failed %s" % str(e))
+                        keepAccumulating = False
+                        #drain all the incoming calls
+        finally:
+            outQueue.put(finisher(argQueue.get(timeout=60), accumulate))
+
+
+class SerialExecutor(object):
+    """An Executor which runs all methods in the original process
+
+    To use the Executor
+      - first call set_functions to set the different methods
+      - for each event, call process
+      - when all events are done, call finish
+"""
+    def __init__(self):
+        pass
+
+    def set_functions(self,event_updater, init_accumulate, accumulator, finish_accumulate):
+        """sets the functions to be used to do the work. The different functions are
+  event_updater : takes the event as arguments and returns values to be passed to accumulor
+  init_accumulate : function taking no arguments that returns the starting point for the
+    accumulator. These values will be passed to each call to accumulator.
+  accumulator : function taking the output of event_updater and the item being accumulated.
+       returns the new accumulated item.
+  finish_accumulate: function taking as argument the item passed to the call to 'finish' and
+       the accumulated item. The value retured from finish_accumulate() is then returned by
+       'finish'
+"""
+        self.eventUpdator = event_updater
+        self.toAccumulate = init_accumulate()
+        self.accumulator = accumulator
+        self.finishAccumulate = finish_accumulate
+
+    def process(self, event):
+        processed_items = self.eventUpdator(event)
+        self.toAccumulate = self.accumulator(processed_items, self.toAccumulate)
+
+    def finish(self, finish_state):
+        """the argument finish_state is passed on to the finish_accumulate method
+    and can be used to handle any conditional activities need in finish_accumulate.
+"""
+        return self.finishAccumulate(finish_state, self.toAccumulate)
 
 class Systematics(object):
     
@@ -112,19 +723,19 @@ class Systematics(object):
         #check for beam
         beam1, beam2 = self.banner.get_pdg_beam()
         if abs(beam1) != 2212 and abs(beam2) != 2212:
-            self.b1 = 0
-            self.b2 = 0 
+            b1 = 0
+            b2 = 0 
             pdf = 'central'
             #raise SystematicsError, 'can only reweight proton beam'
         elif abs(beam1) != 2212:
-            self.b1 = 0
-            self.b2 = beam2//2212
+            b1 = 0
+            b2 = beam2//2212
         elif abs(beam2) != 2212:
-            self.b1 = beam1//2212
-            self.b2 = 0
+            b1 = beam1//2212
+            b2 = 0
         else:             
-            self.b1 = beam1//2212
-            self.b2 = beam2//2212
+            b1 = beam1//2212
+            b2 = beam2//2212
     
         # update in case of e/mu beams with eva
         isEVA=False
@@ -132,44 +743,43 @@ class Systematics(object):
         # eva-on-eva or eva-on-parton
         if self.banner.run_card['pdlabel']=='eva':      
             if (abs(beam1) == 11 or abs(beam1) == 13) and self.banner.run_card['lpp1'] != 0:
-                self.b1 = beam1
+                b1 = beam1
             else:
-                self.b1 = 0
+                b1 = 0
             if (abs(beam2) == 11 or abs(beam2) == 13) and self.banner.run_card['lpp2'] != 0:
-                self.b2 = beam2
+                b2 = beam2
             else:
-                self.b2 = 0
+                b2 = 0
             # not actually eva
-            if self.b1==0 and self.b2==0:
-                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s (%s)' % (self.b1,self.b2) )
+            if b1==0 and b2==0:
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s (%s)' % (b1,b2) )
             # eva-on-parton or parton-on-eva
-            elif self.b1==0 or self.b2==0:
+            elif b1==0 or b2==0:
                 isEVA=True
             isEVA=True
             pdf='0'
         # eva-on-DIS(lhapdf)
         elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='eva' and self.banner.run_card['pdlabel2']=='lhapdf'):
             if abs(beam1) == 11 or abs(beam1) == 13:
-                self.b1 = beam1
+                b1 = beam1
             else:
-                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b1)
-            #self.b2 = beam2//2212
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % b1)
+            #b2 = beam2//2212
             isEVAxDIS=True
         # DIS(lhapdf)-on-eva
         elif self.banner.run_card.LO and (self.banner.run_card['pdlabel1']=='lhapdf' and self.banner.run_card['pdlabel2']=='eva'):
             if abs(beam2) == 11 or abs(beam2) == 13:
-                self.b2 = beam2
+                b2 = beam2
             else:
-                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
-            #self.b1 = beam1//2212
+                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % b2)
+            #b1 = beam1//2212
             isEVAxDIS=True
         # none
         if(self.banner.run_card['pdlabel']=='none'):
             raise SystematicsError('Systematics not supported for pdlabel=none')
 
-        self.orig_ion_pdf = False
-        self.ion_scaling = ion_scaling
-        self.only_beam = only_beam 
+        orig_ion_pdf = False
+
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
@@ -179,7 +789,7 @@ class Systematics(object):
                self.banner.run_card['nb_neutron2'] != 0 or \
                self.banner.run_card['nb_proton1'] != 1 or \
                self.banner.run_card['nb_proton2'] != 1:
-                self.orig_ion_pdf = True
+                orig_ion_pdf = True
         else:
             self.is_lo = False
             if not self.banner.run_card['store_rwgt_info']:
@@ -205,7 +815,7 @@ class Systematics(object):
         if matching_mode == 3:
             self.dyn = [-1]
         # avoid sqrts at NLO if ISR is possible
-        if 4 in self.dyn and self.b1 and self.b2 and not self.is_lo:
+        if 4 in self.dyn and b1 and b2 and not self.is_lo:
             self.dyn.remove(4)
 
         if isinstance(together, str):
@@ -274,7 +884,7 @@ class Systematics(object):
                 break
             else:  
                 self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
-        if not self.b1 == 0 == self.b2 and not isEVA and not isEVAxDIS: 
+        if not b1 == 0 == b2 and not isEVA and not isEVAxDIS: 
             self.log( "# Events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         elif isEVAxDIS:
             self.log( "# Events generated with EVA and LHAPDF PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
@@ -284,7 +894,8 @@ class Systematics(object):
         self.get_all_fct() # define self.fcts and self.args
         
         # For e+/e- type of collision initialise the running of alps
-        if self.b1 == 0 == self.b2 or isEVA:
+        alpsrunner = None
+        if b1 == 0 == b2 or isEVA:
             try:
                 from models.model_reader import Alphas_Runner
             except ImportError:
@@ -313,138 +924,117 @@ class Systematics(object):
             bmass = param_card.get_value('mass', 5, 4.7)
             if bmass == 0:
                 bmass = 4.7
-            self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
-        
-        # Store which weight to keep/removed
-        self.remove_wgts = []
-        for id in remove_wgts:
-            if id == 'all':
-                self.remove_wgts = ['all']
-                break
-            elif ',' in id:
-                min_value, max_value = [int(v) for v in id.split(',')]
-                self.remove_wgts += [i for i in range(min_value, max_value+1)]
-            else:
-                self.remove_wgts.append(id)
-        self.keep_wgts = []
-        for id in keep_wgts:
-            if id == 'all':
-                self.keep_wgts = ['all']
-                break
-            elif ',' in id:
-                min_value, max_value = [int(v) for v in id.split(',')]
-                self.remove_wgts += [i for i in range(min_value, max_value+1)]
-            else:
-                self.remove_wgts.append(id)  
-                
-        # input to start the id in the weight
-        self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
-        self.has_wgts_pattern = False # tag to check if the pattern for removing
-                                      # the weights was computed already
+            alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
+        self.wgts = WeightsController(remove_wgts, keep_wgts, start_id)
+        self.wgts_calc = WeightCalculator(b1=b1,
+                                          b2=b2,
+                                          alpsrunner = alpsrunner,
+                                          pdfsets = self.pdfsets,
+                                          only_beam = only_beam,
+                                          ion_scaling = ion_scaling,
+                                          orig_pdf = self.orig_pdf,
+                                          orig_ion_pdf = orig_ion_pdf,
+                                          run_card = self.banner.run_card,
+                                          is_lo = self.banner.run_card.LO)
         
     def is_wgt_kept(self, name):
         """ determine if we have to keep/remove such weight """
-        
-        if 'all' in self.keep_wgts or not self.remove_wgts:
-            return True
 
-        #start by checking what we want to keep        
-        if name in self.keep_wgts: 
-            return True
-        
-        # check for regular expression
-        if not self.has_wgts_pattern:
-            pat = r'|'.join(w for w in self.keep_wgts if any(letter in w for letter in '*?.([+\\'))
-            if pat:
-                self.keep_wgts_pattern = re.compile(pat)
-            else:
-                self.keep_wgts_pattern = None
-            pat = r'|'.join(w for w in self.remove_wgts if any(letter in w for letter in '*?.([+\\'))
-            if pat:
-                self.rm_wgts_pattern = re.compile(pat)
-            else:
-                self.rm_wgts_pattern = None                
-            self.has_wgts_pattern=True
-            
-        if self.keep_wgts_pattern and re.match(self.keep_wgts_pattern,name):
-            return True
-
-        #check what we want to remove
-        if 'all' in self.remove_wgts:
-            return False
-        elif name in self.remove_wgts:
-            return False
-        elif self.rm_wgts_pattern and re.match(self.rm_wgts_pattern, name):
-            return False
-        else:
-            return True
+        return self.wgts.is_wgt_kept(name)
 
     def remove_old_wgts(self, event):
         """remove the weight as requested by the user"""
         
-        rwgt_data = event.parse_reweight()
-        for name in list(rwgt_data.keys()):
-            if not self.is_wgt_kept(name):
-                del rwgt_data[name]
-                event.reweight_order.remove(name)
+        self.wgts.remove_old_wgts(event)
         
-        
-    def run(self, stdout=sys.stdout):
-        """ """
+    def _setup_event_updater(self, lowest_id):
+        wgt_name = lambda i: self.get_wgt_name(*self.args[i][:5], cid=lowest_id+i)
+        updater = EventUpdater(is_lo = self.is_lo, 
+                               wgts=self.wgts, 
+                               wgts_calc = self.wgts_calc, 
+                               args = self.args, 
+                               wgt_name_func = wgt_name)
+        event_updater = lambda e: updater.update_event(lhe_parser.Event(e))
+        return event_updater
+
+    def _setup_accumulator(self, start_time):
+        #Periodically prints the progress
+        class PeriodicLogger(object):
+            def __init__(self, log, write_every, start_time, start_event):
+                self.log = log
+                self.ncalls = 0
+                self.write_every = write_every
+                self.start_time = start_time
+                self.start_event = start_event
+
+            def __call__(self):
+                self.ncalls +=1
+                if self.ncalls % self.write_every == 0:
+                    self.log( '# Currently at event %s [elapsed time: %.2g s]' % 
+                              (self.start_event+self.ncalls, time.time()-self.start_time))
+
+        #Handles writing out the events and summing the cross
+        class Accumulator(object):
+            def __init__(self, log):
+                self.log = log
+            def __call__(self, event_n_cross, all_n_output):
+                self.log()
+
+                from operator import add
+                all_cross, output = all_n_output
+                event, cross = event_n_cross
+                output.write(str(event))
+                return (list(map(add,cross, all_cross)), output)
+
+        return Accumulator(PeriodicLogger(self.log, 
+                                          2500 if self.is_lo else 1000, 
+                                          start_time, 
+                                          self.start_event))
+
+
+    def run(self, stdout=sys.stdout, executor=SerialExecutor()):
         start_time = time.time()
         if self.start_event == 0 or self.force_write_banner:
             lowest_id = self.write_banner(self.output)
         else:
             lowest_id = self.get_id()        
 
-        ids = [self.get_wgt_name(*self.args[i][:5], cid=lowest_id+i) for i in range(len(self.args)-1)]
-        #ids = [lowest_id+i for i in range(len(self.args)-1)]
-        all_cross = [0 for i in range(len(self.args))]
-        
+        #Handles closing out the file and returning the summed cross
+        def finisher(writeEventEnd, all_n_output):
+            all_cross,output = all_n_output
+            if writeEventEnd:
+                output.write('</LesHouchesEvents>\n')
+            output.close() 
+            return all_cross 
+
+        #need to flush so that when multiprocess is used the
+        # buffer has already been written to the file
+        self.output.file.flush()
+
+        executor.set_functions(event_updater = self._setup_event_updater(lowest_id), 
+                               init_accumulate = lambda : ([0 for i in range(len(self.args))], #all_cross
+                                                           self.output),
+                               accumulator = self._setup_accumulator(start_time),
+                               finish_accumulate = finisher)
+
         self.input.parsing = False
+        
+        shouldWriteEventEnd = False
         for nb_event,event in enumerate(self.input):
+            shouldWriteEventEnd = False
             if nb_event < self.start_event:
                 continue
-            elif nb_event == self.start_event:
-                self.input.parsing = True
-                event = lhe_parser.Event(event)
             elif nb_event >= self.stop_event:
                 if self.force_write_banner:
-                    self.output.write('</LesHouchesEvents>\n')
+                    shouldWriteEventEnd = True
                 break
             
-            if self.is_lo:
-                if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
-                    self.log( '# Currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
-            else:
-                if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
-                    self.log( '# Currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
-                    
-            self.new_event() #re-init the caching of alphas/pdf
-            self.remove_old_wgts(event)
-            if self.is_lo:
-#                print(self.args)
-                wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
-#                print(wgts)
-            else:
-                wgts = [self.get_nlo_wgt(event, *arg) for arg in self.args]
-            
-            if wgts[0] == 0:
-                print(wgts)
-                print(event)
-                raise Exception
-            
-            wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
-            all_cross = [(all_cross[j] + event.wgt*wgts[j]/wgts[0]) for j in range(len(wgts))]
-            
-            rwgt_data = event.parse_reweight()
-            rwgt_data.update(list(zip(ids, wgt)))
-            event.reweight_order += ids
-            # order the 
-            self.output.write(str(event))
+            executor.process(event)
         else:
-            self.output.write('</LesHouchesEvents>\n')
-        self.output.close()
+            shouldWriteEventEnd = True
+        all_cross = executor.finish(shouldWriteEventEnd)
+
+        self.log('finished events [elapsed time: %.2g s]' % (time.time() - start_time))
         self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
         if self.output.name != self.output_path:
@@ -697,7 +1287,7 @@ class Systematics(object):
              text += "</weightgroup>\n"
             
         if 'initrwgt' in self.banner:
-            if not self.remove_wgts:
+            if not self.wgts.will_remove_wgts():
                 self.banner['initrwgt'] += text
             else:
                 # remove the line which correspond to removed weight
@@ -784,8 +1374,8 @@ class Systematics(object):
 
     def get_id(self):
         
-        if self.start_wgt_id is not None:
-            return int(self.start_wgt_id)
+        if self.wgts.get_start_wgt_id() is not None:
+            return int(self.wgts.get_start_wgt_id())
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
@@ -833,328 +1423,19 @@ class Systematics(object):
         return
     
     def new_event(self):
-        self.alphas = {}
-        self.pdfQ2 = {}
-        
-            
-    def get_pdfQ(self, pdf, pdg, x, scale, beam=1):
-        
-        if pdg in [-21,-22]:
-            pdg = abs(pdg)
-        elif pdg == 0:
-            return 1
+        self.wgts_calc.resetCache()
+                    
 
-        if self.only_beam and self.only_beam!= beam and pdf.lhapdfID != self.orig_pdf:
-            return self.getpdfQ(self.pdfsets[self.orig_pdf], pdg, x, scale, beam)
-        
-        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
-            nb_p = self.banner.run_card["nb_proton%s" % beam]
-            nb_n = self.banner.run_card["nb_neutron%s" % beam]
-
-
-            if pdg in [1,2]:
-                pdf1 =  pdf.xfxQ(1, x, scale)/x
-                pdf2 =  pdf.xfxQ(2, x, scale)/x
-                if pdg == 1:
-                    f = nb_p * pdf1 + nb_n * pdf2
-                else:
-                    f = nb_p * pdf2 + nb_n * pdf1
-            elif pdg in [-1,-2]:
-                pdf1 =  pdf.xfxQ(-1, x, scale)/x
-                pdf2 =  pdf.xfxQ(-2, x, scale)/x
-                if pdg == -1:
-                    f = nb_p * pdf1 + nb_n * pdf2
-                else:
-                    f = nb_p * pdf2 + nb_n * pdf1                    
-            else: 
-                f = (nb_p + nb_n) * pdf.xfxQ(pdg, x, scale)/x
-                
-            f = f * (nb_p+nb_n) 
-        else:
-            f = pdf.xfxQ(pdg, x, scale)/x
-#        if f == 0 and pdf.memberID ==0:
-#            pdfset = pdf.set()
-#            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
-#            f = pdfset.uncertainty(allnumber).central /x
-        return f
-
-    def get_pdfQ2(self, pdf, pdg, x, scale, beam=1):
-
-        if pdg in [-21,-22]:
-            pdg = abs(pdg)
-        elif pdg == 0:
-            return 1
-      
-        if (pdf, pdg,x,scale, beam) in self.pdfQ2:
-            return self.pdfQ2[(pdf, pdg,x,scale,beam)]
-
-        if self.orig_ion_pdf and (self.ion_scaling or pdf.lhapdfID == self.orig_pdf):
-            nb_p = self.banner.run_card["nb_proton%s" % beam]
-            nb_n = self.banner.run_card["nb_neutron%s" % beam]
-
-
-            if pdg in [1,2]:
-                pdf1 =  pdf.xfxQ2(1, x, scale)/x
-                pdf2 =  pdf.xfxQ2(2, x, scale)/x
-                if pdg == 1:
-                    f = nb_p * pdf1 + nb_n * pdf2
-                else:
-                    f = nb_p * pdf2 + nb_n * pdf1
-            elif pdg in [-1,-2]:
-                pdf1 =  pdf.xfxQ2(-1, x, scale)/x
-                pdf2 =  pdf.xfxQ2(-2, x, scale)/x
-                if pdg == -1:
-                    f = nb_p * pdf1 + nb_n * pdf2
-                else:
-                    f = nb_p * pdf2 + nb_n * pdf1                    
-            else: 
-                f = (nb_p + nb_n) * pdf.xfxQ2(pdg, x, scale)/x
-                
-            f = f * (nb_p+nb_n)      
-        else:
-            f = pdf.xfxQ2(pdg, x, scale)/x
-        self.pdfQ2[(pdf, pdg,x,scale,beam)] = f
-        return f        
-        
-        
-        
-        #one method to handle the nnpd2.3 problem -> now just move to central
-        if f == 0 and pdf.memberID ==0:
-            # to avoid problem with nnpdf2.3 in lhapdf6.1.6
-            #print 'central pdf returns 0', pdg, x, scale
-            #print self.pdfsets
-            pdfset = pdf.set()
-            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
-            f = pdfset.uncertainty(allnumber).central
-        self.pdfQ2[(pdf, pdg,x,scale)] = f
-        return f
-                
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
         """ 
         pdf is a lhapdf object!"""
-        
-        loinfo = event.parse_lo_weight()
-        if dyn == -1:
-            mur = loinfo['ren_scale']
-            if self.b1 != 0 and loinfo['pdf_pdg_code1']:
-                muf1 = loinfo['pdf_q1'][-1]
-            else:
-                muf1 =0
-            if self.b2 != 0 and loinfo['pdf_pdg_code2']: 
-                muf2 = loinfo['pdf_q2'][-1]
-            else:
-                muf2 =0
-        else:
-            if dyn == 1: 
-                mur = event.get_et_scale(1.)
-#                print(1,mur)
-            elif dyn == 2:
-                mur = event.get_ht_scale(1.)
-#                print(2,mur)
-            elif dyn == 3:
-                mur = event.get_ht_scale(0.5)
-#                print(3,mur)
-            elif dyn == 4:
-                mur = event.get_sqrts_scale(1.)
-#                print(4,mur)
-#            print(mur)
-            if math.isnan(mur):
-                return mur
-            muf1 = mur
-            muf2 = mur
-            loinfo = dict(loinfo)
-            # security for elastic photon from proton
-            if not loinfo['pdf_pdg_code1']:
-                muf1 = 0
-            else:
-                loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
-            if not loinfo['pdf_pdg_code2']:
-                muf2 = 0                
-            else:
-                loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]                
-
-        # MUR part
-        if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
-            if loinfo['n_qcd'] != 0:
-                wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
-            else:
-                wgt = 1.0
-        else:
-            wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
-
-        # MUF/PDF part
-        if self.b1 and muf1 :
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel1']=='eva':
-                vPol = event[0].helicity
-                vPID = event[0].pid
-                ievo = self.banner.run_card['ievo_eva']
-                if ievo != 0 and len(loinfo['pdf_x1']) != 1:
-                    raise SystematicsError('Cannot evaluate systematic errors: too many x1 in pdfrwt in .lhe for EVA.')
-                xx = loinfo['pdf_x1'][-1] # ignored if ievo=0
-                if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf1,vPID,self.b1,vPol,xx,ievo)
-            else:
-                wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1, beam=1)
-        if self.b2 and muf2: 
-            if self.banner.run_card['pdlabel']=='eva' or \
-               self.banner.run_card['pdlabel2']=='eva':
-                vPol = event[1].helicity
-                vPID = event[1].pid
-                ievo = self.banner.run_card['ievo_eva']
-                if ievo != 0 and len(loinfo['pdf_x2']) != 1:
-                    raise SystematicsError('Cannot evaluate systematic errors: too many x2 in pdfrwt in .lhe for EVA.')
-                xx = loinfo['pdf_x2'][-1] # ignored if ievo=0
-                if abs(vPID) in [7,22,23,24]:
-                    wgt *= self.call_eva_get_vx_scaleLog(Dmuf*muf2,vPID,self.b2,vPol,xx,ievo)
-            else:
-                wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2, beam=2) 
-
-        for scale in loinfo['asrwt']:
-            if self.b1 == 0 == self.b2 or self.banner.run_card['pdlabel']=='eva':
-                wgt = self.alpsrunner(Dalps*scale)
-            else:
-                wgt *= pdf.alphasQ(Dalps*scale)
-        
-        # ALS part
-        for i in range(loinfo['n_pdfrw1']-1):
-            scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
-            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale, beam=1)
-            wgt /= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale, beam=1)
-
-        for i in range(loinfo['n_pdfrw2']-1):
-            scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
-            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale, beam=2)
-            wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale, beam=2)            
-        
-#        print(wgt)
-        return wgt
+        return self.wgts_calc.get_lo_wgt(event, Dmur, Dmuf, Dalps, dyn, pdf)
 
     def get_nlo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
         """return the new weight for NLO event --with weight information-- """
         
-        wgt = 0 
-        nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
-        for cevent in nloinfo.cevents:
-            if dyn == 1: 
-                mur2 = max(1.0, cevent.get_et_scale(1.)**2) 
-            elif dyn == 2:
-                mur2 = max(1.0, cevent.get_ht_scale(1.)**2)
-            elif dyn == 3:
-                mur2 = max(1.0, cevent.get_ht_scale(0.5)**2)
-            elif dyn == 4:
-                mur2 = cevent.get_sqrts_scale(event,1)**2
-            else:
-                mur2 = 0
-            muf2 = mur2
-            
-            for onewgt in cevent.wgts:
-                if not __debug__ and (dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf):
-                    wgt += onewgt.ref_wgt 
-                    continue
-                
-                if dyn == -1:
-                    mur2 = onewgt.scales2[1]
-                    muf2 = onewgt.scales2[2]
-                Q2 = onewgt.scales2[0] # Ellis-Sexton scale
-                
-                wgtpdf = self.get_pdfQ2(pdf, self.b1*onewgt.pdgs[0], onewgt.bjks[0],
-                                      Dmuf**2 * muf2)
-                wgtpdf *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
-                                      Dmuf**2 * muf2)
-                
-                tmp = onewgt.pwgt[0]
-                tmp += onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
-                tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
-                
-                if self.b1 == 0 == self.b2:
-                    alps = self.alpsrunner(Dmur*math.sqrt(mur2))
-                else:
-                    alps = pdf.alphasQ2(Dmur**2*mur2)
-                
-                tmp *= math.sqrt(4*math.pi*alps)**onewgt.qcdpower
-                
-                if wgtpdf == 0: #happens for nn23pdf due to wrong set in lhapdf
-                    key = (self.b1*onewgt.pdgs[0], self.b2*onewgt.pdgs[1], onewgt.bjks[0],onewgt.bjks[1], muf2)
-                    if dyn== -1 and Dmuf==1 and Dmur==1 and pdf==self.orig_pdf:
-                        wgtpdf = onewgt.ref_wgt / tmp
-                        self.pdfQ2[key] = wgtpdf
-                    elif key in self.pdfQ2:
-                        wgtpdf = self.pdfQ2[key]
-                    else:
-                        # real zero!
-                        wgtpdf = 0
-
-                tmp *= wgtpdf                
-                wgt += tmp
-                
-                
-                if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
-                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=1):
-                        misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
-                        misc.sprint(onewgt)
-                        misc.sprint(cevent)
-                        misc.sprint(mur2,muf2)
-                        raise Exception('not enough agreement between stored value and computed one')
-                
-        return wgt
-
-
-    def call_eva_get_vx_scaleLog(self, muf, vPID, fPID, vPol, xx, ievo=0):
-        if abs(vPol) == 1:
-            return self.call_eva_get_vT_scaleLog(muf,vPID,fPID,xx,ievo)
-        elif vPol == 0:
-            return self.call_eva_get_v0_scaleLog(muf,vPID,fPID,xx,ievo)
-        else:
-            raise SystematicsError("unknow EVA vPol %s " % vPol)
-
-    def call_eva_get_v0_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        return 1e0
-
-    def call_eva_get_vT_scaleLog(self, muf, vPID, fPID, xx, ievo=0):
-        mufMin = self.call_eva_get_mufMin_byPID(vPID,fPID)
-        if ievo != 0:
-            mufMin = math.sqrt(1.e0-xx)*mufMin # evolution by pT
-        if(mufMin<0):
-            raise SystematicsError("Check PIDs! Unknown min muf for EVA %s" % mufMin)
-        elif(muf < mufMin*1.001):
-            return 0e0
-        else:
-            return math.log(muf/mufMin) 
-
-    def call_eva_get_mufMin_byPID(self, vPID, fPID):
-        return {
-            7:  self.call_eva_get_mf_by_PID(fPID),
-            22: self.call_eva_get_mf_by_PID(fPID),
-            23: self.call_eva_get_mv_by_PID(vPID),
-            24: self.call_eva_get_mv_by_PID(vPID)
-        }.get(abs(vPID),-1)
-
-    def call_eva_get_mf_by_PID(self, fPID):
-        # these must be the same as in ElectroweakFlux.inc
-        return {
-            1:  4.67e-3,
-            2:  2.16e-3,
-            3:  93.0e-3,
-            4:  1.27e0,
-            5:  4.18e0,
-            6:  172.76e0,
-            11: 0.5109989461e-3,
-            13: 105.6583745e-3,
-            15: 1.77686e0
-        }.get(abs(fPID),-1)
-
-    def call_eva_get_mv_by_PID(self, vPID):
-        # these must be the same as in ElectroweakFlux.inc
-         return {
-            7:      0e0,
-            22:     0e0,
-            23:     91.1876e0,
-            24:     80.379e0
-        }.get(abs(vPID),-1)
-       
-        
-
+        return self.wgts_calc.get_nlo_wgt(event, Dmur, Dmuf, Dalps, dyn, pdf)
+                            
 
     
 def call_systematics(args, result=sys.stdout, running=True,
@@ -1265,10 +1546,16 @@ def call_systematics(args, result=sys.stdout, running=True,
                 raise Exception
         del opts['from_card']
     
-
+    nb_core = None
+    if 'nb_core' in opts:
+        nb_core = int(opts['nb_core'][0])
+        del opts['nb_core']
     obj = Systematics(input, output, log=log, **opts)
     if running and obj:
-        obj.run(result)  
+        if nb_core:
+            obj.run(result, ParallelExecutor(nb_core))
+        else:
+            obj.run(result)
     return obj
 
 if __name__ == "__main__":
