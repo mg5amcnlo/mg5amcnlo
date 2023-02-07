@@ -1798,8 +1798,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.warning('impossible to download all the pdfsets. Bypass systematics')
             return
         
-        if self.options['run_mode'] ==2 and self.options['nb_core'] != 1:
-            nb_submit = min(int(self.options['nb_core']), nb_event//2500)
+        cores_to_use = self.options['nb_core']
+        if self.options['run_mode'] ==2 and cores_to_use != 1:
+            nb_submit = min(int(cores_to_use), nb_event//2500)
+            #4 cores are about as fast as using 3 clusters
+            if 4*nb_submit < 3*cores_to_use:
+                nb_submit = 1
+            else:
+                cores_to_use = 1
         elif self.options['run_mode'] ==1:
             try:
                 nb_submit = min(int(self.options['cluster_size']), nb_event//25000)
@@ -1815,7 +1821,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #one core:
         if nb_submit in [0,1]:
-            systematics.call_systematics([input, output] + opts, 
+            full_opts = opts
+            if cores_to_use != 1:
+                full_opts = full_opts[:]
+                full_opts.append('--nb_core=%s' % str(cores_to_use))
+            systematics.call_systematics([input, output] + full_opts, 
                                          log=lambda x: logger.info(str(x)),
                                          result=result_file
                                          )
