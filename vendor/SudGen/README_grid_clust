@@ -1,20 +1,24 @@
 Here we report the operations to run parallel pretabulations on lxplus
 
+0) make sure that correct information on the PY path is stored in makefile.inc;
+   one can also run pythia_path.py to retrieve information from the
+   mg5_configuration.txt file 
+
 1) make gridsudgen_clust
 
 2) edit run_gridsudgen.sh with the desired input parameters
+   (how many mass points, type of dipoles and particles)
 
 3) ./condor_submit_gridsudgen.sh
-this step submits jobs on lxplus; at the end of the jobs one gets
-files called grid_i_j.txt (i=itype, j=ipart)
+   this step submits jobs on lxplus; at the end of the jobs one gets
+   files called grid_i_j.txt (i=itype, j=ipart)
 
 4) make gridsudcomb
 
 5) ./gridsudcomb < input
-where 'input' must have the same parameters as those used in
-run_gridsudgen.sh
-this step copies the content of the grid_i_j.txt files to
-the final sudakov.f output file
+   where 'input' must have the same parameters as those used in
+   run_gridsudgen.sh; this step copies the content of the grid_i_j.txt
+   files to the final sudakov.f output file
 
 
 
