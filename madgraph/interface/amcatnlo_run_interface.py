@@ -1636,6 +1636,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
 
+        if self.run_card['nevents'] == 0 and not self.readonly:
+            if not os.path.exists(pjoin(self.me_dir, 'bin', 'run.sh')):
+                files.cp(pjoin(self.me_dir, 'bin','internal','gridpack', 'run.sh'),
+                         pjoin(self.me_dir, 'bin', 'run.sh'))
+                files.cp(pjoin(self.me_dir, 'bin','internal','gridpack', 'gridrun.py'),
+                         pjoin(self.me_dir, 'bin', 'gridrun.py'))
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
