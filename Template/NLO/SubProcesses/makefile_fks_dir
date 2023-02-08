@@ -21,6 +21,7 @@ NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(llhapdf)
+LINKLIBSSUD = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lcernlib 
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
@@ -126,10 +127,8 @@ ewsudakov_sa: $(EWSUDSA)
 
 libsudpy: $(EWSUDLIB)
 	touch __init__.py
-	#$(FC) -shared -o libewsud.so  $(EWSUDLIB)  $(LINKLIBS)
 	ar rcs libewsud.$(libext) $(EWSUDLIB)
-	$(F2PY) libewsud.$(libext) -m ewsudpy -c sub_f2py_ewsudakov.f --f77exec=$(FC) --f77flags="-ffixed-line-length-132"  $(LINKLIBS)
-	#$ar rcs libewsudakov.$(libext) $(FILESSUD) $(LINKLIBS)
+	$(F2PY) libewsud.$(libext) -m ewsudpy -c sub_f2py_ewsudakov.f --f77exec=$(FC) --f77flags="-ffixed-line-length-132"  $(LINKLIBSSUD)
 
 
 check_sudakov_angle2: $(EWSUD2) $(libmadloop)

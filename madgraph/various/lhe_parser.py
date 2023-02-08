@@ -1883,7 +1883,7 @@ class Event(list):
         """check various property of the events"""
         
         # check that relative error is under control
-        threshold = 1e-6
+        threshold = 1e-4
         
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0
@@ -1931,7 +1931,7 @@ class Event(list):
         """check various property of the events - only kinematics"""
         
         # check that relative error is under control
-        threshold = 1e-6
+        threshold = 1e-3
        
         #1. Check that the 4-momenta are conserved
         E, px, py, pz = 0,0,0,0

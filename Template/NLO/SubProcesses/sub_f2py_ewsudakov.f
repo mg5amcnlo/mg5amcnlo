@@ -12,7 +12,6 @@ C arguments
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 cc
-      include 'run.inc'
       include 'coupl.inc'
       include 'orders.inc'
 
@@ -58,7 +57,6 @@ C-----
       sud_mc_hel=.false.
 
       if (firsttime) then
-       call setrun                !Sets up run parameters
        call setpara('param_card.dat')   !Sets up couplings and masses
        firsttime = .false.
       endif
