@@ -11,14 +11,17 @@ Here we report the operations to run parallel pretabulations on lxplus
 
 3) ./condor_submit_gridsudgen.sh
    this step submits jobs on lxplus; at the end of the jobs one gets
-   files called grid_i_j.txt (i=itype, j=ipart)
+   files called grid_i_j_k.txt (i=itype, j=ipart, k=dipole mass)
 
-4) make gridsudcomb
+4) ./grid_combine.sh
+   this step collects all files grid_i_j_k.txt into grid_i_j.txt 
 
-5) ./gridsudcomb < input
+5) make gridsudcomb
+
+6) ./gridsudcomb < input
    where 'input' must have the same parameters as those used in
    run_gridsudgen.sh; this step copies the content of the grid_i_j.txt
-   files to the final sudakov.f output file
+   files to the final sudakov_template.f output file
 
 
 
