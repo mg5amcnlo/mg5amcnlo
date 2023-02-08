@@ -37,11 +37,11 @@
       alphas = 0
 *
 *     Logo
-      write(6,*) " ****************************************"
-      write(6,*) ""
-      write(6,*) "      NNPDFDriver version 1.0.3"
-      write(6,*) "  Grid: ", gridfilename
-      write(6,*) " ****************************************"
+      !write(6,*) " ****************************************"
+      !write(6,*) ""
+      !write(6,*) "      NNPDFDriver version 1.0.3"
+      !write(6,*) "  Grid: ", gridfilename
+      !write(6,*) " ****************************************"
 
       call readPDFSet(gridfilename)
       

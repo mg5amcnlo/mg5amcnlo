@@ -109,12 +109,12 @@ if (has_ewsudakov.and.nord_integrated_born.gt.1) then
 endif
 
  do j = 1, nsplitorders
-  write(*,*) 'counterterm S.O', j, ordernames(j)
+  !write(*,*) 'counterterm S.O', j, ordernames(j)
   do i = 1, nsqampso
    if (keep_order_cnt(j,i)) then
-    write(*,*) 'BORN: keeping split order', i
+    !write(*,*) 'BORN: keeping split order', i
    else
-    write(*,*) 'BORN: not keeping split order', i
+    !write(*,*) 'BORN: not keeping split order', i
    endif
   enddo
  enddo

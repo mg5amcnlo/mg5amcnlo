@@ -53,6 +53,11 @@ c
       do i=1,nnn
          weights_info(i)=wwwi(i)
       enddo
+      ! Temporary fix to get rwgt in header
+      weights_info(2)='rwgt1'
+      weights_info(3)='rwgt2'
+      !
+
       nwgt=nnn
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
@@ -64,7 +69,6 @@ c for the uncertainty estimate
       xmi=40.d0
       xms=120.d0
 
-      write(*,*) 'at booking'
       do i=1,1
        l=(i-1)*26
         call HwU_book(l+ 1,'total rate    ',1,0.5d0,1.5d0)
