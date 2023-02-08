@@ -148,9 +148,9 @@ def compile_dir(*arguments):
                      close_fds=True) 
             #compile madevent_mintMC/mintFO
             misc.compile([exe], cwd=this_dir, job_specs = False)
+
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
-
         logger.info('    %s done.' % p_dir) 
         return 0
     except MadGraph5Error as msg:
@@ -1409,7 +1409,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'shower' : ['generate_events [OPTIONS]']
     }
     
-    
+    readonly = False #only for gridpack    
+
     ############################################################################
     def __init__(self, me_dir = None, options = {}, *completekey, **stdin):
         """ add information to the cmd """
@@ -1417,7 +1418,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.start_time = 0
         CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
         #common_run.CommonRunCmd.__init__(self, me_dir, options)
-
         self.mode = 'aMCatNLO'
         self.nb_core = 0
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
@@ -1430,6 +1430,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not '[real=QCD]' in proc_card:
             check_compiler(self.options, block=True)
+
+
 
         
     ############################################################################      
@@ -1704,7 +1706,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             return
 
         if not mode in ['LO', 'NLO']:
-            assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            if self.readonly:
+                outdir = '.'
+            else:
+                outdir = pjoin(self.me_dir,'Events', self.run_name)
+            assert os.path.abspath(evt_file) ==  os.path.abspath(pjoin(outdir, 'events.lhe')), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
             
             if self.run_card['systematics_program'] == 'systematics':
                 self.exec_cmd('systematics %s %s ' % (self.run_name, ' '.join(self.run_card['systematics_arguments'])))
@@ -1767,7 +1773,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
             
-        if self.allow_notification_center:    
+        if self.allow_notification_center and not self.readonly:    
             misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
@@ -2121,15 +2127,19 @@ RESTART = %(mint_mode)s
             run_type="MINT step %s" % integration_step
         self.njobs=len(jobs_to_run)            
         for job in jobs_to_run:
-            executable='ajob1'
+            if self.readonly:
+                executable = pjoin(self.me_dir,'SubProcesses',job['p_dir'], 'ajob1')
+                pwd = job['p_dir']
+            else:
+                executable='ajob1'
+                pwd = pjoin(self.me_dir,'SubProcesses',job['p_dir'])
             if fixed_order:
                 arguments=[job['channel'],job['run_mode'], \
                                     str(job['split']),str(integration_step)]
             else:
                 arguments=[job['channel'],name_suffix[job['run_mode']], \
                                     str(job['split']),str(integration_step)]
-            self.run_exe(executable,arguments,run_type,
-                         cwd=pjoin(self.me_dir,'SubProcesses',job['p_dir']))
+            self.run_exe(executable, arguments, run_type, cwd=pwd)
 
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
@@ -2153,7 +2163,10 @@ RESTART = %(mint_mode)s
                                                            jobs=jobs_to_collect)
         else:
             name_suffix={'born' :'B' , 'all':'F'}
-            cross, error = self.make_make_all_html_results(folder_names=['G%s*' % name_suffix[run_mode]])
+            if self.readonly:
+                cross, error = 0,0
+            else:
+                cross, error = self.make_make_all_html_results(folder_names=['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
 # Combine grids from split fixed order jobs
@@ -2186,7 +2199,11 @@ RESTART = %(mint_mode)s
         if (not fixed_order) and integration_step+1 == 2 :
             # Write the jobs_to_collect directory to file so that we
             # can restart them later (with only-generation option)
-            with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+            if self.readonly:
+                Sdir = '.'
+            else: 
+                Sdir = pjoin(self.me_dir,"SubProcesses")
+            with open(pjoin(Sdir,"job_status.pkl"),'wb') as f:
                 pickle.dump(jobs_to_collect,f)
             # next step is event generation (mint_step 2)
             jobs_to_run_new,jobs_to_collect_new= \
@@ -2222,7 +2239,11 @@ RESTART = %(mint_mode)s
                 lhefile=pjoin(path,'events.lhe')
                 content.append(' %s     %d     %9e     %9e' % \
                                (lhefile.ljust(40),job['nevents'],job['resultABS'],1.))
-        with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'w') as f:
+        if self.readonly:
+            Sdir = '.'
+        else:
+            Sdir = pjoin(self.me_dir,'SubProcesses') 
+        with open(pjoin(Sdir,"nevents_unweighted"),'w') as f:
             f.write('\n'.join(content)+'\n')
 
     def write_nevts_files(self,jobs):
@@ -2559,21 +2580,28 @@ RESTART = %(mint_mode)s
     def append_the_results(self,jobs,integration_step):
         """Appends the results for each of the jobs in the job list"""
         error_found=False
+
+
+
         for job in jobs:
+            if  self.readonly and integration_step != 1:
+                localdir = pjoin(job['p_dir'],os.path.basename(job['dirname']))
+            else:
+                localdir = job['dirname']
             try:
                 if integration_step >= 0 :
-                    with open(pjoin(job['dirname'],'res_%s.dat' % integration_step)) as res_file:
+                    with open(pjoin(localdir,'res_%s.dat' % integration_step)) as res_file:
                         results=res_file.readline().split()
                 else:
                 # should only be here when doing fixed order with the 'only_generation'
                 # option equal to True. Take the results from the final run done.
-                    with open(pjoin(job['dirname'],'res.dat')) as res_file:
+                    with open(pjoin(localdir,'res.dat')) as res_file:
                         results=res_file.readline().split()
             except IOError:
                 if not error_found:
                     error_found=True
                     error_log=[]
-                error_log.append(pjoin(job['dirname'],'log.txt'))
+                error_log.append(pjoin(os.getcwd(),localdir,'log.txt'))
                 continue
             job['resultABS']=float(results[0])
             job['errorABS']=float(results[1])
@@ -2584,6 +2612,8 @@ RESTART = %(mint_mode)s
             job['time_spend']=float(results[6])
             job['err_percABS'] = job['errorABS']/job['resultABS']*100.
             job['err_perc'] = job['error']/job['result']*100.
+            misc.sprint(job['result'])
+
         if error_found:
             raise aMCatNLOError('An error occurred during the collection of results.\n' + 
                    'Please check the .log files inside the directories which failed:\n' +
@@ -2614,9 +2644,16 @@ RESTART = %(mint_mode)s
             content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
                            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
                             tot, math.sqrt(err), math.sqrt(err)/tot *100.))
-        with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
+        if self.readonly:
+            Sdir = '.'
+        else:
+            Sdir = pjoin(self.me_dir,'SubProcesses')
+        with open(pjoin(Sdir,'res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
+        misc.sprint({'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
+                'erra':math.sqrt(errABS),'randinit':randinit})
+
         return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
                 'erra':math.sqrt(errABS),'randinit':randinit}
         
@@ -3172,7 +3209,12 @@ RESTART = %(mint_mode)s
         logger.info(message+'\n')
         
         # Now copy relevant information in the Events/Run_<xxx> directory
-        evt_path = pjoin(self.me_dir, 'Events', self.run_name)
+        if self.readonly:
+            Edir = '.'
+            evt_path = '.'
+        else:
+            Edir = pjoin(self.me_dir, 'Events')
+            evt_path = pjoin(Edir, self.run_name)
         open(pjoin(evt_path, 'summary.txt'),'w').write(message+'\n')
         open(pjoin(evt_path, '.full_summary.txt'), 
                                        'w').write(message+'\n\n'+debug_msg+'\n')
@@ -3631,9 +3673,17 @@ RESTART = %(mint_mode)s
            or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
+        misc.sprint(options['nocompile'])
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
-        p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
+
+        if self.readonly:
+            exe = pjoin(self.me_dir, 'SubProcesses', 'collect_events')
+            Sdir = '.'
+        else:
+            exe = './collect_events'
+            Sdir = pjoin(self.me_dir, 'SubProcesses')
+        p = misc.Popen([exe], cwd=Sdir,
                 stdin=subprocess.PIPE, 
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
@@ -3650,17 +3700,26 @@ RESTART = %(mint_mode)s
         data = str(out)
         #get filename from collect events
         filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
-        
-        if not os.path.exists(pjoin(self.me_dir, 'SubProcesses', filename)):
+        misc.sprint(filename)
+        if not os.path.exists(pjoin(Sdir, filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created: \n %s' % data)
-        evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
-        misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
+        if self.readonly:
+            outdir = '.'
+            evt_file = 'events.lhe.gz'
+        else:
+            outdir = pjoin(self.me_dir, 'Events', self.run_name)
+            evt_file =  pjoin(outdir, 'events.lhe.gz')
+        misc.sprint(evt_file)
+        misc.gzip(pjoin(Sdir, filename), stdout=evt_file)
+        misc.sprint(evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
-            res_files = misc.glob('res*.txt', pjoin(self.me_dir, 'SubProcesses'))
-            for res_file in res_files:
-                files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
+            if not self.readonly:
+                res_files = misc.glob('res*.txt', pjoin(self.me_dir, 'SubProcesses'))
+                for res_file in res_files:
+
+                    files.mv(res_file,outdir)
 
         logger.info('The %s file has been generated.\n' % (evt_file))
         self.results.add_detail('nb_event', nevents)
@@ -4535,7 +4594,11 @@ RESTART = %(mint_mode)s
         to compute on the fly scale and/or PDF uncertainities"""
         logger.info('   Doing reweight')
 
-        nev_unw = pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted')
+        if self.readonly:
+            Sdir = '.'
+        else:
+            Sdir =  pjoin(self.me_dir, 'SubProcesses')
+        nev_unw = pjoin(Sdir, 'nevents_unweighted')
         # if only doing reweight, copy back the nevents_unweighted file
         if only:
             if os.path.exists(nev_unw + '.orig'):
@@ -4558,18 +4621,31 @@ RESTART = %(mint_mode)s
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
+        misc.sprint(exe, os.getcwd(), self.me_dir)
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
-            files.ln(pjoin(self.me_dir, 'SubProcesses', exe), \
-                     pjoin(self.me_dir, 'SubProcesses', path))
+            misc.sprint(path, evt, exe)
+            if self.readonly:
+                Sdir = '.'
+                exe = pjoin(self.me_dir, 'SubProcesses', 'reweight_xsec_events.local')
+                #files.ln(pjoin(self.me_dir, 'SubProcesses', 'reweight_xsec_events.local'))
+            else:
+                Sdir = pjoin(self.me_dir, 'SubProcesses')
+            files.ln(pjoin(Sdir, exe), \
+                     pjoin(Sdir, path))
             job_dict[path] = [exe]
 
         self.run_all(job_dict, [[evt, '1']], 'Running reweight')
 
         #check that the new event files are complete
         for evt_file in evt_files:
+            if self.readonly:
+                Sdir = '.'
+            else:
+                Sdir = pjoin(self.me_dir, 'SubProcesses')
+
             last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
-                    pjoin(self.me_dir, 'SubProcesses', evt_file)], \
+                    pjoin(Sdir, evt_file)], \
                     stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
@@ -4598,7 +4674,11 @@ RESTART = %(mint_mode)s
         pdfs=[]
         for i,evt_file in enumerate(evt_files):
             path, evt=os.path.split(evt_file)
-            with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
+            if self.readonly:
+                Pdir = path
+            else:
+                Pdir = pjoin(self.me_dir, 'SubProcesses', path)
+            with open(pjoin(Pdir, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
                     for j,scale in enumerate(self.run_card['dynamical_scale_choice']):
@@ -4724,13 +4804,18 @@ RESTART = %(mint_mode)s
 
     def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
+        misc.sprint("phaa")
         self.ijob = 0
         if run_type != 'shower':
             self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
             for args in arg_list:
                 for Pdir, jobs in job_dict.items():
                     for job in jobs:
-                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                        Pdirfull = pjoin(self.me_dir, 'SubProcesses', Pdir)
+                        if self.readonly:
+                                Pdirfull = Pdir
+                        misc.sprint(job, args, Pdirfull)
+                        self.run_exe(job, args, run_type, cwd=Pdirfull)
             if self.cluster_mode == 2:
                 time.sleep(1) # security to allow all jobs to be launched
         else:
@@ -4748,10 +4833,15 @@ RESTART = %(mint_mode)s
         those which are not nicely terminated"""
         jobs_to_resubmit = []
         for job in jobs:
+            if self.readonly:
+                Gdir = pjoin(job['p_dir'], os.path.basename(job['dirname']))
+            else:
+                Gdir = job['dirname']
+
             last_line = ''
             try:
                 last_line = subprocess.Popen(
-                        ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
+                        ['tail', '-n1', pjoin(Gdir, 'events.lhe')], \
                     stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
             except IOError:
                 pass
@@ -4798,8 +4888,9 @@ RESTART = %(mint_mode)s
         elif not cwd and os.path.exists(exe):
             execpath = exe
         else:
+            misc.sprint(os.listdir())
             raise aMCatNLOError('Cannot find executable %s in %s' \
-                % (exe, os.getcwd()))
+                % (exe, os.getcwd()), os.path.exists(exe), exe in os.listdir())
         # check that the executable has exec permissions
         if self.cluster_mode == 1 and not os.access(execpath, os.X_OK):
             subprocess.call(['chmod', '+x', exe], cwd=cwd)
@@ -5000,6 +5091,8 @@ RESTART = %(mint_mode)s
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+
+        misc.sprint(mode, options)
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
@@ -5263,6 +5356,11 @@ RESTART = %(mint_mode)s
                 self.check_tests(test, this_dir)
 
 
+
+        if mode in ['aMC@NLO','aMC@LO', 'noshower', 'noshowerLO']:
+            misc.compile(['collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'))
+
+
     def donothing(*args):
         pass
 
@@ -5353,7 +5451,7 @@ RESTART = %(mint_mode)s
             mode = 'noshower'  
         
         passing_cmd = []
-        for key,value in switch.keys():
+        for key,value in switch.items():
             passing_cmd.append('%s=%s' % (key,value))
         
         if 'do_reweight' in options and options['do_reweight']:
@@ -5495,6 +5593,178 @@ RESTART = %(mint_mode)s
 #===============================================================================
 class aMCatNLOCmdShell(aMCatNLOCmd, cmd.CmdShell):
     """The command line processor of MadGraph"""  
+
+
+def __init__(self, me_dir = None, nb_event=0, seed=0, gran=-1, *completekey, **stdin):
+        """Initialize the command and directly run"""
+
+        # Initialize properly
+        self.readonly = False
+        MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
+        self.run_mode = 0
+        self.random = seed
+        self.random_orig = self.random
+        self.granularity = gran
+        
+        self.options['automatic_html_opening'] = False
+        #write the grid_card.dat on disk
+        self.nb_event = int(nb_event)
+        self.write_gridcard(nb_event, seed, gran) # set readonly on True if needed
+        self.prepare_local_dir()                  # move to gridpack dir or create local structure
+        # Now it's time to run!
+        if me_dir and nb_event and seed:
+            self.launch(nb_event, seed)
+        else:
+            raise MadGraph5Error('Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
+                  str(seed))
+
+
+
+
+
+#===============================================================================
+# GRIDPACKNLOCMD (not suppose to be run interactively)
+class GridPackNLOCmd(aMCatNLOCmd):
+    """Class for running gridpack at NLO
+       Was previously handle "launch --parton --nocompile --only_generation"
+       This is run via a dedicated script.
+    """
+
+    def __init__(self, me_dir = None, nb_event=0, seed=0, *completekey, **stdin):
+        """Initialize the command and directly run"""
+
+        # Initialize properly
+        self.readonly = True 
+        aMCatNLOCmd.__init__(self, me_dir, *completekey, **stdin)
+        self.run_mode = 0
+        self.random = seed
+        self.random_orig = self.random
+        #self.granularity = gran
+        self.options['automatic_html_opening'] = False
+        #write the grid_card.dat on disk
+        self.nb_event = int(nb_event)
+        #self.write_gridcard(nb_event, seed, 1) 
+        self.prepare_local_dir()                  # move to gridpack dir or create local structure
+        # Now it's time to run!
+        if me_dir and nb_event and seed:
+            self.launch(nb_event, seed)
+        else:
+            raise MadGraph5Error('Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
+                  str(seed))
+
+        self.allow_notification_center = False
+
+    def write_RunWeb(self, me_dir):
+        try:
+            super(GridPackNLOCmd, self).write_RunWeb(me_dir)
+        except IOError:
+            self.readonly  =True   
+
+    def load_results_db(self, *args, **opts):
+        
+        class dummy:
+            def dummy(self, *args):
+                pass
+            def_web_mode = dummy
+            add_results = dummy
+            add_run = dummy
+            add_detail = dummy
+            save = dummy
+        self.results = dummy()
+
+    def update_status(self, *args, **opts):
+        return 
+
+    def collect_log_files(self, *args, **opts):
+        return
+
+
+    def update_random_seed(self):
+        """Update random number seed with the value from the gridpack. 
+        If this is 0, update the number according to a fresh one"""
+        iseed = self.run_card['iseed']
+        misc.sprint([iseed, int(self.random_orig)])
+        assert(iseed==int(self.random_orig))
+
+        if iseed == 0:
+            raise Exception
+        randinit = open('randinit', 'w')
+        randinit.write('r=%d' % iseed)
+        randinit.close()              
+
+    def compile(self, *args, **opts):
+        misc.sprint(args)
+        misc.sprint(opts)
+        self.run_card['nevents'] = self.nb_event
+        self.run_card['iseed'] = self.random
+
+    ############################################################################
+    def get_Pdir(self):
+        """get the list of Pdirectory if not yet saved."""
+        
+        if hasattr(self, "Pdirs"):
+            if self.me_dir in self.Pdirs[0]:
+                return self.Pdirs
+            
+        if not self.readonly:
+            self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
+        else:
+            self.Pdirs = [l.strip() 
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))] 
+          
+        return self.Pdirs
+        
+    def prepare_local_dir(self):
+        """create the P directory structure in the local directory"""
+        
+        if not self.readonly:
+            os.chdir(self.me_dir)
+        else:
+            for line in open(pjoin(self.me_dir,'SubProcesses','subproc.mg')):
+                p = line.strip()
+                os.mkdir(p)
+                files.cp(pjoin(self.me_dir,'SubProcesses',p,'symfact.dat'),
+                         pjoin(p, 'symfact.dat'))
+
+    def launch(self, nb_event, seed):
+        """ launch the generation for the grid """
+
+        switch= {'order': 'NLO',
+                 'fixed_order': False,
+                 'shower': False,
+                 'madspin': False,
+                 'reweight': False,
+                 'madanalysis': False}
+
+        self.last_mode = 'aMC@NLO'
+        self.do_launch("--parton --nocompile --only_generation -f")
+        # --seed=%s --nb_event=%s" %(seed, nb_event))
+
+    def write_input_file(self,job,fixed_order):
+
+        job = dict(job)
+        Gdir = os.path.basename(job['dirname'])
+        Pdir = os.path.basename(os.path.dirname(job['dirname']))
+        os.mkdir(pjoin(Pdir, Gdir))
+        
+        job['dirname'] = pjoin(Pdir, Gdir)
+        return super(GridPackNLOCmd, self).write_input_file(job, fixed_order)
+
+    def write_nevts_files(self,jobs):
+        """write the nevts files in the SubProcesses/P*/G*/ directories"""
+
+        for job in jobs:
+            Gdir = os.path.basename(job['dirname'])
+            Pdir = os.path.basename(os.path.dirname(job['dirname']))
+            dirname = pjoin(Pdir, Gdir)
+            with open(pjoin(dirname,'nevts'),'w') as f:
+                if self.run_card['event_norm'].lower()=='bias':
+                    f.write('%i %f\n' % (job['nevents'],self.cross_sect_dict['xseca']))
+                else:
+                    f.write('%i\n' % job['nevents'])
+
+
 
 _compile_usage = "compile [MODE] [options]\n" + \
                 "-- compiles aMC@NLO \n" + \

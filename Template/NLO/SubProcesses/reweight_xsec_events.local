@@ -3,6 +3,20 @@
 event_file=$1
 save_wgts=$2
 
+
+# find the path to the gridpack (https://stackoverflow.com/questions/59895/getting-the-source-directory-of-a-bash-script-from-within)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+local=`pwd`
+LOCALDIR="$(dirname "$local")"
+PDIR=${LOCALDIR##*/}
+
 # For support of LHAPATH in cluster mode                                                                                                                                                                    
 if [ $CLUSTER_LHAPATH ]; then
   export LHAPATH=$CLUSTER_LHAPATH;
@@ -12,7 +26,8 @@ if [[ -e ./reweight_xsec_events ]]
 then
     (echo $event_file; echo $save_wgts) | ./reweight_xsec_events > reweight_xsec_events.output
 else
-    (echo $event_file; echo $save_wgts) | ../reweight_xsec_events > reweight_xsec_events.output
+    echo "PATH FOUND IS", $DIR, $PDIR, $(PWD)
+    (echo $event_file; echo $save_wgts) | $DIR/$PDIR/reweight_xsec_events > reweight_xsec_events.output
 fi
 
 #old version
