@@ -100,9 +100,9 @@ c Set alphaS(mZ)
      &        /' is going to be modified'
           call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
-          !write(*,*) 'Old value of alpha_s from param_card: ',asmz
+          write(*,*) 'Old value of alpha_s from param_card: ',asmz
           call pdfwrap
-          !write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
+          write(*,*) 'New value of alpha_s from PDF ',pdlabel,':',asmz
       else
           call setpara('param_card.dat')
           asmz=G**2/(16d0*atan(1d0))
