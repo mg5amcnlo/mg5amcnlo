@@ -1532,8 +1532,6 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new0_only = w_orig * sudrat0_only
             w_new1_only = w_orig * sudrat1_only
  
-            event.rescale_weights(sudrat0_only)
-
             return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1}
  
      
