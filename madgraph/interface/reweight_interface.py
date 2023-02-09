@@ -548,7 +548,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
             print('EW module loaded')
-            type_rwgt = ['sud0','sud1']
+            #type_rwgt = ['sud0_only','sud1_only','sud0','sud1']
+            type_rwgt = ['sud0_only','sud1_only']
 
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
@@ -1527,11 +1528,19 @@ class ReweightInterface(extended_cmd.Cmd):
             # Do the reewightings
             sudrat0 = 1. + res[1]/res[0]
             sudrat1 = 1. + res[2]/res[0]
-            event.rescale_weights(sudrat0)
+            sudrat0_only = res[1]/res[0]
+            sudrat1_only = res[2]/res[0]
             w_new0 = w_orig * sudrat0
             w_new1 = w_orig *sudrat1
 
-            return {'orig': orig_wgt, 'sud0': w_new0/w_orig*orig_wgt*jac, 'sud1': w_new1/w_orig*orig_wgt*jac}
+            w_new0_only = w_orig * sudrat0_only
+            w_new1_only = w_orig * sudrat1_only
+ 
+            event.rescale_weights(sudrat0_only)
+
+            #return {'orig': orig_wgt,'sud0_only': w_new0_only, 'sud1_only': w_new1_only,'sud0': w_new0,'sud1': w_new1}
+            return {'orig': orig_wgt,'sud0_only': w_new0_only, 'sud1_only': w_new1_only}
+ 
      
     def get_pdg_tuple(self, pdgs, nincoming):
         """write a tuple of 2 tuple, with the incoming particles unsorted
