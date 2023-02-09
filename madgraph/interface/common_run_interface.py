@@ -2103,6 +2103,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append('--web')
             command.append('reweight')
             
+            ## TV: copy the event file as backup before starting reweighting
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+            event_path_backup = pjoin(self.me_dir, 'Events', self.run_name, 'events_orig.lhe.gz')
+            if os.path.exists(event_path):
+                shutil.copyfile(event_path, event_path_backup)
+
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
                 if self.run_name:
@@ -2219,7 +2225,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cross_sections[key] = value / (nb_event+1)
                 lhe.remove()
                 for key in cross_sections:
-                    if key == 'orig' or key.isdigit():
+                    if key == 'orig' or (key.isdigit() and not (key[0] == '2')):
                         continue
                     logger.info('%s : %s pb' % (key, cross_sections[key]))
                 return

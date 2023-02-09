@@ -493,6 +493,10 @@ class ReweightInterface(extended_cmd.Cmd):
             self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
+        # TV: Load model: needed for the combine_ij function: maybe not needed everyt time??? 
+        model = self.banner.get('proc_card', 'model')
+        self.load_model( model, True, False)
+
         if not self.has_standalone_dir:     
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
@@ -508,19 +512,12 @@ class ReweightInterface(extended_cmd.Cmd):
                     i+=5
                     print('wait for pickle')                  
                 print("loading from pickle")
-                # Load model: needed for the combine_ij function
-                model = self.banner.get('proc_card', 'model')
-                self.load_model( model, True, False)
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
                 self.load_module()
             else:
                 self.create_standalone_directory()
-                ## TV: load module if rw_me folder exists, needed for combine_ij function
-                if self.rwgt_dir:
-                    model = self.banner.get('proc_card', 'model')
-                    self.load_model( model, True, False)
                 self.compile()
                 self.load_module()  
                 if self.multicore == 'create':
@@ -537,7 +534,8 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me =self.rwgt_dir
         else:
             path_me = self.me_dir 
-            
+        
+
         if self.inc_sudakov:
             import importlib
             import numpy as np
@@ -548,12 +546,14 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
             print('EW module loaded')
-            #type_rwgt = ['sud0_only','sud1_only','sud0','sud1']
-            type_rwgt = ['sud0_only','sud1_only']
+            type_rwgt = ['2001','2002']
 
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
         
+        if self.inc_sudakov:
+            tag_name = ''
+
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
         else:
@@ -603,7 +603,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
             if not isinstance(weight, dict):
                 weight = {'':weight}
-            
+
             for name in weight:
                 cross[name] += weight[name]
                 ratio[name] += weight[name]/event.wgt
@@ -612,6 +612,9 @@ class ReweightInterface(extended_cmd.Cmd):
             # ensure to have a consistent order of the weights. new one are put 
             # at the back, remove old position if already defines
             for tag in type_rwgt:
+                if tag in event.reweight_order:
+                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
+                    return
                 try:
                     event.reweight_order.remove('%s%s'  % (tag_name,tag))
                 except ValueError:
@@ -1200,11 +1203,20 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
-            if tag.isdigit():
-                self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
-                                       (tag, rwgttype, diff)
+            if self.inc_sudakov:
+                try:
+                    sud_order = int(rwgttype[-1]) -1
+                    self.banner['initrwgt'] += '<weight id=\'%s\'>%srwgt_sud%s</weight>\n' % \
+                                       (rwgttype, diff, sud_order)
+                except IndexError:
+                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
+                    sys.exit(1)
             else:
-                self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
+                if tag.isdigit():
+                    self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
+                                       (tag, rwgttype, diff)
+                else:
+                    self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
                                        (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
@@ -1376,7 +1388,6 @@ class ReweightInterface(extended_cmd.Cmd):
             buff_event=copy.deepcopy(event)
             orig_wgt = event.wgt
             w_orig= event.wgt
-            jac = 1
             pi=3.141592653589
             mW = 80.3
 
@@ -1384,8 +1395,12 @@ class ReweightInterface(extended_cmd.Cmd):
             import importlib
             import numpy as np
 
-            ### FKS stuff, should be removed (nexternal can stay)
-            pair,nexternal = buff_event.get_fks_pair() # nextneral is the number of the real-emission config
+            for proc in [line[9:].strip() for line in self.banner.proc_card
+                                 if line.startswith('generate')]:
+                process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+                n_init = len(re.split('\s+',re.split('>', process)[0])) -1
+                n_final = len(re.split('\s+',re.split('>', process)[1])) -2
+            nexternal = n_init + n_final
 
             # Remove all propagator particles from the event to be passed to Sud module
             for ip,part in enumerate(buff_event):
@@ -1393,101 +1408,83 @@ class ReweightInterface(extended_cmd.Cmd):
                     buff_event.pop(ip)
 
             x = 1.0
-            write_to_file = False
             sud_cut= x*mW**2
             min_inv=10000000.0
-            fks1=pair[0]
-            fks2=pair[1]
-            min_inv_fks=False
             inv_dict={}
-
-            if (len(buff_event) == nexternal):
-                    H_event=True
-                    S_event=False
-            else:
-                    H_event=False
-                    S_event=True        
-            if (H_event):
-                    for ievt,evt in enumerate(buff_event):
-                        # Find the smallest abs(inv) and the corresponding pair
-                        if (ievt <= 1):
-                            sign1 = 1.0
+ 
+            if (len(buff_event) == nexternal +1): # is an H-event
+                for ievt,evt in enumerate(buff_event):
+                    # Find the smallest abs(inv) and the corresponding pair
+                    if (ievt <= 1):
+                        sign1 = 1.0
+                    else:
+                        sign1 = -1.0
+                    for ievt2,evt2 in enumerate(buff_event):
+                        if (ievt2 <= 1):
+                            sign2 = 1.0
                         else:
-                            sign1 = -1.0
-                        for ievt2,evt2 in enumerate(buff_event):
-                            if (ievt2 <= 1):
-                                sign2 = 1.0
-                            else:
-                                sign2 = -1.0
-                            if (ievt2 > ievt):
-                                inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
+                            sign2 = -1.0
+                        if (ievt2 > ievt):
+                            inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
                                                - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                                inv_dict[(ievt,ievt2)] = abs(inv)
-                                if (abs(inv) < min_inv):
-                                    min_inv=abs(inv)
-                                    min_i=ievt
-                                    min_j=ievt2
-                            ### FKS stuff, should be removed
-                            if ((ievt+1 == fks1) and (ievt2+1 == fks2)) or ((ievt+1 == fks2) and (ievt2+1 == fks1)):
-                                if (ievt <= 1):
-                                    sign1 = 1.0
-                                else:
-                                    sign1 = -1.0
-                                if (ievt2 <= 1):
-                                    sign2 = 1.0
-                                else:
-                                    sign2 = -1.0
-                                fks_inv = abs((sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                               - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2)
+                            inv_dict[(ievt,ievt2)] = abs(inv)
+                            if (abs(inv) < min_inv):
+                                min_inv=abs(inv)
+                                min_i=ievt
+                                min_j=ievt2
+                            
+                # Below finds the current process tag and tries to recombine the min_i and min_j
+                tag, order = buff_event.get_tag_and_order()
+                matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
 
-                    # Below finds the current process tag and tries to recombine the min_i and min_j
-                    tag, order = buff_event.get_tag_and_order()
-                    matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
-
-                    ij_comb= []
-                    if min_i <= 1:
-                        state = False
-                    else:
-                        state = True
-                    comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid,'number': min_i+1,'state': state})
-                    if min_j<= 1:
-                        state = False
-                    else:
-                        state = True
-                    comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid,'number': min_j+1,'state': state})
-                    ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
-                    if ij_comb == []:
-                        ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
+                ij_comb= []
+                if min_i <= 1:
+                    state = False
+                else:
+                    state = True
+                comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid,'number': min_i+1,'state': state})
+                if min_j<= 1:
+                    state = False
+                else:
+                    state = True
+                comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid,'number': min_j+1,'state': state})
+                ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+                if ij_comb == []:
+                    ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
            
-                    # For n+1-body reweighting
-                    if min_inv > sud_cut:
-                        event_to_sud = buff_event
-                        n_part = nexternal
-                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-
-                    # For n-body reweighting
-                    else:
-                        # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
-                        if ij_comb == []:
-                            event_to_sud = buff_event
-                            n_part = nexternal
-                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                        else:
-                            event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
-                            event_to_sud = event_for_sud
-                            n_part = nexternal - 1 
-                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                            # map to n+1 body if recoil does not exist at Born level among processes
-                            if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
-                                event_to_sud = buff_event
-                                n_part = nexternal
-                                mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-            if (S_event):
-                    fks_inv = 0.0
+                # For n+1-body reweighting
+                if min_inv > sud_cut:
                     event_to_sud = buff_event
-                    n_part = nexternal - 1 
+                    n_part = nexternal+1
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
 
+                # For n-body reweighting
+                else:
+                    # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
+                    if ij_comb == []:
+                        event_to_sud = buff_event
+                        n_part = nexternal+1
+                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    else:
+                        event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
+                        event_to_sud = event_for_sud
+                        n_part = nexternal 
+                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                        # map to n+1 body if recoil does not exist at Born level among processes
+                        if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
+                            event_to_sud = buff_event
+                            n_part = nexternal+1
+                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+
+            elif (len(buff_event) == nexternal): # is an S-event
+                    event_to_sud = buff_event
+                    n_part = nexternal 
+                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+            else:
+                logger.critical('ERROR: neither H nor S event!')
+                logger.critical(buff_event)
+                sys.exit(2)
+                
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
             E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
@@ -1532,14 +1529,12 @@ class ReweightInterface(extended_cmd.Cmd):
             sudrat1_only = res[2]/res[0]
             w_new0 = w_orig * sudrat0
             w_new1 = w_orig *sudrat1
-
             w_new0_only = w_orig * sudrat0_only
             w_new1_only = w_orig * sudrat1_only
  
             event.rescale_weights(sudrat0_only)
 
-            #return {'orig': orig_wgt,'sud0_only': w_new0_only, 'sud1_only': w_new1_only,'sud0': w_new0,'sud1': w_new1}
-            return {'orig': orig_wgt,'sud0_only': w_new0_only, 'sud1_only': w_new1_only}
+            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1}
  
      
     def get_pdg_tuple(self, pdgs, nincoming):

@@ -582,7 +582,6 @@ c     find the start of a weightgroup
                     lpdfvar(lhaPDFid(0))=.false.
                  endif
               elseif (index(string,"name='mg_reweighting").ne.0) then
-                      write(*,*) 'found mg'
                       do
                         read(ifile,'(a)')string
                         if (index(string,'<weight id').ne.0) then
@@ -922,7 +921,6 @@ c
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        
          if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
             read(ifile,'(a)')string
             read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
@@ -1020,6 +1018,13 @@ c
          endif
          read(ifile,'(a)')string ! This is for closing <\event>
       else
+         if(mg_rwgt_count.ne.0) then
+             read(ifile,'(a)')string ! this is for beginning <rwgt>
+             do i=1,mg_rwgt_count
+                read(ifile,'(a)')string
+             enddo
+             read(ifile,'(a)')string ! this is for closing <\rwgt>
+         endif
          if (ickkw.eq.3) then
             ptclusstring=buff
             read(ifile,'(a)')buff
