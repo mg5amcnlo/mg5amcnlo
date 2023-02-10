@@ -3980,20 +3980,16 @@ RESTART = %(mint_mode)s
 
         #look for the event files (don't resplit if one asks for the 
         # same number of event files as in the previous run)
-        event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name))
+        event_files = misc.glob('events.lhe_*', pjoin(self.me_dir, 'Events', self.run_name))
         if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
             logger.info('Cleaning old files and splitting the event file...')
             #clean the old files
             files.rm([f for f in event_files if 'events.lhe' not in f])
             if self.shower_card['nsplit_jobs'] > 1:
-                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'), nocompile=options['nocompile'])
-                p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
-                                stdin=subprocess.PIPE,
-                                stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
-                                cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                p.communicate(input = ('events.lhe\n%d\n' % self.shower_card['nsplit_jobs']).encode())
+                eventfile = lhe_parser.EventFile(evt_file)
+                eventfile.split(self.banner.get_detail('run_card', 'nevents') / self.shower_card['nsplit_jobs'], cwd = pjoin(self.me_dir, 'Events', self.run_name))
                 logger.info('Splitting done.')
-            event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name)) 
+            event_files = misc.glob('events.lhe_*', pjoin(self.me_dir, 'Events', self.run_name)) 
 
         event_files.sort()
 
