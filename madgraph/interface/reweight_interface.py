@@ -1527,6 +1527,9 @@ class ReweightInterface(extended_cmd.Cmd):
             sudrat1 = 1. + res[2]/res[0]
             sudrat0_only = res[1]/res[0]
             sudrat1_only = res[2]/res[0]
+            # Dummy step: needed to read in the parse_reweight function
+            event.rescale_weights(1.)
+
             w_new0 = w_orig * sudrat0
             w_new1 = w_orig *sudrat1
             w_new0_only = w_orig * sudrat0_only
