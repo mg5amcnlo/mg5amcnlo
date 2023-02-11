@@ -11,7 +11,6 @@ done
 AJOBDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 
-
 function link1up {
 if [[ ! -e $1 && -e ../$1 ]] ; then
     ln -sf ../$1 .
@@ -41,6 +40,12 @@ channel=$1
 run_mode=$2
 runnumber=$3
 integration_step=$4
+if [ "$5" = "--nolog" ]; then
+    nolog=1
+else
+    nolog=0
+fi
+
 
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
@@ -105,12 +110,21 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ $runnumber != 0 ]]; then
             echo "$runnumber" >& moffset.dat
         fi
-        $AJOBDIR/madevent_mintMC > log.txt <input_app.txt 2>&1
+	if [[ $nolog != 0 ]]; then
+	    $AJOBDIR/madevent_mintMC > /dev/null <input_app.txt 2>&1
+	else
+	    $AJOBDIR/madevent_mintMC > log.txt <input_app.txt 2>&1
+	fi
+
+	
+
     fi
     status=$?
     T="$(($(date +%s)-T))"
     echo "Time in seconds: ${T}" >>log.txt
-    cp -f log.txt log_MINT$integration_step.txt  >/dev/null 2>&1
+    if [[ $nolog = 0 ]]; then
+	cp -f log.txt log_MINT$integration_step.txt  >/dev/null 2>&1
+    fi
     cp -f res.dat res_$integration_step.dat  >/dev/null 2>&1
     exit $status
 done

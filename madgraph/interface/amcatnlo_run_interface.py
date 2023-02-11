@@ -2146,6 +2146,8 @@ RESTART = %(mint_mode)s
             else:
                 arguments=[job['channel'],name_suffix[job['run_mode']], \
                                     str(job['split']),str(integration_step)]
+            #if self.readonly:
+            #    arguments.append('--nolog')
             self.run_exe(executable, arguments, run_type, cwd=pwd)
 
         if self.cluster_mode == 2:
@@ -5747,6 +5749,10 @@ class GridPackNLOCmd(aMCatNLOCmd):
         self.last_mode = 'aMC@NLO'
         self.do_launch("--parton --nocompile --only_generation -f")
         # --seed=%s --nb_event=%s" %(seed, nb_event))
+
+    def collect_log_files(self, *args, **opts):
+        # log are remove to preserve IO
+        return
 
     def write_input_file(self,job,fixed_order):
 

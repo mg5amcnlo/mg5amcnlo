@@ -162,11 +162,12 @@ c
 c
 c     Local
 c
+      logical fopened
 c-----
 c  Begin Code
 c-----
-
-      open(unit=lun,file='./iproc.dat',status='old',err=15)
+      call open_file(lun,'./iproc.dat',fopened)
+      if (.not.fopened) goto 15
          read(lun,*,err=14) iseed
          close(lun)
          return
@@ -177,6 +178,7 @@ c-----
          return
  24   close(lun)
  25   iseed = 0
+      write(*,*) 'WARNING: iproc.dat not found by open_file -> 0' 
       end
 
       subroutine get_moffset(iseed)

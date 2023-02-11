@@ -50,11 +50,8 @@
       endif
       nextbasicfile='nevents_unweighted0'
       write(nextbasicfile(19:19),'(i1)')istep+1
-      write(*,*) "iput file ", basicfile
-      write(*,*) "nextbasic?", nextbasicfile
       open(unit=10,file=basicfile,status='old')
       open(unit=98,file=nextbasicfile,status='unknown')
-      write(*,*) "two file open"
       
 c
 c First get the cross section from the res_1 files
@@ -78,7 +75,6 @@ c
          xsecfrac_all(numoffiles) = xsecfrac
 c store here the proc_id as computed from directory name ("@XX" in
 c     process generation)
-         write(*,*) "eventfile found is ", eventfile
          if (eventfile(1:1).eq.'P') then
             if (eventfile(3:3).eq.'_') then
                read(eventfile(2:2),'(i1)') proc_id(numoffiles)
@@ -98,7 +94,6 @@ c store here the number of events per file
          nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
          junit(numoffiles)=numoffiles+10
-         write(*,*) "try to open", eventfile
          open(unit=junit(numoffiles),file=eventfile,status='old',
      &        err=999)
 c Every time we find 80 files, collect the events
@@ -570,7 +565,6 @@ c
          endif
          results_file=eventfile(1:index(eventfile,'events.lhe')-1)
      $        //'res_1'
-         write(*,*) "trying to open results", results_file
          call open_file(11, results_file, fopened)
          if (.not.fopened) goto 998        
 c         open (unit=11,file=results_file,status='old',err=998)

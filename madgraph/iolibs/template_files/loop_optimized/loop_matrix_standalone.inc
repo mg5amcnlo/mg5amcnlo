@@ -567,7 +567,6 @@ C   We write a dummy filter for structural reasons here
     CLOSE(1)
   ENDIF
 
-write(*,*) ColorNumFN
 OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NCOLORROWS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)

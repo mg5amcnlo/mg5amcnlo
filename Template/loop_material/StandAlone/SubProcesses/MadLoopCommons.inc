@@ -172,7 +172,6 @@ C     when creating the BLHA2 dynamic library
 C     Try to automatically find the path
           prefix='./'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=1, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -180,7 +179,6 @@ C     Try to automatically find the path
           close(1)
           prefix='./MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -188,7 +186,6 @@ C     Try to automatically find the path
           close(1)
           prefix='../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) fpath
           OPEN(1, FILE=fpath, ERR=3, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -202,7 +199,6 @@ c
 	  pos = index(path,'/',.true.)
 	  prefix = path(:pos)
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
 	  OPEN(1, FILE=fpath, ERR=4, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -210,7 +206,6 @@ c
           close(1)
           prefix= prefix // '/MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
           OPEN(1, FILE=fpath, ERR=5, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -218,7 +213,6 @@ c
           close(1)
           prefix= path(:pos) // '/../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
  	  OPEN(1, FILE=fpath, ERR=6, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -227,7 +221,6 @@ c
 	  ! for NLO gridpack
           prefix= path(:pos) // '/MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
  	  OPEN(1, FILE=fpath, ERR=7, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10

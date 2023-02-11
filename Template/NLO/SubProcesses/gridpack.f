@@ -36,7 +36,6 @@ c
       if(fine.eq.0) fine=len(tempname)
       open(unit=lun,file=tempname,status='old',ERR=20)
       fopened=.true.
-      write(*,*) "FOUND LOCALLY"
       return
 
 c      
@@ -49,13 +48,11 @@ c
 c
 c     getting the name of the directory
 c
-c      if (lbw(0).eq.0)then
-         ! No BW separation
-         write(buffer,*)  iconfig
+         write(buffer,*) iconfig
          path = path(:fine2)//'GF'//adjustl(buffer)
          fine2 = index(path, ' ') -1
 
-         write(*,*) "search path", path, fine2, filename
+c         write(*,*) "search path", path, fine2, filename
 c      else
 c         ! BW separation
 c         call Encode(jconfig,lbw(1),3,nexternal)
@@ -68,8 +65,8 @@ c         path = path(:fine2)//'G'//buffer(:fine)//'.'//buffer2
 c         fine2 = index(path, ' ')-1
 c      endif
          tempname = path(:fine2)//'/'//filename
-         write(*,*) 'search tempname', tempname
-      open(unit=lun,file=tempname,status='old',ERR=30)
+c         write(*,*) 'search tempname', tempname
+         open(unit=lun,file=tempname,status='old',ERR=30)
       fopened = .true.
       
  30    return
