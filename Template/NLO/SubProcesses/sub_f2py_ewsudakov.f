@@ -69,6 +69,8 @@ C-----
       call update_as_param()
       p_born(:,:) = p_born_in(:,:)
 
+      s_to_rij = .true.
+      rij_ge_mw = .true.
       do sud_mod = 0,1
         ! call the born
         call sborn(p_born, born)
@@ -101,16 +103,15 @@ C-----
      $        amp_split_ewsud_ssc(1)+
      $        amp_split_ewsud_xxc(1)+
      $        amp_split_ewsud_par(1))
-
       results(4) = wgt_sud
 
+      sud_mod = 1
       s_to_rij = .false.
       rij_ge_mw = .false.
       ! call the born
       call sborn(p_born, born)
       amp_split_born(:) = amp_split(:)
       wgt_born = amp_split_born(1)
-
       ! call the EWsudakov
       call sudakov_wrapper(p_born)
       wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
@@ -119,13 +120,13 @@ C-----
      $        amp_split_ewsud_par(1))
       results(5) = wgt_sud
 
+      sud_mod = 1
       s_to_rij = .true.
       rij_ge_mw = .false.
       ! call the born
       call sborn(p_born, born)
       amp_split_born(:) = amp_split(:)
       wgt_born = amp_split_born(1)
-
       ! call the EWsudakov
       call sudakov_wrapper(p_born)
       wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
