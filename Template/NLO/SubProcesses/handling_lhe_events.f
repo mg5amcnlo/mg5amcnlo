@@ -766,8 +766,11 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt .or.
-     &     jwgtinfo.lt.0)) then
+      !! TV: changed this line below to output commented line in events
+      !when no scale or pdf variation is performed
+      !if(buff(1:1).eq.'#' .and. (do_rwgt .or.
+!     &     jwgtinfo.lt.0)) then
+      if(buff(1:1).eq.'#') then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
