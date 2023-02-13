@@ -546,7 +546,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
             print('EW module loaded')
-            type_rwgt = ['2001','2002']
+            type_rwgt = ['2001','2002','2003','2004','2005']
 
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
@@ -1525,17 +1525,25 @@ class ReweightInterface(extended_cmd.Cmd):
             # Do the reewightings
             sudrat0 = 1. + res[1]/res[0]
             sudrat1 = 1. + res[2]/res[0]
+            sudrat2 = 1. + res[3]/res[0]
+            sudrat3 = 1. + res[4]/res[0]
+            sudrat4 = 1. + res[5]/res[0]
+
             sudrat0_only = res[1]/res[0]
             sudrat1_only = res[2]/res[0]
             # Dummy step: needed to read in the parse_reweight function
             event.rescale_weights(1.)
 
-            w_new0 = w_orig * sudrat0
+            w_new0 = w_orig *sudrat0
             w_new1 = w_orig *sudrat1
+            w_new2 = w_orig *sudrat2
+            w_new3 = w_orig *sudrat3
+            w_new4 = w_orig *sudrat4
+
             w_new0_only = w_orig * sudrat0_only
             w_new1_only = w_orig * sudrat1_only
  
-            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1}
+            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
  
      
     def get_pdg_tuple(self, pdgs, nincoming):

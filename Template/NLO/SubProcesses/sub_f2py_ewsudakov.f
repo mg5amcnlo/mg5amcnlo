@@ -7,7 +7,7 @@ C arguments
 
       include 'nexternal.inc'
       double precision p_born_in(0:3,nexternal-1)
-      double precision gstr_in, results(3)
+      double precision gstr_in, results(6)
       ! results contain (born, sud0, sud1)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -47,6 +47,10 @@ cc
 
       integer i
 
+      logical s_to_rij
+      COMMON /to_s_to_rij/ s_to_rij
+      logical rij_ge_mw
+      COMMON /rij_ge_mw/ rij_ge_mw
 C-----
 C  BEGIN CODE
 C-----  
@@ -82,6 +86,53 @@ C-----
       enddo
       !! MZ to be extended to LO_2 etc 
 
+      !! TV: add the various sudakov outputs
+      sud_mod = 1
+      s_to_rij = .false.
+      rij_ge_mw = .true.
+      ! call the born
+      call sborn(p_born, born)
+      amp_split_born(:) = amp_split(:)
+      wgt_born = amp_split_born(1)
+
+      ! call the EWsudakov
+      call sudakov_wrapper(p_born)
+      wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
+     $        amp_split_ewsud_ssc(1)+
+     $        amp_split_ewsud_xxc(1)+
+     $        amp_split_ewsud_par(1))
+
+      results(4) = wgt_sud
+
+      s_to_rij = .false.
+      rij_ge_mw = .false.
+      ! call the born
+      call sborn(p_born, born)
+      amp_split_born(:) = amp_split(:)
+      wgt_born = amp_split_born(1)
+
+      ! call the EWsudakov
+      call sudakov_wrapper(p_born)
+      wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
+     $        amp_split_ewsud_ssc(1)+
+     $        amp_split_ewsud_xxc(1)+
+     $        amp_split_ewsud_par(1))
+      results(5) = wgt_sud
+
+      s_to_rij = .true.
+      rij_ge_mw = .false.
+      ! call the born
+      call sborn(p_born, born)
+      amp_split_born(:) = amp_split(:)
+      wgt_born = amp_split_born(1)
+
+      ! call the EWsudakov
+      call sudakov_wrapper(p_born)
+      wgt_sud = 2d0*(amp_split_ewsud_lsc(1)+
+     $        amp_split_ewsud_ssc(1)+
+     $        amp_split_ewsud_xxc(1)+
+     $        amp_split_ewsud_par(1))
+      results(6) = wgt_sud
       return
 
       end

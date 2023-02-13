@@ -2106,7 +2106,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             ## TV: copy the event file as backup before starting reweighting
             event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
             event_path_backup = pjoin(self.me_dir, 'Events', self.run_name, 'events_orig.lhe.gz')
-            if os.path.exists(event_path):
+            if os.path.exists(event_path) and not os.path.exists(event_path_backup):
                 shutil.copyfile(event_path, event_path_backup)
 
             #########   START SINGLE CORE MODE ############

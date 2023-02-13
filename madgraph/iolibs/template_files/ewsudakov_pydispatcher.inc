@@ -16,7 +16,7 @@ def ewsudakov(pdgs, p, g):
     to match the fortran<>python convention"""
 
     p_transp =np.array([[pp[i] for pp in p] for i in range(4)], order='F')
-    res = np.array([0.,0.,0.], order='F')
+    res = np.array([0.,0.,0.,0.,0.,0.], order='F')
 
     pdg2ewsud_dict[pdgs].ewsudakov_py(p_transp,  g, res)
 
