@@ -52,9 +52,7 @@ c
       do i=1,nnn
          weights_info(i)=wwwi(i)
       enddo
-      ! Temporary fix to get rwgt in header
-      weights_info(2)='rwgt'
-      !
+     
       nwgt=nnn
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
@@ -225,7 +223,6 @@ C---CLUSTER THE EVENT
       enddo
       njet=0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
-      write(*,*) 'njet',njet
       do i=1,njet
          ptjet(i)=sqrt(pjet(1,i)**2+pjet(2,i)**2)
          if(i.gt.1)then
@@ -254,19 +251,14 @@ C---CLUSTER THE EVENT
         p_tj(i)=p_t(i)+pjet(i,1)
         p_hj(i)=p_h(i)+pjet(i,1)
       enddo
-      write(*,*) p_th
-      write(*,*) p_tth
       pt_th=dsqrt(p_th(1)**2 + p_th(2)**2)
       m_th=getinvm(p_th(4),p_th(1),p_th(2),p_th(3))
-      write(*,*) 'pak 1',m_th
       pt_tth=dsqrt(p_tth(1)**2 + p_tth(2)**2)
       m_tth=getinvm(p_tth(4),p_tth(1),p_tth(2),p_tth(3))
-      write(*,*) 'pak 2',m_tth
       pt_tj=dsqrt(p_tj(1)**2 + p_tj(2)**2)
       pt_hj=dsqrt(p_hj(1)**2 + p_hj(2)**2)
       dr_tj=getdr(p_t(4),p_t(1),p_t(2),p_t(3),pjet(4,1),pjet(1,1),pjet(2,1),pjet(3,1))
       dr_hj=getdr(p_h(4),p_h(1),p_h(2),p_h(3),pjet(4,1),pjet(1,1),pjet(2,1),pjet(3,1))
-
 
      
       var=1.d0

@@ -52,9 +52,6 @@ c
       do i=1,nnn
          weights_info(i)=wwwi(i)
       enddo
-      ! Temporary fix to get rwgt in header
-      weights_info(2)='rwgt'
-      !
       nwgt=nnn
 
 c Initialize histograms
@@ -64,20 +61,22 @@ c for the uncertainty estimate
       call set_error_estimation(0)
       nwgt_analysis=nwgt
       do i=1,1
-       l=(i-1)*11
-       call HwU_book(l+1,'total rate',1,0.5d0,1.5d0)
-       call HwU_book(l+2,'t rap   ', 20,-5d0,5d0)
-       call HwU_book(l+3,'tx rap  ', 20,-5d0,5d0)
-       call HwU_book(l+4,'t-tx pair rap ', 20,-3d0,3d0)
-       call HwU_book(l+5,'m t-tx',20,log10(100d0),log10(4000d0))
-       call HwU_book(l+6,'pt t',20,log10(1d0),log10(2000d0))
-       call HwU_book(l+7,'pt tx',20,log10(1d0),log10(2000d0))
-       call HwU_book(l+8,'pt t-tx',20,log10(1d0),log10(2000d0))
-       call HwU_book(l+9,'pt t-tx zoom',20,log10(1d0),log10(100d0))
-       call HwU_book(l+10,'m t-j',20,1d0,1000d0)
-       call HwU_book(l+11,'dr(t,j)',20,0d0,10d0)
+       l=(i-1)*14
+       call HwU_book(l+1,'total rate',   1,0.5d0,1.5d0)
+       call HwU_book(l+2,'t rap   ',    20,-5d0,5d0)
+       call HwU_book(l+3,'tx rap  ',    20,-5d0,5d0)
+       call HwU_book(l+4,'t-tx pair rap', 20,-3d0,3d0)
+       call HwU_book(l+5,'m t-tx',      20,log10(0.1d0),log10(5000d0))
+       call HwU_book(l+6,'pt t',        20,log10(0.1d0),log10(3000d0))
+       call HwU_book(l+7,'pt tx',       20,log10(0.1d0),log10(3000d0))
+       call HwU_book(l+8,'pt t-tx',     20,log10(0.1d0),log10(3000d0))
+       call HwU_book(l+9,'pt t-tx zoom',20,log10(0.1d0),log10(500d0))
+       call HwU_book(l+10,'m t-j',      20,0d0,1500d0)
+       call HwU_book(l+11,'dr(t,j)',    20,0d0,10d0)
+       call HwU_book(l+12,'pt(j1) ',    20,log10(0.1d0),log10(3000d0))
+       call HwU_book(l+13,'pt(j2) ',    20,log10(0.1d0),log10(3000d0)) 
+       call HwU_book(l+14,'pt(j3) ',    20,log10(0.1d0),log10(1000d0))
       enddo
-      write(*,*) 'finish'
  999  END
 
 C----------------------------------------------------------------------
@@ -104,8 +103,10 @@ C----------------------------------------------------------------------
       SUBROUTINE PYANAL(nnn,xww)
 C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
+c      implicit none
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
+c      implicit none
       DOUBLE PRECISION HWVDOT,PSUM(4)
       INTEGER ICHSUM,ICHINI,IHEP
       LOGICAL DIDSOF,flcuts,siq1flag,siq2flag,ddflag
@@ -135,15 +136,16 @@ C----------------------------------------------------------------------
       double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
 c
+      integer NMAX
       PARAMETER (NMAX=2000)
-      INTEGER NJET,JET(NMAX),IPOS(NMAX),njet_central,NN
+      INTEGER NJET,JET(NMAX),IPOS(NMAX),njet_central,NN,j
       DOUBLE PRECISION PALG,RFJ,SYCUT,PP(4,NMAX),PJET(4,NMAX),
      # PTJET(NMAX),ETAJET(NMAX),YJET(NMAX),pjet_new(4,nmax),
      # njdble,njcdble,y_central
 
-      double precision p_tj(1:4),m_tj,dr_tj
+      double precision p_tj(1:4),m_tj,dr_tj,getdr
 
-      write(*,*) 'start'
+
       if(nnn.eq.0)ww(1)=1d0
       do i=1,nnn
          ww(i)=xww(i)
@@ -154,12 +156,14 @@ c
          STOP
       ENDIF
 
+
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
          WRITE(*,*)'WARNING 111 IN PYANAL'
          GOTO 999
       ENDIF
+
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
       ENDDO
@@ -189,7 +193,7 @@ C FOUND AN ANTITOP; KEEP ONLY THE FIRST ON RECORD
 !              PP(I,NN)=PHEP(I,IHEP)
 !           ENDDO
 !        ENDIF
-        IF(ABS(ID).GT.100.AND.IST.EQ.1) THEN
+        IF(ABS(ID1).GT.100.AND.IST.EQ.1) THEN
            NN=NN+1
            IF (NN.GT.NMAX) STOP 'Too many particles [hadrons]!'
            DO I=1,4
@@ -198,7 +202,6 @@ C FOUND AN ANTITOP; KEEP ONLY THE FIRST ON RECORD
         ENDIF
 
   100 CONTINUE
-      write(*,*) 'number of partons found:',NN
       IF(IQ1*IQ2.EQ.0)THEN
          WRITE(*,*)'ERROR 501 IN PYANAL'
       ENDIF
@@ -212,8 +215,6 @@ C FOUND AN ANTITOP; KEEP ONLY THE FIRST ON RECORD
          pttx(IJ)=XPTQ(IJ)+XPTB(IJ)
       ENDDO
 
-      write(*,*) 'top top ',p_t
-      write(*,*) 'top xpqt',XPTQ
 
 C---CLUSTER THE EVENT
       palg = 1d0
@@ -227,8 +228,10 @@ C---CLUSTER THE EVENT
         jet(i)=0
       enddo
       njet=0
+
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
-      write(*,*) 'njet',njet
+      do i=1,njet
+      enddo
       do i=1,njet
          ptjet(i)=sqrt(pjet(1,i)**2+pjet(2,i)**2)
          if(i.gt.1)then
@@ -240,15 +243,21 @@ C---CLUSTER THE EVENT
          endif
       enddo
 
+      
       DO IJ=1,4
-         p_tj(IJ)=XPTQ(IJ)+pjet(IJ,1)
+         p_tj(IJ)=XPTQ(IJ)
+         if(njet.gt.0) p_tj(IJ)=p_tj(IJ)+pjet(IJ,1)
       ENDDO
-
+ 
+      
       
       m_tj = getinvm(p_tj(4),p_tj(1),p_tj(2),p_tj(3))
+
+      dr_tj=0d0
+      if (njet.gt.0) then
       dr_tj = getdr(XPTQ(4),XPTQ(1),XPTQ(2),XPTQ(3)
      $             ,pjet(4,1),pjet(1,1),pjet(2,1),pjet(3,1))
-      
+      endif
       mtt    = getinvm(pttx(4),pttx(1),pttx(2),pttx(3))
     
       pt_t   = dsqrt(p_t(1)**2 + p_t(2)**2)
@@ -259,9 +268,8 @@ C---CLUSTER THE EVENT
       yttx= getrapidity(pttx(4), pttx(3))
   
       var=1.d0
-      !if ((pt_t .ge. 200d0) .and. (pt_tx .ge. 200d0)) then
       do i=1,1
-         l=(i-1)*11
+         l=(i-1)*14
          call HwU_fill(l+1,1d0,www)
          call HwU_fill(l+2,yt,www)
          call HwU_fill(l+3,ytx,www)
@@ -271,11 +279,13 @@ C---CLUSTER THE EVENT
          if (pt_tx .gt. 0d0) call HwU_fill(l+7,dlog10(pt_tx),www)
          call HwU_fill(l+8,dlog10(pt_ttx),www)
          call HwU_fill(l+9,dlog10(pt_ttx),www)
-         call HwU_fill(l+10,m_tj,www)
-         call HwU_fill(l+11,dr_tj,www)
-      enddo
+         if(njet.gt.0) call HwU_fill(l+10,m_tj,www)
+         if(njet.gt.0) call HwU_fill(l+11,dr_tj,www)
+         if(njet.gt.0) call HwU_fill(l+12,dlog10(ptjet(1)),www)
+         if(njet.gt.1) call HwU_fill(l+13,dlog10(ptjet(2)),www)
+         if(njet.gt.2) call HwU_fill(l+14,dlog10(ptjet(3)),www)
+      enddo      
       call HwU_add_points
-      !endif
 c
  999  return
       end

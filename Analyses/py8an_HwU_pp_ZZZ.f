@@ -64,7 +64,6 @@ c for the uncertainty estimate
       xmi=40.d0
       xms=120.d0
 
-      write(*,*) 'at booking'
       do i=1,1
        l=(i-1)*26
         call HwU_book(l+ 1,'total rate    ',1,0.5d0,1.5d0)
@@ -195,7 +194,6 @@ C EFFECT, SO THROW THE EVENT AWAY
       IQ2=0
       NN=0
 
-      write(*,*) 'BEFORE LOOP'
       DO IHEP=1,NHEP
 C UNCOMMENT THE FOLLOWING WHEN REMOVING THE CHECK ON MOMENTUM 
 C        IF(IQ1*IQ2.EQ.1) GOTO 11
@@ -239,8 +237,6 @@ C        IF(IQ1*IQ2.EQ.1) GOTO 11
         pz2(mu) = phep(mu,i_max2)
       enddo
 
-      write(*,*) 'labda'
-
       do i=1,NHEP
       IST=ISTHEP(i)
       ID1=IDHEP(i)
@@ -255,7 +251,6 @@ C        IF(IQ1*IQ2.EQ.1) GOTO 11
         pz3(mu) = phep(mu,i_max3)
       enddo
 
-      write(*,*) 'befoire cluserting'
 C---CLUSTER THE EVENT
       palg = 1d0
       rfj  = 0.4d0
@@ -269,7 +264,6 @@ C---CLUSTER THE EVENT
       enddo
       njet=0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
-      write(*,*) 'njet',njet
       do i=1,njet
          ptjet(i)=sqrt(pjet(1,i)**2+pjet(2,i)**2)
          if(i.gt.1)then

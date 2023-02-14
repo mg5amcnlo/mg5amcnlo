@@ -53,9 +53,6 @@ c
       do i=1,nnn
          weights_info(i)=wwwi(i)
       enddo
-      ! Temporary fix to get rwgt in header
-      weights_info(2)='rwgt'
-      !
       nwgt=nnn
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
@@ -64,7 +61,6 @@ c for the uncertainty estimate
       call set_error_estimation(0)
       nwgt_analysis=nwgt
 
-      write(*,*) 'at booking'
       do i=1,1
        l=(i-1)*18
         call HwU_book(l+ 1,'total rate    ',1,0.5d0,1.5d0)
@@ -184,7 +180,6 @@ C EFFECT, SO THROW THE EVENT AWAY
       IQ2=0
       NN=0
 
-      write(*,*) 'BEFORE LOOP'
       DO IHEP=1,NHEP
 C UNCOMMENT THE FOLLOWING WHEN REMOVING THE CHECK ON MOMENTUM 
 C        IF(IQ1*IQ2.EQ.1) GOTO 11
@@ -224,7 +219,6 @@ C---CLUSTER THE EVENT
       enddo
       njet=0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
-      write(*,*) 'njet',njet
       do i=1,njet
          ptjet(i)=sqrt(pjet(1,i)**2+pjet(2,i)**2)
          if(i.gt.1)then
@@ -279,11 +273,7 @@ C---CLUSTER THE EVENT
          call HwU_fill(l+15,m_wpj,WWW)
          call HwU_fill(l+16,pt_wmj,WWW)
          call HwU_fill(l+17,m_wmj,WWW)
-
       call HwU_add_points
-
-
-c
  999  return
       end
 
