@@ -2239,9 +2239,9 @@ class DaskClusterBase(Cluster):
             if opt['stderr'] == None:
                 opt['stderr'] = subprocess.STDOUT
             if argument:
-                future = self.client.submit(misc.call, [prog] + argument,  **opt) #this should be using run as call is deprecated but only call is wrapped in misc
+                future = self.client.submit(misc.run, [prog] + argument,  **opt)
             else:
-                future = self.client.submit(misc.call, prog,  **opt) #this should be using run as call is deprecated but only call is wrapped in misc
+                future = self.client.submit(misc.run, prog,  **opt)
             self.results.append(future)
             return self.results[-1].key
         else:
