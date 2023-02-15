@@ -114,10 +114,6 @@ class Cluster(object):
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
-        if 'cluster_type' in opts:
-            if opts['cluster_type'] in ['dasklocal', 'daskslurm']:
-                coremem = float(str(opts['cluster_memory']).strip().strip('GiB'))
-                self.cluster_memory = f"{coremem*int(opts['nb_core'])}GiB"
 
         self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' in opts else 0
         self.cluster_retry_wait = float(opts['cluster_retry_wait']) if 'cluster_retry_wait' in opts else 300
