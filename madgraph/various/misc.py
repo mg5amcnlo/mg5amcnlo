@@ -946,18 +946,6 @@ def call(arg, *args, **opt):
         arg[0] = './%s' % arg[0]
         return subprocess.call(arg, *args, **opt)
 
-@check_system_error
-def run(arg, *args, **opt):
-    """
-    update to subprocess call
-    nice way to call an external program with nice error treatment 
-    """
-    try:
-        return subprocess.run(arg, *args, **opt)
-    except OSError:
-        arg[0] = './%s' % arg[0]
-        return subprocess.run(arg, *args, **opt) 
-
 @check_system_error()
 def Popen(arg, *args, **opt):
     """nice way to call an external program with nice error treatment"""

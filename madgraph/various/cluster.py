@@ -2197,9 +2197,9 @@ class DaskClusterBase(Cluster):
         super(DaskClusterBase, self).__init__(self, *args, **opt)
 
         if 'nb_core' in opt:
-            self.nb_core = opt['nb_core']
+            self.nb_core = int(opt['nb_core'])
         elif isinstance(args[0],int):
-            self.nb_core = args[0]
+            self.nb_core = int(args[0])
         else:
             raise ValueError("nb_core must be set")
 
@@ -2209,13 +2209,13 @@ class DaskClusterBase(Cluster):
             self.cluster_memory = 'auto' 
 
         if 'nb_workers' in opt:
-            self.nb_workers = opt['nb_workers']
+            self.nb_workers = int(opt['nb_workers'])
         else:
             # This will be checked again in DaskMPI
             self.nb_workers = self.nb_core
       
         if 'nb_threads_per_worker' in opt:
-            self.nb_threads_per_worker = opt['nb_threads_per_worker']
+            self.nb_threads_per_worker = int(opt['nb_threads_per_worker'])
         else:
             self.nb_threads_per_worker = 1   
 
@@ -2239,9 +2239,9 @@ class DaskClusterBase(Cluster):
             if opt['stderr'] == None:
                 opt['stderr'] = subprocess.STDOUT
             if argument:
-                future = self.client.submit(misc.run, [prog] + argument,  **opt)
+                future = self.client.submit(misc.call, [prog] + argument,  **opt)
             else:
-                future = self.client.submit(misc.run, prog,  **opt)
+                future = self.client.submit(misc.call, prog,  **opt)
             self.results.append(future)
             return self.results[-1].key
         else:
@@ -2299,7 +2299,6 @@ class DaskMPI(DaskClusterBase):
 
         # Wait for these workers and report
         self.client.wait_for_workers(n_workers=self.nb_workers)
-        self.client.cancel()
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 

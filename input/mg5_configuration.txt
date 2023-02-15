@@ -110,17 +110,12 @@ automatic_html_opening = False
 #!  0: single machine/ 1: cluster / 2: multicore
 run_mode = 1
 
-#! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2] Use for cluster run only
+#! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2|dasklocal|daskmpi] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
 #!  And size of the cluster (some part of the code can adapt splitting accordingly)
 cluster_type = dasklocal
 # cluster_queue = madgraph
-# cluster_size = 150
-
-#! For Dask style clusters we need to know the memory (per core), plese use XX.XXGiB no spaces it will 
-#! be scaled converted into dask frendly format at runtime. https://jobqueue.dask.org/en/latest/configuration-setup.html#gigabyte-vs-gibibyte
-#! Gib to GB is 1 to 1.074
-cluster_memory = 3.36GiB
+# cluster_size = 150 
 
 #! Path to a node directory to avoid direct writing on the central disk
 #!  Note that condor clusters avoid direct writing by default (therefore this
@@ -143,9 +138,31 @@ cluster_memory = 3.36GiB
 #! How much time to wait for the output file before resubmission/crash (filesystem can be very slow)
 # cluster_retry_wait = 300
 
-#! Nb_core to use (None = all) This is use only for multicore run
-#!  This correspond also to the number core used for code compilation for cluster mode
+#! For Multicore: Nb_core to use (None = all) This is use only for multicore run
+#! For Cluster: This correspond also to the number core used for code compilation for cluster mode
+#! For Dask Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
+#! and scheduler) there is no auto.
+#! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
 nb_core = 4
+
+#! Please note for dask clusters the LocalCluster is far more forgiving and usable on your local machine
+#! for daskmpi the submission script needs to be matched to your settings here or things will go wrong.
+#! it is possible to have the mpi script read the system envronment variables and autoconfigure to the job
+#! script but this limits the class to a single cluster submision type and if desired should be implemnted by
+#! subclassing daskmpi and overloading __init__
+
+#! Dask clusters, likely the defaults are the best option, see dask docs for more info
+#! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this must be (nb_core - 2)
+#! nb_thread_per_worker (None = 1) set the number of threads to 
+# nb_workers = 4
+# nb_threads_per_worker = 1 
+
+#! For Dask Clusters we need to know the memory (per core) 
+#! https://docs.dask.org/en/stable/deploying-python.html?highlight=localcluster#localcluster in bytes
+#! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html#dask_mpi.core.initialize
+#! Please use e.g. XGiB, XMB, X where X is an integer value, defalut is auto which splits system memory across workers
+#! Gib to GB is 1 to 1.074
+cluster_memory = 3700MB
 
 #! Pythia-PGS Package
 #!  relative path start from main directory
@@ -233,3 +250,4 @@ nb_core = 4
 #! Absolute paths to the config script in the bin directory of PineAPPL
 #! (to generate PDF-independent fast-interpolation grids).
 # pineappl = pineappl
+

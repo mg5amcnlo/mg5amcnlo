@@ -138,10 +138,10 @@
 #! How much time to wait for the output file before resubmission/crash (filesystem can be very slow)
 # cluster_retry_wait = 300
 
-#! Nb_core to use (None = all) This is use only for multicore run
-#! This correspond also to the number core used for code compilation for cluster mode
-#! For dask clusters this is the number of physical cores (note dask MPI uses two cores per job for the main script
-#! and scheduler)
+#! For Multicore: Nb_core to use (None = all) This is use only for multicore run
+#! For Cluster: This correspond also to the number core used for code compilation for cluster mode
+#! For Dask Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
+#! and scheduler) there is no auto.
 #! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
 # nb_core = None
 
@@ -152,10 +152,10 @@
 #! subclassing daskmpi and overloading __init__
 
 #! Dask clusters, likely the defaults are the best option, see dask docs for more info
-#! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this will be (nb_core - 2)
+#! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this must be (nb_core - 2)
 #! nb_thread_per_worker (None = 1) set the number of threads to 
 # nb_workers = None
-# nb_thread_per_worker = 1 
+# nb_threads_per_worker = 1 
 
 #! For Dask Clusters we need to know the memory (per core) 
 #! https://docs.dask.org/en/stable/deploying-python.html?highlight=localcluster#localcluster in bytes
