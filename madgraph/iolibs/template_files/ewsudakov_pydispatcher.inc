@@ -5,9 +5,16 @@ import numpy as np
 # update the python path
 sys.path.insert(0, '%(path)s')
 
+# the list of P0* directories
 pdir_list = [%(pdir_list)s]
 
+# a dictionary which maps pdgs, in the format ((initial), (sorted final))
+# and the corresponding f2py modules
 pdg2ewsud_dict = {%(pdg2sud)s}
+
+# a dictionary which maps pdgs, in the format ((initial), (sorted final))
+# and the unsorted version (corresponding to the ordering in the Pdirs) 
+original_pdg_list_dict = {%(pdgsorted)s}
 
 
 def ewsudakov(pdgs, p, g):

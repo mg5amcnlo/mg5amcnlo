@@ -4948,7 +4948,6 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
 
     def write_python_wrapper(self, fname):
         """write a wrapper to be able to call the Sudakov for a specific subfolder given its PDG"""
-
         
         template = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_pydispatcher.inc')).read()
@@ -4956,20 +4955,28 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         replace_dict = {}
         replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
         replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
-        replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2])) + \
+        replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
                 ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+
+        replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=False))) \
+                                                for dd in self.dirstopdg])
 
         outfile = open(fname ,'w')
         outfile.write(template % replace_dict)
         outfile.close()
 
-    def get_pdg_tuple(self, pdgs, nincoming):
+    def get_pdg_tuple(self, pdgs, nincoming, sortfinal):
         """write a tuple of 2 tuple, with the incoming particles unsorted
-        and the outgoing ones sorted
+        and the outgoing ones sorted if sortfinal = True
         """
         incoming = pdgs[:nincoming]
         outgoing = pdgs[nincoming:]
-        return (tuple(incoming), tuple(sorted(outgoing)))
+        if sortfinal:
+            return (tuple(incoming), tuple(sorted(outgoing)))
+        else:
+            return (tuple(incoming), tuple(outgoing))
 
 
     #===============================================================================
