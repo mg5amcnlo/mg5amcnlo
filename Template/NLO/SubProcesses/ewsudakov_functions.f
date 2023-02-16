@@ -793,7 +793,7 @@ c      end
         print*,"Strange: in l_a_over_b_sin there is 
      .          a very small but not zero mass. a=",
      .  a," b=",b
-        stop
+        !stop
       endif
 
       aok=a

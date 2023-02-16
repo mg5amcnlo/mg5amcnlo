@@ -1412,6 +1412,7 @@ class ReweightInterface(extended_cmd.Cmd):
             min_inv=10000000.0
             inv_dict={}
  
+            do_compute = True
             if (len(buff_event) == nexternal +1): # is an H-event
                 for ievt,evt in enumerate(buff_event):
                     # Find the smallest abs(inv) and the corresponding pair
@@ -1475,11 +1476,16 @@ class ReweightInterface(extended_cmd.Cmd):
                             event_to_sud = buff_event
                             n_part = nexternal+1
                             mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                        else:
+                            #do_compute = False
+                            do_compute= True
+                            
 
             elif (len(buff_event) == nexternal): # is an S-event
                     event_to_sud = buff_event
                     n_part = nexternal 
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    #do_compute = False
             else:
                 logger.critical('ERROR: neither H nor S event!')
                 logger.critical(buff_event)
@@ -1518,9 +1524,12 @@ class ReweightInterface(extended_cmd.Cmd):
             
             # Get the right Sudakov reweight factors
             gstr=event.aqcd*2.*pi
-            sorted_tag = (mapped_tag[0],tuple(sorted(list(mapped_tag[1]))))
+            sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
 
-            res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
+            if do_compute:
+                res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
+            else:
+                res = [1., -1., -1., -1., -1., -1.]
 
             # Do the reewightings
             sudrat0 = 1. + res[1]/res[0]
@@ -1544,6 +1553,7 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new1_only = w_orig * sudrat1_only
  
             return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
+                      
  
      
     def get_pdg_tuple(self, pdgs, nincoming):
