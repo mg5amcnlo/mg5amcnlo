@@ -162,6 +162,7 @@ c get info on beam and PDFs
       include "nexternal.inc"
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
+      include "genps.inc"
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
       double precision pi,zero
@@ -194,6 +195,11 @@ c get info on beam and PDFs
       logical firsttime
       data firsttime/.true./
 c
+      double precision R
+      double precision tmp
+      logical to_flip
+      integer fksfather_local
+      integer ipartner_lhe_local
       if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
       elseif (ickkw.eq.-1) then
@@ -204,6 +210,20 @@ c
 
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
+
+c     TODO ADD CONDITION ON THE SYMMETRY
+c     Symmetries here the momenta      
+      if(SYMMETRIC_BEAM.and.BEAM_SYMMETRY.eq.2d0)then
+         call ranmar(R)
+         if (R.gt.5d-1)then
+            to_flip = .true.
+         else
+            to_flip = .false.
+         endif
+      else
+         to_flip=.false.
+      endif
+      
 c
 c 'write_header_init' should be called after 'aqcd' has been set,
 c because it includes a call to 'setrun', which resets the value of
@@ -215,10 +235,30 @@ c alpha_s to the one in the param_card.dat (without any running).
       ievent=66
 c
       if(AddInfoLHE)then
+         if(to_flip)then
+            fksfather_local = fksfather_lhe(nFKSprocess)
+            ipartner_lhe_local = ipartner_lhe(nFKSprocess)
+            if (fksfather_local.eq.1) then
+               fksfather_local =2
+            else if (fksfather_local.eq.2) then
+               fksfather_local =1
+            endif
+             if (ipartner_lhe_local.eq.1) then
+	       ipartner_lhe_local =2
+	    else if (ipartner_lhe_local.eq.2) then
+	       ipartner_lhe_local =1
+            endif
+         else
+            fksfather_local = fksfather_lhe(nFKSprocess)
+            ipartner_lhe_local = ipartner_lhe(nFKSprocess)
+         endif
+
+
+         
         if(.not.doreweight)then
            write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
-     &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
-     &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &          ,jfks_lhe(nFKSprocess),fksfather_local
+     &          ,ipartner_lhe_local,scale1_lhe(nFKSprocess)
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
      &          ,zero,zero,zero
         else
@@ -230,8 +270,8 @@ c
           endif
           kwgtinfo= iwgtinfo
           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
-     &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
-     &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &         ,jfks_lhe(nFKSprocess),fksfather_local
+     &         ,ipartner_lhe_local,scale1_lhe(nFKSprocess)
      &         ,scale2_lhe(nFKSprocess),kwgtinfo,nexternal,iwgtnumpartn
      &         ,zero,zero,zero,zero,zero
         endif

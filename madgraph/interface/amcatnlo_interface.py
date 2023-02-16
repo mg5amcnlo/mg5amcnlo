@@ -527,8 +527,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # initialize the writer
         if self._export_format in ['NLO']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
-                      output_type='amcatnlo',group_subprocesses=group_processes)
-            
+                      output_type='amcatnlo',group_subprocesses=group_processes,
+                      cmd_options=dict({tuple(arg[2:].split("=",1)) if "=" in arg else (arg[2:], True) 
+                              for arg in args if arg.startswith("--")}))
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
@@ -671,23 +672,38 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             # Save processes instances generated
             self.born_processes_for_olp = []
             self.born_processes = []
+
+
+            to_del = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
-                    calls = calls + \
-                            self._curr_exporter.generate_directories_fks(me, 
+                    nb_call = self._curr_exporter.generate_directories_fks(me, 
                             self._curr_helas_model, 
                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                             path,self.options['OLP'])
-                    self._fks_directories.extend(self._curr_exporter.fksdirs)
-                    self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
-                    self.born_processes.append(me.born_matrix_element.get('processes'))
+                    if nb_call:
+                        calls += nb_call
+                        self._fks_directories.extend(self._curr_exporter.fksdirs)
+                        self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
+                        self.born_processes.append(me.born_matrix_element.get('processes'))
+                    else: 
+                        to_del.append(ime)
                 else:
                     glob_directories_map.append(\
                             [self._curr_exporter, me, self._curr_helas_model, 
                              ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                              path, self.options['OLP']])
+
+            if to_del:
+
+                import copy
+                curr_matrix_elements = copy.copy(self._curr_matrix_elements.get('matrix_elements'))
+                for ime,me in enumerate(self._curr_matrix_elements.get('matrix_elements')):
+                    if ime in to_del:
+                        curr_matrix_elements.remove(me)
+                self._curr_matrix_elements.set('matrix_elements', curr_matrix_elements)
 
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c

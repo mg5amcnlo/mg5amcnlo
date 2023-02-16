@@ -447,6 +447,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         if not self.model:
             self.model = matrix_element.get('processes')[0].get('model')
+
+
+        if 'symmetric_beam' in self.cmd_options:
+           ids = [l.get('id') for l in proc.get('legs') if not l.get('state')]
+           if len(ids) == 2:
+                id1, id2 = ids
+                if id1 > id2:
+                    logger.info("directory removed by symmetric_beam option")
+                    return 0
         
         cwd = os.getcwd()
         try:
@@ -524,7 +533,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ngraphs = matrix_element.born_matrix_element.get_number_of_amplitudes()
         ncolor = max(1,len(matrix_element.born_matrix_element.get('color_basis')))
         self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
-                         ncolor,maxflow,fortran_model)
+                         ncolor,maxflow,fortran_model, matrix_element)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number=self.write_configs_and_props_info_file(
@@ -1326,15 +1335,35 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(lines)
 
 
-    def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
+    def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model,
+                    matrix_element):
         """writes the genps.inc file
         """
+
+
         lines = []
         lines.append("include 'maxparticles.inc'")
         lines.append("include 'maxconfigs.inc'")
         lines.append("integer maxproc,ngraphs,ncolor,maxflow")
         lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
                      (maxproc,ngraphs,ncolor,maxflow))
+
+        if "symmetric_beam" in self.cmd_options:
+            lines.append("logical symmetric_beam")
+            lines.append("data symmetric_beam /.true./")
+            lines.append("double precision beam_symmetry")
+            proc =  matrix_element.born_matrix_element
+            next, ninit = proc.get_nexternal_ninitial()
+            if ninit == 2:
+                id1,id2 = [l.get('id') for l in  proc.get('processes')[0].get('legs')[:2]]
+                if id1 == id2:
+                    symfact = 1
+                else:
+                    symfact = 2
+            else:
+                symfact = 1 
+            lines.append("data beam_symmetry /%iD0/" % symfact)
+
         writer.writelines(lines)
 
 

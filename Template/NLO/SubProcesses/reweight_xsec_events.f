@@ -274,7 +274,8 @@ c Keep track of the accumulated results:
 c Write event to disk:
          call write_lhef_event(ofile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff, .false.)
+         ! last enty say to not use symmetry on initial state
          
       enddo
       call deallocate_weight_lines

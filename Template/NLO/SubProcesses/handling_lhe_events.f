@@ -641,14 +641,17 @@ c
 
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff, flip)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,*),VTIMUP(*),SPINUP(*)
+     #PUP(5,*),VTIMUP(*),SPINUP(*)
+      logical flip
+      double precision tmp
+      integer itmp
       character*140 buff
-      integer ifile,i,kk
+      integer ifile,i,kk,k
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -668,6 +671,41 @@ c RF: don't use the event_id:
       logical do_rwgt
       event_id = -99
 c
+      if(flip)then
+         ! flip id information
+         itmp =  IDUP(1)
+         IDUP(1) = IDUP(2)
+         IDUP(2) = itmp
+         ! flip colour information
+         itmp = ICOLUP(1,1)
+         ICOLUP(1,1) = ICOLUP(1,2)
+         ICOLUP(1,2) = itmp
+         itmp = ICOLUP(2,1)
+	 ICOLUP(1,1) = ICOLUP(2,2)
+	 ICOLUP(2,2) = itmp
+         ! flip mass information (should not be relevant)
+         tmp = PUP(5,1)
+         PUP(5,1) = PUP(5,2)
+         PUP(5,2) = PUP(5,1)
+         ! flip spin information (should not be relevant)
+         itmp = spinup(1)
+         spinup(1) = spinup(2)
+         spinup(2) = itmp
+         ! flip z direction
+         do i =1, NUP
+            pup(3,i) = -pup(3,i)
+         enddo
+c     now need to flip momenta of particle 1 and 2
+         do i=1,4
+            tmp = pup(i,1)
+            pup(i,1) = pup(i,2)
+            pup(i,2) = tmp
+         enddo
+         ! note buff information (#aMatNLO line) is/should be already flipped
+      endif
+
+
+      
       do_rwgt = do_rwgt_scale .or. do_rwgt_pdf .or. store_rwgt_info
       if (event_id.ge.0) then
          event_id=event_id+1
@@ -736,8 +774,16 @@ c
      &           ,n_mom_conf, nint(wgtcpower)
             do i=1,n_mom_conf
                do j=1,mexternal
+                  k=j
+                  if(flip.and.j.le.2)then
+                     if (j.eq.1)then
+                        k = 2
+                     else
+                        k=1
+                     endif
+                  endif
                   write (ifile,'(4(1x,d21.15))')
-     &                 (momenta_str(ii,j,i),ii=0,3)
+     &                 (momenta_str(ii,k,i),ii=0,3)
                enddo
             enddo
             do i=1,n_ctr_found

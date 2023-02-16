@@ -231,7 +231,13 @@ c Set the minimal tau = x1*x2.
       call set_tau_min()
 c
       xjac0=1d0
-      xpswgt0=1d0
+c
+c     initialise the weight to one
+c     if code generated with --beam_symmetry this
+c     number can be set to 2d0 if the matrix-element is not for identical parton
+c      (like uu~) to compensate for the missing symmetric directory (i.e. u~u)      
+      xpswgt0=beam_symmetry
+      
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Generate Bjorken x's if need be and update jacobian c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
