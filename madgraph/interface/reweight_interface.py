@@ -581,7 +581,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 output[(name_tag,rwgttype)] = lhe_parser.EventFile(pjoin(base,'rwgt_events%s_%s.lhe.gz' %(rwgttype,tag_name)), 'w')
                 #write the banner to the output file
                 self.banner.write(output[(name_tag,rwgttype)], close_tag=False)
-                
+
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
@@ -1221,7 +1221,6 @@ class ReweightInterface(extended_cmd.Cmd):
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
 
-
         logger.info('starts to compute weight for events with the following modification to the param_card:')
         logger.info(card_diff.replace('\n','\nKEEP:'))
         try:
@@ -1235,7 +1234,6 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             tag_name = 'rwgt_%s' % rewgtid
 
-                
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
@@ -1255,7 +1253,6 @@ class ReweightInterface(extended_cmd.Cmd):
                             module.change_para(name, value)
 #                    misc.sprint("recompute module")
                     module.update_all_coup()
-                        
         return param_card_iterator, tag_name
 
         
@@ -1480,7 +1477,6 @@ class ReweightInterface(extended_cmd.Cmd):
                             #do_compute = False
                             do_compute= True
                             
-
             elif (len(buff_event) == nexternal): # is an S-event
                     event_to_sud = buff_event
                     n_part = nexternal 
@@ -1511,21 +1507,36 @@ class ReweightInterface(extended_cmd.Cmd):
             
             # Set all light quarks and lepton masses to zero in event file
             self.set_final_jet_mass_to_zero(event_to_sud)
-
             # Set finally all initial masses to zero rather than the masses in the event files
             self.set_initial_mass_to_zero(event_to_sud)
-
             event_to_sud.check_kinematics_only()
 
-            # Read in the event momenta into np array
-            p_in = np.zeros(shape=(n_part, 4))
-            for i,el in enumerate(event_to_sud):
-                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
-            
-            # Get the right Sudakov reweight factors
             gstr=event.aqcd*2.*pi
             sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
 
+            # Read in the event momenta into np array in the order which is defined in the process directory
+            perm = []
+            i = 1
+            for r in mapped_order[1]:
+                if not list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r) in perm:
+                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r))
+                else:
+                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r)+i)
+                    i += 1
+            order = dict((i,j) for i,j in enumerate(perm))
+            event_to_sud_order = copy.deepcopy(event_to_sud)
+            event_to_sud_order[:len(mapped_tag[0])] =  event_to_sud[:len(mapped_tag[0])]
+            for r in order.keys():
+                event_to_sud_order[r+len(mapped_tag[0])] = event_to_sud[order[r]+len(mapped_tag[0])]
+            p_in = np.zeros(shape=(n_part, 4))
+            for i,el in enumerate(event_to_sud_order):
+                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
+            mapped_tag, mapped_order = event_to_sud_order.get_tag_and_order()
+            if list(sud_mod.original_pdg_list_dict[sorted_tag][1]) != mapped_order[1]:
+                logger.critical('ERROR: order in particle momenta does not match MG convention!')
+                sys.exit(3)
+
+            # Get the right Sudakov reweight factors
             if do_compute:
                 res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
             else:
