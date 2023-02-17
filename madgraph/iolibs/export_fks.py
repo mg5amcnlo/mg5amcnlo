@@ -1348,10 +1348,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
                      (maxproc,ngraphs,ncolor,maxflow))
 
+        lines.append("logical symmetric_beam")
+        lines.append("double precision beam_symmetry")
         if "symmetric_beam" in self.cmd_options:
-            lines.append("logical symmetric_beam")
             lines.append("data symmetric_beam /.true./")
-            lines.append("double precision beam_symmetry")
             proc =  matrix_element.born_matrix_element
             next, ninit = proc.get_nexternal_ninitial()
             if ninit == 2:
@@ -1363,6 +1363,9 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             else:
                 symfact = 1 
             lines.append("data beam_symmetry /%iD0/" % symfact)
+        else:
+            lines.append("data symmetric_beam /.false./")
+            lines.append("data beam_symmetry /1D0/")
 
         writer.writelines(lines)
 

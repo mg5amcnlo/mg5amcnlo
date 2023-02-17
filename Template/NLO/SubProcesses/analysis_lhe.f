@@ -188,7 +188,7 @@ c --- prepare the buffer information
 c --- write the event
       call write_lhef_event(41,
      &     npart,IDPRUP,wgts(1),0d0,0d0,0d0,
-     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &     IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff, .false.)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       end

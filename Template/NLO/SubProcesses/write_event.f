@@ -312,7 +312,7 @@ c********************************************************************
       enddo
       call write_lhef_event(lunlhe,
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff, to_flip)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       return
