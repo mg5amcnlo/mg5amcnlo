@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.14 (02/02/2023)
+     OM: Fix some "output aloha" command, where some routine where not defined
+     OM: Fix a crash in the multicore mode when 0 job was needed. (introduced in 2.9.13)
+
 2.9.13 (01/12/2022)
      OM: Fixing display diagrams on MacOS Catalina
      OM: fixing issue within reweighting module where runname was not respected during scan
