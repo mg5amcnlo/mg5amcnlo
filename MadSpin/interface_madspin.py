@@ -683,7 +683,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+        if os.path.exists(pjoin(self.options['curr_dir'],'decayed_events.lhe')): 
+            misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
+        elif self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'],'decayed_events.lhe')): 
+            misc.gzip(pjoin(self.options['ms_dir'],'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
