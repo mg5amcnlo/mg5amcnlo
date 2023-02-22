@@ -779,12 +779,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         if self.options['seed']:
             #seed is specified need to use that one:
-            open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.options['seed'])
-            #remove all ranmar_state
-            for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
-                                                        self.options['ms_dir']):
-                os.remove(name)    
-        
+            try:
+                open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.options['seed'])
+                #remove all ranmar_state
+                for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
+                                                            self.options['ms_dir']):
+                    os.remove(name)    
+                self.readonly = False
+            except PermissionError:
+                self.readonly = True
+                open('seeds.dat','w').write('%s\n'%self.options['seed']) 
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
         self.cross = generate_all.cross
@@ -802,7 +806,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+        if os.path.exists(pjoin(self.options['curr_dir'],'decayed_events.lhe')):
+            misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
+        else:
+            curr_dir = os.path.dirname(self.inputfile)
+            misc.gzip(pjoin(curr_dir, 'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
