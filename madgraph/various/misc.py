@@ -1870,7 +1870,28 @@ class EasterEgg(object):
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
-    special_banner = {(4,5): May4_banner}
+    Zcommezorglub =  "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M::::::::::M       M::::::::::M                          *\n" + \
+        "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
+        "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
+        "* M::::::M   M:::::::M   M::::::M                          *\n" + \
+        "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
+        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M                          *\n" + \
+        "* MMMMMMMM               MMMMMMMM                          *\n" + \
+        "*                                                          *\n" + \
+        "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
+
+
+
+
+
+    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -1922,7 +1943,26 @@ class EasterEgg(object):
         if MADEVENT:
             return
         import madgraph.interface.madgraph_interface as madgraph_interface
-        madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
+        if date == (14,10):
+            def flip(text):
+                new_text = []
+                for line in text.split('\n'):
+                    new_line = []
+                    for word in line.split(' '):
+                        if "%" in word:
+                            new_line.append(word)
+                            continue
+                        new_line.append(''.join(list(reversed(list(word)))))
+                    new_text.append(' '.join(new_line))
+                return '\n'.join(new_text)
+
+            madgraph_interface.CmdExtended.intro_banner= flip(self.default_banner_1) + \
+                                                        self.special_banner[date] + \
+                                                        flip(self.default_banner_2) #+ \
+                                                        #"\n* homage to Franquin (text above in zorgland)              *" +\
+                                                        #"\n************************************************************"
+        else:
+            madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
 
     def call_apple(self, msg):
