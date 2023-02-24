@@ -120,3 +120,9 @@ endif
 define CHECK_MG5AMC_VERSION
 python -c 'import re; from distutils.version import StrictVersion; print StrictVersion("$(MG5AMC_VERSION)") >= StrictVersion("$(1)") if re.match("^[\d\.]+$$","$(MG5AMC_VERSION)") else True;'
 endef
+
+# Flags to make API run
+# TODO: need to check again later
+FFLAGS+= -fno-stack-protector
+CFLAGS+= -fno-stack-protector
+CXXFLAGS+= -fno-stack-protector
