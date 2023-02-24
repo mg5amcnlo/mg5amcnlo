@@ -4,6 +4,7 @@ c     Front to ranmar which allows user to easily
 c     choose the seed.
 c------------------------------------------------------
       implicit none
+      include 'nexternal.inc'
 c
 c     Arguments
 c
@@ -23,6 +24,13 @@ c     18/6/2012 tjs promoted to integer*8 to avoid overflow for iseed > 60K
 c------
       integer*8       iseed
       common /to_seed/iseed
+
+      double precision Rstore(3*nexternal)
+      integer mode(3*nexternal)
+      integer r_used
+      logical use_external_random_number
+      common/external_random/ Rstore, use_external_random_number, r_used, mode
+      
 c
 c     Data
 c
@@ -31,6 +39,16 @@ c
 c-----
 c  Begin Code
 c-----
+
+      if(use_external_random_number)then
+         r_used = r_used+1
+         x = Rstore(r_used)
+         mode(r_used) = ii
+         x = a+x*(b-a)
+         return
+      endif
+
+
       if (init .eq. 1) then
          init = 0
          call get_offset(ioffset)
@@ -187,6 +205,31 @@ c-----
  25   iseed = 0
       end
 
+
+      subroutine ranmar_api(rvec, ii)
+      include 'nexternal.inc'
+      double precision rvec
+      integer ii
+
+      double precision Rstore(3*nexternal)
+      integer r_used
+      logical use_external_random_number
+      integer mode(3*nexternal)
+      common/external_random/ Rstore, use_external_random_number, r_used, mode
+
+      if(use_external_random_number)then
+         r_used = r_used+1
+         rvec = Rstore(r_used)
+         mode(r_used) = ii
+c         write(*,*) 'random number used (not p)', r_used, rvec
+         return
+      endif
+
+      call ranmar(rvec)
+      return
+      end
+      
+      
       subroutine ranmar(rvec)
 *     -----------------
 * universal random number generator proposed by marsaglia and zaman
@@ -196,6 +239,24 @@ c-----
       common/ raset1 / ranu(97),ranc,rancd,rancm
       common/ raset2 / iranmr,jranmr
       save /raset1/,/raset2/
+
+      include 'nexternal.inc'
+      
+      double precision Rstore(3*nexternal)
+      integer r_used
+      logical use_external_random_number
+      integer mode(3*nexternal)
+      common/external_random/ Rstore, use_external_random_number, r_used, mode
+      
+      if(use_external_random_number)then
+         r_used = r_used+1
+         rvec = Rstore(r_used)
+         mode(r_used) = 1
+c         write(*,*) 'random number used (not p)', r_used, rvec
+         return
+      endif
+
+      
       uni = ranu(iranmr) - ranu(jranmr)
       if(uni .lt. 0d0) uni = uni + 1d0
       ranu(iranmr) = uni

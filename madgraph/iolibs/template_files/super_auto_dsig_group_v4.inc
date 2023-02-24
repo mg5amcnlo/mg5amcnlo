@@ -253,7 +253,7 @@ c     Cannot make a selection with all PDFs to zero, so we return now
 	  endif
 
 C     Perform the selection
-      CALL RANMAR(R)
+      CALL RANMAR_API(R)
 
 C     It is important to cache the status before adding any entries to this grid in this
 C     routine since it might change it
