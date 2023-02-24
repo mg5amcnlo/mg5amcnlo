@@ -1098,7 +1098,7 @@ c      Begin code
 c
 C     Fetch a random number bewteen 0.0 and 1.0
 c     The fourth argument is not used and therefore a dummy
-      dummy = 0
+      dummy = 2
       call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
 C     Pick a point using the DiscreteSampler module
       CALL DS_get_point(dim_name, rdm, picked_bin, jacobian, 'norm') 
@@ -1123,6 +1123,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'nexternal.inc'
 c
 c     Arguments
 c
@@ -1168,6 +1169,12 @@ c
       integer            lastbin(maxdim)
       common /to_lastbin/lastbin
 
+      double precision Rstore(3*nexternal)
+      integer r_used
+      logical use_external_random_number
+      integer mode(3*nexternal)
+      common/external_random/ Rstore, use_external_random_number, r_used, mode
+      
 c-----
 c  Begin Code
 c-----
@@ -1197,12 +1204,12 @@ c     Line which allows us to keep choosing same x
 c
 c         if (swidth(j) .ge. 0) then
          if (nzoom .le. 0) then
-            call ntuple(ddum(j), xbin_min,xbin_max, j, ipole)
+            call ntuple(ddum(j), xbin_min,xbin_max, j+100, ipole)
          else
 c            write(*,*) 'Reusing num',j,nzoom,tx(2,j)
 
             call ntuple(ddum(j),max(xbin_min,dble(int(tx(2,j)))),
-     $           min(xbin_max,dble(int(tx(2,j))+1)),j,ipole)
+     $           min(xbin_max,dble(int(tx(2,j))+1)),j+100,ipole)
 
             if(max(xbin_min,dble(int(tx(2,j)))).gt.
      $           min(xbin_max,dble(int(tx(2,j))+1))) then
@@ -1231,6 +1238,7 @@ c            ddum(j) = tx(2,j)                 !Use last value
          stop
       endif
 
+
       im = ddum(j)
       if (im.ge.ng)then
          im = ng -1
@@ -1246,6 +1254,7 @@ c------
 c
 c     New method of choosing x from bins
 c
+c      if(.not.use_external_random_number)then
       if (ip .eq. 1) then         !This is in the first bin
          xo = grid(2, ip, ij)-xgmin
          x = grid(2, ip, ij) - xo * (dble(ip) - ddum(j))
@@ -1253,6 +1262,10 @@ c
          xo = grid(2, ip, ij)-grid(2,im,ij)
          x = grid(2, ip, ij) - xo * (dble(ip) - ddum(j))
       endif
+c      else
+c         x = ddum(j)
+c     endif
+      
 c
 c     Now we transform x if there is a B.W., S, or T  pole
 c
@@ -1270,6 +1283,7 @@ c     to the fact that the grids are required to be separated by 1e-14. Since
 c     double precision is about 18 digits, we expect things to agree to
 c     3 digit accuracy.
 c
+      if(.not.use_external_random_number)then
       if (abs(ddum(j)-xbin(x,ij))/(ddum(j)+1d-22) .gt. 1e-3) then
          if (icount .lt. 5) then
             write(*,'(a,i4,2e14.6,1e12.4)')
@@ -1285,9 +1299,10 @@ c
 c         write(*,'(a,4i4,2f24.16,1e10.2)') 'Bad x',ij,int(xbin_min),ip,
 c     &        int(xbin_max),xmin,x,xmax-xmin
       endif
-
+      endif
       wgt = wgt * xo * dble(xbin_max-xbin_min)
-c      print*,'Returning x',ij,ipole,j,x
+c      endif
+
       end
 
       subroutine sample_get_wgt(wgt, x, j, ipole, xmin, xmax)

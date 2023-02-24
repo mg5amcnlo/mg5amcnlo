@@ -135,7 +135,7 @@ C     Continue only if IMODE is 0, 4 or 5
 			RETURN
 		 ENDIF
 C     Select a flavor combination (need to do here for right sign)
-         CALL RANMAR(R)
+         CALL RANMAR_API(R)
          IPSEL=0
          DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
             IPSEL=IPSEL+1
