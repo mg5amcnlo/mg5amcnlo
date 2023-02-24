@@ -173,7 +173,7 @@ class CmdExtended(cmd.Cmd):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
