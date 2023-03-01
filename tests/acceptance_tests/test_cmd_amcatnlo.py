@@ -769,7 +769,6 @@ class MECmdShell(IOTests.IOTestManager):
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
-        # warning, delta may not be compatible with python 2.6 
         try:
             self.assertAlmostEqual(6675.0, cross_section,delta=50)
         except TypeError:

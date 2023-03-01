@@ -35,8 +35,8 @@ import sys
 from six.moves import range
 from six.moves import input
 
-if sys.version_info[1] < 7:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.7/3.7 or later.\n\
+if sys.version_info < (3, 7):
+    sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
                Please upgrate your version of python.')
 
 import glob

@@ -5844,8 +5844,8 @@ if '__main__' == __name__:
     # This can ONLY run a single command !!
     import sys
 
-    if sys.version_info[1] < 7:
-        sys.exit('MadGraph5_aMc@NLO works only with python 2.7 or python3.7 and later.\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph5_aMc@NLO works only with python 3.7 and later.\n'+\
                'Please upgrade your version of python or specify a compatible version.')
 
     import os

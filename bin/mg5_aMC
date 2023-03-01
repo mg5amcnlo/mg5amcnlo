@@ -22,17 +22,14 @@ start = time.time()
 and call immediately the command line interface scripts"""
 
 import sys
-if sys.version_info[0] == 2:
-    sys.exit("MadGraph5_aMC@NLO works only with python 3.7 (and later).\n"+\
-             "  You are currently using Python2.%s. Please use a more recent version of Python." % sys.version_info[1])
-elif  sys.version_info[1] < 7:
-    sys.exit("MadGraph5_aMC@NLO works only with python 3.7 (and later).\n"+\
-              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1]) 
+if sys.version_info < (3, 7):
+   sys.exit('MadGraph5_aMC@NLO works with python 3.7 or higher.\n\
+              Please upgrade your version of python.')
     
 try:
     import six
 except ImportError:
-    message = 'madgraph requires the six module. The easiest way to install it is to run "pip%s install six --user"\n' % (sys.version_info[0] if sys.version_info[0]==3 else '')
+    message = 'madgraph requires the six module. The easiest way to install it is to run "python -m pip install six --user"\n'
     message += 'in case of problem with pip, you can download the file at https://pypi.org/project/six/ . It has a single python file that you just need to put inside a directory of your $PYTHONPATH environment variable.'
     sys.exit(message)
 
@@ -78,10 +75,6 @@ if __debug__ and not options.debug and \
 import logging
 import logging.config
 import madgraph.interface.coloring_logging
-
-if sys.version_info[0] ==2:
-    logging.warning("\033[91mpython2 support will be removed in last quarter 2021. If you use python2 due to issue with Python3, please report them on https://bugs.launchpad.net/mg5amcnlo\033[0m")
-
 
 if ' ' in os.getcwd():
     logging.warning("\033[91mPath does contains spaces. We advise that you change your current path to avoid to have space in the path.\033[0m")

@@ -7345,8 +7345,8 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6, 2.7 or python 3.7 or later).\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph/MadEvent 5 works only with python 3.7 or later).\n'+\
                'Please upgrate your version of python.')
 
     import os
