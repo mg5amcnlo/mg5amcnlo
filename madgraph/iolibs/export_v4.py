@@ -2032,17 +2032,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             f2py_compiler = default_compiler['f2py']
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
-        elif sys.version_info[1] == 6:
-            if misc.which('f2py-2.6'):
-                f2py_compiler = 'f2py-2.6'
-            elif misc.which('f2py2.6'):
-                f2py_compiler = 'f2py2.6'
-        elif sys.version_info[1] == 7:
-            if misc.which('f2py-2.7'):
-                f2py_compiler = 'f2py-2.7'
-            elif misc.which('f2py2.7'):
-                f2py_compiler = 'f2py2.7'            
-        
+
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
         

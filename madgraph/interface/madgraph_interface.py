@@ -1547,17 +1547,6 @@ This will take effect only in a NEW terminal
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
 
-        if args[0] in ['low_mem_multicore_nlo_generation']:
-            if args[1]:
-                if sys.version_info[0] == 2:
-                    if  sys.version_info[1] == 6:
-                        raise Exception('python2.6 does not support such functionalities please use python2.7')
-                #else:
-                #    raise Exception('python3.x does not support such functionalities please use python2.7')
-        
-
-
-
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman', 'axial']:
                 raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')

@@ -1889,11 +1889,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
-            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
-                if input.endswith('.gz'):
-                    misc.gunzip(input)
-                    input = input[:-3]
-                    
+
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
