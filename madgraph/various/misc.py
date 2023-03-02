@@ -15,7 +15,6 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import contextlib
 import itertools
