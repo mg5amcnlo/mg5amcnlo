@@ -16,7 +16,6 @@
 """ This is the main script in order to generate events in MadEvent """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 import os
 import subprocess 

@@ -2,7 +2,6 @@
 
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 from madgraph.interface import reweight_interface
 from six.moves import map
 from six.moves import range
