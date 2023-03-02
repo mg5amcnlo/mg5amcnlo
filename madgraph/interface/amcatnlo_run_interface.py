@@ -4630,10 +4630,8 @@ RESTART = %(mint_mode)s
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
-        misc.sprint(exe, os.getcwd(), self.me_dir)
         for i, evt_file in enumerate(evt_files):
             path, evt = os.path.split(evt_file)
-            misc.sprint(path, evt, exe)
             if self.readonly:
                 Sdir = '.'
                 exe = pjoin(self.me_dir, 'SubProcesses', 'reweight_xsec_events.local')
@@ -4813,7 +4811,6 @@ RESTART = %(mint_mode)s
 
     def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
-        misc.sprint("phaa")
         self.ijob = 0
         if run_type != 'shower':
             self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
@@ -4823,7 +4820,6 @@ RESTART = %(mint_mode)s
                         Pdirfull = pjoin(self.me_dir, 'SubProcesses', Pdir)
                         if self.readonly:
                                 Pdirfull = Pdir
-                        misc.sprint(job, args, Pdirfull)
                         self.run_exe(job, args, run_type, cwd=Pdirfull)
             if self.cluster_mode == 2:
                 time.sleep(1) # security to allow all jobs to be launched
@@ -5101,7 +5097,6 @@ RESTART = %(mint_mode)s
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
-        misc.sprint(mode, options)
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
@@ -5692,7 +5687,6 @@ class GridPackNLOCmd(aMCatNLOCmd):
         """Update random number seed with the value from the gridpack. 
         If this is 0, update the number according to a fresh one"""
         iseed = self.run_card['iseed']
-        misc.sprint([iseed, int(self.random_orig)])
         assert(iseed==int(self.random_orig))
 
         if iseed == 0:
@@ -5702,8 +5696,6 @@ class GridPackNLOCmd(aMCatNLOCmd):
         randinit.close()              
 
     def compile(self, *args, **opts):
-        misc.sprint(args)
-        misc.sprint(opts)
         self.run_card['nevents'] = self.nb_event
         self.run_card['iseed'] = self.random
 

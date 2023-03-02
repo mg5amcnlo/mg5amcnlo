@@ -837,7 +837,7 @@ class MultiCore(Cluster):
                     raise self.fail_msg
                 elif isinstance(self.fail_msg, str):
                     raise Exception(self.fail_msg)
-                else:
+                elif self.fail_msg:
                     misc.sprint(self.fail_msg)
                     six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
             # reset variable for next submission
