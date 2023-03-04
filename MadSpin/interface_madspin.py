@@ -786,7 +786,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                             self.options['ms_dir']):
                     os.remove(name)    
                 self.readonly = False
-            except PermissionError:
+            except (PermissionError,FileNotFoundError):
                 self.readonly = True
                 open('seeds.dat','w').write('%s\n'%self.options['seed']) 
         generate_all.ending_run()

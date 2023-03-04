@@ -2301,7 +2301,7 @@ class decay_all_events(object):
         if self.options['ms_dir']:
             try:
                 self.outputfile = open(pjoin(self.options['curr_dir'],'decayed_events.lhe'), 'w')
-            except PermissionError:
+            except (PermissionError, FileNotFoundError):
                 self.outputfile = open('decayed_events.lhe', 'w')
                 self.readonly = True
                 self.setupseed_forreadonly(self.options['seed'])
@@ -3521,7 +3521,7 @@ class decay_all_events(object):
                         try:
                             ranmar_file=pjoin(path,'ranmar_state.dat')
                             ranmar=open(ranmar_file, 'w')
-                        except PermissionError:
+                        except (PermissionError,FileNotFoundError):
                             if not self.readonly:
                                 raise
                             a, c = os.path.split(path)
