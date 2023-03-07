@@ -727,6 +727,13 @@ class UFOMG5Converter(object):
         for key in to_lor:
             if len(to_lor[key]) == 1:
                 continue
+            def get_spin(l):
+                return self.lorentz_info[interaction['lorentz'][l]].get('spins')
+                
+            if any(get_spin(l1) != get_spin(to_lor[key][0]) for l1 in to_lor[key]):
+                logger.warning('not all same spins for a given interactions')
+                continue 
+
             names = [interaction['lorentz'][i] for i in to_lor[key]]
             names.sort()
             if self.lorentz_info[names[0]].get('structure') == 'external':
