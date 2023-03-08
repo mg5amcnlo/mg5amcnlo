@@ -2057,8 +2057,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler['f2py']
+        elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+            f2py_compiler = 'f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)
+        elif misc.which('f2py%d' %(sys.version_info.major)):
+            f2py_compiler = 'f2py%d' %(sys.version_info.major)            
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
+
 
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
