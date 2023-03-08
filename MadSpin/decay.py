@@ -2481,7 +2481,6 @@ class decay_all_events(object):
 
     def setupseed_forreadonly(self, seed):
 
-        misc.sprint(os.listdir(self.options['ms_dir']))
         for pdir in misc.glob('*_me/SubProcesses/P*', self.options['ms_dir']):
             a, d = os.path.split(pdir)
             a, c = os.path.split(a)
@@ -3524,9 +3523,10 @@ class decay_all_events(object):
                         except (PermissionError,FileNotFoundError):
                             if not self.readonly:
                                 raise
-                            a, c = os.path.split(path)
-                            a, b = os.path.split(path)
-                            ranmar_file=pjoin(pjoin(b,c),'ranmar_state.dat')
+                            a, d = os.path.split(path)
+                            a, c = os.path.split(a)
+                            a, b = os.path.split(a)
+                            ranmar_file=pjoin(b,c,d,'ranmar_state.dat')
                             ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
                         ranmar.close()

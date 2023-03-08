@@ -109,11 +109,9 @@ class MadSpinOptions(banner.ConfigFile):
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
         else:
-            misc.sprint(value)
             args = value.split()
             if  len(args) >1:
                 if not hasattr(self, 'run_card'):
-                    misc.sprint("init run_card")
                     self.run_card =  banner.RunCardLO()
                     self.run_card.remove_all_cut()
                 self.run_card[args[0]] = ' '.join(args[1:])
@@ -211,7 +209,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             else: 
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
 
-        self.inputfile = inputfile
+        self.inputeventfile = inputfile
         if self.options['spinmode'] == 'none' and \
            (self.options['input_format'] not in ['lhe','auto'] or 
              (self.options['input_format'] == 'auto' and '.lhe'  not in inputfile[-7:])):  
@@ -810,12 +808,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         else:
-            curr_dir = os.path.dirname(self.inputfile)
+            curr_dir = os.path.dirname(self.inputeventfile)
             misc.gzip(pjoin(curr_dir, 'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
-    
     
 
     def run_bridge(self, line):
@@ -853,7 +850,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
             filename = self.events_file.name
         else:
-            filename = self.inputfile
+            filename = self.inputeventfile
 
         if self.options['input_format'] == 'auto':
             if '.lhe' in filename :

@@ -2621,7 +2621,6 @@ RESTART = %(mint_mode)s
             job['time_spend']=float(results[6])
             job['err_percABS'] = job['errorABS']/job['resultABS']*100.
             job['err_perc'] = job['error']/job['result']*100.
-            misc.sprint(job['result'])
 
         if error_found:
             raise aMCatNLOError('An error occurred during the collection of results.\n' + 
@@ -2660,8 +2659,6 @@ RESTART = %(mint_mode)s
         with open(pjoin(Sdir,'res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
-        misc.sprint({'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
-                'erra':math.sqrt(errABS),'randinit':randinit})
 
         return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
                 'erra':math.sqrt(errABS),'randinit':randinit}
@@ -3682,7 +3679,6 @@ RESTART = %(mint_mode)s
            or self.run_card['store_rwgt_info']:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
-        misc.sprint(options['nocompile'])
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
 
@@ -3709,7 +3705,6 @@ RESTART = %(mint_mode)s
         data = str(out)
         #get filename from collect events
         filename = data.split()[-1].strip().replace('\\n','').replace('"','').replace("'",'')
-        misc.sprint(filename)
         if not os.path.exists(pjoin(Sdir, filename)):
             raise aMCatNLOError('An error occurred during event generation. ' + \
                     'The event file has not been created: \n %s' % data)
@@ -3719,9 +3714,7 @@ RESTART = %(mint_mode)s
         else:
             outdir = pjoin(self.me_dir, 'Events', self.run_name)
             evt_file =  pjoin(outdir, 'events.lhe.gz')
-        misc.sprint(evt_file)
         misc.gzip(pjoin(Sdir, filename), stdout=evt_file)
-        misc.sprint(evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
             if not self.readonly:
