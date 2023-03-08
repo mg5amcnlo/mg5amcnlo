@@ -281,6 +281,11 @@ def has_f2py():
     has_f2py = False
     if which('f2py'):
         has_f2py = True
+    elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+        has_f2py = True
+    elif misc.which('f2py%d' %(sys.version_info.major)):
+        has_f2py = True
+
     return has_f2py       
         
 #===============================================================================
