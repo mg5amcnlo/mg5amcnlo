@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 from cmd import Cmd
 """ Basic test of the command interface """
 
@@ -131,5 +130,5 @@ class TestMadEventCmd(unittest.TestCase):
             if obj.__doc__ and ':' in obj.__doc__:
                 category.add(obj.__doc__.split(':',1)[0])
                 
-        target = set(['Main Commands','Advanced commands', 'Require MG5 directory', 'Not in help'])
+        target = {'Main Commands','Advanced commands', 'Require MG5 directory', 'Not in help'}
         self.assertEqual(target, category)

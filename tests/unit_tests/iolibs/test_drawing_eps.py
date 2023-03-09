@@ -15,13 +15,10 @@
 """Unit test library for the routine creating the points position for the 
     diagram drawing and for the creation of the EPS file."""
 
-from __future__ import division
 
 # The following lines are needed to run the
 # diagram generation using __main__
-from __future__ import absolute_import
 import os, sys
-from six.moves import range
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.realpath(os.path.join(root_path,'..','..'))
 sys.path.insert(0, root_path)
@@ -96,7 +93,7 @@ class TestDrawingOption(unittest.TestCase):
                         self.assertFalse(\
                                     plot.diagram._debug_has_intersection())
                         for line in plot.diagram.lineList:
-                            self.assertNotAlmostEquals(line.get_length(), 0)
+                            self.assertNotAlmostEqual(line.get_length(), 0)
                             
     def test_option_6g(self):
         """Test that gg>6g is fine with all options"""

@@ -17,7 +17,6 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
-from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -29,7 +28,6 @@ import subprocess
 import sys
 import time
 import six
-from six.moves import range
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -55,7 +53,7 @@ class MadEventComparator(me_comparator.MEComparator):
     def run_comparison(self, proc_list, model='sm', orders={}):
         """Run the codes and store results."""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []
@@ -368,7 +366,7 @@ class MadEventComparatorGauge(me_comparator.MEComparatorGauge):
         test_object.assertEqual(fail_test, 0, "Failed for processes: %s" % ', '.join(fail_prop))
 
 
-class FakeRunner(object):
+class FakeRunner:
      temp_dir_name = ""
      proc_list = []
      res_list = []
@@ -380,7 +378,7 @@ class FakeRunner(object):
      def cleanup(self):
          pass
 
-class MadEventRunner(object):
+class MadEventRunner:
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
     """
@@ -436,9 +434,9 @@ class MG5Runner(MadEventRunner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg5_path, 
-                                              "p_ME_test_%s_%s" % (self.type, i))):
+                                              f"p_ME_test_{self.type}_{i}")):
                 i += 1
-            temp_dir = "p_ME_test_%s_%s" % (self.type, i)         
+            temp_dir = f"p_ME_test_{self.type}_{i}"         
 
         self.temp_dir_name = temp_dir
 
@@ -566,7 +564,7 @@ class MG5Runner(MadEventRunner):
         text = open(filepath).read()    
         
         #id="#P1_qq_ll" href=#P1_qq_ll onClick="check_link('#P1_qq_ll','#P1_qq_ll','#P1_qq_ll')"> 842.9
-        info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
+        info = re.findall('id="\\#(?P<a1>\\w*)" href=\\#(?P=a1) onClick="check_link\\(\'\\#(?P=a1)\',\'\\#(?P=a1)\',\'\\#(?P=a1)\'\\)">\\s* ([\\d.e+-]*)', text)
         for name,value in info:
             output['cross_'+name] = value
             

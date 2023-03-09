@@ -14,7 +14,6 @@
 ################################################################################
 """Unit test library for the export Pythia8 format routines"""
 
-from __future__ import absolute_import
 import six
 StringIO = six
 import copy

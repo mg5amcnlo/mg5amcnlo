@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import copy
 import subprocess
 import shutil
@@ -290,7 +289,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
     def setUp(self):
         """ creating the full model from scratch """
         CheckFileCreate.setUp(self)
-        os.system('cp %s %s' % (pjoin(MG5DIR,'Template', 'LO','Source',
+        os.system('cp {} {}'.format(pjoin(MG5DIR,'Template', 'LO','Source',
                                       'make_opts'), '/tmp'))
         
         CheckFileCreate.clean_files(self)
@@ -381,7 +380,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         self.assertEqual(nb_value, 116 - len(checked_solutions))
 
         # before merging with py3 it was [27,67,54,38,78,15,79,96,73,9,74,4,50]
-        self.assertEqual(set(checked_solutions), set(['GC_%s ' % i for i in [4, 9, 27, 30, 39, 51, 56, 67, 73, 75, 78, 79, 97]]))
+        self.assertEqual(set(checked_solutions), {'GC_%s ' % i for i in [4, 9, 27, 30, 39, 51, 56, 67, 73, 75, 78, 79, 97]})
 
         
         

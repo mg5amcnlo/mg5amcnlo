@@ -14,7 +14,6 @@
 ################################################################################
 """Unit test library for the various base objects of the core library"""
 
-from __future__ import absolute_import
 import copy
 import os
 
@@ -22,8 +21,6 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import tests.unit_tests as unittest
-from six.moves import range
-from six.moves import zip
 
 #===============================================================================
 # ParticleTest
@@ -147,7 +144,7 @@ class ParticleTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_part.set(test['prop'], x))
+                self.assertTrue(temp_part.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_part.set(test['prop'], x), '%s not allowd for %s ' %(x, test['prop']))
 
@@ -369,7 +366,7 @@ class InteractionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(mytestinter.set(test['prop'], x))
+                self.assertTrue(mytestinter.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(mytestinter.set(test['prop'], x))
 
@@ -664,8 +661,8 @@ class ModelTest(unittest.TestCase):
                   'color':0,
                   'mass':'zero',
                   'width':'zero',
-                  'texname':'\gamma',
-                  'antitexname':'\gamma',
+                  'texname':r'\gamma',
+                  'antitexname':r'\gamma',
                   'line':'wavy',
                   'charge':0.,
                   'pdg_code':22,
@@ -1130,7 +1127,7 @@ class LegTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_leg.set(test['prop'], x))
+                self.assertTrue(temp_leg.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_leg.set(test['prop'], x))
 
@@ -1275,7 +1272,7 @@ class MultiLegTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_multi_leg.set(test['prop'], x))
+                self.assertTrue(temp_multi_leg.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_multi_leg.set(test['prop'], x))
 
@@ -1387,7 +1384,7 @@ class VertexTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_vertex.set(test['prop'], x))
+                self.assertTrue(temp_vertex.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_vertex.set(test['prop'], x))
 
@@ -1494,7 +1491,7 @@ class DiagramTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_diagram.set(test['prop'], x))
+                self.assertTrue(temp_diagram.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_diagram.set(test['prop'], x))
 
@@ -1644,7 +1641,7 @@ class ProcessTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_process.set(test['prop'], x))
+                self.assertTrue(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
 
@@ -2028,7 +2025,7 @@ class ProcessDefinitionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_process.set(test['prop'], x))
+                self.assertTrue(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
 

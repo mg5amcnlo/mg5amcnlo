@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import division
-from __future__ import absolute_import
 from madgraph.interface import reweight_interface
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 import pickle
 
 ################################################################################
@@ -104,7 +99,7 @@ class Event:
             if particle["istup"] < 2:
                 mom = particle["momentum"]
                 p.append(mom)
-                string+= '%s %s %s %s \n' % (mom.E, mom.px, mom.py, mom.pz)
+                string+= f'{mom.E} {mom.px} {mom.py} {mom.pz} \n'
 
         return p, string 
     
@@ -122,7 +117,7 @@ class Event:
                 if len(data)==0:
                     print(self.rwgt)
                 try:
-                    text = ''.join('   <wgt id=\'%s\'> %+15.7e </wgt>\n' % (pid, float(value) * factor)
+                    text = ''.join(f'   <wgt id=\'{pid}\'> {float(value) * factor:+15.7e} </wgt>\n'
                                      for (pid,value) in data) 
                 except ValueError as error:
                     raise Exception('Event File has unvalid weight. %s' % error)
@@ -888,7 +883,7 @@ class AllMatrixElement(dict):
         dict.__init__(self)
         self.banner = banner
         self.options = options
-        self.decay_ids = set([abs(id) for id in decay_ids])
+        self.decay_ids = {abs(id) for id in decay_ids}
         self.has_particles_ambiguity = False
         self.model = model
 
@@ -1025,7 +1020,7 @@ class AllMatrixElement(dict):
         self[tag]['decaying'] = tuple(decaying)
                 
         # sanity check
-        assert self[tag]['total_br'] <= 1.01, "wrong BR for %s: %s " % (tag,self[tag]['total_br'])
+        assert self[tag]['total_br'] <= 1.01, "wrong BR for {}: {} ".format(tag,self[tag]['total_br'])
 
 
         
@@ -1298,7 +1293,7 @@ class branching(dict):
         self["type"]=s_or_t
 
 
-class width_estimate(object):
+class width_estimate:
     """All methods used to calculate branching fractions"""
 
     def __init__(self,resonances,path_me, banner, model, pid2label):
@@ -1333,8 +1328,8 @@ class width_estimate(object):
         for decays in decay_processes.values():
             for decay in decays:
                 if ',' in decay:
-                    to_decay.update(set([l.split('>')[0].strip()
-                                                    for l in decay.replace('(','').replace(')','').split(',')]))
+                    to_decay.update({l.split('>')[0].strip()
+                                                    for l in decay.replace('(','').replace(')','').split(',')})
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
@@ -1343,7 +1338,7 @@ class width_estimate(object):
             if part in mgcmd._multiparticles:
                 to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
                 to_decay.remove(part)
-        to_decay = list(set([p for p in to_decay if not p in self.br]))
+        to_decay = list({p for p in to_decay if not p in self.br})
         
         if to_decay:
             logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
@@ -1476,7 +1471,7 @@ class width_estimate(object):
                 bran = decay['br']
                 d1 = decay['daughters'][0]
                 d2 = decay['daughters'][1]
-                logger.info('   %e            %s  %s ' % (bran, d1, d2) )
+                logger.info(f'   {bran:e}            {d1}  {d2} ' )
             logger.info('  ')
 
     def print_partial_widths(self):
@@ -1491,7 +1486,7 @@ class width_estimate(object):
                 width=self.br[res][chan]['width']
                 d1=self.br[res][chan]['daughters'][0]
                 d2=self.br[res][chan]['daughters'][1]
-                logger.info('   %e            %s  %s ' % (width, d1, d2) )
+                logger.info(f'   {width:e}            {d1}  {d2} ' )
             logger.info('  ')
 
 
@@ -1510,7 +1505,7 @@ class width_estimate(object):
         # first build a set resonances with pid>0
 
         #particle_set= list(to_decay)
-        pids = set([abs(label2pid[name]) for name in to_decay])
+        pids = {abs(label2pid[name]) for name in to_decay}
         particle_set = [label2pid[pid] for pid in pids]
     
 
@@ -1647,7 +1642,7 @@ class width_estimate(object):
 
         line = 'compute_widths %s %s' % \
                 (' '.join([str(i) for i in opts['particles']]),
-                 ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
+                 ' '.join(f'--{key}={value}' for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
 
         #pattern for checking complex mass scheme.
@@ -1844,7 +1839,7 @@ class decay_misc:
              it is automatically set to its default value in this code
         """
 
-        param_card=open(pjoin(path_me,'param_card.dat'), 'r')
+        param_card=open(pjoin(path_me,'param_card.dat'))
         new_param_card=""
         while 1:
             line=param_card.readline()
@@ -1939,7 +1934,7 @@ class decay_misc:
             sd = mean/5.
         return mean, sd
 
-class decay_all_events(object):
+class decay_all_events:
     
     def __init__(self, ms_interface, banner, inputfile, options):
         """Store all the component and organize special variable"""
@@ -2307,7 +2302,7 @@ class decay_all_events(object):
             if  event_nb and \
                 (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                 running_time = misc.format_timer(time.time()-starttime)
-                logger.info('Event nb %s %s' % (event_nb, running_time))
+                logger.info(f'Event nb {event_nb} {running_time}')
                 self.mscmd.update_status(('$events',1,event_nb, 'decaying events'), 
                                          force=False, print_log=False)
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
@@ -2342,7 +2337,7 @@ class decay_all_events(object):
             nb_mc_masses=len(indices_for_mc_masses)
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'])
+            stdin_text=' {} {} {} {} {} \n'.format('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'], self.options['frame_id'])
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2381,14 +2376,14 @@ class decay_all_events(object):
             # Treat the case that we ge too many overweight.
             if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
-                report['%s_f' % (decay['decay_tag'],)] +=1
+                report['{}_f'.format(decay['decay_tag'])] +=1
                 if __debug__:               
                     misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
                     production_tag:%s [%s], decay:%s [%s], BW_cut: %1g\n
                     ''' %\
                     (weight/decay['max_weight'], decay['decay_tag'], 
                     100 * report['over_weight']/event_nb,
-                    100 * report['%s_f' % (decay['decay_tag'],)] / report[decay['decay_tag']],
+                    100 * report['{}_f'.format(decay['decay_tag'])] / report[decay['decay_tag']],
                     os.path.basename(self.all_ME[production_tag]['path']),
                     production_tag,
                     os.path.basename(decay['path']),
@@ -2403,20 +2398,20 @@ class decay_all_events(object):
                     % (weight/decay['max_weight'], decay['decay_tag'], BWvalue)  
                     logger.error(error)
                 elif report['over_weight'] > max(0.005*event_nb,3):
-                    error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
+                    error = """Found too many weight larger than the computed max_weight ({}/{} = {}%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
-                    """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
+                    """.format(report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
                     raise MadSpinError(error)
                         
                     error = True
-                elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
-                    error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
-    for channel %s. Please relaunch MS with more events/PS point by event in the
+                elif report['{}_f'.format(decay['decay_tag'])] > max(0.01*report[decay['decay_tag']],3):
+                    error = """Found too many weight larger than the computed max_weight ({}/{} = {}%),
+    for channel {}. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
-                    """ % (report['%s_f' % (decay['decay_tag'],)],\
-                            report['%s' % (decay['decay_tag'],)],\
-                            100 * report['%s_f' % (decay['decay_tag'],)] / report[ decay['decay_tag']] ,\
+                    """.format(report['{}_f'.format(decay['decay_tag'])],\
+                            report['{}'.format(decay['decay_tag'])],\
+                            100 * report['{}_f'.format(decay['decay_tag'])] / report[ decay['decay_tag']] ,\
                             decay['decay_tag'])  
                     raise MadSpinError(error)
                     
@@ -2436,21 +2431,21 @@ class decay_all_events(object):
         self.outputfile.close()
 
         if report['over_weight'] > max(0.15*math.sqrt(event_nb),1):
-            error = """Found many weight larger than the computed max_weight (%s/%s = %s%%). 
-            """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
+            error = """Found many weight larger than the computed max_weight ({}/{} = {}%). 
+            """.format(report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
             logger.warning(error)
         for decay_tag in self.all_decay.keys():
-            if report['%s_f' % (decay_tag,)] > max(0.2*report[decay_tag],1):
-                error = """Found many weight larger than the computed max_weight (%s/%s = %s%%),
-    for channel %s.""" % (report['%s_f' % (decay_tag,)],\
-                               report['%s' % (decay_tag,)],\
-                               100 * report['%s_f' % (decay_tag,)] / report[decay_tag] ,\
+            if report[f'{decay_tag}_f'] > max(0.2*report[decay_tag],1):
+                error = """Found many weight larger than the computed max_weight ({}/{} = {}%),
+    for channel {}.""".format(report[f'{decay_tag}_f'],\
+                               report[f'{decay_tag}'],\
+                               100 * report[f'{decay_tag}_f'] / report[decay_tag] ,\
                                decay_tag)
                 logger.warning(error)  
         
         
 
-        logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
+        logger.info(f'Total number of events written: {event_nb}/{event_nb+nb_skip} ')
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
@@ -2474,7 +2469,7 @@ class decay_all_events(object):
             frameid = self.options['frame_id']
         except KeyError:
             frameid = 6
-        stdin_text=' %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
+        stdin_text=' {} {} {} {} {}\n'.format('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses
@@ -2612,9 +2607,9 @@ class decay_all_events(object):
             # create an object for the validation, keeping the ratio between
             # MEM i and MEM j. this is set at zero when the ratio is not found
             #constant
-            valid = dict([ ((i, j), True) for j in range(len(decays)) 
+            valid = { (i, j): True for j in range(len(decays)) 
                                           for i in range(len(decays)) 
-                                          if i != j])
+                                          if i != j}
                 
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
@@ -2717,7 +2712,7 @@ class decay_all_events(object):
                 # Now build the output
                 if basic_tag not in tag2real:
                     tag2real[basic_tag] = (tag, ratio)
-                    decay_mapping[tag] = set([(tag, 1)])
+                    decay_mapping[tag] = {(tag, 1)}
                     ratio2=1
                 else:
                     real_tag, ratio2 = tag2real[basic_tag]
@@ -2764,7 +2759,7 @@ class decay_all_events(object):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -2781,7 +2776,7 @@ class decay_all_events(object):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                mgcmd.do_define("{} = {}".format(name, ' '.join(repr(i) for i in pdgs)))
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
@@ -2873,7 +2868,7 @@ class decay_all_events(object):
             mgcmd.exec_cmd(commandline, precmd=True)
             # remove decay with 0 branching ratio.
             mgcmd.remove_pointless_decay(self.banner.param_card)
-            commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
+            commandline = 'output standalone_msF {} {}'.format(pjoin(path_me,'full_me'),
                                                           ' '.join(list(self.list_branches.keys())))
             mgcmd.exec_cmd(commandline, precmd=True)
             logger.info('Done %.4g' % (time.time()-start))
@@ -2977,7 +2972,7 @@ class decay_all_events(object):
                 continue
             
             # check options
-            tmp, options = [], set(["--no_warning=duplicate"])
+            tmp, options = [], {"--no_warning=duplicate"}
             for arg in new_proc.split():
                 if arg.startswith('--'):
                     options.add(arg)
@@ -3008,10 +3003,10 @@ class decay_all_events(object):
 
             nb_comma = baseproc.count(',')
             if nb_comma == 0:
-                commands.append("%s, %s %s %s" % (baseproc, decay_text, proc_nb, options))
+                commands.append(f"{baseproc}, {decay_text} {proc_nb} {options}")
             elif nb_comma == 1:
                 before, after = baseproc.split(',')
-                commands.append("%s, %s, (%s, %s) %s  %s" % (before, decay_text, after, decay_text, proc_nb, options))
+                commands.append(f"{before}, {decay_text}, ({after}, {decay_text}) {proc_nb}  {options}")
             else:
                 part = baseproc.split(',')
                 if any('(' in p for p in part):
@@ -3019,8 +3014,8 @@ class decay_all_events(object):
                 else:
                     decay_part = []
                     for p in part[1:]:
-                        decay_part.append("(%s, %s)" % (p, decay_text))
-                    commands.append("%s, %s, %s %s %s" % (part[0], decay_text, ', '.join(decay_part), proc_nb, options))
+                        decay_part.append(f"({p}, {decay_text})")
+                    commands.append("{}, {}, {} {} {}".format(part[0], decay_text, ', '.join(decay_part), proc_nb, options))
         commands.append('') #to have a ; at the end of the command
         return ';'.join(commands)
         
@@ -3231,8 +3226,8 @@ class decay_all_events(object):
 
         starttime = time.time()
         ev = -1
-        nb_decay = dict( (key,0) for key in decay_set)
-        probe_weight = dict( (key,[]) for key in decay_set)
+        nb_decay = { key:0 for key in decay_set}
+        probe_weight = { key:[] for key in decay_set}
         while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
 
@@ -3251,7 +3246,7 @@ class decay_all_events(object):
 #            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
 
    
-            logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
+            logger.debug(f'Event {ev+1}/{len(decay_set)*numberev}: ')
             if (len(decay_set)*numberev -(ev+2)) >0:
                 self.mscmd.update_status((len(decay_set)*numberev -(ev+2),1,ev+1, 
                                           'MadSpin: Maximum weight'), 
@@ -3293,7 +3288,7 @@ class decay_all_events(object):
             self.calculator_nbcall = {}
             if ev % 5 == 0:
                 running_time = misc.format_timer(time.time()-starttime)
-                info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
+                info_text = f'Event {ev + 1}/{len(decay_set)*numberev} : {running_time} \n' 
                 #for  index,tag_decay in enumerate(max_decay):
                 #    info_text += '            decay_config %s [%s] : %s\n' % \
                 #       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
@@ -3403,7 +3398,7 @@ class decay_all_events(object):
         """return the max. weight associated with me decay['path']"""
 
         p, p_str=self.curr_event.give_momenta(event_map)
-        std_in=" %s  %s %s %s %s \n" % ("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'])
+        std_in=" {}  {} {} {} {} \n".format("1",BWcut, self.Ecollider, nbpoints, self.options['frame_id'])
         std_in+=p_str
         max_weight = self.loadfortran('maxweight',
                                path, std_in)
@@ -3434,7 +3429,7 @@ class decay_all_events(object):
         try:
             external.stdin.write(stdin_text.encode())
             external.stdin.flush()
-        except IOError as error:
+        except OSError as error:
             if not first:
                 raise
             #misc.sprint(error)
@@ -3625,7 +3620,7 @@ class decay_all_events(object):
                     else: 
                         # need to label resonances backward
                         me_d2 = -nb_res-indexd2-count_res-1
-                    iforest.append("      DATA (IDECAY(I, %s ),I=1,2)/  %s ,  %s / \n" % (me_res, me_d1, me_d2))
+                    iforest.append(f"      DATA (IDECAY(I, {me_res} ),I=1,2)/  {me_d1} ,  {me_d2} / \n")
                     decay_struct[part]['mg_tree'].append((me_res,me_d1,me_d2))
                     pmasswidth.append("      PRMASS(%s)=%s \n" %(me_res,mass) )
                     pmasswidth.append("      PRWIDTH(%s)=%s \n" %(me_res,width) )
@@ -4003,7 +3998,7 @@ class decay_all_events(object):
                     min_br = min([m['total_br'] for m in self.all_ME.values()])
                     logger.info('''All production process does not have the same total Branching Ratio.
                     Therefore the total number of events after decay will be lower than the original file.
-                    [max_br = %s, min_br = %s]''' % (max_br, min_br),'$MG:BOLD')
+                    [max_br = {}, min_br = {}]'''.format(max_br, min_br),'$MG:BOLD')
                 fake_decay = {'br': max_br - production['total_br'], 
                               'path': None, 'matrix_element': None, 
                               'finals': None, 'base_order': None,
@@ -4030,7 +4025,7 @@ class decay_all_events(object):
                     continue
                 partial_br += decay['br']
                 ms_banner += "# %s\n" % ','.join(decay['decay_tag']).replace('\n',' ')
-                ms_banner += "# BR: %s\n# max_weight: %s\n" % (decay['br'], decay['max_weight'])
+                ms_banner += "# BR: {}\n# max_weight: {}\n".format(decay['br'], decay['max_weight'])
                 one_br += decay['br']
             
             if production['Pid'] not in self.br_per_id:
@@ -4069,9 +4064,9 @@ class decay_all_events(object):
                 except:
                     continue
                 if cross_section:
-                    mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)            
+                    mg_info[i] = f'{info} : {value * self.branching_ratio}'            
                 else:
-                    mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
+                    mg_info[i] = f'{info} : {value * self.branching_ratio}'
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
                 
         self.cross = 0
@@ -4094,7 +4089,7 @@ class decay_all_events(object):
                         data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
                         has_missing=True
                     new_init += ' %.12E %.12E %.12E %i\n' % tuple(data)
-                    cross, error = [float(d) for d in data[:2]]
+                    cross, error = (float(d) for d in data[:2])
                     self.cross += cross
                     self.error += error**2
                     
@@ -4127,7 +4122,7 @@ class decay_all_events(object):
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0 0\n".encode()  # before closing, write down the seed 
+                    stdin_text=b"5 0 0 0 0\n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     try:
                         external.stdin.write(stdin_text)
@@ -4213,7 +4208,7 @@ class decay_all_events_onshell(decay_all_events):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath+restriction')
@@ -4230,7 +4225,7 @@ class decay_all_events_onshell(decay_all_events):
                 if name == 'all':
                     continue
                 #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+                mgcmd.do_define("{} = {}".format(name, ' '.join(repr(i) for i in pdgs)))
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
@@ -4354,7 +4349,7 @@ class decay_all_events_onshell(decay_all_events):
     def save_to_file(self, *args):
         import sys
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
-            return super(decay_all_events_onshell,self).save_to_file(*args) 
+            return super().save_to_file(*args) 
 
     
     

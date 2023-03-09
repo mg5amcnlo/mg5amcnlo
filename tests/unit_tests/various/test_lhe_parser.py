@@ -14,14 +14,12 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
-from __future__ import absolute_import
 import unittest
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph .various.misc as misc
 import tempfile
 import os
 import shutil
-from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
 import itertools
@@ -66,7 +64,7 @@ class TestEvent(unittest.TestCase):
         for one in out:
             check.add(one[-1])
         self.assertEqual(len(check), 3)
-        self.assertEqual(check, set([3,4,5]))
+        self.assertEqual(check, {3,4,5})
 
         out = lhe_parser.Event.get_permutation([3,4,5], "ABC")
         self.assertEqual(len(out), 6)
@@ -548,7 +546,7 @@ DATA
             new = lhe_parser.Event(text=str(event))
             for part1,part2 in zip(event, new):
                 self.assertEqual(part1, part2)
-            self.assertEqual(new, event, '%s \n !=\n %s' % (new, event))
+            self.assertEqual(new, event, f'{new} \n !=\n {event}')
             txt += str(event)
         self.assertEqual(nb_event, 3)
     
@@ -650,7 +648,7 @@ DATA
         output_lhe.close()
         self.assertTrue(pjoin(self.path,'event2.lhe.gz'))
         try:
-            text = open(pjoin(self.path, 'event2.lhe.gz'), 'r').read()
+            text = open(pjoin(self.path, 'event2.lhe.gz')).read()
             self.assertFalse(text.startswith('<LesHouchesEvents version="1.0">'))
         except UnicodeDecodeError:
             pass

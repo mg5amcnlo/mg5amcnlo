@@ -12,16 +12,12 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be            
 #                                                                               
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import math
 import os 
 import sys
 import subprocess
-from six.moves import map
-from six.moves import range
 
-class RunningMW(object):
+class RunningMW:
 
     def __init__(self, card_nb, first_event, nb_events, evt_file, mw_int_points, \
                  log_level, sample_nb):
@@ -51,10 +47,10 @@ class RunningMW(object):
         else:
             self.allow_event = lambda x: True
     
-    class output_handler(object):
+    class output_handler:
         
         def __init__(self, card_nb, sample_nb):
-            self.fsock = open('output_%s_%s.xml' % (card_nb, sample_nb), 'w')
+            self.fsock = open(f'output_{card_nb}_{sample_nb}.xml', 'w')
             self.fsock.write('<card id=\'%s\'>\n' % card_nb)
 
         def  __enter__(self):
@@ -64,7 +60,7 @@ class RunningMW(object):
             if type is None:
                 self.fsock.write('</card>\n')
             else:
-                self.fsock.write('<failmsg>%s\n%s\n%s</failmsg></card>\n' % (type, value, traceback))
+                self.fsock.write(f'<failmsg>{type}\n{value}\n{traceback}</failmsg></card>\n')
 
     def run(self):
         """Run the computation"""
@@ -233,7 +229,7 @@ class Weight(dict):
         
         #1. get the weight, error for this object
         try:
-            ff=open('weights.out','r')
+            ff=open('weights.out')
         except Exception:
             return
         for line in ff:
@@ -255,7 +251,7 @@ class Weight(dict):
     def get_details(self):
         """ """
         try:
-            ff=open('details.out', 'r')
+            ff=open('details.out')
         except Exception:
             return
 
@@ -346,7 +342,7 @@ class Permutation(dict):
         self.error = math.sqrt(self.error2)
         return total, self.error   
     
-class Channel(object):
+class Channel:
     """ """
     nb_space=12
     def __init__(self, channel_id, value, error):

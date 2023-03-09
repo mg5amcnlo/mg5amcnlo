@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -117,7 +115,7 @@ class TestMECmdShell(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5_aMC')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install MadAnalysis4'.encode())
+            out = p.communicate(b'install MadAnalysis4')
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
         #if not misc.which('root'):
@@ -141,7 +139,7 @@ class TestMECmdShell(unittest.TestCase):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -501,7 +499,7 @@ class TestMECmdShell(unittest.TestCase):
         #check validity of the default run_card
         run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
 
-        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'),'r')
+        f = open(pjoin(self.run_dir, 'Cards','run_card.dat'))
         self.assertNotIn('ptj', run_card.user_set)
         self.assertNotIn('drjj', run_card.user_set)
         self.assertNotIn('ptj2min', run_card.user_set)
@@ -850,7 +848,7 @@ C
             self.assertTrue('syst' in data[0].parton)
             # check that the code was runned correctly
             fsock = open('%s/Events/%s/parton_systematics.log' % \
-                  (self.run_dir, data[0]['run_name']),'r')
+                  (self.run_dir, data[0]['run_name']))
             text = fsock.read()
             self.assertTrue(text.count('dynamical scheme') >= 3)
         
@@ -1215,7 +1213,7 @@ set draw_rivet_plots True
             import math
             new_error = math.sqrt(error**2 + float(data[0]['error'])**2)
             self.assertTrue(abs(cross - float(data[0]['cross']))/new_error < 3,
-                            'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
+                            'cross is {} and not {}. NB_SIGMA {}'.format(float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
                             )
             self.assertTrue(float(data[0]['error']) < 3 * error)
             

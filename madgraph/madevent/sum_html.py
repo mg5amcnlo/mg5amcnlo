@@ -12,14 +12,11 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import os
 import math
 import logging
 import re
 import xml.dom.minidom as minidom
-from six.moves import range
 
 logger = logging.getLogger('madevent.stdout') # -> stdout
 
@@ -85,7 +82,7 @@ class RunStatistics(dict):
                         "'updtate_statistics' must be a (possibly list of) "+\
                                                        "RunStatistics instance.")
  
-        keys = set([])
+        keys = set()
         for stat in [self,]+new_stats:
             keys |= set(stat.keys())
 
@@ -242,7 +239,7 @@ class RunStatistics(dict):
         
         return ('\n'.join(to_print)).replace("'"," ") 
 
-class OneResult(object):
+class OneResult:
     
     def __init__(self, name):
         """Initialize all data """
@@ -677,7 +674,7 @@ class Combine_results(list, OneResult):
         fsock = open(output_path,'w') 
         fsock.writelines(line)
         for i in range(len(self.ysec_iter)):
-            line = '%s %s %s %s %s %s\n' % (i+1, self.ysec_iter[i], self.yerr_iter[i], 
+            line = '{} {} {} {} {} {}\n'.format(i+1, self.ysec_iter[i], self.yerr_iter[i], 
                       self.eff_iter[i], self.maxwgt_iter[i], self.yasec_iter[i]) 
             fsock.writelines(line)
 
@@ -740,7 +737,7 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                     for job in [j for j in jobs if j['p_dir'] == Pdir]:
                         P_comb.add_results(os.path.basename(job['dirname']),\
                                        pjoin(job['dirname'],'results.dat'))
-            except IOError:
+            except OSError:
                 continue
         else:
             G_dir, mfactors = cmd.get_Gdir(Pdir, symfact=True)

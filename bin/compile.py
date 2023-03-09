@@ -13,7 +13,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import os
 import sys
 import logging
@@ -218,11 +217,11 @@ class Compile_MG5:
             # in case there is #FC -> FC 
             #search file in src
             file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src'))
-            comp_re = re.compile('^(\s*)#FC\s*=\s*(.+)\s*$')
+            comp_re = re.compile(r'^(\s*)#FC\s*=\s*(.+)\s*$')
             var = 'FC'
             mod = False
             for name in file_to_change:
-                lines = open(name,'r').read().split('\n')
+                lines = open(name).read().split('\n')
                 for iline, line in enumerate(lines):
                     result = comp_re.match(line)
                     if result:
@@ -235,7 +234,7 @@ class Compile_MG5:
             file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src','oneloop'))
             mod = False
             for name in file_to_change:
-                lines = open(name,'r').read().split('\n')
+                lines = open(name).read().split('\n')
                 for iline, line in enumerate(lines):
                     result = comp_re.match(line)
                     if result:
@@ -255,11 +254,11 @@ class Compile_MG5:
         else:
             #search file in src
             file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src'))
-            comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+            comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
             var = 'FC'
             mod = False
             for name in file_to_change:
-                lines = open(name,'r').read().split('\n')
+                lines = open(name).read().split('\n')
                 for iline, line in enumerate(lines):
                     result = comp_re.match(line)
                     if result:
@@ -272,7 +271,7 @@ class Compile_MG5:
             file_to_change=misc.find_makefile_in_dir(os.path.join(iregi_path,'src','oneloop'))
             mod = False
             for name in file_to_change:
-                lines = open(name,'r').read().split('\n')
+                lines = open(name).read().split('\n')
                 for iline, line in enumerate(lines):
                     result = comp_re.match(line)
                     if result:

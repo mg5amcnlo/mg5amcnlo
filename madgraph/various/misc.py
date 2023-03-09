@@ -14,7 +14,6 @@
 ################################################################################
 """A set of functions performing routine administrative I/O tasks."""
 
-from __future__ import absolute_import
 import collections
 import contextlib
 import itertools
@@ -32,14 +31,10 @@ import traceback
 import gzip as ziplib
 from distutils.version import LooseVersion, StrictVersion
 import six
-from six.moves import zip_longest
-from six.moves import range
-from six.moves import zip
-from six.moves import input
+from itertools import zip_longest
 StringIO = six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+file = io.IOBase
 try:
     # Use in MadGraph
     import madgraph
@@ -68,7 +63,7 @@ def parse_info_str(fsock):
     """
 
     info_dict = {}
-    pattern = re.compile("(?P<name>\w*)\s*=\s*(?P<value>.*)",
+    pattern = re.compile(r"(?P<name>\w*)\s*=\s*(?P<value>.*)",
                          re.IGNORECASE | re.VERBOSE)
     for entry in fsock:
         entry = entry.strip()
@@ -77,7 +72,7 @@ def parse_info_str(fsock):
         if m is not None:
             info_dict[m.group('name')] = m.group('value')
         else:
-            raise IOError("String %s is not a valid info string" % entry)
+            raise OSError("String %s is not a valid info string" % entry)
 
     return info_dict
 
@@ -85,7 +80,7 @@ def parse_info_str(fsock):
 def glob(name, path=''):
     """call to glob.glob with automatic security on path"""
     import glob as glob_module
-    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    path = re.sub(r'(?P<name>\?|\*|\[|\])', r'[\g<name>]', path)
     return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
@@ -175,7 +170,7 @@ def is_MA5_compatible_with_this_MG5(ma5path):
 
     ma5_version = None
     try:
-        for line in open(pjoin(ma5path,'version.txt'),'r').read().split('\n'):
+        for line in open(pjoin(ma5path,'version.txt')).read().split('\n'):
             if line.startswith('MA5 version :'):
                 ma5_version=LooseVersion(line[13:].strip())
                 break
@@ -456,9 +451,9 @@ def get_scan_name(first, last):
     #convert to string
     base, end = ''.join(base), ''.join(end)
     if end:
-        name = "%s[%s-%s]%s" % (base, first[len(base):-len(end)], last[len(base):-len(end)],end)
+        name = f"{base}[{first[len(base):-len(end)]}-{last[len(base):-len(end)]}]{end}"
     else:
-        name = "%s[%s-%s]%s" % (base, first[len(base):], last[len(base):],end)
+        name = f"{base}[{first[len(base):]}-{last[len(base):]}]{end}"
     return name
 
 def copytree(*args, **opts):
@@ -575,17 +570,17 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
     #search file
     file_to_change=find_makefile_in_dir(directory)
     if compiler_type == 'gfortran':
-        comp_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)FC\s*=\s*(.+)\s*$')
         var = 'FC'
     elif compiler_type == 'cpp':
-        comp_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
+        comp_re = re.compile(r'^(\s*)CXX\s*=\s*(.+)\s*$')
         var = 'CXX'
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
     mod = False
     for name in file_to_change:
-        lines = open(name,'r').read().split('\n')
+        lines = open(name).read().split('\n')
         for iline, line in enumerate(lines):
             result = comp_re.match(line)
             if result:
@@ -638,7 +633,7 @@ def pid_exists(pid):
 #===============================================================================
 # mute_logger (designed to work as with statement)
 #===============================================================================
-class MuteLogger(object):
+class MuteLogger:
     """mute_logger (designed to work as with statement),
        files allow to redirect the output of the log to a given file.
     """
@@ -807,7 +802,7 @@ def detect_cpp_std_lib_dependence(cpp_compiler):
                 # we venture a guess here.
                 return '-lc++'
             else:
-                maj, v = [float(x) for x in v.rsplit('.')[:2]]
+                maj, v = (float(x) for x in v.rsplit('.')[:2])
                 if maj >=11 or (maj ==10 and v >= 9):
                    return '-lc++'
                 else:
@@ -822,9 +817,9 @@ def detect_current_compiler(path, compiler_type='fortran'):
 #    comp = re.compile("^\s*FC\s*=\s*(\w+)\s*")
 #   The regular expression below allows for compiler definition with absolute path
     if compiler_type == 'fortran':
-        comp = re.compile("^\s*FC\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*FC\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     elif compiler_type == 'cpp':
-        comp = re.compile("^\s*CXX\s*=\s*([\w\/\\.\-]+)\s*")
+        comp = re.compile("^\\s*CXX\\s*=\\s*([\\w\\/\\.\\-]+)\\s*")
     else:
         MadGraph5Error, 'Unknown compiler type: %s' % compiler_type
 
@@ -1005,7 +1000,7 @@ def tail(f, n, offset=None):
     while 1:
         try:
             f.seek(-(avg_line_length * to_read), 2)
-        except IOError:
+        except OSError:
             # woops.  apparently file is smaller than what we want
             # to step back, go to the beginning instead
             f.seek(0)
@@ -1105,7 +1100,7 @@ def format_timer(running_time):
 #===============================================================================
 # TMP_directory (designed to work as with statement)
 #===============================================================================
-class TMP_directory(object):
+class TMP_directory:
     """create a temporary directory and ensure this one to be cleaned.
     """
 
@@ -1133,7 +1128,7 @@ class TMP_directory(object):
     def __enter__(self):
         return self.path
     
-class TMP_variable(object):
+class TMP_variable:
     """replace an attribute of a class with another value for the time of the
        context manager
     """
@@ -1186,7 +1181,7 @@ def gunzip(path, keep=False, stdout=None):
     #for large file (>1G) it is faster and safer to use a separate thread
     if os.path.getsize(path) > 1e8:
         if stdout:
-            os.system('gunzip -c %s > %s' % (path, stdout))
+            os.system(f'gunzip -c {path} > {stdout}')
         else:
             os.system('gunzip  %s' % path) 
         return 0
@@ -1195,12 +1190,12 @@ def gunzip(path, keep=False, stdout=None):
         stdout = path[:-3]
     try:
         gfile = ziplib.open(path, "r")
-    except IOError:
+    except OSError:
         raise
     else:    
         try:    
             open(stdout,'w').write(gfile.read().decode(errors='ignore'))
-        except IOError as error:
+        except OSError as error:
             sprint(error)
             # this means that the file is actually not gzip
             if stdout == path:
@@ -1245,7 +1240,7 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
 #
 # Global function to open supported file types
 #
-class open_file(object):
+class open_file:
     """ a convinient class to open a file """
     
     web_browser = None
@@ -1356,7 +1351,7 @@ class open_file(object):
         
         for p in possibility:
             if which(p):
-                logger.info('Using default %s \"%s\". ' % (program, p) + \
+                logger.info(f'Using default {program} \"{p}\". ' + \
                              'Set another one in ./input/mg5_configuration.txt')
                 return p
         
@@ -1408,7 +1403,7 @@ class open_file(object):
             subprocess.call(arguments)
         else:
             # not shell program
-            os.system('open -a %s %s' % (program, file_path))
+            os.system(f'open -a {program} {file_path}')
 
 def get_HEPTools_location_setter(HEPToolsDir,type):
     """ Checks whether mg5dir/HEPTools/<type> (which is 'lib', 'bin' or 'include')
@@ -1519,10 +1514,10 @@ def sprint(*args, **opt):
     
     if not use_print:
         log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
-                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+                   f' \033[1;30m[{os.path.basename(filename)} at line {lineno}]\033[0m')
     else:
         print(' '.join([intro]+[str(a) for a in args]) + \
-                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+                   f' \033[1;30m[{os.path.basename(filename)} at line {lineno}]\033[0m')
 
     if wait:
         input('press_enter to continue')
@@ -1531,7 +1526,7 @@ def sprint(*args, **opt):
 
     return 
 
-class misc(object):
+class misc:
     @staticmethod
     def sprint(*args, **opt):
         return sprint(*args, **opt)
@@ -1601,10 +1596,7 @@ def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def mmin(iter, default=None):
     
-    if six.PY3:
-        return min(iter, default=default)
-    else:
-        return min(iter, default)
+    return min(iter, default=default)
 
 
 ################################################################################
@@ -1749,7 +1741,7 @@ class ProcessTimer:
 #      pass
 
 ## Define system_notify (in a way which is system independent
-class Notification(object):
+class Notification:
 
     def __init__(self):
         self.init = False
@@ -1804,7 +1796,7 @@ class Notification(object):
 
         elif self.working == 'notify-send':
             try:
-                os.system(""" notify-send "MadGraph5_aMC@NLO" "{}"  &> /dev/null """.format(info_text,subtitle))
+                os.system(f""" notify-send "MadGraph5_aMC@NLO" "{info_text}"  &> /dev/null """)
             except:
                 pass
 
@@ -1812,7 +1804,7 @@ class Notification(object):
 
 system_notify = Notification()
 
-class EasterEgg(object):
+class EasterEgg:
     
     done_notification = False
     message_aprilfirst =\
@@ -1855,12 +1847,12 @@ class EasterEgg(object):
     May4_banner = "*                           _____                          *\n" + \
         "*                       ,-~\"     \"~-.                      *\n" + \
         "*        *            ,^ ___         ^.             *      *\n" + \
-        "*          *         / .^   ^.         \         *         *\n" + \
+        "*          *         / .^   ^.         \\         *         *\n" + \
         "*            *      Y  l  o  !          Y      *           *\n" + \
         "*              *   l_  `.___.'         _,[   *             *\n" + \
         "*                * |^~\"--------------~\"\"^| *               *\n" + \
         "*              *   !     May the 4th     !   *             *\n" + \
-        "*            *       \                 /       *           *\n" + \
+        "*            *       \\                 /       *           *\n" + \
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
@@ -1869,13 +1861,13 @@ class EasterEgg(object):
         "* M::::::::::M       M::::::::::M                          *\n" + \
         "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
         "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
-        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \\__ \\                *\n" + \
         "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
         "* M::::::M   M:::::::M   M::::::M                          *\n" + \
         "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
-        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \\| '__|       *\n" + \
         "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
-        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M   |_/\\/\\___/|_|          *\n" + \
         "* M::::::M               M::::::M                          *\n" + \
         "* MMMMMMMM               MMMMMMMM                          *\n" + \
         "*                                                          *\n" + \
@@ -2106,10 +2098,7 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 def plugin_import(module, error_msg, fcts=[]):
     """convenient way to import a plugin file/function"""
     
-    if six.PY2:
-        level = -1
-    else:
-        level = 0
+    level = 0
 
     try:
         _temp = __import__('PLUGIN.%s' % module, globals(), locals(), fcts, level)
@@ -2138,13 +2127,13 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
             if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
                 try:
                     with stdchannel_redirected(sys.stdout, os.devnull):
-                        __import__('%s.%s' % (plugindirname,plug))
+                        __import__(f'{plugindirname}.{plug}')
                 except Exception as error:
                     if warning:
                         logger.warning("error detected in plugin: %s.", plug)
                         logger.warning("%s", error)
                     continue
-                plugin = sys.modules['%s.%s' % (plugindirname,plug)] 
+                plugin = sys.modules[f'{plugindirname}.{plug}'] 
                 if hasattr(plugin, target_type):
                     if not is_plugin_supported(plugin):
                         continue
@@ -2153,7 +2142,7 @@ def from_plugin_import(plugin_path, target_type, keyname=None, warning=False,
                     else:
                         if keyname in getattr(plugin, target_type):
                             if not info:
-                                logger.info('Using from plugin %s mode %s' % (plug, keyname), '$MG:BOLD')
+                                logger.info(f'Using from plugin {plug} mode {keyname}', '$MG:BOLD')
                             else:
                                 logger.info(info % {'plug': plug, 'key':keyname}, '$MG:BOLD')
                             return getattr(plugin, target_type)[keyname]
@@ -2277,75 +2266,72 @@ def make_unique(input, keepordering=None):
     else:
         return list(dict.fromkeys(input)) 
 
-if six.PY3:
-    try:
-        from collections import MutableSet
-    except ImportError: # this is for python3.10
-        from collections.abc import  MutableSet
-    
-    class OrderedSet(collections.OrderedDict, MutableSet):
+try:
+    from collections.abc import MutableSet
+except ImportError: # this is for python3.10
+    from collections.abc import  MutableSet
 
-        def __init__(self, arg=None):
-            super( OrderedSet, self).__init__()
-            if arg:
-                self.update(arg)
+class OrderedSet(collections.OrderedDict, MutableSet):
 
-        def update(self, *args, **kwargs):
-            if kwargs:
-                raise TypeError("update() takes no keyword arguments")
+    def __init__(self, arg=None):
+        super().__init__()
+        if arg:
+            self.update(arg)
 
-            for s in args:
-                for e in s:
-                    self.add(e)
+    def update(self, *args, **kwargs):
+        if kwargs:
+            raise TypeError("update() takes no keyword arguments")
 
-        def add(self, elem):
-            self[elem] = None
+        for s in args:
+            for e in s:
+                self.add(e)
 
-        def discard(self, elem):
-            self.pop(elem, None)
+    def add(self, elem):
+        self[elem] = None
 
-        def pop(self, *args):
-            if args:
-                return super().pop(*args)
-            else:
-                key = next(iter(self))
-                del self[key]
-                return key
+    def discard(self, elem):
+        self.pop(elem, None)
 
-        def __le__(self, other):
-            return all(e in other for e in self)
+    def pop(self, *args):
+        if args:
+            return super().pop(*args)
+        else:
+            key = next(iter(self))
+            del self[key]
+            return key
 
-        def __lt__(self, other):
-            return self <= other and self != other
+    def __le__(self, other):
+        return all(e in other for e in self)
 
-        def __ge__(self, other):
-            return all(e in self for e in other)
+    def __lt__(self, other):
+        return self <= other and self != other
 
-        def __gt__(self, other):
-            return self >= other and self != other
+    def __ge__(self, other):
+        return all(e in self for e in other)
 
-        def __repr__(self):
-            return 'OrderedSet([%s])' % (', '.join(map(repr, self.keys())))
+    def __gt__(self, other):
+        return self >= other and self != other
 
-        def __str__(self):
-            return '{%s}' % (', '.join(map(repr, self.keys())))
+    def __repr__(self):
+        return 'OrderedSet([%s])' % (', '.join(map(repr, self.keys())))
 
-        def __eq__(self, other):
-            try:
-                return set(self) == set(other)
-            except TypeError:
-                return False
-        difference = property(lambda self: self.__sub__)
-        difference_update = property(lambda self: self.__isub__)
-        intersection = property(lambda self: self.__and__)
-        intersection_update = property(lambda self: self.__iand__)
-        issubset = property(lambda self: self.__le__)
-        issuperset = property(lambda self: self.__ge__)
-        symmetric_difference = property(lambda self: self.__xor__)
-        symmetric_difference_update = property(lambda self: self.__ixor__)
-        union = property(lambda self: self.__or__)
-else:
-    OrderedSet = set
+    def __str__(self):
+        return '{%s}' % (', '.join(map(repr, self.keys())))
+
+    def __eq__(self, other):
+        try:
+            return set(self) == set(other)
+        except TypeError:
+            return False
+    difference = property(lambda self: self.__sub__)
+    difference_update = property(lambda self: self.__isub__)
+    intersection = property(lambda self: self.__and__)
+    intersection_update = property(lambda self: self.__iand__)
+    issubset = property(lambda self: self.__le__)
+    issuperset = property(lambda self: self.__ge__)
+    symmetric_difference = property(lambda self: self.__xor__)
+    symmetric_difference_update = property(lambda self: self.__ixor__)
+    union = property(lambda self: self.__or__)
 
 
 def cmp_to_key(mycmp):
@@ -2394,10 +2380,9 @@ def dict_cmp(A, B, level=1):
         return (a > b) - (a < b)
         #return cmp(A[adiff], B[bdiff])
 
-if six.PY3:
-    import io
-    file = io.FileIO
-        
+import io
+file = io.FileIO
+    
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
 This actually just reads blocks (4096 bytes by default) of data from the end of
@@ -2413,7 +2398,7 @@ the file and returns last line in an internal buffer."""
           try:
             self.seek(-self.blksize * self.blkcount, 2) # read from end of file
             self.data = (self.read(self.blksize).decode(errors='ignore') + line).split('\n')
-          except IOError:  # can't seek before the beginning of the file
+          except OSError:  # can't seek before the beginning of the file
             self.seek(0)
             data = self.read(self.size - (self.blksize * (self.blkcount-1))).decode(errors='ignore') + line
             self.data = data.split('\n')

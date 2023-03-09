@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -55,7 +54,7 @@ class TestCmdShell1(unittest.TestCase):
         """join path and treat spaces"""   
 
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -360,7 +359,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stderr=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'temp', 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n'.encode())
+        proc.communicate(b'100 2 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent'],
@@ -423,9 +422,9 @@ class TestCmdShell2(unittest.TestCase,
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
-        os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
+        os.system('cp -rf {} {}'.format(os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
-        os.system('cp -rf %s %s' % (
+        os.system('cp -rf {} {}'.format(
                             TestCmdShell1.join_path(_pickle_path,'simple_v4_proc_card.dat'),
                             os.path.join(self.out_dir,'Cards','proc_card.dat')))
     
@@ -519,7 +518,7 @@ class TestCmdShell2(unittest.TestCase,
 
         #log_output = open(logfile, 'r').read()
         #misc.sprint(log_output)
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -583,7 +582,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_epem_epem'), shell=True)
         (log_output, err) = p.communicate()
         log_output = log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
@@ -613,8 +612,8 @@ class TestCmdShell2(unittest.TestCase,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
-        log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        log_output = open(logfile).read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -649,8 +648,8 @@ class TestCmdShell2(unittest.TestCase,
                                 cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                  oneproc), shell=True)
             
-                log_output = open(logfile, 'r').read()
-                me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                log_output = open(logfile).read()
+                me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                                    re.IGNORECASE)
                 me_groups = me_re.search(log_output)
                 self.assertTrue(me_groups)
@@ -705,7 +704,7 @@ class TestCmdShell2(unittest.TestCase,
                                          'P0_gg_hgg'), shell=True)
         (log_output, err) = p.communicate()                                         
         log_output =log_output.decode()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         
@@ -777,7 +776,7 @@ class TestCmdShell2(unittest.TestCase,
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_epem_epem'), shell=True)
-        proc.communicate('100 2 0.1 .false.\n'.encode())
+        proc.communicate(b'100 2 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -983,7 +982,7 @@ C
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P1_udx_wp_wp_epve'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n'.encode())
+        proc.communicate(b'100 4 0.1 .false.\n')
         
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
@@ -1145,7 +1144,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_gg_qq'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n'.encode())
+        proc.communicate(b'100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent_forhel'],
@@ -1219,7 +1218,7 @@ C
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_qq_gogo_go_qqn1_go_qqn1'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n'.encode())
+        proc.communicate(b'100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
 
 
@@ -1311,7 +1310,7 @@ P1_qq_wp_wp_lvl
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P2_qq_wpg_wp_lvl'),
                                  shell=True)
-        proc.communicate('100 4 0.1 .false.\n'.encode())
+        proc.communicate(b'100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         # Check that madevent compiles
         status = subprocess.call(['make', 'madevent_forhel'],
@@ -1394,7 +1393,7 @@ P1_qq_wp_wp_lvl
                                  stdout=devnull, stdin=subprocess.PIPE,
                                  cwd=os.path.join(self.out_dir, 'SubProcesses',
                                                   'P0_ut_tripx_utg'), shell=True)
-        proc.communicate('100 4 0.1 .false.\n'.encode())
+        proc.communicate(b'100 4 0.1 .false.\n')
         self.assertEqual(proc.returncode, 0)
         
         # Check that madevent compiles
@@ -1559,8 +1558,8 @@ P1_qq_wp_wp_lvl
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P2_Sigma_sm_epem_epem'), shell=True)
 
-        log_output = open(logfile, 'r').read()
-        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
+        log_output = open(logfile).read()
+        me_re = re.compile(r'Matrix element\s*=\s*(?P<value>[\d\.e\+-]+)\s*GeV',
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)

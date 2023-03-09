@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -25,7 +23,6 @@ import sys
 import logging
 import time
 import tests.IOTests as IOTests
-from six.moves import range
 
 logger = logging.getLogger('test_cmd')
 
@@ -501,16 +498,16 @@ class TestCmdMatchBox(IOTests.IOTestManager):
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
-        """ target: TEST/SubProcesses/P1_uux_uux/[.+\.(inc|f)]
+        r""" target: TEST/SubProcesses/P1_uux_uux/[.+\.(inc|f)]
             target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
         
         cmd = """
         import model sm
         generate w+ w- > w+ w- @0
-        output matchbox %(path)s/TEST --postpone_model
+        output matchbox {path}/TEST --postpone_model
         generate u u~ > u u~ [virt=QCD] @1
-        output matchbox %(path)s/TEST -f
-        """ % {'path': self.IOpath}
+        output matchbox {path}/TEST -f
+        """.format(path=self.IOpath)
         
         for line in cmd.split('\n'):
             self.interface.exec_cmd(line)
@@ -524,7 +521,7 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
 
     @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
     def testIO_TIR_output(self):
-        """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
+        r""" target: [ggttx_IOTest/SubProcesses/(.*)\.f]
         """
         interface = MGCmd.MasterCmd()
         interface.no_notification()

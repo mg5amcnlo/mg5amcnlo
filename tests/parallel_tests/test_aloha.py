@@ -14,9 +14,7 @@
 ################################################################################
 """Unit test Library for testing the Creation of Helas Amplitude created from 
 the output of the Feynman Rules."""
-from __future__ import division
 
-from __future__ import absolute_import
 import math
 import os
 import time
@@ -33,8 +31,6 @@ import aloha.aloha_writers as aloha_writers
 #import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
-from six.moves import range
-from six.moves import zip
 
 
 set_global = misc.set_global
@@ -67,13 +63,13 @@ class TestVariable(unittest.TestCase):
         sum = self.var1 + self.var2
         
         #check sanity
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(self.var1 in sum)        
         self.assertTrue(self.var2 in sum)
-        self.assertEquals(len(sum),2)
+        self.assertEqual(len(sum),2)
         
         #test prefactor, constant term treatment
-        self.assertEquals(sum.prefactor,1)
+        self.assertEqual(sum.prefactor,1)
         self.assertTrue(self.var1 in sum)
         #for term in sum:
         #    if term == self.var1:
@@ -92,13 +88,13 @@ class TestVariable(unittest.TestCase):
         #Sum of Two Variable
         sum = self.var2 + self.var1        
         #check sanity
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(self.var1 in sum)        
         self.assertTrue(self.var2 in sum)
-        self.assertEquals(len(sum),2)
+        self.assertEqual(len(sum),2)
         
         #test prefactor, constant term treatment
-        self.assertEquals(sum.prefactor,1)
+        self.assertEqual(sum.prefactor,1)
         #self.assertTrue(self.var1 in sum)
         #for term in sum:
         #    if term == self.var1:
@@ -127,9 +123,9 @@ class TestVariable(unittest.TestCase):
 
         sum = self.var3 + add
         
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(self.var3 in sum)
-        self.assertEquals(len(sum), 3)
+        self.assertEqual(len(sum), 3)
         #for data in sum:
         #    if data == self.var3:
         #        self.assertFalse(data is self.var3)
@@ -147,7 +143,7 @@ class TestVariable(unittest.TestCase):
         mult = self.var1 * self.var2 
         sum = self.var3 + mult
         
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(self.var3 in sum)
 
                 
@@ -161,11 +157,11 @@ class TestVariable(unittest.TestCase):
         prod = self.var1 * self.var2
         prod.simplify()
         #check sanity
-        self.assertEquals(prod.__class__,aloha_lib.MultVariable)
-        self.assertEquals(len(prod),2)
+        self.assertEqual(prod.__class__,aloha_lib.MultVariable)
+        self.assertEqual(len(prod),2)
         
         
-        self.assertEquals(prod.prefactor,6)
+        self.assertEqual(prod.prefactor,6)
 
 
     def testmultvarAdd(self):
@@ -174,15 +170,15 @@ class TestVariable(unittest.TestCase):
         add = self.var1 + self.var2
         prod = self.var3 * add
         #sanity check
-        self.assertEquals(prod.__class__, aloha_lib.AddVariable)
-        self.assertEquals(len(prod), 2)
+        self.assertEqual(prod.__class__, aloha_lib.AddVariable)
+        self.assertEqual(len(prod), 2)
         prod.simplify()
         #check prefactor of each term
         for term in prod:
             if prod.prefactor * term.prefactor == 22:
-                self.assertEqual(set(term), set([self.var1[0], self.var3[0]]))
+                self.assertEqual(set(term), {self.var1[0], self.var3[0]})
             elif prod.prefactor * term.prefactor == 33:
-                self.assertEqual(set(term),set([self.var2[0], self.var3[0]]))
+                self.assertEqual(set(term),{self.var2[0], self.var3[0]})
             else:
                 raise Exception('not valid term')
                 
@@ -196,11 +192,11 @@ class TestVariable(unittest.TestCase):
         prod = self.var1 * mult
         prod.simplify()
         #Sanity
-        self.assertEquals(prod.__class__, aloha_lib.MultVariable)
-        self.assertEquals(len(prod), 2)
+        self.assertEqual(prod.__class__, aloha_lib.MultVariable)
+        self.assertEqual(len(prod), 2)
         
         #check prefactor
-        self.assertEquals(prod.prefactor, 12)
+        self.assertEqual(prod.prefactor, 12)
         
                
     def testmultvarint(self):
@@ -212,8 +208,8 @@ class TestVariable(unittest.TestCase):
         prod2.simplify()
         
         #check prefactor - constant term
-        self.assertEquals(prod1.prefactor, 4)
-        self.assertEquals(prod2.prefactor, 6)
+        self.assertEqual(prod1.prefactor, 4)
+        self.assertEqual(prod2.prefactor, 6)
 
 class TestAddVariable(unittest.TestCase):
 
@@ -255,7 +251,7 @@ class TestAddVariable(unittest.TestCase):
         mult = var1 * var2 + 2
         sum = self.add1 + mult
         #Sanity Check
-        self.assertEquals(sum.__class__, aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__, aloha_lib.AddVariable)
         self.assertEqual(len(sum), 4)
         self.assertTrue(2 in sum)
         self.assertTrue('v2 * v3' in str(sum))
@@ -271,29 +267,29 @@ class TestAddVariable(unittest.TestCase):
         
         var3 = 11 * aloha_lib.Variable( 'var3')
         sum = self.add1 + var3
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(self.var1 in sum)
         self.assertTrue(self.var2 in sum)
         self.assertTrue(self.var3 in sum)        
-        self.assertEquals(len(sum), 3)
+        self.assertEqual(len(sum), 3)
         for data in sum:
             if data == self.var1:
-                self.assertEquals(data.prefactor,2)
+                self.assertEqual(data.prefactor,2)
             elif data == self.var2:
-                self.assertEquals(data.prefactor,3)
+                self.assertEqual(data.prefactor,3)
             elif data == self.var3:
-                self.assertEquals(data.prefactor,11)
+                self.assertEqual(data.prefactor,11)
                 
         #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
+        self.assertEqual(sum.prefactor, 1)
     
     def testsumaddadd(self):
         """Test the sum of two add object"""
         
         sum = self.add1 + self.add2
         
-        self.assertEquals(sum.__class__, aloha_lib.AddVariable)
-        self.assertEquals(len(sum), 4)
+        self.assertEqual(sum.__class__, aloha_lib.AddVariable)
+        self.assertEqual(len(sum), 4)
         
         self.assertTrue(self.var1 in sum)
         self.assertTrue(self.var2 in sum)
@@ -302,15 +298,15 @@ class TestAddVariable(unittest.TestCase):
         
         for data in sum:
             if data == self.var1:
-                self.assertEquals(data.prefactor, 2)
+                self.assertEqual(data.prefactor, 2)
             elif data == self.var2:
-                self.assertEquals(data.prefactor, 3)
+                self.assertEqual(data.prefactor, 3)
             elif data == self.var3:
-                self.assertEquals(data.prefactor, 11)
+                self.assertEqual(data.prefactor, 11)
             elif data == self.var4:
-                self.assertEquals(data.prefactor, 4)
+                self.assertEqual(data.prefactor, 4)
         #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
+        self.assertEqual(sum.prefactor, 1)
         
     def testmultaddint(self):
         """test the multiplication of an AddVariable by a Integer"""
@@ -318,26 +314,26 @@ class TestAddVariable(unittest.TestCase):
         prod1 = 3 * self.add1
         prod2 = self.add2 * 2
         
-        self.assertEquals(prod1.__class__, aloha_lib.AddVariable)
-        self.assertEquals(prod2.__class__, aloha_lib.AddVariable)
+        self.assertEqual(prod1.__class__, aloha_lib.AddVariable)
+        self.assertEqual(prod2.__class__, aloha_lib.AddVariable)
         self.assertFalse(prod1 is self.add1)
         self.assertFalse(prod2 is self.add2)
-        self.assertEquals(len(prod1), 2)
-        self.assertEquals(len(prod2), 2)
+        self.assertEqual(len(prod1), 2)
+        self.assertEqual(len(prod2), 2)
         
-        self.assertEquals(prod1.prefactor, 3)
-        self.assertEquals(prod2.prefactor, 2)
+        self.assertEqual(prod1.prefactor, 3)
+        self.assertEqual(prod2.prefactor, 2)
                 
         for data in prod1:
             if 'var1' in str(data):
-                self.assertEquals(prod1.prefactor * data.prefactor, 6)
+                self.assertEqual(prod1.prefactor * data.prefactor, 6)
             elif 'var2' in str(data):
-                self.assertEquals(prod1.prefactor * data.prefactor, 9)
+                self.assertEqual(prod1.prefactor * data.prefactor, 9)
         for data in prod2:
             if 'var3' in data:
-                self.assertEquals(prod2.prefactor * data.prefactor, 22)
+                self.assertEqual(prod2.prefactor * data.prefactor, 22)
             elif 'var4' in data:
-                self.assertEquals(prod2.prefactor * data.prefactor, 8)
+                self.assertEqual(prod2.prefactor * data.prefactor, 8)
 
     
     def testmultadd_legacy(self):
@@ -372,15 +368,15 @@ class TestAddVariable(unittest.TestCase):
         var3 = 11 * aloha_lib.Variable('var3')
         prod = self.add1 * var3
         #sanity check
-        self.assertEquals(prod.__class__, aloha_lib.AddVariable)
-        self.assertEquals(len(prod), 2)
+        self.assertEqual(prod.__class__, aloha_lib.AddVariable)
+        self.assertEqual(len(prod), 2)
         
         #check prefactor of each term
         for term in prod:
             if 'var1' not in str(term):
-                self.assertEquals(prod.prefactor * term.prefactor, 33)
+                self.assertEqual(prod.prefactor * term.prefactor, 33)
             elif 'var2' not in str(term):
-                self.assertEquals(prod.prefactor * term.prefactor, 22)
+                self.assertEqual(prod.prefactor * term.prefactor, 22)
             else:
                 raise Exception('not valid term')
                 
@@ -454,7 +450,7 @@ class TestAddVariable(unittest.TestCase):
         new = self.add1.replace(id, self.add2)
         
         self.assertEqual(len(new),3)
-        self.assertEqual(set([a.prefactor for a in new]),set([3,22,8]))
+        self.assertEqual({a.prefactor for a in new},{3,22,8})
         for i in new:
             self.assertNotEqual(i,id)
         
@@ -462,14 +458,14 @@ class TestAddVariable(unittest.TestCase):
         id = self.var1.get_id()
         new = self.add1.replace(id, self.var1 * self.var2)
         self.assertEqual(len(new),2)
-        self.assertEqual(set([a.prefactor for a in new]),set([12,3]))
+        self.assertEqual({a.prefactor for a in new},{12,3})
 
         self.setUp()
         add2 = 2 * self.add2
         id  = self.var1.get_id()
         new = self.var1.replace(id, add2)
         self.assertEqual(len(new),2)
-        self.assertEqual(set([a.prefactor for a in new]),set([11,4]))
+        self.assertEqual({a.prefactor for a in new},{11,4})
         for i in new:
             self.assertNotEqual(i,id)
         
@@ -479,7 +475,7 @@ class TestAddVariable(unittest.TestCase):
         id  = self.var1.get_id()
         new = add1.replace(id, add2)
         self.assertEqual(len(new),3)
-        self.assertEqual(set([a.prefactor*new.prefactor for a in new]),set([15,220,80]))
+        self.assertEqual({a.prefactor*new.prefactor for a in new},{15,220,80})
         for i in new:
             self.assertNotEqual(i,id)
         
@@ -807,7 +803,7 @@ class TestMultVariable(unittest.TestCase):
                 
         sum = self.mult2 + add
         #Sanity Check
-        self.assertEquals(sum.__class__, aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__, aloha_lib.AddVariable)
         self.assertEqual(len(sum), 3)
         self.assertTrue(var1 in sum)
         self.assertTrue(var2 in sum)
@@ -832,17 +828,17 @@ class TestMultVariable(unittest.TestCase):
         var = 3 * aloha_lib.Variable('xxx')
         sum = self.mult2 + var
         sum.simplify()
-        self.assertEquals(sum.__class__,aloha_lib.AddVariable)
+        self.assertEqual(sum.__class__,aloha_lib.AddVariable)
         self.assertTrue(var in sum)
-        self.assertEquals(len(sum), 2)
+        self.assertEqual(len(sum), 2)
         for term in sum:
             self.assertTrue(term.prefactor in [3,20])
 
                 
         #test prefactor- constant_term
-        self.assertEquals(sum.prefactor, 1)
-        self.assertEquals(var.prefactor, 3)
-        self.assertEquals(self.mult2.prefactor, 20)
+        self.assertEqual(sum.prefactor, 1)
+        self.assertEqual(var.prefactor, 3)
+        self.assertEqual(self.mult2.prefactor, 20)
         
     def testmultmultint(self):
         """Test the multiplication of an MultVariable with an integer"""
@@ -1086,7 +1082,7 @@ class testLorentzObject(unittest.TestCase):
         analytical2= analytical2.expand()
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
             try:
-                exec('%s = %s' % (name, cexpr))   
+                exec(f'{name} = {cexpr}')   
             except:
                 pass
         
@@ -1216,7 +1212,7 @@ class testLorentzObject(unittest.TestCase):
         M1 = math.sqrt(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
             try:
-                exec('%s = %s' % (name, cexpr))   
+                exec(f'{name} = {cexpr}')   
             except:
                 pass
         for ind in zero.listindices():
@@ -1339,7 +1335,7 @@ class testLorentzObject(unittest.TestCase):
         OM1 = 1.0/48#(P1_0 **2 - P1_1 **2 -P1_2 **2 -P1_3 **2)
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
             try:
-                exec('%s = %s' % (name, cexpr))   
+                exec(f'{name} = {cexpr}')   
             except:
                 pass
         
@@ -1594,15 +1590,15 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         repr3 = aloha_lib.LorentzObjectRepresentation(data, [], [1, 2])
         
         for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
             
         
         #check the dealing with scalar
         repr4 = aloha_lib.LorentzObjectRepresentation(49, [], [])
         for ind in repr4.listindices():
-            self.assertEquals(repr4.get_rep(ind), 49)
+            self.assertEqual(repr4.get_rep(ind), 49)
 
 
     def test_short_sum_with4ind(self):
@@ -1657,7 +1653,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         for ind in final.listindices():
             val1 = eval(str(final.get_rep(ind)))
             val2 = eval(str(solution_rep.get_rep(ind)))
-            self.assertAlmostEqual(val1, val2, msg='not equal data for ind: %s, %s != %s' % (ind, val1, val2))
+            self.assertAlmostEqual(val1, val2, msg=f'not equal data for ind: {ind}, {val1} != {val2}')
 
 
 
@@ -1677,18 +1673,18 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             repr3.set_rep(ind, (ind[0]+1)*(ind[1]+1))
 
         for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))
 
         for ind in repr1.listindices():
-            self.assertEquals(repr1.get_rep(ind), goal[ind[0]][ind[1]])
-            self.assertEquals(repr2.get_rep(ind), goal[ind[0]][ind[1]])
-            self.assertEquals(repr3.get_rep(ind), goal[ind[0]][ind[1]])
+            self.assertEqual(repr1.get_rep(ind), goal[ind[0]][ind[1]])
+            self.assertEqual(repr2.get_rep(ind), goal[ind[0]][ind[1]])
+            self.assertEqual(repr3.get_rep(ind), goal[ind[0]][ind[1]])
             
-            self.assertEquals(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
-            self.assertEquals(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))    
+            self.assertEqual(repr1.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr2.get_rep(ind), (ind[0]+1)*(ind[1]+1))
+            self.assertEqual(repr3.get_rep(ind), (ind[0]+1)*(ind[1]+1))    
             
                     
     def testtensorialproductlorentz(self):
@@ -1698,7 +1694,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         #check global
         self.assertTrue(isinstance(product, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(product.lorentz_ind, [1,2])
+        self.assertEqual(product.lorentz_ind, [1,2])
         self.assertEqual(product.spin_ind, [])
 #        self.assertEqual(product.tag, set(['P1','P2']))
         
@@ -1721,7 +1717,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         #check global
         self.assertTrue(isinstance(product1, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(product1.lorentz_ind, [1,2])
+        self.assertEqual(product1.lorentz_ind, [1,2])
         self.assertEqual(product1.spin_ind, [1,2,3,4])
 
         
@@ -1739,7 +1735,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         #check global
         self.assertTrue(isinstance(product2, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(product2.lorentz_ind, [])
+        self.assertEqual(product2.lorentz_ind, [])
         self.assertEqual(product2.spin_ind, [1,2,3,4])
 #        self.assertEqual(product2.tag, set([]))
         
@@ -1761,7 +1757,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         #check global
         self.assertTrue(isinstance(prod1, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod1.lorentz_ind, [2, 1])
+        self.assertEqual(prod1.lorentz_ind, [2, 1])
         self.assertEqual(prod1.spin_ind, [1,3])
         
         for ind in prod1.listindices():
@@ -1778,7 +1774,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
  
         #check global
         self.assertTrue(isinstance(prod2, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod2.lorentz_ind, [])
+        self.assertEqual(prod2.lorentz_ind, [])
         self.assertEqual(prod2.spin_ind, [1,3])
 
         for ind in prod2.listindices():
@@ -1796,7 +1792,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
  
         #check global
         self.assertTrue(isinstance(prod3, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod3.lorentz_ind, [])
+        self.assertEqual(prod3.lorentz_ind, [])
         self.assertEqual(prod3.spin_ind, [])            
 
         for ind in prod3.listindices():
@@ -1813,7 +1809,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
  
         #check global
         self.assertTrue(isinstance(prod3, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod3.lorentz_ind, [])
+        self.assertEqual(prod3.lorentz_ind, [])
         self.assertEqual(prod3.spin_ind, [])            
 
         for ind in prod3.listindices():
@@ -1834,7 +1830,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
 
         #check global
         self.assertTrue(isinstance(prod1, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod1.lorentz_ind, [2])
+        self.assertEqual(prod1.lorentz_ind, [2])
         self.assertEqual(prod1.spin_ind, [])
 #        self.assertEqual(prod1.tag, set(['P1','P2']))
         
@@ -1859,7 +1855,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
 
         #check global
         self.assertTrue(isinstance(prod2, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(prod2.lorentz_ind, [])
+        self.assertEqual(prod2.lorentz_ind, [])
         self.assertEqual(prod2.spin_ind, [])
 #        self.assertEqual(prod2.tag, set(['P1','P2']))
         
@@ -1895,7 +1891,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
             @classmethod
             def get_unique_name(self, s1, s2):
-                return 'gamma_l_%s_%s' % (s1,s2)
+                return f'gamma_l_{s1}_{s2}'
         
     
             
@@ -1948,7 +1944,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
             @classmethod
             def get_unique_name(self, s1, s2):
-                return 'gamma_s_%s_%s' % (s1,s2)
+                return f'gamma_s_{s1}_{s2}'
 #            create_representation = lambda : representation
         
         
@@ -1983,7 +1979,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
         
         #check global
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [1])
+        self.assertEqual(sum.lorentz_ind, [1])
         self.assertEqual(sum.spin_ind, [])
 #        self.assertEqual(sum.tag, set(['P1','P2']))
         
@@ -2003,7 +1999,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
 
         #check global
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [2, 1])
+        self.assertEqual(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        tag = set(list(sum.tag))
 
@@ -2029,7 +2025,7 @@ class TestLorentzObjectRepresentation(unittest.TestCase):
             
         #check sum is unchanged
         self.assertTrue(isinstance(sum, aloha_lib.LorentzObjectRepresentation))
-        self.assertEquals(sum.lorentz_ind, [2, 1])
+        self.assertEqual(sum.lorentz_ind, [2, 1])
         self.assertEqual(sum.spin_ind, [])
 #        self.assertEqual(sum.tag, tag)
         for ind in sum.listindices():
@@ -2154,7 +2150,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         obj3 = obj3.simplify().expand().simplify()        
         #self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)
         self.assertEqual(obj1.lorentz_ind, obj3.lorentz_ind)
-        self.assertEqual(set(obj2.spin_ind), set([1,4]))          
+        self.assertEqual(set(obj2.spin_ind), {1,4})          
         self.assertEqual(set(obj1.spin_ind), set(obj3.spin_ind))
         for ind in obj1.listindices():
             if obj1.spin_ind == obj3.spin_ind:
@@ -2170,7 +2166,7 @@ class TestSomeObjectProperty(unittest.TestCase):
         obj1 = obj1.simplify().expand().simplify()
         obj2 = obj2.simplify().expand().simplify()    
         self.assertEqual(obj1.lorentz_ind, obj2.lorentz_ind)
-        self.assertEqual(set(obj2.spin_ind), set([1,2]))          
+        self.assertEqual(set(obj2.spin_ind), {1,2})          
         self.assertEqual(set(obj1.spin_ind), set(obj2.spin_ind))
         for ind in obj1.listindices():
             if obj1.spin_ind == obj2.spin_ind:
@@ -2492,7 +2488,7 @@ class TestSomeObjectProperty(unittest.TestCase):
             try:
                 self.assertEqual(zero.get_rep(ind), 0) 
             except Exception as error:
-                error.message = '%s (for component %s) is not zero' % (zero.get_rep(ind),ind)
+                error.message = f'{zero.get_rep(ind)} (for component {ind}) is not zero'
                 raise AssertionError(error.message)
         
         object1_paper = 2 * P(-1,2) * P(-1, 3) * Gamma(3,2,1) - P(3,3) * P(-1,2) * Gamma(-1,2,1)\
@@ -2545,7 +2541,7 @@ class TestSomeObjectProperty(unittest.TestCase):
             val1 = eps.give_parity(index)
             val2 = -1 * aloha_obj.give_sign_perm([0,1,2,3], index)
         
-            self.assertEqual(val1, val2, 'not same parity for perm %s' % (index,))
+            self.assertEqual(val1, val2, f'not same parity for perm {index}')
 
     def testEpsilonProperty(self):
         """Test the property of the epsilon object"""
@@ -2810,7 +2806,7 @@ class test_aloha_creation(unittest.TestCase):
     """ test the creation of one aloha routine from the create_aloha routine """
     
     
-    class Lorentz(object):
+    class Lorentz:
 
         require_args=['name','spins','structure']
     
@@ -2856,7 +2852,7 @@ class test_aloha_creation(unittest.TestCase):
         P2_0,P2_1,P2_2,P2_3 = 101, 111, 121, 134
         P3_0,P3_1,P3_2,P3_3 = 1001, 1106, 1240, 1320
         for name, cexpr in abstract_ZP.contracted.items():
-            exec('%s = %s' % (name, cexpr))
+            exec(f'{name} = {cexpr}')
 
         for ind in expr.listindices():
             self.assertEqual(eval(str(expr.get_rep(ind))), 178727040j)
@@ -2925,7 +2921,7 @@ class test_aloha_creation(unittest.TestCase):
         #    exec('%s = %s' % (name, cexpr))
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
             try:
-                exec('%s = %s' % (name, cexpr))            
+                exec(f'{name} = {cexpr}')            
             except:
                 pass
         for ind in one_exp.listindices():
@@ -3019,7 +3015,7 @@ class test_aloha_creation(unittest.TestCase):
         M3 = 500
         
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
-            exec('%s = %s' % (name, cexpr)) 
+            exec(f'{name} = {cexpr}') 
         
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
@@ -3084,7 +3080,7 @@ class test_aloha_creation(unittest.TestCase):
         P3_0,P3_1,P3_2,P3_3 = 10, 11, 12, 13
         
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
-            exec('%s = %s' % (name, cexpr)) 
+            exec(f'{name} = {cexpr}') 
         
         for ind in abstract.expr.listindices():                        
             self.assertAlmostEqual(eval(str(abstract.expr.get_rep(ind))) -
@@ -3118,7 +3114,7 @@ class test_aloha_creation(unittest.TestCase):
         
         #evaluate all contraction 
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
-            exec('%s = %s' % (name, cexpr))
+            exec(f'{name} = {cexpr}')
             
         # evaluate FFV_0
         val_V = eval(str(V.expr.get_rep((0,))))
@@ -3176,7 +3172,7 @@ class test_aloha_creation(unittest.TestCase):
         s4 = -j*((OM3*(P3_3*((F2_1*((F1_3*(-P3_0-P3_3))+(F1_4*(-P3_1-1*j*P3_2))))+(F2_2*((F1_3*(-P3_1+1*j*P3_2))+(F1_4*(-P3_0+P3_3)))))))+(-(F1_3*F2_1)+(F1_4*F2_2)))
 
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
-            exec('%s = %s' % (name, cexpr)) 
+            exec(f'{name} = {cexpr}') 
 
         self.assertEqual(s1, eval(str(abstract_M.expr.get_rep([0]))))
         self.assertEqual(s2, eval(str(abstract_M.expr.get_rep([1]))))    
@@ -3195,7 +3191,7 @@ class test_aloha_creation(unittest.TestCase):
         zero = abstract_6.expr - abstract_M.expr - \
                                                     2* abstract_P.expr   
         for name, cexpr in aloha_lib.KERNEL.reduced_expr2.items():
-            exec('%s = %s' % (name, cexpr)) 
+            exec(f'{name} = {cexpr}') 
         for ind in zero.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
@@ -3526,8 +3522,8 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
             helas_suite.write(path, 'Fortran')
             
             content = set(os.listdir(path))
-            self.assertEqual(content, set(['FFV1_0.f',
-                                           'FFV1C1_0.f','FFV2C1_0.f']))
+            self.assertEqual(content, {'FFV1_0.f',
+                                           'FFV1C1_0.f','FFV2C1_0.f'})
             
             # Check the content of FFV1__FFV2C1_0.f
             fsock = open('%s/FFV1C1_0.f' % path)
@@ -3637,7 +3633,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         cImag = complex(0,1)
 
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))       
+            exec(f'{name} = {expr}')       
 
         #for i in range(100):
         ufo_value = []
@@ -3708,7 +3704,7 @@ end
         cImag = complex(0,1)
 
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))       
+            exec(f'{name} = {expr}')       
 
 
         ufo_value = eval(str(amp.expr.get_rep([0])))
@@ -3736,7 +3732,7 @@ end
         cImag = complex(0,1)
 
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))
+            exec(f'{name} = {expr}')
             
         ufo_value = eval(str(amp.expr.get_rep([0])))
     
@@ -3758,7 +3754,7 @@ end
         conjg_builder= builder.define_conjugate_builder()
         amp = conjg_builder.compute_routine(0, factorize=False)
         for name, expr in amp.contracted.items():
-            exec('%s = %s' % (name,expr))
+            exec(f'{name} = {expr}')
                     
         ufo_value = eval(str(amp.expr.get_rep([0])))
         self.assertNotEqual(complex(0,1)*ufo_value, v4_value)
@@ -3801,7 +3797,7 @@ end
 
         
 
-class UFOLorentz(object):
+class UFOLorentz:
     """ simple UFO LORENTZ OBJECT """
     
     def __init__(self, name='',spins=[],structure='1'):

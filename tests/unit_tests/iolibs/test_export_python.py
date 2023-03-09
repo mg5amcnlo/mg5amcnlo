@@ -15,7 +15,6 @@
 
 """Unit test library for the export Python format routines"""
 
-from __future__ import absolute_import
 import six
 StringIO = six
 import copy
@@ -529,8 +528,8 @@ class IOExportPythonTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

@@ -18,7 +18,6 @@ constraints to this test is that the current version can still read the old
 model format. 
 The reference version is given here as a argument which can be changed by hand.
 """
-from __future__ import absolute_import
 import itertools
 import logging
 import os
@@ -29,7 +28,6 @@ import unittest
 import subprocess
 
 from madgraph import MG5DIR
-from six.moves import range
 
 pjoin = os.path.join
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -97,7 +95,7 @@ class OLDMG5Comparator(unittest.TestCase):
         
         if os.path.exists(pjoin(MG5DIR,'models','paralel_test_model_%s' % model)):
             shutil.rmtree(pjoin(MG5DIR,'models','paralel_test_model_%s' % model))
-        os.system('cp -rf %s %s' % (pjoin(mg5_path,'models',model) ,
+        os.system('cp -rf {} {}'.format(pjoin(mg5_path,'models',model) ,
                                     pjoin(MG5DIR,'models','paralel_test_model_%s' % model)))
 
         
@@ -152,7 +150,7 @@ class OLDMG5Comparator(unittest.TestCase):
         self.nb_test +=1      
         if os.path.exists(pjoin(MG5DIR,'models','paralel_test_model_%s' % model)):
             shutil.rmtree(pjoin(MG5DIR,'models','paralel_test_model_%s' % model))
-        os.system('cp -rf %s %s' % (pjoin(mg5_path,'models',model) ,
+        os.system('cp -rf {} {}'.format(pjoin(mg5_path,'models',model) ,
                                     pjoin(MG5DIR,'models','paralel_test_model_%s' % model)))
         
         # Create and setup a comparator
@@ -705,7 +703,7 @@ class OLDMG5Comparator(unittest.TestCase):
             f_comb+=1
             iter = itertools.product(list(range(len(boson))), repeat=3)
             if not f_comb % 2:
-                print('step %s/%s' % ((f_comb)//2 + 1, len(fermion)**2//2)) 
+                print(f'step {(f_comb)//2 + 1}/{len(fermion)**2//2}') 
                 my_proc_list = []
             for j in range(len(boson)**3):
                 my_proc_list.append( get_process(fermions, next(iter)))

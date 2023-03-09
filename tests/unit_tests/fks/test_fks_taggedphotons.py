@@ -12,9 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 from cmd import Cmd
-from six.moves import zip
 """ Basic test of the command interface """
 
 import unittest
@@ -60,7 +58,7 @@ class TestAMCatNLOEWTagPh(unittest.TestCase):
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
 
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
-            self.assertEqual(set([r.fks_infos[0]['j'] for r in fksprocess.real_amps]), set(fks_j))
+            self.assertEqual({r.fks_infos[0]['j'] for r in fksprocess.real_amps}, set(fks_j))
             
     def test_invalid_syntax_tag(self):
 

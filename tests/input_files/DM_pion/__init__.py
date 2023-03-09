@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import function_library
 import object_library 
 import particles

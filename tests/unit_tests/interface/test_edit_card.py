@@ -14,7 +14,6 @@
 ################################################################################
 """ Basic test of the command interface """
 
-from __future__ import absolute_import
 import unittest
 import madgraph
 import madgraph.interface.master_interface as mgcmd
@@ -34,7 +33,7 @@ root_path = os.path.dirname(root_path)
 # root_path is ./tests
 pjoin = os.path.join
 
-class FakeInterface(object):
+class FakeInterface:
     
     do_define_transfer_fct = ''
     complete_define_transfer_fct = ''

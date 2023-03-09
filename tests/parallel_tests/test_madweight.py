@@ -17,7 +17,6 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
-from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -29,7 +28,6 @@ import subprocess
 import sys
 import time
 import unittest
-from six.moves import map
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 

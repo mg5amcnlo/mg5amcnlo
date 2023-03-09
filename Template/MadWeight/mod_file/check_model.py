@@ -3,7 +3,6 @@
 #test
 
 #Extension
-from __future__ import absolute_import
 import string
 import os
 import sys

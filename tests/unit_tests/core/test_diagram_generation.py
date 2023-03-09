@@ -15,7 +15,6 @@
 
 """Unit test library for the various base objects of the core library"""
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -28,8 +27,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
-from six.moves import range
-from six.moves import zip
 
 #===============================================================================
 # AmplitudeTest
@@ -117,7 +114,7 @@ class AmplitudeTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_amplitude.set(test['prop'], x))
+                self.assertTrue(temp_amplitude.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_amplitude.set(test['prop'], x))
 
@@ -208,8 +205,8 @@ class DiagramGenerationTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -1933,10 +1930,10 @@ class DiagramGenerationTest(unittest.TestCase):
 
         self.assertEqual(len(myamplitude.get('diagrams')), 8)
         
-        goal_lastvx = set([21,2,-2])
+        goal_lastvx = {21,2,-2}
         for diag in myamplitude.get('diagrams'):
-            self.assertEqual(set([l.get('id') for l in \
-                                  diag.get('vertices')[-1].get('legs')]),
+            self.assertEqual({l.get('id') for l in \
+                                  diag.get('vertices')[-1].get('legs')},
                              goal_lastvx)
 
 #===============================================================================
@@ -2011,8 +2008,8 @@ class MultiparticleTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2195,8 +2192,8 @@ class DecayChainAmplitudeTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -2582,8 +2579,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -3132,8 +3129,8 @@ class MultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

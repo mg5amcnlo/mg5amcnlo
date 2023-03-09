@@ -1,9 +1,7 @@
-
-from __future__ import absolute_import
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
-class ParamCardWriter(object):
+class ParamCardWriter:
     
     header = \
     """######################################################################\n""" + \
@@ -30,7 +28,7 @@ class ParamCardWriter(object):
       
         
         # list all lhablock
-        all_lhablock = set([param.lhablock for param in all_ext_param])
+        all_lhablock = {param.lhablock for param in all_ext_param}
         
         # ordonate lhablock alphabeticaly
         list(all_lhablock).sort()
@@ -54,9 +52,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value, param.name ) 
+            text = f"""  {lhacode} {param.value:e} # {param.name} \n""" 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, param.value)
+            text = f'''DECAY {lhacode} {param.value:e} \n'''
         self.fsock.write(text) 
             
             

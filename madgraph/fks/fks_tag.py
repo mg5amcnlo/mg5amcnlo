@@ -29,12 +29,12 @@ class MultiTagLeg(MG.MultiLeg):
 
     def default_setup(self):
         """Default values for all properties"""
-        super(MultiTagLeg, self).default_setup()
+        super().default_setup()
         self['is_tagged'] = False
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(MultiTagLeg, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys += ['is_tagged']
         return keys
 
@@ -47,7 +47,7 @@ class MultiTagLeg(MG.MultiLeg):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid string for leg 'is_tagged' flag" \
                                                         % str(value))
-        return super(MultiTagLeg,self).filter(name, value)
+        return super().filter(name, value)
     
      
 
@@ -58,12 +58,12 @@ class TagLeg(MG.Leg):
 
     def default_setup(self):
         """Default values for all properties"""
-        super(TagLeg, self).default_setup()
+        super().default_setup()
         self['is_tagged'] = False
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(TagLeg, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys += ['is_tagged']
         return keys
 
@@ -76,4 +76,4 @@ class TagLeg(MG.Leg):
                 raise self.PhysicsObjectError( \
                         "%s is not a valid string for leg 'is_tagged' flag" \
                                                         % str(value))
-        return super(TagLeg,self).filter(name, value)
+        return super().filter(name, value)

@@ -16,7 +16,6 @@
 """Definitions of all basic objects with extra features to treat loop 
    diagrams"""
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -28,8 +27,6 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR
-from six.moves import range
-from six.moves import zip
 
 logger = logging.getLogger('madgraph.loop_base_objects')
 
@@ -53,7 +50,7 @@ class LoopDiagram(base_objects.Diagram):
     def default_setup(self):
         """Default values for all properties"""
 
-        super(LoopDiagram,self).default_setup()
+        super().default_setup()
         # This tag specifies the particular structure of this loop, cut at 
         # and ordered in the same way as originally generated. It contains
         # the full information about the loop vertices and the loop legs.
@@ -127,7 +124,7 @@ class LoopDiagram(base_objects.Diagram):
                 raise self.PhysicsObjectError("%s is not a valid Diagram." % str(value))                            
 
         else:
-            super(LoopDiagram, self).filter(name, value)
+            super().filter(name, value)
 
         return True
 
@@ -141,7 +138,7 @@ class LoopDiagram(base_objects.Diagram):
         
         # Return the mother nice_string if this LoopDiagram is of born type.
         if self['type']==0:
-            return super(LoopDiagram,self).nice_string()
+            return super().nice_string()
         
         mystr=''
         if not self['vertices']:
@@ -1006,7 +1003,7 @@ class LoopDiagram(base_objects.Diagram):
         self['vertices'] = loopVertexList    
     
     def construct_FDStructure(self, fromVert, fromPos, currLeg, FDStruct):
-        """ Construct iteratively a Feynman Diagram structure attached to a Loop, 
+        r""" Construct iteratively a Feynman Diagram structure attached to a Loop, 
         given at each step a vertex and the position of the leg this function is 
         called from. At the same time, it constructs a canonical representation 
         of the structure which is a tuple with each element corresponding to 
@@ -1231,8 +1228,8 @@ class LoopDiagram(base_objects.Diagram):
         not the antiparticle, is stored in this list. Using the tag would be 
         quicker, but we want this function to be available before tagging as 
         well"""
-        return set([abs(l['id']) for v in self['vertices'] for l in v['legs'] \
-                    if l['loop_line']])
+        return {abs(l['id']) for v in self['vertices'] for l in v['legs'] \
+                    if l['loop_line']}
 
     def get_loop_orders(self,model):
         """ Return a dictionary with one entry per type of order appearing in 
@@ -1333,7 +1330,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
     def default_setup(self):
         """Default values for all properties"""
 
-        super(LoopUVCTDiagram,self).default_setup()
+        super().default_setup()
         # These attributes store the specifics of the UV counter-term
         # contribution of this diagram
         self['type']='UV'
@@ -1360,7 +1357,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
                 raise self.PhysicsObjectError("%s is not a valid string" % str(value))
         
         else:
-            super(LoopUVCTDiagram, self).filter(name, value)
+            super().filter(name, value)
 
         return True
     
@@ -1384,7 +1381,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
         that the special order WEIGTHED corresponds to the sum of
         hierarchies for the couplings."""
 
-        coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
+        coupling_orders = {c: 0 for c in model.get('coupling_orders')}
         weight = 0
         for couplings in [model.get('interaction_dict')[vertex.get('id')].\
                         get('orders') for vertex in self['vertices'] if \
@@ -1400,7 +1397,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
         """Returns a nicely formatted string of the diagram content."""
         res=''
         if self['vertices']:
-            res=res+super(LoopUVCTDiagram,self).nice_string()
+            res=res+super().nice_string()
         if self['UVCT_couplings']:
             res=res+'UV renorm. vertices: '
             res=res+','.join(str(vert) for vert in self['UVCT_couplings'])+'\n'
@@ -1429,10 +1426,10 @@ class LoopModel(base_objects.Model):
             if hasattr(args[0],'notused_ct_params'):
                 self.notused_ct_params = list(args[0].notused_ct_params)                
 
-        super(LoopModel,self).__init__(*args,**opts)
+        super().__init__(*args,**opts)
 
     def default_setup(self):
-       super(LoopModel,self).default_setup()
+       super().default_setup()
        self['perturbation_couplings'] = []
        # The 'coupling_orders_counterterms' has all coupling orders
        # as keys and values are tuple of the form:
@@ -1464,7 +1461,7 @@ class LoopModel(base_objects.Model):
                     raise self.PhysicsObjectError("Object of type %s is not a string" % \
                                                             type(order))
         else:
-            super(LoopModel,self).filter(name,value)
+            super().filter(name,value)
         
         return True
 
@@ -1491,7 +1488,7 @@ class LoopModel(base_objects.Model):
         if not bypass_check:
             if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
                 raise Exception("can not change EW scheme for model handling EW correction")
-        return super(LoopModel, self).change_electroweak_mode(mode)
+        return super().change_electroweak_mode(mode)
 
 #===============================================================================
 # DGLoopLeg
@@ -1505,17 +1502,17 @@ class DGLoopLeg(base_objects.Leg):
         """ Allow for initializing a DGLoopLeg of a Leg """
         if not isinstance(argument, base_objects.Leg):
             if argument:
-                super(DGLoopLeg,self).__init__(argument)
+                super().__init__(argument)
             else:
-                super(DGLoopLeg,self).__init__()
+                super().__init__()
         else:
-            super(DGLoopLeg,self).__init__()
+            super().__init__()
             for key in argument.get_sorted_keys():
                 if key in self.get_sorted_keys():
                     self.set(key,argument[key])
 
     def default_setup(self):
-       super(DGLoopLeg,self).default_setup()         
+       super().default_setup()         
        self['depth'] = 0
 
     def filter(self, name, value):
@@ -1526,7 +1523,7 @@ class DGLoopLeg(base_objects.Leg):
                 raise self.PhysicsObjectError("Object of type %s is not a int" % \
                                                             type(value))
         else:
-            super(DGLoopLeg,self).filter(name,value)
+            super().filter(name,value)
         
         return True
 

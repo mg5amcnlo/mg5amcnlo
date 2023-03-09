@@ -13,9 +13,7 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import random
-from six.moves import range
 if __name__=='__main__':
     # Make sure paths are accessible
     import os
@@ -29,7 +27,7 @@ from madgraph import MadGraph5Error
 #===============================================================================
 # MadLoopBannerStyles
 #===============================================================================
-class MadLoopBannerStyles(object):
+class MadLoopBannerStyles:
     """ A container class to specify all banner styles. """
     # a dictionary contaning all banner styles
     ordered_style_keys = ['classic','classic2','classic3','big','funky',

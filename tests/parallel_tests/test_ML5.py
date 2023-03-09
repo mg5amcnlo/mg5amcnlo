@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import logging.config
 import logging
 import pydoc
@@ -116,12 +115,12 @@ def procToFolderName(proc, sqso = {}):
     return res
 
 
-ML4_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
-                                                             ML4_processes_long)
-ML5_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
-                                                             ML5_processes_long)
-ML5_SplitOrders_long_dic = dict((procToFolderName(elem[0], sqso=elem[3]),elem) \
-                                              for elem in ML5_SplitOrders_long)
+ML4_processes_long_dic = {procToFolderName(elem[0]):elem for elem in \
+                                                             ML4_processes_long}
+ML5_processes_long_dic = {procToFolderName(elem[0]):elem for elem in \
+                                                             ML5_processes_long}
+ML5_SplitOrders_long_dic = {procToFolderName(elem[0], sqso=elem[3]):elem \
+                                              for elem in ML5_SplitOrders_long}
 
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """

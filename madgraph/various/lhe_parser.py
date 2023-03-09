@@ -1,5 +1,3 @@
-from __future__ import division
-from __future__ import absolute_import
 import collections
 import random
 import re
@@ -11,9 +9,6 @@ import os
 import shutil
 import sys
 import six
-from six.moves import filter
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 pjoin = os.path.join
@@ -52,10 +47,9 @@ except Exception as error:
 
 logger = logging.getLogger("madgraph.lhe_parser")
 
-if six.PY3:
-    six.text_type = str
+str = str
 
-class Particle(object):
+class Particle:
     """ """
     # regular expression not use anymore to speed up the computation
     #pattern=re.compile(r'''^\s*
@@ -201,10 +195,10 @@ class Particle(object):
 
             
     def __repr__(self):
-        return 'Particle("%s", event=%s)' % (str(self), self.event)
+        return f'Particle("{str(self)}", event={self.event})'
 
 
-class EventFile(object):
+class EventFile:
     """A class to allow to read both gzip and not gzip file"""
     
     allow_empty_event = False
@@ -229,7 +223,7 @@ class EventFile(object):
             try:
                 self.file =  gzip.GzipFile(path, mode, *args, **opt)
                 self.zip_mode =True
-            except IOError as error:
+            except OSError as error:
                 raise
             except Exception as error:
                 misc.sprint(error)
@@ -453,7 +447,7 @@ class EventFile(object):
                 return event.wgt
             get_wgt  = weight
             unwgt_name = "central weight"
-        elif isinstance(get_wgt, (str,six.text_type)):
+        elif isinstance(get_wgt, (str,str)):
             unwgt_name =get_wgt 
             def get_wgt(event):
                 event.parse_reweight()
@@ -658,9 +652,9 @@ class EventFile(object):
             nb_event += 1
             if opt["print_step"] and (nb_event % opt["print_step"]) == 0:
                 if hasattr(self,"len"):
-                    print(("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start)))
+                    print("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start))
                 else:
-                    print(("currently at %s event [%is]" % (nb_event, time.time()-start)))
+                    print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
                 value = fcts[i](event)
                 if not opt['no_output']:
@@ -689,9 +683,9 @@ class EventFile(object):
                 if not partition is None and (nb_file+1>len(partition)):
                     return nb_file
                 if zip:
-                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.path, nb_file)),'w')
+                    current = EventFile(pjoin(cwd,f'{self.path}_{nb_file}.lhe.gz'),'w')
                 else:
-                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.path, nb_file)),'w')                    
+                    current = open(pjoin(cwd,f'{self.path}_{nb_file}.lhe'),'w')                    
                 current.write(self.banner)
             current.write(str(event))
         if i!=0:
@@ -706,7 +700,7 @@ class EventFile(object):
         if not isinstance(hwu, list):
             hwu = [hwu]
 
-        class HwUUpdater(object):
+        class HwUUpdater:
             
             def __init__(self, fct, keep_wgt):
                 
@@ -728,7 +722,7 @@ class EventFile(object):
                             h.add_line(name)
                             if self.keep_wgt is True:
                                 event.parse_reweight()
-                                h.add_line(['%s_%s' % (name, key)
+                                h.add_line([f'{name}_{key}'
                                                     for key in event.reweight_data])
                             elif self.keep_wgt:
                                 h.add_line(list(self.keep_wgt.values()))                            
@@ -742,12 +736,12 @@ class EventFile(object):
                         if self.keep_wgt:
                             event.parse_reweight()
                             if self.keep_wgt is True:
-                                data = dict(('%s_%s' % (name, key),event.reweight_data[key])
-                                                    for key in event.reweight_data)
+                                data = {f'{name}_{key}':event.reweight_data[key]
+                                                    for key in event.reweight_data}
                                 h.addEvent(value, data)
                             else:
-                                data = dict(( value,event.reweight_data[key])
-                                                    for key,value in self.keep_wgt.items())
+                                data = { value:event.reweight_data[key]
+                                                    for key,value in self.keep_wgt.items()}
                                 h.addEvent(value, data)
                                 
                                       
@@ -806,7 +800,7 @@ class EventFile(object):
             sys = orig_event.parse_syscalc_info()
             new_event.syscalc_data = sys
             if smin:
-                new_event.syscalc_data['matchscale'] = "%s %s %s" % (smin, scomp, smax)
+                new_event.syscalc_data['matchscale'] = f"{smin} {scomp} {smax}"
             out.write(str(new_event), nevt)
             try:
                 nevt, smin, smax, scomp = next(sys_iterator)
@@ -1191,7 +1185,7 @@ class MultiEventFile(EventFile):
         """
 
 
-        if isinstance(get_wgt, (str,six.text_type)):
+        if isinstance(get_wgt, (str,str)):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
                 event.parse_reweight()
@@ -1229,13 +1223,13 @@ class MultiEventFile(EventFile):
         elif 'write_init' in opts and opts['write_init']:
             self.define_init_banner(0,0, proc_charac=proc_charac)
             del opts['write_init']
-        return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
+        return super().unweight(outputpath, get_wgt_multi, **opts)
 
     def write(self, path, random=False, banner=None, get_info=False):
         """ """
         
         try:
-            str_type = (str,six.text_type)
+            str_type = (str,str)
         except NameError:
             str_type = (str)
         
@@ -1484,8 +1478,8 @@ class Event(list):
             pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''',re.I)
             data = pattern.findall(self.tag[start:stop])
             try:
-                self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
-                                           if not self.reweight_order.append(pid)])
+                self.reweight_data = {pid: float(value) for (pid, value) in data
+                                           if not self.reweight_order.append(pid)}
                                       # the if is to create the order file on the flight
             except ValueError as error:
                 raise Exception('Event File has unvalid weight. %s' % error)
@@ -1541,11 +1535,11 @@ class Event(list):
             return self.loweight
         
         if not hasattr(Event, 'loweight_pattern'):
-            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb1>1|2)["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <pdfrwt\s+beam=["']?(?P<idb2>1|2)["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
-                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
+                                    <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb1>1|2)["']?\\>\\s*(?P<beam1>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <pdfrwt\\s+beam=["']?(?P<idb2>1|2)["']?\\>\\s*(?P<beam2>[\\s\\d.e+-]*)\\s*</pdfrwt>\\s*\n\\s*
+                                    <totfact>\\s*(?P<totfact>[\\d.e+-]*)\\s*</totfact>
             ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
@@ -1598,15 +1592,15 @@ class Event(list):
         self.matched_scale_data = []
         
 
-        pattern  = re.compile("<scales\s|</scales>")
+        pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
         else:
             tmp = {}
             start,content, end = data
-            self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
+            self.tag = f"{start}{end}"
+            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
             for i in range(1, len(self)+1):
@@ -1630,14 +1624,14 @@ class Event(list):
             return self.syscalc_data
         
         pattern  = re.compile("<mgrwt>|</mgrwt>")
-        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        pattern2 = re.compile("<(?P<tag>[\\w]*)(?:\\s*(\\w*)=[\"'](.*)[\"']\\s*|\\s*)>(.*)</(?P=tag)>")
         data = re.split(pattern,self.tag)
         if len(data) == 1:
             return []
         else:
             tmp = {}
             start,content, end = data
-            self.tag = "%s%s" % (start, end)
+            self.tag = f"{start}{end}"
             for tag, key, keyval, tagval in pattern2.findall(content):
                 if key:
                     self.syscalc_data[(tag, key, keyval)] = tagval
@@ -1661,7 +1655,7 @@ class Event(list):
         
         thres = decay_particle.E*1e-10
         assert max(decay_particle.px, decay_particle.py, decay_particle.pz) < thres,\
-            "not on rest particle %s %s %s %s" % (decay_particle.E, decay_particle.px,decay_particle.py,decay_particle.pz) 
+            f"not on rest particle {decay_particle.E} {decay_particle.px} {decay_particle.py} {decay_particle.pz}" 
         
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
@@ -1883,21 +1877,21 @@ class Event(list):
             fourmass = FourMomentum(particle).mass
             
             if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+                raise Exception( f"Do not have correct mass lhe: {particle.mass} momentum: {fourmass} (error at {(abs(particle.mass) - fourmass)/ abs(particle.mass)}")
                 
 
         if E/absE > threshold:
             logger.critical(self)
-            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
+            raise Exception(f"Do not conserve Energy {E/absE}, {E}")
         if px/abspx > threshold:
             logger.critical(self)
-            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
+            raise Exception(f"Do not conserve Px {px/abspx}, {px}")         
         if py/abspy > threshold:
             logger.critical(self)
-            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
+            raise Exception(f"Do not conserve Py {py/abspy}, {py}")
         if pz/abspz > threshold:
             logger.critical(self)
-            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
+            raise Exception(f"Do not conserve Pz {pz/abspz}, {pz}")
             
         #2. check the color of the event
         self.check_color_structure() 
@@ -2214,14 +2208,14 @@ class Event(list):
                 #only case is a epsilon_ijk structure.
                 if len(canticolors) + len(mcolors) != 3:
                     logger.critical(str(self))
-                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
+                    raise Exception(f"Wrong color flow for {[m.pid for m in mothers]} -> {[c.pid for c in childs]}")              
                 else:
                     popup_index += canticolors
             elif manticolors != []:
                 #only case is a epsilon_ijk structure.
                 if len(ccolors) + len(manticolors) != 3:
                     logger.critical(str(self))
-                    raise Exception("Wrong color flow for %s -> %s" % ([m.pid for m in mothers], [c.pid for c in childs]))              
+                    raise Exception(f"Wrong color flow for {[m.pid for m in mothers]} -> {[c.pid for c in childs]}")              
                 else:
                     popup_index += ccolors
 
@@ -2265,7 +2259,7 @@ class Event(list):
             self.eventflag['event'] = str(event_id)
 
         if self.eventflag:
-            event_flag = ' %s' % ' '.join('%s="%s"' % (k,v) for (k,v) in self.eventflag.items())
+            event_flag = ' %s' % ' '.join(f'{k}="{v}"' for (k,v) in self.eventflag.items())
         else:
             event_flag = ''
 
@@ -2280,7 +2274,7 @@ class Event(list):
                                                 if k not in self.reweight_order]
 
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
-                        '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
+                        f'<wgt id=\'{i}\'> {float(self.reweight_data[i]):+13.7e} </wgt>'
                         for i in self.reweight_order if i in self.reweight_data)
         else:
             reweight_str = '' 
@@ -2295,7 +2289,7 @@ class Event(list):
                                    for i,v in enumerate(self.matched_scale_data)
                                               if v!=-1])
             if tmp_scale:
-                tag_str = "<scales %s></scales>%s" % (tmp_scale, self.tag)
+                tag_str = f"<scales {tmp_scale}></scales>{self.tag}"
             
         if self.syscalc_data:
             keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),
@@ -2307,12 +2301,12 @@ class Event(list):
                     continue
                 replace = {}
                 replace['values'] = self.syscalc_data[k]
-                if isinstance(k, (str, six.text_type)):
+                if isinstance(k, (str, str)):
                     replace['key'] = k
                     replace['opts'] = ''
                 else:
                     replace['key'] = k[0]
-                    replace['opts'] = ' %s=\"%s\"' % (k[1],k[2])                    
+                    replace['opts'] = f' {k[1]}=\"{k[2]}\"'                    
                 sys_str += template % replace
             sys_str += "</mgrwt>\n"
             reweight_str = sys_str + reweight_str
@@ -2561,7 +2555,7 @@ class Event(list):
         out = ''.join(out).replace('e','d')
         return out    
 
-class FourMomentum(object):
+class FourMomentum:
     """a convenient object for 4-momenta operation"""
     
     def __init__(self, obj=0, px=0, py=0, pz=0, E=0):
@@ -2581,7 +2575,7 @@ class FourMomentum(object):
             px = obj[1]
             py = obj[2] 
             pz = obj[3]
-        elif  isinstance(obj, (str, six.text_type)):
+        elif  isinstance(obj, (str, str)):
             obj = [float(i) for i in obj.split()]
             assert len(obj) ==4
             E = obj[0]
@@ -2696,7 +2690,7 @@ class FourMomentum(object):
             return self.mass_sqr
     
     def __repr__(self):
-        return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
+        return f'FourMomentum({self.E},{self.px},{self.py},{self.pz})'
     
     def __str__(self, mode='python'):
         if mode == 'python':
@@ -2782,13 +2776,13 @@ class FourMomentum(object):
         
         
 
-class OneNLOWeight(object):
+class OneNLOWeight:
         
     def __init__(self, input, real_type=(1,11)):
         """ """
 
         self.real_type = real_type
-        if isinstance(input, (str, six.text_type)):
+        if isinstance(input, (str, str)):
             self.parse(input)
         
     def __str__(self, mode='display'):
@@ -2965,7 +2959,7 @@ class OneNLOWeight(object):
             self.momenta_config = self.born_related
 
 
-class NLO_PARTIALWEIGHT(object):
+class NLO_PARTIALWEIGHT:
 
     class BasicEvent(list):
 
@@ -2982,7 +2976,7 @@ class NLO_PARTIALWEIGHT(object):
             
             if wgts[0].momenta_config == wgts[0].born_related:
                 # need to remove one momenta.
-                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+                ind1, ind2 = (ind-1 for ind in wgts[0].to_merge_pdg) 
                 if ind1> ind2: 
                     ind1, ind2 = ind2, ind1
                 if ind1 >= sum(1 for p in event if p.status==-1):
@@ -3163,7 +3157,7 @@ class NLO_PARTIALWEIGHT(object):
         self.modified = False #set on True if we decide to change internal infor
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
-        if isinstance(input, (str,six.text_type)):
+        if isinstance(input, (str,str)):
             self.parse(input)
         
             
@@ -3217,7 +3211,7 @@ class NLO_PARTIALWEIGHT(object):
         
         assert len(wgts) == int(nb_wgt)
         
-        get_weights_for_momenta = dict( (i,[]) for i in range(1,nb_event+1)  )
+        get_weights_for_momenta = { i:[] for i in range(1,nb_event+1)  }
         size_momenta = 0
         for wgt in wgts:
             if wgt.momenta_config in get_weights_for_momenta:
@@ -3227,7 +3221,7 @@ class NLO_PARTIALWEIGHT(object):
                 assert size_momenta == wgt.nexternal
                 get_weights_for_momenta[wgt.momenta_config] = [wgt]
     
-        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
+        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), f"{sum(len(c) for c in get_weights_for_momenta.values())} != {nb_wgt}"
     
         # check singular behavior
         for key in range(1, nb_event+1):
@@ -3249,7 +3243,7 @@ class NLO_PARTIALWEIGHT(object):
                         get_weights_for_momenta[wgt.born_related].append(wgt)
                         wgt.momenta_config = wgt.born_related
          
-        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
+        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), f"{sum(len(c) for c in get_weights_for_momenta.values())} != {nb_wgt}"
            
         self.cevents = []   
         for key in range(1, nb_event+1): 
@@ -3262,7 +3256,7 @@ class NLO_PARTIALWEIGHT(object):
                     pdgs = w.pdgs
                     if w.momenta_config == w.born_related:
                         pdgs = list(pdgs)
-                        ind1, ind2 = [ind-1 for ind in w.to_merge_pdg] 
+                        ind1, ind2 = (ind-1 for ind in w.to_merge_pdg) 
                         if ind1> ind2: 
                             ind1, ind2 = ind2, ind1
                         pdgs.pop(ind1) 
@@ -3330,7 +3324,7 @@ if '__main__' == __name__:
             peout = pein - pa
             #compute e_in and e_out
             e_in = Particle(line="   11 -1 0 0  0 0  %s %s %s %s %s 0 9 " %(pein.px, pein.py, pein.pz, pein.E, pein.mass))
-            e_out = Particle(line="   11 1 1 2 0 0  %s %s %s %s %s 0 9 " % (peout.px, peout.py, peout.pz, peout.E, peout.mass))
+            e_out = Particle(line=f"   11 1 1 2 0 0  {peout.px} {peout.py} {peout.pz} {peout.E} {peout.mass} 0 9 ")
             e_in.event = event
             #e_in.event_id = 0
             e_out.event = event

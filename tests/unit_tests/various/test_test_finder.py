@@ -15,7 +15,6 @@
 
 """Unit test library for the Misc routine library in the I/O package"""
 
-from __future__ import absolute_import
 import tests.unit_tests as unittest
 import tests.test_manager as test_manager
 
@@ -41,21 +40,21 @@ if 0:
 
         for dummy in self.testmodule:
             break
-        self.assert_(len(self.testmodule) > 1)
+        self.assertTrue(len(self.testmodule) > 1)
 
     def test_collect_dir(self):
         """ TestFinder.collect_dir should detect subdirectory and file """
 
         self.testmodule = test_manager.TestFinder(package=\
                          './tests/unit_tests')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                          'TestTestFinder.test_collect_dir'\
                          in self.testmodule)
 
     def test_collect_dir_with_restriction_file(self):
         " TestFinder.collect_dir pass corectly restriction rule on file "
         self.testmodule.restrict_to('test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                      'TestTestFinder.test_collect_dir'  \
                      in self.testmodule)
 
@@ -63,7 +62,7 @@ if 0:
         " TestFinder.collect_dir pass corectly restriction rule on file "
         self.testmodule.restrict_to('./tests/unit_tests/various/' + 
                                     'test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                          'TestTestFinder.test_collect_dir'
                      in self.testmodule)
 
@@ -71,7 +70,7 @@ if 0:
         " TestFinder.collect_dir pass corectly restriction rule on class "
 
         self.testmodule.restrict_to('TestTestFinder')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                      'TestTestFinder.test_collect_dir'
                      in self.testmodule)
 
@@ -79,10 +78,10 @@ if 0:
         " TestFinder.collect_dir pass corectly restriction rule on fct "
 
         self.testmodule.restrict_to('test_check_valid.*')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                      'TestTestFinder.test_collect_dir' \
                      not in self.testmodule)
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                      'TestTestFinder.test_check_valid_on_file'
                      in self.testmodule)
 
@@ -98,7 +97,7 @@ if 0:
 
         self.testmodule.collect_file('./tests/unit_tests/various/' + \
                                      'test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
+        self.assertTrue('tests.unit_tests.various.test_test_finder.' + \
                      'TestTestFinder.test_collect_file' \
                      in self.testmodule)
 
@@ -113,7 +112,7 @@ if 0:
         """ TestFinder.collect_function find the test function """
 
         self.testmodule.collect_function(TestTestFinder)
-        self.assert_('TestTestFinder.test_collect_function' in \
+        self.assertTrue('TestTestFinder.test_collect_function' in \
                          self.testmodule)
 
         for name in self.testmodule:
@@ -317,12 +316,12 @@ if 0:
         output = self.testmodule.format_possibility('./various/test.py')
         for name in output:
             self.assertEqual(output.count(name), 1)
-        self.assert_(len(output) > 3)
+        self.assertTrue(len(output) > 3)
 
         output = self.testmodule.format_possibility('various.test')
         for name in output:
             self.assertEqual(output.count(name), 1)
-        self.assert_(len(output) > 1)
+        self.assertTrue(len(output) > 1)
 
     def test_status_file_on_file(self):
         """ TestFinder.status_file recognizes file """

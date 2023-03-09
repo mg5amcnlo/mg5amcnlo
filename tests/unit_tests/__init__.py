@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import unittest
 import math
 TestLoader = unittest.TestLoader
@@ -45,7 +44,7 @@ class TestCase(unittest.TestCase):
             places = arg['places']
 
         if 'msg' not in arg and len(opt) < 2:
-            arg['msg'] = '%s != %s within %s digits' % (a, b, places )
+            arg['msg'] = f'{a} != {b} within {places} digits'
 
         magarg = a or b
         if not magarg or a - b == 0:

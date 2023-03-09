@@ -17,16 +17,12 @@
 different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import logging
 import numbers
 import os
 import re
 import sys
-from six.moves import input
-from six.moves import range
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -46,7 +42,7 @@ except Exception:
 
 
 # PLY lexer class
-class UFOExpressionParser(object):
+class UFOExpressionParser:
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
@@ -118,7 +114,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'
@@ -187,7 +183,7 @@ class UFOExpressionParser(object):
                 print(p.value)
             except:
                 pass
-            raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
+            raise Exception(f"Syntax error at '{p.value}' in '{self.f}'")
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"

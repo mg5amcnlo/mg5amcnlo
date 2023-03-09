@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
-from __future__ import absolute_import
 import sys
 import logging
 import os
 import stat
 import re
 import six
-from six.moves import range
 
 logger = logging.getLogger('madweight.diagram_class')
 
@@ -116,7 +114,7 @@ class MG_diagram(diagram):
                             (?P<pid>-?\d*)              # pid of the propa                                
                             ''',re.VERBOSE)
 
-        ff=open(dir_file+'/configs.inc','r')
+        ff=open(dir_file+'/configs.inc')
 
         #lecture du fichier
         read=0   #tag is 1 if we are at the correct config.
@@ -169,7 +167,7 @@ class MG_diagram(diagram):
 
         dico_type_to_tflevel={}
         has_theta_tf, has_phi_tf  = [] , []
-        ff=open(file,'r')
+        ff=open(file)
         #pattern
         pattern=re.compile(r'''^\s*(?P<width>\w+)\s+(?P<type>[\w,01]*)''',re.VERBOSE)
         #read file
@@ -792,7 +790,7 @@ class Option:
 
     def __init__(self,info='default'):
        "initialize option"
-       if isinstance(info, six.string_types) and info!='default':
+       if isinstance(info, str) and info!='default':
             info=MW_param.read_card(info)
        # DEFAULT VALUE:
        self.ecs_fuse=1
@@ -829,7 +827,7 @@ class Option:
        #replace defined value:
        for key, value in info['mw_gen'].items():
            if key in tag_to_genvar:
-               exec('%s = %s' % (tag_to_genvar[key],value))
+               exec(f'{tag_to_genvar[key]} = {value}')
 
        self.ecs_on=[]
        for letter in 'abcdef':

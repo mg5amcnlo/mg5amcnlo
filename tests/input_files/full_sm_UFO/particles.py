@@ -3,8 +3,6 @@
 # Date: Tue 26 Oct 2010 21:29:11
 
 
-from __future__ import division
-from __future__ import absolute_import
 from .object_library import all_particles, Particle
 
 ve = Particle(pdg_code = 12,

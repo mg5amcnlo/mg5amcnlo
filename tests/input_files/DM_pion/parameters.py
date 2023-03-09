@@ -4,7 +4,6 @@
 
 
 
-from __future__ import absolute_import
 import object_library as object_library
 all_parameters = object_library.all_parameters
 Parameter = object_library.Parameter

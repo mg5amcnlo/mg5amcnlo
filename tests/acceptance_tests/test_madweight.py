@@ -12,8 +12,6 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -22,7 +20,6 @@ import shutil
 import sys
 import logging
 import time
-from six.moves import map
 
 logger = logging.getLogger('test_cmd')
 
@@ -200,7 +197,7 @@ class TestMadWeight(unittest.TestCase):
             assert key in solution
             value2, error2 = solution[key]
             
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2),'%s != %s' % (value, value2))
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2),f'{value} != {value2}')
             self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
             
@@ -263,7 +260,7 @@ class TestMadWeight(unittest.TestCase):
             assert key in solution
             value2, error2 = solution[key]
             
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2), '%s != %s' % (value, value2))
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2), f'{value} != {value2}')
             self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
             self.assertTrue(abs(error2)/abs(value2) < 0.02)          
 

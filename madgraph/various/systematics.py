@@ -12,11 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
 
-from __future__ import absolute_import
-from six.moves import range
-from six.moves import zip
 if __name__ == "__main__":
     import sys
     import os
@@ -41,7 +37,7 @@ import os
 import re
 import sys
 import time
-from six import StringIO
+from io import StringIO
 
 pjoin = os.path.join
 root = os.path.dirname(__file__)
@@ -49,7 +45,7 @@ root = os.path.dirname(__file__)
 class SystematicsError(Exception):
     pass
 
-class Systematics(object):
+class Systematics:
     
     def __init__(self, input_file, output_file,
                  start_event=0, stop_event=sys.maxsize, write_banner=False,
@@ -140,7 +136,7 @@ class Systematics(object):
                 self.b2 = 0
             # not actually eva
             if self.b1==0 and self.b2==0:
-                raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s (%s)' % (self.b1,self.b2) )
+                raise SystematicsError(f'EVA only works with e/mu beams, not lpp* = {self.b1} ({self.b2})' )
             # eva-on-parton or parton-on-eva
             elif self.b1==0 or self.b2==0:
                 isEVA=True
@@ -321,7 +317,7 @@ class Systematics(object):
                 self.remove_wgts = ['all']
                 break
             elif ',' in id:
-                min_value, max_value = [int(v) for v in id.split(',')]
+                min_value, max_value = (int(v) for v in id.split(','))
                 self.remove_wgts += [i for i in range(min_value, max_value+1)]
             else:
                 self.remove_wgts.append(id)
@@ -331,7 +327,7 @@ class Systematics(object):
                 self.keep_wgts = ['all']
                 break
             elif ',' in id:
-                min_value, max_value = [int(v) for v in id.split(',')]
+                min_value, max_value = (int(v) for v in id.split(','))
                 self.remove_wgts += [i for i in range(min_value, max_value+1)]
             else:
                 self.remove_wgts.append(id)  
@@ -414,7 +410,7 @@ class Systematics(object):
             
             if self.is_lo:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
-                    self.log( '# Currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( f'# Currently at event {nb_event} [elapsed time: {time.time()-start_time:.2g} s]')
             else:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
                     self.log( '# Currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
@@ -531,7 +527,7 @@ class Systematics(object):
                         pdfs[pdfset.lhapdfID] = [0] * pdfset.size
                     pdfs[pdfset.lhapdfID][pdf.memberID] = all_cross[i]
                 else:
-                    to_report.append('# PDF %s : %s\n' % (pdf.lhapdfID, all_cross[i]))
+                    to_report.append(f'# PDF {pdf.lhapdfID} : {all_cross[i]}\n')
   
         stdout.write('\n') 
                 
@@ -541,11 +537,11 @@ class Systematics(object):
         resume.write( "#\n")
         resume.write( '# original cross-section: %s\n' % all_cross[0])
         if max_scale:
-            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100))
+            resume.write( f'#     scale variation: +{(max_scale-all_cross[0])/all_cross[0]*100:2.3g}% -{(all_cross[0]-min_scale)/all_cross[0]*100:2.3g}%\n')
         if max_alps:
-            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
+            resume.write( f'#     emission scale variation: +{(max_alps-all_cross[0])/all_cross[0]*100:2.3g}% -{(all_cross[0]-min_alps)/all_cross[0]*100:2.3g}%\n')
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
-            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
+            resume.write( f'#     central scheme variation: +{(max_dyn-all_cross[0])/all_cross[0]*100:2.3g}% -{(all_cross[0]-min_dyn)/all_cross[0]*100:2.3g}%\n')
         if self.banner.run_card['pdlabel']=='eva':
             resume.write( '# PDF variation not available for EVA.\n')
         elif self.orig_pdf.lhapdfID in pdfs:
@@ -557,7 +553,7 @@ class Systematics(object):
             except RuntimeError:
                 resume.write( '# PDF variation: missing combination\n')
             else:
-                resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
+                resume.write( f'# PDF variation: +{pdferr.errplus*100/all_cross[0]:2.3g}% -{pdferr.errminus*100/all_cross[0]:2.3g}%\n')       
         # report error/central not directly linked to the central
         resume.write( "#\n")        
         for lhapdfid,values in pdfs.items():
@@ -578,9 +574,9 @@ class Systematics(object):
                 # the same error can happend to some other type of error like custom.
                 pass
             else:
-                resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
+                resume.write( f'#PDF {pdfset.name}: {pdferr.central:g} +{pdferr.errplus*100/all_cross[0]:2.3g}% -{pdferr.errminus*100/all_cross[0]:2.3g}%\n')
 
-        dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
+        dyn_name = {1: r'\sum ET', 2:r'\sum\sqrt{m^2+pt^2}', 3:r'0.5 \sum\sqrt{m^2+pt^2}',4:r'\sqrt{\hat s}' }
         for key, curr in dyns.items():
             if key ==-1:
                 continue
@@ -682,14 +678,14 @@ class Systematics(object):
                 tag += 'PDF="%s" ' % 0                
             elif pdf != self.orig_pdf:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
-                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                info += f'PDF={pdf.lhapdfID-pdf.memberID} MemberID={pdf.memberID}'
             else:
                 tag += 'PDF="%s" ' % pdf.lhapdfID
             
             wgt_name = self.get_wgt_name(mur, muf, alps, dyn, pdf, cid)
             tag = self.get_wgt_tag(mur, muf, alps, dyn, pdf, cid)
             info = self.get_wgt_info(mur, muf, alps, dyn, pdf, cid)
-            text +='<weight id="%s" %s> %s </weight>\n' % (wgt_name, tag, info)
+            text +=f'<weight id="{wgt_name}" {tag}> {info} </weight>\n'
             cid+=1
         
         if in_scale or in_alps or in_pdf:
@@ -760,9 +756,9 @@ class Systematics(object):
             if dyn!=-1.:
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]                             
             if self.banner.run_card['pdlabel']=='eva':
-                info += 'PDF=%s MemberID=%s' % (0,0)
+                info += f'PDF={0} MemberID={0}'
             elif pdf != self.orig_pdf:
-                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                info += f'PDF={pdf.lhapdfID-pdf.memberID} MemberID={pdf.memberID}'
 
         return info
 
@@ -787,7 +783,7 @@ class Systematics(object):
             return int(self.start_wgt_id)
         
         if 'initrwgt' in self.banner:
-            pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
+            pattern = re.compile('<weight id=(?:\'|\")([_\\w]+)(?:\'|\")', re.S+re.I+re.M)
             matches =  pattern.findall(self.banner['initrwgt'])
             matches.append('0') #ensure to have a valid entry for the max 
             return  max([int(wid) for wid in  matches if wid.isdigit()])+1
@@ -1240,7 +1236,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                         elif int(d) > 500:
                             pdfs.append(d)
                         else:
-                            pdfs[-1] = '%s %s' % (pdfs[-1], d)
+                            pdfs[-1] = f'{pdfs[-1]} {d}'
         
                 opts['dyn'] = [-1,1,2,3,4]
                 opts['pdf'] = []
@@ -1251,7 +1247,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                     else:
                         pdf,nb = split
                         for i in range(int(nb)):
-                            opts['pdf'].append('%s@%s' % (pdf, i))
+                            opts['pdf'].append(f'{pdf}@{i}')
                 if not opts['pdf']:
                     opts['pdf'] = 'central'
         else:

@@ -16,14 +16,12 @@
 """Unit test library for the various properties of objects in 
    loop_diagram_generaiton"""
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
 import math
 import os
 import sys
-from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -126,8 +124,8 @@ def loadLoopModel():
                   'color':1,
                   'mass':'zero',
                   'width':'zero',
-                  'texname':'\gamma',
-                  'antitexname':'\gamma',
+                  'texname':r'\gamma',
+                  'antitexname':r'\gamma',
                   'line':'wavy',
                   'charge':0.,
                   'pdg_code':22,

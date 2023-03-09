@@ -16,7 +16,6 @@
 A user friendly interface to access all the function associated to MadWeight 
 """
 
-from __future__ import absolute_import
 import logging
 import os
 import subprocess
@@ -25,9 +24,7 @@ import glob
 import math
 import xml.sax.handler
 import shutil
-from six import StringIO
-from six.moves import map
-from six.moves import range
+from io import StringIO
 
 if __name__ == '__main__':
     import sys
@@ -182,14 +179,14 @@ class CmdExtended(cmd.Cmd):
         
         cmd.Cmd.__init__(self, *arg, **opt)
 
-class HelpToCmd(object):
+class HelpToCmd:
     
     def help_collect(self):
         logger.info('collect [-refine]')
         logger.info('  combine the results of the jobs launched on the cluster.')
         logger.info('  This creates three type of output files:')
         logger.info('    - weights.out [weight for event/card]')
-        logger.info('    - unnormalize-likelihood.out [-\sum ln(Weight)]')
+        logger.info(r'    - unnormalize-likelihood.out [-\sum ln(Weight)]')
         logger.info('    - output.xml [additional information]')
         logger.info('')
         logger.info('  The option \'-refine\' is to be added if this is not the first')
@@ -202,7 +199,7 @@ class HelpToCmd(object):
         logger.info('  will be ask. If the TF is provided as argument, no question is asked.')
 
 
-class CompleteForCmd(object):
+class CompleteForCmd:
     
     
     def complete_collect(self,text, line, begidx, endidx):
@@ -297,7 +294,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             possibilities = [content[3:-4] for content in listdir \
                          if (content.startswith('TF') and content.endswith('dat'))]
             for i, tfname in enumerate(possibilities):
-                question += ' %s / %s\n' % (i, tfname)
+                question += f' {i} / {tfname}\n'
             possibilities += list(range(len(possibilities)))
             
             if args and args[0] in possibilities:
@@ -488,7 +485,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         # Need to add PDF (maybe also symfact, ...) ?
         
-        output_file = ['output_%s_%s.xml' % (nb_card, sample_nb)]
+        output_file = [f'output_{nb_card}_{sample_nb}.xml']
         exe = pjoin(self.me_dir, 'bin', 'internal', 'madweight', 'MW_driver.py')
         
         # expected args: card_nb, first_event, nb_event, evt, mw_int_points, log_level
@@ -661,7 +658,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     except KeyError:
                         continue
                     error = math.sqrt(error)
-                    fsock.write('%s %s %s %s %s \n' % (event.replace('@', ' '), card, tf_set, value, error))
+                    fsock.write('{} {} {} {} {} \n'.format(event.replace('@', ' '), card, tf_set, value, error))
     
         # write the likelihood file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'un-normalized_likelihood.out'), 'w')
@@ -672,7 +669,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         for card in cards:
             value, error = likelihood[card], err_likelihood[card]
             error = math.sqrt(error)
-            fsock.write('%s %s %s \n' % (card, value, error))
+            fsock.write(f'{card} {value} {error} \n')
             
     
     def do_clean(self, line):
@@ -699,7 +696,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 logger.warning(error)            
     
     def ask_edit_cards(self, cards, *arg, **opts):
-        super(MadWeightCmd, self).ask_edit_cards(cards, *arg, **opts)
+        super().ask_edit_cards(cards, *arg, **opts)
         self.configured = 0
         self.configure()
         
@@ -793,7 +790,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         name = self.MWparam.name
         allow_refine = []
         # events/cards to refine
-        fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'), 'r')
+        fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'))
         for line in fsock:
             if '#' in line:
                 line = line.split('#')[0]

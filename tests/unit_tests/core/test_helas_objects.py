@@ -12,10 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 from madgraph.iolibs import helas_call_writers
-from six.moves import range
-from six.moves import zip
 
 """Unit test library for the helas_objects module"""
 import unittest as uni
@@ -95,7 +92,7 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_wavefunction.set(test['prop'], x))
+                self.assertTrue(temp_wavefunction.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_wavefunction.set(test['prop'], x))
 
@@ -163,7 +160,7 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_amplitude.set(test['prop'], x))
+                self.assertTrue(temp_amplitude.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_amplitude.set(test['prop'], x))
 
@@ -311,8 +308,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -348,8 +345,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -831,8 +828,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -1691,8 +1688,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -1883,8 +1880,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'mn2',
                       'width':'wn2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -1900,8 +1897,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'zmass',
                       'width':'zwidth',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':23,
@@ -2084,8 +2081,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -2278,8 +2275,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -2294,8 +2291,8 @@ class HelasMatrixElementTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu2',
                       'width':'Wneu2',
-                      'texname':'\chi_0^2',
-                      'antitexname':'\chi_0^2',
+                      'texname':r'\chi_0^2',
+                      'antitexname':r'\chi_0^2',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000023,
@@ -3622,9 +3619,9 @@ class HelasMultiProcessTest(unittest.TestCase):
         # correspond to a decaying particle
         for i, wf in enumerate(matrix_elements[0].get_all_wavefunctions()):
             if i in [6, 8, 13, 15, 18, 19, 21, 22, 24, 25, 27, 28]:
-                self.assert_(wf.get('onshell'))
+                self.assertTrue(wf.get('onshell'))
             else:
-                self.assert_(not wf.get('onshell'))
+                self.assertTrue(not wf.get('onshell'))
 
         # Test Process.get_legs_with_decays
         myleglist = base_objects.LegList()
@@ -3747,12 +3744,12 @@ class HelasMultiProcessTest(unittest.TestCase):
             sym = proc.identical_particle_factor()
             if self.debugging:
                 if sol == sym:
-                    print(("OK  :  %s: expected %s returned %s" % (key, sol, sym)))
+                    print(f"OK  :  {key}: expected {sol} returned {sym}")
                 else:
-                    print(("FAIL  :  %s: expected %s returned %s" % (key, sol, sym)))
+                    print(f"FAIL  :  {key}: expected {sol} returned {sym}")
                     passed = False
             else:
-                self.assertEqual(sol, sym, " %s: expected %s returned %s" % (key, sol, sym))
+                self.assertEqual(sol, sym, f" {key}: expected {sol} returned {sym}")
 
 
         # go for the check with polarization
@@ -3768,12 +3765,12 @@ class HelasMultiProcessTest(unittest.TestCase):
             sym = proc.identical_particle_factor()
             if self.debugging:
                 if sol == sym:
-                    print(("OK  :  %s: expected %s returned %s" % (key, sol, sym)))
+                    print(f"OK  :  {key}: expected {sol} returned {sym}")
                 else:
-                    print(("FAIL  :  %s: expected %s returned %s" % (key, sol, sym)))
+                    print(f"FAIL  :  {key}: expected {sol} returned {sym}")
                     passed = False
             else:
-                self.assertEqual(sol, sym, " %s: expected %s returned %s" % (key, sol, sym))
+                self.assertEqual(sol, sym, f" {key}: expected {sol} returned {sym}")
 
         self.assertTrue(passed)
 
@@ -3832,8 +3829,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -3849,8 +3846,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -3982,7 +3979,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                             get('wavefunctions') if w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers')])[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
-            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
+            self.assertTrue(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
 
         myleglist = base_objects.LegList()
 
@@ -4047,7 +4044,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                             get('wavefunctions') if w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers')])[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
-            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
+            self.assertTrue(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
         
 
     def test_decay_chain_different_pdgs(self):
@@ -4124,8 +4121,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'Mneu1',
                       'width':'Wneu1',
-                      'texname':'\chi_0^1',
-                      'antitexname':'\chi_0^1',
+                      'texname':r'\chi_0^1',
+                      'antitexname':r'\chi_0^1',
                       'line':'straight',
                       'charge':0.,
                       'pdg_code':1000022,
@@ -4141,8 +4138,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -4430,8 +4427,8 @@ class HelasMultiProcessTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\mu^-',
-                      'antitexname':'\mu^+',
+                      'texname':r'\mu^-',
+                      'antitexname':r'\mu^+',
                       'line':'straight',
                       'charge':-1.,
                       'pdg_code':13,
@@ -4840,7 +4837,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         mymatrixelement2 = helas_objects.HelasMatrixElement(\
             myamplitude2, gen_color = False)
 
-        self.assert_(helas_objects.HelasMatrixElement.\
+        self.assertTrue(helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\
                        mymatrixelement1, mymatrixelement2))
 

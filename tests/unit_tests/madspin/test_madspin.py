@@ -16,7 +16,6 @@
 """Unit test library for the spin correlated decay routines
 in the madspin directory"""
 
-from __future__ import absolute_import
 import sys
 import os
 import string
@@ -50,7 +49,7 @@ class TestBanner(unittest.TestCase):
         """Test that the banner is read properly"""
 
         path=pjoin(MG5DIR, 'tests', 'input_files', 'tt_banner.txt')
-        inputfile = open(path, 'r')
+        inputfile = open(path)
         mybanner = banner.Banner(inputfile)
 #        mybanner.ReadBannerFromFile()
         process=mybanner.get("generate")
@@ -67,13 +66,13 @@ class TestBanner(unittest.TestCase):
         fct = lambda x: cmd.get_final_part(x)
         
         # 
-        self.assertEqual(set([11, -11]), fct('p p > e+ e-'))
-        self.assertEqual(set([11, 24]), fct('p p > w+ e-'))
-        self.assertEqual(set([11, 24]), fct('p p > W+ e-'))
-        self.assertEqual(set([1, 2, 3, 4, -1, 11, 21, -4, -3, -2]), fct('p p > W+ e-, w+ > j j'))
-        self.assertEqual(fct('p p > t t~, (t > b w+, w+ > j j) ,t~ > b~ w-'), set([1, 2, 3, 4, -1, 21, -4, -3, -2,5,-5,-24]))
-        self.assertEqual(fct('e+ e- > all all, all > e+ e-'), set([-11,11]))
-        self.assertEqual(fct('e+ e- > j w+, j > e+ e-'), set([-11,11,24]))
+        self.assertEqual({11, -11}, fct('p p > e+ e-'))
+        self.assertEqual({11, 24}, fct('p p > w+ e-'))
+        self.assertEqual({11, 24}, fct('p p > W+ e-'))
+        self.assertEqual({1, 2, 3, 4, -1, 11, 21, -4, -3, -2}, fct('p p > W+ e-, w+ > j j'))
+        self.assertEqual(fct('p p > t t~, (t > b w+, w+ > j j) ,t~ > b~ w-'), {1, 2, 3, 4, -1, 21, -4, -3, -2,5,-5,-24})
+        self.assertEqual(fct('e+ e- > all all, all > e+ e-'), {-11,11})
+        self.assertEqual(fct('e+ e- > j w+, j > e+ e-'), {-11,11,24})
 
     def test_get_proc_with_decay_LO(self):
 

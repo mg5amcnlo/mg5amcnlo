@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -124,7 +122,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -140,13 +138,13 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
-        os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
+        os.system(f'cp  {self.path}/Cards/run_card_default.dat {self.path}/Cards/run_card.dat')
 
         card = open('%s/Cards/param_card_default.dat' % self.path).read()
         self.assertTrue( 'DECAY   6 1.491500e+00 # WT' in card)
         card = card.replace('DECAY   6 1.491500e+00 # WT', 'DECAY   6 0.0e+00 # WT')
         open('%s/Cards/param_card_default.dat' % self.path, 'w').write(card)
-        os.system('cp  %s/Cards/param_card_default.dat %s/Cards/param_card.dat' % (self.path, self.path))
+        os.system(f'cp  {self.path}/Cards/param_card_default.dat {self.path}/Cards/param_card.dat')
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
         self.assertTrue( 'ANALYSE      =' in card)
@@ -296,11 +294,11 @@ class MECmdShell(IOTests.IOTestManager):
         text = """
         set crash_on_error True --no_save
         generate p p > t t~ [QCD]
-        output %s
+        output {}
         launch
         madspin=ON
         shower=OFF
-        set nevents %s
+        set nevents {}
         set mt 174
         set wt = 1.5
         decay t > w+ b
@@ -308,7 +306,7 @@ class MECmdShell(IOTests.IOTestManager):
         launch -i
         decay_events run_01
         add madspin --replace_line="set spinmode.*" --after_line=banner set spinmode=onshell 
-        """ % (self.path,nevents)
+        """.format(self.path,nevents)
         
         interface = MGCmd.MasterCmd()
         interface.no_notification()
@@ -756,7 +754,7 @@ class MECmdShell(IOTests.IOTestManager):
                         stdout=stdout,stderr=stderr)
 
         stdout.close()
-        text = open('%s/test.log' % self.tmpdir,'r').read()
+        text = open('%s/test.log' % self.tmpdir).read()
         if logging.getLogger('madgraph').level <= 20:
             print(text)
         data = text.split('\n')

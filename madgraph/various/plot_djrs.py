@@ -14,13 +14,11 @@
 #
 ################################################################################
 """Example code to plot custom curves based on djrs.dat with matplotlib"""
-from __future__ import absolute_import
 import os
 import sys 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.pylab as pylab
-from six.moves import range
 
 
 ################################################################################

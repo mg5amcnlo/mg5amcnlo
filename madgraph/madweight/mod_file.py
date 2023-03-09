@@ -137,14 +137,12 @@
 ####################################################################################################
 
 # Module
-from __future__ import absolute_import
 import os
 import sys
 import re
 import shutil
 import string
 from time import time
-from six.moves import range
 
 # 1 ###############################################################
 def mod_file(mod_file,rule_file='',write='',opt={}):
@@ -221,7 +219,7 @@ class Mod_file:
         #pattern for tree column in a line
         opt_pattern=re.compile(r'''^\s*(?P<opt>\S+)\s*=\s*(?P<value>\S+)''')
         Pattern=re.compile(r'''^\s*(?P<file>\S+)\s+(?P<rule>\S+)\s+(?P<write>\S*)\s*$''')
-        ff=open(rule_pos,'r')
+        ff=open(rule_pos)
 
         while 1:
             line=ff.readline()
@@ -248,7 +246,7 @@ class Mod_file:
         self.go_to_main_dir()
         self.file=mod_file
 
-        ff=open(mod_file,'r')
+        ff=open(mod_file)
         text=ff.read()
         ff.close()
         if write:
@@ -382,9 +380,9 @@ class Mod_file:
     def extract_modif(self,rule_file):
         """put the information in a dictionary"""
         try:
-            ff=open(rule_file,'r')
+            ff=open(rule_file)
         except:
-            ff=open(os.path.join(self.d_rule,rule_file),'r')
+            ff=open(os.path.join(self.d_rule,rule_file))
         begin=re.compile(r'''^\$B\$\s?(?P<tag>\S+)\s?\$B\$''')
         end=re.compile(r'''^\$E\$\s?(?P<tag>\S+)\s?\$E\$''')
         comment=re.compile(r'''^##\**\s*$''')
@@ -533,7 +531,7 @@ class Mod_file:
     def decomment_text(self,text,comment_tag):
         """ remove comment inserted by comment_text """
 
-        carac_line=re.compile(comment_tag+'\+'+71*'-'+'\+')
+        carac_line=re.compile(comment_tag+r'\+'+71*'-'+r'\+')
 
         def decomment_line(line,comment_tag):
             if line[:6]==comment_tag+'|    ':
@@ -581,7 +579,7 @@ class Mod_file:
 
         ## Step A: remove escape '_' and '+'
         exp=exp.replace('\\\\','@888@') #stupid security against string like (\\_)
-        exp=exp.replace('\_','_').replace('\+','+')
+        exp=exp.replace(r'\_','_').replace(r'\+','+')
         exp=exp.replace('@888@','\\\\') #end of the trick
 
 

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import tests.IOTests as IOTests
 import os 
 import shutil
@@ -62,7 +61,7 @@ class IOTest_SimpleExamples(IOTests.IOTestManager):
 
     @IOTests.createIOTest(groupName='MyTestGroup',testName='MyTestName')
     def testIO_MyCustomNameIOTestWrapped(self):
-        """ target: testScratch/FileC.txt
+        r""" target: testScratch/FileC.txt
             target: testScratch/FolderA/[.+\.txt]
             clean: /tmp/anUndesiredSideEffectFile.txt
         """
@@ -79,7 +78,7 @@ class IOTest_SimpleExamples(IOTests.IOTestManager):
 
     @IOTests.createIOTest(groupName='MyTestGroup',testName='ReturnedPathTest')
     def testIO_MyCustomNameIOTestWrappedWithReturnPath(self):
-        """ target: ../FileC.txt
+        r""" target: ../FileC.txt
             target: [.+\.txt]
         """
         os.mkdir(pjoin(self.IOpath,'testScratch'))
@@ -99,7 +98,7 @@ class IOTest_SimpleExamples(IOTests.IOTestManager):
     # having to modify the original selecting regular expression.
     @IOTests.createIOTest(groupName='MyTestGroup',testName='PathRegExpr')
     def testIO_MyCustomNameIOTestWithPathRegExpr(self):
-        """ target: testScratch/[Folder(A|C)\/.+\.(f|inc)]
+        r""" target: testScratch/[Folder(A|C)\/.+\.(f|inc)]
             target: FileOut.txt
             target: -testScratch/[Folder(A|C)\/File(X|Y).f]
         """

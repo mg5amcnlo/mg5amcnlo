@@ -2,15 +2,12 @@
 
 #Extension
 
-from __future__ import absolute_import
 import os
 import re
 import string
 import sys
 import xml.sax.handler
 import six
-from six.moves import range
-from six.moves import input
 
 try:
     import madgraph.madweight.Cards as Cards
@@ -248,7 +245,7 @@ class TF_input(XML_input):
     def create_transfer_card(self,list_var):
         """ create the generic transfer_card linked to this transfer_functions """
         
-        in_card=open("./input/transfer_card_generic.dat",'r')
+        in_card=open("./input/transfer_card_generic.dat")
         text=in_card.read()
         in_card.close()
         text += '$b$ S-COMMENT_# $b$\n'
@@ -450,7 +447,7 @@ class TF_in_SubProcesses:
         external_done=[]
         #add the definition for external function
         for block in self.blockname_list:
-            if isinstance(block, six.string_types):
+            if isinstance(block, str):
                 name_list='width_E_'+block+', width_THETA_'+block+', width_PHI_'+block
             else:
                 continue
@@ -468,19 +465,19 @@ class TF_in_SubProcesses:
             
             #define central point
             if blockname != -1: #particle is visible
-                text+=' c_point(perm, %s,1,1)=theta(pexp_init(0,2+perm_id(%s)))\n' % (i+1,i-1)
-                text+=' c_point(perm, %s,2,1)=phi(pexp_init(0,2+perm_id(%s)))\n' % (i+1,i-1)
+                text+=f' c_point(perm, {i+1},1,1)=theta(pexp_init(0,2+perm_id({i-1})))\n'
+                text+=f' c_point(perm, {i+1},2,1)=phi(pexp_init(0,2+perm_id({i-1})))\n'
                 text+=' c_point(perm, %s,3,1)=rho(pexp_init(0,2+perm_id(%s)))\n' %(i+1,i-1)
             
             #define width
             variable=['THETA','PHI','E']
             for j in range(1,4):
                 if blockname == -1: #particle is invisible 
-                    text+=' c_point(perm,%s,%s,2)=-1d0\n' % (i+1,j)    
+                    text+=f' c_point(perm,{i+1},{j},2)=-1d0\n'    
                 elif blockname == 0: # in delta mode
-                    text+=' c_point(perm,%s,%s,2)=0d0\n' % (i+1,j)
+                    text+=f' c_point(perm,{i+1},{j},2)=0d0\n'
                 else: #visible particles with TF define
-                    text+=' c_point(perm,%s,%s,2)=width_%s_%s(pexp_init(0,2+perm_id(%s)),tag_lhco(%s))\n' % (i+1,j,variable[j-1],blockname,i-1,i+1)
+                    text+=f' c_point(perm,{i+1},{j},2)=width_{variable[j-1]}_{blockname}(pexp_init(0,2+perm_id({i-1})),tag_lhco({i+1}))\n'
             text+='\n' #space between particles definition
                  
         text+='\n enddo \n return\n end\n'
@@ -511,7 +508,7 @@ class TF_in_SubProcesses:
         for i in range(0,len(self.blockname_list)):
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, six.string_types):
+            if not isinstance(blockname, str):
                 if met and blockname == -1 and i>2: #invisible particlule but not the initial part
                     text+=' do i=0,3\n p_met_rec(i)=p_met_rec(i)+p(i,%s)\n enddo\n' %(i+1)
                 continue
@@ -543,13 +540,13 @@ class TF_in_SubProcesses:
             text2+='\n'+self.text_tf_E_for_one_part(i)+'\n'
             blockname=self.blockname_list[i]
             
-            if not isinstance(blockname, six.string_types):
+            if not isinstance(blockname, str):
                 text+=' if(MG_num.eq.%s) then\n tf_E_for_part=1d0\n return\n endif\n' % (i+1)
             else:
                 text+=' if(MG_num.eq.%s) then\n' %(i+1)
                 text+=' tf_E_for_part=1d0\n'
                 text+=' n_lhco=tag_lhco(%s)\n'% (i+1)
-                text+=' call tf_E_%s(pexp(0,%s),momenta(0,%s),n_lhco,tf_E_for_part)\n' % (blockname,i+1,i+1)
+                text+=f' call tf_E_{blockname}(pexp(0,{i+1}),momenta(0,{i+1}),n_lhco,tf_E_for_part)\n'
                 text+='\n return\n endif\n'        
         
         text+="\n return \n end\n"
@@ -570,12 +567,12 @@ class TF_in_SubProcesses:
         text+='$B$ DEF_TF_E_FOR_ONE_PART $E$\n'
         
         blockname=self.blockname_list[i]            
-        if not isinstance(blockname, six.string_types):        
+        if not isinstance(blockname, str):        
             text+=' tf_E_for_%s=1d0\n' %(i+1) 
         else:
             text+=' tf_E_for_%s=1d0\n' %(i+1)
             text+=' n_lhco=tag_lhco(%s)\n'% (i+1)
-            text+=' call tf_E_%s(pexp(0,%s),momenta(0,%s),n_lhco,tf_E_for_%s)\n' % (blockname,i+1,i+1,i+1)       
+            text+=f' call tf_E_{blockname}(pexp(0,{i+1}),momenta(0,{i+1}),n_lhco,tf_E_for_{i+1})\n'       
         
         text+="\n return \n end\n"
         return text    
@@ -585,7 +582,7 @@ class TF_in_SubProcesses:
 def create_param_inc(list_var):
     
     out=open("TF_param.inc",'w')
-    file_in=open("./input/TF_param_generic.inc",'r')
+    file_in=open("./input/TF_param_generic.inc")
     out.writelines(file_in.read())
     file_in.close()
 
@@ -610,7 +607,7 @@ def create_param_inc(list_var):
 
 def create_ident_card(list_var):
 
-     ff=open("./input/ident_mw_card_generic.dat",'r')
+     ff=open("./input/ident_mw_card_generic.dat")
      out=open("ident_mw_card.dat",'w')
      #copy generic file
      out.writelines(ff.read())
@@ -626,7 +623,7 @@ def create_ident_card(list_var):
     
 def  create_rw(list_var):
 
-    file_in=open("./input/rw_tf_generic.f","r")
+    file_in=open("./input/rw_tf_generic.f")
     file_out=open("./rw_tf.f","w")
 
     Pattern=re.compile(r'''\$\$ADD_HERE\$\$''')
@@ -654,7 +651,7 @@ def create_version(name):
     """
 
     #load version number:
-    ff=open('./Transfer_FctVersion.txt','r')
+    ff=open('./Transfer_FctVersion.txt')
     line=ff.readline().split(':',1)
     ff.close()
 

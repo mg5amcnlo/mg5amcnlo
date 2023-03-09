@@ -27,7 +27,6 @@
    the NAME can contain regular expression (in python re standard format)
 """
 
-from __future__ import absolute_import
 import sys
 import inspect
 import tarfile
@@ -52,9 +51,6 @@ sys.path.insert(0, root_path)
 # Only for profiling with -m cProfile!
 #root_path = os.path.split(os.path.dirname(os.path.realpath(sys.argv[0])))[0]
 #sys.path.append(root_path)
-
-import six
-from six.moves import map
 
 import tests.IOTests
 import aloha
@@ -558,9 +554,9 @@ class TestSuiteModified(unittest.TestSuite):
             else:
                 #for line in open(pjoin(root_path, 'tests','time_db')):
                 #        print line.split()
-                TestSuiteModified.time_db = dict([(' '.join(line.split()[:-1]), float(line.split()[-1]))  
+                TestSuiteModified.time_db = {' '.join(line.split()[:-1]): float(line.split()[-1])  
                          for line in open(pjoin(root_path, 'tests','time_db'))
-                         ])
+                         }
                 time_db = TestSuiteModified.time_db
         
 
@@ -578,7 +574,7 @@ class TestSuiteModified(unittest.TestSuite):
 
         
         start = time.time()
-        super(TestSuiteModified,self).__call__(*args,**kwds)
+        super().__call__(*args,**kwds)
         if not str(self) in time_db:
             TestSuiteModified.time_db[str(self)] = time.time() - start
             TestSuiteModified.time_limit *= -1
@@ -690,7 +686,7 @@ class TestFinder(list):
                 
         time_to_load = time.time() - start
         if time_to_load > 0.1:
-            logging.critical("file %s takes a long time to load (%.4fs)" % (pyname, time_to_load))
+            logging.critical(f"file {pyname} takes a long time to load ({time_to_load:.4f}s)")
 
     def collect_function(self, class_, checking=True, base='', prefix='test'):
         """
@@ -723,7 +719,7 @@ class TestFinder(list):
 
         if isinstance(expression, list):
             pass
-        elif isinstance(expression, six.string_types):
+        elif isinstance(expression, str):
             if expression in '':
                 expression = ['.*'] #made an re authorizing all regular name
             else:
@@ -743,7 +739,7 @@ class TestFinder(list):
     def check_valid(self, name):
         """ check if the name correspond to the rule """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise self.TestFinderError('check valid take a string argument')
 
         for specific_format in self.format_possibility(name):
@@ -766,7 +762,7 @@ class TestFinder(list):
     def passin_pyformat(cls, name):
         """ transform a relative position in a python import format """
 
-        if not isinstance(name, six.string_types):
+        if not isinstance(name, str):
             raise cls.TestFinderError('collect_file takes a file position')
 
         name = name.replace('//', '/') #sanity
@@ -877,7 +873,7 @@ class IOTestFinder(TestFinder):
         if expression!='' or re_opt!=0:
             raise IOTestFinderError('Only use IOTestFinder for searching for'+\
                                                                  ' all classes')
-        super(IOTestFinder,self).__init__(package,expression,re_opt)
+        super().__init__(package,expression,re_opt)
 
     def collect_file(self, filename, checking=True):
         """ Find the different class instance derivated of TestCase """
@@ -899,17 +895,12 @@ class IOTestFinder(TestFinder):
                                                          (pyname, time_to_load))
 
 def bypass_for_py3(fct):
-
-    if six.PY3:
-        to_bypass.append((fct.__name__, fct.__doc__))
-        #global BYPASS
-    
     return fct
 
             
 if __name__ == "__main__":
 
-    help = """
+    help = r"""
     Detailed information about the IOTests at the wiki webpage:
 https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 

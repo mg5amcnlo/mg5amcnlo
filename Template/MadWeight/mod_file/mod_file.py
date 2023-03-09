@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 #Extension
-from __future__ import absolute_import
 import string
 import os
 import sys
 import time
 import re
-from six.moves import range
 
 ############################################################################
 ##                          PARAMETER
@@ -37,7 +35,7 @@ def fuse_f77_files(list_input,output):
     
     for input in list_input:
 
-        ff=open(input,'r')
+        ff=open(input)
         #read  file and add non-existent subroutine
         while 1:
             line=ff.readline()
@@ -76,7 +74,7 @@ def mod_matrix(input_file,output_file,new_rel_pos):
     Pattern.append(re.compile(r'''\s*(DO)\s*J\s*=\s*\d\s*[,]\s*ISUM_HEL\s*''',re.I))
     
 
-    ff=open(input_file,'r')
+    ff=open(input_file)
     gg=open(output_file,'w')
 
 
@@ -111,7 +109,7 @@ def mod_matrix(input_file,output_file,new_rel_pos):
 
 def rem_open_file(input_file,output_file):
 
-    file_in=open(input_file,'r')
+    file_in=open(input_file)
     file_out=open(output_file,'w')
     mode=1
     Pattern=re.compile(r'''^\s*subroutine\s*(\w*_\w*)\s*\(''',re.I)
@@ -140,7 +138,7 @@ def rem_open_file(input_file,output_file):
 def mod_model_make(pos_file):
 
     os.system('cp '+pos_file+' '+pos_file+'_bak')
-    mod_file=open(pos_file,'r')
+    mod_file=open(pos_file)
 
     pattern=re.compile(r'''MODEL\s*=\s*printout.o\s*couplings.o''')
     text=''
@@ -161,7 +159,7 @@ def mod_model_make(pos_file):
 
 def mod_photon_flux(input_file,output_file):
 
-    file_in=open(input_file,'r')
+    file_in=open(input_file)
     file_out=open(output_file,'w')
 
     Pattern=re.compile(r'''\bphi\b''',re.I)  
@@ -189,7 +187,7 @@ def mod_photon_flux(input_file,output_file):
 
 def mod_pdfwrap(input_file,output_file):
 
-    file_in=open(input_file,'r')
+    file_in=open(input_file)
     file_out=open(output_file,'w')
 
     Pattern=re.compile(r'''../alfas.inc''',re.I)
@@ -213,7 +211,7 @@ def mod_pdfwrap(input_file,output_file):
 #########################################################################"
 def mod_run_card(input_file,output_file):
 
-    file_in=open(input_file,'r')
+    file_in=open(input_file)
     file_out=open(output_file,'w')
     
     Pattern_min=re.compile(r'''^\s*[\d.d]*\s*=\s*\w*\s*!\s*min([\s]|[imum\s])''',re.I)   
@@ -245,7 +243,7 @@ def mod_run_card(input_file,output_file):
 #########################################################################"
 def mod_auto_dsig(input_file,output_file,new_rel_pos):
     
-    file_in=open(input_file,'r')
+    file_in=open(input_file)
     file_out=open(output_file,'w')
 
     ##part concerning the Transfert weight to add in file

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: iso-8859-1 -*-
 #
 # progressbar  - Text progressbar library for python.
 # Copyright (c) 2005 Nilton Volpato
@@ -39,9 +38,7 @@ The progressbar module is very easy to use, yet very powerful. And
 automatically supports features like auto-resizing when available.
 """
 
-from __future__ import absolute_import
 import six
-from six.moves import range
 __author__ = "Nilton Volpato"
 __author_email__ = "first-name dot last-name @ gmail.com"
 __date__ = "2006-05-07"
@@ -66,7 +63,7 @@ except ImportError:
     pass
 import signal
 
-class ProgressBarWidget(object):
+class ProgressBarWidget:
     """This is an element of ProgressBar formatting.
 
     The ProgressBar object will call it's update value when an update
@@ -83,7 +80,7 @@ class ProgressBarWidget(object):
         At least this function must be overriden."""
         pass
 
-class ProgressBarWidgetHFill(object):
+class ProgressBarWidgetHFill:
     """This is a variable width element of ProgressBar formatting.
 
     The ProgressBar object will call it's update value, informing the
@@ -158,7 +155,7 @@ class Bar(ProgressBarWidgetHFill):
         self.left = left
         self.right = right
     def _format_marker(self, pbar):
-        if isinstance(self.marker, (str, six.text_type)):
+        if isinstance(self.marker, (str, str)):
             return self.marker
         else:
             return self.marker.update(pbar)
@@ -181,7 +178,7 @@ class ReverseBar(Bar):
         return bar
 
 default_widgets = [Percentage(), ' ', Bar()]
-class ProgressBar(object):
+class ProgressBar:
     """This is the ProgressBar class, it updates and prints the bar.
 
     The term_width parameter may be an integer. Or None, in which case
@@ -252,7 +249,7 @@ class ProgressBar(object):
                 r.append(w)
                 hfill_inds.append(i)
                 num_hfill += 1
-            elif isinstance(w, (str, six.text_type)):
+            elif isinstance(w, (str, str)):
                 r.append(w)
                 currwidth += len(w)
             else:

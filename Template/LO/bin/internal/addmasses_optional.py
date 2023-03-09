@@ -5,10 +5,8 @@
 # Add masses to charged leptons, fix kinematics
 # Insert W/Z when missing
 
-from __future__ import absolute_import
 import math,sys,re
 from xml.dom import minidom
-from six.moves import range
 
 #tolerance for energy momentum conservation
 toler = 1e-4
@@ -109,7 +107,7 @@ def add_masses(f,g):
     while 1:
         try:
             line=f.readline()
-        except IOError:
+        except OSError:
             print("Problem reading from file ",sys.argv[1])
             sys.exit(0)
         if line.find("<event>")==-1:
@@ -122,7 +120,7 @@ def add_masses(f,g):
     #let xml find the event tags
     try:
         xmldoc = minidom.parse(sys.argv[1])
-    except IOError:
+    except OSError:
         print(" could not open file for xml parsing ",sys.argv[1])
         sys.exit(0)
         
@@ -296,14 +294,14 @@ if __name__ == "__main__":
     
     #first print out leading information
     try:
-        f=open(sys.argv[1],'r')
-    except IOError:
+        f=open(sys.argv[1])
+    except OSError:
         print("need a file for reading")
         sys.exit(1)
 
     try:
         g=open(sys.argv[2],'w')
-    except IOError:
+    except OSError:
         print("need a file for writing")
         sys.exit(1)
     

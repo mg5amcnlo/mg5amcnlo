@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import logging.config
 import logging
 import pydoc
@@ -90,8 +89,8 @@ HCR_processes_long =  [
                        ('u~ d > w- z',{},['QED'],{})
                        ]
 
-HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
-                               for elem in HCR_processes_long)
+HCR_processes_long_dic = {procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()):elem\
+                               for elem in HCR_processes_long}
 
 
 ML5EW_processes_long =  [
@@ -145,8 +144,8 @@ ML5EW_processes_long =  [
                          ('u~ d > w- z',{},['QED'],{})
                          ]
 
-ML5EW_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
-                                for elem in ML5EW_processes_long)
+ML5EW_processes_long_dic = {procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()):elem\
+                                for elem in ML5EW_processes_long}
 
 
 def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,

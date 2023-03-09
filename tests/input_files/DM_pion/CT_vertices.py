@@ -3,7 +3,6 @@
 # Date: Thu 11 Jun 2015 17:39:55
 
 
-from __future__ import absolute_import
 
 #from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
 import object_library

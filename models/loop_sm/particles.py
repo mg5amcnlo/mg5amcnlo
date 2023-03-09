@@ -3,8 +3,6 @@
 # Date: Fri 18 Mar 2011 18:40:51
 
 
-from __future__ import division
-from __future__ import absolute_import
 from .object_library import all_particles, Particle
 from . import parameters as Param
 from . import CT_parameters as CTParam

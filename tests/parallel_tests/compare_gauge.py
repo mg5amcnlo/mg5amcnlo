@@ -17,7 +17,6 @@ and the Feynman gauge with the unitary gauge. The comparison between the four
 possibilities is performed since there is a strong relation between complex-mass
 scheme and gauge invariance. 
 """
-from __future__ import absolute_import
 import itertools
 import logging
 import os

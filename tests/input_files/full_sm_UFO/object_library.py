@@ -7,12 +7,11 @@
 ##
 ##
 
-from __future__ import absolute_import
 import cmath
 import six
 
 
-class FRBaseClass(object):
+class FRBaseClass:
     """The class from which all FeynRules classes are derived."""
 
     require_args = []
@@ -91,7 +90,7 @@ class Particle(FRBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in six.iteritems(self.__dict__):
+        for k,v in self.__dict__.items():
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:
@@ -174,7 +173,7 @@ class Lorentz(FRBaseClass):
 
 all_functions = []
 
-class Function(object):
+class Function:
 
     def __init__(self, name, arguments, expression):
 
@@ -188,7 +187,7 @@ class Function(object):
     def __call__(self, *opt):
 
         for i, arg in enumerate(self.arguments):
-            exec('%s = %s' % (arg, opt[i] ))
+            exec(f'{arg} = {opt[i]}')
 
         return eval(self.expr)
 

@@ -19,8 +19,6 @@ multiparticle definitions. DiagramTag allows to identify diagrams
 based on relevant properties.
 """
 
-from __future__ import absolute_import
-from six.moves import filter
 #force filter to be a generator # like in py3
 
 import array
@@ -33,9 +31,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import madgraph.fks.fks_tag as fks_tag
 from madgraph import InvalidCmd, MadGraph5Error
-from six.moves import range
-from six.moves import zip
-from six.moves import filter
 
 logger = logging.getLogger('madgraph.diagram_generation')
 
@@ -48,8 +43,8 @@ class NoDiagramException(InvalidCmd): pass
 # DiagramTag mother class
 #===============================================================================
 
-class DiagramTag(object):
-    """Class to tag diagrams based on objects with some __lt__ measure, e.g.
+class DiagramTag:
+    r"""Class to tag diagrams based on objects with some __lt__ measure, e.g.
     PDG code/interaction id (for comparing diagrams from the same amplitude),
     or Lorentz/coupling/mass/width (for comparing AMPs from different MEs).
     Algorithm: Create chains starting from external particles:
@@ -327,7 +322,7 @@ class DiagramTag(object):
 
     __repr__ = __str__
 
-class DiagramTagChainLink(object):
+class DiagramTagChainLink:
     """Chain link for a DiagramTag. A link is a tuple + vertex id + depth,
     with a comparison operator defined"""
 
@@ -453,15 +448,15 @@ class Amplitude(base_objects.PhysicsObject):
     def __init__(self, argument=None):
         """Allow initialization with Process"""
         if isinstance(argument, base_objects.Process):
-            super(Amplitude, self).__init__()
+            super().__init__()
             self.set('process', argument)
             self.generate_diagrams()
         elif argument != None:
             # call the mother routine
-            super(Amplitude, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(Amplitude, self).__init__()
+            super().__init__()
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -485,7 +480,7 @@ class Amplitude(base_objects.PhysicsObject):
             if self['process']:
                 self.generate_diagrams()
 
-        return super(Amplitude, self).get(name)
+        return super().get(name)
 #        return Amplitude.__bases__[0].get(self, name)  #return the mother routine
 
 
@@ -1355,7 +1350,7 @@ class DecayChainAmplitude(Amplitude):
         """Allow initialization with Process and with ProcessDefinition"""
  
         if isinstance(argument, base_objects.Process):
-            super(DecayChainAmplitude, self).__init__()
+            super().__init__()
             from madgraph.loop.loop_diagram_generation import LoopMultiProcess
             if argument['perturbation_couplings']:
                 MultiProcessClass=LoopMultiProcess
@@ -1450,10 +1445,10 @@ class DecayChainAmplitude(Amplitude):
 
         elif argument != None:
             # call the mother routine
-            super(DecayChainAmplitude, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(DecayChainAmplitude, self).__init__()
+            super().__init__()
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -1587,17 +1582,17 @@ class MultiProcess(base_objects.PhysicsObject):
         optimize allows to use param_card information. (usefull for 1-.N)"""
 
         if isinstance(argument, base_objects.ProcessDefinition):
-            super(MultiProcess, self).__init__()
+            super().__init__()
             self['process_definitions'].append(argument)
         elif isinstance(argument, base_objects.ProcessDefinitionList):
-            super(MultiProcess, self).__init__()
+            super().__init__()
             self['process_definitions'] = argument
         elif argument != None:
             # call the mother routine
-            super(MultiProcess, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(MultiProcess, self).__init__()
+            super().__init__()
 
         self['collect_mirror_procs'] = collect_mirror_procs
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
@@ -1996,7 +1991,7 @@ class MultiProcess(base_objects.PhysicsObject):
         hierarchy.sort()
         for key, value in hierarchydef.items():
             if value>1:
-                tmp.append('%s*%s' % (value,key))
+                tmp.append(f'{value}*{key}')
             else:
                 tmp.append('%s' % key)
         wgtdef = '+'.join(tmp)

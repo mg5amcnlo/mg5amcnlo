@@ -9,7 +9,6 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import os
 import re
 import subprocess
@@ -95,7 +94,7 @@ def setup_channel(channelPath):
     # already present.
     if not os.path.isfile(pjoin(channelPath,'StabilityCheckDriver.f')):
         with open(pjoin(MGRootPath,'Template','loop_material','Checks',
-                        'StabilityCheckDriver.f'),'r') as checkerFile:
+                        'StabilityCheckDriver.f')) as checkerFile:
             with open(pjoin(channelPath,'proc_prefix.txt')) as proc_prefix:
                 checkerToWrite = checkerFile.read()%{'proc_prefix':
                                                      proc_prefix.read()}
@@ -219,7 +218,7 @@ for event in evtFile:
         runner=encountered_channels[EvtChannelName][0]
     except KeyError:
         logging.info('Found new channel %s'%EvtChannelName)
-        chanFinder=re.compile("^P[0-9]*\S*%s\S*$"%EvtChannelName)
+        chanFinder=re.compile(r"^P[0-9]*\S*%s\S*$"%EvtChannelName)
         match_channels=[chan for chan in channel_list if \
                         not chanFinder.match(chan) is None]
         # If not found try to consider u and d quark initial state as
@@ -229,7 +228,7 @@ for event in evtFile:
                 [int(p.pid) for p in event if p.status==-1],
                 [int(p.pid) for p in event if p.status==1])
             for chanName in channelNames:
-                chanFinder=re.compile("^P[0-9]*\S*%s\S*$"%chanName)
+                chanFinder=re.compile(r"^P[0-9]*\S*%s\S*$"%chanName)
                 match_channels=[chan for chan in channel_list if \
                                     not chanFinder.match(chan) is None]
                 if len(match_channels)>1:
@@ -320,7 +319,7 @@ for event in evtFile:
 # do not include alpha_S/2pi
             new_wgt=new_wgt*event.wgt
             worked = True
-        except IOError:
+        except OSError:
             worked = False
             if trial==1:
                 logging.warning('The python-fortran cross-talk yielded an IOError. Retrying')

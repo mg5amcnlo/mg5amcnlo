@@ -15,7 +15,6 @@
 
 """Unit test library for the export v4 format routines"""
 
-from __future__ import absolute_import
 import six
 StringIO = six
 import copy
@@ -36,7 +35,6 @@ import madgraph.core.color_algebra as color
 import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
-from six.moves import range
 
 #===============================================================================
 # SubProcessGroupTest
@@ -111,8 +109,8 @@ class SubProcessGroupTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,
@@ -1372,8 +1370,8 @@ Decay groups:
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

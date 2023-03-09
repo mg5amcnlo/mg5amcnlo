@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 #Extension
-from __future__ import absolute_import
 import string,os,sys,re,time,stat,filecmp
-from six.moves import range
-from six.moves import input
 
 try: 
     import madgraph.madweight.mod_file as mod_file
@@ -609,7 +606,7 @@ def copy_file(list,i):
 
     for file in list:
         title.append(file.split('/')[-1])
-        ff=open(file,'r')
+        ff=open(file)
         content.append(ff.readlines())
         ff.close()
         
@@ -630,7 +627,7 @@ def restore_last_info_for_control(MW_param):
     dir_list=[]
 
     for dir in MW_param.P_listdir+MW_param.MW_listdir:
-        ff=open('./SubProcesses/'+dir+'/schedular/condor.log','r')
+        ff=open('./SubProcesses/'+dir+'/schedular/condor.log')
         text=ff.readline()
         ff.close()
         pat=pattern.search(text)

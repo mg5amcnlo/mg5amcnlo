@@ -16,14 +16,12 @@
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
 import math
 import os
 import sys
-from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -426,8 +424,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             nLoopDiags = 0
             for diag in loopDiagSelected:
                 # We don't want to count twice the counterterms with same ID
-                nLoopDiags += (1+len(set(vert.get('id') for vert in \
-                                                      diag.get('CT_vertices'))))
+                nLoopDiags += (1+len({vert.get('id') for vert in \
+                                                      diag.get('CT_vertices')}))
             if checkColor:
                 if (loopDiagSelected or loopUVCTDiagSelected):
                     loop_col_basis = loop_color_amp.LoopColorBasis()
@@ -508,8 +506,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         if not isinstance(diag,loop_base_objects.LoopUVCTDiagram):
                             # We don't want to count twice the counterterms with
                             # same ID
-                            shift=len(set(vert.get('id') for vert in \
-                                                       diag.get('CT_vertices')))
+                            shift=len({vert.get('id') for vert in \
+                                                       diag.get('CT_vertices')})
                         else:
                             shift=0
                         reconstructedDiags=AllReconstructedDiags[diagIndex:\
@@ -558,7 +556,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     # Check that the right number of counter-diagrams is produced
                     # We don't want to count twice the counterterms with same ID
                     self.assertEqual(len(reconstructedDiags)-1,
-                      len(set(vert.get('id') for vert in diag.get('CT_vertices'))))
+                      len({vert.get('id') for vert in diag.get('CT_vertices')}))
                     for ct_number in range(1,len(reconstructedDiags)):
                         if verbose: print('reconstructed CT diag',ct_number,':',\
                           reconstructedDiags[ct_number].nice_string())
@@ -675,8 +673,8 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # Check the number of key entries for the counter-terms                        
                         if diag.get('CT_vertices'):
                             # We don't want to count twice the counterterms with same ID
-                            self.assertEqual(len(set(vert.get('id') for vert in \
-                              diag.get('CT_vertices'))),len(this_loop_colorize_obj)-1)
+                            self.assertEqual(len({vert.get('id') for vert in \
+                              diag.get('CT_vertices')}),len(this_loop_colorize_obj)-1)
                             # Don't forget that in get_base_amplitude the CT are given sorted
                             # according to their vertex id
                             ctverts=copy.copy(diag.get('CT_vertices'))

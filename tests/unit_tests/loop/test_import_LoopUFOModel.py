@@ -15,7 +15,6 @@
 
 """Unit test library to check that Loop UFO models are correctly imported """
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -165,7 +164,7 @@ class LoopUFOImportTest(unittest.TestCase):
         self.assertEqual(self.imported_loopmodel.get('order_hierarchy'),\
                          {'QCD':1,'QED':2})
         self.assertEqual(set(self.imported_loopmodel.get('coupling_orders')),\
-                         set(['QCD','QED']))
+                         {'QCD','QED'})
         # The up quark
         for key in self.hardcoded_loopmodel['particles'][2].keys():
             self.assertEqual(self.imported_loopmodel['particles'][0][key],\

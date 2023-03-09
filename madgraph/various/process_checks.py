@@ -17,9 +17,7 @@ permutation tests, gauge invariance tests, lorentz invariance
 tests. Also class for evaluation of Python matrix elements,
 MatrixElementEvaluator."""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -80,11 +78,8 @@ from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx, txxxxx, irxxxx, orxxxx
 import six
 StringIO = six
-from six.moves import range
-from six.moves import zip
 import io
-if six.PY3:
-    file = io.FileIO
+file = io.FileIO
 
 
 ADDED_GLOBAL = []
@@ -101,7 +96,7 @@ def clean_added_globals(to_clean):
 #===============================================================================
 # Fake interface to be instancied when using process_checks from tests instead.
 #===============================================================================
-class FakeInterface(object):
+class FakeInterface:
     """ Just an 'option container' to mimick the interface which is passed to the
     tests. We put in only what is now used from interface by the test:
     cmd.options['fortran_compiler']
@@ -157,7 +152,7 @@ def boost_momenta(p, boost_direction=1, beta=0.5):
 #===============================================================================
 # Helper class MatrixElementEvaluator
 #===============================================================================
-class MatrixElementEvaluator(object):
+class MatrixElementEvaluator:
     """Class taking care of matrix element evaluation, storing
     relevant quantities for speedup."""
 
@@ -532,7 +527,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
-        super(LoopMatrixElementEvaluator,self).__init__(*args,cmd=cmd,**kwargs)
+        super().__init__(*args,cmd=cmd,**kwargs)
 
         self.mg_root=self.cmd._mgme_dir
         # If no specific output path is specified, then write in MG5 root directory
@@ -688,7 +683,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             to specify the mode."""
 
         # Instanciate a MadLoopParam card
-        file = open(pjoin(dir_name,'MadLoopParams.dat'), 'r')
+        file = open(pjoin(dir_name,'MadLoopParams.dat'))
         MLCard = bannermod.MadLoopParam(file)
 
         if isinstance(mp,bool):
@@ -753,7 +748,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             logging.info("Directory hasn't been created for process %s: %s", proc, directories)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-        if verbose: logging.debug("Working on process %s in dir %s" % (proc, shell_name))
+        if verbose: logging.debug(f"Working on process {proc} in dir {shell_name}")
         
         dir_name = pjoin(working_dir, 'SubProcesses', shell_name)
         if not skip_compilation:
@@ -797,7 +792,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 logging.warning("Error while looking for file %s"%str(os.path\
                                            .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
@@ -829,7 +824,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # I change it to be the list of line.
         if isinstance(output,(file,io.TextIOWrapper)) or isinstance(output,list):
             text=output
-        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, six.text_type)):
+        elif isinstance(output,(str)) or (six.PY2 and isinstance(output, str)):
             text=output.split('\n')
         elif isinstance(output, bytes):
             text=output.decode(errors='ignore').split('\n')
@@ -938,7 +933,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # Make sure to create a backup
         if not os.path.isfile(bu_path):
             shutil.copy(pjoin(model_path, 'model_functions.f'), bu_path)            
-        model_functions = open(pjoin(model_path,'model_functions.f'),'r')
+        model_functions = open(pjoin(model_path,'model_functions.f'))
         
         new_model_functions = []
         has_replaced        = False
@@ -1023,7 +1018,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             raise Exception("No helas calls output file found.")
         
         helas_file_name=pjoin(dir_name,file_names[ind])
-        file = open(pjoin(dir_name,helas_file_name), 'r')
+        file = open(pjoin(dir_name,helas_file_name))
         
         helas_calls_out=""
         original_file=""
@@ -1092,7 +1087,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         Notice this only affects the double precision evaluation which is
         normally fine as we do not make the timing check on mp."""
 
-        file = open(pjoin(dir_name,'loop_matrix.f'), 'r')
+        file = open(pjoin(dir_name,'loop_matrix.f'))
         loop_matrix = file.read()
         file.close()
         
@@ -1106,7 +1101,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Edit loop_matrix.f in order to set the flag which stops the
         execution after booting the program (i.e. reading the color data)."""
 
-        file = open(pjoin(dir_name,'loop_matrix.f'), 'r')
+        file = open(pjoin(dir_name,'loop_matrix.f'))
         loop_matrix = file.read()
         file.close()
         
@@ -1299,7 +1294,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # Detect one contributing helicity
         contributing_hel=0
         n_contrib_hel=0
-        proc_prefix_file = open(pjoin(dir_name,'proc_prefix.txt'),'r')
+        proc_prefix_file = open(pjoin(dir_name,'proc_prefix.txt'))
         proc_prefix = proc_prefix_file.read()
         proc_prefix_file.close()
         helicities = open(pjoin(dir_name,'MadLoop5_resources',
@@ -1650,7 +1645,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     checkerName = 'StabilityCheckDriver_loop_induced.f'
 
                 with open(pjoin(self.mg_root,'Template','loop_material','Checks',
-                                                checkerName),'r') as checkerFile:
+                                                checkerName)) as checkerFile:
                     with open(pjoin(dir_path,'proc_prefix.txt')) as proc_prefix:
                         checkerToWrite = checkerFile.read()%{'proc_prefix':
                                                                  proc_prefix.read()}
@@ -1762,7 +1757,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 except KeyboardInterrupt:
                     interrupted = True
                     break
-                except IOError as e:
+                except OSError as e:
                     if e.errno == errno.EINTR:
                         if retry==100:
                             logger.error("Failed hundred times consecutively because"+
@@ -1810,7 +1805,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
             # Close the StabChecker process.
             if not interrupted:
-                StabChecker.stdin.write('y\n'.encode())
+                StabChecker.stdin.write(b'y\n')
             else:
                 StabChecker.kill()
         
@@ -1838,7 +1833,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         # Reset the stdin with EOF character without closing it.
         StabChecker.stdin.write('\x1a'.encode())
-        StabChecker.stdin.write('1\n'.encode())
+        StabChecker.stdin.write(b'1\n')
         StabChecker.stdin.write(('%d\n'%mode).encode())   
         StabChecker.stdin.write(('%s\n'%PSpoint).encode())
         StabChecker.stdin.write(('%.16E\n'%mu_r).encode()) 
@@ -1884,7 +1879,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                (ret_code, last_non_empty, error))
 
             return cls.parse_check_output(res,format='tuple')[0][0]
-        except IOError as e:
+        except OSError as e:
             logging.warning("Error while running MadLoop. Exception = %s"%str(e))
             raise e 
 
@@ -3758,7 +3753,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
               (model.get_parameter(particle.get('mass')).name,particle.get('name'))+\
               " parameter as required by this check. \nMG5_aMC will try to"+\
               " modify the model to remedy the situation. No guarantee.")
-            status = model.change_electroweak_mode(set(['mz','mw','alpha']), bypass_check=True)
+            status = model.change_electroweak_mode({'mz','mw','alpha'}, bypass_check=True)
             if not status:
                 raise InvalidCmd('The EW scheme could apparently not be changed'+\
                   ' so as to have the W-boson mass external. The check cannot'+\
@@ -4055,7 +4050,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
         str_res = '%s %s'%(model.get_particle(
                             resonance['ParticlePDG']).get_name(),
                                        str(list(resonance['FSMothersNumbers'])))
-        leg_number_to_leg = dict((l.get('number'),l) for l in process.get('legs'))
+        leg_number_to_leg = {l.get('number'):l for l in process.get('legs')}
         # Find what is the minimum possible offshellness given
         # the mass of the daughters of this resonance.
         # This will only be relevant when options['offshellness'] is negative
@@ -4357,7 +4352,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
          in the diagrams specified. When inconsistency occurs, use orderName
          in the warning message if throwm."""
          
-        orders = set([])
+        orders = set()
         for diag in diagrams:
             diag_orders = diag.calculate_orders()
             orders.add(sum((diag_orders[order] if order in diag_orders else 0)
@@ -5414,9 +5409,9 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
             res_str += '| Widths computed %s'%('analytically' if has_FRdecay 
                                                              else 'numerically')
             if result['recompute_width'] == 'first_time':
-                res_str += ' for \lambda = 1'
+                res_str += r' for \lambda = 1'
             elif result['recompute_width'] == 'always':
-                res_str += ' for all \lambda values'
+                res_str += r' for all \lambda values'
         res_str += " using mode '--recompute_width=%s'.\n"%result['recompute_width']
         for particle_name, width in result['widths_computed']:
             res_str += '| %-10s = %-11.6gGeV\n'%('Width(%s)'%particle_name,width)
@@ -5764,9 +5759,9 @@ minimum value of lambda to be considered in the CMS check."""\
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:
-                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#','\#'), CMSData])
-                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#','\#'), NWAData])
-                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#','\#'), DiffData])
+                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#',r'\#'), CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#',r'\#'), NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#',r'\#'), DiffData])
                 
         process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
@@ -5779,7 +5774,7 @@ minimum value of lambda to be considered in the CMS check."""\
         res_str += \
 """\n-----------------------------------------------------------------------------------------------
 | In the plots, the Complex Mass Scheme check is successful if the normalized difference      |
-| between the CMS and NWA result (lower inset) tends to a constant when \lambda goes to zero. |
+| between the CMS and NWA result (lower inset) tends to a constant when \\lambda goes to zero. |
 -----------------------------------------------------------------------------------------------\n"""
 
         # output the figures

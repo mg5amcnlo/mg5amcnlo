@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import math
 import unittest
@@ -24,7 +22,6 @@ import sys
 import logging
 import time
 import tempfile   
-from six.moves import zip
 
 logger = logging.getLogger('test_cmd')
 
@@ -313,8 +310,8 @@ class TestMECmdRWGT(unittest.TestCase):
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['MYNLO_tree'])
             if i < len(solutions):
-                self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], solutions[i],3), '(event %s) %s != %s ' % (i, rwgt_data['MYNLO_tree'], solutions[i]))
-            self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], event2.wgt, 3), '(event %s) %s != %s ' % (i, rwgt_data['MYNLO_tree'], event2.wgt))
+                self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], solutions[i],3), '(event {}) {} != {} '.format(i, rwgt_data['MYNLO_tree'], solutions[i]))
+            self.assertTrue(misc.equal(rwgt_data['MYNLO_tree'], event2.wgt, 3), '(event {}) {} != {} '.format(i, rwgt_data['MYNLO_tree'], event2.wgt))
         #misc.sprint(solutions)
             
     def test_scan_reweighting(self):

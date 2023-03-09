@@ -16,7 +16,6 @@
 """Definitions of the objects needed both for MadFKS from real 
 and MadFKS from born"""
 
-from __future__ import absolute_import
 import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
@@ -30,7 +29,6 @@ import logging
 import array
 import fractions
 import six
-from six.moves import range
     
 if madgraph.ordering:
     set = misc.OrderedSet    
@@ -408,10 +406,10 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
     # and find where to insert i  (split[1])
     col_maxindex = {}
     mass_col_maxindex = {}
-    for col in set([l[color] for l in leglist[firstfinal:] if l['massless']]):
+    for col in {l[color] for l in leglist[firstfinal:] if l['massless']}:
         col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:]\
                                         if l[color] == col and l['massless']])
-    for col in set([abs(l[color]) for l in leglist[firstfinal:] if not l['massless']]):
+    for col in {abs(l[color]) for l in leglist[firstfinal:] if not l['massless']}:
         mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:]\
                                              if abs(l[color]) == col and not l['massless']])
     #no need to keep info on particles with color > i
@@ -805,13 +803,13 @@ class FKSLegList(MG.LegList):
         massless_legs = [l for l in final_legs if l['massless']]
 
         for leglist in [massive_legs, massless_legs]:
-            spins = sorted(set([abs(l['spin']) for l in leglist]))
+            spins = sorted({abs(l['spin']) for l in leglist})
             for spin in spins:
                 spin_legs = FKSLegList([l for l in leglist if abs(l['spin']) == spin])
                 init_pdg_legs = []
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
-                    for j in range(len(set([ abs(l['id']) for l in initial_legs]))):
+                    for j in range(len({ abs(l['id']) for l in initial_legs})):
                         pdg = abs(initial_legs[j]['id'])
                         init_pdg_legs = [l for l in spin_legs if abs(l['id']) == pdg]
                         if init_pdg_legs:
@@ -847,7 +845,7 @@ class FKSLeg(MG.Leg):
 
     def default_setup(self):
         """Default values for all properties"""
-        super(FKSLeg, self).default_setup()
+        super().default_setup()
 
         self['fks'] = 'n'
         self['color'] = 0
@@ -860,7 +858,7 @@ class FKSLeg(MG.Leg):
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSLeg, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys += ['fks', 'color','charge', 'massless', 'spin','is_tagged','is_part','self_antipart',]
         return keys
 
@@ -874,18 +872,18 @@ class FKSLeg(MG.Leg):
                                                         % str(value))
         if name in ['color', 'spin']:
             if not isinstance(value, int):
-                six.reraise(self.PhysicsObjectError, "%s is not a valid leg %s flag" % \
-                                                 str(value), name)
+                raise "%s is not a valid leg %s flag" % \
+                                                 str(value).with_traceback(name)
                                                  
         if name in ['massless','is_tagged','self_antipart','is_part']:
             if not isinstance(value, bool):
-                six.reraise(self.PhysicsObjectError, "%s is not a valid boolean for leg flag %s" % \
-                                                                    str(value), name)
+                raise "%s is not a valid boolean for leg flag %s" % \
+                                                                    str(value).with_traceback(name)
         if name == 'charge':
             if not isinstance(value, float):
                 raise self.PhysicsObjectError("%s is not a valid float for leg flag charge" \
                     % str(value))                                                           
-        return super(FKSLeg,self).filter(name, value)
+        return super().filter(name, value)
     
      
 

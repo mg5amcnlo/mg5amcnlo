@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-from __future__ import absolute_import
 import six
-from six.moves import range
 try:
     import madgraph.madweight.particle_class as particle_class
     import madgraph.various.misc as misc
@@ -803,13 +801,13 @@ class Block_B(Block_sector):
                 self.order_content=self.in_part+propa_content
             else:
                 self.order_content=[self.in_part[1],self.in_part[0],self.in_part[2]]+propa_content
-        elif isinstance(self.in_part[0].MG, six.string_types): #check if first particle are fuse particle
+        elif isinstance(self.in_part[0].MG, str): #check if first particle are fuse particle
             self.order_content=self.in_part+[self.in_part[0].mother]
             try:
                 self.order_content.append(self.in_part[2].mother)
             except:
                 pass
-        elif isinstance(self.in_part[1].MG, six.string_types): #check if first particle are fuse particle
+        elif isinstance(self.in_part[1].MG, str): #check if first particle are fuse particle
             self.order_content=self.in_part+[self.in_part[1].mother]
             try:
                 self.order_content.append(self.in_part[2].mother)

@@ -14,7 +14,6 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
-from __future__ import absolute_import
 import unittest
 import tempfile
 import madgraph.various.banner as bannermod
@@ -151,8 +150,8 @@ class TestConfigFileCase(unittest.TestCase):
         
         self.config['list'] = (1,2,3,'4')
         self.assertEqual(self.config['list'],[1,2,3,4]) 
-        self.config['list'] = set((1,'2',3,'4'))
-        self.assertEqual(set(self.config['list']),set([1,2,3,4])) 
+        self.config['list'] = {1,'2',3,'4'}
+        self.assertEqual(set(self.config['list']),{1,2,3,4}) 
         
         self.assertRaises(Exception, self.config.__setitem__, 'list', {1:2,3:4},raiseerror=True)
         
@@ -162,8 +161,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list_s'], ['1'])
         self.config['list_s'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
-        self.config['list_s'] = " 1\ 2, 3, 5d1 "
-        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        self.config['list_s'] = r" 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],[r'1\ 2','3', '5d1']) 
 
         self.config['list_s'] = "['--pdf=central', '--mur=1,2,3']"
         self.assertEqual(self.config['list_s'],['--pdf=central', '--mur=1,2,3']) 
@@ -445,7 +444,7 @@ class TestPythia8Card(unittest.TestCase):
    
     def setUp(self):
         self.basic_PY8_template = open(pjoin(MG5DIR,'Template','LO','Cards',
-                                         'pythia8_card_default.dat'),'r').read()
+                                         'pythia8_card_default.dat')).read()
         
     def test_PY8Card_basic(self):
         """ Basic consistency check of a read-write of the default card."""
@@ -467,11 +466,11 @@ class TestPythia8Card(unittest.TestCase):
         # ========== 
         # Keep the following if you want to print out all parameters with
         # print_only_visible=False
-        pythia8_card_read.system_set = set([k.lower() for k in 
-                                                      pythia8_card_read.keys()])
+        pythia8_card_read.system_set = {k.lower() for k in 
+                                                      pythia8_card_read.keys()}
         for subrunID in pythia8_card_read.subruns.keys():
             pythia8_card_read.subruns[subrunID].system_set = \
-              set([k.lower() for k in pythia8_card_read.subruns[subrunID].keys()])
+              {k.lower() for k in pythia8_card_read.subruns[subrunID].keys()}
         # ==========
               
         out = StringIO.StringIO()
@@ -527,11 +526,11 @@ Beams:LHEF='events_ouaf.lhe.gz'
 
         # Now write the card, and write all parameters, including hidden ones.
         # We force that by setting them 'system_set'
-        modified_PY8Card.system_set = set([k.lower() for k in 
-                                                      modified_PY8Card.keys()])
+        modified_PY8Card.system_set = {k.lower() for k in 
+                                                      modified_PY8Card.keys()}
         for subrunID in modified_PY8Card.subruns.keys():
             modified_PY8Card.subruns[subrunID].system_set = \
-              set([k.lower() for k in modified_PY8Card.subruns[subrunID].keys()])
+              {k.lower() for k in modified_PY8Card.subruns[subrunID].keys()}
         out = StringIO.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
         out.seek(0)        

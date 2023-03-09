@@ -15,7 +15,6 @@
 
 """Unit test library for the save model routines"""
 
-from __future__ import absolute_import
 import six
 StringIO = six
 
@@ -77,7 +76,7 @@ class IOSaveModel(unittest.TestCase):
         fsock = StringIO.StringIO()
         save_model.save_particles(fsock, mypartlist)
 
-        goal_str = "particles = [\n%s,%s]" % (str(mypartlist[0]),
+        goal_str = "particles = [\n{},{}]".format(str(mypartlist[0]),
                                             str(mypartlist[1]))
 
         self.assertEqual(fsock.getvalue(), goal_str)

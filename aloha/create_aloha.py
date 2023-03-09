@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import cmath
 import copy
 import operator
@@ -28,8 +26,6 @@ import sys
 import time
 from madgraph.interface.tutorial_text import output
 
-from six.moves import range
-from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -59,7 +55,7 @@ pjoin = os.path.join
 
 ALOHAERROR = aloha.ALOHAERROR
 
-class AbstractRoutine(object):
+class AbstractRoutine:
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
     
@@ -120,7 +116,7 @@ class AbstractRoutine(object):
             raise ALOHAERROR('%s is not a valid information that can be computed' % info)
 
 
-class AbstractRoutineBuilder(object):
+class AbstractRoutineBuilder:
     """ Launch the creation of the Helicity Routine"""
     
     prop_lib = {} # Store computation for the propagator
@@ -209,7 +205,7 @@ class AbstractRoutineBuilder(object):
         if (pair > 1 or nb_fermion >2) and not self.conjg:
             # self.conjg avoif multiple check
             data = aloha_fct.get_fermion_flow(self.lorentz_expr, nb_fermion)
-            target = dict([(2*i+1,2*i+2) for i in range(nb_fermion//2)])
+            target = {2*i+1:2*i+2 for i in range(nb_fermion//2)}
             if not data == target:
                 text = """Unable to deal with 4(or more) point interactions
 in presence of majorana particle/flow violation"""
@@ -241,14 +237,14 @@ in presence of majorana particle/flow violation"""
 
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                     infostr, self.denominator)
-        output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
+        output.contracted = {name: aloha_lib.KERNEL.reduced_expr2[name]
                                           for name in aloha_lib.KERNEL.use_tag
-                                          if name.startswith('TMP')])
+                                          if name.startswith('TMP')}
         
 
-        output.fct = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
+        output.fct = {name: aloha_lib.KERNEL.reduced_expr2[name]
                                           for name in aloha_lib.KERNEL.use_tag
-                                          if name.startswith('FCT')])
+                                          if name.startswith('FCT')}
 
         output.tag = [t for t in self.tag if not t.startswith('C')]
         output.tag += ['C%s' % pair for pair in self.conjg]
@@ -404,7 +400,7 @@ in presence of majorana particle/flow violation"""
         lorentz = lorentz.simplify()
         
         # Modify the expression in case of loop-pozzorini
-        if any((tag.startswith('L') for tag in self.tag if len(tag)>1)):
+        if any(tag.startswith('L') for tag in self.tag if len(tag)>1):
             return self.compute_loop_coefficient(lorentz, outgoing)
             
         lorentz = lorentz.expand()
@@ -563,7 +559,7 @@ in presence of majorana particle/flow violation"""
         Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
 
-        Pdep = set([P for P in Pdep if P.particle in [outgoing, l_in]])
+        Pdep = {P for P in Pdep if P.particle in [outgoing, l_in]}
         for P in Pdep:
             if P.particle == l_in:
                 sign = 1
@@ -580,7 +576,7 @@ in presence of majorana particle/flow violation"""
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[abs(self.spins[l_in-1])]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
-        var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
+        var_veto += [f'{spin}{l_in}_{i}' for i in range(1,size)]
         # compute their unique identifiant
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
@@ -623,7 +619,7 @@ in presence of majorana particle/flow violation"""
     def get_routine_name(name, outgoing):
         """return the name of the """
         
-        name = '%s_%s' % (name, outgoing) 
+        name = f'{name}_{outgoing}' 
         return name
             
     @classmethod
@@ -656,7 +652,7 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
         self.outgoing = None
         self.lorentz_expr = []
         for i, lor in enumerate(l_lorentz):
-            self.lorentz_expr.append( 'Coup(%s) * (%s)' % (i+1, lor.structure))
+            self.lorentz_expr.append( f'Coup({i+1}) * ({lor.structure})')
         self.lorentz_expr = ' + '.join(self.lorentz_expr)
         self.routine_kernel = None
         self.contracted = {}
@@ -674,7 +670,7 @@ class AbstractALOHAModel(dict):
         # Option
         self.explicit_combine = explicit_combine
         # Extract the model name if combined with restriction
-        model_name_pattern = re.compile("^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
+        model_name_pattern = re.compile(r"^(?P<name>.+)-(?P<rest>[\w\d_]+)$")
         model_name_re = model_name_pattern.match(model_name)
         if model_name_re:
             name = model_name_re.group('name')
@@ -756,7 +752,7 @@ class AbstractALOHAModel(dict):
         if not filepos:
             filepos = os.path.join(self.model_pos,'aloha.pkl') 
         if os.path.exists(filepos):
-            fsock = open(filepos, 'r')
+            fsock = open(filepos)
             self.update(six.moves.cPickle.load(fsock))        
             return True
         else:
@@ -862,7 +858,7 @@ class AbstractALOHAModel(dict):
             
             if lorentz.structure == 'external':
                 for i in range(len(lorentz.spins)):
-                    self.external_routines.append('%s_%s' % (lorentz.name, i))
+                    self.external_routines.append(f'{lorentz.name}_{i}')
                 continue
             
             #standard routines
@@ -966,7 +962,7 @@ class AbstractALOHAModel(dict):
             tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
             conjugate = tuple([int(float(c[1:])) for c in tag if c.startswith('C')])
-            loop = any((t.startswith('L') for t in tag))
+            loop = any(t.startswith('L') for t in tag)
             if loop:
                 aloha.loop_mode = True
                 self.explicit_combine = True
@@ -1146,7 +1142,7 @@ class AbstractALOHAModel(dict):
         ext_files  = []
         for path in paths:
             base, amp = name.rsplit('_',1)
-            ext_files = misc.glob('%s*_%s.%s' % (base,amp, ext), path)
+            ext_files = misc.glob(f'{base}*_{amp}.{ext}', path)
             if ext_files:
                 break
         else: 
@@ -1288,7 +1284,7 @@ class AbstractALOHAModel(dict):
                     try:
                         conjugate_request[lorentz.name].add(i//2+1)
                     except Exception:
-                        conjugate_request[lorentz.name] = set([i//2+1])
+                        conjugate_request[lorentz.name] = {i//2+1}
         
         for elem in conjugate_request:
             conjugate_request[elem] = list(conjugate_request[elem])

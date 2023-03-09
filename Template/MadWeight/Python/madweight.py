@@ -6,14 +6,12 @@
 
 
 #Extension
-from __future__ import absolute_import
 import string
 import sys
 import os
 import re
 import time
 import stat
-from six.moves import input
 # patch if symbolic directory replace by real file
 sys.path.append('./Source/MadWeight/Python')
 sys.path.append('../Source/MadWeight/Python')

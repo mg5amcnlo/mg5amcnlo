@@ -15,7 +15,6 @@
 
 """Function to save model files."""
 
-from __future__ import absolute_import
 import logging
 import os
 
@@ -69,9 +68,9 @@ def save_model(path, model):
         logger.warning("Path %s does not exist, try to make it..." % str(path))
         try:
             os.mkdir(path)
-        except IOError as xxx_todo_changeme:
+        except OSError as xxx_todo_changeme:
             (errno, strerror) = xxx_todo_changeme.args
-            logger.error("I/O error (%s): %s" % (errno, strerror))
+            logger.error(f"I/O error ({errno}): {strerror}")
             return None
 
     print("Saving particles...", end=' ')

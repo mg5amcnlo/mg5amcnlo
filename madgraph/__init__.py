@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 class MadGraph5Error(Exception):
     """Exception raised if an exception is find 
     Those Types of error will stop nicely in the cmd interface"""

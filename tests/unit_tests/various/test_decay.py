@@ -13,9 +13,7 @@
 #
 ################################################################################
 """Unit test Library for the objects in decay module."""
-from __future__ import division
 
-from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -36,7 +34,6 @@ import tests.input_files.import_vertexlist as import_vertexlist
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
-from six.moves import range
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -110,14 +107,14 @@ class Test_DecayParticle(unittest.TestCase):
         self.my_3bodyvertexlist_radiactive = base_objects.VertexList()
 
         for index, vertex in full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
-            if legs_set == set([-5, 6, 24]) :
+            legs_set = {l['id'] for l in vertex['legs']}
+            if legs_set == {-5, 6, 24} :
                 self.my_2bodyvertexlist.append(vertex)
-            elif legs_set == set([-11, 12, 24]):
+            elif legs_set == {-11, 12, 24}:
                 self.my_2bodyvertexlist.append(vertex)
-            elif legs_set == set([-6, 5, -24]):
+            elif legs_set == {-6, 5, -24}:
                 self.my_2bodyvertexlist_wrongini.append(vertex)
-            elif legs_set == set([-5, -24, -6]):
+            elif legs_set == {-5, -24, -6}:
                 self.my_2bodyvertexlist_wrongini.append(vertex)
 
         # Artificial 3-body vertices
@@ -496,12 +493,12 @@ class Test_DecayParticle(unittest.TestCase):
         w_vlist_2_off = base_objects.VertexList()
 
         for index, vertex in import_vertexlist.full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
-            if legs_set == set([5, 24, 6]) :
+            legs_set = {l['id'] for l in vertex['legs']}
+            if legs_set == {5, 24, 6} :
                 top_vlist_2_on.append(vertex)
-            elif legs_set == set([-11, 12, 24]):
+            elif legs_set == {-11, 12, 24}:
                 w_vlist_2_on.append(vertex)
-            elif legs_set == set([-5, 6, 24]):
+            elif legs_set == {-5, 6, 24}:
                 w_vlist_2_off.append(vertex)
         
         rightlist_top = [blank_vlist, top_vlist_2_on, blank_vlist, blank_vlist]
@@ -539,15 +536,15 @@ class Test_DecayParticle(unittest.TestCase):
                  base_objects.Leg({'id':25, 'number':2})])})
 
         for index, vertex in import_vertexlist.full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
+            legs_set = {l['id'] for l in vertex['legs']}
             # h > t t~
-            if legs_set == set([-6, 6, 25]) :
+            if legs_set == {-6, 6, 25} :
                 vert_1 = copy.deepcopy(vertex)
             # t > b w+ = (t~ b w+)
-            elif legs_set == set([-5, -24, -6]):
+            elif legs_set == {-5, -24, -6}:
                 vert_2 = copy.deepcopy(vertex)
             # t~ > b~ w- = (t b~ w-)
-            elif legs_set == set([5, 24, 6]):
+            elif legs_set == {5, 24, 6}:
                 vert_3 = copy.deepcopy(vertex)
 
         vert_1['legs'][0]['number'] = 2
@@ -910,12 +907,12 @@ class Test_DecayModel(unittest.TestCase):
         w_vlist_2_off = base_objects.VertexList()
 
         for index, vertex in import_vertexlist.full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
-            if legs_set == set([5, 24, 6]) :
+            legs_set = {l['id'] for l in vertex['legs']}
+            if legs_set == {5, 24, 6} :
                 top_vlist_2_on.append(vertex)
-            elif legs_set == set([-11, 12, 24]):
+            elif legs_set == {-11, 12, 24}:
                 w_vlist_2_on.append(vertex)
-            elif legs_set == set([-5, 6, 24]):
+            elif legs_set == {-5, 6, 24}:
                 w_vlist_2_off.append(vertex)
         
         rightlist_top = [empty, top_vlist_2_on, empty, empty]
@@ -978,7 +975,7 @@ class Test_DecayModel(unittest.TestCase):
         decay_mssm = decay_objects.DecayModel(mssm, True)
 
         decay_mssm.find_decay_groups()
-        goal_groups = set([(25, 35, 36, 37),
+        goal_groups = {(25, 35, 36, 37),
                            (1000001, 1000002, 1000003, 1000004, 1000005, 
                             1000006, 1000021, 2000001, 2000002, 2000003, 
                             2000004, 2000005, 2000006), 
@@ -986,11 +983,11 @@ class Test_DecayModel(unittest.TestCase):
                            (1000013, 1000014), 
                            (1000015, 1000016, 2000015), 
                            (2000011,), 
-                           (2000013,)])
+                           (2000013,)}
 
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                                 group])) \
-                                  for group in decay_mssm['decay_groups']]),
+                                  for group in decay_mssm['decay_groups']},
                          goal_groups)
 
 
@@ -1010,9 +1007,9 @@ class Test_DecayModel(unittest.TestCase):
                        [1000001, 1000002, 1000003, 1000004, 1000011, 1000012, 1000013, 1000014, 1000015, 1000016, 1000021, 1000022, 1000023, 1000024, 1000025, 1000035, 1000037, 2000001, 2000002, 2000003, 2000004, 2000011, 2000013, 2000015],
                        [1000005, 1000006, 2000005, 2000006], 
                        [5, 6]]
-        goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
+        goal_stable_particle_ids = {(1,2,3,4,11,12,13,14,16,21,22),
                                         (5,),
-                                        (1000022,)])
+                                        (1000022,)}
         for i, group in enumerate(decay_mssm.get('decay_groups')):
             pdg = sorted([p.get('pdg_code') for p in group])
             self.assertTrue( pdg in goal_groups)
@@ -1025,7 +1022,7 @@ class Test_DecayModel(unittest.TestCase):
         # Reset decay_groups, test the auto run from find_stable_particles
         decay_mssm['decay_groups'] = []
         
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm.get('stable_particles')]), goal_stable_particle_ids)
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm.get('stable_particles')}, goal_stable_particle_ids)
 
             
 
@@ -1100,7 +1097,7 @@ class Test_DecayModel(unittest.TestCase):
         decay_mssm.get('interactions').append(new_interaction)
         decay_mssm.get('interactions').append(new_interaction_add_sm)
 
-        goal_groups = set([(1,2,3,4,11,12,13,14, 15, 16,21,22,
+        goal_groups = {(1,2,3,4,11,12,13,14, 15, 16,21,22,
                             23, 24, 25, 35, 36, 37, 2000013), # 15 and from 23
                            # are calculated, others are massless default
                            (1000005, 1000006, 2000005, 2000006),
@@ -1113,7 +1110,7 @@ class Test_DecayModel(unittest.TestCase):
                            # 2000013 originally should be here, but the
                            # the new_interaction_add_sm change it to SM group
                            (2000011,)
-                           ])
+                           }
 
         # the stable_candidates that should appear in 1st stage of
         # find stable_particles
@@ -1121,7 +1118,7 @@ class Test_DecayModel(unittest.TestCase):
                                   [1000006], [1000015], [2000001, 2000003],
                                   [5], [1000012], [1000014],[2000011]]
         # Group 1,3,4 mixed; group 2, 5, 6 mixed
-        goal_stable_particle_ids = set([(1,2,3,4,11,12,13,14,16,21,22),
+        goal_stable_particle_ids = {(1,2,3,4,11,12,13,14,16,21,22),
                                         (1000015,),
                                         # 5 mass = squark
                                         # will be set later
@@ -1130,15 +1127,15 @@ class Test_DecayModel(unittest.TestCase):
                                         (1000012,),
                                         (1000014,),
                                         # all sleptons are combine
-                                        (2000011,)])
+                                        (2000011,)}
 
         # Get the decay_groups (this should run find_decay_groups_general)
         # automatically.
         mssm_decay_groups = decay_mssm.get('decay_groups')
 
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                              for group in mssm_decay_groups]),
+                              for group in mssm_decay_groups},
                          goal_groups)
  
 
@@ -1152,7 +1149,7 @@ class Test_DecayModel(unittest.TestCase):
         decay_mssm['decay_groups'] = []
         decay_mssm.find_stable_particles()
 
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particle_ids)
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']}, goal_stable_particle_ids)
         
 
         # Test the assignment of is_stable to particles
@@ -1173,12 +1170,12 @@ class Test_DecayModel(unittest.TestCase):
                                      for p in decay_mssm.get('particles') \
                                      if p.get('is_stable')]), goal_stable_pid)
 
-        goal_stable_particles_ad = set([(1,),(2,),(3,),(4,),(5,),
+        goal_stable_particles_ad = {(1,),(2,),(3,),(4,),(5,),
                                         (11,),(12,),(13,),(14,),(16,),
                                         (21,),(22,),
                                         (1000012,),(1000014,),(1000015,),
-                                        (2000001,),( 2000003,),( 2000011,)])
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']]), goal_stable_particles_ad)
+                                        (2000001,),( 2000003,),( 2000011,)}
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in plist])) for plist in decay_mssm['stable_particles']}, goal_stable_particles_ad)
 
 
         
@@ -1209,24 +1206,24 @@ class Test_DecayModel(unittest.TestCase):
 
         # the stable particles are the ones with lightest mass in
         # their group
-        goal_groups_1 = set([(21,22, 23,25), # 23 and 25 are calculated
+        goal_groups_1 = {(21,22, 23,25), # 23 and 25 are calculated
                              # others are massless default
                              (1,), (2,), (3,), (4,), (5,), (6,),
                              (11,), (12,), (13,), (14,), (15,), (16,),
-                             (24,)])
-        goal_stable_particles_1 = set([(21,22),
+                             (24,)}
+        goal_stable_particles_1 = {(21,22),
                                        (2,),
-                                       (11,), (12,), (14,), (16,)])
+                                       (11,), (12,), (14,), (16,)}
 
         # Test decay groups
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                                  for group in full_sm.get('decay_groups')]),
+                                  for group in full_sm.get('decay_groups')},
                          goal_groups_1)
         # Test stable particles
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                                 for group in full_sm.get('stable_particles')]),
+                                 for group in full_sm.get('stable_particles')},
                          goal_stable_particles_1)
 
 
@@ -1243,25 +1240,25 @@ class Test_DecayModel(unittest.TestCase):
         for p in full_sm['particles']:
             p['is_stable'] = False
 
-        goal_groups_2 = set([(12,14,16,21,22, 23,25), # 23,25 are
+        goal_groups_2 = {(12,14,16,21,22, 23,25), # 23,25 are
                              # calculated, others are massless
                              (1,), (2,), (3,), (4,), (5,), (6,),
-                             (11,13,15,24)])
-        goal_stable_particles_2 = set([(12,14,16,21,22),
+                             (11,13,15,24)}
+        goal_stable_particles_2 = {(12,14,16,21,22),
                                        (2,),
-                                       (11,)])
+                                       (11,)}
         goal_stable_pid_2 = [2, 11, 12,14,16,21,22]
 
         # Test decay groups
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                                  for group in full_sm.get('decay_groups')]),
+                                  for group in full_sm.get('decay_groups')},
                          goal_groups_2)
 
         # Test stable particles
-        self.assertEqual(set([tuple(sorted([p.get('pdg_code') for p in \
+        self.assertEqual({tuple(sorted([p.get('pdg_code') for p in \
                                             group])) \
-                                 for group in full_sm.get('stable_particles')]),
+                                 for group in full_sm.get('stable_particles')},
                          goal_stable_particles_2)
 
         # Test the assignment of is_stable
@@ -1492,17 +1489,17 @@ class Test_Channel(unittest.TestCase):
 
         # Get vertices
         for index, vertex in full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
-            if legs_set == set([-6, 6, 25]) :
+            legs_set = {l['id'] for l in vertex['legs']}
+            if legs_set == {-6, 6, 25} :
                 # h > t t~
                 vert_1 = copy.deepcopy(vertex)
-            elif legs_set == set([5, 24, 6]):
+            elif legs_set == {5, 24, 6}:
                 # t~ > b~ w- (decay of antiparticle)
                 # t > b w+ 
                 vert_2 = copy.deepcopy(vertex)
                 vert_3 = copy.deepcopy(vertex)
                 vert_6 = copy.deepcopy(vertex)
-            elif legs_set == set([-13, 14, 24]):
+            elif legs_set == {-13, 14, 24}:
                 # w- > mu- vm~ (decay of antiparticle)
                 # w+ > mu+ vm
                 vert_4 = copy.deepcopy(vertex)
@@ -1669,7 +1666,7 @@ class Test_Channel(unittest.TestCase):
 
         # decay of w+ > mu+ vm
         for v in self.my_testmodel.get_particle(24).get_vertexlist(2, True):
-            if set([l['id'] for l in v['legs']]) == set([24, -13, 14]):
+            if {l['id'] for l in v['legs']} == {24, -13, 14}:
                 w_muvm = v
 
         # Connect h > w+ w- b b~  with w+ > mu+ vm 
@@ -1809,7 +1806,7 @@ class Test_Channel(unittest.TestCase):
         Nice string of channel_a,b,c (new leg ordering):
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) \ mu(8) vm(12)
+                         \\ mu(7) vm(11) \\ mu(8) vm(12)
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
           \t~(6) 
@@ -1826,7 +1823,7 @@ class Test_Channel(unittest.TestCase):
           \t (4) 
           \t~(5) 
           \t~(6) > b~(6) w-(9)          w-(10)
-                         \ mu(9) vm(11) \ mu(10) vm(12)
+                         \\ mu(9) vm(11) \\ mu(10) vm(12)
         Channel_b:
         ((10(13),12(-14)>10(-24),id:44),(9(13),11(-14)>9(-24),id:44),
         (6(-5),9(-24),10(-24)>6(-6),id:901),(3(-5),8(-24)>3(-6),id:54),
@@ -1836,10 +1833,10 @@ class Test_Channel(unittest.TestCase):
         --------------
         h--t (2) 
           \t~(3) > b~(3) w-(7)          w-(8)
-                         \ mu(7) vm(11) 
+                         \\ mu(7) vm(11) 
           \t (4) > w+ (4) b(9)
           \t~(5) > b~ (5) w-(10)
-                          \ mu(10) vm(12)
+                          \\ mu(10) vm(12)
           \t~(6) 
         Channel_c:
         ((10(13),12(-14)>10(-24),id:44),(7(13),11(-14)>7(-24),id:44),
@@ -2069,17 +2066,17 @@ class Test_Channel(unittest.TestCase):
 
         # Get vertices
         for index, vertex in import_vertexlist.full_vertexlist.items():
-            legs_set = set([l['id'] for l in vertex['legs']])
-            if legs_set == set([23, 23, 25]) :
+            legs_set = {l['id'] for l in vertex['legs']}
+            if legs_set == {23, 23, 25} :
                 # h > z z
                 vert_1 = copy.deepcopy(vertex)
-            elif legs_set == set([11, -11, 23]):
+            elif legs_set == {11, -11, 23}:
                 # z > e- e+ 
                 vert_2 = copy.deepcopy(vertex)
-            elif legs_set == set([24, -24, 25]):
+            elif legs_set == {24, -24, 25}:
                 # h > w+ w-
                 vert_3 = copy.deepcopy(vertex)
-            elif legs_set == set([-11, 12, 24]):
+            elif legs_set == {-11, 12, 24}:
                 # w+ > e+ ve
                 vert_4 = copy.deepcopy(vertex)
 
@@ -2216,19 +2213,19 @@ class Test_Channel(unittest.TestCase):
         # Choose h > w- e+ ve
 
         for c in higgs.get_channels(3, True):
-            final_ids = set([l.get('id') for l in c.get_final_legs()])
-            if final_ids == set([-11, 12, -24]):
+            final_ids = {l.get('id') for l in c.get_final_legs()}
+            if final_ids == {-11, 12, -24}:
                 h_ww_weve = c
         #print h_ww_weve.nice_string()
 
         # Choose h > w- e+ ve, h > w- t b~
 
         for c in higgs.get_channels(3, False):
-            final_ids = set([l.get('id') for l in c.get_final_legs()])
-            if final_ids == set([-5, 5, 23]):
+            final_ids = {l.get('id') for l in c.get_final_legs()}
+            if final_ids == {-5, 5, 23}:
                 h_zz_zbb = c
             # Distiguish h > ww > w t b~ from h > tt~ > t w b~
-            if final_ids == set([-5, 6, -24]) \
+            if final_ids == {-5, 6, -24} \
                     and abs(c['vertices'][-1]['legs'][0]['id']) == 24:
                 h_ww_wtb = c
         #print h_ww_wtb.nice_string(), h_zz_zbb.nice_string()
@@ -2239,11 +2236,11 @@ class Test_Channel(unittest.TestCase):
         print higgs.get_channels(4, True).nice_string()"""
 
         for c in higgs.get_channels(4, True):
-            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            final_ids = {l.get('id') for l in c.get_final_legs()}
             #print final_ids
-            if final_ids == set([11, -11, 11, -11]):
+            if final_ids == {11, -11, 11, -11}:
                 h_zz_2epairs = c
-            if final_ids == set([14, -14, 5, -5]):
+            if final_ids == {14, -14, 5, -5}:
                 h_zz_bbvtvt  = c
         #print h_zz_bbvtvt.nice_string(), h_zz_2epairs.nice_string()
         
@@ -2338,11 +2335,11 @@ class Test_Channel(unittest.TestCase):
         MTAU = abs(eval('decay_objects.' + tau.get('mass')))
         tau.find_channels(3, full_sm)
         for c in tau.get_channels(3, True):
-            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            final_ids = {l.get('id') for l in c.get_final_legs()}
             #print final_ids
-            if final_ids == set([-2, 1, 16]):
+            if final_ids == {-2, 1, 16}:
                 tau_qdecay = c
-            if final_ids == set([-14, 13, 16]):
+            if final_ids == {-14, 13, 16}:
                 tau_ldecay = c
         """print tau_qdecay.nice_string(), tau_ldecay.nice_string()"""
 
@@ -2441,8 +2438,8 @@ class Test_Channel(unittest.TestCase):
 
         # Choose h > z w+ w-
         for c in higgs.get_channels(3, False):
-            final_ids = set([l.get('id') for l in c.get_final_legs()])
-            if final_ids == set([-24, 24, 23]):
+            final_ids = {l.get('id') for l in c.get_final_legs()}
+            if final_ids == {-24, 24, 23}:
                 h_zz_zww = c
                 #print h_zz_zww.nice_string()
 
@@ -2450,7 +2447,7 @@ class Test_Channel(unittest.TestCase):
         self.assertAlmostEqual(h_zz_zww.get_apx_fnrule(24, q_offshell, 
                                                  False, full_sm),
                                ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
-                             (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
+                             ((q_offshell**2-MW **2)**2+MW**2*WW**2))
                                )
 
         # Channels with next-level decay: h > z w+ w-
@@ -2733,45 +2730,45 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         #print h.get_amplitudes(4).nice_string()
 
         for c in h.get_channels(4, True):
-            pids = set([l['id'] for l in c.get_final_legs()])
+            pids = {l['id'] for l in c.get_final_legs()}
             # Z mediated hadronic decays
-            if pids == set([3, -3, 4, -4]) and \
+            if pids == {3, -3, 4, -4} and \
                     c['vertices'][0]['legs'][-1]['id'] == 23:
                 h_zz_sscc = c
                 h_zz_sscc_Tag = decay_objects.IdentifyHelasTag(h_zz_sscc, 
                                                                self.my_testmodel)
-            if pids == set([3, -3, 3, -3]):
+            if pids == {3, -3, 3, -3}:
                 h_zz_ssss = c
                 h_zz_ssss_Tag = decay_objects.IdentifyHelasTag(h_zz_ssss, 
                                                                self.my_testmodel)
 
-            if pids == set([5, -5, 5, -5]):
+            if pids == {5, -5, 5, -5}:
                 h_zz_bbbb = c
                 h_zz_bbbb_Tag = decay_objects.IdentifyHelasTag(h_zz_bbbb, 
                                                                self.my_testmodel)
             # Z mediated leptonic decays
-            if pids == set([11, -11, 12, -12]) and \
+            if pids == {11, -11, 12, -12} and \
                     c['vertices'][0]['legs'][-1]['id'] == 23:
                 h_zz_eeveve = c
                 h_zz_eeveve_Tag = decay_objects.IdentifyHelasTag(h_zz_eeveve, 
                                                                  self.my_testmodel)
-            if pids == set([11, -11, 13, -13]):
+            if pids == {11, -11, 13, -13}:
                 h_zz_eemumu = c
                 h_zz_eemumu_Tag = decay_objects.IdentifyHelasTag(h_zz_eemumu, 
                                                                  self.my_testmodel)
-            if pids == set([13, -13, 13, -13]):
+            if pids == {13, -13, 13, -13}:
                 h_zz_mumumumu = c
                 h_zz_mumumumu_Tag = decay_objects.IdentifyHelasTag(h_zz_mumumumu, 
                                                                  self.my_testmodel)
 
             # W mediated hadronic decays
-            if pids == set([3, -3, 4, -4]) and \
+            if pids == {3, -3, 4, -4} and \
                     abs(c['vertices'][0]['legs'][-1]['id']) == 24:
                 h_ww_sscc = c
                 h_ww_sscc_Tag = decay_objects.IdentifyHelasTag(h_ww_sscc, 
                                                                self.my_testmodel)
             # W mediated leptonic decays
-            if pids == set([11, -11, 12, -12]) and \
+            if pids == {11, -11, 12, -12} and \
                     abs(c['vertices'][0]['legs'][-1]['id']) == 24:
                 h_ww_eeveve = c
                 h_ww_eeveve_Tag = decay_objects.IdentifyHelasTag(h_ww_eeveve, 
@@ -2932,12 +2929,12 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Get channels: h > ww > e+ e- ve ve~
         #               h > zz > e+ e- e+ e-
         for c in higgs.get_channels(4, True):
-            final_ids = set([l['id'] for l in c.get_final_legs()])
-            if final_ids == set([11, -11, 12, -12]):
+            final_ids = {l['id'] for l in c.get_final_legs()}
+            if final_ids == {11, -11, 12, -12}:
                 # w mediated, not z
                 if abs(c['vertices'][0]['legs'][-1]['id']) == 24:
                     h_mmvv_1 = c
-            if final_ids == set([11, -11, 11, -11]):
+            if final_ids == {11, -11, 11, -11}:
                 # z mediated
                 if abs(c['vertices'][0]['legs'][-1]['id']) == 23:
                     h_mmvv_2 = c
@@ -2959,13 +2956,13 @@ class Test_DecayAmplitude(unittest.TestCase):
         self.assertEqual([l1, l2], sorted_legs)
 
         # Note: initial id in process should be POSITIVE
-        goal_id_list_h = set([25, 11, -11, -12, 12])
-        goal_id_list_t = set([6, 5, 24])
-        self.assertEqual(set([l.get('id') \
-                              for l in amplt_h_mmvv.get('process').get('legs')]),
+        goal_id_list_h = {25, 11, -11, -12, 12}
+        goal_id_list_t = {6, 5, 24}
+        self.assertEqual({l.get('id') \
+                              for l in amplt_h_mmvv.get('process').get('legs')},
                          goal_id_list_h)
-        self.assertEqual(set([l.get('id') \
-                              for l in amplt_t_bw.get('process').get('legs')]),
+        self.assertEqual({l.get('id') \
+                              for l in amplt_t_bw.get('process').get('legs')},
                          goal_id_list_t)
 
         # Check the legs in process (id, number, and state)
@@ -3085,15 +3082,15 @@ class Test_DecayAmplitude(unittest.TestCase):
         #               h > zz > e+ e- ve ve~
         #               h > zz > e+ e- e+ e-
         for c in higgs.get_channels(4, True):
-            final_ids = set([l['id'] for l in c.get_final_legs()])
-            if final_ids == set([13, -13, 14, -14]):
+            final_ids = {l['id'] for l in c.get_final_legs()}
+            if final_ids == {13, -13, 14, -14}:
                 # w mediated, not z
                 if abs(c['vertices'][0]['legs'][-1]['id']) == 24:
                     h_mmvv_1 = c
                 # z mediated
                 elif abs(c['vertices'][0]['legs'][-1]['id']) == 23:
                     h_mmvv_2 = c
-            if final_ids == set([11, -11, 11, -11]):
+            if final_ids == {11, -11, 11, -11}:
                 h_epairs = c
 
 
@@ -3130,9 +3127,9 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Test that all the final_legs has the same number
         for amp in higgs.get_amplitudes(4):
-            final_list = set([(l['number'], l['id']) for l in amp['process']['legs'][1:]])
+            final_list = {(l['number'], l['id']) for l in amp['process']['legs'][1:]}
             for dia in amp['diagrams']:
-                self.assertEqual(set([(l['number'], l['id']) for l in dia.get_final_legs()]), final_list)
+                self.assertEqual({(l['number'], l['id']) for l in dia.get_final_legs()}, final_list)
 
 
     def test_decaytable_string(self):
@@ -3474,8 +3471,8 @@ class Test_AbstractModel(unittest.TestCase):
 
         ab_model = self.my_testmodel_new['ab_model']
         ab_model.setup_particles(self.my_testmodel_new['particles'])
-        goal_abpart_keys = set([(1,1,True), (2,1,False), (2,3,False), 
-                                (3,1,True), (3,8,True)])
+        goal_abpart_keys = {(1,1,True), (2,1,False), (2,3,False), 
+                                (3,1,True), (3,8,True)}
         goal_abpart_prop = {(1,1,True):('S1_00', 'none', 
                                          'MSS1_00', 9901100),
                             (2,1,False):('F1_00', 'F1_00~', 
@@ -3615,8 +3612,8 @@ class Test_AbstractModel(unittest.TestCase):
         # Set an interaction that will not be included in AbstractModel
         # (The [22, 6, -6] only works for testmodel = standard model)
         for inter in normal_sm['interactions']:
-            if set([21, 6, -6]) == \
-                    set([part.get_pdg_code() for part in inter['particles']]):
+            if {21, 6, -6} == \
+                    {part.get_pdg_code() for part in inter['particles']}:
                 I_rad = inter
             if [25, 25, 25] == \
                     [part.get_pdg_code() for part in inter['particles']]:
@@ -3643,8 +3640,8 @@ class Test_AbstractModel(unittest.TestCase):
 
         # Test for setting existing particle
         for inter in self.my_testmodel['interactions']:
-            if set([24, -6, 5]) == \
-                    set([part.get_pdg_code() for part in inter['particles']]):
+            if {24, -6, 5} == \
+                    {part.get_pdg_code() for part in inter['particles']}:
                 I_wtb = inter
 
         #print I_wtb
@@ -3812,8 +3809,8 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model.add_ab_diagram(ab_amp, h_zz_zbb)
         ab_dia = ab_amp['diagrams'][0]
         #print ab_dia.nice_string(), h_zz_zbb.nice_string()
-        goal_pids = set([-9902300, 9902301, 9903101, 9903101, 9903100, 
-                      9901100])
+        goal_pids = {-9902300, 9902301, 9903101, 9903101, 9903100, 
+                      9901100}
         result_pids = []
         [result_pids.extend([l.get('id') for l in v.get('legs')]) for v in ab_dia['vertices']]
         self.assertEqual(set(result_pids), goal_pids)
@@ -3951,9 +3948,9 @@ class Test_AbstractModel(unittest.TestCase):
         ab_model.add_ab_diagram(ab_amp, h_zz_bbbb)
         ab_dia = ab_amp['diagrams'][0]
         #print ab_dia.nice_string(), h_zz_bbbb.nice_string()
-        goal_pids = set([-9902300, 9902302, 9903100, 
+        goal_pids = {-9902300, 9902302, 9903100, 
                       -9902301, 9902303, 9903101,
-                      9903101, 9903100, 9901100])
+                      9903101, 9903100, 9901100}
 
         result_pids = []
         [result_pids.extend([l.get('id') for l in v.get('legs')]) for v in ab_dia['vertices']]
@@ -3999,8 +3996,8 @@ class Test_AbstractModel(unittest.TestCase):
         ab_dia_2 = ab_amp['diagrams'][-1]
         #print ab_amp.nice_string(), h_zz_eevv.nice_string()
         # ab_dia_1: -e, ve, e, -ve; ab_dia_2: -ve, ve, -e, e
-        self.assertEqual(set([l['id'] for l in ab_dia_2.get_final_legs()]),
-                         set([9902103, -9902100, 9902102, -9902101]))
+        self.assertEqual({l['id'] for l in ab_dia_2.get_final_legs()},
+                         {9902103, -9902100, 9902102, -9902101})
 
         #----------------------
         # Test compare diagrams, set_final_legs_dict, again
@@ -4130,8 +4127,8 @@ class Test_AbstractModel(unittest.TestCase):
         # Test if the diagrams in each amp have consistent final leg numbers.
         for testlist in [amplist, amplist2, amplist3]:
             for amp in testlist:
-                number_to_id_dict = dict([(l['number'],l['id']) \
-                                              for l in amp.get('process')['legs']])
+                number_to_id_dict = {l['number']:l['id'] \
+                                              for l in amp.get('process')['legs']}
                 #print number_to_id_dict
                 for channel in amp['diagrams']:
                     for l in channel.get_final_legs():

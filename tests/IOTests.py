@@ -13,7 +13,6 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -30,7 +29,6 @@ from functools import wraps
 
 import aloha
 import aloha.aloha_lib as aloha_lib
-from six.moves import zip
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -91,19 +89,19 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
         return deco_f_set
     return deco_set
 
-class IOTest(object):
+class IOTest:
     """ IOTest runner and attribute container. It can be overloaded depending on
     what kind of IO test will be necessary later """
 
     # Handy definitions
-    proc_files = ['[^.+\.(f|dat|inc)$]','MadLoop5_resources/[^ML5_.*\.dat]']
+    proc_files = [r'[^.+\.(f|dat|inc)$]',r'MadLoop5_resources/[^ML5_.*\.dat]']
     # Some model files are veto because they are sourced by dictionaries whose 
     # order is random.
-    model_files = ['../../Source/MODEL/[^.+\.(f|inc)$]',
+    model_files = [r'../../Source/MODEL/[^.+\.(f|inc)$]',
                    '-../../Source/MODEL/lha_read.f',
                    '-../../Source/MODEL/param_read.inc',
                    '-../../Source/MODEL/param_write.inc']            
-    helas_files = ['../../Source/DHELAS/[^.+\.(f|inc)$]']
+    helas_files = [r'../../Source/DHELAS/[^.+\.(f|inc)$]']
     
     # We also exclude the helas_files because they are sourced from unordered
     # dictionaries.
@@ -363,7 +361,7 @@ class IOTestManager(unittest.TestCase):
         """ Add the object attribute my_local_tests."""
         # Lists the keys for the tests of this particular instance
         self.instance_tests = []
-        super(IOTestManager,self).__init__(*args,**opts)    
+        super().__init__(*args,**opts)    
     
     def setUp(self):
         """ Dummy function possibly overloaded by the daughters """
@@ -506,7 +504,7 @@ class IOTestManager(unittest.TestCase):
             if path.isdir(_hc_comparison_files):
                 try:
                     shutil.rmtree(_hc_comparison_files)
-                except IOError:
+                except OSError:
                     pass
             if path.isfile(_hc_comparison_tarball):
                 tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
@@ -740,7 +738,7 @@ class IOTestManager(unittest.TestCase):
                         os.makedirs(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name))
                     # Transform the package information to make it a template
-                    file = open(file_path,'r')
+                    file = open(file_path)
                     target=file.read()
                     # So that if % appear, we cast them to %% which are not formatted.
                     target = target.replace('%','%%')
@@ -753,7 +751,7 @@ class IOTestManager(unittest.TestCase):
                                                       'v%(version)s (%(date)s)')
                     file.close()
                     if os.path.isfile(comparison_path):
-                        file = open(comparison_path,'r')
+                        file = open(comparison_path)
                         existing = file.read()
                         file.close()
                         if existing == target:

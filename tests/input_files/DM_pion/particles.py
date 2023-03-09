@@ -3,8 +3,6 @@
 # Date: Thu 11 Jun 2015 17:39:54
 
 
-from __future__ import division
-from __future__ import absolute_import
 import object_library
 all_particles = object_library.all_particles
 Particle = object_library.Particle

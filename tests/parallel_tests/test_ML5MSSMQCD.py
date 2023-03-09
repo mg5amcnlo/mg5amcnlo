@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import logging.config
 import logging
 import pydoc
@@ -44,8 +43,8 @@ HCR_processes_long =  [
                        ('g g > n1 n1',{},['QCD'],{})
                        ]
 
-HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
-                               for elem in HCR_processes_long)
+HCR_processes_long_dic = {procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()):elem\
+                               for elem in HCR_processes_long}
 
 
 ML5MSSMQCD_processes_long =  [
@@ -61,8 +60,8 @@ ML5MSSMQCD_processes_long =  [
                          ('g g > n1 n1',{},['QCD'],{})
                          ]
 
-ML5MSSMQCD_processes_long_dic = dict((procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()),elem)\
-                                for elem in ML5MSSMQCD_processes_long)
+ML5MSSMQCD_processes_long_dic = {procToFolderName(elem[0])+'_mssm_'+'_'.join(elem[2][0].split()):elem\
+                                for elem in ML5MSSMQCD_processes_long}
 
 class ML5MSSMQCDTest(unittest.TestCase):
     """ A class to test ML5 QCD corrections in MSSM versus runs from hard-coded reference process. """

@@ -12,9 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 from madgraph.core import base_objects
-from six.moves import range
 """Methods and classes to import v4 format model files."""
 
 import fractions
@@ -418,7 +416,7 @@ def read_interactions_v4(fsock, ref_part_list):
                 def count_duplicates_in_list(dupedlist):
                     """return a dictionary with key the element of dupeList and
                     with value the number of times that they are in this list"""
-                    unique_set = set(item for item in dupedlist)
+                    unique_set = {item for item in dupedlist}
                     ret_dict = {}
                     for item in unique_set:
                         ret_dict[item] = dupedlist.count(item)
@@ -454,7 +452,7 @@ class WrongFileFormat(InvalidCmd):
     """A specific class error for wrong V4 proc_card"""
     pass
 
-class ProcCardv4Reader(object):
+class ProcCardv4Reader:
     """read a proc_card.dat in the mg4 format and creates the equivalent routine
     for mg5"""
     
@@ -633,7 +631,7 @@ class ProcCardv4Reader(object):
                 
         return out
     
-class ProcessInfo(object):
+class ProcessInfo:
     """This is the basic object for storing process information"""
     
     def __init__(self, line):
@@ -809,7 +807,7 @@ class ProcessInfo(object):
         for coupling in model_coupling:
             if coupling in self.couplings:
                 # Need coupling for all cases, since might be decay chain
-                out += '%s=%s ' % (coupling, self.couplings[coupling])
+                out += f'{coupling}={self.couplings[coupling]} '
             else:
                 # if not define put to zero (mg4 default)
                 out += '%s=0 ' % coupling

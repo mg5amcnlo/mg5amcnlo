@@ -10,11 +10,9 @@
 #
 #
 ################################################################################
-from __future__ import absolute_import
 from aloha.aloha_object import *
 import aloha.aloha_lib as aloha_lib
 import cmath
-from six.moves import range
 
 class WrongFermionFlow(Exception):
     pass
@@ -198,7 +196,7 @@ def guess_routine_from_name(names):
             while base[-1].isdigit():
                 base = base[:-1]
             for nb in multiple:
-                lorentz.append('%s%s' % (base, nb))
+                lorentz.append(f'{base}{nb}')
         
         # add in the results
         output.append((tuple(lorentz), tuple(tags), int(offshell)))

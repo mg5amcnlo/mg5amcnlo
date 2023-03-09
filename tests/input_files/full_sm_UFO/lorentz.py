@@ -3,7 +3,6 @@
 # Date: Tue 26 Oct 2010 21:29:11
 
 
-from __future__ import absolute_import
 from .object_library import all_lorentz, Lorentz
 
 from .function_library import complexconjugate, re, im, csc, sec, acsc, asec

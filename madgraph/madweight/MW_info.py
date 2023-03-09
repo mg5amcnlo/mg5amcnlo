@@ -55,12 +55,10 @@
 ##
 ## BEGIN INCLUDE
 ##
-from __future__ import absolute_import
 import sys
 import os
 import re
 import stat
-from six.moves import range
 try: 
     import madgraph.madweight.Cards as Cards
 except ImportError as error:

@@ -20,7 +20,6 @@ simply modify this script. Support for new ME generator is achieved through
 inheritance of the MERunner class.
 """
 
-from __future__ import absolute_import
 import logging
 import logging.config
 import pydoc
@@ -161,7 +160,7 @@ if '__main__' == __name__:
     # Print the output
     my_comp.output_result(filename=filename)
 
-    pydoc.pager(open(filename,'r').read())
+    pydoc.pager(open(filename).read())
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()

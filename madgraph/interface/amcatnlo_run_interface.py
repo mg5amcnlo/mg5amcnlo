@@ -15,9 +15,7 @@
 """A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
-from __future__ import division
 
-from __future__ import absolute_import
 import atexit
 import glob
 import logging
@@ -40,8 +38,6 @@ import tarfile
 import traceback
 import six
 StringIO = six
-from six.moves import range
-from six.moves import zip
 try:
     import cpickle as pickle
 except:
@@ -294,7 +290,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
-        super(CmdExtended, self).__init__(me_dir, options, *arg, **opt)
+        super().__init__(me_dir, options, *arg, **opt)
         
 
     def get_history_header(self):
@@ -359,7 +355,7 @@ class CmdExtended(common_run.CommonRunCmd):
 #===============================================================================
 # HelpToCmd
 #===============================================================================
-class HelpToCmd(object):
+class HelpToCmd:
     """ The Series of help routine for the aMCatNLOCmd"""
     
     def help_launch(self):
@@ -405,7 +401,7 @@ class HelpToCmd(object):
         if data:
             logger.info('-- local options:')
             for name, info in data:
-                logger.info('      %s : %s' % (name, info))
+                logger.info(f'      {name} : {info}')
         
         logger.info("-- session options:")
         logger.info("      Note that those options will be kept for the current session")      
@@ -419,7 +415,7 @@ class HelpToCmd(object):
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
-class CheckValidForCmd(object):
+class CheckValidForCmd:
     """ The Series of check routine for the aMCatNLOCmd"""
 
     def check_shower(self, args, options):
@@ -942,14 +938,14 @@ class AskRunNLO(cmd.ControlSwitch):
         if 'QED' in self.proc_characteristics['splitting_types']:
             hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
         
-        super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
+        super().__init__(self.to_control, opt['mother_interface'],
                                      *args, hide_line=hide_line, force=force,
                                       **opt)
 
     @property
     def answer(self):
         
-        out = super(AskRunNLO, self).answer
+        out = super().answer
         if out['shower'] == 'HERWIG7':
             out['shower'] = 'HERWIGPP'
         
@@ -961,7 +957,7 @@ class AskRunNLO(cmd.ControlSwitch):
 
     def default(self,*args, **opts):
         self.nb_fo_warning = 0
-        super(AskRunNLO, self).default(*args, **opts)
+        super().default(*args, **opts)
 
     def check_available_module(self, options):
         
@@ -1683,13 +1679,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             banner = banner_mod.Banner(args[0])
             for line in banner['run_settings']:
                 if '=' in line:
-                    mode, value = [t.strip() for t in line.split('=')]
+                    mode, value = (t.strip() for t in line.split('='))
                     mode_status[mode] = value
         else:
             mode_status = {}
 
         # Call Generate events
-        self.do_launch('-n %s %s' % (self.run_name, '-f' if self.force else ''),
+        self.do_launch('-n {} {}'.format(self.run_name, '-f' if self.force else ''),
                        switch=mode_status)
         
     ############################################################################      
@@ -1718,13 +1714,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
 
-        return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
+        return super().do_treatcards(line, amcatnlo)
     
     ############################################################################
     def set_configuration(self, amcatnlo=True, **opt):
         """assign all configuration variable from file 
             loop over the different config file if config_file not define """
-        return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
+        return super().set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
     def do_launch(self, line, options={}, argss=[], switch={}):
@@ -1791,7 +1787,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
             
             if self.run_card['systematics_program'] == 'systematics':
-                self.exec_cmd('systematics %s %s ' % (self.run_name, ' '.join(self.run_card['systematics_arguments'])))
+                self.exec_cmd('systematics {} {} '.format(self.run_name, ' '.join(self.run_card['systematics_arguments'])))
             
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
@@ -1832,7 +1828,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     if not options['force']:
                         options['force'] = True
                     if options['run_name']:
-                        options['run_name'] = '%s_%s' % (orig_name, i+1)
+                        options['run_name'] = f'{orig_name}_{i+1}'
                     if not argss:
                         argss = [mode, "-f"]
                     elif argss[0] == "auto":
@@ -1851,7 +1847,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             
         if self.allow_notification_center:    
             misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                              '{}: {} +- {} '.format(self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
     
@@ -2073,7 +2069,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 try:
                     with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
                         channels=chan_file.readline().split()
-                except IOError:
+                except OSError:
                     logger.warning('No integration channels found for contribution %s' % p_dir)
                     continue
                 if fixed_order:
@@ -2726,7 +2722,7 @@ RESTART = %(mint_mode)s
                 # option equal to True. Take the results from the final run done.
                     with open(pjoin(job['dirname'],'res.dat')) as res_file:
                         results=res_file.readline().split()
-            except IOError:
+            except OSError:
                 if not error_found:
                     error_found=True
                     error_log=[]
@@ -2892,7 +2888,7 @@ RESTART = %(mint_mode)s
         
         
         # 1. write the banner
-        text = open(pjoin(jobs[0]['dirname'],'header.txt'),'r').read()
+        text = open(pjoin(jobs[0]['dirname'],'header.txt')).read()
         i1, i2 = text.find('<initrwgt>'),text.find('</initrwgt>') 
         self.banner['initrwgt'] = text[10+i1:i2]
 #        
@@ -2904,7 +2900,7 @@ RESTART = %(mint_mode)s
 
         cross = sum(j['result'] for j in jobs)
         error = math.sqrt(sum(j['error'] for j in jobs))
-        self.banner['init'] = "0 0 0e0 0e0 0 0 0 0 -4 1\n  %s %s %s 1" % (cross, error, cross)
+        self.banner['init'] = f"0 0 0e0 0e0 0 0 0 0 -4 1\n  {cross} {error} {cross} 1"
         self.banner.write(output[:-3], close_tag=False)
         misc.gzip(output[:-3])
         
@@ -2921,7 +2917,7 @@ RESTART = %(mint_mode)s
                 dirname = job['dirname']
                 #read last line
                 lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
-                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                nb_event, sumwgt, cross = (float(i) for i in lastline.split())
                 # get normalisation ratio 
                 ratio = cross/sumwgt
                 lhe = lhe_parser.EventFile(pjoin(dirname,'events.lhe'))
@@ -2949,7 +2945,7 @@ RESTART = %(mint_mode)s
             for job in jobs:
                 dirname = job['dirname']
                 lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
-                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                nb_event, sumwgt, cross = (float(i) for i in lastline.split())
                 lastlhe = globallhe.add(pjoin(dirname,'events.lhe'),cross, 0, cross,
                                         nb_event=int(nb_event), scale=cross/sumwgt)
             for eventsgroup in globallhe:
@@ -3390,7 +3386,7 @@ RESTART = %(mint_mode)s
     
         for gv_log in log_GV_files:
             channel_name = '/'.join(gv_log.split('/')[-5:-1])
-            log=open(gv_log,'r').read()                
+            log=open(gv_log).read()                
             UPS_stats = re.search(UPS_stat_finder,log)
             for retunit_stats in re.finditer(RetUnit_finder, log):
                 if channel_name not in list(stats['UPS'].keys()):
@@ -3483,13 +3479,13 @@ RESTART = %(mint_mode)s
             r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_abs_contr_err>[\d\+-Eed\.]*)\s*\%\)")
     
         virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
-                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
+                     r"-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
         
         channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
         
         channel_contr_list = {}
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')
+            logfile=open(gv_log)
             log = logfile.read()
             logfile.close()
             channel_name = '/'.join(gv_log.split('/')[-3:-1])
@@ -3533,8 +3529,8 @@ RESTART = %(mint_mode)s
             average_contrib = average_contrib / len(list(channel_contr_list.values()))
         
         relevant_log_GV_files = []
-        excluded_channels = set([])
-        all_channels = set([])
+        excluded_channels = set()
+        all_channels = set()
         for log_file in log_GV_files:
             channel_name = '/'.join(log_file.split('/')[-3:-1])
             all_channels.add(channel_name)
@@ -3548,7 +3544,7 @@ RESTART = %(mint_mode)s
         
         # Now we want to use the latest occurence of accumulated result in the log file
         for gv_log in relevant_log_GV_files:
-            logfile=open(gv_log,'r')
+            logfile=open(gv_log)
             log = logfile.read()
             logfile.close()
             channel_name = '/'.join(gv_log.split('/')[-3:-1])
@@ -3648,10 +3644,10 @@ RESTART = %(mint_mode)s
         # =======================================
     
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
-                     "(?P<time>[\d\+-Eed\.]*)\s*")
+                     r"(?P<time>[\d\+-Eed\.]*)\s*")
 
         for logf in log_GV_files:
-            logfile=open(logf,'r')
+            logfile=open(logf)
             log = logfile.read()
             logfile.close()
             channel_name = '/'.join(logf.split('/')[-3:-1])
@@ -3707,8 +3703,8 @@ RESTART = %(mint_mode)s
             debug_msg += '\n  Timing profile for <%s> :'%name
             try:
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
-                       safe_float((100.0*(sum(stats['timings'][name].values())/
-                                      sum(stats['timings']['Total'].values()))))
+                       safe_float(100.0*(sum(stats['timings'][name].values())/
+                                      sum(stats['timings']['Total'].values())))
             except KeyError as ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
             debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
@@ -3728,7 +3724,7 @@ RESTART = %(mint_mode)s
         err_finder = re.compile(\
              r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
         for log in all_log_files:
-            logfile=open(log,'r')
+            logfile=open(log)
             nErrors = len(re.findall(err_finder, logfile.read()))
             logfile.close()
             if nErrors != 0:
@@ -3771,13 +3767,13 @@ RESTART = %(mint_mode)s
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
         if event_norm.lower() == 'sum':
-            out, err = p.communicate(input = '1\n'.encode())
+            out, err = p.communicate(input = b'1\n')
         elif event_norm.lower() == 'unity':
-            out, err = p.communicate(input = '3\n'.encode())
+            out, err = p.communicate(input = b'3\n')
         elif event_norm.lower() == 'bias':
-            out, err = p.communicate(input = '0\n'.encode())
+            out, err = p.communicate(input = b'0\n')
         else:
-            out, err = p.communicate(input = '2\n'.encode())
+            out, err = p.communicate(input = b'2\n')
         
         out = out.decode(errors='ignore')
         data = str(out)
@@ -3908,7 +3904,7 @@ RESTART = %(mint_mode)s
         # check that if FxFx is activated the correct shower plugin is present
         if shower == 'PYTHIA8' and self.run_card['ickkw'] == 3:
             misc.sprint(self.options['pythia8_path'])
-            f1 = open(pjoin(self.me_dir, "MCatNLO","Scripts", "JetMatching.h"), "r").read()
+            f1 = open(pjoin(self.me_dir, "MCatNLO","Scripts", "JetMatching.h")).read()
             py8_plugin = pjoin(self.options['pythia8_path'], "include","Pythia8Plugins","JetMatching.h")
             if not os.path.exists(py8_plugin):
                 raise Exception("FxFx requires a dedicated plugin to be installed in Pythia8. See http://cern.ch/amcatnlo/FxFx_merging.htm")
@@ -4138,9 +4134,9 @@ RESTART = %(mint_mode)s
             filename = 'plot_%s_%d_' % (shower, 1)
             count = 1
             while os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0.%s' % (filename,ext))) or \
+                      self.run_name, f'{filename}0.{ext}')) or \
                   os.path.exists(pjoin(self.me_dir, 'Events', 
-                      self.run_name, '%s0__1.%s' % (filename,ext))):
+                      self.run_name, f'{filename}0__1.{ext}')):
                 count += 1
                 filename = 'plot_%s_%d_' % (shower, count)
 
@@ -4290,7 +4286,7 @@ RESTART = %(mint_mode)s
             else:
                 pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
                 
-                pythiare = re.compile("\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
+                pythiare = re.compile(r"\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
                 # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
                                                          
                 for line in pythia_log:
@@ -4748,7 +4744,7 @@ RESTART = %(mint_mode)s
         pdfs=[]
         for i,evt_file in enumerate(evt_files):
             path, evt=os.path.split(evt_file)
-            with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
+            with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')) as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
                     for j,scale in enumerate(self.run_card['dynamical_scale_choice']):
@@ -4904,7 +4900,7 @@ RESTART = %(mint_mode)s
                 last_line = subprocess.Popen(
                         ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
                     stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
-            except IOError:
+            except OSError:
                 pass
             if last_line != "</LesHouchesEvents>":
                 jobs_to_resubmit.append(job)
@@ -4923,7 +4919,7 @@ RESTART = %(mint_mode)s
         # find the number of the integration channel
         splittings = []
         ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
-        pattern = re.compile('for i in (\d+) ; do')
+        pattern = re.compile(r'for i in (\d+) ; do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
         # then open the nevents_unweighted_splitted file and look for the 
@@ -4932,7 +4928,7 @@ RESTART = %(mint_mode)s
         # This skips the channels with zero events, because they are
         # not of the form GFXX_YY, but simply GFXX
         pattern = re.compile(r"%s_(\d+)/events.lhe" % \
-                          pjoin(pdir, 'G%s%s' % (arg,channel)))
+                          pjoin(pdir, f'G{arg}{channel}'))
         matches = re.findall(pattern, nevents_file)
         for m in matches:
             splittings.append(m)
@@ -5101,16 +5097,16 @@ RESTART = %(mint_mode)s
             # MADEVENT MINT FO MODE
             input_files.append(pjoin(cwd, 'madevent_mintFO'))
             if args[2] == '0':
-                current = '%s_G%s' % (args[1],args[0])
+                current = f'{args[1]}_G{args[0]}'
             else:
-                current = '%s_G%s_%s' % (args[1],args[0],args[2])
+                current = f'{args[1]}_G{args[0]}_{args[2]}'
             if os.path.exists(pjoin(cwd,current)):
                 input_files.append(pjoin(cwd, current))
             output_files.append(current)
 
             required_output.append('%s/results.dat' % current)
-            required_output.append('%s/res_%s.dat' % (current,args[3]))
-            required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
+            required_output.append(f'{current}/res_{args[3]}.dat')
+            required_output.append(f'{current}/log_MINT{args[3]}.txt')
             required_output.append('%s/mint_grids' % current)
             required_output.append('%s/grid.MC_integer' % current)
             if args[3] != '0':
@@ -5121,19 +5117,19 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, 'madevent_mintMC'))
 
             if args[2] == '0':
-                current = 'G%s%s' % (args[1],args[0])
+                current = f'G{args[1]}{args[0]}'
             else:
-                current = 'G%s%s_%s' % (args[1],args[0],args[2])
+                current = f'G{args[1]}{args[0]}_{args[2]}'
             if os.path.exists(pjoin(cwd,current)):
                 input_files.append(pjoin(cwd, current))
             output_files.append(current)
             if args[2] > '0':
                 # this is for the split event generation
-                output_files.append('G%s%s_%s' % (args[1], args[0], args[2]))
-                required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1],args[0],args[2],args[3]))
+                output_files.append(f'G{args[1]}{args[0]}_{args[2]}')
+                required_output.append(f'G{args[1]}{args[0]}_{args[2]}/log_MINT{args[3]}.txt')
 
             else:
-                required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
+                required_output.append(f'{current}/log_MINT{args[3]}.txt')
             if args[3] in ['0','1']:
                 required_output.append('%s/results.dat' % current)
             if args[3] == '1':
@@ -5164,7 +5160,7 @@ RESTART = %(mint_mode)s
         # update the LHAPDF data path
 
         if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
-            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
+            os.environ['LHAPDF_DATA_PATH'] = '{}:{}'.format(epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
         else:
             os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
 
@@ -5224,7 +5220,7 @@ RESTART = %(mint_mode)s
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                          '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
+                          f'{self.run_name}_{self.run_tag}_banner.txt'))
 
         self.get_characteristics(pjoin(self.me_dir, 
                                         'SubProcesses', 'proc_characteristics'))
@@ -5323,7 +5319,7 @@ RESTART = %(mint_mode)s
                 # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
                 emela_info.update_epdf_emela_variables(self.banner, uvscheme)
                 self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                          '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
+                          f'{self.run_name}_{self.run_tag}_banner2.txt'))
 
             elif self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
                 # using internal densities: copy the files for the chosen density
@@ -5409,10 +5405,10 @@ RESTART = %(mint_mode)s
 
         # Verify compatibility between current compiler and the one which was
         # used when last compiling CutTools (if specified).
-        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
-                                  libdir, 'libcts.a')))),'compiler_version.log')
+        compiler_log_path = pjoin(os.path.dirname(os.path.realpath(pjoin(
+                                  libdir, 'libcts.a'))),'compiler_version.log')
         if os.path.exists(compiler_log_path):
-            compiler_version_used = open(compiler_log_path,'r').read()
+            compiler_version_used = open(compiler_log_path).read()
             if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
                        pjoin(sourcedir,'make_opts')))) in compiler_version_used:
                 if os.path.exists(pjoin(sourcedir,'CutTools')):
@@ -5437,10 +5433,10 @@ RESTART = %(mint_mode)s
         if os.path.exists(pjoin(libdir, 'libiregi.a')):
             # Verify compatibility between current compiler and the one which was
             # used when last compiling IREGI (if specified).
-            compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
-                                libdir, 'libiregi.a')))),'compiler_version.log')
+            compiler_log_path = pjoin(os.path.dirname(os.path.realpath(pjoin(
+                                libdir, 'libiregi.a'))),'compiler_version.log')
             if os.path.exists(compiler_log_path):
-                compiler_version_used = open(compiler_log_path,'r').read()
+                compiler_version_used = open(compiler_log_path).read()
                 if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
                        pjoin(sourcedir,'make_opts')))) in compiler_version_used:
                     if os.path.exists(pjoin(sourcedir,'IREGI')):
@@ -5597,7 +5593,7 @@ RESTART = %(mint_mode)s
         
         passing_cmd = []
         for key,value in switch.keys():
-            passing_cmd.append('%s=%s' % (key,value))
+            passing_cmd.append(f'{key}={value}')
         
         if 'do_reweight' in options and options['do_reweight']:
             passing_cmd.append('reweight=ON')
@@ -5683,7 +5679,7 @@ RESTART = %(mint_mode)s
         for card in cards:
             self.banner.add(pjoin(self.me_dir, 'Cards', card))
         # and the run settings
-        run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
+        run_settings = '\n'.join([f'{k} = {v}' for (k, v) in switch.items()])
         self.banner.add_text('run_settings', run_settings)
 
         if not mode =='onlyshower':

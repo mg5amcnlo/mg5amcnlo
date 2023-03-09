@@ -29,10 +29,7 @@ following actions:
 6. tar the MadGraph5_vVERSION directory.
 """
 
-from __future__ import absolute_import
 import sys
-from six.moves import range
-from six.moves import input
 
 if sys.version_info < (3, 7):
     sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
@@ -194,7 +191,7 @@ if auto_update:
             last_message = int(text[1].strip())
         else:
             last_message = 99
-    except (ValueError, IOError):
+    except (ValueError, OSError):
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':

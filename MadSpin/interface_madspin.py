@@ -13,8 +13,6 @@
 #
 ################################################################################
 """ Command interface for MadSpin """
-from __future__ import division
-from __future__ import absolute_import
 import collections
 import logging
 import math
@@ -26,7 +24,6 @@ import sys
 import time
 import glob
 import six
-from six.moves import range
 
 
 pjoin = os.path.join
@@ -284,7 +281,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not hasattr(self,'multiparticles_ms'):
             for key, value in self.banner.get_detail('proc_card','multiparticles'):
                 try:
-                    self.do_define('%s = %s' % (key, value))
+                    self.do_define(f'{key} = {value}')
                 except self.mg5cmd.InvalidCmd:  
                     pass
                 
@@ -544,8 +541,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 del self.multiparticles_ms[key]
             raise
            
-        self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
-                                        self.mg5cmd._multiparticles.items()])
+        self.multiparticles_ms = {k:list(pdgs) for k, pdgs in \
+                                        self.mg5cmd._multiparticles.items()}
     
     
     def update_status(self, *args, **opts):
@@ -1034,7 +1031,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         for event in orig_lhe:
             if counter and counter % 100 == 0 and float(str(counter)[1:]) ==0:
-                print("decaying event number %s [%s s]" % (counter, time.time()-start))
+                print(f"decaying event number {counter} [{time.time()-start} s]")
             counter +=1
             
             # use random order for particles to avoid systematics when more than 
@@ -1210,7 +1207,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return {}# this particle is not defined in the current model so ignore it
         name = part.get_name()
         out = {}
-        logger.info("generate %s decay event for particle %s" % (int(nb_event), name))
+        logger.info(f"generate {int(nb_event)} decay event for particle {name}")
         if name not in self.list_branches:
             return out
         for i,proc in enumerate(self.list_branches[name]):
@@ -1522,7 +1519,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if self.options['fixed_order']:
                 production, counterevt= production[0], production[1:]
             if curr_event and self.efficiency and curr_event % 10 == 0 and float(str(curr_event)[1:]) ==0:
-                logger.info("decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start))
+                logger.info(f"decaying event number {curr_event}. Efficiency: {1/self.efficiency} [{time.time()-start} s]")
             #else:
             #    logger.info("next event [%s]", time.time()-start)
             while 1:
@@ -1620,7 +1617,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'max_wgt')):
-            return float(open(pjoin(self.options['ms_dir'], 'max_wgt'),'r').read())
+            return float(open(pjoin(self.options['ms_dir'], 'max_wgt')).read())
         
         nevents = self.options['Nevents_for_max_weight']
         if nevents == 0 :
@@ -1629,13 +1626,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         all_maxwgt = []
         logger.info("Estimating the maximum weight")
         logger.info("*****************************")
-        logger.info("Probing the first %s events with %s phase space points" % (nevents, self.options['max_weight_ps_point']))
+        logger.info("Probing the first {} events with {} phase space points".format(nevents, self.options['max_weight_ps_point']))
 
         self.efficiency = 1. / self.options['max_weight_ps_point']
         start = time.time()
         for i in range(nevents):
             if i % 5 ==1:
-                logger.info( "Event %s/%s :  %2fs" % (i, nevents, time.time()-start))
+                logger.info( f"Event {i}/{nevents} :  {time.time()-start:2f}s")
             maxwgt = 0
             orig_lhe.seek(0)
             base_event = next(orig_lhe)
@@ -1748,10 +1745,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
             
             mymod = __import__("%s.matrix2py" % (pdir))
-            if six.PY3:
-                from importlib import reload
-            else:
-                from imp import reload
+            from importlib import reload
             reload(mymod)
             mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
@@ -1771,7 +1765,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]
+                      if re.search(r'^\s*add\s+process', line)]
         # 2. compute the decay matrix-element
         decay_text = []
         processes_decay = []
@@ -1799,7 +1793,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     raise MadSpinError('MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb)
                 proc_nb = '@ %i' % proc_nb 
                 if self.options['global_order_coupling']:
-                    proc_nb = '%s %s' % (proc_nb, self.options['global_order_coupling'])
+                    proc_nb = '{} {}'.format(proc_nb, self.options['global_order_coupling'])
             else:
                 if self.options['global_order_coupling']:
                     proc_nb = '@0 %s ' % self.options['global_order_coupling']    

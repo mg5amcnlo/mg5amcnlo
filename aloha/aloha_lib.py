@@ -42,15 +42,12 @@
 ################################################################################
 
 
-from __future__ import division
-from __future__ import absolute_import
 from array import array
 import collections
 from fractions import Fraction
 import numbers
 import re
 import aloha # define mode of writting
-from six.moves import range
 
 try:
     import madgraph.various.misc as misc
@@ -173,10 +170,10 @@ class Computation(dict):
             else:
                 module = 'cmath.'
             try:
-                return str(eval("%s%s(%s)" % (module,fct_tag, ','.join(repr(x) for x in argument))))
+                return str(eval("{}{}({})".format(module,fct_tag, ','.join(repr(x) for x in argument))))
             except Exception as error:
                 print(error)
-                print("cmath.%s(%s)" % (fct_tag, ','.join(repr(x) for x in argument)))
+                print("cmath.{}({})".format(fct_tag, ','.join(repr(x) for x in argument)))
         if str(fct_tag)+str(argument) in self.inverted_fct:
             tag = self.inverted_fct[str(fct_tag)+str(argument)]
             v = tag.split('(')[1][:-1]
@@ -310,7 +307,7 @@ class AddVariable(list):
     def contains(self, variables):
         """returns true if one of the variables is in the expression"""
         
-        return any((v in obj for obj in self for v in variables  ))
+        return any(v in obj for obj in self for v in variables  )
     
     
     def get_all_var_names(self):
@@ -482,7 +479,7 @@ class AddVariable(list):
         text = ''
         if self.prefactor != 1:
             text += str(self.prefactor) + ' * '
-        text += super(AddVariable,self).__repr__()
+        text += super().__repr__()
         return text        
     
     def count_term(self):
@@ -610,7 +607,7 @@ class MultContainer(list):
     def __str__(self):
         """ String representation """
         if self.prefactor !=1:
-            text = '(%s * %s)' % (self.prefactor, ' * '.join([str(t) for t in self]))
+            text = '({} * {})'.format(self.prefactor, ' * '.join([str(t) for t in self]))
         else:
             text = '(%s)' % (' * '.join([str(t) for t in self]))
         return text
@@ -793,7 +790,7 @@ class MultVariable(array):
         """ String representation """
         t = ['%s' % KERNEL.objs[n] for n in self]
         if self.prefactor != 1:
-            text = '(%s * %s)' % (self.prefactor,' * '.join(t))
+            text = '({} * {})'.format(self.prefactor,' * '.join(t))
         else:
             text = '(%s)' % (' * '.join(t))
         return text
@@ -820,7 +817,7 @@ class ExtVariable(str):
     type = 'parameter'
 
 
-class FactoryVar(object):
+class FactoryVar:
     """This is the standard object for all the variable linked to expression.
     """
     mult_class = MultVariable # The class for the multiplication   
@@ -1002,7 +999,7 @@ class MultLorentz(MultVariable):
 #===============================================================================
 # LorentzObject
 #===============================================================================
-class LorentzObject(object):
+class LorentzObject:
     """ A symbolic Object for All Helas object. All Helas Object Should 
     derivated from this class"""
     
@@ -1141,7 +1138,7 @@ class LorentzObjectRepresentation(dict):
             except Exception:
                 raise LorentzObjectRepresentation.LorentzObjectRepresentationError(
                         "Invalid addition. Object doen't have the same lorentz "+ \
-                        "indices : %s != %s" % (l1, l2))
+                        f"indices : {l1} != {l2}")
             else:
                 switch_order.append(shift + index)
         return switch_order
@@ -1172,8 +1169,8 @@ class LorentzObjectRepresentation(dict):
             switch = lambda ind : (ind)
    
         # Some sanity check  
-        assert tuple(self.lorentz_ind+self.spin_ind) == tuple(switch(obj.lorentz_ind+obj.spin_ind)), '%s!=%s' % (self.lorentz_ind+self.spin_ind, switch(obj.lorentz_ind+self.spin_ind))
-        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), '%s!=%s' % (tuple(self.lorentz_ind), switch(obj.lorentz_ind))
+        assert tuple(self.lorentz_ind+self.spin_ind) == tuple(switch(obj.lorentz_ind+obj.spin_ind)), f'{self.lorentz_ind+self.spin_ind}!={switch(obj.lorentz_ind+self.spin_ind)}'
+        assert tuple(self.lorentz_ind) == tuple(switch(obj.lorentz_ind)), f'{tuple(self.lorentz_ind)}!={switch(obj.lorentz_ind)}'
         
         # define an empty representation
         new = LorentzObjectRepresentation({}, obj.lorentz_ind, obj.spin_ind)
@@ -1209,8 +1206,8 @@ class LorentzObjectRepresentation(dict):
             switch = lambda ind : (ind)
    
         # Some sanity check  
-        assert tuple(switch(self.lorentz_ind+self.spin_ind)) == tuple(obj.lorentz_ind+obj.spin_ind), '%s!=%s' % (switch(self.lorentz_ind+self.spin_ind), (obj.lorentz_ind+obj.spin_ind))
-        assert tuple(switch(self.lorentz_ind) )== tuple(obj.lorentz_ind), '%s!=%s' % (switch(self.lorentz_ind), tuple(obj.lorentz_ind))
+        assert tuple(switch(self.lorentz_ind+self.spin_ind)) == tuple(obj.lorentz_ind+obj.spin_ind), f'{switch(self.lorentz_ind+self.spin_ind)}!={(obj.lorentz_ind+obj.spin_ind)}'
+        assert tuple(switch(self.lorentz_ind) )== tuple(obj.lorentz_ind), f'{switch(self.lorentz_ind)}!={tuple(obj.lorentz_ind)}'
         
         # loop over all indices and fullfill the new object         
         if fact == 1:

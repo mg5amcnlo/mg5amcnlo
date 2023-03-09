@@ -14,10 +14,8 @@
 ################################################################################
 """Test the validity of the LHE parser"""
 
-from __future__ import absolute_import
 import unittest
 import madgraph.various.misc as misc
-from six.moves import range
 
 class TEST_misc(unittest.TestCase):
     
@@ -125,10 +123,10 @@ class TEST_misc(unittest.TestCase):
 
         set = misc.OrderedSet
 
-        a = set(['a'])
+        a = {'a'}
         self.assertEqual(a.pop(), 'a')
         self.assertEqual(len(a), 0)
 
-        a = set(['a', 'b'])
+        a = {'a', 'b'}
         self.assertEqual(a.pop(), 'a')
         self.assertEqual(len(a), 1)

@@ -15,7 +15,6 @@
 
 """Methods and classes dealing with file access."""
 
-from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -35,17 +34,17 @@ def read_from_file(filename, myfunct, *args, **opt):
         if 'binary' in opt and opt['binary']:
             sock = open(filename, 'rb')
         else:
-            sock = open(filename, 'r')
+            sock = open(filename)
         try:
             ret_value = myfunct(sock, *args)
         finally:
             sock.close()
-    except IOError as error:
+    except OSError as error:
         errno, strerror = error.errno, str(error)
         if 'print_error' in opt:
             if not opt['print_error']:
                 return None
-        logger.error("I/O error on file %s (%s): %s" % (filename,errno, strerror))
+        logger.error(f"I/O error on file {filename} ({errno}): {strerror}")
         return None
 
     return ret_value
@@ -69,10 +68,10 @@ def write_to_file(filename, myfunct, *args, **opts):
             ret_value = myfunct(sock, *args, **opts)
         finally:
             sock.close()
-    except IOError as xxx_todo_changeme1:
+    except OSError as xxx_todo_changeme1:
         (errno, strerror) = xxx_todo_changeme1.args
         if 'log' not in opts or opts['log']:
-            logger.error("I/O error (%s): %s" % (errno, strerror))
+            logger.error(f"I/O error ({errno}): {strerror}")
         return None
 
     return ret_value
@@ -92,9 +91,9 @@ def append_to_file(filename, myfunct, *args):
             ret_value = myfunct(sock, *args)
         finally:
             sock.close()
-    except IOError as xxx_todo_changeme2:
+    except OSError as xxx_todo_changeme2:
         (errno, strerror) = xxx_todo_changeme2.args
-        logger.error("I/O error (%s): %s" % (errno, strerror))
+        logger.error(f"I/O error ({errno}): {strerror}")
         return None
 
     return ret_value
@@ -147,13 +146,13 @@ def cp(path1, path2, log=True, error=False):
     path2 = format_path(path2)
     try:
         shutil.copy(path1, path2)
-    except IOError as why:
+    except OSError as why:
         import madgraph.various.misc as misc
         try: 
             if os.path.exists(path2):
                 path2 = os.path.join(path2, os.path.split(path1)[1])
             misc.copytree(path1, path2)
-        except IOError as why:
+        except OSError as why:
             if error:
                 raise
             if log:
@@ -242,7 +241,7 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
     except Exception as error:
         if log:
             logger.debug(error)
-            logger.warning('Could not link %s at position: %s' % (file_pos, \
+            logger.warning('Could not link {} at position: {}'.format(file_pos, \
                                                 os.path.realpath(starting_dir)))
 
 def copytree(src, dst):

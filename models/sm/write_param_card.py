@@ -1,8 +1,7 @@
-
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
-class ParamCardWriter(object):
+class ParamCardWriter:
     
     header = \
     """######################################################################\n""" + \
@@ -64,7 +63,7 @@ class ParamCardWriter(object):
         """ """
         
         # list all lhablock
-        all_lhablock = set([param.lhablock for param in all_ext_param])
+        all_lhablock = {param.lhablock for param in all_ext_param}
         
         # ordonate lhablock alphabeticaly
         all_lhablock = list(all_lhablock)
@@ -105,9 +104,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, complex(param.value).real, param.name ) 
+            text = f"""  {lhacode} {complex(param.value).real:e} # {param.name} \n""" 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
+            text = f'''DECAY {lhacode} {complex(param.value).real:e} \n'''
         self.fsock.write(text) 
                     
 
@@ -118,7 +117,7 @@ class ParamCardWriter(object):
         from parameters import all_parameters
         for parameter in all_parameters:
             try:
-                exec("%s = %s" % (parameter.name, parameter.value))
+                exec(f"{parameter.name} = {parameter.value}")
             except Exception:
                 pass
         text = "##  Not dependent paramater.\n"

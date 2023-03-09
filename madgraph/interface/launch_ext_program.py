@@ -14,13 +14,11 @@
 ################################################################################
 
 
-from __future__ import absolute_import
 import logging
 import os
 import pydoc
 import subprocess
 import time
-from six.moves import range
 start=time.time()
 import madgraph.iolibs.files as files
 import madgraph.interface.madevent_interface as me_cmd
@@ -37,7 +35,7 @@ logger = logging.getLogger('cmdprint.ext_program')
 
 
 
-class ExtLauncher(object):
+class ExtLauncher:
     """ Generic Class for executing external program """
     
     program_dir = ''
@@ -180,7 +178,7 @@ class MadLoopLauncher(ExtLauncher):
                     PSfile.close()       
                 self.edit_file(os.path.join(dir_path,'PS.input'))
         else:
-            super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
+            super().treat_input_file(filename,default,msg)
 
     def launch_program(self):
         """launch the main program"""
@@ -232,8 +230,8 @@ class MadLoopLauncher(ExtLauncher):
                     raise MadGraph5Error("Error while running process %s."\
                                                                      %shell_name)
                 try:
-                    rFile=open(os.path.join(curr_path,'result.dat'), 'r')
-                except IOError:
+                    rFile=open(os.path.join(curr_path,'result.dat'))
+                except OSError:
                     raise MadGraph5Error("Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat')))
                 # The result are returned as a dictionary.

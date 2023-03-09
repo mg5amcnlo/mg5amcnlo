@@ -29,12 +29,9 @@
 ##    list <--- LorentzObjectRepresentation <-- ConstantObject
 ##
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import aloha.aloha_lib as aloha_lib
 import aloha
 import cmath
-from six.moves import range
 
 #===============================================================================
 # P (Momenta)
@@ -69,7 +66,7 @@ class P(aloha_lib.FactoryLorentz):
     #def __init__(self, lorentz1, particle):
     @classmethod
     def get_unique_name(self, lorentz1, particle):
-        return '_P^%s_%s' % (particle, lorentz1)
+        return f'_P^{particle}_{lorentz1}'
 
 
 
@@ -106,7 +103,7 @@ class PBar(aloha_lib.FactoryLorentz):
     #def __init__(self, lorentz1, particle):
     @classmethod
     def get_unique_name(self, lorentz1, particle):
-        return '_PB^%s_%s' % (particle, lorentz1)
+        return f'_PB^{particle}_{lorentz1}'
 
 #===============================================================================
 # P (Momenta)
@@ -141,7 +138,7 @@ class PVec(aloha_lib.FactoryLorentz):
     #def __init__(self, lorentz1, particle):
     @classmethod
     def get_unique_name(self, lorentz1, particle):
-        return '_Pvec^%s_%s' % (particle, lorentz1)
+        return f'_Pvec^{particle}_{lorentz1}'
 
 
     
@@ -285,7 +282,7 @@ class PSlash(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, spin2, particle):
-        return '_P%s/_%s_%s' % (particle, spin1,spin2)
+        return f'_P{particle}/_{spin1}_{spin2}'
 
 
 #===============================================================================
@@ -424,7 +421,7 @@ class PT(aloha_lib.FactoryLorentz):
     #def __init__(self, lorentz1, particle):
     @classmethod
     def get_unique_name(self, lorentz1, particle):
-        return '_PT^%s_%s' % (particle, lorentz1)
+        return f'_PT^{particle}_{lorentz1}'
 
 
 
@@ -536,7 +533,7 @@ class Spinor(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self,spin1, particle):  
-        return '_F%s_%s' % (particle,spin1)
+        return f'_F{particle}_{spin1}'
 
 #===============================================================================
 # Vector
@@ -568,7 +565,7 @@ class Vector(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, lor, particle):
-        return '_V%s_%s' % (particle, lor)    
+        return f'_V{particle}_{lor}'    
 
 #===============================================================================
 # Spin3/2
@@ -619,7 +616,7 @@ class Spin3Half(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, lor, spin, part):
-        return 'Spin3Half%s^%s_%s' % (part, lor, spin)
+        return f'Spin3Half{part}^{lor}_{spin}'
 
 #===============================================================================
 # Spin2
@@ -670,7 +667,7 @@ class Spin2(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, lor1, lor2, part):
-        return 'Spin2^%s_%s_%s' % (part, lor1, lor2)
+        return f'Spin2^{part}_{lor1}_{lor2}'
 
 #===============================================================================
 # Gamma
@@ -721,7 +718,7 @@ class Gamma(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, lor, spin1, spin2):
-        return 'Gamma^%s_%s_%s' % (lor, spin1, spin2)
+        return f'Gamma^{lor}_{spin1}_{spin2}'
         
         
 #===============================================================================
@@ -834,7 +831,7 @@ class Sigma(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, lorentz1, lorentz2, spin1, spin2):
-        return 'Sigma_[%s,%s]^[%s,%s]' % (spin1, spin2, lorentz1, lorentz2)
+        return f'Sigma_[{spin1},{spin2}]^[{lorentz1},{lorentz2}]'
 
 
 #===============================================================================
@@ -862,7 +859,7 @@ class Gamma5(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        return 'Gamma5_%s_%s' % (spin1, spin2)
+        return f'Gamma5_{spin1}_{spin2}'
         
 #===============================================================================
 # Conjugate Matrices
@@ -922,7 +919,7 @@ def give_sign_perm(perm0, perm1):
     assert len(perm0) == len(perm1) 
         
     perm1 = list(perm1) ## copy this into a list so we don't mutate the original
-    perm1_map = dict((v, i) for i,v in enumerate(perm1))
+    perm1_map = {v: i for i,v in enumerate(perm1)}
 
     transCount = 0
     for loc, p0 in enumerate(perm0):
@@ -942,7 +939,7 @@ class L_Epsilon(aloha_lib.LorentzObject):
  
     def give_parity(self, perm):
         """return the parity of the permutation"""
-        assert set(perm) == set([0,1,2,3]) 
+        assert set(perm) == {0,1,2,3} 
         
         i1 , i2, i3, i4 = perm
         #formula found on wikipedia
@@ -965,18 +962,18 @@ class L_Epsilon(aloha_lib.LorentzObject):
 
         if not hasattr(self, 'epsilon'):
             # init all element to zero
-            epsilon = dict( ((l1, l2, l3, l4), 0)
+            epsilon = { (l1, l2, l3, l4): 0
                                   for l1 in range(4) \
                                   for l2 in range(4) \
                                   for l3 in range(4) \
-                                  for l4 in range(4))        
+                                  for l4 in range(4)}        
             # update non trivial one
-            epsilon.update(dict(
-             ((l1, l2, l3, l4), self.give_parity((l1,l2,l3,l4)))
+            epsilon.update({
+             (l1, l2, l3, l4): self.give_parity((l1,l2,l3,l4))
                                  for l1 in range(4) \
                                  for l2 in range(4) if l2 != l1\
                                  for l3 in range(4) if l3 not in [l1,l2]\
-                                 for l4 in range(4) if l4 not in [l1,l2,l3]))
+                                 for l4 in range(4) if l4 not in [l1,l2,l3]})
 
             L_Epsilon.epsilon = epsilon
         
@@ -990,7 +987,7 @@ class Epsilon(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(cls,l1,l2,l3,l4):
-        return '_EPSILON_%s_%s_%s_%s' % (l1,l2,l3,l4)
+        return f'_EPSILON_{l1}_{l2}_{l3}_{l4}'
     
             
 #===============================================================================
@@ -1022,9 +1019,9 @@ class Metric(aloha_lib.FactoryLorentz):
     def get_unique_name(cls,l1,l2):
 
         if str(l1)<str(l2):
-            return '_ETA_%s_%s' % (l1,l2)
+            return f'_ETA_{l1}_{l2}'
         else:
-            return '_ETA_%s_%s' % (l2,l1)
+            return f'_ETA_{l2}_{l1}'
 #===============================================================================
 # Identity
 #===============================================================================
@@ -1051,7 +1048,7 @@ class Identity(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, spin1, spin2):
-        return 'Id_%s_%s' % (spin1, spin2)
+        return f'Id_{spin1}_{spin2}'
 
 #===============================================================================
 # IdentityL
@@ -1079,7 +1076,7 @@ class IdentityL(aloha_lib.FactoryLorentz):
 
     @classmethod
     def get_unique_name(self, l1, l2):
-        return 'IdL_%s_%s' % (l1, l2)
+        return f'IdL_{l1}_{l2}'
 
 #===============================================================================
 # ProjM 
@@ -1108,7 +1105,7 @@ class ProjM(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, spin2):
-            return 'PROJM_%s_%s' % (spin1, spin2)
+            return f'PROJM_{spin1}_{spin2}'
 #===============================================================================
 # ProjP 
 #===============================================================================    
@@ -1138,7 +1135,7 @@ class ProjP(aloha_lib.FactoryLorentz):
     @classmethod
     def get_unique_name(self, spin1, spin2):
         
-        return 'PROJP_%s_%s' % (spin1, spin2)
+        return f'PROJP_{spin1}_{spin2}'
 
 #===============================================================================
 # EPSL (longitudinal part of the epsilon normmaized to avoid denominator)
@@ -1187,7 +1184,7 @@ class EPSL(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, lor1, particle):
-        return '_EPSL%s_%s_' % (particle, lor1)
+        return f'_EPSL{particle}_{lor1}_'
 
 #===============================================================================
 # EPSTR (transverse part of the epsilon normmalized to avoid denominator -- one of the eigenstate)
@@ -1237,7 +1234,7 @@ class EPST1(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, lor1, particle):
-        return '_EPST1%s_%s_' % (particle, lor1)
+        return f'_EPST1{particle}_{lor1}_'
 
 #===============================================================================
 # EPSTI (transverse part of the epsilon normmalized to avoid denominator -- one of the eigenstate)
@@ -1289,7 +1286,7 @@ class EPST2(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, lor1, particle):
-        return '_EPST2%s_%s_' % (particle, lor1)
+        return f'_EPST2{particle}_{lor1}_'
 #===============================================================================
 # UFP U fermion plus component (first two component)
 #       the denominator is include in the denominator of the propagator
@@ -1338,7 +1335,7 @@ class UFP(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_UFP%s_%s_' % (particle, spin1)
+        return f'_UFP{particle}_{spin1}_'
 
 class L_UFM(aloha_lib.LorentzObject):
     """ 
@@ -1381,7 +1378,7 @@ class UFM(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_UFM%s_%s_' % (particle, spin1)
+        return f'_UFM{particle}_{spin1}_'
    
 class L_UFPC(aloha_lib.LorentzObject):
     """ 
@@ -1424,7 +1421,7 @@ class UFPC(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_UFPC%s_%s_' % (particle, spin1)
+        return f'_UFPC{particle}_{spin1}_'
 
 class L_UFMC(aloha_lib.LorentzObject):
     """ 
@@ -1467,7 +1464,7 @@ class UFMC(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_UFMC%s_%s_' % (particle, spin1)
+        return f'_UFMC{particle}_{spin1}_'
 
 class L_VFP(aloha_lib.LorentzObject):
     """ 
@@ -1511,7 +1508,7 @@ class VFP(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_VFP%s_%s_' % (particle, spin1)
+        return f'_VFP{particle}_{spin1}_'
 
 class L_VFPC(aloha_lib.LorentzObject):
     """ 
@@ -1555,7 +1552,7 @@ class VFPC(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_VFPC%s_%s_' % (particle, spin1)
+        return f'_VFPC{particle}_{spin1}_'
 
 
 class L_VFM(aloha_lib.LorentzObject):
@@ -1600,7 +1597,7 @@ class VFM(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_VFM%s_%s_' % (particle, spin1)
+        return f'_VFM{particle}_{spin1}_'
 
 class L_VFMC(aloha_lib.LorentzObject):
     """ 
@@ -1645,7 +1642,7 @@ class VFMC(aloha_lib.FactoryLorentz):
     
     @classmethod
     def get_unique_name(self, spin1, particle):
-        return '_VFMC%s_%s_' % (particle, spin1)
+        return f'_VFMC{particle}_{spin1}_'
 
 #===============================================================================
 # Denominator Propagator 

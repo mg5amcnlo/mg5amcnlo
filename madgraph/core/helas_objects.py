@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 """Definitions of objects used to generate language-independent Helas
 calls: HelasWavefunction, HelasAmplitude, HelasDiagram for the
 generation of wavefunctions and amplitudes, HelasMatrixElement and
@@ -42,8 +40,6 @@ import madgraph.various.misc as misc
 
 from madgraph import InvalidCmd, MadGraph5Error
 import six
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 if madgraph.ordering:
@@ -137,7 +133,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
            a way that identical particles are treated in a symmetric way"""
 
         # Crate dictionary from leg number to position
-        start_perm_dict = dict([(n,i) for (i,n) in enumerate(numbers)])
+        start_perm_dict = {n:i for (i,n) in enumerate(numbers)}
 
         # Ids for process legs            
         legs = [l.get('id') for l in sorted(process.get_legs_with_decays())]
@@ -243,7 +239,7 @@ class IdentifyMETagFKS(IdentifyMETag):
 
     def __init__(self, diagram, model = None, ninitial = 2):
         self.flow_charge_diff = diagram.get_flow_charge_diff(model)
-        super(IdentifyMETagFKS, self).__init__(diagram, model, ninitial)
+        super().__init__(diagram, model, ninitial)
 
     def __eq__(self, other):
         return super(IdentifyMETag, self).__eq__(other) and \
@@ -659,7 +655,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if isinstance(arguments[0], base_objects.Leg) and \
                    isinstance(arguments[1], int) and \
                    isinstance(arguments[2], base_objects.Model):
-                super(HelasWavefunction, self).__init__()
+                super().__init__()
                 leg = arguments[0]
                 interaction_id = arguments[1]
                 model = arguments[2]
@@ -706,9 +702,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     self.set('polarization', leg.get('polarization'))
                 self.set('interaction_id', interaction_id, model)
         elif arguments:
-            super(HelasWavefunction, self).__init__(arguments[0])
+            super().__init__(arguments[0])
         else:
-            super(HelasWavefunction, self).__init__()
+            super().__init__()
 
 
 
@@ -717,11 +713,11 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         if name in ['particle', 'antiparticle']:
             if not isinstance(value, base_objects.Particle):
-                raise self.PhysicsObjectError("%s tag %s is not a particle" % (name, repr(value)))            
+                raise self.PhysicsObjectError(f"{name} tag {repr(value)} is not a particle")            
 
         elif name == 'is_part':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError("%s tag %s is not a boolean" % (name, repr(value)))
+                raise self.PhysicsObjectError(f"{name} tag {repr(value)} is not a boolean")
 
         elif name == 'interaction_id':
             if not isinstance(value, int):
@@ -868,13 +864,13 @@ class HelasWavefunction(base_objects.PhysicsObject):
         elif name == 'antiname':
             return self['particle'].get_anti_name()
         elif name == 'me_id':
-            out = super(HelasWavefunction, self).get(name)
+            out = super().get(name)
             if out: 
                 return out
             else:
-                return super(HelasWavefunction, self).get('number')
+                return super().get('number')
         else:
-            return super(HelasWavefunction, self).get(name)
+            return super().get(name)
         
 
     # Enhanced set function, where we can append a model
@@ -920,7 +916,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 six.reraise(self.PhysicsObjectError("%s not allowed name for 3-argument set", name))
         else:
-            return super(HelasWavefunction, self).set(name, value)
+            return super().set(name, value)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
@@ -2012,9 +2008,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         loop wavefunction """
         
         if not self.get('mothers'):
-            return set([self.get('number_external'),])
+            return {self.get('number_external')}
 
-        res=set([])
+        res=set()
         for wf in self.get('mothers'):
             if not wf['is_loop']:
                 res=res.union(wf.get_struct_external_leg_ids())
@@ -2557,13 +2553,13 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if len(arguments) > 1:
             if isinstance(arguments[0], base_objects.Vertex) and \
                isinstance(arguments[1], base_objects.Model):
-                super(HelasAmplitude, self).__init__()
+                super().__init__()
                 self.set('interaction_id',
                          arguments[0].get('id'), arguments[1])
         elif arguments:
-            super(HelasAmplitude, self).__init__(arguments[0])
+            super().__init__(arguments[0])
         else:
-            super(HelasAmplitude, self).__init__()
+            super().__init__()
 
     def filter(self, name, value):
         """Filter for valid property values."""
@@ -2670,7 +2666,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
                        str(self[prop]) + ',\n'
             else:
                 info = [m.get('pdg_code') for m in self['mothers']]
-                mystr += '    \'%s\': %s,\n' % (prop, info) 
+                mystr += f'    \'{prop}\': {info},\n' 
                 
         mystr = mystr.rstrip(',\n')
         mystr = mystr + '\n}'
@@ -2724,7 +2720,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         if name == 'conjugate_indices' and self[name] == None:
             self['conjugate_indices'] = self.get_conjugate_index()
 
-        return super(HelasAmplitude, self).get(name)
+        return super().get(name)
 
     # Enhanced set function, where we can append a model
 
@@ -2763,7 +2759,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             else:
                 six.reraise(self.PhysicsObjectError( "%s not allowed name for 3-argument set", name))
         else:
-            return super(HelasAmplitude, self).set(name, value)
+            return super().set(name, value)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
@@ -3428,7 +3424,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         if name == 'base_amplitude' and not self[name]:
             self['base_amplitude'] = self.get_base_amplitude()
 
-        return super(HelasMatrixElement, self).get(name)
+        return super().get(name)
 
     # Customized constructor
     def __init__(self, amplitude=None, optimization=1,
@@ -3440,7 +3436,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         if amplitude != None:
             if isinstance(amplitude, diagram_generation.Amplitude):
-                super(HelasMatrixElement, self).__init__()
+                super().__init__()
                 self.get('processes').append(amplitude.get('process'))
                 self.set('has_mirror_process',
                          amplitude.get('has_mirror_process'))
@@ -3451,9 +3447,9 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     self.process_color()
             else:
                 # In this case, try to use amplitude as a dictionary
-                super(HelasMatrixElement, self).__init__(amplitude)
+                super().__init__(amplitude)
         else:
-            super(HelasMatrixElement, self).__init__()
+            super().__init__()
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
@@ -3533,10 +3529,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         wf_number = 0
 
         # Generate wavefunctions for the external particles
-        external_wavefunctions = dict([(leg.get('number'),
+        external_wavefunctions = {leg.get('number'):
                                         HelasWavefunction(leg, 0, model,
-                                                          decay_ids)) \
-                                       for leg in process.get('legs')])
+                                                          decay_ids) \
+                                       for leg in process.get('legs')}
 
         # Initially, have one wavefunction for each external leg.
         wf_number = len(process.get('legs'))
@@ -4678,7 +4674,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
     def get_all_mass_widths(self):
         """Gives a list of all widths used by this ME (from propagator)"""
 
-        return set([(d.get('mass'),d.get('width')) for d in self.get_all_wavefunctions()])
+        return {(d.get('mass'),d.get('width')) for d in self.get_all_wavefunctions()}
 
 
     def get_all_amplitudes(self):
@@ -4715,10 +4711,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
 
         external_wfs = [wf for wf in self.get_all_wavefunctions() if not wf.get('mothers')]
 
-        return (len(set([wf.get('number_external') for wf in \
-                         external_wfs])),
-                len(set([wf.get('number_external') for wf in \
-                         [wf for wf in external_wfs if wf.get('leg_state') == False]])))
+        return (len({wf.get('number_external') for wf in \
+                         external_wfs}),
+                len({wf.get('number_external') for wf in \
+                         [wf for wf in external_wfs if wf.get('leg_state') == False]}))
 
     def get_external_masses(self):
         """Gives the list of the strings corresponding to the masses of the
@@ -5295,14 +5291,14 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         """Allow initialization with DecayChainAmplitude"""
 
         if isinstance(argument, diagram_generation.DecayChainAmplitude):
-            super(HelasDecayChainProcess, self).__init__()
+            super().__init__()
             self.generate_matrix_elements(argument)
         elif argument:
             # call the mother routine
-            super(HelasDecayChainProcess, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(HelasDecayChainProcess, self).__init__()
+            super().__init__()
 
     def nice_string(self, indent = 0):
         """Returns a nicely formatted string of the matrix element processes."""
@@ -5602,20 +5598,20 @@ class HelasMultiProcess(base_objects.PhysicsObject):
 
 
         if isinstance(argument, diagram_generation.AmplitudeList):
-            super(HelasMultiProcess, self).__init__()
+            super().__init__()
             self.set('matrix_elements', self.generate_matrix_elements(argument,
                             combine_matrix_elements = combine_matrix_elements,
                             matrix_element_opts=matrix_element_opts,
                             compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.MultiProcess):
-            super(HelasMultiProcess, self).__init__()
+            super().__init__()
             self.set('matrix_elements',
                      self.generate_matrix_elements(argument.get('amplitudes'),
                              combine_matrix_elements = combine_matrix_elements,
                              matrix_element_opts = matrix_element_opts,
                              compute_loop_nc = compute_loop_nc))
         elif isinstance(argument, diagram_generation.Amplitude):
-            super(HelasMultiProcess, self).__init__()
+            super().__init__()
             self.set('matrix_elements', self.generate_matrix_elements(\
                              diagram_generation.AmplitudeList([argument]),
                              combine_matrix_elements = combine_matrix_elements,
@@ -5623,10 +5619,10 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                              compute_loop_nc = compute_loop_nc))
         elif argument:
             # call the mother routine
-            super(HelasMultiProcess, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(HelasMultiProcess, self).__init__()
+            super().__init__()
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with

@@ -15,9 +15,7 @@
 """A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
-from __future__ import division
 
-from __future__ import absolute_import
 import collections
 import itertools
 import glob
@@ -34,7 +32,6 @@ import time
 import tarfile
 import shutil
 import copy
-from six.moves import range
 import six
 StringIO = six
 try:
@@ -202,7 +199,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
-        super(CmdExtended, self).__init__(me_dir, options, *arg, **opt)
+        super().__init__(me_dir, options, *arg, **opt)
         
     def get_history_header(self):
         """return the history header""" 
@@ -223,7 +220,7 @@ class CmdExtended(common_run.CommonRunCmd):
     def postcmd(self, stop, line):
         """ Update the status of  the run for finishing interactive command """
         
-        stop = super(CmdExtended, self).postcmd(stop, line)   
+        stop = super().postcmd(stop, line)   
         # relaxing the tag forbidding question
         self.force = False
         
@@ -321,7 +318,7 @@ class CmdExtended(common_run.CommonRunCmd):
 #===============================================================================
 # HelpToCmd
 #===============================================================================
-class HelpToCmd(object):
+class HelpToCmd:
     """ The Series of help routine for the MadEventCmd"""
     
     def help_pythia(self):
@@ -367,7 +364,7 @@ class HelpToCmd(object):
         if data:
             logger.info('-- local options:')
             for name, info in data:
-                logger.info('      %s : %s' % (name, info))
+                logger.info(f'      {name} : {info}')
         
         logger.info("-- session options:")
         logger.info("      Note that those options will be kept for the current session")      
@@ -512,7 +509,7 @@ class AskRun(cmd.ControlSwitch):
         
         self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
-        super(AskRun,self).__init__(self.to_control, opt['mother_interface'],
+        super().__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
         
         
@@ -911,7 +908,7 @@ class AskRun(cmd.ControlSwitch):
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
-class CheckValidForCmd(object):
+class CheckValidForCmd:
     """ The Series of check routine for the MadEventCmd"""
 
     def check_banner_run(self, args):
@@ -1162,8 +1159,8 @@ class CheckValidForCmd(object):
         """check that the argument for survey are valid"""
         
         
-        self.opts = dict([(key,value[1]) for (key,value) in \
-                          self._survey_options.items()])
+        self.opts = {key:value[1] for (key,value) in \
+                          self._survey_options.items()}
 
         # Treat any arguments starting with '--'
         while args and args[-1].startswith('--'):
@@ -1856,7 +1853,7 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) >= 2 and args[1] =='results':
             start = line.find('results')
             return self.complete_print_results(text, 'print_results '+line[start+7:], begidx+2+start, endidx+2+start)
-        return super(CompleteForCmd, self).complete_display(text, line, begidx, endidx)
+        return super().complete_display(text, line, begidx, endidx)
 
     def complete_multi_run(self, text, line, begidx, endidx):
         """complete multi run command"""
@@ -2128,7 +2125,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         """assign all configuration variable from file 
             loop over the different config file if config_file not define """
         
-        super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
+        super().set_configuration(amcatnlo=amcatnlo, 
                                                             final=final, **opt)
 
         if not final:
@@ -2207,7 +2204,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.force = True
         
         # Call Generate events
-        self.exec_cmd('generate_events %s %s' % (self.run_name, self.force and '-f' or ''))
+        self.exec_cmd('generate_events {} {}'.format(self.run_name, self.force and '-f' or ''))
  
  
  
@@ -2274,7 +2271,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         elif  args[0] == 'results':
             self.do_print_results(' '.join(args[1:]))
         else:
-            super(MadEventCmd, self).do_display(line, output)
+            super().do_display(line, output)
  
     def do_save(self, line, check=True, to_keep={}):
         """Not in help: Save information to file"""  
@@ -2447,20 +2444,20 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
             self.update_status("Starting postprocess contur", level="rivet")
 
-            set_env = "#!{0}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
+            set_env = "#!{}\n".format(misc.which('bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'))
             rivet_path = self.options['rivet_path']
             yoda_path = self.options['yoda_path']
             set_env = set_env + "# RIVET/YODA PATH SETUP\n"
-            set_env = set_env + "export PATH={0}:{1}:$PATH\n"\
+            set_env = set_env + "export PATH={}:{}:$PATH\n"\
                                              .format(pjoin(rivet_path, 'bin'),\
                                                      pjoin(yoda_path, 'bin'))
-            set_env = set_env + "export LD_LIBRARY_PATH={0}:{1}:{2}:{3}:$LD_LIBRARY_PATH\n"\
+            set_env = set_env + "export LD_LIBRARY_PATH={}:{}:{}:{}:$LD_LIBRARY_PATH\n"\
                                                         .format(pjoin(rivet_path, 'lib'),\
                                                                 pjoin(rivet_path, 'lib64'),\
                                                                 pjoin(yoda_path, 'lib'),\
                                                                 pjoin(yoda_path, 'lib64'))
             major, minor = sys.version_info[0:2]
-            set_env = set_env + "export PYTHONPATH={0}:{1}:{2}:{3}:$PYTHONPATH\n\n"\
+            set_env = set_env + "export PYTHONPATH={}:{}:{}:{}:$PYTHONPATH\n\n"\
                                                    .format(pjoin(rivet_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                            pjoin(rivet_path, 'lib64', 'python%s.%s' %(major,minor), 'site-packages'),\
                                                            pjoin(yoda_path, 'lib', 'python%s.%s' %(major,minor), 'site-packages'),\
@@ -2468,26 +2465,26 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
             contur_path = self.options['contur_path']
             set_env = set_env + "# CONTUR PATH SETUP\n"
-            set_env = set_env + "export PATH={0}:$PATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor), 'bin'))
-            set_env = set_env + "export PYTHONPATH={0}:$PYTHONPATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor)))
+            set_env = set_env + "export PATH={}:$PATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor), 'bin'))
+            set_env = set_env + "export PYTHONPATH={}:$PYTHONPATH\n".format(pjoin(contur_path, 'python%s.%s' %(major,minor)))
 
-            set_env = set_env + "source {0} >> contur.log 2>&1\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
+            set_env = set_env + "source {} >> contur.log 2>&1\n\n".format(pjoin(contur_path, "contur", "setupContur.sh"))
 
-            os.system("mkdir -p {0}".format(pjoin(self.me_dir, 'Analysis', 'contur')))
+            os.system("mkdir -p {}".format(pjoin(self.me_dir, 'Analysis', 'contur')))
 
             if nb_rivet == 1:
                 this_yoda_file = pjoin(run_dirs[0], "rivet_result.yoda")
-                os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda')))
+                os.system("ln -s {} {}".format(this_yoda_file, pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda')))
                 if not rivet_config["weight_name"] == "None":
-                    contur_cmd = 'contur --wn "{0}" {1}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+                    contur_cmd = 'contur --wn "{}" {}\n'.format(rivet_config["weight_name"], pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
                 else:
-                    contur_cmd = 'contur {0}\n'.format(pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
+                    contur_cmd = 'contur {}\n'.format(pjoin(self.me_dir, 'Analysis', 'contur', 'rivet_result.yoda'))
             else:
                 # Link yoda and params files inside analysis/contur/scan directory
                 scan_subdirs = []
                 for i_rivet in range(nb_rivet):
                     this_scan_dir = pjoin(self.me_dir, 'Analysis', 'contur', 'scan', rivet_config["contur_ra"])
-                    os.system("mkdir -p {0}".format(this_scan_dir))
+                    os.system(f"mkdir -p {this_scan_dir}")
 
                     this_scan_subdir = pjoin(this_scan_dir, str(i_rivet+1).zfill(4))
                     scan_subdirs.append(this_scan_subdir)
@@ -2495,8 +2492,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
                     this_yoda_file = pjoin(run_dirs[i_rivet], "rivet_result.yoda")
                     this_param_file = pjoin(run_dirs[i_rivet], "params.dat")
-                    os.system("ln -s {0} {1}".format(this_yoda_file, pjoin(this_scan_subdir, "runpoint_"+str(i_rivet+1).zfill(4)+".yoda")))
-                    os.system("ln -s {0} {1}".format(this_param_file, pjoin(this_scan_subdir, "params.dat")))
+                    os.system("ln -s {} {}".format(this_yoda_file, pjoin(this_scan_subdir, "runpoint_"+str(i_rivet+1).zfill(4)+".yoda")))
+                    os.system("ln -s {} {}".format(this_param_file, pjoin(this_scan_subdir, "params.dat")))
 
                     if rivet_config['xaxis_relvar'] or rivet_config['yaxis_relvar']:
                         f_params = open(pjoin(run_dirs[i_rivet], "params.dat"))
@@ -2514,7 +2511,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 if rivet_config["weight_name"] == "None":
                     contur_cmd = 'contur -g scan >> contur.log 2>&1\n'
                 else:
-                    contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
+                    contur_cmd = 'contur -g scan --wn "{}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
 
                 if rivet_config["draw_contur_heatmap"]:
 
@@ -2545,18 +2542,18 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     else:
                         yaxis_var = rivet_config["yaxis_var"]
 
-                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {0} {1} {2} {3}' \
+                    contur_cmd = contur_cmd + 'contur-plot ANALYSIS/contur.map {} {} {} {}' \
                                                         .format(xaxis_var, yaxis_var,axis_label, axis_log)
 
             wrapper = open(pjoin(self.me_dir, "Analysis", "contur", "run_contur.sh"), "w")
             wrapper.write(set_env)
  
-            wrapper.write('{0}\n'.format(contur_cmd))
+            wrapper.write(f'{contur_cmd}\n')
             wrapper.close()
  
             misc.call(["run_contur.sh"], cwd=(pjoin(self.me_dir, "Analysis", "contur")))
 
-            logger.info("Contur outputs are stored in {0}".format(pjoin(self.me_dir, "Analysis", "contur","conturPlot")))
+            logger.info("Contur outputs are stored in {}".format(pjoin(self.me_dir, "Analysis", "contur","conturPlot")))
             self.update_status("postprocessing contur done", level="rivet")
 
     # this decorator handle the loop related to scan.
@@ -2594,7 +2591,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             logger.info('Generating %s events with run name %s' %
                         (self.run_card['nevents'], self.run_name))
         
-            self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
+            self.exec_cmd('survey  {} {}'.format(self.run_name,' '.join(args)),
                           postcmd=False)
             nb_event = self.run_card['nevents']
             bypass_run=False
@@ -2616,7 +2613,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             
             #we can bypass the following if scan and first result is zero
             if not bypass_run:
-                self.exec_cmd('refine %s --treshold=%s' % (nb_event,self.run_card['second_refine_treshold'])
+                self.exec_cmd('refine {} --treshold={}'.format(nb_event,self.run_card['second_refine_treshold'])
                               , postcmd=False)
             
                 self.exec_cmd('combine_events', postcmd=False,printcmd=False)
@@ -2637,7 +2634,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         
                     if to_use == 'systematics':
                         if self.run_card['systematics_arguments'] != ['']:
-                            self.exec_cmd('systematics %s %s ' % (self.run_name,
+                            self.exec_cmd('systematics {} {} '.format(self.run_name,
                                           ' '.join(self.run_card['systematics_arguments'])),                  
                                           postcmd=False, printcmd=False)
                         else:
@@ -2672,7 +2669,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         
             if self.allow_notification_center:    
                 misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                              '{}: {} +- {} '.format(self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
     
@@ -2787,16 +2784,16 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             logger.info(" ")
 
             
-        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
+        logger.info("  === Results Summary for run: {} tag: {} ===\n".format(data['run_name'],data['tag']))
         
         total_time = int(sum(_['cumulative_timing'] for _ in data['run_statistics'].values()))
         if total_time > 0:
             logger.info("     Cumulative sequential time for this run: %s"%misc.format_time(total_time))
         
         if self.ninitial == 1:
-            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
+            logger.info("     Width :   {:.4g} +- {:.4g} GeV".format(data['cross'], data['error']))
         else:
-            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
+            logger.info("     Cross-section :   {:.4g} +- {:.4g} pb".format(data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
 
         if data['run_mode']=='madevent':
@@ -2819,9 +2816,9 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     
                 else:
                     if self.ninitial == 1:
-                        logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                        logger.info("     Matched width :   {:.4g} +- {:.4g} GeV".format(data['cross_pythia'], data['error_pythia']))
                     else:
-                        logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+                        logger.info("     Matched cross-section :   {:.4g} +- {:.4g} pb".format(data['cross_pythia'], data['error_pythia']))            
                         logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_pythia']))
                 if self.run_card['use_syst'] in self.true and \
                    (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
@@ -2853,15 +2850,15 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
             
             if self.ninitial == 1:
-                fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
+                fsock.write("     Width :   {:.4g} +- {:.4g} GeV\n".format(data['cross'], data['error']))
             else:
-                fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+                fsock.write("     Cross-section :   {:.4g} +- {:.4g} pb\n".format(data['cross'], data['error']))
             fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
             if data['cross_pythia'] and data['nb_event_pythia']:
                 if self.ninitial == 1:
-                    fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+                    fsock.write("     Matched Width :   {:.4g} +- {:.4g} GeV\n".format(data['cross_pythia'], data['error_pythia']))
                 else:
-                    fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+                    fsock.write("     Matched Cross-section :   {:.4g} +- {:.4g} pb\n".format(data['cross_pythia'], data['error_pythia']))            
                 fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
             fsock.write(" \n" )
         elif format == "short":
@@ -2932,7 +2929,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             # due to grouping we need to compute the ratio factor for the 
             # ungroup resutls (that we need here). Note that initial particles
             # grouping are not at the same stage as final particle grouping
-            nb_output = len(ids) / (len(set([p[0] for p in ids])))
+            nb_output = len(ids) / (len({p[0] for p in ids}))
             results = open(pjoin(P_path, run_name + '_results.dat')).read().split('\n')[0]
             result = float(results.strip().split(' ')[0])
             for particles in ids:
@@ -2975,7 +2972,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                         particle = 0
                 # Read BRs for this decay
                 line = param_card[line_number]
-                while re.search('^(#|\s|\d)', line):
+                while re.search(r'^(#|\s|\d)', line):
                     line = param_card.pop(line_number)
                     if not particle or line.startswith('#'):
                         line=param_card[line_number]
@@ -3053,7 +3050,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         nb_event = 0
         for i in range(nb_run):
             self.nb_refine = 0
-            self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
+            self.exec_cmd(f'generate_events {main_name}_{i} -f', postcmd=False)
             # Update collected value
             nb_event += int(self.results[self.run_name][-1]['nb_event'])  
             self.results.add_detail('nb_event', nb_event , run=main_name)            
@@ -3077,7 +3074,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
             self.update_status("Create Root file", level='parton')
-            path = '%s/%s/unweighted_events.lhe.gz' % (pjoin(self.me_dir,'Events'), self.run_name)
+            path = '{}/{}/unweighted_events.lhe.gz'.format(pjoin(self.me_dir,'Events'), self.run_name)
 
             if os.path.exists(path):
                 misc.gunzip(path)
@@ -3226,7 +3223,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 for line in open(pjoin(bias_module_path,'%s.f'%os.path.basename(bias_module_path))):
                     if start and last:
                         break
-                    if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
+                    if not start and not re.search(r'c\s*parameters\s*=\s*{',line, re.I):
                         continue
                     start = True
                     if not line.startswith('C'):
@@ -3235,7 +3232,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     if '{' in line:
                         line = line.split('{')[-1]
                     # split for } ! #
-                    split_result = re.split('(\}|!|\#)', line,1, re.M)
+                    split_result = re.split(r'(\}|!|\#)', line,1, re.M)
                     line = split_result[0]
                     sep = split_result[1] if len(split_result)>1 else None
                     if sep == '}':
@@ -3514,8 +3511,8 @@ Beware that this can be dangerous for local multicore runs.""")
         text = open(conf_path).read()
         min_evt, max_evt = 2500 *(2+rate), 10000*(rate+1) 
         
-        text = re.sub('''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
-        text = re.sub('''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
+        text = re.sub(r'''\(min_events = \d+\)''', '(min_events = %i )' % min_evt, text)
+        text = re.sub(r'''\(max_events = \d+\)''', '(max_events = %i )' % max_evt, text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
@@ -3602,7 +3599,7 @@ Beware that this can be dangerous for local multicore runs.""")
             cross, error = x_improve.update_html() #update html results for survey
             if  cross == 0:
                 return
-            logger.info("- Current estimate of cross-section: %s +- %s" % (cross, error))
+            logger.info(f"- Current estimate of cross-section: {cross} +- {error}")
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -3619,7 +3616,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     alljobs = misc.glob('ajob*', Pdir)
                     
                     #remove associated results.dat (ensure to not mix with all data)
-                    Gre = re.compile("\s*j=(G[\d\.\w]+)")
+                    Gre = re.compile(r"\s*j=(G[\d\.\w]+)")
                     for job in alljobs:
                         Gdirs = Gre.findall(open(job).read())
                         for Gdir in Gdirs:
@@ -3677,8 +3674,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if "SubProcesses" not in Pdir:
             Pdir = pjoin(self.me_dir, "SubProcesses", Pdir)
         if mode == "S":
-            self.opts = dict([(key,value[1]) for (key,value) in \
-                          self._survey_options.items()])
+            self.opts = {key:value[1] for (key,value) in \
+                          self._survey_options.items()}
             gensym = gen_ximprove.gensym(self)
             gensym.combine_iteration(Pdir, Gdir, int(step))
         elif mode == "R":
@@ -3715,7 +3712,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
-                                '%s_%s_banner.txt' % (self.run_name, tag)))
+                                f'{self.run_name}_{tag}_banner.txt'))
         
 
         get_wgt = lambda event: event.wgt            
@@ -3961,7 +3958,7 @@ Beware that this can be dangerous for local multicore runs.""")
         misc.compile(['../bin/internal/gen_ximprove'], cwd=pjoin(self.me_dir, "Source"))
         
         Gdir = self.get_Gdir()
-        Pdir = set([os.path.dirname(G) for G in Gdir])
+        Pdir = {os.path.dirname(G) for G in Gdir}
         for P in Pdir: 
             allG = misc.glob('G*', path=P)
             for G in allG:
@@ -3984,7 +3981,7 @@ Beware that this can be dangerous for local multicore runs.""")
         misc.call(['./bin/internal/make_gridpack'], cwd=self.me_dir)
         files.mv(pjoin(self.me_dir, 'gridpack.tar.gz'), 
                 pjoin(self.me_dir, '%s_gridpack.tar.gz' % self.run_name))
-        os.system("sed -i.bak \"s/\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
+        os.system("sed -i.bak \"s/\\s*.true.*=.*GridRun/  .false.  =  GridRun/g\" %s/Cards/grid_card.dat" \
                   % self.me_dir)
         self.update_status('gridpack created', level='gridpack')
         
@@ -4741,7 +4738,7 @@ tar -czf split_$1.tar.gz split_$1
                     pythia_log_file.write('='*35+'\n')
                     pythia_log_file.write(' -> Pythia8 log file for run %d <-'%i+'\n')
                     pythia_log_file.write('='*35+'\n')
-                    pythia_log_file.write(open(log_file,'r').read()+'\n')
+                    pythia_log_file.write(open(log_file).read()+'\n')
                     if run_type in merged_run_types:
                         sigma_m, Nacc, Ntry = self.parse_PY8_log_file(log_file)
                         if any(elem is None for elem in [sigma_m, Nacc, Ntry]):
@@ -4838,7 +4835,7 @@ tar -czf split_$1.tar.gz split_$1
                         # Use system calls to quickly put these together
                         header = open(pjoin(tmp_dir,'header.hepmc'),'w')
                         n_head = 0
-                        for line in open(all_hepmc_files[0],'r'):
+                        for line in open(all_hepmc_files[0]):
                             if not line.startswith('E'):
                                 n_head += 1
                                 header.write(line)
@@ -4898,7 +4895,7 @@ tar -czf split_$1.tar.gz split_$1
                                             self.run_name, '%s_pts.dat' % tag))
 
         if not os.path.isfile(pythia_log) or \
-             'Inclusive cross section:' not in '\n'.join(open(pythia_log,'r').readlines()[-20:]):
+             'Inclusive cross section:' not in '\n'.join(open(pythia_log).readlines()[-20:]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
         
@@ -4958,14 +4955,14 @@ tar -czf split_$1.tar.gz split_$1
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
                 # with central parameters and a different merging scale
-                a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+                a_float_re = r'[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
                 central_merging_re = re.compile(
-                  '^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
+                  r'^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
                                                                   re.IGNORECASE)                
-                cross_sections = dict(
-                    (float(central_merging_re.match(xsec).group('merging')),value)
+                cross_sections = {
+                    float(central_merging_re.match(xsec).group('merging')):value
                         for xsec, value in cross_sections.items() if not 
-                                         central_merging_re.match(xsec) is None)
+                                         central_merging_re.match(xsec) is None}
                 central_scale = PY8_Card['JetMatching:qCut'] if \
                         int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
                 if central_scale in cross_sections:
@@ -5001,7 +4998,7 @@ tar -czf split_$1.tar.gz split_$1
                 self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
             else:
                 self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
-        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, f'{self.run_name}_{tag}_banner.txt')
         self.banner.write(banner_path)
 
         self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8')
@@ -5011,8 +5008,8 @@ tar -czf split_$1.tar.gz split_$1
     
     def parse_PY8_log_file(self, log_file_path):
         """ Parse a log file to extract number of event and cross-section. """
-        pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
-        pythia_xsec_re = re.compile("Inclusive cross section\s*:\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        pythiare = re.compile(r"Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        pythia_xsec_re = re.compile(r"Inclusive cross section\s*:\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
         sigma_m, Nacc, Ntry = None, None, None
         for line in misc.BackRead(log_file_path): 
             info = pythiare.search(line)
@@ -5049,18 +5046,18 @@ tar -czf split_$1.tar.gz split_$1
         """Extract cross-sections from a djr XML output."""
         import xml.dom.minidom as minidom
         run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
-        all_nodes = dict((int(node.getAttribute('id')),node) for
-                                                      node in run_nodes)
+        all_nodes = {int(node.getAttribute('id')):node for
+                                                      node in run_nodes}
         try:
             selected_run_node = all_nodes[0]
         except:
             return {}
         xsections = selected_run_node.getElementsByTagName("xsection")
         # In the DJR, the conversion to pb is already performed
-        return dict((xsec.getAttribute('name'),
+        return {xsec.getAttribute('name'):
             [float(xsec.childNodes[0].data.split()[0]),
-             float(xsec.childNodes[0].data.split()[1])])
-                                              for xsec in xsections)
+             float(xsec.childNodes[0].data.split()[1])]
+                                              for xsec in xsections}
     
     def do_pythia(self, line):
         """launch pythia"""
@@ -5153,7 +5150,7 @@ tar -czf split_$1.tar.gz split_$1
             # read the line from the bottom of the file
             #pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
             #                                             '%s_pythia.log' % tag))
-            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            pythiare = re.compile(r"\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
             for line in misc.reverse_readline(pjoin(self.me_dir,'Events', self.run_name, 
                                                          '%s_pythia.log' % tag)):
                 info = pythiare.search(line)
@@ -5197,7 +5194,7 @@ tar -czf split_$1.tar.gz split_$1
                 self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
             else:
                 self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
-        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, f'{self.run_name}_{tag}_banner.txt')
         self.banner.write(banner_path)
 
         # Creating LHE file
@@ -5261,7 +5258,7 @@ tar -czf split_$1.tar.gz split_$1
                     if self.force:
                         args.append('-f')
                     try:
-                        self.exec_cmd('remove %s %s' % (run, ' '.join(args[1:]) ) )
+                        self.exec_cmd('remove {} {}'.format(run, ' '.join(args[1:]) ) )
                     except self.InvalidCmd as error:
                         logger.info(error)
                         pass # run already clear
@@ -5366,7 +5363,7 @@ tar -czf split_$1.tar.gz split_$1
             if tag:
                 # remove banner
                 try:
-                    os.remove(pjoin(self.me_dir, 'Events',run,'%s_%s_banner.txt' % (run,tag)))
+                    os.remove(pjoin(self.me_dir, 'Events',run,f'{run}_{tag}_banner.txt'))
                 except Exception:
                     logger.warning('fail to remove the banner')
                 # remove the run from the html output
@@ -5386,7 +5383,7 @@ tar -czf split_$1.tar.gz split_$1
                     return
         else:
             logger.info('''The banner is not removed. In order to remove it run:
-    remove %s all banner %s''' % (run, tag and '--tag=%s ' % tag or '')) 
+    remove {} all banner {}'''.format(run, tag and '--tag=%s ' % tag or '')) 
 
         # update database.
         self.results.clean(mode, run, tag)
@@ -5591,7 +5588,7 @@ tar -czf split_$1.tar.gz split_$1
             start = time.time()
             #os.system('cd %s; ./%s' % (cwd,exe))
             status = misc.call([exe] + argument, cwd=cwd, stdout=stdout, **opt)
-            logger.info('%s run in %f s' % (exe, time.time() -start))
+            logger.info(f'{exe} run in {time.time() -start:f} s')
             if status:
                 raise MadGraph5Error('%s didn\'t stop properly. Stop all computation' % exe)
 
@@ -5614,8 +5611,8 @@ tar -czf split_$1.tar.gz split_$1
                 input_files.append(self.get_pdf_input_filename())
                         
                 #Find the correct ajob
-                Gre = re.compile("\s*j=(G[\d\.\w]+)")
-                origre = re.compile("grid_directory=(G[\d\.\w]+)")
+                Gre = re.compile(r"\s*j=(G[\d\.\w]+)")
+                origre = re.compile(r"grid_directory=(G[\d\.\w]+)")
                 try : 
                     fsock = open(exe)
                 except Exception:
@@ -5623,7 +5620,7 @@ tar -czf split_$1.tar.gz split_$1
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\.\s]*) ; do")
+                    Ire = re.compile(r"for i in ([\d\.\s]*) ; do")
                     data = Ire.findall(text)
                     data = ' '.join(data).split()
                     for nb in data:
@@ -5662,7 +5659,7 @@ tar -czf split_$1.tar.gz split_$1
                 suffix = "_%s" % int(float(argument[0]))
                 if suffix == '_0':
                     suffix = ''
-                output_files = ['G%s%s' % (i, suffix) for i in argument[1:]]
+                output_files = [f'G{i}{suffix}' for i in argument[1:]]
                 for G in output_files:
                     required_output.append('%s/results.dat' % G)
 
@@ -6198,7 +6195,7 @@ tar -czf split_$1.tar.gz split_$1
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
-                    os.system('cat %s/gensudgrid%s.log >> %s' % (self.me_dir, path))
+                    os.system('cat {}/gensudgrid{}.log >> {}'.format(self.me_dir, path))
                     misc.gzip(path, stdout=issudfile)
                                      
     ############################################################################
@@ -6327,9 +6324,9 @@ tar -czf split_$1.tar.gz split_$1
                 output = pjoin(event_dir, 'syscalc.lhe')
                 stdout = open(pjoin(event_dir, self.run_name, '%s_systematics.log' % (mode)),'w')
             elif mode == 'Pythia':
-                stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w')
+                stdout = open(pjoin(event_dir, self.run_name, f'{tag}_{mode}_syscalc.log'),'w')
                 if 'mgpythiacard' in self.banner:
-                    pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
+                    pat = re.compile(r'''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
                     data = pat.search(self.banner['mgpythiacard'])
                     if data:
                         qcut = float(data.group(1))
@@ -6527,7 +6524,7 @@ class MadEventCmdShell(MadEventCmd, cmd.CmdShell):
 #===============================================================================
 # HELPING FUNCTION For Subprocesses
 #===============================================================================
-class SubProcesses(object):
+class SubProcesses:
 
     name_to_pdg = {}
 
@@ -6606,7 +6603,7 @@ class SubProcesses(object):
         for line in open(pjoin(path, 'leshouche.inc')):
             if not 'IDUP' in line:
                 continue
-            particles = re.search("/([\d,-]+)/", line)
+            particles = re.search(r"/([\d,-]+)/", line)
             all_ids.append([int(p) for p in particles.group(1).split(',')])
         return all_ids
     
@@ -6660,8 +6657,8 @@ class GridPackCmd(MadEventCmd):
 
     def write_RunWeb(self, me_dir):
         try:
-            super(GridPackCmd, self).write_RunWeb(me_dir)
-        except IOError:
+            super().write_RunWeb(me_dir)
+        except OSError:
             self.readonly  =True
 
     def write_gridcard(self, nb_event, seed, gran):
@@ -6764,8 +6761,8 @@ class GridPackCmd(MadEventCmd):
         
         precision = nb_event
 
-        self.opts = dict([(key,value[1]) for (key,value) in \
-                          self._survey_options.items()])
+        self.opts = {key:value[1] for (key,value) in \
+                          self._survey_options.items()}
         
         # initialize / remove lhapdf mode
         # self.configure_directory() # All this has been done before
@@ -6886,7 +6883,7 @@ class GridPackCmd(MadEventCmd):
         if not os.path.exists(pjoin(outdir, self.run_name)):
                 os.mkdir(pjoin(outdir, self.run_name))
         self.banner.write(pjoin(outdir, self.run_name, 
-                                '%s_%s_banner.txt' % (self.run_name, tag)))
+                                f'{self.run_name}_{tag}_banner.txt'))
         
         get_wgt = lambda event: event.wgt            
         AllEvent = lhe_parser.MultiEventFile()
@@ -6945,7 +6942,7 @@ class GridPackCmd(MadEventCmd):
             self.correct_bias()
 
 
-class MadLoopInitializer(object):
+class MadLoopInitializer:
     """ A container class for the various methods for initializing MadLoop. It is
     placed in MadEventInterface because it is used by Madevent for loop-induced 
     simulations. """
@@ -7031,7 +7028,7 @@ class MadLoopInitializer(object):
             raise MadGraph5Error('Could not find the location of check_sa.f'+\
                                   ' from the specified path %s.'%str(file_path))    
 
-        file = open(file_path, 'r')
+        file = open(file_path)
         check_sa = file.read()
         file.close()
         
@@ -7132,7 +7129,7 @@ class MadLoopInitializer(object):
 
         def need_init():
             """ True if init not done yet."""
-            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'))
             proc_prefix = proc_prefix_file.read()
             proc_prefix_file.close()
             return any([not os.path.exists(pjoin(run_dir,'MadLoop5_resources',
@@ -7227,7 +7224,7 @@ class MadLoopInitializer(object):
             if not os.path.isdir(v_folder) or not os.path.isfile(\
                                                pjoin(v_folder,'loop_matrix.f')):
                 continue
-            proc_prefix_file = open(pjoin(v_folder,'proc_prefix.txt'),'r')
+            proc_prefix_file = open(pjoin(v_folder,'proc_prefix.txt'))
             proc_prefix = proc_prefix_file.read()
             proc_prefix_file.close()
             if need_init(pjoin(proc_dir,'SubProcesses','MadLoop5_resources'),

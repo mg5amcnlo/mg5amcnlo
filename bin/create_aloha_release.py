@@ -31,9 +31,7 @@ following actions:
 6. tar the ALOHA_vVERSION directory.
 """
 
-from __future__ import absolute_import
 import sys
-from six.moves import input
 import glob
 import optparse
 import logging

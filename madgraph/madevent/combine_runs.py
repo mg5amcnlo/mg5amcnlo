@@ -16,13 +16,10 @@
      split into multiple jobs. Multi-job channels are identified
      by local file mjobs.dat in the channel directory.
 """
-from __future__ import division
-from __future__ import absolute_import
 import math
 import os
 import re
 import logging
-from six.moves import range
 
 try:
     import madgraph
@@ -59,7 +56,7 @@ def get_inc_file(path):
             out[name] = orig_value
     return out
 
-class CombineRuns(object):
+class CombineRuns:
     
     def __init__(self, me_dir, subproc=None):
         
@@ -91,7 +88,7 @@ class CombineRuns(object):
             return
         results = sum_html.Combine_results(channel)
         if njobs:
-            logger.debug('find %s multijob in %s' % (njobs, channel))
+            logger.debug(f'find {njobs} multijob in {channel}')
         else:
             return
         for i in range(njobs):
@@ -112,7 +109,7 @@ class CombineRuns(object):
         fsock.write('--------------------- Multi run with %s jobs. ---------------------\n'
                     % njobs)
         for r in results:
-            fsock.write('job %s : %s %s +- %s %s\n' % (r.name, r.xsec, r.axsec,\
+            fsock.write('job {} : {} {} +- {} {}\n'.format(r.name, r.xsec, r.axsec,\
                                                        r.xerru, r.nunwgt))  
             
         #Now read in all of the events and write them
@@ -157,7 +154,7 @@ class CombineRuns(object):
                     sign = ''
                 else:
                     sign = '-'  
-                line= ' %s  %s%s  %s\n' % ('   '.join(data[:2]), sign,
+                line= ' {}  {}{}  {}\n'.format('   '.join(data[:2]), sign,
                                            new_wgt, '  '.join(data[3:]))
             fsock.write(line)
             old_line = line
@@ -184,7 +181,7 @@ class CombineRuns(object):
                 if xi == k:
                     dirname = 'G%i' % k
                 else:
-                    dirname = 'G%.{0}f'.format(ncode) % xi
+                    dirname = f'G%.{ncode}f' % xi
                 channels.append(os.path.join(proc_path,dirname))
         return channels
     

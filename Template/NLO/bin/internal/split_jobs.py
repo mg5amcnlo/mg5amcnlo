@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 #  MZ, 2012-06-14
-from __future__ import absolute_import
 import os
 import sys
 import tarfile
-from six.moves import range
-from six.moves import input
 
 class SplitJobsError(Exception):
     pass
@@ -83,7 +80,7 @@ while True:
 splitted_lines = []
 tot_events = 0
 
-dirs = set([j['dir'] for j in jobs])
+dirs = {j['dir'] for j in jobs}
 tar_dict = {}
 for dir in dirs:
     tar_dict[dir] = tarfile.open(os.path.join(dir, 'nevents.tar'),'w')

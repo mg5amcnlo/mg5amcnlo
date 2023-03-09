@@ -16,9 +16,7 @@
 """Module for the handling of histograms, including Monte-Carlo error per bin
 and scale/PDF uncertainties."""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -34,11 +32,8 @@ import xml.dom.minidom as minidom
 from xml.parsers.expat import ExpatError as XMLParsingError
 import six
 StringIO = six
-from six.moves import range
-from six.moves import zip
 import io
-if six.PY3:
-    file = io.IOBase
+file = io.IOBase
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 
@@ -107,7 +102,7 @@ class histograms_PhysicsObjectList(list):
         return mystr + ']'
 #===============================================================================
 
-class Bin(object):
+class Bin:
     """A class to store Bin related features and function.
     """
   
@@ -145,7 +140,7 @@ class Bin(object):
                     raise MadGraph5Error("The bin weight value '%s' is not a "+\
                                                                  "float."%str(val))   
    
-        super(Bin, self).__setattr__(name,value)
+        super().__setattr__(name,value)
         
     def get_weight(self, key='central'):
         """ Accesses a specific weight from this bin."""
@@ -259,10 +254,10 @@ class BinList(histograms_PhysicsObjectList):
             while current < bin_range[1]:
                 self.append(Bin(boundaries =
                             (current, min(current+bin_range[2],bin_range[1])),
-                            wgts = dict((wgt,0.0) for wgt in self.weight_labels)))
+                            wgts = {wgt:0.0 for wgt in self.weight_labels}))
                 current += bin_range[2]
         else:
-            super(BinList, self).__init__(list)
+            super().__init__(list)
 
     def is_valid_element(self, obj):
         """Test whether specified object is of the right type for this list."""
@@ -294,12 +289,12 @@ class BinList(histograms_PhysicsObjectList):
            ' can be a tuple, but its elements past the first one must be either floats, integers or strings')
                                 
    
-        super(BinList, self).__setattr__(name, value)    
+        super().__setattr__(name, value)    
             
     def append(self, object):
         """Appends an element, but test if valid before."""
         
-        super(BinList,self).append(object)    
+        super().append(object)    
         # Assign the weight labels to those of the first bin added
         if len(self)==1 and self.weight_labels is None:
             self.weight_labels = list(object.wgts.keys())
@@ -317,7 +312,7 @@ class BinList(histograms_PhysicsObjectList):
         
         return '\n'.join(res)
 
-class Histogram(object):
+class Histogram:
     """A mother class for all specific implementations of Histogram conventions
     """
     
@@ -377,7 +372,7 @@ class Histogram(object):
                   " must be in [%s], ('%s' given)"%(str(self.allowed_axis_modes),
                                                                      str(value)))
                                         
-        super(Histogram, self).__setattr__(name,value)
+        super().__setattr__(name,value)
     
     def nice_string(self, short=True):
         """ Nice representation of this histogram. """
@@ -632,34 +627,34 @@ class HwU(Histogram):
     # than necessary because the HwU standard allows for spaces from within
     # the name of a weight
     weight_header_re = re.compile(
-                       '&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
+                       r'&\s*(?P<wgt_name>(\S|(\s(?!\s*(&|$))))+)(\s(?!(&|$)))*')
     
     # ================================
     #  Histo weight specification RE's
     # ================================
     # The start of a plot
-    histo_start_re = re.compile('^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
-                                   '(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
+    histo_start_re = re.compile(r'^\s*<histogram>\s*(?P<n_bins>\d+)\s*"\s*'+
+                                   r'(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
     # A given weight specifier
-    a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+    a_float_re = r'[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
     histo_bin_weight_re = re.compile('(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
-    a_int_re = '[\+|-]?\d+'
+    a_int_re = r'[\+|-]?\d+'
     
     # The end of a plot
     histo_end_re = re.compile(r'^\s*<\\histogram>\s*$')
     # A scale type of weight
-    weight_label_scale = re.compile('^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                   '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_PDF_XML = re.compile('^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
-    weight_label_TMS = re.compile('^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
-    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
+    weight_label_scale = re.compile(r'^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                   r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_PDF_XML = re.compile(r'^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_TMS = re.compile(r'^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
+    weight_label_alpsfact = re.compile(r'^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
                                                                   re.IGNORECASE)
 
-    weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
-                                        '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
-                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
+    weight_label_scale_adv = re.compile(r'^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
+                                        r'\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                                        r'\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF_adv = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
     
     class ParseError(MadGraph5Error):
@@ -699,14 +694,14 @@ class HwU(Histogram):
         histogram data with no treatment of the weight labels at all
         (this is used for the matplotlib output)."""
         
-        super(HwU, self).__init__(**opts)
+        super().__init__(**opts)
 
         self.dimension = 2
         
         if file_path is None:
             return
         elif isinstance(file_path, str):
-            stream = open(file_path,'r')
+            stream = open(file_path)
         elif isinstance(file_path, io.IOBase):
             stream = file_path
         elif isinstance(file_path, file):
@@ -926,7 +921,7 @@ class HwU(Histogram):
                 res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)))
             res[-1] += ' '.join('%+16.7e'%bin.wgts[key] for key in 
                 self.bins.weight_labels if key not in ['central','stat_error'])
-        res.append('<\histogram>')
+        res.append(r'<\histogram>')
         return res
     
     def output(self, path=None, format='HwU', print_header=True):
@@ -1368,9 +1363,9 @@ class HwU(Histogram):
         for i,label in enumerate(label_to_consider):
             wgts=wgts_to_consider[i]
             if label != 'none':
-                new_wgt_labels=['%s_cen %s @aux' % (new_wgt_label,label),
-                                '%s_min %s @aux' % (new_wgt_label,label),
-                                '%s_max %s @aux' % (new_wgt_label,label)]
+                new_wgt_labels=[f'{new_wgt_label}_cen {label} @aux',
+                                f'{new_wgt_label}_min {label} @aux',
+                                f'{new_wgt_label}_max {label} @aux']
             else:
                 new_wgt_labels=['%s_cen @aux' % new_wgt_label,
                                 '%s_min @aux' % new_wgt_label,
@@ -1670,11 +1665,11 @@ class HwUList(histograms_PhysicsObjectList):
         """
         
         if isinstance(file_path, str):
-            stream = open(file_path,'r')
+            stream = open(file_path)
         elif isinstance(file_path, file):
             stream = file_path
         else:
-            return super(HwUList,self).__init__(file_path, **opts)
+            return super().__init__(file_path, **opts)
 
         try:
             # Try to read it in XML format
@@ -1777,8 +1772,8 @@ class HwUList(histograms_PhysicsObjectList):
         function get_HwU_wgt_label_type()."""
         
         run_nodes = minidom.parse(stream).getElementsByTagName("run")
-        all_nodes = dict((int(node.getAttribute('id')),node) for
-                                                              node in run_nodes)
+        all_nodes = {int(node.getAttribute('id')):node for
+                                                              node in run_nodes}
         selected_run_node = None
         weight_header     = None
         if run_id is None:
@@ -1803,7 +1798,7 @@ class HwUList(histograms_PhysicsObjectList):
             # Filter empty weights coming from the split
             weight_label_list = [wgt.strip() for wgt in 
                 str(selected_run_node.getAttribute('header')).split(';') if
-                                                      not re.match('^\s*$',wgt)]
+                                                      not re.match(r'^\s*$',wgt)]
             ordered_weight_label_list = [w for w in weight_label_list if w not\
                                                              in ['xmin','xmax']]
             # Remove potential repetition of identical weight labels
@@ -1812,10 +1807,10 @@ class HwUList(histograms_PhysicsObjectList):
                 if wgt_label not in filtered_ordered_weight_label_list:
                     filtered_ordered_weight_label_list.append(wgt_label)
     
-            selected_weights = dict([ (wgt_pos, 
-             [wgt if wgt not in ['xmin','xmax'] else HwU.mandatory_weights[wgt]])
+            selected_weights = { wgt_pos: 
+             [wgt if wgt not in ['xmin','xmax'] else HwU.mandatory_weights[wgt]]
                  for wgt_pos, wgt in enumerate(weight_label_list) if wgt in 
-                            filtered_ordered_weight_label_list+['xmin','xmax']])
+                            filtered_ordered_weight_label_list+['xmin','xmax']}
 
             return self.retrieve_plots_from_XML_source(selected_run_node,
                    selected_weights, filtered_ordered_weight_label_list,
@@ -1827,7 +1822,7 @@ class HwUList(histograms_PhysicsObjectList):
         all_weights = []
         for wgt_position, wgt_label in \
             enumerate(str(selected_run_node.getAttribute('header')).split(';')):
-            if not re.match('^\s*$',wgt_label) is None:
+            if not re.match(r'^\s*$',wgt_label) is None:
                 continue
             all_weights.append({'POSITION':wgt_position})
             for wgt_item in wgt_label.strip().split('_'):
@@ -1892,7 +1887,7 @@ class HwUList(histograms_PhysicsObjectList):
             # automatically considered as the Event weight (central) for which
             # only the merging scale can be different
             if 'Weight' in weight:
-                return set([])
+                return set()
             if weight['MUR'] not in [central_MUR, -1.0] or \
                weight['MUF'] not in [central_MUF, -1.0]:
                 differences.append('mur_muf_scale')
@@ -1939,7 +1934,7 @@ class HwUList(histograms_PhysicsObjectList):
             for weight_position, weight in enumerate(all_weights):
                 # Check if that weight corresponds to a central weight 
                 # (conventional label for central weight is 'Weight'
-                if get_difference_to_central(weight)==set([]):
+                if get_difference_to_central(weight)==set():
                     # Check if the merging scale matches this time
                     if weight['MERGING']==merging_scale_chosen:
                         selected_weights[weight_position] = ['central value']
@@ -1973,13 +1968,13 @@ class HwUList(histograms_PhysicsObjectList):
             # the PDF used for the Event weight is often unknown but the
             # mu_r and mu_f variational weight specify it. Same story for
             # alpsfact.
-            if variations in [set(['mur_muf_scale']),set(['pdf','mur_muf_scale'])]:
+            if variations in [{'mur_muf_scale'},{'pdf','mur_muf_scale'}]:
                 wgt_label = ('scale',weight['MUR'],weight['MUF'])
-            if variations in [set(['ALPSFACT']),set(['pdf','ALPSFACT'])]:
+            if variations in [{'ALPSFACT'},{'pdf','ALPSFACT'}]:
                 wgt_label = ('alpsfact',weight['ALPSFACT'])
-            if variations == set(['pdf']):
+            if variations == {'pdf'}:
                 wgt_label = ('pdf',weight['PDF'])             
-            if variations == set([]):
+            if variations == set():
                 # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
 
@@ -1990,7 +1985,7 @@ class HwUList(histograms_PhysicsObjectList):
                     continue
                 # Otherwise consider them also, but for now only if it is for
                 # the central value parameter (central PDF, central mu_R and mu_F)
-                if variations == set([]):
+                if variations == set():
                     # We choose to store the merging variation weight labels as floats
                     wgt_label = ('merging_scale', weight['MERGING'])
             # Make sure that the weight label does not already exist. If it does,
@@ -2714,7 +2709,7 @@ set key invert
 
         # First the global gnuplot header for this histogram group
         global_header =\
-"""
+r"""
 ################################################################################
 ### Rendering of the plot titled '%(title)s'
 ################################################################################
@@ -2862,9 +2857,9 @@ plot \\"""
                 major_title = ', '.join(major_title)                    
             
             if not mu[0] in ['none',None]:
-                major_title += ', dynamical\_scale\_choice=%s'%mu[0]
+                major_title += r', dynamical\_scale\_choice=%s'%mu[0]
             if not pdf[0] in ['none',None]:
-                major_title += ', PDF=%s'%pdf[0].replace('_','\_')
+                major_title += ', PDF=%s'%pdf[0].replace('_',r'\_')
 
             # Do not show uncertainties for individual jet samples (unless first
             # or specified explicitely and uniquely)
@@ -2937,7 +2932,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var+3,color_index,\
-'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
+fr'{title} dynamical\_scale\_choice={mu[j]}'))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
@@ -2947,7 +2942,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
-'%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
+'{} PDF={}'.format(title,pdf[j].replace('_',r'\_'))))
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines

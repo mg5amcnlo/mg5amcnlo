@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from __future__ import absolute_import
-from six.moves import input
 def giveInfo(class_):
         if type(class_)!=str:
                 class_=class_.__class__.__name__

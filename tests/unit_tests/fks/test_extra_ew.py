@@ -12,9 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 from cmd import Cmd
-from six.moves import zip
 """ Basic test of the command interface """
 
 import unittest
@@ -1111,7 +1109,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             return save_load_object.load_from_file(pjoin(root_path,'input_files',save_name))
         else:
             self.interface.do_import('model %s'%model_name)
-            print(( "Regenerating %s ..."%process_def))
+            print( "Regenerating %s ..."%process_def)
             self.interface.do_generate(process_def)
             proc = copy.copy(self.interface._fks_multi_proc)
             me = fks_helas.FKSHelasMultiProcess(proc)['matrix_elements'][0]

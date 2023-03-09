@@ -15,7 +15,6 @@
 
 """Unit test library for the import v4 format routines"""
 
-from __future__ import absolute_import
 import six
 StringIO = six
 import copy
@@ -27,7 +26,6 @@ import madgraph.iolibs.import_v4 as import_v4
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
-from six.moves import range
 import re
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -248,7 +246,7 @@ class IOImportV4Test(unittest.TestCase):
         model_path = 'sm_v4'
         model = import_v4.import_model(model_path)[0]
         self.assertEqual(set(model.get('coupling_orders')),
-                         set(['QCD', 'QED']))
+                         {'QCD', 'QED'})
         self.assertEqual(model.get('order_hierarchy'),
                          {'QCD': 1, 'QED': 2})
         self.assertEqual(model.get('expansion_order'),
@@ -287,8 +285,8 @@ class ProcCardV4ReaderTest(unittest.TestCase):
         self.assertEqual(proccard.model, 'sm')
         self.assertEqual(len(proccard.multipart), 6)
         # Check that multiparticles are already loaded
-        self.assertEqual(proccard.particles_name, set(
-                                           ['l-', 'j', 'vl', 'l+', 'p', 'vl~']))
+        self.assertEqual(proccard.particles_name, {
+                                           'l-', 'j', 'vl', 'l+', 'p', 'vl~'})
         self.assertEqual(proccard.couplings_name, set())
         
     def test_line_creation(self):
@@ -316,10 +314,10 @@ class ProcCardV4ReaderTest(unittest.TestCase):
             try:
                 self.assertEqual(command,solution[i])
             except:
-                if re.match('QCD=\d+ QED=\d+', command):
-                    qcd, qed =re.findall('QCD=(\d+) QED=(\d+)')
-                    sol = solution[i].replace('QCD=%s QED=%s' % (qcd,qed), 
-                                              'QED=%s QCD=%s' % (qed,qcd))
+                if re.match(r'QCD=\d+ QED=\d+', command):
+                    qcd, qed =re.findall(r'QCD=(\d+) QED=(\d+)')
+                    sol = solution[i].replace(f'QCD={qcd} QED={qed}', 
+                                              f'QED={qed} QCD={qcd}')
                     self.assertEqual(command,sol)
                 
                 

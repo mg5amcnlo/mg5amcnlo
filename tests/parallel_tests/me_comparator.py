@@ -17,7 +17,6 @@ generators (e.g., MG v5 against v4, ...) and output nice reports in different
 formats (txt, tex, ...).
 """
 
-from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -46,7 +45,7 @@ import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error, MG5DIR
 
-class MERunner(object):
+class MERunner:
     """Base class to containing default function to setup, run and access results
     produced with a specific ME generator. 
     """
@@ -146,19 +145,19 @@ class MG4Runner(MERunner):
         # Create a copy of Template
         if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
-            raise IOError("Path %s is not a valid MG4 path" % str(mg4_path))
+            raise OSError("Path %s is not a valid MG4 path" % str(mg4_path))
 
         self.mg4_path = os.path.abspath(mg4_path)
 
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg4_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
+                                              f"ptest_{self.type}_{i}")):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = f"ptest_{self.type}_{i}"         
 
         if os.path.exists(os.path.join(mg4_path, temp_dir)):
-            raise IOError("Path %s for test already exist" % \
+            raise OSError("Path %s for test already exist" % \
                                     str(os.path.join(mg4_path, temp_dir)))
 
         misc.copytree(os.path.join(mg4_path, 'Template'),
@@ -183,7 +182,7 @@ class MG4Runner(MERunner):
 
         if not os.path.isdir(os.path.join(mg4_path, "Template")) or \
                not os.path.isdir(os.path.join(mg4_path, "HELAS")):
-            raise IOError("Path %s is not a valid MG4 path" % str(mg4_path))
+            raise OSError("Path %s is not a valid MG4 path" % str(mg4_path))
 
     def cleanup(self):
         """Clean up temporary directories"""
@@ -287,7 +286,7 @@ class MG4Runner(MERunner):
             logging.info("Directory hasn't been created for process %s" % (proc))
             return ((0.0, 0), [])
 
-        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        logging.info(f"Working on process {proc} in dir {shell_name}")
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
         # Run make
@@ -307,7 +306,7 @@ class MG4Runner(MERunner):
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
             return self.parse_check_output(output.read().decode())
             output.close()
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0), [])
 
@@ -346,7 +345,7 @@ class MG4Runner(MERunner):
         for check_sa_path in glob.glob(\
                        os.path.join(dir_name, 'SubProcesses','*','check_sa.f')):
 
-            file = open(check_sa_path, 'r')
+            file = open(check_sa_path)
             check_sa = file.read()
             file.close()
     
@@ -371,9 +370,9 @@ class MG5Runner(MG4Runner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg4_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
+                                              f"ptest_{self.type}_{i}")):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = f"ptest_{self.type}_{i}"         
 
         self.temp_dir_name = temp_dir
 
@@ -402,7 +401,7 @@ class MG5Runner(MG4Runner):
 
         # Run mg5
         logging.info("Running mg5")
-        proc_card = open(proc_card_location, 'r').read()
+        proc_card = open(proc_card_location).read()
         new_proc_list = []
         cmd = cmd_interface.MasterCmd()
         cmd.no_notification()
@@ -519,9 +518,9 @@ class MG5OldRunner(MG5Runner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(MG5DIR, 
-                                              "ptest_%s_%s" % (self.type, i))):
+                                              f"ptest_{self.type}_{i}")):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = f"ptest_{self.type}_{i}"         
         self.temp_dir_name = temp_dir    
 
     def run(self, proc_list, model, orders={}, energy=1000):
@@ -627,7 +626,7 @@ class MG5_CPP_Runner(MG5Runner):
         """Replace the hard coded collision energy in check_sa.f by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'r')
+        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'))
         check_sa = file.read()
         file.close()
 
@@ -693,7 +692,7 @@ class PickleRunner(MERunner):
 
             return object_list
 
-        raise IOError("Path %s is not valid pickle directory" % \
+        raise OSError("Path %s is not valid pickle directory" % \
               str(pickle_path))
 
     @staticmethod
@@ -713,7 +712,7 @@ class PickleRunner(MERunner):
 
         logging.info("Stored comparison object in %s" % pickle_path)
 
-class MEComparator(object):
+class MEComparator:
     """Base object to run comparison tests. Take standard MERunner objects and
     a list of proc as an input and return detailed comparison tables in various
     formats."""
@@ -733,7 +732,7 @@ class MEComparator(object):
     def run_comparison(self, proc_list, model='sm', orders={}, energy=1000):
         """Run the codes and store results."""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []

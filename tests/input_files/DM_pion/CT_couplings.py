@@ -3,7 +3,6 @@
 # Date: Thu 11 Jun 2015 17:39:54
 
 
-from __future__ import absolute_import
 
 import object_library
 Coupling = object_library.Coupling

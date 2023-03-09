@@ -15,9 +15,7 @@
 """Module to allow reading a param_card and setting all parameters and
 couplings for a model"""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import array
 import cmath
 import copy
@@ -55,7 +53,7 @@ class ModelReader(loop_base_objects.LoopModel):
         """The particles is changed to ParticleList"""
         self['coupling_dict'] = {}
         self['parameter_dict'] = {}
-        super(ModelReader, self).default_setup()
+        super().default_setup()
 
     def set_parameters_and_couplings(self, param_card = None, scale=None,
                                                       complex_mass_scheme=None,
@@ -79,7 +77,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     dictionary = {}
                     parameter_dict[param.lhablock.lower()] = dictionary
                 dictionary[tuple(param.lhacode)] = param
-            if isinstance(param_card, six.string_types):
+            if isinstance(param_card, str):
                 # Check that param_card exists
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error("No such file %s" % param_card)
@@ -112,9 +110,9 @@ class ModelReader(loop_base_objects.LoopModel):
                 
     
                 msg = '''Invalid restriction card (not same block)
-    %s != %s.
-    Missing block: %s
-    Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
+    {} != {}.
+    Missing block: {}
+    Unknown block : {}'''.format(set(key), set(parameter_dict.keys()),
                              missing_block, unknow_block)
                 apply_conversion = []
                 
@@ -131,7 +129,7 @@ class ModelReader(loop_base_objects.LoopModel):
                     else:
                         apply_conversion.append('to_slha2')
                         overwrite = False
-                elif missing_set == set(['fralpha']) and 'alpha' in unknow_set:
+                elif missing_set == {'fralpha'} and 'alpha' in unknow_set:
                     apply_conversion.append('alpha')
                 elif  self.need_slha2(missing_set, unknow_set):
                     apply_conversion.append('to_slha2')
@@ -180,7 +178,7 @@ class ModelReader(loop_base_objects.LoopModel):
                         if block == 'loop':
                             value = param_card['mass'].get(23).value
                         else:
-                            raise MadGraph5Error('%s %s not define' % (block, pid))
+                            raise MadGraph5Error(f'{block} {pid} not define')
 
                     if isinstance(value, str) and value.lower() == 'auto':
                         value = '0.0' 
@@ -199,7 +197,7 @@ class ModelReader(loop_base_objects.LoopModel):
                             else:
                                 raise
                             
-                    exec("locals()[\'%s\'] = %s" % (parameter_dict[block][pid].name,
+                    exec("locals()[\'{}\'] = {}".format(parameter_dict[block][pid].name,
                                           value))
                     parameter_dict[block][pid].value = float(value)
            
@@ -209,12 +207,12 @@ class ModelReader(loop_base_objects.LoopModel):
                 if scale and parameter_dict[block][id].name == 'aS':
                     runner = Alphas_Runner(value, nloop=3)
                     value = runner(scale)
-                exec("locals()[\'%s\'] = %s" % (param.name, param.value))
+                exec(f"locals()[\'{param.name}\'] = {param.value}")
 
             
         # Define all functions used
         for func in self['functions']:
-            exec("def %s(%s):\n   return %s" % (func.name,
+            exec("def {}({}):\n   return {}".format(func.name,
                                                 ",".join(func.arguments),
                                                 func.expr))
 
@@ -229,13 +227,13 @@ class ModelReader(loop_base_objects.LoopModel):
         # Now calculate derived parameters
         for param in derived_parameters:
             try:
-                exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
+                exec(f"locals()[\'{param.name}\'] = {param.expr}")
             except Exception as error:
-                msg = 'Unable to evaluate %s = %s: raise error: %s' % (param.name,param.expr, error)
+                msg = f'Unable to evaluate {param.name} = {param.expr}: raise error: {error}'
                 raise MadGraph5Error(msg)
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:
-                logger.warning("%s has no expression: %s" % (param.name,
+                logger.warning("{} has no expression: {}".format(param.name,
                                                              param.expr))
 
         # Correct width sign for Majorana particles (where the width
@@ -252,22 +250,22 @@ class ModelReader(loop_base_objects.LoopModel):
         # Now calculate all couplings
         for coup in couplings:
             #print "I execute %s = %s"%(coup.name, coup.expr)
-            exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
+            exec(f"locals()[\'{coup.name}\'] = {coup.expr}")
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:
-                logger.warning("%s has no expression: %s" % (coup.name,
+                logger.warning("{} has no expression: {}".format(coup.name,
                                                              coup.expr))
 
         # Set parameter and coupling dictionaries
-        self.set('parameter_dict', dict([(param.name, param.value) \
+        self.set('parameter_dict', {param.name: param.value \
                                         for param in external_parameters + \
-                                         derived_parameters]))
+                                         derived_parameters})
 
         # Add "zero"
         self.get('parameter_dict')['ZERO'] = complex(0.)
 
-        self.set('coupling_dict', dict([(coup.name, coup.value) \
-                                        for coup in couplings]))
+        self.set('coupling_dict', {coup.name: coup.value \
+                                        for coup in couplings})
         
         return locals()
     
@@ -291,7 +289,7 @@ class ModelReader(loop_base_objects.LoopModel):
         return all([b in missing_set for b in ['te','msl2','dsqmix','tu','selmix','msu2','msq2','usqmix','td', 'mse2','msd2']]) and\
                      all(b in unknow_set for b in ['ae','ad','sbotmix','au','modsel','staumix','stopmix'])
     
-class Alphas_Runner(object):
+class Alphas_Runner:
     """Evaluation of strong coupling constant alpha_S"""
     #     Author: Olivier Mattelaer translated from a fortran routine 
     #     written by R. K. Ellis

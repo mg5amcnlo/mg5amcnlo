@@ -1,10 +1,6 @@
-
-
-from __future__ import absolute_import
 import re
 import sys
 import string
-from six.moves import range
 
 
 try: 
@@ -51,7 +47,7 @@ class Decay_info:
 
     def read_config(self, file_name, mglabel2pid_dic):
         print(file_name)
-        trappe=open(file_name, 'r')
+        trappe=open(file_name)
         buff=trappe.readline()
         res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[\_a-zA-Z0-9]*)\s*(?P<width>[\_a-zA-Z0-9]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
 

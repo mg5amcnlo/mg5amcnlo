@@ -12,9 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
 
-from __future__ import absolute_import
 import madgraph.various.histograms as histograms
 import os
 import unittest
@@ -38,15 +36,15 @@ class IOTest_Histogram(IOTests.IOTestManager):
         # run in an external version of python due to potential segfault
         line='''if 1:
           import os,sys;
-          sys.path=%s;
-          _file_path = '%s';
+          sys.path={};
+          _file_path = '{}';
           _HwU_source = os.path.join(_file_path,'input_files','MADatNLO.HwU')
           pjoin = os.path.join
 
           import madgraph.various.histograms as histograms;
           histo_list = histograms.HwUList(_HwU_source);
-          histo_list.output(pjoin('%s','HistoOut'), format = 'gnuplot');
-        ''' % (sys.path, _file_path, self.IOpath)
+          histo_list.output(pjoin('{}','HistoOut'), format = 'gnuplot');
+        '''.format(sys.path, _file_path, self.IOpath)
 
         os.system('echo "%s" | python' % line) 
 

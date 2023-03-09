@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from . import particles
 from . import couplings
 from . import lorentz

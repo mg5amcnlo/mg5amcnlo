@@ -16,7 +16,6 @@
 """Unit test library for the routines of the core library related to writing
 color information for diagrams."""
 
-from __future__ import absolute_import
 import copy
 import fractions
 
@@ -27,7 +26,6 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 
 import tests.unit_tests as unittest
-from six.moves import range
 
 class ColorAmpTest(unittest.TestCase):
     """Test class for the color_amp module"""
@@ -96,8 +94,8 @@ class ColorAmpTest(unittest.TestCase):
                       'color':1,
                       'mass':'zero',
                       'width':'zero',
-                      'texname':'\gamma',
-                      'antitexname':'\gamma',
+                      'texname':r'\gamma',
+                      'antitexname':r'\gamma',
                       'line':'wavy',
                       'charge':0.,
                       'pdg_code':22,

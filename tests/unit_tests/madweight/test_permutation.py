@@ -13,7 +13,6 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import unittest
 import madgraph.madweight.MW_fct as permutation
 
@@ -111,7 +110,7 @@ class TestPermutation(unittest.TestCase):
         self.assertEqual(len(output), 720)
         for i,sol in enumerate(output):
             self.assertFalse(sol in output[:i])         
-            self.assertEqual(set(sol), set([1,2,3,4,5,6]))
+            self.assertEqual(set(sol), {1,2,3,4,5,6})
         
         # generate p p > t1 t1~ , ( t1 > t n1 , ( t > b w+ , w+ > j j ) ), ( t1~ > t~ n1 , ( t~ > b~ w- , w- > mu- vm~ ) )
         # tt~ ful

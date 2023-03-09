@@ -13,9 +13,7 @@
 #
 ################################################################################
 """Unit test Library for importing and restricting model"""
-from __future__ import division
 
-from __future__ import absolute_import
 import copy
 import os
 import sys
@@ -33,8 +31,6 @@ import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.misc as misc
 import six
-from six.moves import range
-from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
@@ -45,7 +41,7 @@ import cmath
 # UFO CLASS SINCE THEY WILL BE USEFULL!
 #
 
-class UFOBaseClass(object):
+class UFOBaseClass:
     """The class from which all FeynRules classes are derived."""
 
     require_args = []
@@ -162,7 +158,7 @@ class Particle(UFOBaseClass):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
-        for k,v in six.iteritems(self.__dict__):
+        for k,v in self.__dict__.items():
             if k not in self.require_args_all:                
                 outdic[k] = -v
         if self.color in [1,8]:
@@ -245,7 +241,7 @@ class Lorentz(UFOBaseClass):
 
 all_functions = []
 
-class Function(object):
+class Function:
 
     def __init__(self, name, arguments, expression):
 
@@ -259,13 +255,13 @@ class Function(object):
     def __call__(self, *opt):
 
         for i, arg in enumerate(self.arguments):
-            exec('%s = %s' % (arg, opt[i] ))
+            exec(f'{arg} = {opt[i]}')
 
         return eval(self.expr)
 
 all_orders = []
 
-class CouplingOrder(object):
+class CouplingOrder:
 
     def __init__(self, name, expansion_order, hierarchy, perturbative_expansion = 0):
         
@@ -303,7 +299,7 @@ class FormFactor(UFOBaseClass):
         global all_form_factors
         all_form_factors.append(self)
 
-class Model(object):
+class Model:
     """ """
     def __init__(self):
         global all_form_factors, all_particles, all_decays,all_orders, all_functions,\

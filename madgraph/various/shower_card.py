@@ -14,12 +14,10 @@
 ################################################################################
 """A File for splitting"""
 
-from __future__ import absolute_import
 import sys
 import re
 import os
 import logging
-from six.moves import range
 
 try:
     import madgraph
@@ -151,13 +149,13 @@ class ShowerCard(dict):
             except InvalidCmd as error:
                 raise ShowerCardError(str(error))
         else:
-            raise ShowerCardError('Unknown entry: %s = %s' % (key, value))
+            raise ShowerCardError(f'Unknown entry: {key} = {value}')
         self.keylist.append(key)
 
         #then update self.text and write the new card
         if write_to:
-            logger.info('modify parameter %s of the shower_card.dat to %s' % (key, value))
-            key_re = re.compile('^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
+            logger.info(f'modify parameter {key} of the shower_card.dat to {value}')
+            key_re = re.compile(r'^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
             newlines = []
             for line in self.text.split('\n'):
                 key_match = key_re.match(line)
@@ -167,20 +165,20 @@ class ShowerCard(dict):
                     except:
                         comment = ''
                     if key not in self.logical_vars:
-                        newlines.append('%s = %s #%s' % (key, value, comment))
+                        newlines.append(f'{key} = {value} #{comment}')
                     else:
 
                         if self[key]:
-                            newlines.append('%s = %s #%s' % (key, 'T', comment))
+                            newlines.append('{} = {} #{}'.format(key, 'T', comment))
                         else:
-                            newlines.append('%s = %s #%s' % (key, 'F', comment))
+                            newlines.append('{} = {} #{}'.format(key, 'F', comment))
                 elif key_match and ( str(key).upper().startswith('DM') ):
                     pass
                 else:
                     newlines.append(line)
 
             if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
-                newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
+                newlines.append(f'{str(key).upper()} = {value[0:len(value)]}')
                 logger.info('please specify a decay through set DM_1 decay; see shower_card.dat for details')
                 
             self.text = '\n'.join(newlines) + '\n'
@@ -225,7 +223,7 @@ class ShowerCard(dict):
                         except KeyError:
                             pass
                     try:
-                        line = '%s="%s"' % (self.names_dict[key][self.shower].upper(), value)
+                        line = f'{self.names_dict[key][self.shower].upper()}="{value}"'
                         lines.append(line)
                         continue
                     except KeyError:
@@ -235,7 +233,7 @@ class ShowerCard(dict):
                 else:
                     value = '"%s"' % value
 
-                line = '%s=%s' % (key.upper(), value)
+                line = f'{key.upper()}={value}'
                 lines.append(line)
                 continue
             elif key in self.int_vars:
@@ -243,9 +241,9 @@ class ShowerCard(dict):
             elif key in self.float_vars:
                 value = '%4.3f' % value
             else:
-                raise ShowerCardError('Unknown key: %s = %s' % (key, value))
+                raise ShowerCardError(f'Unknown key: {key} = {value}')
             try:
-                line = '%s=%s' % (self.names_dict[key][self.shower].upper(), value.upper())
+                line = f'{self.names_dict[key][self.shower].upper()}={value.upper()}'
                 lines.append(line)
             except KeyError:
                 pass
@@ -253,5 +251,5 @@ class ShowerCard(dict):
         if self.testing:
             return ('\n'.join(lines) + '\n')
         else:
-            open(card_path, 'w').write(('\n'.join(lines) + '\n'))
+            open(card_path, 'w').write('\n'.join(lines) + '\n')
 

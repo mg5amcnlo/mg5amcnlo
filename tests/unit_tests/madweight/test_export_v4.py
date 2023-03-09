@@ -13,7 +13,6 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import copy
 import shutil
 import os
@@ -24,7 +23,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 from madgraph import MG5DIR
-from six import StringIO
+from io import StringIO
 import tests.IOTests as IOTests
 import tempfile
 

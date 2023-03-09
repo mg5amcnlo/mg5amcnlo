@@ -16,7 +16,6 @@
 """Unit test library for the color algebra related routines 
 in the core library"""
 
-from __future__ import absolute_import
 import copy
 import fractions
 
@@ -360,7 +359,7 @@ class ColorStringTest(unittest.TestCase):
         my_color_string.replace_indices(repl_dict)
         self.assertEqual(str(my_color_string),
                          '1 T(2,3,1,4) Tr(1,3,2)')
-        inv_repl_dict = dict([v, k] for k, v in repl_dict.items())
+        inv_repl_dict = {v: k for k, v in repl_dict.items()}
         my_color_string.replace_indices(inv_repl_dict)
         self.assertEqual(str(my_color_string),
                          '1 T(1,2,3,4) Tr(3,2,1)')

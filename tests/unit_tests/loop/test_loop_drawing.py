@@ -15,8 +15,6 @@
 
 """Unit test library for the various properties of objects in 
    loop_helas_objects.py"""
-from __future__ import division
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -24,7 +22,6 @@ import math
 import os
 import pickle
 import sys
-from six.moves import range
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -140,17 +137,17 @@ class TestLoopDrawer(unittest.TestCase):
         level_solution = [1, 0, 0, 2, 2]
         x_position = [1 / 2, 0, 0, 1, 1]
         y_position = [1 / 2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.vertexList), 5)
+        self.assertEqual(len(diagram.vertexList), 5)
         for i in range(0, 5):
-            self.assertEquals(diagram.vertexList[i].level, \
+            self.assertEqual(diagram.vertexList[i].level, \
                               level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_x, \
                               x_position[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_y, \
                               y_position[i])
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
         # test that LO is still fine when generate via NLO: S-channel
         diagram = self.store_diagram['g g > g g'][1]
@@ -166,7 +163,7 @@ class TestLoopDrawer(unittest.TestCase):
         level_solution = [1, 2, 0, 0, 3, 3]
         x_position = [1/3, 2/3, 0, 0, 1, 1]
         y_position = [1/2, 1/2, 0, 1, 0, 1]
-        self.assertEquals(len(diagram.vertexList), 6)
+        self.assertEqual(len(diagram.vertexList), 6)
 
 
     def test_NLO_draw(self):
@@ -210,18 +207,18 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
         y_solution = [1/6, 5/6, 3/4, 1/2, 0, 0, 1, 1]
         
-        self.assertEquals(len(diagram.vertexList), 8)
+        self.assertEqual(len(diagram.vertexList), 8)
         
         for i in range(0, 8):
-            self.assertEquals(diagram.vertexList[i].level, \
+            self.assertEqual(diagram.vertexList[i].level, \
                               level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_x, \
                               x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_y, \
                               y_solution[i])
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
     def test_flipping(self):
         """ check if the flipping of loop-line work"""
@@ -281,17 +278,17 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [1/3, 1/3, 2/3, 1/3, 0, 1, 0, 1]
         y_solution = [1/6, 5/6, 3/4, 1/2, 0, 0, 1, 1]
         
-        self.assertEquals(len(diagram.vertexList), 8)
+        self.assertEqual(len(diagram.vertexList), 8)
         for i in range(0, 8):
-            self.assertEquals(diagram.vertexList[i].level, \
+            self.assertEqual(diagram.vertexList[i].level, \
                               level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_x, \
                               x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_y, \
                               y_solution[i])
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
         
         
 
@@ -322,17 +319,17 @@ class TestLoopDrawer(unittest.TestCase):
         x_solution = [2/3, 1/3, 1/3, 1, 1, 0, 0]
         y_solution = [1/2, 3/4, 1/4, 0, 1, 1, 0]
         
-        self.assertEquals(len(diagram.vertexList), 7)
+        self.assertEqual(len(diagram.vertexList), 7)
         for i in range(0, 7):
-            self.assertEquals(diagram.vertexList[i].level, \
+            self.assertEqual(diagram.vertexList[i].level, \
                               level_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_x, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_x, \
                               x_solution[i])
-            self.assertAlmostEquals(diagram.vertexList[i].pos_y, \
+            self.assertAlmostEqual(diagram.vertexList[i].pos_y, \
                               y_solution[i])
         for line in diagram.lineList:
-            self.assertNotEquals(line.begin, None)
-            self.assertNotEquals(line.end, None)
+            self.assertNotEqual(line.begin, None)
+            self.assertNotEqual(line.end, None)
 
         # check the associate position
         

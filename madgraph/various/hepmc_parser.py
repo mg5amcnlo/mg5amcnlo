@@ -1,8 +1,4 @@
-from __future__ import division
-
-from __future__ import absolute_import
 import gzip
-from six.moves import range
 import os 
 
 if '__main__' == __name__:
@@ -29,7 +25,7 @@ else:
 import os
 import logging
 
-class HEPMC_Particle(object):
+class HEPMC_Particle:
     
     def __init__(self, text=None, event=None):
         
@@ -97,7 +93,7 @@ class HEPMC_Particle(object):
 
      
         
-class HEPMC_Vertex(object):
+class HEPMC_Vertex:
 
     def __init__(self, text=None, event=None):
 
@@ -141,7 +137,7 @@ class HEPMC_Vertex(object):
     def add_outcoming(self, particle):
         self.outcoming.append(particle)
 
-class HEPMC_Event(object):
+class HEPMC_Event:
 
     def __init__(self, text=None):
         """The initialization of an empty Event (or one associate to a text file)"""
@@ -202,7 +198,7 @@ class HEPMC_Event(object):
             elif line[0] in ['E', 'N', 'U', 'H','F','C']:
                 getattr(self, 'parse_%s' % line[0])(line)
             else:
-                self.comment = '%s%s\n' % (self.comment,line) 
+                self.comment = f'{self.comment}{line}\n' 
         
         # add the information about incoming particle
         for particle in self:
@@ -258,7 +254,7 @@ class HEPMC_Event(object):
     def add_particle(self, P):
         self.particles[P.barcode] = P
 
-class HEPMC_EventFile(object):
+class HEPMC_EventFile:
     
     
     def __init__(self, path, mode='r', *args, **opt):
@@ -278,7 +274,7 @@ class HEPMC_EventFile(object):
             try:
                 self.file =  gzip.GzipFile(path, mode, *args, **opt)
                 self.zip_mode =True
-            except IOError as error:
+            except OSError as error:
                 raise
             except Exception as error:
                 misc.sprint(error)

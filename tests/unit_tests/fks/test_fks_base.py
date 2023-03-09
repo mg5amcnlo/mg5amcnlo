@@ -15,11 +15,8 @@
 
 """Testing modules for FKS_process class"""
 
-from __future__ import absolute_import
 import sys
 import os
-from six.moves import range
-from six.moves import zip
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -1443,24 +1440,18 @@ class TestFKSProcess(unittest.TestCase):
                          [len(real) for real in target])                
         for i in range(len(fksproc.reals)):
             for j in range(len(fksproc.reals[i])):
-                if six.PY3:
-                    for k in range(len(fksproc.reals[i])):
-                        if fksproc.reals[i][j]['leglist'] ==  target[i][k]:
-                            break
-                    else:
-                        self.assertTrue(False)
-                else:    
-                    self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
+                for k in range(len(fksproc.reals[i])):
+                    if fksproc.reals[i][j]['leglist'] ==  target[i][k]:
+                        break
+                else:
+                    self.assertTrue(False)
         for i in range(len(fksproc_qed.reals)):
             for j in range(len(fksproc_qed.reals[i])):
-                if six.PY3:
-                    for k in range(len(fksproc_qed.reals[i])):
-                        if fksproc_qed.reals[i][j]['leglist'] ==  target[i][k]:
-                            break
-                    else:
-                        self.assertTrue(False)
+                for k in range(len(fksproc_qed.reals[i])):
+                    if fksproc_qed.reals[i][j]['leglist'] ==  target[i][k]:
+                        break
                 else:
-                    self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
+                    self.assertTrue(False)
         
         #process is d d~ > u u~
         fksproc2 = fks_base.FKSProcess(self.myproc2)

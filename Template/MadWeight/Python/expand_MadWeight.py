@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 # Module
-from __future__ import absolute_import
 import string
 import os
 import sys
@@ -29,7 +28,7 @@ def copy_file(echap=[]):
 
     Pattern=re.compile(r'''^\s*(?P<file>\S+)\s+(?P<pos>\S+)\s*$''')
     init_pos=os.path.abspath('./Source/MadWeight/MWP_template/')+'/'
-    ff=open(init_pos+'/MW_pos','r')
+    ff=open(init_pos+'/MW_pos')
 
     while 1:
         line=ff.readline()

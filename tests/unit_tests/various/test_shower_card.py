@@ -12,13 +12,11 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import os
 import sys
 import tests.unit_tests as unittest
 
 import madgraph.various.shower_card as shower_card
-from six.moves import zip
 
 import madgraph.various.misc as misc
 pjoin = os.path.join

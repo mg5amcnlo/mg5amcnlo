@@ -14,7 +14,6 @@
 ################################################################################
 """Methods and classes to export matrix elements to v4 format."""
 
-from __future__ import absolute_import
 import copy
 import fractions
 import glob
@@ -56,8 +55,6 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
 from madgraph.loop.loop_base_objects import LoopDiagram
 from madgraph.loop.MadLoopBannerStyles import MadLoopBannerStyles
-from six.moves import range
-from six.moves import zip
 
 
 
@@ -74,7 +71,7 @@ logger = logging.getLogger('madgraph.loop_exporter')
 #===============================================================================
 # LoopExporterFortran
 #===============================================================================
-class LoopExporterFortran(object):
+class LoopExporterFortran:
     """ Class to define general helper functions to the different 
         loop fortran exporters (ME, SA, MEGroup, etc..) which will inherit both 
         from this class AND from the corresponding ProcessExporterFortran(ME,SA,...).
@@ -114,7 +111,7 @@ class LoopExporterFortran(object):
         self.dependencies = self.opt['output_dependencies']
         self.compute_color_flows = self.opt['compute_color_flows']
 
-        super(LoopExporterFortran,self).__init__(dir_path, self.opt)        
+        super().__init__(dir_path, self.opt)        
 
 
     def link_CutTools(self, targetPath):
@@ -245,21 +242,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                print_frame=True, side_margin = 7, up_margin = 1)
 
     def __init__(self, *args, **opts):
-        super(LoopProcessExporterFortranSA,self).__init__(*args,**opts)
+        super().__init__(*args,**opts)
         self.unique_id=0 # to allow collier to distinguish the various loop subprocesses
         self.has_loop_induced = False
         
     def copy_template(self, model):
         """Additional actions needed to setup the Template.
         """
-        super(LoopProcessExporterFortranSA, self).copy_template(model)
+        super().copy_template(model)
 
         self.loop_additional_template_setup()
         
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
         """create the global information for loops"""
         
-        super(LoopProcessExporterFortranSA,self).finalize(matrix_element,
+        super().finalize(matrix_element,
                                              cmdhistory, MG5options, outputflag)
         
 
@@ -398,7 +395,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
 
         info = []
         for (key,pid), (prefix, tag) in self.prefix_info.items():
-            info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
+            info.append(f'#PY {tag} : {key} # {prefix} {pid}')
             
 
         text = []
@@ -538,7 +535,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         os.chdir(cwd)
 
         # We must link the CutTools to the Library folder of the active Template
-        super(LoopProcessExporterFortranSA, self).link_CutTools(self.dir_path)
+        super().link_CutTools(self.dir_path)
 
     # This function is placed here and not in optimized exporterd,
     # because the same makefile.inc should be used in all cases.
@@ -567,7 +564,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         fortran subroutine.
         """
         self.get_aloha_model(model)
-        super(LoopProcessExporterFortranSA, self).convert_model(model,
+        super().convert_model(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
     def get_ME_identifier(self, matrix_element, 
@@ -662,14 +659,14 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
     def make_model_symbolic_link(self):
         """ Add the linking of the additional model files for multiple precision
         """
-        super(LoopProcessExporterFortranSA, self).make_model_symbolic_link()
+        super().make_model_symbolic_link()
         model_path = self.dir_path + '/Source/MODEL/'
         ln(model_path + '/mp_coupl.inc', self.dir_path + '/SubProcesses')
         ln(model_path + '/mp_coupl_same_name.inc', self.dir_path + '/SubProcesses')
     
     def make(self):
         """ Compiles the additional dependences for loop (such as CutTools)."""
-        super(LoopProcessExporterFortranSA, self).make()
+        super().make()
         
         # make CutTools (only necessary with MG option output_dependencies='internal')
         libdir = os.path.join(self.dir_path,'lib')
@@ -690,10 +687,10 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         
         # Verify compatibility between current compiler and the one which was
         # used when last compiling CutTools (if specified).
-        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
-                                  libdir, 'libcts.a')))),'compiler_version.log')
+        compiler_log_path = pjoin(os.path.dirname(os.path.realpath(pjoin(
+                                  libdir, 'libcts.a'))),'compiler_version.log')
         if os.path.exists(compiler_log_path):
-            compiler_version_used = open(compiler_log_path,'r').read()
+            compiler_version_used = open(compiler_log_path).read()
             if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
                        pjoin(sourcedir,'make_opts')))) in compiler_version_used:
                 if os.path.exists(pjoin(sourcedir,'CutTools')):
@@ -1757,7 +1754,7 @@ C               ENDIF""")%replace_dict
         # This is to decide wether once to reuse old wavefunction to store new
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
-        return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
+        return super().write_matrix_element_v4(
                                                   writer, bornME, fortran_model, 
                            proc_prefix=matrix_element.rep_dict['proc_prefix'])
 
@@ -1837,7 +1834,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         information on where to find all the loop-related source files, 
         like CutTools and TIR"""
 
-        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt)
+        super().__init__(dir_path, opt)
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
@@ -1858,7 +1855,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Additional actions needed to setup the Template. 
         """
         
-        super(LoopProcessOptimizedExporterFortranSA, self).copy_template(model)
+        super().copy_template(model)
         
         self.loop_optimized_additional_template_setup()
 
@@ -1926,7 +1923,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
-'Could not find the include directory for %s, looking in %s.\n' % (tir, str(trgt_path))+
+f'Could not find the include directory for {tir}, looking in {str(trgt_path)}.\n'+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             to_include = '<Not_found_define_it_yourself>'                
                         tir_include.append('-I %s'%str(to_include))
@@ -1999,8 +1996,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 # of the tool, of course this check doesn't make sense.
                 if os.path.isfile(pjoin(libpath,os.pardir,'AUTHORS')):
                     try:
-                        version = open(pjoin(libpath,os.pardir,'VERSION'),'r').read()
-                    except IOError:
+                        version = open(pjoin(libpath,os.pardir,'VERSION')).read()
+                    except OSError:
                         version = None
                     if version is None :
                         logger.warning(
@@ -2121,7 +2118,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
         """create the global information for loops"""
         
-        super(LoopProcessOptimizedExporterFortranSA,self).finalize(matrix_element,
+        super().finalize(matrix_element,
                                              cmdhistory, MG5options, outputflag)
         self.write_global_specs(matrix_element)
     
@@ -3099,7 +3096,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     
     def __init__(self, *args, **opts):
         """ Initialize the process, setting the proc characteristics."""
-        super(LoopInducedExporterME, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
         self.proc_characteristic['loop_induced'] = True
 
         if self.opt and isinstance(self.opt['output_options'], dict) and \
@@ -3111,7 +3108,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         """ Make sure that the contextual variable MadEventOutput is set to
         True for this exporter"""
         
-        context = super(LoopInducedExporterME,self).get_context(*args,**opts)
+        context = super().get_context(*args,**opts)
         context['MadEventOutput'] = True
         return context
         
@@ -3132,7 +3129,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         SOURCE directory. It is different for loop_induced processes and 
         also depends on the value of the 'output_dependencies' option"""
         
-        libraries_list = super(LoopInducedExporterME,self).\
+        libraries_list = super().\
                                                      get_source_libraries_list()
 
         if self.dependencies=='internal':
@@ -3144,7 +3141,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     def link_files_in_SubProcess(self, Ppath):
         """ Add the loop-induced related links to the P* directory Ppath"""
         
-        super(LoopInducedExporterME,self).link_files_in_SubProcess(Ppath)
+        super().link_files_in_SubProcess(Ppath)
         
         ln(pjoin('../MadLoop5_resources') , cwd=Ppath)
 

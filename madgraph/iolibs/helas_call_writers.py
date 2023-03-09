@@ -13,7 +13,6 @@
 #
 ################################################################################
 """Classes for writing Helas calls. HelasCallWriter is the base class."""
-from __future__ import absolute_import
 
 
 import re
@@ -26,7 +25,6 @@ import aloha.aloha_writers as aloha_writers
 import aloha
 from madgraph import MadGraph5Error
 import madgraph.various.misc as misc
-from six.moves import range
 if madgraph.ordering:
     set	= misc.OrderedSet
 
@@ -288,7 +286,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
             return ""
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
-            call, n = re.subn(',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
+            call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
             if n:
                 self.width_tchannel_set_tozero = True
         return call
@@ -348,10 +346,10 @@ class HelasCallWriter(base_objects.PhysicsObject):
         self.options.update(options)
         
         if isinstance(argument, base_objects.Model):
-            super(HelasCallWriter, self).__init__()
+            super().__init__()
             self.set('model', argument)
         else:
-            super(HelasCallWriter, self).__init__(argument)
+            super().__init__(argument)
             
 #===============================================================================
 # FortranHelasCallWriter
@@ -375,7 +373,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         """Set up special Helas calls (wavefunctions and amplitudes)
         that can not be done automatically by generate_helas_call"""
 
-        super(FortranHelasCallWriter, self).default_setup()
+        super().default_setup()
 
         # Add special fortran Helas calls, which are not automatically
         # generated
@@ -605,7 +603,7 @@ class FortranHelasCallWriter(HelasCallWriter):
             # is asymmetric in the two scalars
             wavefunction.set_scalar_coupling_sign(self['model'])
 
-        val = super(FortranHelasCallWriter, self).get_wavefunction_call(wavefunction)
+        val = super().get_wavefunction_call(wavefunction)
 
         if val:
             return val
@@ -617,7 +615,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                   implemented for > 3 mothers""")
 
         self.generate_helas_call(wavefunction)
-        return super(FortranHelasCallWriter, self).get_wavefunction_call(\
+        return super().get_wavefunction_call(\
             wavefunction)
 
     def get_amplitude_call(self, amplitude):
@@ -625,7 +623,7 @@ class FortranHelasCallWriter(HelasCallWriter):
         to the key. If the function doesn't exist, generate_helas_call
         is called to automatically create the function."""
 
-        val = super(FortranHelasCallWriter, self).get_amplitude_call(amplitude)
+        val = super().get_amplitude_call(amplitude)
 
         if val:
             return val
@@ -637,7 +635,7 @@ class FortranHelasCallWriter(HelasCallWriter):
                   implemented for > 4 mothers""")
 
         self.generate_helas_call(amplitude)
-        return super(FortranHelasCallWriter, self).get_amplitude_call(amplitude)
+        return super().get_amplitude_call(amplitude)
 
     def generate_helas_call(self, argument):
         """Routine for automatic generation of Fortran Helas calls
@@ -975,13 +973,13 @@ class UFOHelasCallWriter(HelasCallWriter):
         # different routines (in import_v4.py)
         wavefunction.set_octet_majorana_coupling_sign()
 
-        val = super(UFOHelasCallWriter, self).get_wavefunction_call(wavefunction)
+        val = super().get_wavefunction_call(wavefunction)
         if val:
             return val
 
         # If function not already existing, try to generate it.
         self.generate_helas_call(wavefunction, **opt)
-        return super(UFOHelasCallWriter, self).get_wavefunction_call(\
+        return super().get_wavefunction_call(\
             wavefunction)
 
     def get_amplitude_call(self, amplitude):
@@ -989,13 +987,13 @@ class UFOHelasCallWriter(HelasCallWriter):
         to the key. If the function doesn't exist, generate_helas_call
         is called to automatically create the function."""
 
-        val = super(UFOHelasCallWriter, self).get_amplitude_call(amplitude)
+        val = super().get_amplitude_call(amplitude)
         if val:
             return val
         
         # If function not already existing, try to generate it.
         self.generate_helas_call(amplitude)
-        return super(UFOHelasCallWriter, self).get_amplitude_call(amplitude)
+        return super().get_amplitude_call(amplitude)
 
     # Helper function
     def write_factor(self, factor):
@@ -1023,7 +1021,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         helicity, i.e. W(1,i) vs W(1,i,H).
         """
         self.hel_sum = hel_sum
-        super(FortranUFOHelasCallWriter, self).__init__(argument, options=options)
+        super().__init__(argument, options=options)
 
     def format_helas_object(self, prefix, number):
         """ Returns the string for accessing the wavefunction with number in
@@ -1047,7 +1045,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 lwf.set_octet_majorana_coupling_sign()
             amplitude.set('coupling',amplitude.get_couplings())
         
-        return super(FortranUFOHelasCallWriter, self).get_amplitude_call(
+        return super().get_amplitude_call(
                                                                amplitude,**opts)        
         
 
@@ -1060,11 +1058,11 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             call += "%(numMotherWfs)s%(numCouplings)s(%(numeratorNumber)d,"
             for i in range(len(loopamp.get('pairing'))):
-                call = call + "%(Pairing{0})d,".format(i)
+                call = call + f"%(Pairing{i})d,"
         else:
             call += "%(numCouplings)s(%(numeratorNumber)d,"            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,".format(i+1)
+            call = call + f"%(MotherID{i+1})d,"
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),CMPLX({1}%(LoopMass{0})s,KIND=16),"\
@@ -1141,7 +1139,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
                 call = call + "%(mass)s,NHEL(%(number_external)d),"
-            call = call + "%(state_id)+d*IC(%(number_external)d),{0})".format(\
+            call = call + "%(state_id)+d*IC(%(number_external)d),{})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
 
         call_function = lambda wf: call % wf.get_external_helas_call_dict()
@@ -1183,8 +1181,8 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # select how to write a single wf
         if (isinstance(argument,helas_objects.HelasWavefunction) \
                  and argument.get('is_loop')) or \
-                 ((isinstance(argument,helas_objects.HelasAmplitude) \
-                 and argument['type']=='loop')):
+                 (isinstance(argument,helas_objects.HelasAmplitude) \
+                 and argument['type']=='loop'):
             base_wf = "W%(WF{0})s,"
         else:
             base_wf = self.format_helas_object('W(1,','%({0})d')+','
@@ -1222,7 +1220,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         # UV Counterterm (and other)
         else:
             arg['mass'] = ''
-            ampl = "AMPL({0},%(out)d)".format(argument.get_epsilon_order()+1)
+            ampl = f"AMPL({argument.get_epsilon_order()+1},%(out)d)"
             arg['out'] = '%s' % ampl
             if isinstance(argument,loop_helas_objects.LoopHelasUVCTAmplitude)\
                    and argument.get_UVCT_couplings()!='1.0d0':
@@ -1480,14 +1478,14 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
             call += "%(numMotherWfs)s("
             for i in range(len(loopamp.get('pairing'))):
-                call = call + "%(Pairing{0})d,".format(i)
+                call = call + f"%(Pairing{i})d,"
         else:
             call += "("            
         for i in range(len(loopamp.get('mothers'))):
-            call = call + "%(MotherID{0})d,".format(i+1)
+            call = call + f"%(MotherID{i+1})d,"
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
-            "DCMPLX(%(LoopMass{0})s),".format(i+1)
+            f"DCMPLX(%(LoopMass{i+1})s),"
         call = call + "%(LoopRank)d,"
         call = call + "I_SO,%(loop_group_id)d)"
         
@@ -1561,7 +1559,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # UV Counterterm (and other)
         else:
             arg['mass'] = ''
-            ampl = "AMPL({0},%(out)d)".format(argument.get_epsilon_order()+1)
+            ampl = f"AMPL({argument.get_epsilon_order()+1},%(out)d)"
             arg['out'] = '%s' % ampl
             if isinstance(argument,loop_helas_objects.LoopHelasUVCTAmplitude)\
                    and argument.get_UVCT_couplings()!='1.0d0':

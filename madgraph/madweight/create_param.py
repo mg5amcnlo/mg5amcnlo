@@ -42,8 +42,6 @@
 ##
 ## BEGIN INCLUDE
 ##
-from __future__ import absolute_import
-from six.moves import range
 try:
     import madgraph.madweight.MW_info as MW_param
 except ImportError:
@@ -199,7 +197,7 @@ class Param_card:
         ff=open('./Cards/'+name,'w')
         if self.source:
             #charge the comment from the original card
-            gg=open('./Cards/'+self.source,'r')
+            gg=open('./Cards/'+self.source)
             while 1:
                 line=gg.readline()
                 if line=='':
@@ -582,7 +580,7 @@ class Param_card:
 
         
         try:
-            ff=open('Cards/param_card_1.dat','r')
+            ff=open('Cards/param_card_1.dat')
             ff.close()
             os.system('ln -s  param_card_1.dat Cards/param_card.dat')
         except:

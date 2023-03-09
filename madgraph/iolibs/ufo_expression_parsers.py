@@ -17,13 +17,11 @@
 different languages/frameworks (Fortran and Pythia8). Uses the PLY 3.3
 Lex + Yacc framework"""
 
-from __future__ import absolute_import
 import logging
 import os
 import re
 import sys
 import copy
-from six.moves import input
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir))
@@ -45,7 +43,7 @@ if madgraph.ordering:
 class ModelError(MadGraph5Error):
     """Appropriate Error for a wrong parsing"""
 
-class UFOExpressionParser(object):
+class UFOExpressionParser:
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
@@ -162,7 +160,7 @@ class UFOExpressionParser(object):
 
     t_ignore = " \t"
 
-    re_cmath_function = re.compile("cmath\.(?P<name>[0-9a-zA-Z_]+)")
+    re_cmath_function = re.compile(r"cmath\.(?P<name>[0-9a-zA-Z_]+)")
 
     def t_newline(self, t):
         r'\n+'
@@ -331,7 +329,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def __init__(self, model, *args, **opts):
         """ """
         self.model = model
-        out = super(UFOExpressionParserFortran,self).__init__(*args, **opts)
+        out = super().__init__(*args, **opts)
         self.to_define = set()
         
     def clean(self):
@@ -369,7 +367,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
-        p[0] = 'CONDIF(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
+        p[0] = f'CONDIF({p[3]},DCMPLX({p[1]}),DCMPLX({p[5]}))'
         self.to_define.add('condif')
             
     def p_expression_ifimplicit(self,p):
@@ -429,7 +427,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
             self.to_define.add(p[1])
             
     def create_modelfct(self):
-        self.modelfct = dict([(f.name,f) for f in self.model.get('functions')])
+        self.modelfct = {f.name:f for f in self.model.get('functions')}
     
     def p_expression_function1(self, p):
         "expression : FUNCTION '(' expression ')'"
@@ -675,7 +673,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
 
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
-        p[0] = 'MP_CONDIF(%s,CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))' % (p[3], p[1], p[5])
+        p[0] = f'MP_CONDIF({p[3]},CMPLX({p[1]},KIND=16),CMPLX({p[5]},KIND=16))'
         self.to_define.add('condif')
         
     def p_expression_ifimplicit(self,p):
@@ -803,11 +801,11 @@ class UFOExpressionParserCPP(UFOExpressionParser):
 
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
-        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
+        p[0] = f'({p[3]} ? {p[1]} : {p[5]})'
             
     def p_expression_ifimplicit(self,p):
         "expression :   expression IF expression ELSE expression "
-        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
+        p[0] = f'({p[3]} ? {p[1]} : {p[5]})'
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
@@ -953,13 +951,13 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
             # such as '1 if True else 2'
             self.defined_variables = None
   
-        super(UFOExpressionParserPythonIF,self).__init__(*args, **kw)
+        super().__init__(*args, **kw)
         
     def parse(self, *args, **kw):
         """ Wrapper around the parse function so as to also return the number
         of if substitutions made."""
         self.changes_performed = 0
-        new_expression = super(UFOExpressionParserPythonIF,self).parse(*args, **kw)
+        new_expression = super().parse(*args, **kw)
         return new_expression, self.changes_performed
         
     def p_expression_number(self, p):

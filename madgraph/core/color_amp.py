@@ -17,7 +17,6 @@
 for a diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
-from __future__ import absolute_import
 import copy
 import fractions
 import operator
@@ -31,7 +30,6 @@ import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
 from functools import reduce
 
 if madgraph.ordering:
@@ -81,8 +79,8 @@ class ColorBasis(dict):
         # Return a list filled with ColorOne if all entries are empty ColorString()
         empty_colorstring = color_algebra.ColorString()
         if all(cs == empty_colorstring for cs in res_dict.values()):
-            res_dict = dict((key, color_algebra.ColorString(
-                               [color_algebra.ColorOne()])) for key in res_dict)
+            res_dict = {key: color_algebra.ColorString(
+                               [color_algebra.ColorOne()]) for key in res_dict}
                     
         return res_dict
 
@@ -376,7 +374,7 @@ class ColorBasis(dict):
     def _invert_dict(self, mydict):
         """Helper method to invert dictionary dict"""
 
-        return dict([v, k] for k, v in mydict.items())
+        return {v: k for k, v in mydict.items()}
 
     @staticmethod
     def get_color_flow_string(my_color_string, octet_indices):
@@ -740,10 +738,7 @@ class ColorMatrix(dict):
     @staticmethod
     def lcm(a, b):
         """Return lowest common multiple."""
-        if six.PY2:
-            return a * b // fractions.gcd(a, b)
-        else:
-            return a * b // math.gcd(a, b)
+        return a * b // math.gcd(a, b)
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""

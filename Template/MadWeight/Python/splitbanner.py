@@ -14,9 +14,7 @@
 ##   last-modif:24/01/09                                                ##
 ##                                                                      ##
 ##########################################################################
-from __future__ import absolute_import
 import sys
-from six.moves import input
 # patch if symbolic directory replace by real file
 sys.path.append('./Source/MadWeight/Python')
 sys.path.append('../Source/MadWeight/Python')
@@ -36,8 +34,8 @@ dico={'MGVersion':'old_version',
 
 class banner:
 
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     def __init__(self,pos):
 
@@ -45,7 +43,7 @@ class banner:
 
 
     def split(self):
-        self.file=open(self.pos,'r')
+        self.file=open(self.pos)
 
         for line in self.file:
             if self.pat_begin.search(line):

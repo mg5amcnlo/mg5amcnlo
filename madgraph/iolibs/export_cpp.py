@@ -16,7 +16,6 @@
 """Methods and classes to export models and matrix elements to Pythia 8
 and C++ Standalone format."""
 
-from __future__ import absolute_import
 import fractions
 import glob
 import itertools
@@ -45,8 +44,6 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
-from six.moves import range
-from six.moves import zip
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
@@ -62,7 +59,7 @@ def make_model_cpp(dir_path):
     misc.compile(cwd=source_dir)
 
 
-class OneProcessExporterCPP(object):
+class OneProcessExporterCPP:
     """Class to take care of exporting a set of matrix elements to
     C++ format."""
 
@@ -227,7 +224,7 @@ class OneProcessExporterCPP(object):
 
         logger.info('Created files %(process)s.h and %(process)s.cc in' % \
                     {'process': self.process_class} + \
-                    ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+                    f' directory {os.path.split(filename)[0]}')
 
 
     def get_default_converter(self):
@@ -335,7 +332,7 @@ class OneProcessExporterCPP(object):
         replace_dict['process_class_name'] = self.process_name
 
         # Extract process definition
-        process_definition = "%s (%s)" % (self.process_string,
+        process_definition = "{} ({})".format(self.process_string,
                                           self.model_name)
         replace_dict['process_definition'] = process_definition
 
@@ -428,7 +425,7 @@ class OneProcessExporterCPP(object):
         process_string = self.process_string
 
         # Extract process number
-        proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*(.*)$")
+        proc_number_pattern = re.compile(r"^(.+)@\s*(\d+)\s*(.*)$")
         proc_number_re = proc_number_pattern.match(process_string)
         proc_number = 0
         if proc_number_re:
@@ -437,7 +434,7 @@ class OneProcessExporterCPP(object):
                              proc_number_re.group(3)
 
         # Remove order information
-        order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        order_pattern = re.compile(r"^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
         order_re = order_pattern.match(process_string)
         while order_re:
             process_string = order_re.group(1)
@@ -454,7 +451,7 @@ class OneProcessExporterCPP(object):
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
-        process_string = "Sigma_%s_%s" % (self.model_name,
+        process_string = "Sigma_{}_{}".format(self.model_name,
                                           process_string)
         return process_string
 
@@ -718,9 +715,9 @@ class OneProcessExporterCPP(object):
         """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
 
         # Create a set with the pairs of incoming partons
-        beams = set([(process.get('legs')[0].get('id'),
+        beams = {(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
-                     for process in self.processes])
+                     for process in self.processes}
         beams = sorted(list(beams))
         res_lines = []
 
@@ -889,7 +886,7 @@ class OneProcessExporterMatchbox(OneProcessExporterCPP):
     def get_class_specific_definition_matrix(self, converter, matrix_element):
         """ """
         
-        converter = super(OneProcessExporterMatchbox, self).get_class_specific_definition_matrix(converter, matrix_element)
+        converter = super().get_class_specific_definition_matrix(converter, matrix_element)
         
         # T(....)
         converter['color_sting_lines'] = \
@@ -989,7 +986,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
             del opts['version']
         else:
             self.version='8.2'
-        super(OneProcessExporterPythia8, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
 
         # Check if any processes are not 2->1,2,3
         for me in self.matrix_elements:
@@ -1037,7 +1034,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         replace_dict['process_class_name'] = self.process_name
 
         # Extract process definition
-        process_definition = "%s (%s)" % (self.process_string,
+        process_definition = "{} ({})".format(self.process_string,
                                           self.model_name)
         replace_dict['process_definition'] = process_definition
 
@@ -1135,9 +1132,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
 
         # Create a set with the pairs of incoming partons in definite order,
         # e.g.,  g g >... u d > ... d~ u > ... gives ([21,21], [1,2], [-2,1])
-        beams = set([tuple(sorted([process.get('legs')[0].get('id'),
+        beams = {tuple(sorted([process.get('legs')[0].get('id'),
                                    process.get('legs')[1].get('id')])) \
-                          for process in self.processes])
+                          for process in self.processes}
 
         # Define a number of useful sets
         antiquarks = list(range(-1, -6, -1))
@@ -1155,7 +1152,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
 
         # The following gives a list from flavor combinations to "inFlux" values
         # allowed by Pythia8, see Pythia 8 document SemiInternalProcesses.html
-        set_tuples = [(set([(21, 21)]), "gg"),
+        set_tuples = [({(21, 21)}, "gg"),
                       (set(list(itertools.product(allquarks, [21]))), "qg"),
                       (set(zip(antiquarks, quarks)), "qqbarSame"),
                       (set(list(itertools.product(allquarks,
@@ -1165,8 +1162,8 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                       (set(list(itertools.product(allfermions,
                                                        allfermions))), "ff"),
                       (set(list(itertools.product(allfermions, [22]))), "fgm"),
-                      (set([(21, 22)]), "ggm"),
-                      (set([(22, 22)]), "gmgm")]
+                      ({(21, 22)}, "ggm"),
+                      ({(22, 22)}, "gmgm")]
 
         for set_tuple in set_tuples:
             if beams.issubset(set_tuple[0]):
@@ -1185,9 +1182,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         """Open a template file and return the contents."""
              
         try:
-            return super(OneProcessExporterPythia8, cls).read_template_file(filename)     
+            return super().read_template_file(filename)     
         except:
-            return super(OneProcessExporterPythia8, cls).read_template_file(filename, classpath=True)
+            return super().read_template_file(filename, classpath=True)
 
         
     def get_id_masses(self, process):
@@ -1325,9 +1322,9 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         res_lines = []
 
         # Create a set with the pairs of incoming partons
-        beams = set([(process.get('legs')[0].get('id'),
+        beams = {(process.get('legs')[0].get('id'),
                       process.get('legs')[1].get('id')) \
-                     for process in self.processes])
+                     for process in self.processes}
         beams = sorted(list(beams))
         # Now write a selection routine for final state ids
         for ibeam, beam_parts in enumerate(beams):
@@ -1768,8 +1765,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         model = process_exporter_pythia8.model
         model_name = process_exporter_pythia8.model_name
         process_exporter_pythia8.process_dir = \
-                       'Processes_%(model)s' % {'model': \
-                        model_name}
+                       'Processes_{model}'.format(model=\
+                        model_name)
         process_exporter_pythia8.include_dir = process_exporter_pythia8.process_dir
         process_exporter_pythia8.generate_process_files()
         return process_exporter_pythia8
@@ -1838,7 +1835,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                 num += 1
             main_file_name = str(num)
     
-        main_file = 'main_%s_%s' % (exporter.model_name,
+        main_file = 'main_{}_{}'.format(exporter.model_name,
                                     main_file_name)
     
         main_filename = os.path.join(filepath, main_file + '.cc')
@@ -1927,7 +1924,7 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
 # UFOModelConverterCPP
 #===============================================================================
 
-class UFOModelConverterCPP(object):
+class UFOModelConverterCPP:
     """ A converter of the UFO-MG5 Model to the C++ format """
 
     # Static variables (for inheritance)
@@ -1939,7 +1936,7 @@ class UFOModelConverterCPP(object):
                  "complex": "std::complex<double>"}
 
     # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile('^#\w')
+    compiler_option_re = re.compile(r'^#\w')
     namespace_re = re.compile('^using namespace')
 
     slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
@@ -2175,7 +2172,7 @@ class UFOModelConverterCPP(object):
         # type parameters;
         res_strings = []
         for key in type_param_dict:
-            res_strings.append("%s %s;" % (self.type_dict[key],
+            res_strings.append("{} {};".format(self.type_dict[key],
                                           ",".join(type_param_dict[key])))
 
         return "\n".join(res_strings)
@@ -2207,7 +2204,7 @@ class UFOModelConverterCPP(object):
 
         res_strings = []
         for param in params:
-            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
+            res_strings.append(f"cout << setw(20) << \"{param.name} \" << \"= \" << setiosflags(ios::scientific) << setw(10) << {param.name} << endl;")
 
         return "\n".join(res_strings)
 
@@ -2286,7 +2283,7 @@ class UFOModelConverterCPP(object):
 
         template_files = []
         for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
-            file = open(filename, 'r')
+            file = open(filename)
             template_file_string = ""
             while file:
                 line = file.readline()

@@ -14,7 +14,6 @@
 ################################################################################
 """ Basic test of the command interface """
 
-from __future__ import absolute_import
 import unittest
 import madgraph
 import madgraph.interface.master_interface as cmd
@@ -194,7 +193,7 @@ class TestValidCmd(unittest.TestCase):
                     else:
                         categories_nb[cat] = 1
 
-        target = set(['Not in help', 'Main commands', 'Documented commands'])
+        target = {'Not in help', 'Main commands', 'Documented commands'}
         self.assertEqual(target, category)
         self.assertEqual(categories_nb['Not in help'], 29)
     
@@ -336,46 +335,46 @@ class TestMadSpinFCT_in_interface(unittest.TestCase):
         """ """
         
         output = self.cmd.get_final_part(' p p > e+ e-')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
 
         output = self.cmd.get_final_part(' p p > e+ e- QED=2')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
         
         output = self.cmd.get_final_part(' p p > z > e+ e-')
-        self.assertEqual(output, set([-11, 11]))        
+        self.assertEqual(output, {-11, 11})        
           
         output = self.cmd.get_final_part(' p p > z > e+ e- / a')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
 
         output = self.cmd.get_final_part(' p p > z > e+ e- [QCD]')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
         
         output = self.cmd.get_final_part(' p p > z > e+ e- [ QCD ]')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
         
         output = self.cmd.get_final_part(' p p > z > e+ e- [ all = QCD ]')
-        self.assertEqual(output, set([-11, 11]))
+        self.assertEqual(output, {-11, 11})
         
         output = self.cmd.get_final_part(' p p > z > l+ l- [ all = QCD ]')
-        self.assertEqual(output, set([-11, 11, -13, 13]))
+        self.assertEqual(output, {-11, 11, -13, 13})
         
         output = self.cmd.get_final_part(' p p > z j, z > l+ l- [ all = QCD ]')
-        self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
+        self.assertEqual(output, {-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4})
         
         output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
-        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5])) 
+        self.assertEqual(output, {-11, 11, -13, 13, -6, 5}) 
         
         output = self.cmd.get_final_part('p p > 2Z')
-        self.assertEqual(output, set([23]))        
+        self.assertEqual(output, {23})        
         
         output = self.cmd.get_final_part('p p > Z{L} j')
-        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 23]))         
+        self.assertEqual(output, {1, 2, 3, 4, -1, 21, -4, -3, -2, 23})         
 
         output = self.cmd.get_final_part('p p > Z{L} j, Z > e+ e-')
-        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11])) 
+        self.assertEqual(output, {1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11}) 
         
         output = self.cmd.get_final_part('p p > 2Z{L} ')
-        self.assertEqual(output, set([23]))         
+        self.assertEqual(output, {23})         
 
         output = self.cmd.get_final_part('p p > 2Z{L} j, Z > e+ e-')
-        self.assertEqual(output, set([1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11]))         
+        self.assertEqual(output, {1, 2, 3, 4, -1, 21, -4, -3, -2, 11, -11})         

@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -126,7 +124,7 @@ class MECmdShell(IOTests.IOTestManager):
     def join_path(*path):
         """join path and treat spaces"""     
         combine = os.path.join(*path)
-        return combine.replace(' ','\ ')        
+        return combine.replace(' ',r'\ ')        
     
     def do(self, line):
         """ exec a line in the cmd under test """        
@@ -142,7 +140,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
-        os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
+        os.system(f'cp  {self.path}/Cards/run_card_default.dat {self.path}/Cards/run_card.dat')
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
         self.assertTrue( 'ANALYSE      =' in card)
@@ -203,7 +201,7 @@ class MECmdShell(IOTests.IOTestManager):
         # check the result
         res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
 
-        pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+        pat = re.compile(r'''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
         \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
 
         match = re.search(pat, res)
@@ -577,7 +575,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
         self.cmd_line.import_command_file('/tmp/mg5_cmd')
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
+        text=open('%s/Events/run_01/summary.txt' % self.path).read()
         data=text.split('\n')
         for i,line in enumerate(data):
             if 'Process' in line:

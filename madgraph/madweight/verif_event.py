@@ -32,14 +32,11 @@
 ##                                                                      ##
 ##########################################################################
 #Extension
-from __future__ import absolute_import
 import os
 import re
 import sys
 import time
 import math
-from six.moves import range
-from six.moves import input
 
 try: 
     import madgraph.madweight.diagram_class as diagram_class
@@ -172,7 +169,7 @@ class Lhco_filter:
         if dir:
             os.chdir('./SubProcesses/'+dir)
 
-        ff=open('./info_part.dat','r')
+        ff=open('./info_part.dat')
 
         text=ff.readline()
         ff.close()
@@ -227,8 +224,8 @@ class Lhco_filter:
         if not file:
             file='./Events/'+self.lhco_file
 
-        if   os.path.isfile(file):  f_in=open(file,'r')
-        elif os.path.isfile('./Events/'+file):  f_in=open('./Events/'+file,'r')
+        if   os.path.isfile(file):  f_in=open(file)
+        elif os.path.isfile('./Events/'+file):  f_in=open('./Events/'+file)
         else: sys.exit('FATAL ERROR: No experimental file \"'+file+'\" in Events directory.')
 
             

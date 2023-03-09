@@ -4,7 +4,6 @@
 
 
 
-from __future__ import absolute_import
 from .object_library import all_parameters, Parameter
 
 
@@ -30,7 +29,7 @@ lhv = Parameter(name = 'lhv',
                  nature = 'internal',
                  type = 'real',
                  value = '1.0',
-                 texname = '\lambda_{HV}')
+                 texname = r'\lambda_{HV}')
 
 Ncol = Parameter(name = 'Ncol',
                  nature = 'internal',

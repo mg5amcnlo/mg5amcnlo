@@ -4,7 +4,6 @@
 
 
 
-from __future__ import absolute_import
 from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
 from . import particles as P
 from . import CT_couplings as C

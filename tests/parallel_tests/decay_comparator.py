@@ -15,9 +15,7 @@
 """A Test suite in order to compare the width computed by MG5 to those provided
 by FR in the decays.py files of the model.
 """
-from __future__ import division
 
-from __future__ import absolute_import
 import logging
 import os
 import shutil
@@ -46,7 +44,7 @@ import madgraph.various.misc as misc
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 
 
-class DecayComparator(object):
+class DecayComparator:
     """base object to run comparaison test"""
     
     def __init__(self, model):
@@ -57,8 +55,8 @@ class DecayComparator(object):
         self.cmd.exec_cmd('import model %s --modelname' % model, precmd=True)
         self.cmd._curr_model = import_ufo.import_model(model, decay=True)
         
-        self.particles_id = dict([(p.get('name'), p.get('pdg_code'))
-                                for p in self.cmd._curr_model.get('particles')])
+        self.particles_id = {p.get('name'): p.get('pdg_code')
+                                for p in self.cmd._curr_model.get('particles')}
 
     def compare(self, card1, card2, pid, name1, name2):
         
@@ -217,7 +215,7 @@ class DecayComparator(object):
                 value1 / orig_width1 < 1e-3:
                 continue                         
             else:
-                print('fail for %s %s %s' % (lha_code,value1,value2))
+                print(f'fail for {lha_code} {value1} {value2}')
                 fail = True
         
         if fail:
@@ -248,7 +246,7 @@ class DecayComparator(object):
         """
         enter_time = time.time()
         
-        dir_name = 'TEST_DECAY_%s_%s' % (self.model,particle)       
+        dir_name = f'TEST_DECAY_{self.model}_{particle}'       
         pid = self.particles_id[particle]
         
         # clean previous run
@@ -345,7 +343,7 @@ class DecayComparator(object):
         
         # Generate the MG comparison point:
         start= time.time()
-        dir_name = 'TEST_DECAY3_%s_%s' % (self.model,part)
+        dir_name = f'TEST_DECAY3_{self.model}_{part}'
         os.system('rm -rf %s >/dev/null' % dir_name)
         os.system('rm -rf %s_dec >/dev/null' % dir_name)
         self.cmd.run_cmd('set automatic_html_opening False --no-save')
@@ -388,7 +386,7 @@ class DecayComparator(object):
         """use FR to get the list of particles being in the 1->2 final state"""    
 
        
-        dir_name = 'TEST_DECAY3_%s_%s' % (self.model,particle) 
+        dir_name = f'TEST_DECAY3_{self.model}_{particle}' 
         os.system('rm -rf %s >/dev/null' % dir_name)
          
         pid = self.particles_id[particle] 
@@ -436,7 +434,7 @@ class TestFRDecay(unittest.TestCase):
         for i, name in enumerate(decay_framework.particles_id.keys()):
             import time
             start = time.time()
-            print('comparing decay for %s %s' % (i, name))
+            print(f'comparing decay for {i} {name}')
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print('done in %s s' % (time.time() - start))
         
@@ -452,7 +450,7 @@ class TestFRDecay(unittest.TestCase):
         for i, name in enumerate(mssm.split()[:]):
             import time
             start = time.time()
-            print('\n****** comparing decay for %s %s *********' % (i, name))
+            print(f'\n****** comparing decay for {i} {name} *********')
             decay_framework.check_3body(name, 'mssm', 'sm', 'sm', log='all_mssm.log')
             print('done in %s s' % (time.time() - start))
         
@@ -518,7 +516,7 @@ class TestFRDecay(unittest.TestCase):
         for i, name in enumerate(decay_framework.particles_id.keys()):
             import time
             start = time.time()
-            print('comparing decay for %s %s' % (i, name))
+            print(f'comparing decay for {i} {name}')
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print('done in %s s' % (time.time() - start))         
         

@@ -3,7 +3,6 @@
 # Date: Mon 1 Oct 2012 14:58:25
 
 
-from __future__ import absolute_import
 from .object_library import all_vertices, Vertex
 from . import particles as P
 from . import couplings as C

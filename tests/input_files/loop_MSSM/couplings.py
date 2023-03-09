@@ -3,7 +3,6 @@
 # Date: Wed 19 Mar 2014 10:12:28
 
 
-from __future__ import absolute_import
 from .object_library import all_couplings, Coupling
 
 from .function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot

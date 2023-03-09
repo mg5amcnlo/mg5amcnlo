@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-from six.moves import range
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
@@ -18,7 +16,7 @@ from numbers import Number
 from collections import defaultdict
 from fractions import Fraction
 # fast way to deal with string
-from six import StringIO
+from io import StringIO
 # Look at http://www.skymind.com/~ocrow/python_string/ 
 # For knowing how to deal with long strings efficiently.
 import itertools
@@ -65,7 +63,7 @@ class WriteALOHA:
         if 'C%s' %((self.outgoing + 1) // 2) in self.tag:
             #flip the outgoing tag if in conjugate
             self.outgoing = self.outgoing + self.outgoing % 2 - (self.outgoing +1) % 2
-        self.outname = '%s%s' % (self.particles[self.outgoing -1], \
+        self.outname = '{}{}'.format(self.particles[self.outgoing -1], \
                                                                self.outgoing)
         #initialize global helper routine
         self.declaration = Declaration_list()
@@ -83,7 +81,7 @@ class WriteALOHA:
             ind_name = self.routine.expr.lorentz_ind
         except:
             # When the expr is a loop one, i.e. with SplitCoefficient
-            if len(set([tuple(expr.lorentz_ind) for expr in self.routine.expr.values()]))!=1:
+            if len({tuple(expr.lorentz_ind) for expr in self.routine.expr.values()})!=1:
                 raise Exception('All SplitCoefficients do not share the same indices names.')
             for expr in self.routine.expr.values():
               ind_name = expr.lorentz_ind
@@ -232,8 +230,8 @@ class WriteALOHA:
                 call_arg.append(('double','W%s' % self.outgoing))              
                 self.declaration.add(('double','W%s' % self.outgoing))
         
-        assert len(call_arg) == len(set([a[1] for a in call_arg]))
-        assert len(self.declaration) == len(set([a[1] for a in self.declaration])), self.declaration
+        assert len(call_arg) == len({a[1] for a in call_arg})
+        assert len(self.declaration) == len({a[1] for a in self.declaration}), self.declaration
         self.call_arg = call_arg
         return call_arg
 
@@ -457,16 +455,16 @@ class ALOHAWriterForFortran(WriteALOHA):
         """Put the function in the correct format"""
         if not hasattr(self, 'fct_format'):
             one = self.change_number_format(1)
-            self.fct_format = {'csc' : '{0}/cos(dble(%s))'.format(one),
-                   'sec': '{0}/sin(dble(%s))'.format(one),
-                   'acsc': 'asin({0}/(dble(%s)))'.format(one),
-                   'asec': 'acos({0}/(%s))'.format(one),
+            self.fct_format = {'csc' : f'{one}/cos(dble(%s))',
+                   'sec': f'{one}/sin(dble(%s))',
+                   'acsc': f'asin({one}/(dble(%s)))',
+                   'asec': f'acos({one}/(%s))',
                    're': ' dble(%s)',
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(dble(%s))', 
                    'sqrt': 'sqrt(dble(%s))',
                    'complexconjugate': 'conjg(dcmplx(%s))',
-                   '/' : '{0}/(%s)'.format(one),
+                   '/' : f'{one}/(%s)',
                    'pow': '(%s)**(%s)',
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
@@ -482,7 +480,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             return self.fct_format[fct]
         else:
             self.declaration.add(('fct', fct))
-            return '{0}(%s)'.format(fct)
+            return f'{fct}(%s)'
             
 
     
@@ -563,14 +561,14 @@ class ALOHAWriterForFortran(WriteALOHA):
                 else:
                     size = '*'
     
-                out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
+                out.write(f' {self.type2def[type]} {name}({size})\n')
             elif type == 'fct':
                 if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
                     continue
-                out.write(' %s %s\n' % (self.type2def['complex'], name))
+                out.write(' {} {}\n'.format(self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
-                out.write(' %s %s\n' % (self.type2def[type], name))
+                out.write(f' {self.type2def[type]} {name}\n')
                 
         # Add the lines corresponding to the symmetry
         
@@ -610,7 +608,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                p.append('{0}{1}{2}(%(i)s)'.format(signs[i],type,i+1,type))    
+                p.append(f'{signs[i]}{type}{i+1}(%(i)s)')    
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
@@ -628,7 +626,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             
             for i in range(self.momentum_size):
                 dict_energy = {'i':1+i}
-                out.write('    %s%s(%s) = %s\n' % (type,self.outgoing, 1+i, 
+                out.write('    {}{}({}) = {}\n'.format(type,self.outgoing, 1+i, 
                                              ''.join(p) % dict_energy))
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
@@ -695,7 +693,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             shift = 0
         else:
             shift =  self.momentum_size 
-        return '%s(%s)' % (match.group('var'), int(match.group('num')) + shift)
+        return '{}({})'.format(match.group('var'), int(match.group('num')) + shift)
               
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
@@ -707,7 +705,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 return name
             if name.startswith(aloha.aloha_prefix):
                 return name
-            return '%s%s' % (aloha.aloha_prefix, name)
+            return f'{aloha.aloha_prefix}{name}'
         
         if '_' in name:
             vtype = name.type
@@ -715,7 +713,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
   
     def change_number_format(self, number):
@@ -728,11 +726,11 @@ class ALOHAWriterForFortran(WriteALOHA):
                 return False
 
         if isinteger(number):
-            out = '%s%s' % (str(int(number)),self.format)
+            out = f'{str(int(number))}{self.format}'
         elif isinstance(number, complex):
             if number.imag:
                 if number.real:
-                    out = '(%s + %s*CI)' % (self.change_number_format(number.real), \
+                    out = '({} + {}*CI)'.format(self.change_number_format(number.real), \
                                     self.change_number_format(number.imag))
                 else:
                     if number.imag == 1:
@@ -750,9 +748,9 @@ class ALOHAWriterForFortran(WriteALOHA):
                 if 'e' in str(number):
                     out = str(number).replace('e','d')
                 else:
-                    out = '%s%s' % (number, self.format)
+                    out = f'{number}{self.format}'
             else:
-                out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
+                out = f'{tmp.numerator}{self.format}/{tmp.denominator}{self.format}'
         return out
     
     def define_expression(self):
@@ -765,7 +763,7 @@ class ALOHAWriterForFortran(WriteALOHA):
             all_keys.sort()
             for name in all_keys:
                 obj = self.routine.contracted[name]
-                out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                out.write(f' {name} = {self.write_obj(obj)}\n')
                 self.declaration.add(('complex', name))
                 
         
@@ -783,7 +781,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
-            format = ' %s = %s\n' % (name, self.get_fct_format(fct))
+            format = f' {name} = {self.get_fct_format(fct)}\n'
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
             except TypeError:
@@ -846,7 +844,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                 if 'P1N' not in self.tag:
                     self.declaration.add((ptype,'P%s' % self.outgoing))
                 else:
-                    coeff = '%(COUP)s*' % {'COUP': coup_name}  
+                    coeff = f'{coup_name}*'  
             else:
                 if coup_name == 'COUP':
                     coeff = 'COUP*'
@@ -940,7 +938,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     routine.write( '    vertex = vertex + tmp\n')
                 else:
                     size = self.type_to_size[self.particles[self.outgoing -1]] -2
-                    routine.write(" do i = %s, %s\n" % (self.momentum_size+1, self.momentum_size+size))
+                    routine.write(f" do i = {self.momentum_size+1}, {self.momentum_size+size}\n")
                     routine.write("        %(main)s(i) = %(main)s(i) + %(tmp)s(i)\n" %\
                                {'main': main, 'tmp': data['out']})
                     routine.write(' enddo\n')
@@ -970,7 +968,7 @@ class ALOHAWriterForFortran(WriteALOHA):
         return text
 
 
-class QP(object): 
+class QP: 
     """routines for writing out Fortran"""
     
     type2def = {}    
@@ -1005,7 +1003,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
 
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
-                out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                out.write(f' {name} = {self.write_obj(obj)}\n')
                 self.declaration.add(('complex', name))
 
         if not 'Coup(1)' in self.routine.infostr:
@@ -1032,11 +1030,11 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     else:
                         data = 0
                     if data and coup:
-                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
+                        out.write('    COEFF({},{},{})= coup*{}\n'.format( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
                     else:
-                        out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
+                        out.write('    COEFF({},{},{})= {}\n'.format( 
                                     self.pass_to_HELAS(ind)+1-self.momentum_size,
                                     J, K+1, self.write_obj(data)))
 
@@ -1083,14 +1081,14 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                     out.write("include 'coef_specs.inc'\n")
                     size = 'MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE'
     
-                out.write(' %s %s(%s)\n' % (self.type2def[type], name, size))
+                out.write(f' {self.type2def[type]} {name}({size})\n')
             elif type == 'fct':
                 if name.upper() in ['EXP','LOG','SIN','COS','ASIN','ACOS']:
                     continue
-                out.write(' %s %s\n' % (self.type2def['complex'], name))
+                out.write(' {} {}\n'.format(self.type2def['complex'], name))
                 out.write(' external %s\n' % (name))
             else:
-                out.write(' %s %s\n' % (self.type2def[type], name))
+                out.write(f' {self.type2def[type]} {name}\n')
 
         return out.getvalue()
     
@@ -1163,11 +1161,11 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 out_type = 'P'
                 continue
             elif i+1 == self.l_helas_id:
-                p.append('%sP%s({%s})' % (signs[i],i+1,len(size))) 
+                p.append(f'{signs[i]}P{i+1}({{{len(size)}}})') 
                 size.append(0)
                 continue
             elif self.offshell:
-                p.append('%s%s%s({%s})' % (signs[i],type,i+1,len(size)))
+                p.append(f'{signs[i]}{type}{i+1}({{{len(size)}}})')
                 size.append(1)
                 
             if self.declaration.is_used('P%s' % (i+1)):
@@ -1180,7 +1178,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             else:
                 size_p = 2
             for i in range(size_p):
-                out.write('    P%s(%s) = %s\n' % (self.outgoing, i, 
+                out.write('    P{}({}) = {}\n'.format(self.outgoing, i, 
                                              ''.join(p).format(*[s+i for s in size])))
 
         
@@ -1255,7 +1253,7 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     if outgoing is None:
         outgoing = abstract.outgoing
 
-    return '%s_%s' % (name, outgoing)
+    return f'{name}_{outgoing}'
 
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
@@ -1267,9 +1265,9 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
             suffix = '%(propa)s'
             
         if len(target_string)<50:
-            return '%s%s' % (target_string, suffix)
+            return f'{target_string}{suffix}'
         else:
-            return 'ALOHA_%s%s' % (str(hash(target_string.lower())).replace('-','m'), suffix)
+            return 'ALOHA_{}{}'.format(str(hash(target_string.lower())).replace('-','m'), suffix)
 
     if tag and any(t.startswith('P') for t in tag[:-1]):
         # propagator need to be the last entry for the tag
@@ -1281,7 +1279,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
+    p=re.compile(r'^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1366,7 +1364,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         elif isinstance(number, complex):
             if number.imag:
                 if number.real:
-                    out = '(%s + %s*cI)' % (self.change_number_format(number.real), \
+                    out = '({} + {}*cI)'.format(self.change_number_format(number.real), \
                                     self.change_number_format(number.imag))
                 else:
                     if number.imag == 1:
@@ -1383,7 +1381,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             if not abs(tmp - number) / abs(tmp + number) < 1e-8:
                 out = '%.9f' % (number)
             else:
-                out = '%s./%s.' % (tmp.numerator, tmp.denominator)
+                out = f'{tmp.numerator}./{tmp.denominator}.'
         return out
     
     
@@ -1393,7 +1391,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             shift = 0
         else:
             shift =  self.momentum_size - 1
-        return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
+        return '{}[{}]'.format(match.group('var'), int(match.group('num')) + shift)
               
     
     def change_var_format(self, name): 
@@ -1405,23 +1403,23 @@ class ALOHAWriterForCPP(WriteALOHA):
             self.declaration.add(('list_%s' % type, decla))
         else:
             self.declaration.add((name.type, name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         return name
             
     def get_fct_format(self, fct):
         """Put the function in the correct format"""
         if not hasattr(self, 'fct_format'):
             one = self.change_number_format(1)
-            self.fct_format = {'csc' : '{0}/cos(%s)'.format(one),
-                   'sec': '{0}/sin(%s)'.format(one),
-                   'acsc': 'asin({0}/(%s))'.format(one),
-                   'asec': 'acos({0}/(%s))'.format(one),
+            self.fct_format = {'csc' : f'{one}/cos(%s)',
+                   'sec': f'{one}/sin(%s)',
+                   'acsc': f'asin({one}/(%s))',
+                   'asec': f'acos({one}/(%s))',
                    're': ' real(%s)',
                    'im': 'imag(%s)',
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
-                   '/' : '{0}/(%s)'.format(one),
+                   '/' : f'{one}/(%s)',
                    'abs': 'std::abs(%s)'
                    }
             
@@ -1429,7 +1427,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             return self.fct_format[fct]
         else:
             self.declaration.add(('fct', fct))
-            return '{0}(%s)'.format(fct)
+            return f'{fct}(%s)'
     
     
     
@@ -1514,9 +1512,9 @@ class ALOHAWriterForCPP(WriteALOHA):
                     else:
                         size = 18
     
-                out.write(' %s %s[%s];\n' % (self.type2def[type], name, size))
+                out.write(f' {self.type2def[type]} {name}[{size}];\n')
             elif (type, name) not in self.call_arg:
-                out.write(' %s %s;\n' % (self.type2def[type], name))               
+                out.write(f' {self.type2def[type]} {name};\n')               
 
         return out.getvalue()
 
@@ -1546,7 +1544,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                p.append('{0}{1}{2}[%(i)s]'.format(signs[i],type,i+1,type))    
+                p.append(f'{signs[i]}{type}{i+1}[%(i)s]')    
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)
@@ -1562,7 +1560,7 @@ class ALOHAWriterForCPP(WriteALOHA):
             
             for i in range(size_p):
                 dict_energy = {'i':i}
-                out.write('    %s%s[%s] = %s;\n' % (type,self.outgoing, i, 
+                out.write('    {}{}[{}] = {};\n'.format(type,self.outgoing, i, 
                                              ''.join(p) % dict_energy))
             if self.declaration.is_used('P%s' % self.outgoing):
                 self.get_one_momenta_def(self.outgoing, out)
@@ -1612,11 +1610,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             keys = sorted(self.routine.contracted.keys())
             for name in keys:
                 obj = self.routine.contracted[name]
-                out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                out.write(f' {name} = {self.write_obj(obj)};\n')
                 self.declaration.add(('complex', name))
         
         for name, (fct, objs) in self.routine.fct.items():
-            format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
+            format = f' {name} = {self.get_fct_format(fct)};\n'
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
             
         
@@ -1665,7 +1663,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile(r'std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -1756,7 +1754,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                     routine.write( '    vertex = vertex + tmp;\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
-                    routine.write(""" i= %s;\nwhile (i < %s)\n{\n""" % (self.momentum_size, self.momentum_size+size))
+                    routine.write(f""" i= {self.momentum_size};\nwhile (i < {self.momentum_size+size})\n{{\n""")
                     routine.write(" %(main)s[i] = %(main)s[i] + %(tmp)s[i];\n i++;\n" %\
                                {'main': main, 'tmp': data['out']})
                     routine.write('}\n')
@@ -1903,7 +1901,7 @@ class ALOHAWriterForPython(WriteALOHA):
             else:
                 return change_number_format(obj.imag, pure_complex='j')
         elif obj.imag != 0:
-            return '(%s+%s)' % (change_number_format(obj.real),
+            return '({}+{})'.format(change_number_format(obj.real),
                                change_number_format(obj.imag, pure_complex='j')) 
         elif obj.imag == 0: 
             if int(obj.real) == obj:
@@ -1927,7 +1925,7 @@ class ALOHAWriterForPython(WriteALOHA):
         else:
             shift = -1 + self.momentum_size
             
-        return '%s[%s]' % (match.group('var'), int(match.group('num')) + shift)
+        return '{}[{}]'.format(match.group('var'), int(match.group('num')) + shift)
 
     def change_var_format(self, name): 
         """Formatting the variable name to Python format
@@ -1940,7 +1938,7 @@ class ALOHAWriterForPython(WriteALOHA):
             self.declaration.add((name.type, name))
         else:
             self.declaration.add(('', name.split('_',1)[0]))
-        name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
+        name = re.sub(r'(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
         
         return name
 
@@ -1948,17 +1946,17 @@ class ALOHAWriterForPython(WriteALOHA):
         """Put the function in the correct format"""
         if not hasattr(self, 'fct_format'):
             one = self.change_number_format(1)
-            self.fct_format = {'csc' : '{0}/cmath.cos(%s)'.format(one),
-                   'sec': '{0}/cmath.sin(%s)'.format(one),
-                   'acsc': 'cmath.asin({0}/(%s))'.format(one),
-                   'asec': 'cmath.acos({0}/(%s))'.format(one),
+            self.fct_format = {'csc' : f'{one}/cmath.cos(%s)',
+                   'sec': f'{one}/cmath.sin(%s)',
+                   'acsc': f'cmath.asin({one}/(%s))',
+                   'asec': f'cmath.acos({one}/(%s))',
                    're': ' complex(%s).real',
                    'im': 'complex(%s).imag',
                    'cmath.sqrt': 'cmath.sqrt(%s)',
                    'sqrt': 'cmath.sqrt(%s)',
                    'pow': 'pow(%s, %s)',
                    'complexconjugate': 'complex(%s).conjugate()',
-                   '/' : '{0}/%s'.format(one),
+                   '/' : f'{one}/%s',
                    'abs': 'cmath.fabs(%s)'
                    }
             
@@ -1966,7 +1964,7 @@ class ALOHAWriterForPython(WriteALOHA):
             return self.fct_format[fct]
         elif hasattr(cmath, fct):
             self.declaration.add(('fct', fct))
-            return 'cmath.{0}(%s)'.format(fct)
+            return f'cmath.{fct}(%s)'
         else:
             raise Exception("Unable to handle function name %s (no special rule defined and not in cmath)" % fct)
     
@@ -1981,7 +1979,7 @@ class ALOHAWriterForPython(WriteALOHA):
             
             for name in keys:
                 obj = self.routine.contracted[name]
-                out.write('    %s = %s\n' % (name, self.write_obj(obj)))
+                out.write(f'    {name} = {self.write_obj(obj)}\n')
 
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -1997,7 +1995,7 @@ class ALOHAWriterForPython(WriteALOHA):
         keys.sort(key=misc.cmp_to_key(sort_fct))
         for name in keys:
             fct, objs = self.routine.fct[name]
-            format = '    %s = %s\n' % (name, self.get_fct_format(fct))
+            format = f'    {name} = {self.get_fct_format(fct)}\n'
             try:
                 text = format % ','.join([self.write_obj(obj) for obj in objs])
             except TypeError:
@@ -2091,13 +2089,13 @@ class ALOHAWriterForPython(WriteALOHA):
         
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
-               out.write("    OM{0} = 0.0\n    if (M{0}): OM{0}=1.0/M{0}**2\n".format( (i+1) ))
+               out.write("    OM{0} = 0.0\n    if (M{0}): OM{0}=1.0/M{0}**2\n".format( i+1 ))
             if i+1 == self.outgoing:
                 out_type = type
                 out_size = self.type_to_size[type] 
                 continue
             elif self.offshell:
-                p.append('{0}{1}{2}[%(i)s]'.format(signs[i],type,i+1))  
+                p.append(f'{signs[i]}{type}{i+1}[%(i)s]')  
                 
             if self.declaration.is_used('P%s' % (i+1)):
                 self.get_one_momenta_def(i+1, out)             
@@ -2105,7 +2103,7 @@ class ALOHAWriterForPython(WriteALOHA):
         # define the resulting momenta
         if self.offshell:
             type = self.particles[self.outgoing-1]
-            out.write('    %s%s = wavefunctions.WaveFunction(size=%s)\n' % (type, self.outgoing, out_size))
+            out.write(f'    {type}{self.outgoing} = wavefunctions.WaveFunction(size={out_size})\n')
             if aloha.loop_mode:
                 size_p = 4
             else:
@@ -2113,7 +2111,7 @@ class ALOHAWriterForPython(WriteALOHA):
             for i in range(size_p):
                 dict_energy = {'i':i}
     
-                out.write('    %s%s[%s] = %s\n' % (type,self.outgoing, i, 
+                out.write('    {}{}[{}] = {}\n'.format(type,self.outgoing, i, 
                                              ''.join(p) % dict_energy))
             
             self.get_one_momenta_def(self.outgoing, out)
@@ -2217,7 +2215,7 @@ class ALOHAWriterForPython(WriteALOHA):
                     text.write( '    vertex += tmp\n')
                 else:
                     size = self.type_to_size[self.particles[offshell -1]] -2
-                    text.write("    for i in range(%s,%s):\n" % (self.momentum_size, self.momentum_size+size))
+                    text.write(f"    for i in range({self.momentum_size},{self.momentum_size+size}):\n")
                     text.write("        %(main)s[i] += tmp[i]\n" %{'main': main})
         
         text.write(self.get_foot_txt())
@@ -2266,7 +2264,7 @@ class Declaration_list(set):
     
         
 
-class WriterFactory(object):
+class WriterFactory:
     
     def __new__(cls, data, language, outputdir, tags):
         language = language.lower()

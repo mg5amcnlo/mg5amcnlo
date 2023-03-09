@@ -37,9 +37,7 @@
    may run DecayModel.find_all_channels(final_state_number) to search
    the channels for all particles in the given model."""
    
-from __future__ import division
 
-from __future__ import absolute_import
 import array
 import cmath
 import collections
@@ -65,8 +63,6 @@ import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
 import models.model_reader as model_reader
-from six.moves import range
-from six.moves import zip
 
 ZERO = 0
 #===============================================================================
@@ -124,7 +120,7 @@ class DecayParticle(base_objects.Particle):
     def default_setup(self):
         """Default values for all properties"""
         
-        super(DecayParticle, self).default_setup()
+        super().default_setup()
 
         self['is_stable'] = False
         #log of the find_vertexlist history
@@ -169,7 +165,7 @@ class DecayParticle(base_objects.Particle):
         if name == 'decay_amplitudes':
             self.decay_amplitudes = value
         else:
-            out = super(DecayParticle, self).set(name, value, *args, **opts)
+            out = super().set(name, value, *args, **opts)
             return out
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
@@ -378,7 +374,7 @@ class DecayParticle(base_objects.Particle):
             if not isinstance(value, float) and not isinstance(value, int):
                 raise self.PhysicsObjectError("Property %s must be float type." % str(value))
 
-        super(DecayParticle, self).filter(name, value)
+        super().filter(name, value)
 
         return True
 
@@ -467,8 +463,8 @@ class DecayParticle(base_objects.Particle):
 
         seperator = str('#'*80)
         output = '\n'+seperator
-        output += str('\n#\n#\tPDG\t\tWIDTH\t\tERROR\n')
-        output += str('DECAY\t%8d\t%.5e     %.3e  #%s decay\n') \
+        output += '\n#\n#\tPDG\t\tWIDTH\t\tERROR\n'
+        output += 'DECAY\t%8d\t%.5e     %.3e  #%s decay\n' \
             %(self.get('pdg_code'), 
               self.get('apx_decaywidth'),
               self.get('apx_decaywidth_err'),
@@ -1342,7 +1338,7 @@ class DecayModel(model_reader.ModelReader):
         
     def default_setup(self):
         """The particles is changed to ParticleList"""
-        super(DecayModel, self).default_setup()
+        super().default_setup()
         self['particles'] = DecayParticleList()
         # Other properties
         self['vertexlist_found'] = False
@@ -1400,7 +1396,7 @@ class DecayModel(model_reader.ModelReader):
                     if not isinstance(p, DecayParticle):
                         raise self.PhysicsObjectError("Property %s should be a list contains several particle list." % name)
 
-        super(DecayModel, self).filter(name, value)
+        super().filter(name, value)
         
         return True
             
@@ -1408,7 +1404,7 @@ class DecayModel(model_reader.ModelReader):
     def set(self, name, value, force=False):
         """Change the Particle into DecayParticle"""
         #Record the validity of set by mother routine
-        return_value = super(DecayModel, self).set(name, value, force)
+        return_value = super().set(name, value, force)
         #Reset the dictionaries
         
         if return_value:
@@ -1946,9 +1942,9 @@ class DecayModel(model_reader.ModelReader):
 
         self.set_parameters_and_couplings(param_card)
         for param, value in self.get('parameter_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value), globals())
+            exec(f"globals()[\'{param}\'] = {value}", globals())
         for param, value in self.get('coupling_dict').items():
-            exec("globals()[\'%s\'] = %s" % (param, value), globals())        
+            exec(f"globals()[\'{param}\'] = {value}", globals())        
 
         for particle in self.get('particles'):
             pid = abs(particle['pdg_code'])
@@ -1977,7 +1973,7 @@ class DecayModel(model_reader.ModelReader):
         global aS, amZ0, mdl_amZ0
         # Define all functions used
         for func in self['functions']:
-            exec("def %s(%s):\n   return %s" % (func.name,
+            exec("def {}({}):\n   return {}".format(func.name,
                                                 ",".join(func.arguments),
                                                 func.expr), globals())
 
@@ -2103,7 +2099,7 @@ class DecayModel(model_reader.ModelReader):
 
         # Define all functions used
         for func in self['functions']:
-            exec("def %s(%s):\n   return %s" % (func.name,
+            exec("def {}({}):\n   return {}".format(func.name,
                                                 ",".join(func.arguments),
                                                 func.expr),  globals())
 
@@ -2126,9 +2122,9 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate derived parameters
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent params
         for param in derived_parameters:
-            exec("globals()[\'%s\'] = %s" % (param.name, param.expr), globals())
+            exec(f"globals()[\'{param.name}\'] = {param.expr}", globals())
             if not eval(param.name) and eval(param.name) != 0:
-                logger.warning("%s has no expression: %s" % (param.name,
+                logger.warning("{} has no expression: {}".format(param.name,
                                                              param.expr))
 #             try:
 #                 logger.info("Recalculated parameter %s = %f" % \
@@ -2153,9 +2149,9 @@ class DecayModel(model_reader.ModelReader):
         # Now calculate all couplings
         # TO BE IMPLEMENTED use running alpha_s for aS-dependent couplings
         for coup in couplings:
-            exec("globals()[\'%s\'] = %s" % (coup.name, coup.expr), globals())
+            exec(f"globals()[\'{coup.name}\'] = {coup.expr}", globals())
             if not eval(coup.name) and eval(coup.name) != 0:
-                logger.warning("%s has no expression: %s" % (coup.name,
+                logger.warning("{} has no expression: {}".format(coup.name,
                                                              coup.expr))
             """logger.info("Recalculated coupling %s = (%f, %f)" % \
                         (coup.name,\
@@ -2964,11 +2960,11 @@ class DecayModel(model_reader.ModelReader):
             raise PhysicsObjectError("The file name of the decay table must be str." % str(name))
 
         summary_chart = ''
-        summary_chart = (str('# DECAY WIDTH COMPARISON \n') +\
+        summary_chart = ('# DECAY WIDTH COMPARISON \n' +\
                             str('# model: %s \n' %self['name']) +\
                             str('#'*80 + '\n')+\
-                            str('#Particle ID    card value     apprx. value  ratio') +\
-                            str('   level    err \n')
+                            '#Particle ID    card value     apprx. value  ratio' +\
+                            '   level    err \n'
                         )
 
         for part in self.get('particles'):
@@ -3073,7 +3069,7 @@ class DecayModel(model_reader.ModelReader):
             raise PhysicsObjectError("The file name of the decay table must be str." % str(name))
 
         # Write the param_card used first
-        fdata0 = open(mother_card_path, 'r')
+        fdata0 = open(mother_card_path)
         fdata.write(fdata0.read())
         fdata0.close()
 
@@ -3083,15 +3079,15 @@ class DecayModel(model_reader.ModelReader):
         summary_chart = ''
         seperator = str('#'*80 + '\n')
         fdata.write('\n' + seperator + '#\n'*2 +\
-                        str('##    EST. DECAY TABLE    ## \n') +\
+                        '##    EST. DECAY TABLE    ## \n' +\
                         '#\n'*2 + seperator)
 
         # Header of summary data
-        summary_chart = (str('# DECAY WIDTH COMPARISON \n') +\
+        summary_chart = ('# DECAY WIDTH COMPARISON \n' +\
                             str('# model: %s \n' %self['name']) +\
                             str('#'*80 + '\n')+\
-                            str('#Particle ID    card value     apprx. value  ratio') +\
-                            str('   level    err \n')
+                            '#Particle ID    card value     apprx. value  ratio' +\
+                            '   level    err \n'
                         )
         # Header of stable particle output
         spart = ('\n' + seperator + \
@@ -3241,15 +3237,15 @@ class DecayModel(model_reader.ModelReader):
     
         # Read in param_card
         logger.info("\nRead MG4 param_card: %s \n" % str(param_card))
-        param_lines = open(param_card, 'r').read().split('\n')
+        param_lines = open(param_card).read().split('\n')
 
         # Define regular expressions
         re_decay = re_module.compile(\
-            "^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
+            r"^decay\s+(?P<pid>\d+)\s+(?P<value>-*\d+\.\d+e(\+|-)\d+)\s*")
         re_two_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)")
         re_three_body_decay = re_module.compile(\
-            "^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
+            r"^\s+(?P<br>-*\d+\.\d+e(\+|-)\d+)\s+(?P<nda>\d+)\s+(?P<pid1>-*\d+)\s+(?P<pid2>-*\d+)\s+(?P<pid3>-*\d+)")
 
         # Define the decay pid, total width
         pid = 0
@@ -3396,11 +3392,11 @@ class Channel(base_objects.Diagram):
             return [self]
         elif len(self['vertices']) == 1:
             return [self]
-        elif len(self.get_final_legs()) == len(set(l['id'] for l in self.get_final_legs())):
+        elif len(self.get_final_legs()) == len({l['id'] for l in self.get_final_legs()}):
             return [self]
 
         # check if all symetry are already handle:
-        if len(set(l['id'] for l in self.get_final_legs() if l['id'] not in ignore)) ==\
+        if len({l['id'] for l in self.get_final_legs() if l['id'] not in ignore}) ==\
            len([   l['id'] for l in self.get_final_legs() if l['id'] not in ignore]):
             return [self]
         
@@ -3418,7 +3414,7 @@ class Channel(base_objects.Diagram):
         
         for new_numbers in itertools.permutations(numbers):
             
-            mapping_id = dict([(o,n) for o,n in zip(numbers, new_numbers) if o!=n])        
+            mapping_id = {o:n for o,n in zip(numbers, new_numbers) if o!=n}        
             if not mapping_id:
                 out.append(self)
                 continue
@@ -3486,7 +3482,7 @@ class Channel(base_objects.Diagram):
             if not isinstance(value, bool):
                 raise self.PhysicsObjectError("%s is not a valid onshell condition." % str(value))
 
-        return super(Channel, self).filter(name, value)
+        return super().filter(name, value)
     
     def get(self, name, model=None):
         """ Check the onshell condition before the user get it. 
@@ -3507,7 +3503,7 @@ class Channel(base_objects.Diagram):
             self['helastag'] = IdentifyHelasTag(self, model)
             
 
-        return super(Channel, self).get(name)
+        return super().get(name)
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
@@ -3534,7 +3530,7 @@ class Channel(base_objects.Diagram):
 
     def nice_string(self, decay_info=True):
         """ Add width/width_nextlevel to the nice_string"""
-        mystr = super(Channel, self).nice_string()
+        mystr = super().nice_string()
         if self['vertices'] and decay_info:
             if self['onshell']:
                 mystr +=" (width = %.3e)" % self['apx_decaywidth']
@@ -4045,8 +4041,8 @@ class Channel(base_objects.Diagram):
         
     @classmethod
     def init_regular_expression(cls):
-        dico = dict((repr(i), '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
-        cls.lor_pattern = re_module.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+        dico = {repr(i): '%s' % ','.join([r"\s*-?'?[\w\s]*'?\s*"]*i) for i in range(1,6)}
+        cls.lor_pattern = re_module.compile(r"""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
                                         Gamma5\(%(2)s\)|
@@ -4141,7 +4137,7 @@ class Channel(base_objects.Diagram):
 
                 for key, v in vertex['couplings'].items():
                     if not hasattr(model, 'lorentz_dict'):
-                        model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
+                        model.lorentz_dict = {l.name: l for l in model['lorentz']}
                         self.init_regular_expression()
                     
                     lorentz =  model.lorentz_dict[vertex['lorentz'][key[1]]]
@@ -4223,7 +4219,7 @@ class Channel(base_objects.Diagram):
                 for key, v in vertex['couplings'].items():
                     
                     if not hasattr(model, 'lorentz_dict'):
-                        model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
+                        model.lorentz_dict = {l.name: l for l in model['lorentz']}
                         self.init_regular_expression()
                         
                     structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
@@ -4243,10 +4239,10 @@ class Channel(base_objects.Diagram):
                                                          obj.value)
                             while True:
                                 try:
-                                    exec('%s=%s' % (obj.name, val % q_dict_lor), globals())
+                                    exec(f'{obj.name}={val % q_dict_lor}', globals())
                                 except NameError as error:
                                     failname = str(error).split("'")[1]
-                                    exec('%s=mdl_%s' % (failname, failname), globals())
+                                    exec(f'{failname}=mdl_{failname}', globals())
                                 else:
                                     break
                         lor_value = eval(new_structure % q_dict_lor)
@@ -4643,7 +4639,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         if isinstance(argument, Channel) and isinstance(model, DecayModel):
 
-            super(DecayAmplitude, self).__init__()
+            super().__init__()
 
             # Set the corresponding process.
             self.set_process(argument, model)
@@ -4653,7 +4649,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
             #self['potential_gauge_dependence'] = argument['potential_gauge_dependence']
 
         else:
-            super(DecayAmplitude, self).__init__(argument)
+            super().__init__(argument)
 
     def filter(self, name, value):
         """Filter for valid amplitude property values."""
@@ -4702,7 +4698,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
                 pass
                 #logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % ini_part.get('name'))
 
-        return super(DecayAmplitude, self).get(name)
+        return super().get(name)
 
     def get_sorted_keys(self):
         """Return DecayProcess property names as a nicely sorted list."""
@@ -4778,8 +4774,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
             self['diagrams'].append(new_dia)
             return
         # Conversion from non_std_number to std_number
-        converted_dict = dict([(num[1], std_numbers[i][1])\
-                                   for i, num in enumerate(non_std_numbers)])
+        converted_dict = {num[1]: std_numbers[i][1]\
+                                   for i, num in enumerate(non_std_numbers)}
         
         # 1st stage of converting all legs: change numbering without fixing
         # wrong number flows (e.g. number 3 2 > 3)
@@ -4890,7 +4886,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         """ Print the nice string of abstract amplitudes,
         which shows the real process of this type."""
 
-        output = super(DecayAmplitude, self).nice_string()
+        output = super().nice_string()
         output += "\nReal process:  "
         output += ', '.join([ref['process'].input_string() for ref in self['ab2real_dicts']])
 
@@ -5012,7 +5008,7 @@ class AbstractModel(base_objects.Model):
     def default_setup(self):
         """The particles is changed to ParticleList"""
 
-        super(AbstractModel, self).default_setup()
+        super().default_setup()
         # Other properties
         self['particles'] = DecayParticleList()
         # Object type -> Abstract Object list of the given type
@@ -6036,7 +6032,7 @@ class AbstractHelasMatrixElement(helas_objects.HelasMatrixElement):
     def default_setup(self):
         """Default values for all properties."""
 
-        super(AbstractHelasMatrixElement, self).default_setup()
+        super().default_setup()
         self['ab2real_dicts'] = Ab2RealDictList()
 
 
@@ -6047,7 +6043,7 @@ class AbstractHelasMatrixElement(helas_objects.HelasMatrixElement):
         If DecayAmplitude is provided, copy the Ab2RealDictList.
         """
 
-        super(AbstractHelasMatrixElement, self).__init__()
+        super().__init__()
 
         if isinstance(amplitude, DecayAmplitude):
             self['ab2real_dicts'] = amplitude['ab2real_dicts']

@@ -1,5 +1,3 @@
-from __future__ import division
-from __future__ import absolute_import
 import subprocess
 import unittest
 import os
@@ -70,14 +68,14 @@ class TestMadSpin(unittest.TestCase):
         fsock = open(pjoin(self.path, 'test_hepmc'),'w')
         text = """
         set spinmode none
-        set cross_section {0:1.0}
+        set cross_section {{0:1.0}}
         set new_wgt BR
         set input_format hepmc
         import ./test.hepmc.gz
-        import model %s/tests/input_files/DM_pion %s/tests/input_files/DM_pion/param_pion.dat
+        import model {}/tests/input_files/DM_pion {}/tests/input_files/DM_pion/param_pion.dat
         decay k0 > xr xr a
         launch
-        """ % (MG5DIR, MG5DIR)
+        """.format(MG5DIR, MG5DIR)
         
         fsock.write(text)
         fsock.close()
@@ -228,4 +226,3 @@ class TestMadSpin(unittest.TestCase):
         import math
         self.assertTrue(abs(pol[1]-pol[-1]) < 2 * math.sqrt(pol[1]))
         self.assertTrue(pol[0] < pol[-1])
-         

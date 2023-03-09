@@ -20,9 +20,7 @@
 #########################################################################################################
 #  TEST #################################################################################################
 #########################################################################################################
-from __future__ import absolute_import
 import sys
-from six.moves import input
 sys.path.append('./Source/MadWeight/Python')
 import filecmp
 import unittest
@@ -275,7 +273,7 @@ class TestMWBuilder(unittest.TestCase):
                 text = 'diff ./SubProcesses/%s/' + filename + ' ./Source/MadWeight/test_files/'+ filename
                 os.system(text % (MWdir, '', MWdir[4]))
                 self.assertTrue(filecmp.cmp(os.path.join('./SubProcesses/',MWdir, filename % ''), './Source/MadWeight/test_files/' + filename % MWdir[4], False),
-                                'not valid file %s in process %s' % (filename % '', MWdir))
+                                'not valid file {} in process {}'.format(filename % '', MWdir))
     
 
 

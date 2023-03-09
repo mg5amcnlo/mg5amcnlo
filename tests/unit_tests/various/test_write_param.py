@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import division
-from __future__ import absolute_import
 import random
 import six
 StringIO = six
@@ -25,7 +23,6 @@ import madgraph.core.base_objects as base_objects
 
 import models.import_ufo as import_ufo
 import models.write_param_card as writter
-from six.moves import range
 import madgraph.various.misc as misc 
 
 
@@ -109,7 +106,7 @@ class TestParamWritting(unittest.TestCase):
             random.shuffle(start)
             start.sort(key=misc.cmp_to_key(self.writter.order_param))
             self.assertEqual(start, result, 
-               '%s != %s' % ([p.name for p in start], [p.name for p in result]))
+               f'{[p.name for p in start]} != {[p.name for p in result]}')
         
     def test_write_block(self):
         """Check that the writting of a block works"""

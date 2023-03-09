@@ -17,7 +17,6 @@ from various ME generators (e.g., MadLoop v5 against v4, ...) and output nice
 reports in different formats (txt, tex, ...).
 """
 
-from __future__ import absolute_import
 import datetime
 import glob
 import itertools
@@ -32,8 +31,6 @@ import re
 import operator
 import math
 import six
-from six.moves import map
-from six.moves import range
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -158,7 +155,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                      (len(proc_list), os.path.join(dir_name, 'Cards')))
         # Run mg5
         logging.info("Running mg5")
-        proc_card = open(proc_card_location, 'r').read()
+        proc_card = open(proc_card_location).read()
         new_proc_list = []
         cmd = cmd_interface.MasterCmd()
         for line in proc_card.split('\n'):
@@ -331,7 +328,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
@@ -385,7 +382,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if not os.path.isfile(file_path):
             raise MadGraph5Error('Could not find check_sa.f in path %s.'%str(file_path))
 
-        file = open(file_path, 'r')
+        file = open(file_path)
         check_sa = file.read()
         file.close()
 
@@ -481,9 +478,9 @@ class LoopMG4Runner(me_comparator.MERunner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(mg4_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
+                                              f"ptest_{self.type}_{i}")):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = f"ptest_{self.type}_{i}"         
 
         self.temp_dir_name = temp_dir
 
@@ -676,7 +673,7 @@ class LoopMG4Runner(me_comparator.MERunner):
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
         
@@ -694,7 +691,7 @@ class LoopMG4Runner(me_comparator.MERunner):
                 logging.warning("Error while looking for file %s"%str(os.path\
                                                   .join(dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./check in %s" % shell_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
         
@@ -754,7 +751,7 @@ class LoopMG4Runner(me_comparator.MERunner):
             return False
         
         # Check that the process does not only contains gluons.
-        if set(incoming_parts+outcoming_parts)==set(['g']):
+        if set(incoming_parts+outcoming_parts)=={'g'}:
             logging.info("The process %s only contains gluons." % proc)
             return False
                 
@@ -781,7 +778,7 @@ class LoopMG4Runner(me_comparator.MERunner):
     def fix_PSPoint_in_check(self, dir_name):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'r')
+        file = open(os.path.join(dir_name,'NLOComp_sa.f'))
         nlocomp_sa = file.read()
         file.close()
 
@@ -793,7 +790,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         """Replace the hard coded collision energy in check_sa.f by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'r')
+        file = open(os.path.join(dir_name,'NLOComp_sa.f'))
         check_sa = file.read()
         file.close()
 
@@ -805,7 +802,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         """ Replace in HelasNLO.inc and MadLoop.param the logical controlling
         whether to get the finite part or the single pole correct """
         
-        file = open(os.path.join(dir_name,'MadLoop.param'), 'r')
+        file = open(os.path.join(dir_name,'MadLoop.param'))
         MadLoopParam = file.read()
         file.close()
 
@@ -821,7 +818,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         if mode=='first':
             return
 
-        file = open(os.path.join(dir_name,'HelasNLO.input'), 'r')
+        file = open(os.path.join(dir_name,'HelasNLO.input'))
         HelasNLO = file.read()
         file.close()
 
@@ -854,9 +851,9 @@ class GoSamRunner(me_comparator.MERunner):
         if not temp_dir:
             i=0
             while os.path.exists(os.path.join(GoSam_path, 
-                                              "ptest_%s_%s" % (self.type, i))):
+                                              f"ptest_{self.type}_{i}")):
                 i += 1
-            temp_dir = "ptest_%s_%s" % (self.type, i)         
+            temp_dir = f"ptest_{self.type}_{i}"         
 
         self.temp_dir_name = temp_dir
         shutil.os.mkdir(os.path.join(self.GoSam_path, self.temp_dir_name))
@@ -888,7 +885,7 @@ class GoSamRunner(me_comparator.MERunner):
                 logging.info("Error while running gosam.py --template in %s" % dir_name)
                 self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
             proc_card_location = os.path.join(dir_name,'myproc.in')
-            file = open(proc_card_location, 'r')
+            file = open(proc_card_location)
             order_specified, proc_card_out, proc_name = \
                 self.format_gosam_proc_card(i,proc, model, born_orders, \
                 perturbation_orders, squared_orders, file)
@@ -1031,8 +1028,8 @@ class GoSamRunner(me_comparator.MERunner):
             elif line.find("# order=")==0:
                 # Please always put 'QCD' first in the list below
                 orders_considered=['QCD','QED']
-                gosam_born_orders=dict([(order,-1) for order in orders_considered])
-                gosam_loop_orders=dict([(order,-1) for order in orders_considered])
+                gosam_born_orders={order:-1 for order in orders_considered}
+                gosam_loop_orders={order:-1 for order in orders_considered}
                 for key, value in born_orders.items():
                     for order in orders_considered:
                         if key==order and value!=99:
@@ -1137,7 +1134,7 @@ class GoSamRunner(me_comparator.MERunner):
             logging.info("Directory hasn't been created for process %s" % (proc))
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
-        logging.info("Working on process %s in dir %s" % (proc, shell_name))
+        logging.info(f"Working on process {proc} in dir {shell_name}")
         
         dir_name = os.path.join(working_dir, shell_name)
         logging.info("Making GoSam sources for process %s"%proc)
@@ -1197,7 +1194,7 @@ class GoSamRunner(me_comparator.MERunner):
                 logging.warning("Error while looking for file %s"%str(os.path\
                                         .join(matrix_dir_name,'result.dat')))
                 return ((0.0, 0.0, 0.0, 0.0, 0), [])
-        except IOError:
+        except OSError:
             logging.warning("Error while executing ./test.exe in %s" % matrix_dir_name)
             return ((0.0, 0.0, 0.0, 0.0, 0), [])
 
@@ -1261,7 +1258,7 @@ class GoSamRunner(me_comparator.MERunner):
         """Modify test.f90 from GoSam to have it output his result in a file, 
         assuming working directory dir_name."""
 
-        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        file = open(os.path.join(dir_name,'test.f90'))
         new_test=""
         for line in file:
             new_test+=line
@@ -1300,7 +1297,7 @@ class GoSamRunner(me_comparator.MERunner):
     def fix_PSPoint_in_check(self, dir_name):
         """Set test.f90 to be reading PS.input assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        file = open(os.path.join(dir_name,'test.f90'))
         new_test=""
         for line in file:
             new_test+=line
@@ -1332,19 +1329,19 @@ class GoSamRunner(me_comparator.MERunner):
         """Replace the hard coded collision energy in check_sa.f by the given
         energy, assuming a working dir dir_name"""
 
-        file = open(os.path.join(dir_name,'test.f90'), 'r')
+        file = open(os.path.join(dir_name,'test.f90'))
         test = file.read()
         file.close()
 
         file = open(os.path.join(dir_name,'test.f90'), 'w')
-        file.write(re.sub("5.0E\+02","%i.0E+00"% int(energy), test))
+        file.write(re.sub(r"5.0E\+02","%i.0E+00"% int(energy), test))
         file.close()
 
     def fix_common_file(self, dir_name):
         """Fix some compile-time parameters in common/config.90. It is assumed
         that dir_name is the 'common' directory."""
 
-        file = open(os.path.join(dir_name,'config.f90'), 'r')
+        file = open(os.path.join(dir_name,'config.f90'))
         config = file.read()
         file.close()
         
@@ -1369,7 +1366,7 @@ class LoopMEComparator(me_comparator.MEComparator):
         Notice that the proc list is a list of tuples formated like this:
         (process,born_orders,perturbation_orders,squared_orders)"""
 
-        if isinstance(model, six.string_types):
+        if isinstance(model, str):
             model= [model] * len(self.me_runners)
 
         self.results = []
@@ -1449,7 +1446,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                         continue
                 else:
                     diff = (max(list_res) - min(list_res)) / \
-                           abs((max(list_res) + min(list_res)))
+                           abs(max(list_res) + min(list_res))
 
                 proc_string = ""
                 if any('^2' in key for key in squared_orders.keys()):
@@ -1510,7 +1507,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                     diff = 0.0
                 else:
                     diff = (max(list_res) - min(list_res)) / \
-                           abs((max(list_res) + min(list_res)))
+                           abs(max(list_res) + min(list_res))
 
                 if diff >= tolerance and proc not in failed_proc_list and\
                          (max(list(map(abs,list_res)))/maxfin>=tolerance or index<=1):

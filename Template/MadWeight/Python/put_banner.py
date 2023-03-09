@@ -99,10 +99,7 @@
 
 
 
-from __future__ import absolute_import
 import os,re,sys
-from six.moves import range
-from six.moves import input
 sys.path+=['../'*i+'./Source/MadWeight/Python' for i in range(1,6)]
 import MW_param
 
@@ -143,7 +140,7 @@ class Banner:
         """    |   put in variable full_banner_txt the content of the file      ##
         ##     |   defined in position self.header_file                         ##
         """
-        self.full_banner_txt+=open(self.header_file,'rU').read()
+        self.full_banner_txt+=open(self.header_file).read()
 
     #2 #######################################################################
     def put_version_info(self):
@@ -152,8 +149,8 @@ class Banner:
         self.full_banner_txt+="<MGVersion>\n"
         for key,pos in self.version_info.items():
             try:
-                self.full_banner_txt+="# "+key+' '*(25-len(key))+':'+open(pos,'rU').read()
-            except IOError:
+                self.full_banner_txt+="# "+key+' '*(25-len(key))+':'+open(pos).read()
+            except OSError:
                 self.full_banner_txt+="# "+key+' '*(25-len(key))+':'
             if self.full_banner_txt[-1]!='\n':
                 self.full_banner_txt+='\n'
@@ -173,7 +170,7 @@ class Banner:
             try:
                 self.full_banner_txt+=eval('self.mod_'+key+'(\"'+pos+'\")')
             except:
-                self.full_banner_txt+=open(pos,'rU').read()
+                self.full_banner_txt+=open(pos).read()
             self.full_banner_txt+="</"+key+">\n"
 
     #2 #######################################################################
@@ -182,7 +179,7 @@ class Banner:
         ##     |   self.input_file                                              ##
         """
         
-        self.full_banner_txt+=open(self.input_file,'rU').read()
+        self.full_banner_txt+=open(self.input_file).read()
         if self.full_banner_txt[-1]!='\n':
             self.full_banner_txt+='\n'
         self.full_banner_txt+="</LesHouchesEvents>\n"

@@ -1,9 +1,6 @@
-from __future__ import division
-from __future__ import absolute_import
 import collections
 import math
 import os
-from six.moves import range
 try:
     import madgraph
 except ImportError:
@@ -17,7 +14,7 @@ else:
 
 pjoin = os.path.join
 
-class grid_information(object):
+class grid_information:
 
     start, stop = -1,1 #original interval
 
@@ -68,7 +65,7 @@ class grid_information(object):
         if self.nonzero == 0:
             #first information added
             try:
-                self.nonzero, self.ng, self.maxinvar = [int(i) for i in line.split()]
+                self.nonzero, self.ng, self.maxinvar = (int(i) for i in line.split())
             except ValueError:
                 self.nb_ps_point += 500000
                 self.onefail = True
@@ -128,7 +125,7 @@ class grid_information(object):
         self.max_wgt = max(self.max_wgt, data[3])
         self.nb_ps_point += data[4]
         if self.target_evt:
-            assert self.target_evt == data[5], "%s != %s" % (self.target_evt, data[5])
+            assert self.target_evt == data[5], f"{self.target_evt} != {data[5]}"
         else: 
             self.target_evt += data[5]  
         self.force_max_wgt.append(data[6])
@@ -167,7 +164,7 @@ class grid_information(object):
 
         Gdirs = [] #build the the list of directory
         for i in range(n_split):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            path = pjoin(Pdir, f"G{G}_{i+1}")
             Gdirs.append(path)
                 
         # Create the new grid and put it in all directory  
@@ -204,7 +201,7 @@ class grid_information(object):
         while len(data) >= 4:
             v1, v2, v3, v4 = data[:4]
             data = data[4:]
-            fsock.write('%+.16f %+.16f %+.16f %+.16f \n' % (v1, v2, v3, v4))
+            fsock.write(f'{v1:+.16f} {v2:+.16f} {v3:+.16f} {v4:+.16f} \n')
         
         # if data is not a multiple of 4 write the rest.
         for v in data:
@@ -746,7 +743,7 @@ class DiscreteSamplerDimension(dict):
                 'min_bin_probing_points': self.min_bin_probing_points,
                 'grid_mode': self.grid_mode,
                 'grid_type': self.grid_type,
-                'bins_informations' : '\n'.join('    %s %s' % (bin_id,str(bin_info)) \
+                'bins_informations' : '\n'.join(f'    {bin_id} {str(bin_info)}' \
                                             for (bin_id, bin_info) in bins),
                 'small_contrib': '%3.3f'%self.small_contrib_threshold,
                 'damping_power': '%3.3f'%self.damping_power                
@@ -755,7 +752,7 @@ class DiscreteSamplerDimension(dict):
         fsock.write(template % data)
     
             
-class Bin_Entry(object):
+class Bin_Entry:
     """ One bin (of the Discrite Sampler grid) """
     
     def __init__(self, n_entries, weight, weight_sqr, abs_weight):
@@ -788,7 +785,7 @@ class Bin_Entry(object):
             
     def __str__(self):
         
-        return '  %s %s %s %s' % (self.n_entries, self.weight, self.weight_sqr,
+        return '  {} {} {} {}'.format(self.n_entries, self.weight, self.weight_sqr,
                                  self.abs_weight)
             
                           
