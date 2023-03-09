@@ -77,7 +77,7 @@
   %(shower_scale_factor)s = shower_scale_factor ! multiply default shower starting
                             ! scale by this factor
   %(mcatnlo_delta)s = MCatNLO_DELTA ! use MC@NLO-Delta matching, arXiv:2002.12716
-                        ! (only with Pythia8)
+                        ! (only with Pythia8309 or later)
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *
