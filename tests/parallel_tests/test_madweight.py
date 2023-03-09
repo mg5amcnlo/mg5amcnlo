@@ -18,7 +18,6 @@ formats (txt, tex, ...).
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import datetime
 import glob
 import itertools
@@ -103,7 +102,7 @@ class TestMadWeight(unittest.TestCase):
 
         start = time.time()
         print('this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
-        subprocess.call([pjoin(MG5DIR,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
@@ -171,8 +170,7 @@ class TestMadWeight(unittest.TestCase):
         
         start = time.time()
         print('this mw test is expected to take 2 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
-        subprocess.call([pjoin(MG5DIR,'bin','mg5_aMC'), 
-
+        subprocess.call([sys.executable, pjoin(MG5DIR,'bin','mg5_aMC'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)
@@ -245,7 +243,7 @@ class TestMadWeight(unittest.TestCase):
         
         start = time.time()
         print('this mw test is expected to take 15s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min)) 
-        subprocess.call([pjoin(MG5DIR,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable, pjoin(MG5DIR,'bin','mg5_aMC'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=stdout, stderr=stderr)

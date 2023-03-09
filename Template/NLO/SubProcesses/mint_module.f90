@@ -1482,6 +1482,7 @@ contains
     average_virtual(0,1:nchans)=0d0
     call write_grids_to_file
     call write_results
+    call regrid_MC_integer
     open (unit=12, file='res.dat',status='unknown')
     do kchan=0,nchans
        write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan) &

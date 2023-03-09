@@ -15,7 +15,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 from six.moves import range
 from six.moves import zip
 if __name__ == "__main__":
@@ -163,9 +162,9 @@ class Systematics(object):
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
             #self.b1 = beam1//2212
             isEVAxDIS=True
-        # none
-        if(self.banner.run_card['pdlabel']=='none'):
-            raise SystematicsError('Systematics not supported for pdlabel=none')
+        # none, chff, edff
+        if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
+            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
@@ -544,7 +543,7 @@ class Systematics(object):
         if max_scale:
             resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100))
         if max_alps:
-            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100))
+            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
         if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
             resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
         if self.banner.run_card['pdlabel']=='eva':

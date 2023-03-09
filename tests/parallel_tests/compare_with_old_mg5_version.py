@@ -19,7 +19,6 @@ model format.
 The reference version is given here as a argument which can be changed by hand.
 """
 from __future__ import absolute_import
-from __future__ import print_function
 import itertools
 import logging
 import os

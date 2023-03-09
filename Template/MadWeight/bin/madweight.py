@@ -16,7 +16,6 @@
 """ This is the main script in order to generate events in MadEvent """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 import os
 import subprocess 
@@ -28,10 +27,6 @@ import subprocess
 import time
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
-
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\
-               Please upgrade your version of python.')
 
 # Check if optimize mode is (and should be) activated
 if __debug__ and (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py'))):

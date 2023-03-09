@@ -56,6 +56,10 @@
  %(iseed)s    = iseed       ! rnd seed (0=assigned automatically=default))
 #***********************************************************************
 # Collider type and energy                                             *
+#    0 = no PDF                                                        *
+#    1/-1 = proton/antiproton                                          *
+#    3/-3 = electron/positron with ISR/Beamstrahlung;                  * 
+#    4/-4 = muon/antimuon with ISR/Beamstrahlung;                      * 
 #***********************************************************************
  %(lpp1)s   = lpp1    ! beam 1 type (0 = no PDF)
  %(lpp2)s   = lpp2    ! beam 2 type (0 = no PDF)
@@ -68,6 +72,15 @@
  %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
               ! numbers for central PDF sets are allowed. Can be a list; 
               ! PDF sets beyond the first are included via reweighting.
+  0	= pdfscheme ! the scheme of the input PDFs. 0->MSbar; 1->DIS
+	            ! 2->eta (leptonic); 3->beta (leptonic) 
+		    ! 4->mixed (leptonic); 6->delta (leptonic)
+                    ! if pdlabel==emela, this is set automatically
+#***********************************************************************
+# The following block is specific to lepton collisions (lpp=+-3)       *
+#***********************************************************************
+ True   = photons_from_lepton ! whether to include or not photons from 
+                              ! lepton ISR
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
@@ -112,6 +125,10 @@
 # parameter reweighting at NLO+PS accuracy                             *
 #***********************************************************************
  %(store_rwgt_info)s = store_rwgt_info ! Store info for reweighting in LHE file
+#***********************************************************************
+#  Customization of the code. List of files containing user hook function 
+#***********************************************************************
+ %(custom_fcts)s = custom_fcts ! List of files containing user hook function
 #***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *

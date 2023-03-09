@@ -3081,6 +3081,11 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
         return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
       
 
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        out = super().finalize(matrix_element, cmdhistory, MG5options, outputflag)
+        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        return out
+
 #===============================================================================
 # LoopInducedExporter
 #===============================================================================
