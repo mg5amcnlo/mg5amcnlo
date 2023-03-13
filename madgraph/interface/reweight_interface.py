@@ -585,6 +585,31 @@ class ReweightInterface(extended_cmd.Cmd):
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
+        n_s_events = 0
+        n_h1_events = 0
+        n_h2_events = 0
+        n_s_neg_wgt = 0
+        n_h1_neg_wgt = 0
+        n_h2_neg_wgt = 0
+        n_s_neg_sud = 0
+        n_h1_neg_sud = 0
+        n_h2_neg_sud= 0
+        n_h1_small_inv = 0
+        n_h2_small_inv = 0
+        n_s_small_inv = 0
+        neg_jet_large1 = 0
+        pos_jet_large1 = 0
+        neg_jet_large2 = 0
+        pos_jet_large2 = 0
+        neg_jet_large3 = 0
+        pos_jet_large3 = 0
+        neg_jet_large4 = 0
+        pos_jet_large4 = 0
+        neg_jet_large5 = 0
+        pos_jet_large5 = 0
+        neg_jet_large6 = 0
+        pos_jet_large6 = 0
+
         self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
@@ -596,10 +621,93 @@ class ReweightInterface(extended_cmd.Cmd):
 
             # This returns an error for events with light quarks or leptons!
             #event.check_kinematics_only()
+
+            ## TV: Uncomment if ythe weights should be changed to their absolute values, remove for public version
+            #if event.wgt < 0.0:
+            #    event.rescale_weights(-1.0)
+
             if self.inc_sudakov:
-                weight = self.calculate_weight(event, sud_mod)
+                ## TV: change to commented line below for public version
+                weight, type, wgt, sud, min_inv = self.calculate_weight(event, sud_mod)
+                #weight = self.calculate_weight(event, sud_mod)
             else:
                 weight = self.calculate_weight(event)
+
+            ## TV: 
+            #  BEGIN
+            #  Bunch of debugging counts of event types, jet pT, etc, remove for public version
+            sud_cut = 80.3**2
+            if type == 0:
+                n_s_events += 1
+                if wgt < 0.0:
+                    n_s_neg_wgt += 1
+                if sud[1] < 0.0:
+                    n_s_neg_sud += 1
+                if min_inv < sud_cut:
+                    n_s_small_inv += 1
+            elif type == 1:
+                for i,p in enumerate(event):
+                    if (abs(p.pid) < 5 or p.pid == 21) and (p.status == 1):
+                        pT_jet = math.sqrt(p.px**2+p.py**2)
+                n_h1_events +=1
+
+                if wgt < 0.0:
+                    n_h1_neg_wgt += 1
+                    if pT_jet > 50.0:
+                        neg_jet_large1 += 1
+                else:
+                    if pT_jet > 50.0:
+                        pos_jet_large1 += 1
+
+                if wgt < 0.0:
+                    if pT_jet > 100.0:
+                        neg_jet_large2 += 1
+                else:
+                    if pT_jet > 100.0:
+                        pos_jet_large2 += 1
+
+                if wgt < 0.0:
+                    if pT_jet > 200.0:
+                        neg_jet_large3 += 1
+                else:
+                    if pT_jet > 200.0:
+                        pos_jet_large3 += 1
+
+                if wgt < 0.0:
+                    if pT_jet > 400.0:
+                        neg_jet_large4 += 1
+                else:
+                    if pT_jet > 400.0:
+                        pos_jet_large4 += 1
+                
+                if wgt < 0.0:
+                    if pT_jet > 500.0:
+                        neg_jet_large5 += 1
+                else:
+                    if pT_jet > 500.0:
+                        pos_jet_large5 += 1
+
+                if wgt < 0.0:
+                    if pT_jet > 600.0:
+                        neg_jet_large6 += 1
+                else:
+                    if pT_jet > 600.0:
+                        pos_jet_large6 += 1
+
+                if sud[1] < 0.0:
+                    n_h1_neg_sud += 1
+                if min_inv < sud_cut:
+                    n_h1_small_inv += 1
+
+            elif type == 2:
+                n_h2_events +=1
+                if wgt < 0.0:
+                    n_h2_neg_wgt += 1
+                if sud[1] < 0.0:
+                    n_h2_neg_sud += 1
+                if min_inv < sud_cut:
+                    n_h2_small_inv += 1
+            ## END
 
             if not isinstance(weight, dict):
                 weight = {'':weight}
@@ -649,6 +757,17 @@ class ReweightInterface(extended_cmd.Cmd):
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
+        ## TV: remove print statements for public version
+        print('Number of S events: Number with neg wgt:  Number with neg sud: Number with inv < sudcut')
+        print(n_s_events, n_s_neg_wgt, n_s_neg_sud, n_s_small_inv)
+        print('Number of H1 events: Number with neg wgt:  Number with neg sud: umber with inv < sudcut')
+        print(n_h1_events, n_h1_neg_wgt, n_h1_neg_sud, n_h1_small_inv)
+        print('Number of NEG H1 emissions with pT > 50, 100, 200, 400, 500, 600:')
+        print(neg_jet_large1, neg_jet_large2, neg_jet_large3, neg_jet_large4, neg_jet_large5, neg_jet_large6)
+        print('Number of POS H1 emissions with pT > 50, 100, 200, 400, 500, 600:')
+        print(pos_jet_large1, pos_jet_large2, pos_jet_large3, pos_jet_large4, pos_jet_large5, pos_jet_large6)
+        print('Number of H2 events: Number with neg wgt:  Number with neg sud: umber with inv < sudcut')
+        print(n_h2_events, n_h2_neg_wgt, n_h2_neg_sud, n_h2_small_inv)
     
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -1409,7 +1528,6 @@ class ReweightInterface(extended_cmd.Cmd):
             min_inv=10000000.0
             inv_dict={}
  
-            do_compute = True
             if (len(buff_event) == nexternal +1): # is an H-event
                 for ievt,evt in enumerate(buff_event):
                     # Find the smallest abs(inv) and the corresponding pair
@@ -1450,11 +1568,19 @@ class ReweightInterface(extended_cmd.Cmd):
                 if ij_comb == []:
                     ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
            
+                ## TV: remove all "do_compute" for public version
+                do_compute_h1 = True             #<-------------------------------
                 # For n+1-body reweighting
                 if min_inv > sud_cut:
                     event_to_sud = buff_event
                     n_part = nexternal+1
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    #### H1 type
+                    type = 1
+                    if not (do_compute_h1):
+                        do_compute = False
+                    else:
+                        do_compute = True
 
                 # For n-body reweighting
                 else:
@@ -1463,6 +1589,12 @@ class ReweightInterface(extended_cmd.Cmd):
                         event_to_sud = buff_event
                         n_part = nexternal+1
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                        #### H1 type
+                        type = 1
+                        if not (do_compute_h1):
+                            do_compute = False
+                        else:
+                            do_compute = True
                     else:
                         event_for_sud = self.merge_particles_kinematics(buff_event, min_i,min_j,ij_comb)
                         event_to_sud = event_for_sud
@@ -1473,20 +1605,30 @@ class ReweightInterface(extended_cmd.Cmd):
                             event_to_sud = buff_event
                             n_part = nexternal+1
                             mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                            #### H1 type
+                            type = 1
+                            if not (do_compute_h1):
+                                do_compute = False
+                            else:
+                                do_compute = True
                         else:
-                            #do_compute = False
-                            do_compute= True
+                            #### H2 type
+                            type = 2
+                            do_compute = False   #<-------------------------------
                             
             elif (len(buff_event) == nexternal): # is an S-event
                     event_to_sud = buff_event
                     n_part = nexternal 
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                    #do_compute = False
+                    ### S type
+                    type = 0
+                    do_compute = False       #<-------------------------------
             else:
                 logger.critical('ERROR: neither H nor S event!')
                 logger.critical(buff_event)
                 sys.exit(2)
                 
+            do_compute=True
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
             E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
@@ -1539,8 +1681,11 @@ class ReweightInterface(extended_cmd.Cmd):
             # Get the right Sudakov reweight factors
             if do_compute:
                 res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
+                ## TV: res2 is only for printing weight without sudakov in the rwgt block, remove for public version
+                res2 = [1., 0., 0., 0., 0., 0.]
             else:
                 res = [1., -1., -1., -1., -1., -1.]
+                res2 = res
 
             # Do the reewightings
             sudrat0 = 1. + res[1]/res[0]
@@ -1551,6 +1696,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
             sudrat0_only = res[1]/res[0]
             sudrat1_only = res[2]/res[0]
+            sudrat1_2 = 1. + res2[2]/res[0]
             # Dummy step: needed to read in the parse_reweight function
             event.rescale_weights(1.)
 
@@ -1560,11 +1706,16 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new3 = w_orig *sudrat3
             w_new4 = w_orig *sudrat4
 
+            w_new1_2 = w_orig *sudrat1_2
+
             w_new0_only = w_orig * sudrat0_only
             w_new1_only = w_orig * sudrat1_only
  
-            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
-                      
+            ## TV: use last line (commented) for picking out H1 events only. Change to first commented line for public version
+            #return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
+            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv
+            #return {'orig': orig_wgt,'2001': w_new1_2, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv
+
  
      
     def get_pdg_tuple(self, pdgs, nincoming):
