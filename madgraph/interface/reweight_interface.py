@@ -1628,7 +1628,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.critical(buff_event)
                 sys.exit(2)
                 
-            do_compute=True
+            do_compute=True 
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
             E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
