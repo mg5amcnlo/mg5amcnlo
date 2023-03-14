@@ -7488,6 +7488,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
             self.write_card(os.path.basename(answer.replace('_card.dat','')))
 
+        start = time.time()
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd as error:
@@ -7505,6 +7506,8 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
+        if time.time() - start < .5:
+            self.mother_interface.ask("Are you really that fast? If you are using an editor that returns directly. Please confirm that you have finised to edit the file", 'y')
         self.reload_card(path)
         
     def reload_card(self, path): 
