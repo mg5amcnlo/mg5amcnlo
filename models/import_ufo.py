@@ -693,9 +693,6 @@ class UFOMG5Converter(object):
                 del interaction['couplings'][key]
                 
         
-                
-
-        
         # we want to check if the same coupling is used for two lorentz strucutre 
         # for the same color structure. 
         to_lor = {}
@@ -705,7 +702,7 @@ class UFOMG5Converter(object):
                 to_lor[key].append(lor)
             else:
                 to_lor[key] = [lor]
-                
+
         nb_reduce = []
         optimize = False
         for key in to_lor:
@@ -2662,9 +2659,19 @@ class RestrictModel(model_reader.ModelReader):
                 self.defined_lorentz_expr[lor.get('structure')] = lor.get('name')
                 self.lorentz_info[lor.get('name')] = lor #(lor.get('structure'), lor.get('spins'))
             
+
+
         for key in to_lor:
             if len(to_lor[key]) == 1:
                 continue
+
+            def get_spin(l):
+                return self.lorentz_info[interaction['lorentz'][l]].get('spins')
+
+            if any(get_spin(l1[0]) != get_spin(to_lor[key][0][0]) for l1 in to_lor[key]):
+                logger.warning('not all same spins for a given interactions')
+                continue 
+
             names = ['u%s' % interaction['lorentz'][i[0]] if i[1] ==1 else \
                      'd%s' % interaction['lorentz'][i[0]] for i in to_lor[key]]
 
@@ -2708,6 +2715,7 @@ class RestrictModel(model_reader.ModelReader):
                 break
         else:
             base_name = 'LMER'
+
         i = 1
         while '%s%s' %(base_name, i) in self.lorentz_info:
             i +=1

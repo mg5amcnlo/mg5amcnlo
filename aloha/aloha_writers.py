@@ -799,8 +799,6 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             coup_name = '%s' % self.change_number_format(1)
 
-        
-        misc.sprint(self.name, coup_name, cond="VVS11_14P1N" in self.name)
         if not self.offshell:
             if coup_name == 'COUP':
                 formatted = self.write_obj(numerator.get_rep([0]))
