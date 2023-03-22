@@ -47,6 +47,14 @@ c it does not work if set to true, besides particular cases
        DATA cs_run / .false. /
        END
 
+       BLOCK DATA are_we_preventing_rij_smaller_than_MW
+       implicit none
+       logical rij_ge_mw
+       COMMON /rij_ge_mw/ rij_ge_mw
+       DATA rij_ge_mw / .true. /
+       END
+
+
 
        logical function has_lo2()
        implicit none
@@ -785,7 +793,7 @@ c      end
         print*,"Strange: in l_a_over_b_sin there is 
      .          a very small but not zero mass. a=",
      .  a," b=",b
-        stop
+        !stop
       endif
 
       aok=a
@@ -1501,15 +1509,23 @@ C returns the gamma/z mixing of sdk_cew
       subroutine sdk_get_invariants(p, iflist, invariants)
       implicit none
       include 'nexternal.inc'
+      include "coupl.inc"
       double precision p(0:3, nexternal-1)
       integer iflist(nexternal-1)
       double precision invariants(nexternal-1, nexternal-1)
       integer i,j
       double precision sumdot
 
+      logical rij_ge_mw
+      COMMON /rij_ge_mw/ rij_ge_mw
+
+
       do i = 1, nexternal-1
         do j = i, nexternal-1
           invariants(i,j) = sumdot(p(0,i),p(0,j),dble(iflist(i)*iflist(j)))
+          if(rij_ge_mw.and.abs(invariants(i,j)).lt.mdl_mw**2) then
+            invariants(i,j)=dsign(1d0,invariants(i,j))*mdl_mw**2
+          endif
           invariants(j,i) = invariants(i,j)
         enddo
       enddo

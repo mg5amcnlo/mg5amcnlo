@@ -664,7 +664,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'check_sudakov.f',
                      'check_sudakov_angle2.f',
                      'ewsudakov_functions.f',
-                     'momentum_reshuflling.f',
+                     'momentum_reshuffling.f',
                      'MCmasses_HERWIG6.inc',
                      'MCmasses_HERWIGPP.inc',
                      'MCmasses_PYTHIA6Q.inc',
@@ -766,7 +766,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.chdir(cwd)
         # Generate info page
         gen_infohtml.make_info_html_nlo(self.dir_path)
-
 
         return calls, amp_split_orders
 
@@ -4977,3 +4976,205 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
 
             
+class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
+    """exports the EW sudakov matrix element in a standalone format
+    """
+    dirstopdg = []
+
+    def finalize(self, *args, **opts):
+        """do the usual finalize, then call the function that writes
+        the python module with all the calls
+        """
+        super(ProcessExporterEWSudakovSA, self).finalize(*args, **opts)
+        self.write_python_wrapper(os.path.join(self.dir_path, 'bin', 'internal', 'ewsud_pydispatcher.py'))
+
+    def write_python_wrapper(self, fname):
+        """write a wrapper to be able to call the Sudakov for a specific subfolder given its PDG"""
+        
+        template = open(os.path.join(_file_path, \
+                          'iolibs/template_files/ewsudakov_pydispatcher.inc')).read()
+
+        replace_dict = {}
+        replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
+        replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
+        replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
+                ": importlib.import_module('%s.ewsudpy')" % dd[0] for dd in self.dirstopdg])   
+
+        replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),
+                        str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=False))) \
+                                                for dd in self.dirstopdg])
+
+        outfile = open(fname ,'w')
+        outfile.write(template % replace_dict)
+        outfile.close()
+
+    def get_pdg_tuple(self, pdgs, nincoming, sortfinal):
+        """write a tuple of 2 tuple, with the incoming particles unsorted
+        and the outgoing ones sorted if sortfinal = True
+        """
+        incoming = pdgs[:nincoming]
+        outgoing = pdgs[nincoming:]
+        if sortfinal:
+            return (tuple(incoming), tuple(sorted(outgoing)))
+        else:
+            return (tuple(incoming), tuple(outgoing))
+
+
+    #===============================================================================
+    # generate_directories_fks
+    #===============================================================================
+    def generate_directories_fks(self, matrix_element, fortran_model, me_number,
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
+        """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
+        only generating the relevant files for the EW Sudakov"""
+        proc = matrix_element.born_me['processes'][0]
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
+        
+        cwd = os.getcwd()
+        try:
+            os.chdir(path)
+        except OSError as error:
+            error_msg = "The directory %s should exist in order to be able " % path + \
+                        "to \"export\" in it. If you see this error message by " + \
+                        "typing the command \"export\" please consider to use " + \
+                        "instead the command \"output\". "
+            raise MadGraph5Error(error_msg) 
+        
+        calls = 0
+        
+        self.fksdirs = []
+        #first make and cd the direcrory corresponding to the born process:
+        borndir = "P%s" % \
+        (matrix_element.born_me.get('processes')[0].shell_string())
+        os.mkdir(borndir)
+        os.chdir(borndir)
+        logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
+
+## write the files corresponding to the born process in the P* directory
+        self.generate_born_fks_files(matrix_element,
+                fortran_model, me_number, path)
+
+
+#write the infortions for the different real emission processes
+        sqsorders_list = \
+            self.write_real_matrix_elements(matrix_element, fortran_model)
+
+        filename = 'extra_cnt_wrapper.f'
+        self.write_extra_cnt_wrapper(writers.FortranWriter(filename),
+                                     matrix_element.extra_cnt_me_list, 
+                                     fortran_model)
+
+        filename = 'iproc.dat'
+        self.write_iproc_file(writers.FortranWriter(filename),
+                              me_number)
+
+        filename = 'fks_info.inc'
+        # write_fks_info_list returns a set of the splitting types
+        self.proc_characteristic['splitting_types'] = list(\
+                set(self.proc_characteristic['splitting_types']).union(\
+                    self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)))
+
+        filename = 'leshouche_info.dat'
+        nfksconfs,maxproc,maxflow,nexternal=\
+                self.write_leshouche_info_file(filename,matrix_element)
+
+        # if no corrections are generated ([LOonly] mode), get 
+        # these variables from the born
+        if nfksconfs == maxproc == maxflow == 0:
+            nfksconfs = 1
+            (dummylines, maxproc, maxflow) = self.get_leshouche_lines(
+                    matrix_element.born_me, 1)
+
+        filename = 'genps.inc'
+        ngraphs = matrix_element.born_me.get_number_of_amplitudes()
+        ncolor = max(1,len(matrix_element.born_me.get('color_basis')))
+        self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
+
+#        filename = 'maxconfigs.inc'
+#        self.write_maxconfigs_file(writers.FortranWriter(filename),
+#                max(nconfigs,matrix_element.born_me.get_number_of_amplitudes()))
+
+        filename = 'nexternal.inc'
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        self.write_nexternal_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+
+        filename = 'orders.inc'
+        amp_split_orders, amp_split_size, amp_split_size_born = \
+			   self.write_orders_file(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+
+        filename = 'amp_split_orders.inc'
+        self.write_amp_split_orders_file(
+                            writers.FortranWriter(filename),
+                            amp_split_orders)
+        self.proc_characteristic['ninitial'] = ninitial
+        self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
+        
+        filename = 'maxparticles.inc'
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     nexternal)
+        
+        filename = 'pmass.inc'
+        try:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.real_processes[0].matrix_element)
+        except IndexError:
+            self.write_pmass_file(writers.FortranWriter(filename),
+                             matrix_element.born_me)
+
+        #draw the diagrams
+        self.draw_feynman_diagrams(matrix_element)
+
+        linkfiles = ['sa_ewsudakov.f',
+                     'sub_f2py_ewsudakov.f',
+                     'sa_ewsudakov_dummyfcts.f',
+                     'ewsudakov_functions.f',
+                     'momentum_reshuffling.f',
+                     'splitorders_stuff.f',
+                     'add_write_info.f',
+                     'coupl.inc',
+                     'weight_lines.f',
+                     'run.inc',
+                     'run_card.inc',
+                     'q_es.inc',
+                     'setscales.f',
+                     'randinit',
+                     'timing_variables.inc',
+                     'orderstag_base.inc',
+                     'orderstags_glob.dat']
+
+        for file in linkfiles:
+            ln('../' + file , '.')
+        os.system("ln -s ../../Cards/param_card.dat .")
+
+        #copy the makefile 
+        os.system("ln -s ../makefile_fks_dir ./makefile")
+
+        # touch a dummy analyse_opts
+
+        os.system('touch %s/analyse_opts' % os.path.join(self.dir_path,'SubProcesses'))
+
+        # Return to SubProcesses dir
+        os.chdir(os.path.pardir)
+        # Add subprocess to subproc.mg
+        filename = 'subproc.mg'
+        files.append_to_file(filename,
+                             self.write_subproc,
+                             borndir)
+            
+        os.chdir(cwd)
+        # Generate info page
+        gen_infohtml.make_info_html_nlo(self.dir_path)
+        
+        # update the dirs to pdg information
+        self.dirstopdg.extend([(borndir, [l.get('id') for l in pp['legs']], [l.get('state') for l in pp['legs']].count(False)) for pp in matrix_element.born_me['processes']])
+
+        return calls, amp_split_orders

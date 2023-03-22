@@ -501,7 +501,7 @@ C energies (sum of z components of FS momenta)
      $   ' implemented', nincoming
         stop
       endif
-
+      
       do i = 1, nexternal-1
 C--------mass shell conditions
         if (i.ne.iresh) then

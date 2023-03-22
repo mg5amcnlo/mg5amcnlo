@@ -2092,6 +2092,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # ensure that the run_card is present
             if not hasattr(self, 'run_card'):
                 self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            # Below reads the run_card in the LHE file rather than the Cards/run_card
+            import madgraph.various.lhe_parser as lhe_parser
+            args_path = list(args)
+            self.check_decay_events(args_path) 
+            self.run_card = banner_mod.RunCard(lhe_parser.EventFile(args_path[0]).get_banner()['mgruncard'])
+
             
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
@@ -2103,6 +2109,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append('--web')
             command.append('reweight')
             
+            ## TV: copy the event file as backup before starting reweighting
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+            event_path_backup = pjoin(self.me_dir, 'Events', self.run_name, 'events_orig.lhe.gz')
+            if os.path.exists(event_path) and not os.path.exists(event_path_backup):
+                shutil.copyfile(event_path, event_path_backup)
+
             #########   START SINGLE CORE MODE ############
             if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
                 if self.run_name:
@@ -2218,7 +2230,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cross_sections[key] = value / (nb_event+1)
                 lhe.remove()
                 for key in cross_sections:
-                    if key == 'orig' or key.isdigit():
+                    if key == 'orig' or (key.isdigit() and not (key[0] == '2')):
                         continue
                     logger.info('%s : %s pb' % (key, cross_sections[key]))
                 return

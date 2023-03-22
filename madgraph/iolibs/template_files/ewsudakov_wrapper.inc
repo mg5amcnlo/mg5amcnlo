@@ -124,7 +124,7 @@ if (firsttime_hel(ihel)) then
       hel(hel(0)) = ihel
       igood_hel(hel(0)) = 1
     endif
-    write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel, nhel(:,ihel), good_hel(ihel)
+    !write(*,*) 'EW SUDAKOV WRAPPER HEL FILTER', ihel, nhel(:,ihel), good_hel(ihel)
     firsttime_hel(ihel) = .false.
 endif
 
