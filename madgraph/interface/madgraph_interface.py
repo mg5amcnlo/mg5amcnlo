@@ -8471,7 +8471,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             return ndiags, cpu_time2 - cpu_time1
 
         # Start of the actual routine
-        
+        if self._export_format == 'madevent' and  self._me_curr_exporter:
+                self._curr_exporter.grouped_mode = 'gpu'
+                # temporary fix, simplify grouping
+
         ndiags, cpu_time = generate_matrix_elements(self,group_processes)
 
         calls = 0
