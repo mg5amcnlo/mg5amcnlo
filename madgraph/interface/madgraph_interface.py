@@ -8413,6 +8413,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                        self.options['loop_optimized_output']}
                     
                     grouping_criteria = self._curr_exporter.grouped_mode
+                    if grouping_criteria == 'gpu':
+                        grouping_criteria = 'madevent'
                     if non_dc_amps:
                         subproc_groups.extend(\
                           group_subprocs.SubProcessGroup.group_amplitudes(\
@@ -8429,6 +8431,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
                     ndiags = sum([len(m.get('diagrams')) for m in \
                               subproc_groups.get_matrix_elements()])
+                    
+                    if self._curr_exporter.grouped_mode == "gpu":
+                        subproc_groups = subproc_groups.split_nonidentical_grouping()
+
                     self._curr_matrix_elements = subproc_groups
                     # assign a unique id number to all groups
                     uid = 0
@@ -8470,11 +8476,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
             return ndiags, cpu_time2 - cpu_time1
 
-        # Start of the actual routine
-        if self._export_format == 'madevent' and  self._me_curr_exporter:
-                self._curr_exporter.grouped_mode = 'gpu'
-                # temporary fix, simplify grouping
 
+        if self._me_curr_exporter:
+            self._curr_exporter.grouped_mode = 'gpu'
+            # temporary should be passed to 
+            # self._curr_exporter.grouped_mode = self._me_curr_exporter.grouped_mode
+            # or the most restricted of the two
+            
         ndiags, cpu_time = generate_matrix_elements(self,group_processes)
 
         calls = 0

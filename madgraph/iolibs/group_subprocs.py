@@ -527,6 +527,7 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
+
         return helas_objects.HelasMatrixElementList(\
             sum([group.get('matrix_elements') for group in self], []))
 
@@ -571,6 +572,22 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
                 output.append(new_group)
         return output
         
+    def split_nonidentical_grouping(self):
+        """Return a list of grouping where they are no groupoing over the leptons."""
+        
+        output = SubProcessGroupList()
+        for group in self:
+            new_mes = {}
+            #misc.sprint(type())
+            for me in group['matrix_elements']:
+                new_me = copy.copy(me)
+                new_group = copy.copy(group)
+                new_group['matrix_elements'] = group['matrix_elements'].__class__([new_me])
+                new_group.set('name', new_group.generate_name(\
+                                    new_me['processes'][0],
+                                    criteria='gpu'))
+                output.append(new_group)
+        return output        
         
     
 #===============================================================================
