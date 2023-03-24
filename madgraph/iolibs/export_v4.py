@@ -7862,7 +7862,7 @@ class UFO_model_to_mg4(object):
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
         
@@ -8929,7 +8929,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                    "grreglog","regsqrt","b0f","sqrt_trajectory","log_trajectory"]:
 
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
@@ -8967,7 +8967,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                        "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
