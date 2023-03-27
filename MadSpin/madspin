@@ -4,11 +4,11 @@
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -33,7 +33,6 @@ import optparse
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, root_path)
 
-
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
 parser = optparse.OptionParser(usage=usage)
@@ -51,7 +50,6 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 if len(args) == 0:
     args = ''
 
-
 import subprocess
 
 # Check if optimize mode is (and should be) activated
@@ -64,7 +62,7 @@ import logging
 import logging.config
 import madgraph.interface.coloring_logging
 
-try: 
+try:
     import readline
 except ImportError:
     try:
@@ -76,8 +74,8 @@ else:
 
     if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
         readline.parse_and_bind("bind ^I rl_complete")
-        readline.__doc__ = 'libedit'  
-    
+        readline.__doc__ = 'libedit'
+
     elif hasattr(readline, '__doc__'):
         if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: complete")
@@ -86,11 +84,19 @@ else:
     else:
         readline.__doc__ = 'GNU'
         readline.parse_and_bind("tab: complete")
-        
+
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5', 'decayhistory')
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "decayhistory")
         readline.read_history_file(history_file)
+
     except:
         pass
 
@@ -103,12 +109,11 @@ except:
 if __debug__:
         print('Running MG5 in debug mode')
 
-
 # Set logging level according to the logging level given by options
 #logging.basicConfig(level=vars(logging)[options.logging])
 try:
     if __debug__ and options.logging == 'INFO':
-        options.logging = 'DEBUG'    
+        options.logging = 'DEBUG'
     logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
     logging.root.setLevel(eval('logging.' + options.logging))
     logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
@@ -120,7 +125,7 @@ import MadSpin.interface_madspin as interface
 # Call the cmd interface main loop
 try:
     if options.file or args:
-        # They are an input file 
+        # They are an input file
         if args:
             input_file = os.path.realpath(args[0])
         else:
@@ -157,16 +162,11 @@ try:
         try:
             cmd_line.exec_cmd('quit all', printcmd=False)
             readline.set_history_length(100)
-            if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
-                os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+            if not os.path.exists(state_dir):
+                os.mkdir(state_dir)
             readline.write_history_file(history_file)
         except Exception as error:
             pass
 except KeyboardInterrupt:
-    print('writting history and quit on KeyboardInterrupt') 
+    print('writting history and quit on KeyboardInterrupt')
     pass
-
-
-
-
-    

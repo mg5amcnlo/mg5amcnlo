@@ -8,11 +8,11 @@ start = time.time()
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -27,8 +27,8 @@ if sys.version_info[0] == 2:
              "  You are currently using Python2.%s. Please use a more recent version of Python." % sys.version_info[1])
 elif  sys.version_info[1] < 7:
     sys.exit("MadGraph5_aMC@NLO works only with python 3.7 (and later).\n"+\
-              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1]) 
-    
+              "  You are currently using Python 3.%i. So please upgrade your version of Python." % sys.version_info[1])
+
 try:
     import six
 except ImportError:
@@ -44,7 +44,6 @@ import optparse
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, root_path)
-
 
 # Write out nice usage message if called with -h or --help
 usage = "usage: %prog [options] [FILE] "
@@ -62,7 +61,7 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
 parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
-                  help='For mac user, forbids to use caffeinate when running with a script')                               
+                  help='For mac user, forbids to use caffeinate when running with a script')
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -82,11 +81,10 @@ import madgraph.interface.coloring_logging
 if sys.version_info[0] ==2:
     logging.warning("\033[91mpython2 support will be removed in last quarter 2021. If you use python2 due to issue with Python3, please report them on https://bugs.launchpad.net/mg5amcnlo\033[0m")
 
-
 if ' ' in os.getcwd():
     logging.warning("\033[91mPath does contains spaces. We advise that you change your current path to avoid to have space in the path.\033[0m")
 
-try: 
+try:
     import readline
 except ImportError:
     try:
@@ -98,8 +96,8 @@ else:
 
     if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
         readline.parse_and_bind("bind ^I rl_complete")
-        readline.__doc__ = 'libedit'  
-    
+        readline.__doc__ = 'libedit'
+
     elif hasattr(readline, '__doc__'):
         if 'libedit' not in readline.__doc__:
             readline.parse_and_bind("tab: complete")
@@ -108,11 +106,19 @@ else:
     else:
         readline.__doc__ = 'GNU'
         readline.parse_and_bind("tab: complete")
-        
+
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5', 'mg5history')
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "mg5history")
         readline.read_history_file(history_file)
+
     except:
         pass
 
@@ -129,7 +135,7 @@ if __debug__:
 #logging.basicConfig(level=vars(logging)[options.logging])
 try:
     if __debug__ and options.logging == 'INFO':
-        options.logging = 'DEBUG'    
+        options.logging = 'DEBUG'
     if options.logging.isdigit():
         level = int(options.logging)
     else:
@@ -153,7 +159,6 @@ try:
 except:
     pass
 
-
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
         print( "ERROR: %s is not present in the PLUGIN directory. Please install it first")
@@ -169,10 +174,8 @@ if options.plugin:
     cmd_line.plugin=options.plugin
 elif options.web:
     cmd_line = interface.MasterCmdWeb()
-else: 
+else:
     cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
-
-
 
 # Call the cmd interface main loop
 try:
@@ -181,7 +184,7 @@ try:
             logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
             pid = os.getpid()
             subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
-        # They are an input file 
+        # They are an input file
         if args:
             input_file = os.path.realpath(args[0])
         else:
@@ -208,17 +211,14 @@ try:
         else:
             cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print('writting history and quit on KeyboardInterrupt') 
+    print('writting history and quit on KeyboardInterrupt')
     pass
 
 try:
     cmd_line.exec_cmd('quit all', printcmd=False)
     readline.set_history_length(100)
-    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
-        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+    if not os.path.exists(state_dir):
+        os.mkdir(state_dir)
     readline.write_history_file(history_file)
 except Exception as error:
     pass
-
-
-    
