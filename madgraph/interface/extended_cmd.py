@@ -2,18 +2,17 @@
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """  A file containing different extension of the cmd basic python library"""
-
 
 from __future__ import absolute_import
 from __future__ import print_function
@@ -40,7 +39,6 @@ except:
     readline = None
     GNU_SPLITTING = True
 
-
 logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 logger_tuto = logging.getLogger('tutorial') # for stdout
@@ -55,9 +53,8 @@ except ImportError as error:
         import internal.misc as misc
     except:
         raise error
-    
-    MADEVENT = True
 
+    MADEVENT = True
 
 pjoin = os.path.join
 
@@ -67,10 +64,10 @@ class TimeOutError(Exception):
 def debug(debug_only=True):
 
     def deco_debug(f):
-        
+
         if debug_only and not __debug__:
             return f
-        
+
         def deco_f(*args, **opt):
             try:
                 return f(*args, **opt)
@@ -86,7 +83,7 @@ import string
 # The following is copy from the standard cmd routine but pass in new class type
 __all__ = ["Cmd"]
 PROMPT = '(Cmd) '
-IDENTCHARS = string.ascii_letters + string.digits + '_'            
+IDENTCHARS = string.ascii_letters + string.digits + '_'
 class OriginalCmd(object):
     """A simple framework for writing line-oriented command interpreters.
 
@@ -186,7 +183,6 @@ class OriginalCmd(object):
                 except ImportError:
                     pass
 
-
     def precmd(self, line):
         """Hook method executed just before the command line is
         interpreted, but after the input prompt is generated and issued.
@@ -284,20 +280,20 @@ class OriginalCmd(object):
 
     def completenames(self, text, *ignored):
         dotext = 'do_'+text
-        
+
         done = set() # store the command already handle
         out = []
         #misc.sprint([a for a in self.get_names() if a.startswith(dotext)])
         for a in self.get_names():
             if a.startswith(dotext) and a not in done and not done.add(a):
-                # to allow practical shortcut of type do_arg1_arg2 
+                # to allow practical shortcut of type do_arg1_arg2
                 # do not include such here
                 if ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done):
                     done.add(a)
                     out.append(a[3:])
         return out
-        
-        return [a[3:] for a in self.get_names() 
+
+        return [a[3:] for a in self.get_names()
                 if a.startswith(dotext) and a not in done and not done.add(a)
                 and ('_' not in a[3:] or '%s%s' %(dotext,a[3:].split('_',1)[0]) not in done)
                 ]
@@ -454,10 +450,7 @@ class OriginalCmd(object):
                 del texts[-1]
             for col in range(len(texts)):
                 texts[col] = texts[col].ljust(colwidths[col])
-            self.stdout.write("%s\n"%str("  ".join(texts)))    
-    
-    
-
+            self.stdout.write("%s\n"%str("  ".join(texts)))
 
 #===============================================================================
 # CmdExtended
@@ -497,7 +490,7 @@ class BasicCmd(OriginalCmd):
             values = set((s[0] for s in dico.values() if len(s)==1))
             if len(values) == 1:
                 return values
-                
+
         # That's the real work
         out = []
         valid=0
@@ -511,16 +504,16 @@ class BasicCmd(OriginalCmd):
             # Remove duplicate
             d = {}
             for x in opt:
-                d[x] = 1    
+                d[x] = 1
             opt = list(d.keys())
             opt.sort()
             out += opt
 
         if not forceCategory and valid == 1:
             out = out[1:]
-            
+
         return out
-    
+
     @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
@@ -559,13 +552,13 @@ class BasicCmd(OriginalCmd):
                     self.stdout.write(self.completion_prefix + val + \
                                      ' ' * (longest_match_length +1 -len(val)))
                 self.stdout.write('\n')
-    
+
             self.stdout.write(self.prompt+readline.get_line_buffer())
             self.stdout.flush()
         except Exception as error:
             if __debug__:
                 logger.error(error)
-            
+
     def getTerminalSize(self):
         def ioctl_GWINSZ(fd):
             try:
@@ -589,7 +582,7 @@ class BasicCmd(OriginalCmd):
             except Exception:
                 cr = (25, 80)
         return int(cr[1])
-    
+
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
          If a command has not been entered, then complete against command list.
@@ -602,7 +595,7 @@ class BasicCmd(OriginalCmd):
             stripped = len(origline) - len(line)
             begidx = readline.get_begidx() - stripped
             endidx = readline.get_endidx() - stripped
-            
+
             if ';' in line:
                 begin, line = line.rsplit(';',1)
                 begidx = begidx - len(begin) - 1
@@ -631,43 +624,43 @@ class BasicCmd(OriginalCmd):
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
-                self.completion_matches = [p[to_rm:] for p in data 
-                                              if len(p)>to_rm]                
+                self.completion_matches = [p[to_rm:] for p in data
+                                              if len(p)>to_rm]
             # correct wrong splitting with '-'/"="
             elif line and line[begidx-1] in ['-',"=",':']:
-             try:    
+             try:
                 sep = line[begidx-1]
                 Ntext = line.split()[-1]
                 self.completion_prefix = Ntext.rsplit(sep,1)[0] + sep
                 to_rm = len(self.completion_prefix)
                 Nbegidx = len(line.rsplit(None, 1)[0])
                 data = compfunc(Ntext, line, Nbegidx, endidx)
-                self.completion_matches = [p[to_rm:] for p in data 
+                self.completion_matches = [p[to_rm:] for p in data
                                               if len(p)>to_rm]
              except Exception as error:
-                 print(error)                
+                 print(error)
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
 
         self.completion_matches = [ l if l[-1] in [' ','@','=',os.path.sep]
                                     else ((l + ' ') if not l.endswith('\\$') else l[:-2])
-                                  for l in self.completion_matches if l] 
-        
+                                  for l in self.completion_matches if l]
+
         try:
             return self.completion_matches[state]
         except IndexError as error:
             # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
-            return None    
-        
+            return None
+
     @staticmethod
     def split_arg(line):
         """Split a line of arguments"""
-        
+
         split = re.findall(r"(?:[^\s'\"]|(?:'|\")(?:\\.|[^\"'])*(?:\"|'))+",line)
-        
+
         out=[]
         tmp=''
         for data in split:
@@ -683,7 +676,7 @@ class BasicCmd(OriginalCmd):
             else:
                 out.append(data)
         return out
-    
+
     @staticmethod
     def list_completion(text, list, line=''):
         """Propose completions of text in list"""
@@ -695,19 +688,18 @@ class BasicCmd(OriginalCmd):
                             for f in list
                             if f.startswith(text)
                             ]
-            
+
         return completions
-            
 
     @staticmethod
-    def path_completion(text, base_dir = None, only_dirs = False, 
+    def path_completion(text, base_dir = None, only_dirs = False,
                                                                  relative=True):
         """Propose completions of text to compose a valid path"""
 
         if base_dir is None:
             base_dir = os.getcwd()
         base_dir = os.path.expanduser(os.path.expandvars(base_dir))
-        
+
         if text == '~':
             text = '~/'
         prefix, text = os.path.split(text)
@@ -742,26 +734,23 @@ class BasicCmd(OriginalCmd):
         if relative:
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
-        
+
         completion = [a.replace(' ','\ ') for a in completion]
         return completion
-
-
-
 
 class CheckCmd(object):
     """Extension of the cmd object for only the check command"""
 
     def check_history(self, args):
         """check the validity of line"""
-        
+
         if len(args) > 1:
             self.help_history()
             raise self.InvalidCmd('\"history\" command takes at most one argument')
-        
+
         if not len(args):
             return
-        
+
         if args[0] =='.':
             if not self._export_dir:
                 raise self.InvalidCmd("No default directory is defined for \'.\' option")
@@ -770,21 +759,21 @@ class CheckCmd(object):
                 if dirpath and not os.path.exists(dirpath) or \
                        os.path.isdir(args[0]):
                     raise self.InvalidCmd("invalid path %s " % dirpath)
-    
+
     def check_save(self, args):
         """check that the line is compatible with save options"""
-        
+
         if len(args) > 2:
             self.help_save()
             raise self.InvalidCmd('too many arguments for save command.')
-        
+
         if len(args) == 2:
             if args[0] != 'options':
                 self.help_save()
                 raise self.InvalidCmd('\'%s\' is not recognized as first argument.' % \
                                                 args[0])
             else:
-                args.pop(0)           
+                args.pop(0)
 
 class HelpCmd(object):
     """Extension of the cmd object for only the help command"""
@@ -792,7 +781,7 @@ class HelpCmd(object):
     def help_quit(self):
         logger.info("-- terminates the application",'$MG:color:BLUE')
         logger.info("syntax: quit",'$MG:BOLD')
-    
+
     help_EOF = help_quit
 
     def help_history(self):
@@ -802,7 +791,7 @@ class HelpCmd(object):
         logger.info("   Cards/proc_card_mg5.dat will be used.")
         logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
-        
+
     def help_help(self):
         logger.info("-- access to the in-line help",'$MG:color:BLUE')
         logger.info("syntax: help",'$MG:BOLD')
@@ -810,22 +799,22 @@ class HelpCmd(object):
     def help_save(self):
         """help text for save"""
         logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
-        logger.info("syntax: save [options]  [FILEPATH]",'$MG:BOLD') 
-        
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:BOLD')
+
     def help_display(self):
         """help for display command"""
-        logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
+        logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')
         logger.info("syntax: display " + "|".join(self._display_opts),'$MG:BOLD')
-        
+
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
 
-    def complete_display(self,text, line, begidx, endidx):        
+    def complete_display(self,text, line, begidx, endidx):
         args = self.split_arg(line[0:begidx])
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._display_opts)
-        
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
@@ -868,14 +857,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #suggested list of command
     next_possibility = {} # command : [list of suggested command]
     history_header = ""
-    
+
     _display_opts = ['options','variable']
     allow_notification_center = True
-    
+
     class InvalidCmd(Exception):
         """expected error for wrong command"""
-        pass    
-    
+        pass
+
     ConfigurationError = InvalidCmd
 
     debug_output = 'debug'
@@ -883,7 +872,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            More information is found in '%(debug)s'.\n
            Please attach this file to your report."""
     config_debug = error_debug
-           
+
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
 
@@ -904,10 +893,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else:
                 continue
             break
-    
+
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
-        
+
         self.log = True
         self.history = []
         self.save_line = '' # for line splitting
@@ -916,8 +905,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
         self.inputfile = None # input file (in non interactive mode)
-        self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
-        self.stored_line = '' # for be able to treat answer to question in input file 
+        self.haspiping = not sys.stdin.isatty() # check if mg5 is piped
+        self.stored_line = '' # for be able to treat answer to question in input file
                               # answer which are not required.
         if not hasattr(self, 'helporder'):
             self.helporder = ['Documented commands']
@@ -936,9 +925,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
 
-    
     def cmdloop(self, intro=None):
-        
+
         self.preloop()
         if intro is not None:
             self.intro = intro
@@ -973,54 +961,53 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             finally:
                 stop = self.postcmd(stop, line)
         self.postloop()
-            
+
     def no_notification(self):
         """avoid to have html opening / notification"""
         self.allow_notification_center = False
         try:
             self.options['automatic_html_opening'] = False
             self.options['notification_center'] = False
-            
+
         except:
             pass
-    
-      
+
     def precmd(self, line):
         """ A suite of additional function needed for in the cmd
         this implement history, line breaking, comment treatment,...
         """
-        
+
         if not line:
             return line
 
         # Check if we are continuing a line:
         if self.save_line:
-            line = self.save_line + line 
+            line = self.save_line + line
             self.save_line = ''
-            
-        line = line.lstrip()        
+
+        line = line.lstrip()
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1] 
-            return '' # do nothing   
-                
+            self.save_line = line[:-1]
+            return '' # do nothing
+
         # Remove comment
         if '#' in line:
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line: 
+        if ';' in line:
             lines = line.split(';')
             for subline in lines:
                 if not (subline.startswith("history") or subline.startswith('help') \
-                        or subline.startswith('#*')): 
-                    self.history.append(subline)           
+                        or subline.startswith('#*')):
+                    self.history.append(subline)
                 stop = self.onecmd_orig(subline)
                 stop = self.postcmd(stop, subline)
             return ''
-            
+
         # execute the line command
-        self.history.append(line) 
+        self.history.append(line)
         return line
 
     def postcmd(self,stop, line):
@@ -1043,8 +1030,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # We are in a file reading mode. So we need to redirect the cmd
         self.child = obj_instance
         self.child.mother = self
-        
-        
+
         #ensure that notification are sync:
         self.child.allow_notification_center = self.allow_notification_center
 
@@ -1056,28 +1042,28 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.inputfile:
             # we are in non interactive mode -> so pass the line information
             obj_instance.inputfile = self.inputfile
-        
+
         obj_instance.haspiping = self.haspiping
-        
+
         if not interface:
             return self.child
- 
+
     #===============================================================================
     # Ask a question with nice options handling
-    #===============================================================================    
-    def ask(self, question, default, choices=[], path_msg=None, 
+    #===============================================================================
+    def ask(self, question, default, choices=[], path_msg=None,
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, text_format='4', force=False, 
+            first_cmd=None, text_format='4', force=False,
             return_instance=False, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
-        
+
         if path_msg:
             path_msg = [path_msg]
         else:
             path_msg = []
-            
+
         if timeout is True:
             try:
                 timeout = self.options['timeout']
@@ -1087,20 +1073,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # add choice info to the question
         if choices + path_msg:
             question += ' ['
-            question += "\033[%sm%s\033[0m, " % (text_format, default)    
+            question += "\033[%sm%s\033[0m, " % (text_format, default)
             for data in choices[:9] + path_msg:
                 if default == data:
                     continue
                 else:
                     question += "%s, " % data
-                    
+
             if len(choices) > 9:
-                question += '... , ' 
+                question += '... , '
             question = question[:-2]+']'
         else:
-            question += "[\033[%sm%s\033[0m] " % (text_format, default)    
+            question += "[\033[%sm%s\033[0m] " % (text_format, default)
         if ask_class:
-            obj = ask_class  
+            obj = ask_class
         elif path_msg:
             obj = OneLinePathCompletion
         else:
@@ -1108,10 +1094,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if alias:
             choices += list(alias.keys())
-        
-        question_instance = obj(question, allow_arg=choices, default=default, 
+
+        question_instance = obj(question, allow_arg=choices, default=default,
                                                    mother_interface=self, **opt)
-        
+
         if first_cmd:
             if isinstance(first_cmd, str):
                 question_instance.onecmd(first_cmd)
@@ -1121,7 +1107,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
-        
+
         if force:
             answer = default
         else:
@@ -1134,7 +1120,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     answer = question_instance.default(line)
                     question_instance.postcmd(answer, line)
                     if not return_instance:
-                        return question_instance.answer 
+                        return question_instance.answer
                     else:
                         return question_instance.answer , question_instance
                 if hasattr(question_instance, 'check_answer_consistency'):
@@ -1143,7 +1129,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     return answer
                 else:
                     return answer, question_instance
-        
+
         question = question_instance.question
         if not force:
             value =   Cmd.timed_input(question, default, timeout=timeout,
@@ -1161,27 +1147,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             value = question_instance.default(default)
             if hasattr(question_instance, 'answer'):
                 value = question_instance.answer
-           
 
         if not return_instance:
             return value
         else:
             return value, question_instance
- 
+
     def do_import(self, line):
         """Advanced commands: Import command files"""
 
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
-        
+
         # Execute the card
         self.import_command_file(args[1])
-    
-        
+
     def check_import(self, args):
         """check import command"""
-        
+
         if '-f' in args:
             self.force = True
             args.remove('-f')
@@ -1191,18 +1175,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             raise self.InvalidCmd('import command requires one filepath argument')
         if not os.path.exists(args[1]):
             raise 'No such file or directory %s' % args[1]
-        
-    
+
     def check_answer_in_input_file(self, question_instance, default, path=False, line=None):
         """Questions can have answer in output file (or not)"""
-
 
         if not self.inputfile:
             return None# interactive mode
 
         if line is None:
             line = self.get_stored_line()
-            # line define if a previous answer was not answer correctly 
+            # line define if a previous answer was not answer correctly
 
         if not line:
             try:
@@ -1216,9 +1198,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 logger.info('The answer to the previous question is not set in your input file', '$MG:BOLD')
                 logger.info('Use %s value' % default, '$MG:BOLD')
                 return str(default)
-            
+
         line = line.replace('\n','').strip()
-        if '#' in line: 
+        if '#' in line:
             line = line.split('#')[0]
         if not line:
             # Comment or empty line, pass to the next one
@@ -1245,7 +1227,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             for entry in question_instance.allow_arg:
                 if line.lower() == entry.lower():
                     return entry
-        elif any(line.lower()==opt.lower() for opt in options): 
+        elif any(line.lower()==opt.lower() for opt in options):
             possibility = [opt for opt in options if line.lower()==opt.lower()]
             if len (possibility)==1:
                 return possibility[0]
@@ -1254,18 +1236,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line,n = re.subn('\s*=\s*','=', line)
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
-            
 
         if hasattr(question_instance, 'special_check_answer_in_input_file'):
             out = question_instance.special_check_answer_in_input_file(line, default)
-            
+
             if out is not None:
                 return out
-            
+
         #else:
         #    misc.sprint('No special check', type(question_instance))
-        
-            
+
         # No valid answer provides
         if self.haspiping:
             self.store_line(line)
@@ -1273,13 +1253,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             logger.info(question_instance.question)
             logger.warning('found line : %s' % line)
-            logger.warning('This answer is not valid for current question. Keep it for next question and use here default: %s', default) 
+            logger.warning('This answer is not valid for current question. Keep it for next question and use here default: %s', default)
             self.store_line(line)
             return str(default)
 
     def store_line(self, line):
         """store a line of the input file which should be executed by the higher mother"""
-        
+
         if self.mother:
             self.mother.store_line(line)
         else:
@@ -1292,17 +1272,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.mother.stored_line = None
         else:
             value = self.stored_line
-            self.stored_line = None    
+            self.stored_line = None
         return value
 
-
-
     def nice_error_handling(self, error, line):
-        """ """ 
+        """ """
         # Make sure that we are at the initial position
         if self.child:
             return self.child.nice_error_handling(error, line)
-        
+
         os.chdir(self.__initpos)
         # Create the debug files
         self.log = False
@@ -1325,18 +1303,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text += '\"%s\" with error:\n' % self.history[-1]
         else:
             error_text = ''
-        error_text += '%s : %s\n' % (error.__class__.__name__, 
+        error_text += '%s : %s\n' % (error.__class__.__name__,
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug':self.debug_output}
         logger_stderr.critical(error_text)
-        
-                
+
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
         except Exception as error:
             debug_file.write('Fail to write options with error %s' % error)
-        
+
         #add the cards:
         for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat']:
             try:
@@ -1345,29 +1322,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 ff.close()
             except Exception:
                 pass
-            
+
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
-                raise 
+                raise
                 sys.exit(str(error))
             elif self.options['crash_on_error'] == 'never':
                 return False
-            
+
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False or self.inputfile:
             return True
         elif self.mother:
             if self.mother.use_rawinput is False:
                 return True
-                
+
             elif self.mother.mother:
                 if self.mother.mother.use_rawinput is False:
-                    return True 
-        
+                    return True
+
         return False
-
-
 
     def nice_user_error(self, error, line):
         if self.child:
@@ -1379,11 +1354,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = 'Command \"%s\" interrupted with error:\n' % line
         else:
             error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
-            error_text += '\"%s\" with error:\n' % self.history[-1] 
-        error_text += '%s : %s' % (error.__class__.__name__, 
+            error_text += '\"%s\" with error:\n' % self.history[-1]
+        error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
-        
+
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
@@ -1400,17 +1375,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return True
             elif self.mother.mother:
                 if self.mother.mother.use_rawinput is False:
-                    return True                
-            
+                    return True
+
         # Remove failed command from history
         self.history.pop()
         return False
-    
+
     def nice_config_error(self, error, line):
         if self.child:
             return self.child.nice_user_error(error, line)
 
-        # Make sure that we are at the initial position                                 
+        # Make sure that we are at the initial position
         os.chdir(self.__initpos)
         if not self.history or line == self.history[-1]:
             error_text = 'Error detected in \"%s\"\n' % line
@@ -1429,13 +1404,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
-        
+
         # Add options status to the debug file
         try:
             self.do_display('options', debug_file)
         except Exception as error:
             debug_file.write('Fail to write options with error %s' % error)
-            
+
         if hasattr(self, 'options') and 'crash_on_error' in self.options:
             if self.options['crash_on_error'] is True:
                 logger.info('stop computation due to crash_on_error=True')
@@ -1444,9 +1419,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if self.history:
                     self.history.pop()
                 return False
-            
 
-        
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False or self.inputfile:
             return True
@@ -1455,27 +1428,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return True
             elif self.mother.mother:
                 if self.mother.mother.use_rawinput is False:
-                    return True                             
+                    return True
 
-        # Remove failed command from history                                            
+        # Remove failed command from history
         if self.history:
             self.history.pop()
         return False
-    
+
     def onecmd_orig(self, line, **opt):
         """Interpret the argument as though it had been typed in response
         to the prompt.
 
         The return value is a flag indicating whether interpretation of
         commands by the interpreter should stop.
-        
+
         This allow to pass extra argument for internal call.
         """
         if '~/' in line and 'HOME' in os.environ:
             line = line.replace('~/', '%s/' % os.environ['HOME'])
         if '#' in line:
             line = line.split('#')[0]
-             
+
         line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:
@@ -1493,15 +1466,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return func(arg, **opt)
 
     def error_handling(self, error, line):
-        
+
         me_dir = ''
         if hasattr(self, 'me_dir'):
             me_dir = os.path.basename(me_dir) + ' '
-        
+
         misc.EasterEgg('error')
         stop=False
         try:
-            raise 
+            raise
         except self.InvalidCmd as error:
             if __debug__:
                 stop = self.nice_error_handling(error, line)
@@ -1534,28 +1507,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if stop:
             self.do_quit('all')
         return stop
-        
-
 
     def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
-           
+
         try:
             return self.onecmd_orig(line, **opt)
-        except BaseException as error: 
+        except BaseException as error:
             return self.error_handling(error, line)
-            
-    
+
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
         pass # dummy function
-            
-    def exec_cmd(self, line, errorhandling=False, printcmd=True, 
+
+    def exec_cmd(self, line, errorhandling=False, printcmd=True,
                                      precmd=False, postcmd=True,
                                      child=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
-
 
         if printcmd and not line.startswith('#'):
             logger.info(line)
@@ -1566,25 +1535,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling or \
-            (hasattr(self, 'options') and 'crash_on_error' in self.options and 
+            (hasattr(self, 'options') and 'crash_on_error' in self.options and
              self.options['crash_on_error']=='never'):
             stop = current_interface.onecmd(line, **opt)
         else:
             stop = Cmd.onecmd_orig(current_interface, line, **opt)
         if postcmd:
             stop = current_interface.postcmd(stop, line)
-        return stop      
+        return stop
 
     def run_cmd(self, line):
         """for third party call, call the line with pre and postfix treatment
         with global error handling"""
-        
+
         return self.exec_cmd(line, errorhandling=True, precmd=True)
-    
+
     def emptyline(self):
         """If empty line, do nothing. Default is repeat previous command."""
         pass
-    
+
     def default(self, line, log=True):
         """Default action if line is not recognized"""
 
@@ -1595,13 +1564,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if line.strip() in ['q', '.q', 'stop']:
             logger.info("If you want to quit mg5 please type \"exit\".")
 
-        if self.history and self.history[-1] == line:        
+        if self.history and self.history[-1] == line:
             self.history.pop()
-             
+
     # Write the list of command line use in this session
     def do_history(self, line):
         """write in a file the suite of command that was used"""
-        
+
         args = self.split_arg(line)
         # Check arguments validity
         self.check_history(args)
@@ -1619,11 +1588,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             output_file = open(output_file, 'w')
         else:
             output_file = open(args[0], 'w')
-            
+
         # Create the command file
         text = self.get_history_header()
-        text += ('\n'.join(self.history) + '\n') 
-        
+        text += ('\n'.join(self.history) + '\n')
+
         #write this information in a file
         output_file.write(text)
         output_file.close()
@@ -1642,7 +1611,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """remove all line in history (but the last) starting with line.
         up to the point when a line didn't start by something in no_break.
         (reading in reverse order)"""
-        
+
         new_history = []
         for i in range(1, len(self.history)+1):
             cur_line = self.history[-i]
@@ -1657,20 +1626,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             else:
                 new_history.append(cur_line)
-            
+
         new_history.reverse()
         self.history[:] = new_history
-        
-                        
+
     def import_command_file(self, filepath):
         # remove this call from history
         if self.history:
             self.history.pop()
-        
 
         #avoid that command of other file interfere with this one.
         previous_store_line = self.get_stored_line()
-        
+
         # Read the lines of the file and execute them
         if isinstance(filepath, str):
             commandline = open(filepath).readlines()
@@ -1684,7 +1651,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # filepath can be overwritten during the run (leading to weird results)
         # Note also that we need a generator and not a list.
         for line in self.inputfile:
-            
+
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
@@ -1698,25 +1665,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         # If a child was open close it
         if self.child:
-            self.child.exec_cmd('quit')        
+            self.child.exec_cmd('quit')
         self.inputfile = oldinputfile
-        self.use_rawinput = oldraw   
-        
+        self.use_rawinput = oldraw
+
         # restore original store line
         cmd = self
         while hasattr(cmd, 'mother') and cmd.mother:
             cmd = cmd.mother
         cmd.stored_line = previous_store_line
         return
-    
+
     def get_history_header(self):
         """Default history header"""
-        
+
         return self.history_header
-    
+
     def postloop(self):
         """ """
-        
+
         if self.use_rawinput and self.completekey:
             try:
                 import readline
@@ -1726,7 +1693,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 pass
             except AttributeError:
                 pass
-        
+
         args = self.split_arg(self.lastcmd)
         if args and args[0] in ['quit','exit']:
             if 'all' in args:
@@ -1734,28 +1701,28 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(args) >1 and args[1].isdigit():
                 if args[1] not in  ['0', '1']:
                     return True
-                                
+
         return False
-        
+
     #===============================================================================
     # Ask a question with a maximum amount of time to answer
-    #===============================================================================    
+    #===============================================================================
     @staticmethod
     def timed_input(question, default, timeout=None, noerror=True, fct=None,
                     fct_timeout=None):
         """ a question with a maximal time to answer take default otherwise"""
-    
-        def handle_alarm(signum, frame): 
+
+        def handle_alarm(signum, frame):
             raise TimeOutError
-        
+
         signal.signal(signal.SIGALRM, handle_alarm)
-    
+
         if fct is None:
             fct = six.moves.input
-        
+
         if timeout:
             signal.alarm(timeout)
-            question += '[%ss to answer] ' % (timeout)    
+            question += '[%ss to answer] ' % (timeout)
         try:
             result = fct(question)
         except TimeOutError:
@@ -1773,15 +1740,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             fct_timeout(False)
         return result
 
-
-
-        
-
-
     # Quit
     def do_quit(self, line):
         """Not in help: exit the mainloop() """
-        
+
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
             return
@@ -1796,7 +1758,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.mother.lastcmd = 'quit %s' % level
         elif self.inputfile:
             for line in self.inputfile:
-                logger.warning('command not executed: %s' % line.replace('\n','')) 
+                logger.warning('command not executed: %s' % line.replace('\n',''))
 
         return True
 
@@ -1806,12 +1768,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     def do_help(self, line):
         """Not in help: propose some usefull possible action """
-                
+
         # if they are an argument use the default help
         if line:
             return super(Cmd, self).do_help(line)
-        
-        
+
         names = self.get_names()
         cmds = {}
         names.sort()
@@ -1838,8 +1799,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if tag in cmds:
                     cmds[tag].append(cmdname)
                 else:
-                    cmds[tag] = [cmdname] 
-                    
+                    cmds[tag] = [cmdname]
+
         self.stdout.write("%s\n"%str(self.doc_leader))
         for tag in self.helporder:
             if tag not in cmds:
@@ -1854,28 +1815,27 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             header = "%s (type help <topic>):" % name
             self.print_topics(header, item,   15,80)
 
-
         ## Add contextual help
         if len(self.history) == 0:
             last_action_2 = last_action = 'start'
         else:
             last_action_2 = last_action = 'none'
-        
+
         pos = 0
-        authorize = list(self.next_possibility.keys()) 
+        authorize = list(self.next_possibility.keys())
         while last_action_2  not in authorize and last_action not in authorize:
             pos += 1
             if pos > len(self.history):
                 last_action_2 = last_action = 'start'
                 break
-            
+
             args = self.history[-1 * pos].split()
             last_action = args[0]
-            if len(args)>1: 
+            if len(args)>1:
                 last_action_2 = '%s %s' % (last_action, args[1])
-            else: 
+            else:
                 last_action_2 = 'none'
-        
+
         logger.info('Contextual Help')
         logger.info('===============')
         if last_action_2 in authorize:
@@ -1886,25 +1846,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return
         text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
-            text+='\t %s \n' % option      
+            text+='\t %s \n' % option
         logger.info(text)
 
     def do_display(self, line, output=sys.stdout):
         """Advanced commands: basic display"""
-        
+
         args = self.split_arg(line)
         #check the validity of the arguments
-        
+
         if len(args) == 0:
             self.help_display()
             raise self.InvalidCmd('display require at least one argument')
-        
+
         if args[0] == "options":
-            outstr = "Value of current Options:\n" 
+            outstr = "Value of current Options:\n"
             for key, value in self.options.items():
                 outstr += '%25s \t:\t%s\n' %(key,value)
             output.write(outstr)
-            
+
         elif args[0] == "variable":
             outstr = "Value of Internal Variable:\n"
             try:
@@ -1912,9 +1872,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             except Exception:
                 outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
             else:
-                outstr += 'GLOBAL:\n' 
+                outstr += 'GLOBAL:\n'
                 outstr += misc.nice_representation(var, nb_space=4)
-               
+
             try:
                 var = eval('self.%s' % args[1])
             except Exception:
@@ -1925,7 +1885,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             split =  args[1].split('.')
             for i, name in enumerate(split):
                 try:
-                    __import__('.'.join(split[:i+1]))                    
+                    __import__('.'.join(split[:i+1]))
                     exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
                 except ImportError:
                     try:
@@ -1935,27 +1895,34 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                         break
                     else:
                         outstr += 'EXTERNAL:\n'
-                        outstr += misc.nice_representation(var, nb_space=4)                        
+                        outstr += misc.nice_representation(var, nb_space=4)
                 else:
                     var = eval(args[1])
                     outstr += 'EXTERNAL:\n'
-                    outstr += misc.nice_representation(var, nb_space=4)                        
-            
+                    outstr += misc.nice_representation(var, nb_space=4)
+
             pydoc.pager(outstr)
-    
-    
+
     def do_save(self, line, check=True):
         """Save the configuration file"""
-        
+
         args = self.split_arg(line)
         # Check argument validity
         if check:
             Cmd.check_save(self, args)
-            
+
         # find base file for the configuration
-        if 'HOME' in os.environ and os.environ['HOME']  and \
-        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
-            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+        legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_config_dir):
+            config_dir = legacy_config_dir
+        else:
+            config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+        config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+
+        if 'HOME' in os.environ and os.environ['HOME'] and os.path.exists(config_file):
+            base = config_file
             if hasattr(self, 'me_dir'):
                 basedir = self.me_dir
             elif not MADEVENT:
@@ -1965,7 +1932,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         elif MADEVENT:
             # launch via ./bin/madevent
             for config_file in ['me5_configuration.txt', 'amcatnlo_configuration.txt']:
-                if os.path.exists(pjoin(self.me_dir, 'Cards', config_file)): 
+                if os.path.exists(pjoin(self.me_dir, 'Cards', config_file)):
                     base = pjoin(self.me_dir, 'Cards', config_file)
             basedir = self.me_dir
         else:
@@ -1975,15 +1942,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.write_configuration(base, base, self.me_dir)
             base = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             basedir = MG5DIR
-            
+
         if len(args) == 0:
             args.append(base)
         self.write_configuration(args[0], base, basedir, self.options)
-        
+
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
         # We use the default configuration file as a template.
-        # to ensure that all configuration information are written we 
+        # to ensure that all configuration information are written we
         # keep track of all key that we need to write.
 
         logger.info('save configuration file to %s' % filepath)
@@ -1994,18 +1961,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         for line in open(basefile):
             if '=' in line:
                 data, value = line.split('=',1)
-            else: 
+            else:
                 text += line
                 continue
             data = data.strip()
             if data.startswith('#'):
                 key = data[1:].strip()
-            else: 
-                key = data 
+            else:
+                key = data
             if '#' in value:
                 value, comment = value.split('#',1)
             else:
-                comment = ''    
+                comment = ''
             if key in to_keep:
                 value = str(to_keep[key])
             else:
@@ -2017,7 +1984,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 to_write.remove(key)
             except Exception:
                 pass
-            if '_path' in key:       
+            if '_path' in key:
                 # special case need to update path
                 # check if absolute path
                 if not os.path.isabs(value):
@@ -2026,17 +1993,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
-        
+
         if not MADEVENT and not has_mg5_path:
             text += """\n# MG5 MAIN DIRECTORY\n"""
-            text += "mg5_path = %s\n" % MG5DIR         
-        
+            text += "mg5_path = %s\n" % MG5DIR
+
         writer = open(filepath,'w')
         writer.write(text)
         writer.close()
-                       
-
-    
 
 class CmdShell(Cmd):
     """CMD command with shell activate"""
@@ -2050,7 +2014,7 @@ class CmdShell(Cmd):
         else:
             logging.info("running shell command: " + line)
             subprocess.call(line, shell=True)
-    
+
     def complete_shell(self, text, line, begidx, endidx):
         """ add path for shell """
 
@@ -2068,10 +2032,8 @@ class CmdShell(Cmd):
 
     def help_shell(self):
         """help for the shell"""
-        logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
+        logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')
         logger.info("syntax: shell CMD (or ! CMD)",'$MG:BOLD')
-
-
 
 class NotValidInput(Exception): pass
 #===============================================================================
@@ -2086,12 +2048,12 @@ class SmartQuestion(BasicCmd):
         self.prompt = '>'
         self.value = None
         BasicCmd.preloop(self)
-        
+
     @property
     def answer(self):
         return self.value
 
-    def __init__(self, question, allow_arg=[], default=None, 
+    def __init__(self, question, allow_arg=[], default=None,
                                             mother_interface=None, *arg, **opt):
 
         self.question = question
@@ -2106,13 +2068,13 @@ class SmartQuestion(BasicCmd):
             del opt['case']
         elif 'casesensitive' in opt:
             self.casesensitive = opt['casesensitive']
-            del opt['casesensitive']            
+            del opt['casesensitive']
         else:
             self.casesensistive = True
         super(SmartQuestion, self).__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
-        
+
         self.question = question
         for key,value in opts:
             setattr(self, key, value)
@@ -2121,7 +2083,6 @@ class SmartQuestion(BasicCmd):
             logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
             logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
         return self.cmdloop()
-        
 
     def completenames(self, text, line, *ignored):
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -2134,18 +2095,18 @@ class SmartQuestion(BasicCmd):
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Recognized command'] = super(SmartQuestion, self).completenames(text,line, *ignored)
-            
+
             return self.deal_multiple_categories(out)
         except Exception as error:
             print(error)
-    
+
     completedefault = completenames
 
     def get_names(self):
         # This method used to pull in base class attributes
         # at a time dir() didn't do it yet.
-        return dir(self)  
-    
+        return dir(self)
+
     def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly
         Interpret the argument as though it had been typed in response
@@ -2153,7 +2114,7 @@ class SmartQuestion(BasicCmd):
 
         The return value is a flag indicating whether interpretation of
         commands by the interpreter should stop.
-        
+
         This allow to pass extra argument for internal call.
         """
         try:
@@ -2173,17 +2134,17 @@ class SmartQuestion(BasicCmd):
                     func = getattr(self, 'do_' + cmd)
                 except AttributeError:
                     return self.default(line)
-                return func(arg, **opt)        
+                return func(arg, **opt)
         except Exception as error:
-            logger.warning(error)  
+            logger.warning(error)
             if __debug__:
                 raise
-            
+
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
-        
-        if prev_timer:     
+
+        if prev_timer:
             if pat.search(self.question):
                 timeout = int(pat.search(self.question).groups()[0])
                 signal.alarm(timeout)
@@ -2193,43 +2154,43 @@ class SmartQuestion(BasicCmd):
             print(self.question)
 
         if self.mother_interface:
-            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
+            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF',
                                                                 path=self.allowpath)
             if answer:
                 stop = self.default(answer)
                 self.postcmd(stop, answer)
                 return False
-            
+
         return False
-    
+
     def do_help(self, line):
-        
+
         text=line
         out ={}
         out['Options'] = Cmd.list_completion(text, self.allow_arg)
         out['command'] = BasicCmd.completenames(self, text)
-        
+
         if not text:
             if out['Options']:
                 logger.info( "Here is the list of all valid options:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
-            if out['command']: 
+            if out['command']:
                 logger.info( "Here is the list of command available:", '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
         else:
             if out['Options']:
                 logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['Options']))
-            if out['command']: 
+            if out['command']:
                 logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:BOLD')
                 logger.info( "  "+  "\n  ".join(out['command']))
             elif not  out['Options']:
-                logger.info( "No possibility starting with \'%s\'" % text, '$MG:BOLD')           
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:BOLD')
         logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:BOLD')
     def complete_help(self, text, line, begidx, endidx):
         """ """
         return self.completenames(text, line)
-        
+
     def default(self, line):
         """Default action if line is not recognized"""
 
@@ -2240,14 +2201,13 @@ class SmartQuestion(BasicCmd):
 
     def emptyline(self):
         """If empty line, return default"""
-        
+
         if self.default_value is not None:
             self.value = self.default_value
 
-
     def postcmd(self, stop, line):
 
-        try:    
+        try:
             if self.value in self.allow_arg:
                 return True
             elif str(self.value) == 'EOF':
@@ -2273,8 +2233,7 @@ class SmartQuestion(BasicCmd):
                 else:
                     raise Exception
 
-                
-            else: 
+            else:
                 raise Exception
         except Exception as error:
             if self.wrong_answer < 100:
@@ -2286,11 +2245,11 @@ class SmartQuestion(BasicCmd):
             else:
                 self.value = self.default_value
                 return True
-                
+
     def cmdloop(self, intro=None):
         super(SmartQuestion,self).cmdloop(intro)
         return self.answer
-    
+
 # a function helper
 def smart_input(input_text, allow_arg=[], default=None):
     print(input_text)
@@ -2302,7 +2261,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 #===============================================================================
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
-    
+
     completion_prefix=''
     allowpath=True
 
@@ -2313,23 +2272,23 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-        
+
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text, line, begidx, endidx)
-            
+
             return self.deal_multiple_categories(out, formatting)
         except Exception as error:
             print(error)
-            
+
     def precmd(self, *args):
         """ """
-        
+
         signal.alarm(0)
         return SmartQuestion.precmd(self, *args)
-        
+
     def completedefault(self,text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
@@ -2342,7 +2301,7 @@ class OneLinePathCompletion(SmartQuestion):
         except Exception as error:
             print(error)
 
-        # Directory continuation                 
+        # Directory continuation
         if args[-1].endswith(os.path.sep):
 
             return Cmd.path_completion(text,
@@ -2351,10 +2310,9 @@ class OneLinePathCompletion(SmartQuestion):
                                        begidx, endidx)
         return self.completenames(text, line, begidx, endidx)
 
-
     def postcmd(self, stop, line):
-        try:    
-            if self.value in self.allow_arg: 
+        try:
+            if self.value in self.allow_arg:
                 return True
             elif self.value and os.path.isfile(self.value):
                 return os.path.relpath(self.value)
@@ -2363,33 +2321,30 @@ class OneLinePathCompletion(SmartQuestion):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 # go to retry
-                reprint_opt = True 
+                reprint_opt = True
             elif self.value in ['repeat', 'reask']:
-                reprint_opt = True         
+                reprint_opt = True
             else:
                 raise Exception
-        except Exception as error:  
+        except Exception as error:
             print("""not valid argument. Valid argument are file path or value in (%s).""" \
                           % ','.join(self.allow_arg))
             print('please retry')
-            reprint_opt = False 
+            reprint_opt = False
 
         if line != 'EOF':
             return self.reask(reprint_opt)
 
-            
 # a function helper
 def raw_path_input(input_text, allow_arg=[], default=None):
     print(input_text)
     obj = OneLinePathCompletion(allow_arg=allow_arg, default=default )
     return obj.cmdloop()
 
-
-
 class ControlSwitch(SmartQuestion):
     """A class for asking a question on which program to run.
        This is the abstract class
-       
+
        Behavior for each switch can be customize via:
        set_default_XXXX() -> set default value
            This is super-seeded by self.default_switch if that attribute is defined (and has a key for XXXX)
@@ -2397,7 +2352,7 @@ class ControlSwitch(SmartQuestion):
        check_value_XXXX(value) -> return True/False if the user can set such value
        switch_off_XXXXX()      -> set it off (called for special mode)
        color_for_XXXX(value)   -> return the representation on the screen for value
-       get_cardcmd_for_XXXX(value)> return the command to run to customize the cards to 
+       get_cardcmd_for_XXXX(value)> return the command to run to customize the cards to
                                   match the status
        print_options_XXXX()    -> return the text to disply below "other options"
                                   default is other possible value (ordered correctly)
@@ -2405,32 +2360,32 @@ class ControlSwitch(SmartQuestion):
        consistency_XX_YY(val_XX, val_YY)
            -> XX is the new key set by the user to a new value val_XX
            -> YY is another key set by the user.
-           -> return value should be None or "replace_YY" 
-       
+           -> return value should be None or "replace_YY"
+
        consistency_XX(val_XX):
-            check the consistency of the other switch given the new status of this one. 
+            check the consistency of the other switch given the new status of this one.
             return a dict {key:replaced_value} or {} if nothing to do
-            
+
        user typing "NAME" will result to a call to self.ans_NAME(None)
-       user typing "NAME=XX" will result to a call to self.ans_NAME('XX')    
-       
+       user typing "NAME=XX" will result to a call to self.ans_NAME('XX')
+
        Note on case sensitivity:
        -------------------------
        the XXX is displayed with the case in self.to_control
            but ALL functions should use the lower case version.
-       for key associated to get_allowed_keys(), 
+       for key associated to get_allowed_keys(),
            if (user) value not in that list.
               -> try to find the first entry matching up to the case
-       for ans_XXX, set the value to lower case, but if case_XXX is set to True 
+       for ans_XXX, set the value to lower case, but if case_XXX is set to True
        """
-       
+
     case_sensitive = False
     quit_on = ['0','done', 'EOF','','auto']
 
     def __init__(self, to_control, motherinstance, *args, **opts):
         """to_control is a list of ('KEY': 'Choose the shower/hadronization program')
         """
-    
+
         self.to_control = to_control
         if 'hide_line' in opts:
             self.hide_line = opts['hide_line']
@@ -2440,20 +2395,20 @@ class ControlSwitch(SmartQuestion):
         self.mother_interface = motherinstance
         self.inconsistent_keys = {} #flag parameter which are currently not consistent
                                     # and the value by witch they will be replaced if the
-                                    # inconsistency remains.  
-        self.inconsistent_details = {} # flag to list 
-        self.last_changed = []         # keep the order in which the flag have been modified 
+                                    # inconsistency remains.
+        self.inconsistent_details = {} # flag to list
+        self.last_changed = []         # keep the order in which the flag have been modified
                                        # to choose the resolution order of conflict
         #initialise the main return value
         self.switch = {}
         for key, _ in to_control:
             self.switch[key.lower()] = 'temporary'
-            
+
         self.set_default_switch()
         question = self.create_question()
-        
+
         #check all default for auto-completion
-        allowed_args = [ repr(i)+';' for i in range(1, 1+len(self.to_control))] 
+        allowed_args = [ repr(i)+';' for i in range(1, 1+len(self.to_control))]
         for key in self.switch:
             allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
         # adding special mode
@@ -2480,7 +2435,7 @@ class ControlSwitch(SmartQuestion):
         if '=' not in line:
             if line.strip().startswith('set'):
                 self.mother_interface.store_line(line)
-                return str(default) 
+                return str(default)
             return None
         key, value = line.split('=',1)
         if key.lower() in self.switch:
@@ -2493,13 +2448,9 @@ class ControlSwitch(SmartQuestion):
             return line
 
         return None
-        
-        
-        
-
 
     def set_default_switch(self):
-        
+
         for key,_ in self.to_control:
             key = key.lower()
             if hasattr(self, 'default_switch') and key in self.default_switch:
@@ -2509,19 +2460,19 @@ class ControlSwitch(SmartQuestion):
                 getattr(self, 'set_default_%s' % key)()
             else:
                 self.default_switch_for(key)
-        
+
     def default_switch_for(self, key):
         """use this if they are no dedicated function for such key"""
-        
+
         if hasattr(self, 'get_allowed_%s' % key):
             return getattr(self, 'get_allowed_%s' % key)()[0]
         else:
             self.switch[key] = 'OFF'
-    
+
     def set_all_off(self):
         """set all valid parameter to OFF --call before special keyword--
         """
-        
+
         for key in self.switch:
             if hasattr(self, 'switch_off_%s' % key):
                 getattr(self, 'switch_off_%s' % key)()
@@ -2529,52 +2480,49 @@ class ControlSwitch(SmartQuestion):
                 self.switch[key] = 'OFF'
         self.inconsistent_details = {}
         self.inconsistent_keys = {}
-    
-        
+
     def check_value(self, key, value):
         """return True/False if the value is a correct value to be set by the USER.
            other value than those can be set by the system --like-- Not available.
            This does not check the full consistency of the switch
            """
-           
+
         if hasattr(self, 'check_value_%s' % key):
             return getattr(self, 'check_value_%s' % key)(value)
         elif value in self.get_allowed(key):
             return True
         else:
             return False
-        
-        
+
     def get_cardcmd(self):
-        """ return the list of command that need to be run to have a consistent 
+        """ return the list of command that need to be run to have a consistent
             set of cards with the switch value choosen """
-        
+
         switch = self.answer
         cmd= []
         for key in self.switch:
             if hasattr(self, 'get_cardcmd_for_%s' % key):
                 cmd += getattr(self, 'get_cardcmd_for_%s' % key)(switch[key])
         return cmd
-        
-        
+
     def get_allowed(self, key):
         """return the list of possible value for key"""
 
         if hasattr(self, 'get_allowed_%s' % key):
             return getattr(self, 'get_allowed_%s' % key)()
         else:
-            return ['ON', 'OFF']    
-            
+            return ['ON', 'OFF']
+
     def default(self, line, raise_error=False):
         """Default action if line is not recognized"""
-        
+
         line=line.strip().replace('@', '__at__')
         if ';' in line:
             for l in line.split(';'):
                 if l:
                     out = self.default(l)
             return out
-        
+
         if '=' in line:
             base, value = line.split('=',1)
             base = base.strip()
@@ -2601,7 +2549,7 @@ class ControlSwitch(SmartQuestion):
             except:
                 if self.get_allowed(base):
                     value = self.get_allowed(base)[0]
-                else:                      
+                else:
                     logger.warning('Can not switch "%s" to another value via number', base)
                     self.value='reask'
                     return
@@ -2610,12 +2558,11 @@ class ControlSwitch(SmartQuestion):
                     value = self.get_allowed(base)[cur+1]
                 except IndexError:
                     value = self.get_allowed(base)[0]
-                    if value == "OFF" and  cur == 0:
+                    if value == "OFF" and cur == 0:
                         logger.warning("Invalid action: %s" % self.print_options(base))
-                    elif cur == 0: 
+                    elif cur == 0:
                         logger.warning("Can not change value for this parameter")
-                        
-                        
+
         elif line in ['', 'done', 'EOF', 'eof','0']:
             super(ControlSwitch, self).default(line)
             return self.answer
@@ -2630,9 +2577,9 @@ class ControlSwitch(SmartQuestion):
             logger.warning('unknow command: %s' % line)
             self.value = 'reask'
             return
-        
-        self.value = 'reask'   
-        base = base.lower()               
+
+        self.value = 'reask'
+        base = base.lower()
         if hasattr(self, 'ans_%s' % base):
             if value and not self.is_case_sensitive(base):
                 value = value.lower()
@@ -2642,18 +2589,18 @@ class ControlSwitch(SmartQuestion):
         elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
             raise NotValidInput('Not valid command: %s. Did you mean \"%s\"' % (line, line[4:]))
         elif raise_error:
-            raise NotValidInput('Not valid command: %s' % line)                
+            raise NotValidInput('Not valid command: %s' % line)
         else:
             logger.warning('Not valid command: %s' % line)
-   
+
     def is_case_sensitive(self, key):
         """check if a key is case sensitive"""
-        
-        case = self.case_sensitive 
+
+        case = self.case_sensitive
         if hasattr(self, 'case_%s' % key):
             case = getattr(self, 'case_%s' % key)
         return case
-    
+
     def onecmd(self, line, **opt):
         """ensure to rewrite the function if a call is done directly"""
         out = super(ControlSwitch, self).onecmd(line, **opt)
@@ -2662,7 +2609,7 @@ class ControlSwitch(SmartQuestion):
 
     @property
     def answer(self):
-        
+
         #avoid key to Not Avail in the output
         for key,_ in self.to_control:
             if not self.check_value(key, self.switch[key]):
@@ -2676,7 +2623,7 @@ class ControlSwitch(SmartQuestion):
             return out
 
     def postcmd(self, stop, line):
-        
+
         # for diamond class arch where both branch defines the postcmd
         # set it up to be in coop mode
         try:
@@ -2688,7 +2635,7 @@ class ControlSwitch(SmartQuestion):
 
         line = line.strip()
         if ';' in line:
-            line= [l for l in line.split(';') if l][-1] 
+            line= [l for l in line.split(';') if l][-1]
         if line in self.quit_on or self.value in self.quit_on:
             return True
         if self.value != 'reask':
@@ -2700,12 +2647,12 @@ class ControlSwitch(SmartQuestion):
         """change a switch to a given value"""
 
         assert key in self.switch
-        
+
         if hasattr(self, 'ans_%s' % key):
             if not self.is_case_sensitive(key):
                 value = value.lower()
             return getattr(self, 'ans_%s' % key)(value)
-        
+
         if not self.is_case_sensitive(key) and value not in self.get_allowed(key):
             lower = [t.lower() for t in self.get_allowed(key)]
             try:
@@ -2714,52 +2661,50 @@ class ControlSwitch(SmartQuestion):
                 pass # keep the current case, in case check_value accepts it anyway.
             else:
                 value = self.get_allowed(key)[ind]
-        
-        check = self.check_value(key, value) 
+
+        check = self.check_value(key, value)
         if not check:
             logger.warning('"%s" not valid option for "%s"', value, key)
             return
         if isinstance(check, str):
             value = check
-        
+
         self.switch[key] = value
-        
+
         if user:
             self.check_consistency(key, value)
-        
+
     def remove_inconsistency(self, keys=[]):
-        
+
         if not keys:
-            self.inconsistent_keys = {} 
-            self.inconsistent_details = {} 
+            self.inconsistent_keys = {}
+            self.inconsistent_details = {}
         elif isinstance(keys, list):
             for key in keys:
                 if key in self.inconsistent_keys:
                     del self.inconsistent_keys[keys]
-                    del self.inconsistent_details[keys]                
+                    del self.inconsistent_details[keys]
         else:
             if keys in self.inconsistent_keys:
                 del self.inconsistent_keys[keys]
                 del self.inconsistent_details[keys]
-        
+
     def check_consistency(self, key, value):
         """check the consistency of the new flag with the old ones"""
-        
-        
+
         if key in self.last_changed:
             self.last_changed.remove(key)
         self.last_changed.append(key)
-        
+
         # this is used to update self.consistency_keys which contains:
         #  {key: replacement value with solved conflict}
         # it is based on self.consistency_details which is a dict
-        # key:  {'orig_value': 
+        # key:  {'orig_value':
         #                'changed_key':
         #                'new_changed_key_val':
-        #                'replacement': 
+        #                'replacement':
         # which keeps track of all conflict and of their origin.
-        
-        
+
         # rules is a dict: {keys:None} if the value for that key is consistent.
         #                  {keys:value_to_replace} if that key is inconsistent
         if hasattr(self, 'consistency_%s' % key):
@@ -2770,7 +2715,7 @@ class ControlSwitch(SmartQuestion):
             for key2,value2 in self.switch.items():
                 if hasattr(self, 'consistency_%s_%s' % (key,key2)):
                     rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
-                    # check that the suggested value is allowed. 
+                    # check that the suggested value is allowed.
                     # can happen that it is not if some program are not installed
                     if rules[key2] is not None and not self.check_value(key2, rules[key2]):
                         if rules[key2] != 'OFF':
@@ -2778,9 +2723,9 @@ class ControlSwitch(SmartQuestion):
                         rules[key2] = None
                 else:
                     rules[key2] = None
-                    
+
         #
-        
+
         #update the self.inconsisten_details adding new conflict
         # start by removing the inconsistency for the newly set parameter
         self.remove_inconsistency(key)
@@ -2795,10 +2740,10 @@ class ControlSwitch(SmartQuestion):
                     self.inconsistent_details[key2].append(info)
                 else:
                     self.inconsistent_details[key2] = [info]
-        
+
         if not self.inconsistent_details:
             return
-          
+
         # review the status of all conflict
         for key2 in dict(self.inconsistent_details):
             for conflict in list(self.inconsistent_details[key2]):
@@ -2814,15 +2759,14 @@ class ControlSwitch(SmartQuestion):
             if not self.inconsistent_details[key2]:
                 del self.inconsistent_details[key2]
 
-
         # create the valid set of replacement for this current conflict
         # start by current status to avoid to keep irrelevant conflict
         tmp_switch = dict(self.switch)
-        
+
         # build the order in which we have to check the various conflict reported
         to_check = [(c['changed_key'], c['new_changed_key_val']) \
                          for k in self.inconsistent_details.values() for c in k
-                         if c['changed_key'] != key] 
+                         if c['changed_key'] != key]
 
         to_check.sort(key=lambda x: self.last_changed.index(x[0]))
 
@@ -2839,7 +2783,7 @@ class ControlSwitch(SmartQuestion):
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
                 rules = self.check_consistency_with_all(key2, value2)
-                        
+
             for key, replacement in rules.items():
                 if replacement:
                     tmp_switch[key] = replacement
@@ -2857,7 +2801,7 @@ class ControlSwitch(SmartQuestion):
             to_check = to_check_new
         if nstep >=50:
             logger.critical('Failed to find a consistent set of switch values.')
-            
+
         # Now tmp_switch is to a fully consistent setup for sure.
         # fill self.inconsistent_key
         self.inconsistent_keys = {}
@@ -2867,8 +2811,7 @@ class ControlSwitch(SmartQuestion):
                 if value2 == 'OFF' and not self.check_value(key2, 'OFF'):
                     continue
                 self.inconsistent_keys[key2] = value2
-            
-            
+
     def check_consistency_with_all(self, key, value):
         rules = {}
         for key2,value2 in self.switch.items():
@@ -2877,22 +2820,22 @@ class ControlSwitch(SmartQuestion):
             else:
                 rules[key2] = None
         return rules
-    #    
-    # Helper routine for putting questions with correct color 
     #
-    green = '\x1b[32m%s\x1b[0m' 
+    # Helper routine for putting questions with correct color
+    #
+    green = '\x1b[32m%s\x1b[0m'
     yellow = '\x1b[33m%s\x1b[0m'
     red   = '\x1b[31m%s\x1b[0m'
     bold = '\x1b[01m%s\x1b[0m'
     def color_for_value(self, key, switch_value, consistency=True):
-        
+
         if consistency and key in self.inconsistent_keys:
             return self.color_for_value(key, self.inconsistent_keys[key], consistency=False) +\
                                 u' \u21d0 '+ self.yellow % switch_value
-        
+
         if self.check_value(key, switch_value):
             if  hasattr(self, 'color_for_%s' % key):
-                return getattr(self, 'color_for_%s' % key)(switch_value)            
+                return getattr(self, 'color_for_%s' % key)(switch_value)
             if switch_value in ['OFF']:
                 # inconsistent key are the list of key which are inconsistent with the last change
                 return self.red % switch_value
@@ -2900,7 +2843,7 @@ class ControlSwitch(SmartQuestion):
                 return self.green % switch_value
         else:
             if ' ' in switch_value:
-                return self.bold % switch_value 
+                return self.bold % switch_value
             else:
                 return self.red % switch_value
 
@@ -2909,25 +2852,25 @@ class ControlSwitch(SmartQuestion):
         if hasattr(self, 'print_options_%s' % key) and not keep_default:
             return getattr(self, 'print_options_%s' % key)()
 
-        #re-order the options in order to have those in cycling order    
+        #re-order the options in order to have those in cycling order
         try:
             ind =  self.get_allowed(key).index(self.switch[key])
         except Exception as err:
             options = self.get_allowed(key)
         else:
-            options = self.get_allowed(key)[ind:]+ self.get_allowed(key)[:ind] 
+            options = self.get_allowed(key)[ind:]+ self.get_allowed(key)[:ind]
 
         info = '|'.join([v for v in options if v != self.switch[key]])
         if info == '':
             info = 'Please install module'
         return info
-    
+
     def do_help(self, line, list_command=False):
         """dedicated help for the control switch"""
-        
+
         if line:
             return self.print_help_for_switch(line)
-        
+
         # here for simple "help"
         logger.info(" ")
         logger.info("  In order to change a switch you can:")
@@ -2944,18 +2887,17 @@ class ControlSwitch(SmartQuestion):
         if list_command:
             super(ControlSwitch, self).do_help(line)
 
-        
     def print_help_for_switch(self, line):
         """ """
-        
+
         arg = line.split()[0]
-        
+
         if hasattr(self, 'help_%s' % arg):
             return getattr(self, 'help_%s' % arg)('')
-        
+
         if hasattr(self, 'ans_%s' % arg):
             return getattr(self, 'help_%s' % arg).__doc__
-        
+
         if arg in self.switch:
             logger.info("   information for switch %s: ", arg, '$MG:BOLD')
             logger.info("   allowed value:")
@@ -2964,9 +2906,6 @@ class ControlSwitch(SmartQuestion):
                 logger.info("")
                 for line in getattr(self, 'help_text_%s' % arg):
                     logger.info(line)
-                      
-        
-    
 
     def question_formatting(self, nb_col = 80,
                                   ldescription=0,
@@ -2977,13 +2916,13 @@ class ControlSwitch(SmartQuestion):
                                   lnb_key=0,
                                   key=None):
         """should return four lines:
-        1. The upper band (typically /========\ 
+        1. The upper band (typically /========\
         2. The lower band (typically \========/
         3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
         4. The line with    conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
         # Be carefull to include the size of the color flag for the switch
-        green/red/yellow are  adding 9 in length 
-        
+        green/red/yellow are  adding 9 in length
+
         line should be like '| %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |'
 
            the total lenght of the line (for defining the upper/lower line)
@@ -2996,7 +2935,7 @@ class ControlSwitch(SmartQuestion):
                            conflict_switch_nc # self.inconsistent_keys without color formatting
                            add_info
         """
-        
+
         if key:
             # key is only provided for conflict
             len_switch = len(self.switch[key])
@@ -3005,9 +2944,9 @@ class ControlSwitch(SmartQuestion):
             else:
                 len_cswitch = 0
         else:
-            len_switch = 0 
-            len_cswitch = 0 
-            
+            len_switch = 0
+            len_cswitch = 0
+
         list_length = []
         # | 1. KEY = VALUE |
         list_length.append(lnb_key + lname + lswitch + 9)
@@ -3024,22 +2963,21 @@ class ControlSwitch(SmartQuestion):
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         list_length.append(list_length[-1] +3+ max(15,6+ladd_info))
         #| 1. DESCRIP    |   KEY = VALUE_MAXSIZE |     INFO     |
-        list_length.append(list_length[-2] +13+ max(15,10+ladd_info))        
-        
+        list_length.append(list_length[-2] +13+ max(15,10+ladd_info))
+
         selected = [0] + [i+1 for i,s in enumerate(list_length) if s < nb_col]
         selected = selected[-1]
-        
+
         # upper and lower band
         if selected !=0:
             size = list_length[selected-1]
         else:
             size = nb_col
-        
-        
+
         # default for upper/lower:
         upper = "/%s\\" % ("=" * (size-2))
-        lower = "\\%s/" % ("=" * (size-2))        
-        
+        lower = "\\%s/" % ("=" * (size-2))
+
         if selected==0:
             f1= '%(nb){0}d \x1b[1m%(name){1}s\x1b[0m=%(switch)-{2}s'.format(lnb_key,
                                                                   lname,lswitch)
@@ -3051,7 +2989,7 @@ class ControlSwitch(SmartQuestion):
             to_add = nb_col -size
             f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
                                                                   lname,lswitch+9+to_add)
-            
+
             f = u'| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
             f2 =f.format(lnb_key, lname, len_cswitch+9, lswitch-len_cswitch+len_switch+to_add-1)
         #1. DESCRIP KEY = VALUE
@@ -3091,12 +3029,12 @@ class ControlSwitch(SmartQuestion):
             elif l_conflict_line -3 <= nb_col:
                 f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
-                        
+
             else:
                 ldescription -= (l_conflict_line - nb_col)
                 f=u'| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
-                
+
         # 1. DESCRIP KEY = VALUE_MAXSIZE
         elif selected == 5:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
@@ -3104,7 +3042,7 @@ class ControlSwitch(SmartQuestion):
             f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, max(2*lpotential_switch+3, lswitch)-lpotential_switch+len_switch)
         #| 1. DESCRIP KEY = VALUE_MAXSIZE |
-        elif selected == 6: 
+        elif selected == 6:
             f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9)
             f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
@@ -3115,8 +3053,8 @@ class ControlSwitch(SmartQuestion):
             upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4,
                                                     lname+max(2*lpotential_switch+3, lswitch)+5,
                                                     ladd_info)
-            upper = upper.format(' Description ', ' values ', ' other options ') 
-            
+            upper = upper.format(' Description ', ' values ', ' other options ')
+
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-4)
             f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
@@ -3127,38 +3065,37 @@ class ControlSwitch(SmartQuestion):
             upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4+5,
                                                     lname+max(3+2*lpotential_switch,lswitch)+10,
                                                     ladd_info)
-            upper = upper.format(' Description ', ' values ', ' other options ') 
-            lower = "\\%s/" % ("=" * (size-2)) 
-            
+            upper = upper.format(' Description ', ' values ', ' other options ')
+            lower = "\\%s/" % ("=" * (size-2))
+
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
             f1 = f.format(lnb_key,ldescription+5,5+lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-5)
             f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
             f2 = f.format(lnb_key,ldescription+5,5+lname,
                           lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
-        
+
         return upper, lower, f1, f2
-                
+
     def create_question(self, help_text=True):
         """ create the question  with correct formatting"""
-        
+
         # geth the number of line and column of the shell to adapt the printing
-        # accordingly  
+        # accordingly
         try:
             nb_rows, nb_col = os.popen('stty size', 'r').read().split()
             nb_rows, nb_col = int(nb_rows), int(nb_col)
         except Exception as error:
             nb_rows, nb_col = 20, 80
-        
+
         #compute information on the length of element to display
-        max_len_description = 0 
+        max_len_description = 0
         max_len_switch = 0
         max_len_name = 0
         max_len_add_info = 0
         max_len_potential_switch = 0
         max_nb_key = 1 + int(math.log10(len(self.to_control)))
-        
-        
+
         for key, descrip in self.to_control:
             if key in self.hide_line:
                 continue
@@ -3170,7 +3107,7 @@ class ControlSwitch(SmartQuestion):
             else:
                 to_display = self.switch[key]
             if len(to_display) > max_len_switch: max_len_switch=len(to_display)
-            
+
             info = self.print_options(key)
             if len(info)> max_len_add_info: max_len_add_info = len(info)
 
@@ -3180,23 +3117,21 @@ class ControlSwitch(SmartQuestion):
                 max_k = 0
             if max_k > max_len_potential_switch: max_len_potential_switch = max_k
 
-        upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
-                                         max_len_name, max_len_add_info, 
+        upper_line, lower_line, f1, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch,
+                                         max_len_name, max_len_add_info,
                                          max_len_potential_switch, max_nb_key)
         f3 = 0 #formatting for hidden line
-        
+
         text = \
         ["The following switches determine which programs are run:",
          upper_line
-        ]                     
+        ]
 
-
-        
         for i,(key, descrip) in enumerate(self.to_control):
 
             if key in self.hide_line and not __debug__:
                 continue
-            
+
             data_to_format = {'nb': i+1,
                            'descrip': descrip,
                            'name': key,
@@ -3205,41 +3140,40 @@ class ControlSwitch(SmartQuestion):
                            'switch_nc': self.switch[key],
                            'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
                            }
-            
+
             hidden_line = False
             if __debug__ and key in self.hide_line:
                 data_to_format['descrip'] = '\x1b[32m%s\x1b[0m' % data_to_format['descrip']
                 data_to_format['add_info'] = '\x1b[32m%s\x1b[0m' % data_to_format['add_info']
                 data_to_format['name'] = '\x1b[32m%s\x1b[0m' % data_to_format['name']
                 hidden_line=True
-                
+
             if key in self.inconsistent_keys:
                 # redefine the formatting here, due to the need to know the conflict size
-                _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch, 
-                                         max_len_name, max_len_add_info, 
+                _,_,_, f2 = self.question_formatting(nb_col, max_len_description, max_len_switch,
+                                         max_len_name, max_len_add_info,
                                          max_len_potential_switch, max_nb_key,
                                          key=key)
-                
+
                 data_to_format['conflict_switch_nc'] = self.inconsistent_keys[key]
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
-                
-                if hidden_line: 
-                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+
+                if hidden_line:
+                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s',
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f2)
                 text.append(f2 % data_to_format)
             elif hidden_line:
                 if not f3:
-                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s',
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f1)
                 text.append(f3 % data_to_format)
             else:
                 text.append(f1 % data_to_format)
 
-                                
         text.append(lower_line)
-        
+
         # find a good example of switch to set for the lower part of the description
         example = None
         for key in self.switch:
@@ -3251,17 +3185,17 @@ class ControlSwitch(SmartQuestion):
                     else:
                         continue
                     break
-                
+
         if not example:
             example = ('KEY', 'VALUE')
-        
+
         if help_text:
             text += \
               ["Either type the switch number (1 to %s) to change its setting," % len(self.to_control),
                "Set any switch explicitly (e.g. type '%s=%s' at the prompt)" % example,
                "Type 'help' for the list of all valid option",
                "Type '0', 'auto', 'done' or just press enter when you are done."]
-            
+
             # check on the number of row:
             if len(text) > nb_rows:
                 # too many lines. Remove some
@@ -3270,27 +3204,26 @@ class ControlSwitch(SmartQuestion):
                               -4, #Either type the switch number (1 to %s) to change its setting,
                               -3, # Set any switch explicitly
                               -1, # Type '0', 'auto', 'done' or just press enter when you are done.
-                             ] 
+                             ]
                 to_remove = to_remove[:min(len(to_remove), len(text)-nb_rows)]
                 text = [t for i,t in enumerate(text) if i-len(text) not in to_remove]
-            
-        self.question =    "\n".join(text)                                                              
+
+        self.question =    "\n".join(text)
         return self.question
-    
 
 #===============================================================================
-# 
+#
 #===============================================================================
 class CmdFile(file):
     """ a class for command input file -in order to debug cmd \n problem"""
-    
+
     def __init__(self, name, opt='rU'):
-        
+
         file.__init__(self, name, opt)
         self.text = file.read(self)
         self.close()
         self.lines = self.text.split('\n')
-    
+
     def readline(self, *arg, **opt):
         """readline method treating correctly a line whithout \n at the end
            (add it)
@@ -3299,18 +3232,15 @@ class CmdFile(file):
             line = self.lines.pop(0)
         else:
             return ''
-        
+
         if line.endswith('\n'):
             return line
         else:
             return line + '\n'
-    
+
     def __next__(self):
-        return self.lines.__next__()    
+        return self.lines.__next__()
 
     def __iter__(self):
         return self.lines.__iter__()
-
-
-
 
