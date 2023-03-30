@@ -5141,6 +5141,74 @@ RESTART = %(mint_mode)s
         return input_files, output_files, required_output,  args
 
 
+    def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
+        """links and copies the libraries/PDFs from ePDF/eMELA
+        pdlabel is in the form epdf:setname
+        """
+        logger.info('Using eMELA for leptonic densities')
+
+        epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        epdfdatadir = subprocess.Popen([self.options['eMELA'], '--data'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        # update the LHAPDF data path
+
+        if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
+        else:
+            os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
+
+        pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
+        pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
+
+        # link the static library in lib
+        lib = 'libeMELA.a'
+
+        if os.path.exists(pjoin(libdir, lib)):
+            files.rm(pjoin(libdir, lib))
+        files.ln(pjoin(epdflibdir, lib), libdir)
+
+        # create the PDFsets dir
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+
+        #clean previous set of pdf used
+        for name in os.listdir(pjoin(libdir, 'PDFsets')):
+            if name not in pdfsetname:
+                try:
+                    if os.path.isdir(pjoin(libdir, 'PDFsets', name)):
+                        shutil.rmtree(pjoin(libdir, 'PDFsets', name))
+                    else:
+                        os.remove(pjoin(libdir, 'PDFsets', name))
+                except Exception as error:
+                    logger.debug('%s', error)
+
+        # copy the ePDF set in the PDFsets dir
+        for setname in pdfsetname:
+            shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
+
+        # finally return the parsed info file
+        return banner_mod.eMELA_info(os.path.join(libdir, 'PDFsets', setname, setname + '.info'), self.me_dir)
+
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+
+
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
@@ -5190,8 +5258,7 @@ RESTART = %(mint_mode)s
         #directory where to compile exe
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
-        # create param_card.inc and run_card.inc
-        self.do_treatcards('', amcatnlo=True, mode=mode)
+
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
@@ -5219,8 +5286,35 @@ RESTART = %(mint_mode)s
             # force not to use LHAPDF in this case
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
-            # copy the files for the chosen density
-            if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+
+            elif self.run_card['pdlabel'].startswith('emela'):
+                # this is if the PDFs from ePDF/eMELA are employed
+                self.make_opts_var['epdf'] = self.options['eMELA']
+                self.update_make_opts()
+                # link the LHAPDF libraries, but unset the corresponding keys in make_opts
+                self.link_lhapdf(libdir)
+                for kk in ['lhapdf', 'lhapdfversion', 'lhapdfsubversion', 'lhapdf_config']:
+                    self.make_opts_var[kk] = None
+                # and link eMELA
+                emela_info = self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
+
+                # find the uv scheme of the model. if a file called 'TOYXS' exists, use msbar
+                #  (for testing purposes only) 
+                if os.path.exists(pjoin(self.me_dir, 'TOYXS')):
+                    uvscheme = 0
+                else:
+                    try:
+                        Gmu = self.banner.get_detail('param_card', 'sminputs', 2)
+                        uvscheme = 2 # Gmu scheme
+                    except KeyError:
+                        uvscheme = 1 # Alpha(mz) scheme
+                # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
+                emela_info.update_epdf_emela_variables(self.banner, uvscheme)
+                self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
+
+            elif self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                # using internal densities: copy the files for the chosen density
                 self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
 
         # bare leptons, or anything else
@@ -5229,6 +5323,9 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
 
             self.make_opts_var['lhapdf'] = ""
+
+        # create param_card.inc and run_card.inc
+        self.do_treatcards('', amcatnlo=True, mode=mode)
 
         # read the run_card to find if PineAPPL is used or not
         if self.run_card['pineappl']:
@@ -5247,7 +5344,7 @@ RESTART = %(mint_mode)s
 
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
-        
+
         # add the make_opts_var to make_opts
         self.update_make_opts()
         
@@ -5351,8 +5448,6 @@ RESTART = %(mint_mode)s
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-                if self.proc_characteristics['ew_sudakov']:
-                    tests.append('check_sudakov')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -5398,6 +5493,25 @@ RESTART = %(mint_mode)s
                 this_dir = pjoin(self.me_dir, 'SubProcesses', p_dir) 
                 #check that none of the tests failed
                 self.check_tests(test, this_dir)
+
+
+    def compile_and_run_printalpha(self):
+        this_dir = os.path.join(self.me_dir, 'SubProcesses')
+
+        input = pjoin(this_dir, 'printalpha.in')
+        infile = open(input, 'w')
+        infile.write('%d %e\n' % (self.run_card['lhaid'][0], self.run_card['ebeam1'] + self.run_card['ebeam2']))
+        infile.close()
+
+        misc.compile(['printalpha'], cwd = this_dir, job_specs = False)
+        misc.call(['./printalpha' ], cwd = this_dir, 
+                    stdin = open(input),
+                    stdout=open(pjoin(this_dir, 'printalpha.log'), 'w'),
+                    close_fds=True)
+
+        output = open(pjoin(this_dir, 'printalpha.log')).read()
+        return float(output.split('ALPHAVALUE')[1])
+
 
 
     def donothing(*args):
