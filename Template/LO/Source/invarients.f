@@ -234,14 +234,14 @@ c         do j=1,3*nbranch-4+2
          enddo
          jgrid=j-1
 
-         write(*,*) 'Determine nb_t'
+C         write(*,*) 'Determine nb_t'
          ns_channel=1
          do while((iforest(1,-ns_channel,mincfig) .ne. 1.and.iforest(1,-ns_channel,mincfig) .ne. 2).and.ns_channel.lt.nbranch)
             ns_channel=ns_channel+1
          enddo
          ns_channel=ns_channel - 1
          nb_tchannel=nbranch-ns_channel-1
-         write(*,*) 'T-channel found: ',nb_tchannel 
+C         write(*,*) 'T-channel found: ',nb_tchannel 
          
       else
 c      if (ep) jgrid=1

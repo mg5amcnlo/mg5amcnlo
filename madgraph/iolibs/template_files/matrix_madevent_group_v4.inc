@@ -200,7 +200,7 @@ c           Include the Jacobian from helicity sampling
 	RETURN
     ENDIF
     IF (ANS.ne.0d0.and.(ISUM_HEL .NE. 1.or.HEL_PICKED.eq.-1)) THEN
-    CALL RANMAR(R)
+    CALL RANMAR_API(R,3)
     SUMHEL=0d0
     DO I=1,NCOMB
        SUMHEL=SUMHEL+DABS(TS(I))/ANS

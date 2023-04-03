@@ -367,8 +367,10 @@ class gensym(object):
                         done = True
                 if not done:
                     raise Exception('Parsing error in gensym: %s' % stdout)
-                     
+
+            # Compile madevent      
             self.cmd.compile(['madevent'], cwd=Pdir)
+            
             if to_submit:
                 self.submit_to_cluster(job_list)
                 job_list = {}

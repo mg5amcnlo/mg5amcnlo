@@ -837,14 +837,14 @@ c  Begin Code
 c-----
       if (flat_grid) then
          if (itype.gt.1) then
-            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
+c            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
             if (a .ge. xo) then
                write(*,*) 'Can not integrate over singularity'
                write(*,*) 'Set grid',j,xo,a
                return
             endif
          else
-            write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
+c            write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
          endif
 c     grid(2,1,j) = xo
          grid(2,ng,j)=xgmax
@@ -2609,7 +2609,7 @@ C       Due to the initialization of the helicity sum.
 C     LOCAL
       integer i,j
 
-      write(*,*) "RESET CUMULATIVE VARIABLE"
+C      write(*,*) "RESET CUMULATIVE VARIABLE"
       non_zero = 0
       nb_pass_cuts = 0
       do j=1,maxinvar

@@ -99,3 +99,10 @@ initcluster.o: message.inc
 
 clean:
 	$(RM) *.o gensym madevent madevent_forhel
+	$(RM) *.so madevent
+
+
+madevent_vec.so: ../madevent_vec.cpp ../madevent_api.f $(PROCESS) matrix1_orig.o
+	$(FC) $(LINKLIBS) -o madevent_api.o -c ../madevent_api.f $(FFLAGS) -fbounds-check -Wall -DTF=1
+	g++ -std=c++14 -shared ../madevent_vec.cpp -o madevent_vec.so madevent_api.o $(MATRIX_HEL) $(PROCESS) -fPIC -O2  $(LINKLIBS) -lgfortran -fstack-protector
+
