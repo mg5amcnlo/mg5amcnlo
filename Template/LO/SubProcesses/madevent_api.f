@@ -1,16 +1,18 @@
 ************************************************************************
-*	API to call madevent functionality with python/tensorflow
+*	API to call madevent functionality with python
 *
-*       Initialization for tf by 	subroutine configure_code_tf
-*       Initialization by 	subroutine configure_code
-*       Full event weight by 	subroutine madevent_api
+*       Init for wrapper by     subroutine configure_code_cc
+*       Initialization by 	  subroutine configure_code
+*       Full event weight by 	  subroutine madevent_api
 *
 
 #ifdef TF
 ************************************************************************
-      subroutine configure_code_tf(multi_channel_in,helicity_sum,dconfig)
+      subroutine configure_code_cc(multi_channel_in,helicity_sum,dconfig)
 ************************************************************************
-*	initialize multi-channel and phase-space generation
+*	initialize multi-channel and phase-space generation for wrapper
+*     just calls the normal configure_code but properly handels bools
+*     from C/C++ side
 ************************************************************************
       use iso_c_binding
       implicit none
