@@ -251,6 +251,7 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
 
       if (k_exp.gt.ps_expo) then
           write(*,*) 'WARNING, e+e- exponent exceeding limit', k_exp, ps_expo
+          stop 1
       endif
 
       compute_eepdf = compute_eepdf * (omx_ee)**(-k_exp+ps_expo)
