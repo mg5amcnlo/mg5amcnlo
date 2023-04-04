@@ -370,7 +370,7 @@ class gensym(object):
 
             # Compile madevent      
             self.cmd.compile(['madevent'], cwd=Pdir)
-            # Compile madevent-api     
+            # Compile madevent-api
             self.cmd.compile(['madevent_vec.so'], cwd=Pdir)
             if to_submit:
                 self.submit_to_cluster(job_list)
