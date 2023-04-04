@@ -259,8 +259,6 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
         else:
             os.rename(data, data.replace('compile.py','.compile.py'))
 
-os.remove(path.join(filepath, 'README.developer'))
-
 
 # 1. Add information for the auto-update
 if rev_nb and auto_update:
