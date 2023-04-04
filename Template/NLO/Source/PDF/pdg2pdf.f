@@ -89,7 +89,8 @@ c     instead of stopping the code, as this might accidentally happen.
 
 C     dressed leptons so force lpp to be 3/4 (electron/muon beam)
 C      and check that it is not a photon initial state --elastic photon is handle below --
-      if ((abs(ih).eq.3.or.abs(ih).eq.4).and.ipdg.ne.22) then
+C MZ FIX THIS      if ((abs(ih).eq.3.or.abs(ih).eq.4).and.ipdg.ne.22) then
+      if ((abs(ih).eq.3.or.abs(ih).eq.4)) then
 c         if (ibeam.lt.0) then
 c            ipart=sign(1,ih)*ipdg
 c         else
