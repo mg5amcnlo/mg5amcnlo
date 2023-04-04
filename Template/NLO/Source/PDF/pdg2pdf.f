@@ -208,9 +208,11 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       ! importance-sampling transformation to sample
       ! the Bjorken x's
       implicit none
-      double precision expo
-      parameter (expo=0.96d0)
-      get_ee_expo = expo
+      integer idbeam
+      double precision expo_e, expo_m
+      parameter (expo_e=0.96d0)
+      parameter (expo_m=0.975d0)
+      get_ee_expo = expo_m
       return
       end
 
