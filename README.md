@@ -47,6 +47,6 @@ Windows users are recommended to use [Windows Subsystem for Linux (WSL)](https:/
     - `tutorial MadLoop` for a tutorial on MadLoop for learning how to output standalone codes for loop process evaluation for given PS points
 
 ## Contribute
-MadGraph5_aMC@NLO is licensed under an [adapted University of Illinois/NCSA license](madgraph/LICENSE).
+MadGraph5_aMC@NLO is licensed under an [adapted University of Illinois/NCSA license](LICENSE).
 
 Contributors are encouraged to read the [contribution guidelines](CONTRIBUTING.md)
