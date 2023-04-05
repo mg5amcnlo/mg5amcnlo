@@ -3589,7 +3589,6 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             ln('../%s' % file, starting_dir=cwd)
             
         ln('nexternal.inc', '../../Source', log=False, cwd=dirpath)
-        ln('pmass.inc', '../../Source', log=False, cwd=dirpath)
         ln('leshouche.inc', '../../Source', log=False, cwd=dirpath)
         ln('maxamps.inc', '../../Source', log=False, cwd=dirpath)
         ln('phasespace.inc', '../', log=True, cwd=dirpath)
@@ -4317,7 +4316,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         #import nexternal/leshouche in Source
         ln(pjoin(Ppath,'nexternal.inc'), pjoin(self.dir_path,'Source'), log=False)
-        ln(pjoin(Ppath,'pmass.inc'), pjoin(self.dir_path,'Source'), log=False)
         ln(pjoin(Ppath,'leshouche.inc'),  pjoin(self.dir_path,'Source'), log=False)
         ln(pjoin(Ppath,'maxamps.inc'),  pjoin(self.dir_path,'Source'), log=False)
         # Return to SubProcesses dir
@@ -4364,7 +4362,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'sudakov.inc',
                      'symmetry.f',
                      'unwgt.f',
-                     'dummy_fct.f'
+                     'dummy_fct.f',
+                     'madnis.f',
+                     'madnis.cpp',
+                     'madnis_debug.py'
                      ]
 
     def link_files_in_SubProcess(self, Ppath):
@@ -6145,7 +6146,6 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         #import nexternal/leshouch in Source
         ln('nexternal.inc', '../../Source', log=False)
-        ln('pmass.inc', '../../Source', log=False)
         ln('leshouche.inc', '../../Source', log=False)
         ln('maxamps.inc', '../../Source', log=False)
 
@@ -9569,7 +9569,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
             ln('../%s' % file, cwd=Ppath)
 
         ln('nexternal.inc', '../../Source', cwd=Ppath, log=False)
-        ln('pmass.inc', '../../Source', cwd=Ppath, log=False)
         ln('leshouche.inc', '../../Source', cwd=Ppath, log=False)
         ln('maxamps.inc', '../../Source', cwd=Ppath, log=False)
         ln('../../Source/maxparticles.inc', '.', log=True, cwd=Ppath)

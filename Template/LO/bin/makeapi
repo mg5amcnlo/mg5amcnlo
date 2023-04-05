@@ -31,7 +31,7 @@ if [[ -d SubProcesses ]]; then
     for i in `cat subproc.mg` ; do
 	cd $i
 	echo -n "."
-	make madevent_vec.so
+	make madnis
 	cd ..
     done
     echo " "

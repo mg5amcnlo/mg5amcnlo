@@ -116,7 +116,7 @@ c   Kiran please check if you need this:
     ENDDO
 
     IF (ANS.ne.0d0) THEN
-        CALL RANMAR(R)
+        CALL RANMAR_API(R, 3)
         SUMHEL=0d0
 	DO I=1,NCOMB
             SUMHEL=SUMHEL+DABS(TS(I))/ANS

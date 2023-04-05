@@ -6,7 +6,7 @@
 
 extern "C" {
     void configure_code_cc_(bool, bool, double&); 
-    void madevent_api_(double*, int&, int&, bool&, double&);
+    void madnis_api_(double*, int&, int&, bool&, double&);
     void get_momenta_(double*);
     void get_multichannel_(double*, int*);
 }
@@ -15,7 +15,7 @@ extern "C" {
 double Weight(double *rans, int ndim, int channel) {
     double result;
     bool cut = true;
-    madevent_api_(rans, ndim, channel, cut, result);
+    madnis_api_(rans, ndim, channel, cut, result);
     return result;
 }
 

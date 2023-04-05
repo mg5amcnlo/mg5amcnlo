@@ -98,9 +98,14 @@ unwgt.o: genps.inc nexternal.inc symswap.inc cluster.inc run.inc message.inc \
 initcluster.o: message.inc
 
 clean:
-	$(RM) *.o gensym madevent madevent_forhel
-	$(RM) *.so madevent
+	$(RM) *.o gensym madevent madevent_forhel madnis
+	$(RM) *.so madnis
 
-madevent_vec.so: ../madevent_vec.cpp ../madevent_api.f $(PROCESS) matrix1_orig.o
-	$(FC) $(LINKLIBS) -o madevent_api.o -c ../madevent_api.f $(FFLAGS) -fbounds-check -Wall -DTF=1
-	g++ -std=c++14 -shared ../madevent_vec.cpp -o madevent_vec.so madevent_api.o $(MATRIX_HEL) $(PROCESS) -fPIC -O2  $(LINKLIBS) -lgfortran -fstack-protector
+madnis_dev: $(PROG)_forhel symmetry.o $(MATRIX_HEL) $(PROCESS)
+	$(FC) -E madnis.f -cpp -o madnis_temp.f
+	$(F2PY) $(LINKLIBS) -c madnis_temp.f -m madnis_dev --f77exec=$(FC) --opt="$(FFLAGS)" $(MATRIX_HEL) $(PROCESS)
+	$(RM) madnis_temp.f
+
+madnis: $(PROG)_forhel symmetry.o $(MATRIX_HEL) $(PROCESS)
+	$(FC) $(LINKLIBS) -o madnis.o -c madnis.f $(FFLAGS) -fbounds-check -Wall -DTF=1
+	g++ -std=c++14 -shared madnis.cpp -o madnis.so madnis.o $(MATRIX_HEL) $(PROCESS) -fPIC -O2  $(LINKLIBS) -lgfortran -fstack-protector

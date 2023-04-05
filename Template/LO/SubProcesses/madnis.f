@@ -1,9 +1,9 @@
 ************************************************************************
-*	API to call madevent functionality with python
+*	API to call madgraph functionality with python
 *
 *       Init for wrapper by     subroutine configure_code_cc
 *       Initialization by 	  subroutine configure_code
-*       Full event weight by 	  subroutine madevent_api
+*       Full event weight by 	  subroutine madnis_api
 *
 
 #ifdef TF
@@ -43,9 +43,9 @@ CF2PY double precision, intent(in) :: dconfig
       
 
 c      include 'maxparticles.inc'
-      include '../Source/nexternal.inc'
-      include '../Source/maxconfigs.inc'
-      include '../Source/genps.inc'
+      include 'nexternal.inc'
+      include 'maxconfigs.inc'
+      include 'genps.inc'
 c      integer NCOMB
 c TODO: need templating      
 c      parameter (NCOMB=16)
@@ -155,7 +155,7 @@ c      open(unit=lun,status='scratch')
       param_card_name = 'param_card.dat'
       call setrun                !Sets up run parameters
       call setpara(param_card_name )   !Sets up couplings and masses
-      include '../Source/pmass.inc'        !Sets up particle masses
+      include 'pmass.inc'        !Sets up particle masses
       call setcuts               !Sets up cuts
 c      call printout              !Prints out a summary of paramaters
 c      call run_printout          !Prints out a summary of the run settings
@@ -184,7 +184,7 @@ c      call run_printout          !Prints out a summary of the run settings
       end
 
 ************************************************************************
-      subroutine madevent_api(R, ndim, channel, apply_cut, wgt)
+      subroutine madnis_api(R, ndim, channel, apply_cut, wgt)
 ************************************************************************
 *     This is a subroutine that returns the full event weight
 *
@@ -201,9 +201,9 @@ Cf2py integer, intent(inout) :: channel
 Cf2py logical, intent(in) :: apply_cut      
 Cf2py double precision, intent(out) :: wgt      
       implicit none
-      include '../Source/nexternal.inc'
-      include '../Source/maxconfigs.inc'
-      include '../Source/genps.inc'
+      include 'nexternal.inc'
+      include 'maxconfigs.inc'
+      include 'genps.inc'
       
       integer, intent(in) :: ndim
       double precision, intent(in), dimension(ndim) ::  R
@@ -322,7 +322,7 @@ CF2PY   integer, intent(out) :: answer
 
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory      
-      include '../Source/nexternal.inc'
+      include 'nexternal.inc'
       double precision Rstore(3*nexternal)
       integer r_used
       logical use_external_random_number
@@ -347,7 +347,7 @@ CF2PY   integer, intent(out), dimension(20) :: utility
 
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory            
-      include '../Source/nexternal.inc' 
+      include 'nexternal.inc' 
       integer utility(3*nexternal)
       double precision Rstore(3*nexternal)
       integer r_used
@@ -364,7 +364,7 @@ c     since this is a common block with the Source directory
 
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory            
-      include '../Source/nexternal.inc'
+      include 'nexternal.inc'
       double precision R(3*nexternal), Rstore(3*nexternal)
       integer r_used
       logical use_external_random_number
@@ -382,9 +382,9 @@ C      write(*,*) "stored rans = ", Rstore
       subroutine store_momenta(pin)
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory                  
-      include '../Source/nexternal.inc'
+      include 'nexternal.inc'
       double precision p(0:3,nexternal), pin(0:3,nexternal)
-      common/madevent_api_p/p
+      common/madnis_api_p/p
       p(:,:) = pin(:,:)
       return
       end
@@ -394,10 +394,10 @@ c     since this is a common block with the Source directory
 CF2PY double precision, intent(out), dimension(0:3,5) :: pout
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory                  
-      include '../Source/nexternal.inc'
+      include 'nexternal.inc'
       double precision p(0:3,nexternal)
       double precision, intent(inout) :: pout(4,nexternal)
-      common/madevent_api_p/p
+      common/madnis_api_p/p
       pout(:,:) = p(:,:)
       return
       end
@@ -415,8 +415,8 @@ C     and therefore which of the alphaout needs to be associated to the event.
       double precision, intent(out) :: alphaout(8)
       integer used_channel
 
-      include '../Source/maxamps.inc'
-      include '../Source/maxconfigs.inc'
+      include 'maxamps.inc'
+      include 'maxconfigs.inc'
 
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
