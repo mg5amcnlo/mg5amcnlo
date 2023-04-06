@@ -350,8 +350,10 @@ def import_full_model(model_path, decay=False, prefix=''):
                                                          (model_path, filename))
         files_list.append(filepath)
     # use pickle files if defined and up-to-date
-    if aloha.unitary_gauge: 
+    if aloha.unitary_gauge == 1: 
         pickle_name = 'model.pkl'
+    elif aloha.unitary_gauge == 3:
+        pickle_name = 'model_FDG.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
     if decay:
@@ -596,6 +598,11 @@ class UFOMG5Converter(object):
         for interaction_info in self.ufomodel.all_vertices:
             self.add_interaction(interaction_info, color_info)
 
+        if aloha.unitary_gauge == 3:
+            self.merge_all_goldstone_with_vector()
+
+
+
         if self.non_qcd_gluon_emission:
             logger.critical("Model with non QCD emission of gluon (found %i of those).\n  This type of model is not fully supported within MG5aMC.\n"+\
             "  Restriction on LO dynamical scale and MLM matching/merging can occur for some processes.\n"+\
@@ -758,6 +765,121 @@ class UFOMG5Converter(object):
             interaction['couplings'][(color, new_l)] = coup  
                 
     
+    def merge_all_goldstone_with_vector(self):
+        """For Feynman Diagram gauge need to merge interaction of scalar/boson"""
+
+        # Here identify the pair and then delegates to another function
+        # This routine also removes the goldstone from the list of particles of the model
+        
+        for particle in self.particles[:]:
+            if particle.get('type') == 'goldstone':
+                self.particles.remove(particle)
+                vector = [p for p in self.particles if p.get('mass') == particle.get('mass')]
+                if len(vector) != 1:
+                    raise Exception("Failed to idendity goldstone/boson relation")
+                self.merge_goldstone_with_vector(particle, vector[0])
+                if not particle.get('self_antipart') and particle.get('is_part'):
+                    particle = copy.copy(particle)
+                    particle.set('is_part', False)
+                    vector = copy.copy(vector[0])
+                    vector.set('is_part', False)
+                    self.merge_goldstone_with_vector(particle, vector)
+
+    def merge_goldstone_with_vector(self, goldstone, vector):
+        """For Feynman Diagram gauge need to merge interaction of scalar/boson
+           In this routine we identify the interactions that needs to be merge into a single one.
+           And delegate the actual merging to another routine
+        """
+
+        g_name = goldstone.get_name()
+        v_name = vector.get_name()
+
+        goldstone_interactions = [vertex for vertex in self.interactions if goldstone in  vertex.get('particles')]
+        vector_interactions = [vertex for vertex in self.interactions 
+                               if vector in vertex.get('particles') and
+                               goldstone not in vertex.get('particles')]
+
+        # create an easy way (dict) to find the equivalent vertex with boson
+        search_int = {}
+        for vertex in vector_interactions:
+            names = tuple([p.get_name() for p in vertex.get('particles')])
+            if names in search_int:
+                search_int[names].append(vertex)
+            else:
+                search_int[names] = [vertex]
+
+
+        # now loop over goldstone interaction, identify if the a vector interactions
+        # does exists and act accordingly (call dedicated routine)
+        for vertex in goldstone_interactions:
+            self.interactions.remove(vertex)
+
+            old_names = tuple([p.get_name() for p in vertex.get('particles')])
+            names = tuple([p.get_name() if p.get_name() != g_name else v_name
+                      for p in vertex.get('particles')])
+            if names in search_int:
+                self.update_vertex_for_goldstone(search_int[names], vertex, goldstone, vector)
+            else:
+                new_vertex = self.convert_goldstone_to_V(vertex, goldstone, vector)
+                self.interactions.append(new_vertex)
+                search_int[names] = [new_vertex]
+
+        #raise Exception
+
+
+    def convert_goldstone_to_V(self, vertex, goldstone, vector):
+        """create a new vertex where goldstone are replace by the associated vector"""
+
+        particles_list = base_objects.ParticleList(vertex.get('particles'))
+        for i, part in enumerate(vertex.get('particles')):
+            if part == goldstone:
+                particles_list[i] = vector
+        vertex.set('particles', particles_list)
+
+        return vertex
+    
+    def update_vertex_for_goldstone(self, vertex, gold_vertex, goldstone, vector):
+        """put the content of the gold_vertex within the vertex.
+           So far we do assume that ordering is preserved between interaction
+        """
+
+
+        if len(vertex) !=1 :
+            raise Exception
+
+        vertex = vertex[0]
+        # check how to translate the color:
+        # the translate_color track the index of the color in gold_vertex (key)
+        # and the value is associate to the identical color in vertex. 
+        # If that color does not exists it is added to the mix (should never happen. I guess)
+        translate_color = {}
+        for i, color in enumerate(gold_vertex.get('color')):
+            if color in vertex.get('color'):
+                translate_color[i] = vertex.get('color').index(color)
+            else:
+                misc.sprint("why a new color appear?")
+                raise Exception
+                translate_color[i] = len(vertex.get('color'))
+                vertex.get('color').append(color)
+        
+        # check now the lorentz structure. Some strategy as for the color
+        # But lorentz structure should not repeat in principle...
+        translate_lorentz = {}
+        for i, lor in enumerate(gold_vertex.get('lorentz')):
+            if lor in vertex.get('lorentz'):
+                raise Exception("lorentz should not repeat. Please report for investigation.")
+                translate_color[i] = vertex.get('lorentz').index(color)
+            else:
+                translate_lorentz[i] = len(vertex.get('lorentz'))
+                vertex.get('lorentz').append(lor)
+
+        # now we can add the coupling to the original vertex
+        for (color, lorentz), value in gold_vertex.get('couplings').items():
+            key = (translate_color[color], translate_lorentz[lorentz])
+            assert key not in vertex.get('couplings')
+            vertex.get('couplings')[key] = value
+
+
     def add_merge_lorentz(self, names):
         """add a lorentz structure which is the sume of the list given above"""
         
@@ -816,7 +938,7 @@ class UFOMG5Converter(object):
         if not self.perturbation_couplings and particle_info.spin < 0:
             return
         
-        if (aloha.unitary_gauge and 0 in self.model['gauge']) \
+        if (aloha.unitary_gauge in [1,2] and 0 in self.model['gauge']) \
                             or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 

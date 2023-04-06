@@ -984,7 +984,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
-            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+            if aloha.unitary_gauge !=3:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                                                 write_dir+'/aloha_functions.f')
+            else:
+                cp(MG5DIR + '/aloha/template_files/aloha_functions_fd.f', 
                                                  write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 

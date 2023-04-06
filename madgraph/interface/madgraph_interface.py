@@ -775,8 +775,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This option can considerably slow down the loop ME")
         logger.info("   computation time, especially when summing over all color")
         logger.info("   and helicity configuration, hence turned off by default.")        
-        logger.info("gauge unitary|Feynman|axial",'$MG:color:GREEN')
+        logger.info("gauge unitary|Feynman|axial|FD",'$MG:color:GREEN')
         logger.info(" > (default unitary) choose the gauge of the non QCD part.")
+        logger.info(" > FD is for Feynman Diagram gauge:     2203.10440 ")
         logger.info(" > For loop processes, only Feynman gauge is employable.")
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Set complex mass scheme.")
@@ -1559,8 +1560,9 @@ This will take effect only in a NEW terminal
 
 
         if args[0] in ['gauge']:
-            if args[1] not in ['unitary','Feynman', 'axial']:
-                raise self.InvalidCmd('gauge needs argument unitary, axial or Feynman.')
+            allow = ['unitary','Feynman', 'axial', 'FD']
+            if args[1] not in allow:
+                raise self.InvalidCmd('gauge needs argument %s.' % ','.join(allow))
 
         if args[0] in ['timeout']:
             if not args[1].isdigit():
@@ -2600,7 +2602,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1].lower() == 'ewscheme':
                 return self.list_completion(text, ["external", "MZ_MW_alpha"])
             elif args[1] == 'gauge':
-                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial'])
+                return self.list_completion(text, ['unitary', 'Feynman','default', 'axial', 'FD'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'output_dependencies':
@@ -5651,7 +5653,7 @@ This implies that with decay chains:
                         if 1 not in self._curr_model.get('gauge') :
                             logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
-                                                'QCD loop cmputations with it.')
+                                                'QCD loop computations with it.')
                         else:
                             logger.info('Change to the gauge to Feynman because '+\
                           'this loop model allows for more than just tree level'+\
@@ -7770,6 +7772,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     aloha.unitary_gauge = True
                 elif args[1] == 'axial':
                     aloha.unitary_gauge = 2 
+                elif args[1] == 'FD':
+                    aloha.unitary_gauge = 3 
                 else:
                     aloha.unitary_gauge = False
                 aloha_lib.KERNEL.clean()
