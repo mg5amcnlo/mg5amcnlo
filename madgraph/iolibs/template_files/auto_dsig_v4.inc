@@ -75,7 +75,8 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
-      include '../../Source/vector.inc'
+      include 'vector.inc'
+      include 'coupl.inc'
       include 'run.inc'
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -269,6 +270,7 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
+      include 'coupl.inc'
       include 'run.inc'
 
       double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
