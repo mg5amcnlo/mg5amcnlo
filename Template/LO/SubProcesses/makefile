@@ -101,11 +101,11 @@ clean:
 	$(RM) *.o gensym madevent madevent_forhel madnis
 	$(RM) *.so madnis
 
-madnis_dev: $(PROG)_forhel symmetry.o $(PROCESS) $(MATRIX_HEL)
+madnis_dev: $(PROG)_forhel symmetry.o $(MATRIX_HEL)
 	$(FC) -E madnis.f -cpp -o madnis_temp.f
 	$(F2PY) $(LINKLIBS) -c madnis_temp.f -m madnis_dev --f77exec=$(FC) --opt="$(FFLAGS)" $(MATRIX_HEL) $(PROCESS)
 	$(RM) madnis_temp.f
 
 madnis: $(PROCESS) $(MATRIX_HEL)
-	$(FC) $(LINKLIBS) -o madnis.o -c madnis.f $(FFLAGS) -fbounds-check -Wall -DTF=1
-	g++ -std=c++14 -shared madnis.cpp -o madnis.so madnis.o $(MATRIX_HEL) $(PROCESS) -fPIC -O2  $(LINKLIBS) -lgfortran -fstack-protector
+	$(FC) $(LINKLIBS) -o madnis_api.o -c madnis.f $(FFLAGS) -fbounds-check -Wall -DTF=1
+	g++ -std=c++14 -shared madnis.cpp -o madnis.so madnis_api.o $(MATRIX_HEL) $(PROCESS) -fPIC -O2  $(LINKLIBS) -lgfortran -fstack-protector

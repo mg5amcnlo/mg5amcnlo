@@ -210,7 +210,7 @@ Cf2py double precision, intent(out) :: wgt
       integer, intent(inout) :: channel
       logical, intent(in) :: apply_cut
       double precision, intent(out) ::  wgt
-      double precision p(0:3,5)
+      double precision p(0:3,nexternal)
       double precision dsig
       external dsig
 
@@ -323,10 +323,10 @@ CF2PY   integer, intent(out) :: answer
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory      
       include 'nexternal.inc'
-      double precision Rstore(3*nexternal)
+      double precision Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
 
       answer = r_used
@@ -348,11 +348,11 @@ CF2PY   integer, intent(out), dimension(20) :: utility
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory            
       include 'nexternal.inc' 
-      integer utility(3*nexternal)
-      double precision Rstore(3*nexternal)
+      integer utility(4*nexternal)
+      double precision Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
 
       utility(:) = mode(:)
@@ -365,10 +365,10 @@ c     since this is a common block with the Source directory
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory            
       include 'nexternal.inc'
-      double precision R(3*nexternal), Rstore(3*nexternal)
+      double precision R(4*nexternal), Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
 
       use_external_random_number = .true.
@@ -412,7 +412,9 @@ C     the channel under consideration is not always the input channel
 C     used_channel returns the channel selected for the current event
 C     and therefore which of the alphaout needs to be associated to the event.
       implicit none
-      double precision, intent(out) :: alphaout(8)
+
+      include 'ngraphs.inc'
+      double precision, intent(out) :: alphaout(n_max_cg)
       integer used_channel
 
       include 'maxamps.inc'

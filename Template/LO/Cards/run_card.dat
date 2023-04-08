@@ -257,3 +257,5 @@ $ecut
 %(systematics_program)s = systematics_program ! none, systematics [python], SysCalc [depreceted, C++]
 %(systematics_arguments)s = systematics_arguments ! see: https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Systematics#Systematicspythonmodule
 $syscalc
+
+%(mc_grouped_subproc)s = mc_grouped_subproc

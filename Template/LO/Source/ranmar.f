@@ -25,8 +25,8 @@ c------
       integer*8       iseed
       common /to_seed/iseed
 
-      double precision Rstore(3*nexternal)
-      integer mode(3*nexternal)
+      double precision Rstore(4*nexternal)
+      integer mode(4*nexternal)
       integer r_used
       logical use_external_random_number
       common/external_random/ Rstore, use_external_random_number, r_used, mode
@@ -211,10 +211,10 @@ c-----
       double precision rvec
       integer ii
 
-      double precision Rstore(3*nexternal)
+      double precision Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
 
       if(use_external_random_number)then
@@ -242,10 +242,10 @@ c         write(*,*) 'random number used (not p)', r_used, rvec
 
       include 'nexternal.inc'
       
-      double precision Rstore(3*nexternal)
+      double precision Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
       
       if(use_external_random_number)then

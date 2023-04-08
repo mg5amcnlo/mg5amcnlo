@@ -841,7 +841,7 @@ c      kl = 4321
       max_np = 1
       np = max_np   !Flag to open csh file
       do i=1,ng
-         call ranmar(rvec)
+         call ranmar_api(rvec, 100)
          ip = index(gn(i),'/')
          fname = gn(i)(1:ip) // 'gscalefact.dat'
          open(unit=27,file=fname,status='unknown',err=91)

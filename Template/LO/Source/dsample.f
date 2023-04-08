@@ -1169,10 +1169,10 @@ c
       integer            lastbin(maxdim)
       common /to_lastbin/lastbin
 
-      double precision Rstore(3*nexternal)
+      double precision Rstore(4*nexternal)
       integer r_used
       logical use_external_random_number
-      integer mode(3*nexternal)
+      integer mode(4*nexternal)
       common/external_random/ Rstore, use_external_random_number, r_used, mode
       
 c-----
