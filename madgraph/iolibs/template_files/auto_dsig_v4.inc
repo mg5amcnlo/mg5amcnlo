@@ -75,7 +75,8 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
-      include 'coupl.inc'
+      INCLUDE 'vector.inc'  ! defines VECSIZE_MEMMAX
+      INCLUDE 'coupl.inc'  ! defines VECSIZE_MEMMAX_COUPL
       include 'run.inc'
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
