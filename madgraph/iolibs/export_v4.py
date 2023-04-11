@@ -7025,9 +7025,16 @@ class UFO_model_to_mg4(object):
 
         # Write header
         header = """C
-C NB: VECSIZE_MEMMAX is defined in vector.inc
-C NB: vector.inc must be included before coupl.inc
+C     NB: VECSIZE_MEMMAX is defined in vector.inc, but this is not
+C     included in coupl.inc because Fortran has no include guards
 C
+C     NB: therefore coupl.inc introduces the definition of a separate
+C     variable VECSIZE_MEMMAX_COUPL, whose value must be the same as
+C     that of VECSIZE_MEMMAX (this is cross-checked in PROGRAM DRIVER)
+C
+
+      INTEGER VECSIZE_MEMMAX_COUPL
+      PARAMETER (VECSIZE_MEMMAX_COUPL=%(vector_size)s)
 
                 double precision G, all_G%(vec)s
                 common/strong/ G, all_G
@@ -7038,9 +7045,10 @@ C
                 double precision MU_R, all_mu_r%(vec)s
                 common/rscale/ MU_R, all_mu_r
 
-                """   % {'vec': ('' if not self.vector_size else '(1)' if self.vector_size<=1 else '(VECSIZE_MEMMAX)')}
-                ###   % {'vec': ("(VECSIZE_MEMMAX)" if self.vector_size else '')}
-                ###   % {'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
+                """   % {'vector_size' : "%i" % max(1,self.vector_size) if self.vector_size else '1',
+                         'vec': ('' if not self.vector_size else '(1)' if self.vector_size<=1 else '(VECSIZE_MEMMAX_COUPL)')}
+                ###      'vec': ("(VECSIZE_MEMMAX_COUPL)" if self.vector_size else '')}
+                ###      'vec': ("(%i)" % max(1,self.vector_size) if self.vector_size else '')}
 
         # Nf is the number of light quark flavours
         header = header+"""double precision Nf
@@ -7128,7 +7136,7 @@ C
             fsock.writelines('double complex '+', '.join(c_list)+'\n') 
 
         if self.vector_size:
-            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX") for coupl in self.coups_dep]
+            c_list = ['%s(%s)' %(coupl.name, "VECSIZE_MEMMAX_COUPL") for coupl in self.coups_dep]
         else:
             c_list = [coupl.name for coupl in self.coups_dep] 
         
