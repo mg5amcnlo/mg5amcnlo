@@ -81,6 +81,14 @@ C  BEGIN CODE
 C----- 
       call cpu_time(t_before)
       CUMULATED_TIMING = t_before
+
+c Sanity check (see https://github.com/madgraph5/madgraph4gpu/issues/629)
+      IF ( VECSIZE_MEMMAX .NE. VECSIZE_MEMMAX_COUPL ) THEN
+        WRITE(6,*) 'ERROR! Stopping in program DRIVER: VECSIZE_MEMMAX != VECSIZE_MEMMAX_COUPL!'
+        WRITE(6,*) 'ERROR! VECSIZE_MEMMAX       =', VECSIZE_MEMMAX
+        WRITE(6,*) 'ERROR! VECSIZE_MEMMAX_COUPL =', VECSIZE_MEMMAX_COUPL
+      ENDIF
+
 c
 c     Read process number
 c
