@@ -71,7 +71,6 @@ c      double precision xsec,xerr
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),ic
 c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
-      include 'vector.inc'
       include 'coupl.inc'
       INTEGER VECSIZE_USED
       DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime

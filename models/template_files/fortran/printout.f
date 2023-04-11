@@ -9,7 +9,6 @@ c************************************************************************
       subroutine printout
       implicit none
 
-      include '../vector.inc'
       include 'coupl.inc'
       include 'input.inc'
       

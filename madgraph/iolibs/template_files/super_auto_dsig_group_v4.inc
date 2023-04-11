@@ -411,7 +411,6 @@ C     Common blocks
       data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
       common /nb_hel_state/ nb_spin_state
 
-      include 'vector.inc'
       include 'coupl.inc'
       include 'run.inc'
 C   ICONFIG has this config number
@@ -726,9 +725,9 @@ C     ****************************************************
       include 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      include 'vector.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      include 'vector.inc'
 C     
 C     ARGUMENTS 
 C     
@@ -859,9 +858,9 @@ C     ****************************************************
       include 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      include 'vector.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      include '../../Source/vector.inc'
 C     
 C     ARGUMENTS 
 C

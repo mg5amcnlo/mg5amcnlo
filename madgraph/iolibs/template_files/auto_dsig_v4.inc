@@ -75,7 +75,6 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
-      include 'vector.inc'
       include 'coupl.inc'
       include 'run.inc'
 C     Common blocks
