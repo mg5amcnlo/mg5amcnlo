@@ -20,10 +20,11 @@ C     Include
 C
 C      include '../pdf.inc'
 C     Common block
-      character*7 pdlabel,epa_label
-      character*7 pdsublabel(2)
-      integer lhaid
-      common/to_pdf/lhaid,pdlabel,epa_label,pdsublabel
+      include '../pdf.inc'
+c      character*7 pdlabel,epa_label
+c      character*7 pdsublabel(2)
+c      integer lhaid
+c      common/to_pdf/lhaid,pdlabel,epa_label,pdsublabel
 
       double precision xx1,xx2
 
