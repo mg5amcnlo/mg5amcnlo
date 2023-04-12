@@ -359,9 +359,9 @@ c     since this is a common block with the Source directory
       return
       end
       
-      
+************************************************************************     
       subroutine store_random_number(R)
-
+************************************************************************
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory            
       include 'nexternal.inc'
@@ -378,8 +378,9 @@ C      write(*,*) "stored rans = ", Rstore
       mode(:) = 0
       return
       end
-
+************************************************************************
       subroutine store_momenta(pin)
+************************************************************************
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory                  
       include 'nexternal.inc'

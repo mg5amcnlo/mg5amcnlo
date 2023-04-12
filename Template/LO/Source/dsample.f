@@ -837,14 +837,14 @@ c  Begin Code
 c-----
       if (flat_grid) then
          if (itype.gt.1) then
-c            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
+C            write(*,'(a,i4,2e15.5,i4)') 'Setting grid',j,xo,a,itype
             if (a .ge. xo) then
                write(*,*) 'Can not integrate over singularity'
                write(*,*) 'Set grid',j,xo,a
                return
             endif
-         else
-c            write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
+C         else
+C            write(*,'(a,i4,1e15.5,i4)') 'Setting grid',j,xo,itype            
          endif
 c     grid(2,1,j) = xo
          grid(2,ng,j)=xgmax

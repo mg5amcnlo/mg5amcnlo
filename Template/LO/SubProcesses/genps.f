@@ -132,11 +132,10 @@ c
       integer imatch
       save maxwgt
       double precision R        !random value
-      integer ninvar, nconfigs
+      integer ninvar
       double precision tau_m, tau_w, t1, t2
       double precision get_ee_expo
 
-      
 c
 c     External
 c
@@ -218,12 +217,8 @@ c----
       this_config = iconfig             !Pass iconfig to amplitude routine
 c      write(*,*) 'using iconfig',iconfig
       if (firsttime) then
-         firsttime=.false.
-         do i=1,nexternal
-            m(i)=pmass(i)
-         enddo
-         maxwgt=0d0
-c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
+         firsttime=.true.
+         call configure_integral(this_config,mincfig,maxcfig,invar,maxwgt)
          nparticles   = nexternal
          nfinal       = nparticles-nincoming
          nbranch      = nparticles-2
@@ -235,8 +230,7 @@ c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
-         write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
-         call configure_integral(iconfig,mincfig,maxcfig,invar,maxwgt)
+C         write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
       endif                          !First_time
 
       this_config = iconfig             !Pass iconfig to amplitude routine
@@ -328,7 +322,7 @@ c               endif
 c-----
 c tjs 5/24/2010 for 2->1 process
 c-------
-           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
            xtau = x(ndim-1)
             if(nexternal .eq. 3) then
                x(ndim-1) = pmass(3)*pmass(3)/stot
@@ -344,9 +338,10 @@ c           Set CM rapidity for use in the rap() function
 c           Set shat
             s(-nbranch) = xbk(1)*xbk(2)*stot
          endif
+
       elseif (lpp(1).eq.9.or.lpp(2).eq.9) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
-        if (lpp(1).eq.9)then
+         if (lpp(1).eq.9)then
             call get_dummy_x1(sjac, xbk(1), x(ndim), pi1, pi2, stot, s(-nbranch))
             xbk(2) = 1d0
          else
@@ -627,6 +622,9 @@ c
       logical passcuts
 
 
+      logical firsttime
+      data firsttime/.true./
+      save firsttime
 c
 c     global
 c
@@ -644,8 +642,11 @@ c
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
 
+      integer          lwgt(0:maxconfigs,maxinvar)
+      common/to_lwgt/lwgt
 
-
+      if (firsttime)then
+         firsttime=.false.
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -671,26 +672,48 @@ c        Set stot
             pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
             stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
          endif
-         write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
+C         write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
+         endif
 c        Start graph mapping
          do i=1,mapconfig(0)
             if (mapconfig(i) .eq. iconfig) this_config=i
          enddo
-         write(*,*) 'Mapping Graph',iconfig,' to config',this_config
+C         write(*,*) 'Mapping Graph',iconfig,' to config',this_config
          iconfig = this_config
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
-c         maxwgt=0d0
-c         nparticles   = nexternal
-c         nfinal       = nparticles-nincoming
-c         nbranch      = nparticles-2
-c         ndim         = 3*nfinal-4
-c         if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
-c         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
-c         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+         maxwgt=0d0
+         nparticles   = nexternal
+         nfinal       = nparticles-nincoming
+         nbranch      = nparticles-2
+         ndim         = 3*nfinal-4
+         if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
+         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
+         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
          call set_peaks
+         do j=1,invar
+            lwgt(0,j)=0
+         enddo
+c
+c     Here we set up which diagrams contribute to each variable
+c     in principle more than 1 diagram can contribute to a variable
+c     if we believe they will have identical structure.
+c
+c         do i=1,mapconfig(0)
+         do i=mincfig,maxcfig
+C            write(*,'(15i4)') i,(minvar(j,i),j=1,ndim)
+            do j=1,ndim
+               ipole = minvar(j,i)
+               if (ipole .ne. 0) then
+                  n = lwgt(0,ipole)+1
+                  lwgt(n,ipole)=mapconfig(i)
+                  lwgt(0,ipole)=n
+               endif
+            enddo
+         enddo
+
 c     Initialize dsig (needed for subprocess group running mode)
          dum=dsig(0,0,1)
 

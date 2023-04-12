@@ -547,9 +547,9 @@ c-----------------------
             endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
-         else
-            write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
+C            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
+C         else
+C            write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
          endif
       endif
 
