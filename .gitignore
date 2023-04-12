@@ -6,3 +6,6 @@ MY_FIRST_MG5_RUN/
 **/__pycache__/
 .DS_Store
 *.zip
+test_ssWWjj_QCD/*
+*.pkl
+slurm-*.out
