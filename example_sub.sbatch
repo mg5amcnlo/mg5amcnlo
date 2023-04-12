@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=1
+#SBATCH --nodes=2
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=96
 #SBATCH --mem-per-cpu=3700
-#SBATCH --time=00:00:03
+#SBATCH --time=02:00:00
 #SBATCH --partition=devel
 
 module purge

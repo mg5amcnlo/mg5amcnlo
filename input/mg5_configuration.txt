@@ -113,7 +113,7 @@ run_mode = 1
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm|htcaas|htcaas2|dasklocal|daskmpi] Use for cluster run only
 #!  And cluster queue (or partition for slurm)
 #!  And size of the cluster (some part of the code can adapt splitting accordingly)
-cluster_type = dasklocal
+cluster_type = daskmpi
 # cluster_queue = madgraph
 # cluster_size = 150 
 
@@ -143,7 +143,7 @@ cluster_type = dasklocal
 #! For Dask Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
 #! and scheduler) there is no auto.
 #! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
-nb_core = 4
+# nb_core = 4
 
 #! Please note for dask clusters the LocalCluster is far more forgiving and usable on your local machine
 #! for daskmpi the submission script needs to be matched to your settings here or things will go wrong.
@@ -154,8 +154,8 @@ nb_core = 4
 #! Dask clusters, likely the defaults are the best option, see dask docs for more info
 #! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this must be (nb_core - 2)
 #! nb_thread_per_worker (None = 1) set the number of threads to 
-# nb_workers = 4
-# nb_threads_per_worker = 1 
+nb_workers = 94
+nb_threads_per_worker = 1 
 
 #! For Dask Clusters we need to know the memory (per core) 
 #! https://docs.dask.org/en/stable/deploying-python.html?highlight=localcluster#localcluster in bytes
