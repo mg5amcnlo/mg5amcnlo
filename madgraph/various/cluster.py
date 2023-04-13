@@ -2291,10 +2291,8 @@ class DaskMPI(DaskClusterBase):
 
         if self.nb_core >= self.nb_workers:
             self.nb_workers = self.nb_core - 2
-            self.nb_threads = self.nb_workers * self.nb_threads_per_worker
 
-        # Initialise Dask cluster and client interface
-        initialize(interface = 'ib0', nthreads=self.nb_threads, local_directory='/tmp', memory_limit=self.cluster_memory)
+        # Initialise Dask cluster client
         self.client = Client() # This will find the MPI cluster
 
         # Wait for these workers and report

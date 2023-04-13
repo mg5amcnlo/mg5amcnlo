@@ -153,6 +153,12 @@ try:
 except:
     pass
 
+# If using dask mpi initialize on each core, all ranks other than 1 block here.
+if options.run_mode == 1 and options.cluster_type == 'daskmpi':
+    import dask_mpi
+    is_client = dask_mpi.initialize(interface = 'ib0', nthreads=options.nb_threads_per_worker, local_directory='/tmp', memory_limit=options.cluster_memory)
+    if not is_client:
+        exit
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
