@@ -147,7 +147,7 @@ except:
 # If using dask mpi initialize on each core, all ranks other than 1 block here.
 if options.daskmpi:
     import dask_mpi
-    is_client = dask_mpi.initialize(interface = 'en0', nthreads=1, local_directory='/tmp')
+    is_client = dask_mpi.initialize(interface = 'ib0', nthreads=1, local_directory='/tmp')
     if not is_client:
         exit(0)
 
