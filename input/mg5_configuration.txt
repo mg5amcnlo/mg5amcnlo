@@ -143,7 +143,7 @@ cluster_type = daskmpi
 #! For Dask Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
 #! and scheduler) there is no auto.
 #! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
-# nb_core = 4
+nb_core = 96
 
 #! Please note for dask clusters the LocalCluster is far more forgiving and usable on your local machine
 #! for daskmpi the submission script needs to be matched to your settings here or things will go wrong.

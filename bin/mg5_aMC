@@ -144,6 +144,13 @@ try:
 except:
     pass
 
+# If using dask mpi initialize on each core, all ranks other than 1 block here.
+if options.daskmpi:
+    import dask_mpi
+    is_client = dask_mpi.initialize(interface = 'en0', nthreads=1, local_directory='/tmp')
+    if not is_client:
+        exit(0)
+
 import madgraph.interface.master_interface as interface
 
 if __debug__ and time.time() - start > 0.5:
@@ -154,15 +161,6 @@ try:
     misc.EasterEgg('loading')
 except:
     pass
-
-print(options)
-
-# If using dask mpi initialize on each core, all ranks other than 1 block here.
-if options.daskmpi:
-    import dask_mpi
-    is_client = dask_mpi.initialize(interface = 'ib0', nthreads=options.nb_threads_per_worker, local_directory='/tmp', memory_limit=options.cluster_memory)
-    if not is_client:
-        exit(0)
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):

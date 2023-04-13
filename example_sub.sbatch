@@ -3,7 +3,7 @@
 #SBATCH --ntasks-per-node=48
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=3700
-#SBATCH --time=02:00:00
+#SBATCH --time=01:00:00
 #SBATCH --partition=devel
 
 module purge
