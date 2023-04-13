@@ -62,7 +62,9 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
 parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
-                  help='For mac user, forbids to use caffeinate when running with a script')                               
+                  help='For mac user, forbids to use caffeinate when running with a script')      
+parser.add_option("--daskmpi", action="store_true", default=False,
+                  help='Enable dask mpi')                          
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -153,12 +155,14 @@ try:
 except:
     pass
 
+print(options)
+
 # If using dask mpi initialize on each core, all ranks other than 1 block here.
-if options.run_mode == 1 and options.cluster_type == 'daskmpi':
+if options.daskmpi:
     import dask_mpi
     is_client = dask_mpi.initialize(interface = 'ib0', nthreads=options.nb_threads_per_worker, local_directory='/tmp', memory_limit=options.cluster_memory)
     if not is_client:
-        exit
+        exit(0)
 
 if options.plugin:
     if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
@@ -182,8 +186,6 @@ elif options.web:
     cmd_line = interface.MasterCmdWeb()
 else: 
     cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
-
-
 
 # Call the cmd interface main loop
 try:
