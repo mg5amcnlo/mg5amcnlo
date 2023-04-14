@@ -140,10 +140,9 @@ cluster_type = daskmpi
 
 #! For Multicore: Nb_core to use (None = all) This is use only for multicore run
 #! For Cluster: This correspond also to the number core used for code compilation for cluster mode
-#! For Dask Clusters: This is the number of physical cores (note dask MPI uses two cores per job for the main script
-#! and scheduler) there is no auto.
-#! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html
-nb_core = 96
+#! For Local Dask Cluster: This is the number of physical cores.
+#! Dask MPI is configured in/by the job submission script.
+# nb_core = 96
 
 #! Please note for dask clusters the LocalCluster is far more forgiving and usable on your local machine
 #! for daskmpi the submission script needs to be matched to your settings here or things will go wrong.
@@ -153,16 +152,18 @@ nb_core = 96
 
 #! Dask clusters, likely the defaults are the best option, see dask docs for more info
 #! nb_workers (None = nb_core) set the number of workers to launch for dask mpi this must be (nb_core - 2)
-#! nb_thread_per_worker (None = 1) set the number of threads to 
-nb_workers = 94
-nb_threads_per_worker = 1 
+#! nb_thread_per_worker (None = 1) set the number of threads to
+#! Dask MPI is configured in/by the job submission script.
+# nb_workers = 94
+# nb_threads_per_worker = 1 
 
-#! For Dask Clusters we need to know the memory (per core) 
+#! For Local Dask Clusters we need to know the memory (per core), dask mpi is handled by the job submission script
 #! https://docs.dask.org/en/stable/deploying-python.html?highlight=localcluster#localcluster in bytes
 #! http://mpi.dask.org/en/latest/generated/dask_mpi.core.initialize.html#dask_mpi.core.initialize
 #! Please use e.g. XGiB, XMB, X where X is an integer value, defalut is auto which splits system memory across workers
 #! Gib to GB is 1 to 1.074
-cluster_memory = 3700MB
+#! Dask MPI is configured in/by the job submission script.
+# cluster_memory = 3700MB
 
 #! Pythia-PGS Package
 #!  relative path start from main directory

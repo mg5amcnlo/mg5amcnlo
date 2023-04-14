@@ -2200,6 +2200,8 @@ class DaskClusterBase(Cluster):
             self.nb_core = int(opt['nb_core'])
         elif isinstance(args[0],int):
             self.nb_core = int(args[0])
+        elif os.getenv('SLURM_NTASKS'):
+            pass
         else:
             raise ValueError("nb_core must be set")
 
@@ -2285,22 +2287,11 @@ class DaskMPI(DaskClusterBase):
         """Init the cluster """
         super(DaskMPI, self).__init__(self, *args, **opt)
         from dask.distributed import Client
-        
-        # Query SLURM environment per worker task
-        p = int(os.getenv('SLURM_CPUS_PER_TASK'))
-        mem = os.getenv('SLURM_MEM_PER_CPU')
-        mem = str(int(mem)*p)+'MB'
 
         sched_file = os.getenv('SLURM_JOB_ID')+'.sched'
 
-        if self.nb_core <= 3:
-            raise ValueError('Number of cores must be greater than 3')
-
-        if self.nb_core >= self.nb_workers:
-            self.nb_workers = self.nb_core - 2
-
         # Initialise Dask cluster client
-        self.client = Client(scheduler_file=sched_file, nthreads=p, local_directory='/tmp', memory_limit=mem) # This will find the MPI cluster
+        self.client = Client(scheduler_file=sched_file) # This will find the MPI cluster
 
         N = int(os.getenv('SLURM_NTASKS'))
         # Wait for these workers and report
