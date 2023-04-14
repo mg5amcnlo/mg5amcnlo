@@ -62,9 +62,7 @@ parser.add_option("","--debug", action="store_true", default=False, dest='debug'
 parser.add_option("-m", "--mode", dest="plugin",
                   help="Define some additional command provide by a PLUGIN")
 parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
-                  help='For mac user, forbids to use caffeinate when running with a script')      
-parser.add_option("--daskmpi", action="store_true", default=False,
-                  help='Enable dask mpi')                          
+                  help='For mac user, forbids to use caffeinate when running with a script')                        
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -144,12 +142,6 @@ try:
 except:
     pass
 
-# If using dask mpi initialize on each core, all ranks other than 1 block here.
-if options.daskmpi:
-    import dask_mpi
-    is_client = dask_mpi.initialize(interface = 'ib0', nthreads=1, local_directory='/tmp')
-    if not is_client:
-        exit(0)
 
 import madgraph.interface.master_interface as interface
 

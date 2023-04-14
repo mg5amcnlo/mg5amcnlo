@@ -2253,8 +2253,10 @@ class DaskClusterBase(Cluster):
     
     @check_interupt()
     def wait(self, *args, **kwargs):
-        from dask.distributed import wait
-        wait(self.results)
+        from dask.distributed import wait, progress
+        progress(self.results, notebook=False)
+        results = self.client.gather(self.results)
+        print(results)
         return 0
 
     def remove(self, *args, **opts):
@@ -2283,8 +2285,14 @@ class DaskMPI(DaskClusterBase):
     def __init__(self, *args, **opt):
         """Init the cluster """
         super(DaskMPI, self).__init__(self, *args, **opt)
-        from dask_mpi import initialize
         from dask.distributed import Client
+        
+        # Query SLURM environment per worker task
+        p = int(os.getenv('SLURM_CPUS_PER_TASK'))
+        mem = os.getenv('SLURM_MEM_PER_CPU')
+        mem = str(int(mem)*p)+'MB'
+
+        sched_file = os.getenv('SLURM_JOB_ID')+'.sched'
 
         if self.nb_core <= 3:
             raise ValueError('Number of cores must be greater than 3')
@@ -2293,10 +2301,13 @@ class DaskMPI(DaskClusterBase):
             self.nb_workers = self.nb_core - 2
 
         # Initialise Dask cluster client
-        self.client = Client() # This will find the MPI cluster
+        self.client = Client(scheduler_file=sched_file, nthreads=p, local_directory='/tmp', memory_limit=mem) # This will find the MPI cluster
 
+        N = int(os.getenv('SLURM_NTASKS'))
         # Wait for these workers and report
-        self.client.wait_for_workers(n_workers=self.nb_workers)
+        self.client.wait_for_workers(n_workers=N)
+        num_workers = len(self.client.scheduler_info()['workers'])
+        print(f"{num_workers} dask workers available and ready")
 
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
