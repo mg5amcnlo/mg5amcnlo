@@ -2255,8 +2255,7 @@ class DaskClusterBase(Cluster):
     def wait(self, *args, **kwargs):
         from dask.distributed import wait, progress
         progress(self.results, notebook=False)
-        results = self.client.gather(self.results)
-        print(results)
+        self.client.gather(self.results)
         return 0
 
     def remove(self, *args, **opts):
