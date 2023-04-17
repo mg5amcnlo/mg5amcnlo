@@ -3958,7 +3958,7 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("mue_ref_fixed", 91.1880, hidden=True)
-        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
+        self.add_param("dynamical_scale_choice", 3, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
                                                 allowed=[-1,0,1,2,3,4,10])
         self.add_param("mue_over_ref", 1.0, hidden=True, comment='ratio mu_other/mu for dynamical scale')
         self.add_param("ievo_eva",0,hidden=True, allowed=[0,1],fortran_name="ievo_eva",
