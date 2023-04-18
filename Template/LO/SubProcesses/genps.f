@@ -127,7 +127,6 @@ c
       common/to_sprop/sprop,tprid
       integer last_config
       save last_config
-      data last_config /0/
 
       double precision xprop(3,nexternal),tprop(3,nexternal)
       double precision maxwgt
@@ -211,6 +210,7 @@ c
 c     data
 c
       include 'configs.inc'
+      data last_config/0/
       data jfig/1/
 c-----
 c  Begin Code
