@@ -341,7 +341,6 @@ in presence of majorana particle/flow violation"""
                     if massless or aloha.unitary_gauge in [0,3]: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
                     else:
-                        raise Exception
                         lorentz *= VectorPropagator(id, 'I2', id)
                 elif spin == 4:
                     # shift and flip the tag if we multiply by C matrices

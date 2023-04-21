@@ -671,7 +671,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                           .format(i+1))
                 #out.write("     FWM{0} = M{0}/FWP{0}\n".format(i+1))
         
-            if aloha.unitary_gauge == 3: # FD gauge
+            if aloha.unitary_gauge == 3 and type in ["S","V"]: # FD gauge
                 out.write("      DO I = 3, 7\n")
                 out.write(" %(type)s%(out)s(I) = CZERO \n" % {'type': type, 'out':self.outgoing}) 
                 out.write(" ENDDO\n")      
