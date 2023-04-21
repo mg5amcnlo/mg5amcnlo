@@ -414,29 +414,32 @@ C     used_channel returns the channel selected for the current event
 C     and therefore which of the alphaout needs to be associated to the event.
       implicit none
 
-      include 'ngraphs.inc'
-      double precision, intent(out) :: alphaout(n_max_cg)
-      integer used_channel
-
       include 'maxamps.inc'
       include 'maxconfigs.inc'
 
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      INCLUDE 'config_subproc_map.inc'
+      integer used_channel
+      
+      double precision, intent(out) :: alphaout(LMAXCONFIGS)
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
 
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
-      
-      integer i
+
+      integer i, j
       double precision total
 
       total = 0d0
-      do i=1,MAXAMPS
-         total = total + amp2(i)
+      do i=1,LMAXCONFIGS
+         j = CONFSUB(1, i)
+         total = total + amp2(j)
       enddo
 
-      do i=1,MAXAMPS
-         alphaout(i) = amp2(i) / total
+      do i=1,LMAXCONFIGS
+         j = CONFSUB(1, i)
+         alphaout(i) = amp2(j) / total
       enddo
 
       used_channel = this_config
