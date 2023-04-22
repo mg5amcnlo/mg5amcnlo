@@ -416,12 +416,13 @@ C     and therefore which of the alphaout needs to be associated to the event.
 
       include 'maxamps.inc'
       include 'maxconfigs.inc'
+      include 'ngraphs.inc'
 
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
       integer used_channel
       
-      double precision, intent(out) :: alphaout(LMAXCONFIGS)
+      double precision, intent(out) :: alphaout(N_MAX_CG)
       DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
       COMMON/TO_AMPS/  AMP2,       JAMP2
 
@@ -432,12 +433,12 @@ C     and therefore which of the alphaout needs to be associated to the event.
       double precision total
 
       total = 0d0
-      do i=1,LMAXCONFIGS
+      do i=1,N_MAX_CG
          j = CONFSUB(1, i)
          total = total + amp2(j)
       enddo
 
-      do i=1,LMAXCONFIGS
+      do i=1,N_MAX_CG
          j = CONFSUB(1, i)
          alphaout(i) = amp2(j) / total
       enddo
