@@ -1304,7 +1304,7 @@ c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
 
       end
 
-      double precision function rewgt(p)
+      double precision function rewgt(p, IBLOCK)
 c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
@@ -1331,9 +1331,8 @@ C     Present process number
       COMMON/TO_MIRROR/IMIRROR, IPROC
       integer              IPSEL
       COMMON /SubProc/ IPSEL
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      INTEGER SUBDIAG(MAXSPROC, VECSIZE_MEMMAX),IB(2,VECSIZE_MEMMAX)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
-      data IB/1,2/
 C     ICONFIG has this config number
       INTEGER MCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MCONFIG, ICONFIG
@@ -1382,6 +1381,10 @@ c     ipart gives external particle number chain
       external isqcd,isjet,isparton,ispartonvx
       external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
 
+      IBL(1) = IB(1, IBLOCK)
+      IBL(1) = IB(2, IBLOCK)
+
+      
       rewgt=1.0d0
       clustered=.false.
 
@@ -1420,7 +1423,7 @@ c     Store pdf information for systematics studies (initial)
             do j=1,2
                 n_pdfrw(j)=1
                 i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-                s_xpdf(1,j)=xbk(ib(j))
+                s_xpdf(1,j)=xbk(ibj(j))
                 s_qpdf(1,j)=sqrt(q2fact(j))
             enddo
            endif
@@ -1443,7 +1446,7 @@ c     need to be done after      setclscales since that one clean the syscalc va
          do j=1,2
             n_pdfrw(j)=1
             i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-            s_xpdf(1,j)=xbk(ib(j))
+            s_xpdf(1,j)=xbk(ibj(j))
             s_qpdf(1,j)=sqrt(q2fact(j))
          enddo
       endif
@@ -1484,7 +1487,7 @@ c      ilast(0)=nexternal
       endif
 c     Set x values for the two sides, for IS Sudakovs
       do i=1,2
-        xnow(i)=xbk(ib(i))
+        xnow(i)=xbk(ibj(i))
       enddo
       if(btest(mlevel,3))then
         write(*,*) 'Set x values to ',xnow(1),xnow(2)
@@ -1652,11 +1655,11 @@ c                    if non-radiating vertex or last 2->2
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
                      else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                       n.le.jlast(j))then
-                        pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
+                        pdfj1=pdg2pdf(abs(lpp(IBL(j))),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc)*sign(1,lpp(IBL(j))), IBL(j),
      $                       xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i), 
-     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
+                        pdfj2=pdg2pdf(abs(lpp(IBL(j))),ipdgcl(idacl(n,i), 
+     $                       igraphs(1),iproc)*sign(1,lpp(IBL(j))), IBL(j),
      $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
@@ -1762,9 +1765,9 @@ c     Set reweight factor for systematics studies
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
-            if (lpp(IB(i)).ne.0) then
-                s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
+            if (lpp(IBL(i)).ne.0) then
+                s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IBL(i))),
+     $           i_pdgpdf(1,i)*sign(1,lpp(IBL(i))),IBL(i),
      $           s_xpdf(1,i),s_qpdf(1,i))
             endif
          enddo

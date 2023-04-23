@@ -35,8 +35,18 @@ c
       integer jmax,i,j,ipole
       integer itmax_adjust
 
-      integer imirror, iproc, iconf
-      integer ivec ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+c     symetry/matrix-element choice
+c     in practise the correct size here is VECSIZE_USED/VECSIZE_LOCKSTEP
+c     since they are one value by block      
+      integer imirror(VECSIZE_MEMMAX), iproc(VECSIZE_MEMMAX), iconf(VECSIZE_MEMMAX)
+      
+      integer ivec,jvec         ! position of the event in the vector
+                                ! max is VECSIZE_LOCKSTEP
+      integer iblock,jblock     ! position of the event in the block
+                                ! max is VECSIZE_MEMMAX/VECSIZED_LOCKSTEP
+                                ! l oops go over VECSIZE_USED/VECSIZED_LOCKSTEP
+      integer igrid,jgrid       ! position of the event in the full batch size
+                                ! max is VECSIZE_MEMMAX but in practise only VECSIZE_USED
 
 c
 c     External
@@ -157,7 +167,15 @@ c     Main Integration Loop
 c
       ievent = 0
       iter = 1
-      ivec = 0
+c
+c     value for the control of the multi-event handling
+c
+      ivec = 0   ! naivly:  ievent % VECSIZE_LOCKSTEP
+      igrid = 0  ! naivly: ievent % VECSIZE_USED 
+      iblock = 1 ! naivly (igrid-ivec)/VECSIZE_LOCKSTEP 
+c     Naivly because might need shift of +-1
+c            becuase ievent is counting event that does not pass cuts and not those
+      
       do while(iter .le. itmax)
 c
 c     Get integration point
@@ -170,7 +188,12 @@ c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             CUTSDONE=.FALSE.
             CUTSPASSED=.FALSE.
             if (passcuts(p)) then
+               igrid = igrid +1
                ivec=ivec+1
+               if (ivec.gt.VECSIZE_LOCKSTEP)then
+                  ivec = 1
+                  iblock = iblock + 1
+               endif
 c              write(*,*) 'pass_point ivec is ', ivec
                all_p(:,ivec) = p(:)
                all_wgt(ivec) = wgt
@@ -184,25 +207,29 @@ c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.VECSIZE_USED)then
+               if (ivec.lt.VECSIZE_LOCKSTEP)then
                   cycle
                endif
                ivec=0
                if (VECSIZE_USED.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
                else
-               do i=1, VECSIZE_USED
-c                 need to restore common block                  
-                  xbk(:) = all_xbk(:, i)
-                  cm_rap = all_cm_rap(i)
-                  q2fact(:) = all_q2fact(:,i)
-                  CUTSDONE=.TRUE.
-                  CUTSPASSED=.TRUE.
-                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
-               enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_USED)
+                  do i=1, VECSIZE_LOCKSTEP
+                     jgrid = (iblock-1)*VECSIZE_LOCKSTEP+i
+c                    need to restore common block                  
+                     xbk(:) = all_xbk(:, jgrid)
+                     cm_rap = all_cm_rap(jgrid)
+                     q2fact(:) = all_q2fact(:,jgrid)
+                     CUTSDONE=.TRUE.
+                     CUTSPASSED=.TRUE.
+                     call prepare_grouping_choice(all_p(1,jgrid), all_wgt(jgrid), i.eq.1)
+                  enddo
+                  call select_grouping(imirror(iblock), iproc(iblock), iconf(iblock), all_wgt, VECSIZE_LOCKSTEP)
+               if (igrid.lt.VECSIZE_USED)then
+                  cycle
+               endif
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,VECSIZE_USED)
+     &                          iconf, iproc, imirror, all_fx, VECSIZE_USED)
 
                 do i=1, VECSIZE_USED
 c                 need to restore common block                  
@@ -221,7 +248,7 @@ c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo
                do i =1, VECSIZE_USED
-c     if last paremeter is true -> allow grid update so only for a full page
+c     if last paremeter is true -> allow grid update so only for a full grid
                   lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
 c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_USED                   

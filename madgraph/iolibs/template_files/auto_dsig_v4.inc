@@ -258,7 +258,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      INTEGER          IPSEL
+      INTEGER          IPSEL(VECSIZE_MEMMAX)
       COMMON /SubProc/ IPSEL
 C     MINCFIG has this config number
       integer           mincfig, maxcfig
@@ -286,7 +286,7 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec
+	   integer igrid, iblock, ivec
 
 C  
 C DATA
@@ -313,17 +313,24 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,VECSIZE_USED
+	 IVEC = 0
+	 IBLOCK =1
+	 DO IGRID=1,VECSIZE_USED
+	 ivec = ivec +1
+	 if (ivec.gt.VECSIZE_LOCKSTEP) then
+	    iblock = iblock +1
+	    ivec =1
+	 endif
 c        Do not need those three here do I?	 
-	 XBK(:) = ALL_XBK(:,IVEC)
-c	 CM_RAP = ALL_CM_RAP(IVEC)
-	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+	 XBK(:) = ALL_XBK(:,IGRID)
+c	 CM_RAP = ALL_CM_RAP(IGRID)
+	 Q2FACT(:) = ALL_Q2FACT(:, IGRID)
 
 C     Select a flavor combination (need to do here for right sign)
        CALL RANMAR(R)
-       IPSEL=0
+       IPSEL(IVEC)=0
        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
-          IPSEL=IPSEL+1
+          IPSEL(IVEC)=IPSEL(IVEC)+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
 
@@ -335,7 +342,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO
-	 channel = %(get_channel)s
+	 channel(iblock) = %(get_channel)s
 
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
@@ -413,7 +420,7 @@ C
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
-     integer channel
+     integer channel(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)

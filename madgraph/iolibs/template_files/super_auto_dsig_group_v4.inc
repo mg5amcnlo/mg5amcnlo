@@ -114,7 +114,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
       
-      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_USED)
+      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_LOCKSTEP)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 c     
@@ -122,15 +122,15 @@ c     INPUT (VIA COMMAND BLOCK)
 c       SELPROC 
 c       SUMPROB
 c     INPUT
-c       VECSIZE_USED (number of weight to update)
+c       VECSIZE_LOCKSTEP (number of weight to update)
 c     INPUT/OUTPUT
-c       WGT(VECSIZE_USED) #multiplied by the associated jacobian      
+c       WGT(VECSIZE_LOCKSTEP) #multiplied by the associated jacobian      
 c
 c     OUTPUT
 c
 c     iconf, iproc, imirror
 c
-      integer VECSIZE_USED
+      integer VECSIZE_LOCKSTEP
       double precision WGT(*)
       integer imirror, iproc, iconf
 
@@ -203,7 +203,7 @@ C      all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-	DO I=1, VECSIZE_USED
+	DO I=1, VECSIZE_LOCKSTEP
 	   WGT(i)=WGT(i)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
 	ENDDO	
 
@@ -227,6 +227,7 @@ c     INPUT/OUtpUT       ALL_WGT(VECSIZE_USED)
 c            VECSIZE_USED = vector size
 c     ALL_OUT(VECSIZE_USED)
 c            function (PDf*cross)
+c     input (via common) VECSIZE_LOCKSTEP -> size of event with the same iconfig, iproc, imirror
 c     ******************************************************
       USE DISCRETESAMPLER
       IMPLICIT NONE
@@ -238,7 +239,7 @@ c     ******************************************************
       double precision all_xbk(2,*)
       double precision all_q2fact(2,*)
       double precision all_cm_rap(*)
-      integer iconf, iproc, imirror
+      integer iconf(*), iproc(*), imirror(*) ! size VECSIZE_USED/VECSIZE_LOCKSTEP
       double precision all_out(*)
       include 'maxconfigs.inc'
       include 'maxamps.inc'
@@ -271,7 +272,7 @@ c     ******************************************************
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED      
 
-      INTEGER I
+      INTEGER I, IVEC, IBLOCK, IGRID
       integer grouped_MC_grid_status
 
       integer                                      lpp(2)
@@ -318,11 +319,18 @@ c		call DS_add_entry('grouped_processes',Lmapped,(ALL_OUT(i)/SELPROC(IMIRROR,IPR
 c	  ENDIF
 
 	  ENDDO
-      DO I=1, VECSIZE_USED
+      ivec = 1
+      iblock = 1
+      DO IGRID=1, VECSIZE_USED
+         ivec = ivec +1
+	 if (ivec.gt.VECSIZE_LOCKSTEP)then
+	    ivec =1 
+	    iblock = iblock+1
+	 endif
       	 IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
-             SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DABS(ALL_OUT(I)*ALL_WGT(I))
-             NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
+             SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR(iblock),IPROC(iblock),ICONF(iblock))+DABS(ALL_OUT(I)*ALL_WGT(I))
+             NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR(iblock),IPROC(iblock),ICONF(iblock))+1
       	 ENDIF  
       ENDDO
 
@@ -872,7 +880,7 @@ C
       double precision all_wgt(VECSIZE_MEMMAX)
       double precision all_out(VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGPROC
-      INTEGER ICONF,IPROC,IMIRROR,IMODE
+      INTEGER ICONF(*),IPROC(*),IMIRROR(*),IMODE
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INTEGER VECSIZE_USED
@@ -881,7 +889,7 @@ C     GLOBAL VARIABLES
 C     
 C     SUBDIAG is vector of diagram numbers for this config
 C     IB gives which beam is which (for mirror processes)
-      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      INTEGER SUBDIAG(MAXSPROC, VECSIZE_MEMMAX),IB(2, VECSIZE_MEMMAX)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
 C     ICONFIG has this config number
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
@@ -909,49 +917,63 @@ C
       INCLUDE 'symperms.inc'
 	  SAVE ALL_P1,JC
 
-      if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
-        ICONFIG=SYMCONF(ICONF)
+      IVEC = 0
+      IBLOCK = 1
+      do IGRID=1, VECSIZE_USED
+         IVEC = IVEC + 1
+	 if (IVEC.gt.VECSIZE_LOCKSTEP)then
+	    IBLOCK = IBLOCK + 1
+	    IVEC = 1
+	 endif	
+      if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF(IBLOCK)) then
+        ICONFIG=SYMCONF(ICONF(IBLOCK)) ! WARNING check which iconfig this needs to be a list
         DO I=1,MAXSPROC
-          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+          SUBDIAG(I,IBLOCK) = CONFSUB(I,SYMCONF(ICONF(IBLOCK))) -> check if need to pass to a list
         ENDDO
 
 C       Set momenta according to this permutation
-	do IVEC=1, VECSIZE_USED
-	   CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+
+	   CALL SWITCHMOM(ALL_P(1,IGRID),All_P1(0,1,IGRID),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
 
 	    if (LAST_ICONF.ne.-1) then
-		  LAST_ICONF = ICONF
+		  LAST_ICONF = ICONF(IBLOCK)
 		endif
-	enddo
-	endif	
+	endif
 
+	IVEC =0
+	IBLOCK=1
+      do IGRID=1, VECSIZE_USED
+         IVEC = IVEC + 1
+	 if (IVEC.gt.VECSIZE_LOCKSTEP)then
+	    IBLOCK = IBLOCK + 1
+	    IVEC = 1
+	    IB(1, IBLOCK)=1
+      	    IB(2, IBLOCK)=2
+	 endif	
 
-      IB(1)=1
-      IB(2)=2
-
-
-      IF(IMIRROR.EQ.2)THEN
-             DO IVEC=1,VECSIZE_USED
+         IF(IMIRROR(IBLOCK).EQ.2)THEN
 C       Flip momenta (rotate around x axis)
-        DO I=1,NEXTERNAL
-          ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
+          DO I=1,NEXTERNAL
+            ALL_P1(2,I, IGRID)=-ALL_P1(2,I,IGRID)
+            ALL_P1(3,I, IGRID)=-ALL_P1(3,I,IGRID)
 	enddo
-          XDUM=ALL_XBK(1, ivec)
-	  ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
-	  ALL_XBK(2, ivec) = XDUM
-	  all_cm_rap(ivec) = - all_cm_rap(ivec)
+          XDUM=ALL_XBK(1, igrid)
+	  ALL_XBK(1, igrid) = ALL_XBK(2, igrid)
+	  ALL_XBK(2, igrid) = XDUM
+	  all_cm_rap(igrid) = - all_cm_rap(igrid)
 C       Flip beam identity
-        IB(1)=2
-        IB(2)=1
-      ENDDO
+        IB(1,iblock)=2
+        IB(2,iblock)=1
       ENDIF
+      ENDDO
 
       ALL_OUT(:)=0D0
 
 c      IF (PASSCUTS(P1)) THEN
-       DO IVEC=1,VECSIZE_USED
-      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
+	IVEC =0
+	IBLOCK=1
+       DO IGRID=1,VECSIZE_USED
+      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(igrid).ne.0d0)then
         nb_pass_cuts = nb_pass_cuts + 1
       endif
       ENDDO
@@ -959,12 +981,19 @@ c      IF (PASSCUTS(P1)) THEN
 %(call_dsig_proc_lines_vec)s
 c      ENDIF
 
-	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
+	DO IGRID=1,VECSIZE_USED
+         IVEC = IVEC + 1
+	 if (IVEC.gt.VECSIZE_LOCKSTEP)then
+	    IBLOCK = IBLOCK + 1
+	    IVEC = 1
+	    IB(1, IBLOCK)=1
+      	    IB(2, IBLOCK)=2
+	 endif	
+	 IF (LAST_ICONF.ne.-1.and.IMIRROR(IBLOCK).EQ.2) then
 C       Flip back local momenta P1 if cached
-	DO IVEC=1,VECSIZE_USED
-        DO I=1,NEXTERNAL	
-          ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
+	DO I=1,NEXTERNAL		
+          ALL_P1(2,I,IGRID)=-ALL_P1(2,I,IGRID)
+          ALL_P1(3,I,IGRID)=-ALL_P1(3,I,IGRID)
         ENDDO
 	ENDDO
 	  endif
