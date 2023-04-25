@@ -185,6 +185,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
@@ -733,6 +737,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
+                     'pythia8_fortran_dummy.cc',
+                     'pythia8_fortran.cc',
+                     'pythia8_wrapper.cc',
+                     'pythia8_control_setup.inc',
+                     'pythia8_control.inc',
+                     'dire_fortran.cc',
+                     'LHAFortran_aMCatNLO.h',
+                     'sudakov.f',
+                     'hep_event_streams.inc',
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f']
@@ -4143,7 +4156,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",

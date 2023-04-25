@@ -66,6 +66,10 @@ c     Shower MonteCarlo
 c     
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
+
+      logical mcatnlo_delta
+      common /cMCatNLO_Delta/ mcatnlo_delta
+
 c
 c     Reweight info
 c

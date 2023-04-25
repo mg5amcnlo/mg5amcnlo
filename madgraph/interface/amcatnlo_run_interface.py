@@ -2199,6 +2199,10 @@ RESTART = %(mint_mode)s
 """ \
               % job
         else:
+            if job['mint_mode'] == 0:
+                job['fold_string']='1 1 1'
+            else:
+                job['fold_string']=' '.join(map(str, self.run_card['folding']))
             content = \
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
@@ -2208,7 +2212,7 @@ RESTART = %(mint_mode)s
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
 %(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%(fold_string)s      ! if imode is 1: Folding parameters for xi_i, y_ij and phi_i
 %(run_mode)s        ! all, born, real, virt
 """ \
                     % job
@@ -4663,6 +4667,10 @@ RESTART = %(mint_mode)s
             content += 'PDFCODE=0\n'
 
         content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        if self.banner.get_detail('run_card', 'mcatnlo_delta') :
+            content += 'DELTA=ON\n'
+        else:
+            content += 'DELTA=OFF\n'
         content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
@@ -5148,6 +5156,35 @@ RESTART = %(mint_mode)s
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
 
+    def activate_Pythia8_compilation(self, mode, options):
+        """ Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. """
+        # Also write dummies if we do fixed-order for now
+        if mode in ['NLO', 'LO'] or not self.run_card['mcatnlo_delta'] :
+            # Write dummy entries
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=.
+PYTHIA8TARGETS=pythia8_fortran_dummy.o
+PYTHIA8LINKLIBS=""")
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/-1/
+      data pythia_cmd_file/500*' '/""")
+        else:
+            if not self.options['pythia8_path']:
+                raise aMCatNLOError('Cannot find Pythia8 path in configuration file')
+            os.environ["PYTHIA8DATA"] = pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc')
+            # Write entries accoridng to the pythia8_path
+            # Probably need to do something a bit more careful to asses when '-lz' really is necessary
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=-I%(pythia8_prefix)s/include
+PYTHIA8TARGETS=pythia8_wrapper.o
+PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
+            # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
+            # For now, we don't use any pythia8.cmd card for initialization
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/0/
+      data pythia_cmd_file/500*' '/""")
 
     def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
         """links and copies the libraries/PDFs from ePDF/eMELA
@@ -5220,7 +5257,6 @@ RESTART = %(mint_mode)s
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -5262,6 +5298,11 @@ RESTART = %(mint_mode)s
             # write an analyse_opts with a dummy analysis so that compilation goes through
             with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
                 fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
+
+        # Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. 
+        self.activate_Pythia8_compilation(mode, options)
 
         #directory where to compile exe
         p_dirs = [d for d in \
@@ -5569,7 +5610,7 @@ RESTART = %(mint_mode)s
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
-            shower = self.run_card['parton_shower']
+            shower = self.run_card['parton_shower'].upper()
             header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
             file.write(header + content)
         elif test == 'test_ME':

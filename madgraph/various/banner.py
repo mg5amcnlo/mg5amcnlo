@@ -5299,8 +5299,9 @@ class RunCardNLO(RunCard):
         self.add_param('ndnq_run', -1)
         self.add_param('w_run', 1)
         #shower and scale
-        self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
+        self.add_param('parton_shower', 'pythia8', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
+        self.add_param('mcatnlo_delta', True)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
@@ -5332,7 +5333,10 @@ class RunCardNLO(RunCard):
         self.add_param('store_rwgt_info', False)
         self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
-             
+
+        #technical
+        self.add_param('folding', [1,1,1], include=False)
+        
         #merging
         self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
@@ -5535,6 +5539,15 @@ class RunCardNLO(RunCard):
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
+    # Check the folding parameters
+        if len(self['folding']) != 3:
+            raise InvalidRunCard("'folding' should contain exactly three integers")
+        for ifold in self['folding']:
+            if ifold not in [1,2,4,8]: 
+                raise InvalidRunCard("The three 'folding' parameters should be equal to 1, 2, 4, or 8.")
+    # Check MC@NLO-Delta
+        if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
+            raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:

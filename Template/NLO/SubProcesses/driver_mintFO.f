@@ -372,6 +372,8 @@ c PineAPPL
       common /for_pineappl/ pineappl
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
       integer ini_fin_fks_map(0:2,0:fks_configs)
       save ini_fin_fks_map
 
@@ -393,6 +395,7 @@ c PineAPPL
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
       endif
+      fold=ifl
       if (pineappl .and. sum) then
          write (*,*) 'WARNING: PineAPPL only possible '/
      &        /'with MC over FKS directories',pineappl,sum
