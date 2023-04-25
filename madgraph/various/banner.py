@@ -5299,9 +5299,9 @@ class RunCardNLO(RunCard):
         self.add_param('ndnq_run', -1)
         self.add_param('w_run', 1)
         #shower and scale
-        self.add_param('parton_shower', 'pythia8', fortran_name='shower_mc')        
+        self.add_param('parton_shower', 'herwig6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
-        self.add_param('mcatnlo_delta', True)
+        self.add_param('mcatnlo_delta', False)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
