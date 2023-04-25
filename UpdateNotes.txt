@@ -6,6 +6,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
 	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
 	      https://github.com/gstagnit/eMELA/releases
+      SF+MZ+PT+PY8author: Introduction of MCatNLO-Delta, a new matching procedure allowing to have less
+          negative events generated (see 2002.12716)
       OM: MadSpin has now a syntax for handling semi-leptonic decay
           not supported in spinmode=onshel/none
       OM: possibility to install eMELA (install eMELA)
