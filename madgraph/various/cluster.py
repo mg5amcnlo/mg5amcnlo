@@ -846,6 +846,7 @@ class MultiCore(Cluster):
                     # can happend that stoprequest is set bu not fail if no job have been resubmitted
                     six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
                 # self.fail_msg is None can happen when no job was submitted -> ignore
+
             # reset variable for next submission
             try:
                 self.lock.clear()

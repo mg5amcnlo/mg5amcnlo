@@ -1025,7 +1025,7 @@ c      enddo
          do k = 1,2
             found=.false.
             do j=1,nexternal
-               if(icol(k,i).eq.icol(1,j).or.icol(k,i).eq.icol(2,j))then
+               if(abs(icol(k,i)).eq.abs(icol(1,j)).or.abs(icol(k,i)).eq.abs(icol(2,j)))then
                   found=.true.
                   goto 10       ! break
                endif

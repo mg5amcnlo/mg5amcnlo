@@ -1,7 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-3.5.0.alpha (26/01/22)
+3.5.0.alpha (26/04/23)
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
 	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
@@ -12,6 +12,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           not supported in spinmode=onshel/none
       OM: possibility to install eMELA (install eMELA)
       HS: Adding support of UPC
+      OM: bug fixing from LTS up to 2.9.14
 
 3.4.2 (20/01/22)
       ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
@@ -122,6 +123,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
+2.9.14 (02/02/2023)
+     OM: Fix some "output aloha" command, where some routine where not defined
+     OM: Fix a crash in the multicore mode when 0 job was needed. (introduced in 2.9.13)
 
 2.9.13 (01/12/2022)
      OM: Fixing display diagrams on MacOS Catalina

@@ -332,9 +332,9 @@ class Systematics(object):
                 break
             elif ',' in id:
                 min_value, max_value = [int(v) for v in id.split(',')]
-                self.remove_wgts += [i for i in range(min_value, max_value+1)]
+                self.keep_wgts += [i for i in range(min_value, max_value+1)]
             else:
-                self.remove_wgts.append(id)  
+                self.keep_wgts.append(id)  
                 
         # input to start the id in the weight
         self.start_wgt_id = int(start_id[0]) if (start_id is not None) else None
