@@ -8929,7 +8929,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt","b0f","sqrt_trajectory","log_trajectory"]:
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
