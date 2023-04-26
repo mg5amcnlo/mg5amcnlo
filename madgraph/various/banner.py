@@ -5289,14 +5289,20 @@ class RunCardNLO(RunCard):
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
+        # whether to include or not photon-initiated processes in lepton collisions
         self.add_param('photons_from_lepton', True)
-        self.add_param('has_bstrahl', False)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         # stuff for lepton collisions 
+        # these parameters are in general set automatically by eMELA in a consistent manner with the PDF set 
+        # whether the current PDF set has or not beamstrahlung 
+        self.add_param('has_bstrahl', False)
+        # renormalisation scheme of alpha
         self.add_param('alphascheme', 0)
+        # number of leptons/up-/down-quarks relevant for the running of alpha
         self.add_param('nlep_run', -1)
         self.add_param('nupq_run', -1)
         self.add_param('ndnq_run', -1)
+        # w contribution included or not in the running of alpha
         self.add_param('w_run', 1)
         #shower and scale
         self.add_param('parton_shower', 'herwig6', fortran_name='shower_mc')        
