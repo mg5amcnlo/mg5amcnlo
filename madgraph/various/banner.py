@@ -5295,17 +5295,17 @@ class RunCardNLO(RunCard):
         # stuff for lepton collisions 
         # these parameters are in general set automatically by eMELA in a consistent manner with the PDF set 
         # whether the current PDF set has or not beamstrahlung 
-        self.add_param('has_bstrahl', False)
+        self.add_param('has_bstrahl', False, system=True)
         # renormalisation scheme of alpha
-        self.add_param('alphascheme', 0)
+        self.add_param('alphascheme', 0, system=True)
         # number of leptons/up-/down-quarks relevant for the running of alpha
-        self.add_param('nlep_run', -1)
-        self.add_param('nupq_run', -1)
-        self.add_param('ndnq_run', -1)
+        self.add_param('nlep_run', -1, system=True)
+        self.add_param('nupq_run', -1, system=True)
+        self.add_param('ndnq_run', -1, system=True)
         # w contribution included or not in the running of alpha
-        self.add_param('w_run', 1)
+        self.add_param('w_run', 1, system=True)
         #shower and scale
-        self.add_param('parton_shower', 'herwig6', fortran_name='shower_mc')        
+        self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('mcatnlo_delta', False)
         self.add_param('fixed_ren_scale', False)
