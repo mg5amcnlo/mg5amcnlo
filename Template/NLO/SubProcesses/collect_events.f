@@ -52,7 +52,7 @@
       write(nextbasicfile(19:19),'(i1)')istep+1
       open(unit=10,file=basicfile,status='old')
       open(unit=98,file=nextbasicfile,status='unknown')
-
+      
 c
 c First get the cross section from the res_1 files
 c
@@ -74,7 +74,7 @@ c
          numoffiles=numoffiles+1
          xsecfrac_all(numoffiles) = xsecfrac
 c store here the proc_id as computed from directory name ("@XX" in
-c process generation)
+c     process generation)
          if (eventfile(1:1).eq.'P') then
             if (eventfile(3:3).eq.'_') then
                read(eventfile(2:2),'(i1)') proc_id(numoffiles)
@@ -533,7 +533,7 @@ c
       double precision xsec(100),xsecABS,xerr(100)
       logical get_xsec_from_res1
       common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
-
+      logical fopened
       proc_id_tot(0)=0
       get_xsec_from_res1=.true.
       xsecABS=0d0
@@ -565,7 +565,9 @@ c
          endif
          results_file=eventfile(1:index(eventfile,'events.lhe')-1)
      $        //'res_1'
-         open (unit=11,file=results_file,status='old',err=998)
+         call open_file(11, results_file, fopened)
+         if (.not.fopened) goto 998        
+c         open (unit=11,file=results_file,status='old',err=998)
          read (11,'(120a)',err=998) read_line
          read(read_line(index(read_line,'Final result [ABS]:')+20:),*
      $        ,err=998)xsecABS_read

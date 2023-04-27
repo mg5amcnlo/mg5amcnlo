@@ -94,6 +94,8 @@ c general MadFKS parameters
       include "FKSParams.inc"
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
+c     local
+      logical fopened
 
 C-----
 C  BEGIN CODE
@@ -189,7 +191,7 @@ c initialize grids
             enddo
          else
 c to restore grids:
-            open (unit=12, file='mint_grids',status='old')
+            call open_file (12, 'mint_grids', fopened)
             do j=0,nintervals
                read (12,*) (xgrid(j,i,1),i=1,ndim)
             enddo
@@ -235,7 +237,7 @@ c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
 c to restore grids:
-         open (unit=12, file='mint_grids',status='old')
+         call open_file_local(12, 'mint_grids', fopened)
          do j=0,nintervals
             read (12,*) (xgrid(j,i,1),i=1,ndim)
          enddo
@@ -328,7 +330,7 @@ c Mass-shell stuff. This is MC-dependent
          ncall=nevts ! Update ncall with the number found in 'nevts'
 
 c to restore grids:
-         open (unit=12, file='mint_grids',status='unknown')
+         call open_file_local (12, 'mint_grids', fopened)
          read (12,*) (xgrid(0,i,1),i=1,ndim)
          do j=1,nintervals
             read (12,*) (xgrid(j,i,1),i=1,ndim)
@@ -1304,3 +1306,5 @@ c     include all quarks (except top quark) and the gluon.
       endif
       return
       end
+
+

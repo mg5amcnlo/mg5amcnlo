@@ -127,6 +127,8 @@ c     other parameter
       integer event_id
       common /c_event_id/ event_id
 
+      logical fopened
+      
 c     Set the event_id to 0. If 0 or positive, this value will be update
 c     in write_lhe_event. It is set to -99 through a block data
 c     statement.
@@ -135,8 +137,9 @@ c
       write(ifile,'(a)') '<LesHouchesEvents version="3.0">'
       write(ifile,'(a)') '  <header>'
       write(ifile,'(a)') '  <MG5ProcCard>'
-      open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat'
-     &     ,err=99)
+      call open_file(92, path(1:index(path," ")-1)//'proc_card_mg5.dat', fopened)
+      if (.not.fopened) goto 99
+c      open (unit=92,file=path(1:index(path," ")-1)//'proc_card_mg5.dat',err=99)
       do
          read(92,'(a)',err=89,end=89) buffer
          write(ifile,'(a)') buffer
@@ -144,8 +147,9 @@ c
  89   close(92)
       write(ifile,'(a)') '  </MG5ProcCard>'
       write(ifile,'(a)') '  <slha>'
-      open (unit=92,file=path(1:index(path," ")-1)//'param_card.dat'
-     &     ,err=98)
+      call open_file(92, path(1:index(path," ")-1)//'param_card.dat', fopened)
+      if (.not.fopened) goto 98
+c      open (unit=92,file=path(1:index(path," ")-1)//'param_card.dat'     ,err=98)
       do
          read(92,'(a)',err=88,end=88) buffer
          write(ifile,'(a)') buffer
@@ -171,8 +175,9 @@ c Scale variation
  95   continue
 
 c     copy the run_card as part of the banner.
-      open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
-     &     ,err=97)
+      call open_file(92, path(1:index(path," ")-1)//'run_card.dat', fopened)
+      if (.not.fopened) goto 97 
+c      open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'     ,err=97)
       do
          read(92,'(a)',err=87,end=87) buffer
          buffer_lc=buffer

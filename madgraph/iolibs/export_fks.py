@@ -658,7 +658,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
-                     'timing_variables.inc']
+                     'timing_variables.inc',
+                     'gridpack.f']
 
         for file in linkfiles:
             ln('../' + file , '.')

@@ -65,7 +65,11 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &     acc(0:maxintervals,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
       logical            flat_grid
-      common/to_readgrid/flat_grid                !Tells if grid read from file
+      common/to_readgrid/flat_grid !Tells if grid read from file
+c
+c     local
+c
+      logical fopened
       if (this_dim.lt.1.or.this_dim.gt.maxdim) then
          write (*,*) 'Increase maxdim in MC_integer.f',maxdim,this_dim
       endif
@@ -90,7 +94,9 @@ c Flat grid for this dimension
             enddo
          else
 c Read the grid for 'this_dim' from file
-            open(unit=52,file='grid.MC_integer',status='old',err=999)
+c     open(unit=52,file='grid.MC_integer',status='old',err=999)
+            call open_file_local(52,'grid.MC_integer', fopened)
+            if (.not.fopened) goto 999
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
                read(52,*,end=999,err=999) cdum
             enddo

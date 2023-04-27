@@ -199,7 +199,6 @@ c
 	  pos = index(path,'/',.true.)
 	  prefix = path(:pos)
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
 	  OPEN(1, FILE=fpath, ERR=4, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -207,7 +206,6 @@ c
           close(1)
           prefix= prefix // '/MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
           OPEN(1, FILE=fpath, ERR=5, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
@@ -215,12 +213,19 @@ c
           close(1)
           prefix= path(:pos) // '/../MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
-	  write(*,*) 'test', fpath
  	  OPEN(1, FILE=fpath, ERR=6, STATUS='OLD',ACTION='READ')
           MLPath=prefix
           goto 10
  6        continue
           close(1)
+	  ! for NLO gridpack
+          prefix= path(:pos) // '/MadLoop5_resources/'
+          call joinPath(prefix,nameToCheck,fpath)
+ 	  OPEN(1, FILE=fpath, ERR=7, STATUS='OLD',ACTION='READ')
+          MLPath=prefix
+          goto 10
+ 7        continue
+          close(1)	  
 
 c     We could not automatically find the auxiliary files
           write(*,*) '==='

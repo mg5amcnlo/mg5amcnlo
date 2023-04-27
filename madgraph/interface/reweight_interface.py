@@ -692,6 +692,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
 
         # perform the scanning
+        reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
         if param_card_iterator:
             if self.options['rwgt_name']:
                 reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan

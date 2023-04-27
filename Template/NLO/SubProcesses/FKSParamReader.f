@@ -10,16 +10,22 @@
       CHARACTER*64 buff, buff2, mode
       include "FKSParams.inc"
 
+      logical fopened
       logical printParam, couldRead, paramPrinted
       data paramPrinted/.FALSE./
       couldRead=.False.
+      
 !     Default parameters
 
       if (HasReadOnce.and..not.force) then
           goto 901
       endif
 
-      open(68, file=fileName, err=676, action='READ')
+      call open_file(68, fileName,fopened)
+      if (.not.fopened) then
+         goto 676
+      endif
+
       do
          read(68,*,end=999) buff
          if(index(buff,'#').eq.1) then
