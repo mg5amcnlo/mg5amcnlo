@@ -104,11 +104,19 @@ else:
     else:
         readline.__doc__ = 'GNU'
         readline.parse_and_bind("tab: complete")
-        
+
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5', 'me5history')
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "me5history")
         readline.read_history_file(history_file)
+
     except:
         pass
 
@@ -173,21 +181,21 @@ try:
         else:
             cmd_line = cmd_interface.MadWeightCmdShell()
             cmd_line.cmdloop()
-            
+
 except KeyboardInterrupt:
-    print 'writting history and directory and quit on KeyboardInterrupt' 
+    print 'writting history and directory and quit on KeyboardInterrupt'
     pass
 except common_run_interface.AlreadyRunning, error:
     logging.error(str(error))
     sys.exit()
-try: 
+try:
     readline.set_history_length(100)
-    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
-        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+    if not os.path.exists(state_dir):
+        os.mkdir(state_dir)
     readline.write_history_file(history_file)
 except:
     pass
-    
+
 try:
     if cmd_line.history[-1] not in ['EOF','quit','exit']:
         cmd_line.results.store_result()

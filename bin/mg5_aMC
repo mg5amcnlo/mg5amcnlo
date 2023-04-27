@@ -103,7 +103,14 @@ else:
         
     # charge history file
     try:
-        history_file = os.path.join(os.environ['HOME'], '.mg5', 'mg5history')
+        legacy_state_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_state_dir):
+            state_dir = legacy_state_dir
+        else:
+            state_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+        history_file = os.path.join(state_dir, "mg5history")
         readline.read_history_file(history_file)
     except:
         pass
@@ -211,8 +218,8 @@ except KeyboardInterrupt:
 try:
     cmd_line.exec_cmd('quit all', printcmd=False)
     readline.set_history_length(100)
-    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
-        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+    if not os.path.exists(state_dir):
+        os.mkdir(state_dir)
     readline.write_history_file(history_file)
 except Exception as error:
     pass

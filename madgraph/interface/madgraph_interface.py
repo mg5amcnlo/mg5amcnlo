@@ -317,7 +317,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
-        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use the global configuration')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
         logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
@@ -1465,10 +1465,18 @@ This will take effect only in a NEW terminal
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
                 elif arg == 'global':
-                    if 'HOME' in os.environ:
-                        args.remove('global')
-                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-                        has_path = True
+                    legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                    if os.path.exists(legacy_config_dir):
+                        config_dir = legacy_config_dir
+                    else:
+                        config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                    config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+                    args.remove('global')
+                    args.insert(1, config_file)
+
+                    has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -6004,14 +6012,21 @@ This implies that with decay chains:
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(None))
-            
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
         if 'heptools_install_dir' in self.options:
             prefix = self.options['heptools_install_dir']
-            config_file = '~/.mg5/mg5_configuration.txt'
+            legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+            if os.path.exists(legacy_config_dir):
+                config_dir = legacy_config_dir
+            else:
+                config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+            config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
             prefix = pjoin(MG5DIR, 'HEPTools')
             config_file = ''
@@ -7164,8 +7179,15 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+                config_path = os.path.join(config_dir, "mg5history")
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',

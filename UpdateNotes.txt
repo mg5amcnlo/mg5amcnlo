@@ -12,6 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
           not supported in spinmode=onshel/none
       OM: possibility to install eMELA (install eMELA)
       HS: Adding support of UPC
+      Bruno-Miguel-Oliveira: conform with the XDG Base Directory Specification for history/config file:
+          https://github.com/mg5amcnlo/mg5amcnlo/pull/45
       OM: bug fixing from LTS up to 2.9.14
 
 3.4.2 (20/01/22)
