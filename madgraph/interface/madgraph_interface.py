@@ -7186,7 +7186,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 else:
                     config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
 
-                config_path = os.path.join(config_dir, "mg5history")
+                config_path = os.path.join(config_dir, "mg5_configuration.txt")
 
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
