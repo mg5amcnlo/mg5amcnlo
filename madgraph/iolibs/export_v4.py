@@ -2052,7 +2052,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             import platform
             version, _, _ = platform.mac_ver()
             if not version:# not linux 
-                version = 14 # set version to remove MACFLAG
+                majversion = 14 # set version to remove MACFLAG
             else:
                 majversion, version = [int(x) for x in version.split('.',3)[:2]]
 
