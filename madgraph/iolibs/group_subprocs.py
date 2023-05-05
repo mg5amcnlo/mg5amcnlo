@@ -577,8 +577,6 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
         
         output = SubProcessGroupList()
         for group in self:
-            new_mes = {}
-            #misc.sprint(type())
             for me in group['matrix_elements']:
                 new_me = copy.copy(me)
                 new_group = copy.copy(group)
@@ -587,6 +585,7 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
                                     new_me['processes'][0],
                                     criteria='gpu'))
                 output.append(new_group)
+                
         return output        
         
     
