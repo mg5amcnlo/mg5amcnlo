@@ -110,10 +110,7 @@ c     ...unless the diagram is passed in igraphs(1); then use that diagram
          if (btest(mlevel,3)) then
             write(*,*)'unwgt.f: write out diagram ',igraphs(1)
          endif
-         if (iconfig.ne.igraphs(1)) then
-            write(*,*) "issue with vectorization"
-            stop 1
-         endif
+         lconfig = vec_igraph1(ivec)
       endif
       
 c
