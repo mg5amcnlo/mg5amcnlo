@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.15 (12/05/23)
+     OM: Fix a bug where the number of core sed was higher than requested
+     OM: Reduce RAM used by madspin
+     OM: Fix a rare issue with helicity recycling leading to incorect format in the generated code (and crash)
+     OM: Fix issue with param_card parsing for some block not related to the model
+     OM: Fix compilation error for stdhep
+     OM: Fix one issue for sextet model/process
+     
 2.9.14 (17/02/2023)
      OM: Fix some "output aloha" command, where some routine where not defined
      OM: Fix a crash in the multicore mode when 0 job was needed. (introduced in 2.9.13)

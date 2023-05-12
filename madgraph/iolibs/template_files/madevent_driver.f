@@ -57,7 +57,7 @@ cc
 
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
 c--masses
       double precision pmass(nexternal)

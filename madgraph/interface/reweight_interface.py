@@ -694,7 +694,10 @@ class ReweightInterface(extended_cmd.Cmd):
         # perform the scanning
         reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
         if param_card_iterator:
-            reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            if self.options['rwgt_name']:
+                reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            else:
+                reweight_name = None
             for i,card in enumerate(param_card_iterator):
                 if reweight_name:
                     self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)
