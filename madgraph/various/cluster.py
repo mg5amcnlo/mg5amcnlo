@@ -694,8 +694,8 @@ class MultiCore(Cluster):
                     continue
             except six.moves.queue.Empty:
                 continue
-            
-            
+        import threading
+        self.demons.remove(threading.current_thread())  
             
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
@@ -756,8 +756,6 @@ class MultiCore(Cluster):
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )   
-            
-        self.demons[:] = [] 
 
 
     def wait(self, me_dir, update_status, update_first=None):
@@ -875,7 +873,6 @@ class MultiCore(Cluster):
 
         if not self.keep_thread:
             self.stoprequest.set()
-            self.demons.clear()
 
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""

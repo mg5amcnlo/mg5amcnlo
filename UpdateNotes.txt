@@ -1,7 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
-3.5.0.beta (04/05/23)
+3.5.0.beta (12/05/23)
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
 	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
@@ -14,7 +13,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       HS: Adding support of UPC
       Bruno-Miguel-Oliveira: conform with the XDG Base Directory Specification for history/config file:
           https://github.com/mg5amcnlo/mg5amcnlo/pull/45
-      OM: bug fixing from LTS up to 2.9.14
+      OM: bug fixing from LTS up to 2.9.15 (see below)
 
 3.4.2 (20/01/22)
       ALL: fixing bugs related to 2.9.13 (Long Term Stable: see below)
@@ -126,7 +125,15 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
-2.9.14 (02/02/2023)
+2.9.15 (12/05/23)
+     OM: Fix a bug where the number of core sed was higher than requested
+     OM: Reduce RAM used by madspin
+     OM: Fix a rare issue with helicity recycling leading to incorect format in the generated code (and crash)
+     OM: Fix issue with param_card parsing for some block not related to the model
+     OM: Fix compilation error for stdhep
+     OM: Fix one issue for sextet model/process
+     
+2.9.14 (17/02/2023)
      OM: Fix some "output aloha" command, where some routine where not defined
      OM: Fix a crash in the multicore mode when 0 job was needed. (introduced in 2.9.13)
 
