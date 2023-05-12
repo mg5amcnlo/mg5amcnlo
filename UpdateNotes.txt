@@ -7,8 +7,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
      OM: Fix issue with param_card parsing for some block not related to the model
      OM: Fix compilation error for stdhep
      OM: Fix one issue for sextet model/process
-
-2.9.14 (02/02/2023)
+     
+2.9.14 (17/02/2023)
      OM: Fix some "output aloha" command, where some routine where not defined
      OM: Fix a crash in the multicore mode when 0 job was needed. (introduced in 2.9.13)
 
