@@ -563,9 +563,16 @@ class ProcessExporterFortran(VirtualExporter):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
+        # this is for LHAPDF
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.writelines(template % changer)
+
+        # this is for eMELA
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_emela.f"),"r").read()
         ff.writelines(template % changer)
         
         
@@ -688,6 +695,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
@@ -1714,6 +1722,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -1748,6 +1772,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             if dressed_lep:
                                 pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
                                 (pdf_codes[initial_state],i + 1)
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            if 22 in initial_states[0] and 22 in initial_states[1]:
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -2030,19 +2057,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler['f2py']
+        elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+            f2py_compiler = 'f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)
+        elif misc.which('f2py%d' %(sys.version_info.major)):
+            f2py_compiler = 'f2py%d' %(sys.version_info.major)            
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
-        elif sys.version_info[1] == 6:
-            if misc.which('f2py-2.6'):
-                f2py_compiler = 'f2py-2.6'
-            elif misc.which('f2py2.6'):
-                f2py_compiler = 'f2py2.6'
-        elif sys.version_info[1] == 7:
-            if misc.which('f2py-2.7'):
-                f2py_compiler = 'f2py-2.7'
-            elif misc.which('f2py2.7'):
-                f2py_compiler = 'f2py2.7'            
-        
+
+
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
         
@@ -2137,7 +2159,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             import platform
             version, _, _ = platform.mac_ver()
             if not version:# not linux 
-                version = 14 # set version to remove MACFLAG
+                majversion = 14 # set version to remove MACFLAG
             else:
                 majversion, version = [int(x) for x in version.split('.',3)[:2]]
 
@@ -3354,6 +3376,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for gammaUPC")
+        misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
         misc.compile(arg=['../lib/libcernlib.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for GENERIC")
@@ -3665,7 +3689,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 
@@ -6183,7 +6207,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         printzeroamp = []
         for iproc in range(len(matrix_elements)):
             printzeroamp.append(\
-                "        call print_zero_amp_%i()" % ( iproc + 1))
+                "        call print_zero_amp%i()" % ( iproc + 1))
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
@@ -7779,6 +7803,7 @@ class UFO_model_to_mg4(object):
                         towrite = towrite.replace('math.pi', 'MP__pi')
                         towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
                         data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
+
             data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
                                     for i, name in enumerate(runparams)])
             text += template % data   
@@ -7837,7 +7862,7 @@ class UFO_model_to_mg4(object):
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
         
@@ -8904,7 +8929,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
@@ -8942,7 +8967,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                        "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)

@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import collections
 import cmath
@@ -173,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -318,7 +317,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- save information as file FILENAME",'$MG:BOLD')
         logger.info("   FILENAME is optional for saving 'options'.")
         logger.info('   By default it uses ./input/mg5_configuration.txt')
-        logger.info('   If you put "global" for FILENAME it will use ~/.mg5/mg5_configuration.txt')
+        logger.info('   If you put "global" for FILENAME it will use the global configuration')
         logger.info('   If this files exists, it is uses by all MG5 on the system but continues')
         logger.info('   to read the local options files.')
         logger.info('   if additional argument are defined for save options, only those arguments will be saved to the configuration file.')
@@ -782,7 +781,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
         logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
-        logger.info(" > (default False) Do not include real emission with leptons in the initial state.")
+        logger.info(" > (default False) Do not include processes with leptons in the initial state (nlo gen. only).")
         logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
         logger.info(" > Note that pressing tab always stops the timer.")
@@ -1466,10 +1465,18 @@ This will take effect only in a NEW terminal
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
                 elif arg == 'global':
-                    if 'HOME' in os.environ:
-                        args.remove('global')
-                        args.insert(1,pjoin(os.environ['HOME'],'.mg5','mg5_configuration.txt'))
-                        has_path = True
+                    legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                    if os.path.exists(legacy_config_dir):
+                        config_dir = legacy_config_dir
+                    else:
+                        config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                    config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+                    args.remove('global')
+                    args.insert(1, config_file)
+
+                    has_path = True
                 else:
                     basename = os.path.dirname(arg)
                     if not os.path.exists(basename):
@@ -1546,17 +1553,6 @@ This will take effect only in a NEW terminal
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
                 raise self.InvalidCmd('%s needs argument True or False'%args[0])
-
-        if args[0] in ['low_mem_multicore_nlo_generation']:
-            if args[1]:
-                if sys.version_info[0] == 2:
-                    if  sys.version_info[1] == 6:
-                        raise Exception('python2.6 does not support such functionalities please use python2.7')
-                #else:
-                #    raise Exception('python3.x does not support such functionalities please use python2.7')
-        
-
-
 
         if args[0] in ['gauge']:
             if args[1] not in ['unitary','Feynman', 'axial']:
@@ -2910,7 +2906,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5',
-                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur']
+                              'yoda', 'rivet', 'fastjet', 'fjcontrib', 'contur', 'cmake', 'eMELA']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -2969,6 +2965,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
+                       'eMELA':'eMELA-config',
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
@@ -6015,14 +6012,21 @@ This implies that with decay chains:
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(None))
-            
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
         if 'heptools_install_dir' in self.options:
             prefix = self.options['heptools_install_dir']
-            config_file = '~/.mg5/mg5_configuration.txt'
+            legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+            if os.path.exists(legacy_config_dir):
+                config_dir = legacy_config_dir
+            else:
+                config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+            config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
             prefix = pjoin(MG5DIR, 'HEPTools')
             config_file = ''
@@ -7175,8 +7179,15 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+
+                config_path = os.path.join(config_dir, "mg5_configuration.txt")
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path, final=False)
             config_path = os.path.relpath(pjoin(MG5DIR,'input',
@@ -7185,6 +7196,10 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
         if not os.path.exists(config_path):
             files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'), config_path)
+        if not os.path.exists(pjoin(MG5DIR,'input','default_run_card_lo.dat')) and madgraph.ReadWrite:
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_lo.dat'), pjoin(MG5DIR,'input','default_run_card_lo.dat'))
+            files.cp(pjoin(MG5DIR,'input','.default_run_card_nlo.dat'), pjoin(MG5DIR,'input','default_run_card_nlo.dat'))
+
         config_file = open(config_path)
 
         # read the file and extract information
@@ -7883,6 +7898,28 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                      " needed for loop color flow computation.")
                 self.do_set('loop_optimized_output True',False)
 
+        elif args[0] == 'eMELA':
+            try:
+                p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                output = output.decode()
+                res = 0
+            except Exception:
+                res = 1
+
+            if res != 0 or error:
+                logger.info('%s does not seem to correspond to a valid eMELA-config ' % args[1] + \
+                 'executable.\n Please set the \'fastjet\'' + \
+                 'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).' +
+                        '\n MG5_aMC> set eMELA /PATH/TO/eMELA-config\n')
+                self.options[args[0]] = None
+                if self.history and 'eMELA' in self.history[-1]:
+                    self.history.pop()
+            else: #everything is fine
+                logger.info('set eMELA to %s' % args[1])
+                self.options[args[0]] = args[1]
+
         elif args[0] == 'fastjet':
             try:
                 p = subprocess.Popen([args[1], '--version'], stdout=subprocess.PIPE,
@@ -8117,7 +8154,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if wanted_lorentz:
                 aloha_model.compute_subset(wanted_lorentz)
             else:
-                aloha_model.compute_all(save=False)
+                aloha_model.compute_all(save=False, custom_propa=True)
             aloha_model.write(output, format)
             return
 
@@ -8552,7 +8589,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
-                                                                    'hepmc_path']
+                                                                    'hepmc_path', 'eMELA']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:

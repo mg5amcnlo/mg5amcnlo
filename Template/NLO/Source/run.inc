@@ -66,6 +66,10 @@ c     Shower MonteCarlo
 c     
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
+
+      logical mcatnlo_delta
+      common /cMCatNLO_Delta/ mcatnlo_delta
+
 c
 c     Reweight info
 c
@@ -89,3 +93,12 @@ c
       double precision mxxmin4pdg(0:25) 
       logical mxxpart_antipart(1:25) 
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart
+
+C stuff for alpha running in lepton collisions
+      integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+      common/to_alphascheme/alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+
+      logical photons_from_lepton, has_bstrahl
+      common /to_afromee/ photons_from_lepton
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      common /to_has_bs/ has_bstrahl
