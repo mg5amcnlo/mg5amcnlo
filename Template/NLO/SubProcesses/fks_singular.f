@@ -2628,7 +2628,8 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7 .and. itype(i).ne.15) then
+     &        .and. itype(i).ne.7 .and. itype(i).ne.15.and.itype(i).lt.20) then
+             ! MZ <20 is needed to exclude the ew sudakov 
             sig=sig+wgts(1,i)
          endif
       enddo
