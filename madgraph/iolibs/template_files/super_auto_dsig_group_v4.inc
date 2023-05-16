@@ -248,7 +248,12 @@ c     ******************************************************
 
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INCLUDE 'config_subproc_map.inc'
-      
+
+C     SUBDIAG is vector of diagram numbers for this config
+C     IB gives which beam is which (for mirror processes)
+      INTEGER SUBDIAG(MAXSPROC),IB(2)
+      COMMON/TO_SUB_DIAG/SUBDIAG,IB
+
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
 
@@ -291,7 +296,10 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
        grouped_MC_grid_status = DS_get_dim_status('grouped_processes')
        IMIRROR_GLOBAL = IMIRROR
        IPROC_GLOBAL = IPROC
-       ICONFIG = ICONF
+       ICONFIG=SYMCONF(ICONF)
+       DO I=1,MAXSPROC
+       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+      	ENDDO
 
 c     set the running scale 
 c     and update the couplings accordingly
