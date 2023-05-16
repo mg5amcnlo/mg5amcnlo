@@ -38,7 +38,6 @@ c
 c
 c     Global
 c
-      include '../../Source/vector.inc' ! for coupl.inc
       include 'coupl.inc'
       logical gridpack
       common/to_gridpack/gridpack
@@ -323,7 +322,6 @@ c
 c
 c     Global
 c
-      include '../../Source/vector.inc' ! for coupl.inc
       include 'coupl.inc'                     !Mass and width info
       double precision stot
       common/to_stot/stot
@@ -461,7 +459,6 @@ c
       common/to_bwcutoff/bwcutoff
       double precision stot
       common/to_stot/stot
-      include '../../Source/vector.inc' ! for coupl.inc      
       include 'coupl.inc'                     !Mass and width info
 
 c-----
