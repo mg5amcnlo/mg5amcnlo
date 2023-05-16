@@ -198,7 +198,7 @@ c TODO determine dimension here + template
 Cf2py double precision, intent(in), dimension(ndim) :: R
 Cf2py integer, intent(in) :: ndim
 Cf2py integer, intent(inout) :: channel
-Cf2py logical, intent(in) :: apply_cut      
+Cf2py logical, intent(in) :: apply_cut
 Cf2py double precision, intent(out) :: wgt      
       implicit none
       include 'nexternal.inc'
@@ -392,7 +392,7 @@ c     since this is a common block with the Source directory
 ************************************************************************
       subroutine get_momenta(pout)
 ************************************************************************
-CF2PY double precision, intent(out), dimension(0:3,5) :: pout
+CF2PY double precision, intent(out), dimension(0:3,*) :: pout
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory                  
       include 'nexternal.inc'
@@ -446,4 +446,54 @@ C     and therefore which of the alphaout needs to be associated to the event.
       used_channel = this_config
       
       return
-      end      
+      end
+
+      
+      SUBROUTINE preunwgt_api(px,wgt, reset_threshold)
+CF2PY double precision, intent(in), dimension(0:3,*) :: px
+CF2PY double precision, intent(in) :: wgt
+CF2PY logical, intent(in) :: reset_threshold      
+c
+c     Arguments
+c
+      include 'genps.inc'
+      include 'nexternal.inc'
+      
+      double precision px(0:3,nexternal),wgt
+c      integer numproc USING GLOBAL HERE
+      logical reset_threshold
+C
+C     GLOBAL
+C
+      double precision twgt, maxwgt,swgt(maxevents)
+      integer                             lun, nw, itmin
+      common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
+
+C     IPROC has the present process number
+      INTEGER IPROC
+      COMMON/TO_MIRROR/IMIRROR, IPROC
+
+      reset_threshold = .false. ! need to be handle later
+      call unwgt(px, wgt, IPROC)
+      return 
+      end
+
+      SUBROUTINE second_unwgt_api(force_max_wgt)
+C**************************************************************************
+C     Takes events from scratch file (/tmp) and writes them to a permanent
+c     file  events.lhe
+c     if force_max_weight =-1, then get it automatically (for a given truncation)
+c     weight will not be rescaled to a specific cross-section at this level
+C**************************************************************************
+CF2PY double precision, intent(in) :: force_max_wgt
+CF2PY double precision, intent(in) :: scale_to_xsec      
+c
+c     Arguments
+c
+      double precision force_max_wgt
+      logical scale_to_xsec
+c
+      scale_to_xsec = .false.
+      call store_events(force_max_wgt, scale_to_xsec)
+      return
+      end

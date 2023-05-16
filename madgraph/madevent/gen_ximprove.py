@@ -371,6 +371,7 @@ class gensym(object):
             # Compile madevent      
             self.cmd.compile(['madevent'], cwd=Pdir)
             # Compile madevent-api
+            logger.debug("We should remove the default compilation of madnis (or think about it)")
             self.cmd.compile(['madnis'], cwd=Pdir)
             if to_submit:
                 self.submit_to_cluster(job_list)
