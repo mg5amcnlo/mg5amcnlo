@@ -206,7 +206,7 @@ C ****************************************************
 C  
 C CONSTANTS
 C
-      include '../../Source/vector.inc'
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMXAX
       include 'genps.inc'
       include 'nexternal.inc'
       include 'maxconfigs.inc'
@@ -408,7 +408,7 @@ C
      implicit none
 
      include 'nexternal.inc'
-     include '../../Source/vector.inc'
+     include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
      include 'maxamps.inc'
      INTEGER                 NCOMB
      PARAMETER (             NCOMB=%(ncomb)d)

@@ -3,7 +3,7 @@ c	Parameters used by cluster
 c*************************************************************************
       include 'ncombs.inc'
       include 'ngraphs.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'maxconfigs.inc'
 c     parameters for clustering:
 c     id_cl gives diagrams for propagators     

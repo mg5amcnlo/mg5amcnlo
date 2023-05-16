@@ -58,7 +58,7 @@ C
 C  
 C GLOBAL VARIABLES
 C
-    include '../../Source/vector.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
 
 
@@ -225,7 +225,7 @@ C
 C  
 C GLOBAL VARIABLES
 C
-    include '../../Source/vector.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
     include 'coupl.inc'
 

@@ -1790,7 +1790,7 @@ C
       include 'genps.inc'
       include 'run.inc'
       include 'nexternal.inc'
-c     include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'coupl.inc'
@@ -1819,7 +1819,7 @@ C
       include 'genps.inc'
       include 'run.inc'
       include 'nexternal.inc'
-c     include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
+c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'coupl.inc'

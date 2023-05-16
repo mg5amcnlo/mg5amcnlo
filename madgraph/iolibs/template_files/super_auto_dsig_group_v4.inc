@@ -735,7 +735,7 @@ C     ****************************************************
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
 C     
 C     ARGUMENTS 
 C     
@@ -869,7 +869,7 @@ C     ****************************************************
       INCLUDE 'maxamps.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
-      include '../../Source/vector.inc'
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
 C     
 C     ARGUMENTS 
 C
