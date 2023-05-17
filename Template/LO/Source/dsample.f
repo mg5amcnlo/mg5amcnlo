@@ -17,7 +17,7 @@ c                    but the SIMD vector size and GPU warp size are smaller)
 c**************************************************************************
       implicit none
       include 'genps.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
 c     
 c Arguments
 c
@@ -667,7 +667,7 @@ c
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'run.inc'
-      include 'vector.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
 c
 c     Arguments
 c

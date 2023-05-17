@@ -15,8 +15,8 @@ c
       include 'PDF/pdf.inc'
       include 'run.inc'
       include 'alfas.inc'
-      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
-      include 'MODEL/coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'MODEL/coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       double precision D
       common/to_dj/D
