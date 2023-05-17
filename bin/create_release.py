@@ -121,7 +121,7 @@ auto_update = True
 # check that we are in the correct branch (note this file does not handle LTS)
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
 branch = p.stdout.read().decode().strip()
-if branch != 'main':
+if branch != '3.x':
     print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
@@ -175,7 +175,7 @@ elif auto_update:
     auto_update = False
 
 # checking that the rev_nb is in a reasonable range compare to the old one.
-rev_nb = None
+#rev_nb = None
 if auto_update:
     rev_nb_i = int(rev_nb)
     try:
