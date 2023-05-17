@@ -77,7 +77,7 @@ C GLOBAL VARIABLES
 C  
     logical init_mode
     common /to_determine_zero_hel/init_mode
-    include '../../Source/vector.inc'
+    include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     DOUBLE PRECISION AMP2(MAXAMPS), JAMP2(0:MAXFLOW)
    
 
@@ -311,9 +311,9 @@ C
 C  
 C GLOBAL VARIABLES
 C
-   include '../../Source/vector.inc'
+   include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
     Double Precision amp2(maxamps), jamp2(0:maxflow)
-    include 'coupl.inc'
+    include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
 	double precision small_width_treatment
 	common/narrow_width/small_width_treatment

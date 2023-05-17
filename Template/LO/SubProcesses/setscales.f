@@ -11,8 +11,8 @@ c     INCLUDE and COMMON
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
-      include 'coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 
       integer i
       include 'maxamps.inc'
@@ -106,8 +106,8 @@ c     INCLUDE and COMMON
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
-      include 'coupl.inc'
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'run.inc'
 c--masses and poles
 c

@@ -38,8 +38,8 @@ c
 c
 c     Global
 c
-      include '../../Source/vector.inc' ! for coupl.inc
-      include 'coupl.inc'
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       logical gridpack
       common/to_gridpack/gridpack
       double precision stot
@@ -323,8 +323,8 @@ c
 c
 c     Global
 c
-      include '../../Source/vector.inc' ! for coupl.inc
-      include 'coupl.inc'                     !Mass and width info
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
       double precision stot
       common/to_stot/stot
 
@@ -461,8 +461,8 @@ c
       common/to_bwcutoff/bwcutoff
       double precision stot
       common/to_stot/stot
-      include '../../Source/vector.inc' ! for coupl.inc      
-      include 'coupl.inc'                     !Mass and width info
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
 
 c-----
 c  Begin Code

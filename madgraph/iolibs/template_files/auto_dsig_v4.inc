@@ -75,7 +75,7 @@ C     Keep track of whether cuts already calculated for this event
       LOGICAL cutsdone,cutspassed
       COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
-      include '../../Source/vector.inc' ! needed to define VECSIZE_MEMMAX
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -205,7 +205,7 @@ C ****************************************************
 C  
 C CONSTANTS
 C
-      include '../../Source/vector.inc' ! needed to define VECSIZE_MEMMAX
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'genps.inc'
       include 'nexternal.inc'
       include 'maxconfigs.inc'
@@ -406,7 +406,7 @@ C
      implicit none
 
      include 'nexternal.inc'
-     include '../../Source/vector.inc' ! needed to define VECSIZE_MEMMAX
+     include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
      include 'maxamps.inc'
      INTEGER                 NCOMB
      PARAMETER (             NCOMB=%(ncomb)d)

@@ -31,8 +31,8 @@ c
 c
 c     Global
 c
-      include 'vector.inc' ! needed by coupl.inc (defines VECSIZE_MEMMAX)
-      include 'coupl.inc'                     !Mass and width info
+      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'coupl.inc' ! mass and width info - needs VECSIZE_MEMMAX (defined in vector.inc)
       double precision stot
       common/to_stot/stot
 
