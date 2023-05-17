@@ -1812,15 +1812,18 @@ class DecayModel(model_reader.ModelReader):
                     one_subdiag = True
                 else:
                     continue
-                
                 #check that all substructure are valid
-                #remove if any radiation and two times the same particle in a vertex
+                #remove if any radiation add two times the same particle in a vertex
                 # 2020: relaxed to avoid only twice initial particle in the vertex
                 for v in proc['vertices']:
                     if any([get_mass(l)==0 for l in v.get('legs')]):
                         self['invalid_Npoint'].append(vertex['id'])
                         return False
-                    init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    try:
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    except:
+                        l_num = min([l['number'] for l in v.get('legs')])
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==l_num][0]
                     nb_part = [1 for l in v.get('legs') if abs(l['id']) in [abs(init_pdg), abs(initpart.get('pdg_code'))]]
                     if len(nb_part) > 1:
                         self['invalid_Npoint'].append(vertex['id'])
