@@ -276,6 +276,7 @@ C     Keep track of whether cuts already calculated for this event
       double precision col_rand(VECSIZE_MEMMAX)
       integer selected_hel(VECSIZE_MEMMAX)
       integer selected_col(VECSIZE_MEMMAX)
+      double precision all_rwgt(VECSIZE_MEMMAX)
       
 C     Common blocks
       CHARACTER*7         PDLABEL,EPA_LABEL
@@ -326,6 +327,10 @@ C     Select a flavor combination (need to do here for right sign)
           IPSEL=IPSEL+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
+       channel = %(get_channel)s
+
+
+       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC))
 
 	 if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
@@ -335,8 +340,6 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO
-	 channel = %(get_channel)s
-
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
@@ -361,7 +364,8 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
            P1 = ALL_PP(:,:,IVEC)
          endif
 C	 call restore_cl_val_to(ivec)
-         DSIGUU=DSIGUU*REWGT(P1)
+c         DSIGUU=DSIGUU*REWGT(P1)
+	  DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(P1,DSIGUU,%(numproc)d, IVEC)
