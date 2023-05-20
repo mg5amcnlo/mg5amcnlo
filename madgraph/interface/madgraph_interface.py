@@ -7797,6 +7797,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     able_to_mod = False
                     if log: logger.warning('Note that parton-shower gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
+            elif args[1] == 'FD':
+                logger.critical("WARNING: NOT ALL MODEL ARE SUPPORTING THIS GAUGE. PLEASE CHECK")
+                if 0 in self._curr_model.get('gauge'):
+                    aloha.unitary_gauge = 3
+                else:
+                    able_to_mod = False
+                    if log: logger.warning('Note that FD gauge is not allowed for your current model %s' \
+                                           % self._curr_model.get('name'))   
             else:
                 if 1 in self._curr_model.get('gauge'):
                     aloha.unitary_gauge = False
