@@ -1185,6 +1185,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             lastmodel = max(models, key=os.path.getmtime)
             logger.info('last model found is %s', lastmodel)
             args.insert(1, lastmodel)
+            self.history.info['model'] = lastmodel
 
         if not args:
             self.help_import()
