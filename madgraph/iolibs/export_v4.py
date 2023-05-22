@@ -4664,7 +4664,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
+            if self.model._curr_gauge == 'FD':
+                replace_dict['wavefunctionsize'] = 7
 
+        assert replace_dict['wavefunctionsize'] == 7
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element, config_map, replace_dict)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)

@@ -5673,6 +5673,8 @@ This implies that with decay chains:
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return
+            if self._curr_model:
+                self._curr_model._curr_gauge = self.options['gauge']
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -7813,6 +7815,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
 
+            self._curr_model._curr_gauge = args[1]
             if self.options['gauge'] == args[1]:
                 return
             
@@ -7838,8 +7841,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
-            logger.info('Passing to gauge %s.' % args[1])
-
             if able_to_mod:
                 # We don't want to go through the MasterCommand again
                 # because it messes with the interface switching when
