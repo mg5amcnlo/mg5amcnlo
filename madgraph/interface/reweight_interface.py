@@ -611,6 +611,7 @@ class ReweightInterface(extended_cmd.Cmd):
         pos_jet_large6 = 0
 
         self.lhe_input.seek(0)
+        count_errors = 0
         for event_nb,event in enumerate(self.lhe_input):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
@@ -628,7 +629,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
             if self.inc_sudakov:
                 ## TV: change to commented line below for public version
-                weight, type, wgt, sud, min_inv = self.calculate_weight(event, sud_mod)
+                weight, type, wgt, sud, min_inv, large_sud_error = self.calculate_weight(event, sud_mod)
+                if large_sud_error:
+                    count_errors = count_errors + 1
                 #weight = self.calculate_weight(event, sud_mod)
             else:
                 weight = self.calculate_weight(event)
@@ -647,7 +650,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     n_s_small_inv += 1
             elif type == 1:
                 for i,p in enumerate(event):
-                    if (abs(p.pid) < 5 or p.pid == 21) and (p.status == 1):
+                    if (abs(p.pid) < 6 or p.pid == 21) and (p.status == 1):
                         pT_jet = math.sqrt(p.px**2+p.py**2)
                 n_h1_events +=1
 
@@ -755,7 +758,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
+        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
+        logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
         
         ## TV: remove print statements for public version
         print('Number of S events: Number with neg wgt:  Number with neg sud: Number with inv < sudcut')
@@ -1525,7 +1529,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
             x = 1.0
             sud_cut= x*mW**2
-            min_inv=10000000.0
+            min_inv=1000000000.0
             inv_dict={}
  
             if (len(buff_event) == nexternal +1): # is an H-event
@@ -1568,8 +1572,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 if ij_comb == []:
                     ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
            
-                ## TV: remove all "do_compute" for public version
+                ## TV: set to True to include H1 events
                 do_compute_h1 = True             #<-------------------------------
+
                 # For n+1-body reweighting
                 if min_inv > sud_cut:
                     event_to_sud = buff_event
@@ -1586,6 +1591,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
                     if ij_comb == []:
+                        
                         event_to_sud = buff_event
                         n_part = nexternal+1
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
@@ -1614,6 +1620,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         else:
                             #### H2 type
                             type = 2
+                            # TV: set to True to include H2 events
                             do_compute = False   #<-------------------------------
                             
             elif (len(buff_event) == nexternal): # is an S-event
@@ -1622,13 +1629,17 @@ class ReweightInterface(extended_cmd.Cmd):
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
                     ### S type
                     type = 0
+                    # TV: set to True to include S events
                     do_compute = False       #<-------------------------------
+
             else:
                 logger.critical('ERROR: neither H nor S event!')
                 logger.critical(buff_event)
                 sys.exit(2)
                 
-            do_compute=True 
+            # TV: set to True to include all events
+            do_compute=True      #<-------------------------------
+
             # Boost to partonic CM frame if not already in one for the momentum reshuffling 
             E, px, py, pz = 0.,0.,0.,0.
             for i,particle in enumerate(event_to_sud):
@@ -1677,6 +1688,11 @@ class ReweightInterface(extended_cmd.Cmd):
             if list(sud_mod.original_pdg_list_dict[sorted_tag][1]) != mapped_order[1]:
                 logger.critical('ERROR: order in particle momenta does not match MG convention!')
                 sys.exit(3)
+        
+            # TV: uncomment to remove gluon-induced processes
+            #mapped_tag_orig, mapped_order_orig = buff_event.get_tag_and_order()
+            #if 21 in mapped_tag_orig[0]:
+            #    do_compute = False
 
             # Get the right Sudakov reweight factors
             if do_compute:
@@ -1694,6 +1710,20 @@ class ReweightInterface(extended_cmd.Cmd):
             sudrat3 = 1. + res[4]/res[0]
             sudrat4 = 1. + res[5]/res[0]
 
+            large_sud_error=False
+            if sudrat1 < -200:
+                logger.info('ERROR: event will not be reweighted because Sudakov ratio is too large: %s ' %sudrat1)
+                logger.info(buff_event)
+                sudrat0 = 1. 
+                sudrat1 = 1.
+                sudrat2 = 1.
+                sudrat3 = 1. 
+                sudrat4 = 1.
+                sudrat1_2 = 1. 
+                sudrat0_only = 1.
+                sudrat1_only = 1.
+                large_sud_error = True
+
             sudrat0_only = res[1]/res[0]
             sudrat1_only = res[2]/res[0]
             sudrat1_2 = 1. + res2[2]/res[0]
@@ -1705,16 +1735,15 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new2 = w_orig *sudrat2
             w_new3 = w_orig *sudrat3
             w_new4 = w_orig *sudrat4
-
             w_new1_2 = w_orig *sudrat1_2
 
             w_new0_only = w_orig * sudrat0_only
             w_new1_only = w_orig * sudrat1_only
  
-            ## TV: use last line (commented) for picking out H1 events only. Change to first commented line for public version
+            ## TV: use last line to output total weights as separate H1/S/H2 contributions. Use second line for standard usage. 
             #return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
-            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv
-            #return {'orig': orig_wgt,'2001': w_new1_2, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv
+            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv, large_sud_error
+            #return {'orig': orig_wgt,'2001': w_new1_2, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv, large_sud_error
 
  
      
