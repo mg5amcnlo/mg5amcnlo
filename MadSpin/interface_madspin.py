@@ -773,6 +773,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         if 'mgruncard' in self.banner:
             generate_all.banner['mgruncard'] = self.banner['mgruncard']   
         
+        # replace path to the ms_dir if they were relative path/ms_dir moved/...
+        generate_all.options['ms_dir'] = self.options['ms_dir']
+
         # NOW we have all the information available for RUNNING
         
         if self.options['seed']:
