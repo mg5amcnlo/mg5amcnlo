@@ -448,8 +448,9 @@ C     and therefore which of the alphaout needs to be associated to the event.
       return
       end
 
-      
+************************************************************************
       SUBROUTINE preunwgt_api(px,wgt, reset_threshold)
+************************************************************************
 CF2PY double precision, intent(in), dimension(0:3,*) :: px
 CF2PY double precision, intent(in) :: wgt
 CF2PY logical, intent(in) :: reset_threshold      
@@ -478,13 +479,14 @@ C     IPROC has the present process number
       return 
       end
 
+**************************************************************************
       SUBROUTINE second_unwgt_api(force_max_wgt)
-C**************************************************************************
+**************************************************************************
 C     Takes events from scratch file (/tmp) and writes them to a permanent
 c     file  events.lhe
 c     if force_max_weight =-1, then get it automatically (for a given truncation)
 c     weight will not be rescaled to a specific cross-section at this level
-C**************************************************************************
+**************************************************************************
 CF2PY double precision, intent(in) :: force_max_wgt
 CF2PY double precision, intent(in) :: scale_to_xsec      
 c
