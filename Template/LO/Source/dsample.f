@@ -55,6 +55,9 @@ c
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
 
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
+      
       integer nzoom
       double precision  tx(1:3,maxinvar)
       common/to_xpoints/tx, nzoom
@@ -611,6 +614,9 @@ c
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
+
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
       
       integer              icor
       common/to_correlated/icor
@@ -1035,6 +1041,9 @@ c************************************************************************
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
+      
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
 
@@ -1619,6 +1628,8 @@ c
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
 
       real*8             wmax                 !This is redundant
       common/to_unweight/wmax
@@ -1650,6 +1661,7 @@ c-----
 
       if (first_time) then
          first_time = .false.
+         twgt_it = 0d0
          twgt1 = 0d0       !
          iavg = 0         !Vars for averging to increase err estimate
          navg = 1      !
@@ -1948,7 +1960,14 @@ c-----
             vol = 1d0/dble(events*itm)
             knt = events
             if (use_cut.ne.-2) then
-              twgt = mean / (dble(itm)*dble(events))
+               if(cur_it.lt.itmin-1) then
+                  twgt = 0d0
+               else if(cur_it.le.itmin) then
+                  twgt = mean / (dble(itm)*dble(events))
+               else
+                  twgt = mean / (dble(itm)*dble(events))/ 2d0**cur_it
+               endif
+               twgt_it = 0d0 ! reset the automatic finding of the maximum
             endif
 c            write(*,*) 'New number of events',events,twgt
 
