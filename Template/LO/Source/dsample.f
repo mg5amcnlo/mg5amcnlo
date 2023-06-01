@@ -1960,13 +1960,7 @@ c-----
             vol = 1d0/dble(events*itm)
             knt = events
             if (use_cut.ne.-2) then
-               if(cur_it.lt.itmin-1) then
-                  twgt = 0d0
-               else if(cur_it.le.itmin) then
-                  twgt = mean / (dble(itm)*dble(events))
-               else
-                  twgt = mean / (dble(itm)*dble(events))/ 2d0**cur_it
-               endif
+               twgt = mean / (dble(itm)*dble(events))
                twgt_it = 0d0 ! reset the automatic finding of the maximum
             endif
 c            write(*,*) 'New number of events',events,twgt
