@@ -55,8 +55,6 @@ c
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
 
-      double precision twgt_it, local_twgt
-      common/to_unwgt_it/twgt_it
       
       integer nzoom
       double precision  tx(1:3,maxinvar)
@@ -615,9 +613,6 @@ c
       integer                             lun, nw, itminx
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itminx
 
-      double precision twgt_it, local_twgt
-      common/to_unwgt_it/twgt_it
-      
       integer              icor
       common/to_correlated/icor
 
@@ -1041,9 +1036,6 @@ c************************************************************************
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
-      double precision twgt_it, local_twgt
-      common/to_unwgt_it/twgt_it
-      
       double precision    grid(2, ng, 0:maxinvar)
       common /data_grid/ grid
 
@@ -1628,7 +1620,7 @@ c
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
-      double precision twgt_it, local_twgt
+      double precision twgt_it
       common/to_unwgt_it/twgt_it
 
       real*8             wmax                 !This is redundant
