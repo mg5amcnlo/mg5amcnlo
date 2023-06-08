@@ -4,11 +4,11 @@
 #
 # Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -77,7 +77,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
 
 # 0. check that all modification are committed in this directory
 #    and that the date/UpdateNote are up-to-date
-diff_result = subprocess.Popen(["git", "diff"], stdout=subprocess.PIPE).communicate()[0] 
+diff_result = subprocess.Popen(["git", "diff"], stdout=subprocess.PIPE).communicate()[0]
 
 if diff_result:
     logging.warning("Directory is not up-to-date. The release follow the last committed version.")
@@ -95,7 +95,7 @@ if diff_result:
     if answer != 'y':
         exit()
 
-        
+
 release_date = date.fromtimestamp(time.time())
 for line in open(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
@@ -155,7 +155,7 @@ if auto_update:
             exit()
         auto_update = False
 else:
-    max_revnb = 0 
+    max_revnb = 0
 
 # 1. Adding the file .revision used for future auto-update.
 # Provide this only if version is not beta/tmp/...
@@ -165,7 +165,7 @@ if pattern.match(version):
     # Get current revision number:
     #p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
     rev_nb = max_revnb
-    logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
+    logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)
 elif auto_update:
     logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
          "in consequence the automatic update of the code will be deactivated" )
@@ -229,7 +229,7 @@ if auto_update:
         if answer != 'y':
             exit()
 
-            
+
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
@@ -246,12 +246,11 @@ if status:
     exit()
 
 # 1. Remove the .bzr directory and clean bin directory file,
-#    take care of README files.
 
 try:
     shutil.rmtree(path.join(filepath, '.bzr'))
 except:
-    pass 
+    pass
 shutil.rmtree(path.join(filepath, '.git'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
     if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
@@ -261,7 +260,6 @@ for data in glob.glob(path.join(filepath, 'bin', '*')):
             os.rename(data, data.replace('compile.py','.compile.py'))
 
 os.remove(path.join(filepath, 'README.developer'))
-shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
 
 
 # 1. Add information for the auto-update
@@ -280,15 +278,15 @@ if rev_nb and auto_update:
     if answer == 'y':
         p = subprocess.call("git push", shell=True)
         p = subprocess.call("git push --tags", shell=True)
-        
+
 # 1. Copy the .mg5_configuration_default.txt to it's default path
-shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
+shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'),
             path.join(filepath, 'input','mg5_configuration.txt'))
 shutil.copy(path.join(filepath, 'input','.default_run_card_lo.dat'),
             path.join(filepath, 'input','default_run_card_lo.dat'))
 shutil.copy(path.join(filepath, 'input','.default_run_card_nlo.dat'),
             path.join(filepath, 'input','default_run_card_nlo.dat'))
-shutil.copy(path.join(filepath, 'input','proc_card_default.dat'), 
+shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
             path.join(filepath, 'proc_card.dat'))
 
 
@@ -343,14 +341,14 @@ rm -rf download-temp;
 """ % filepath
 os.system(install_str)
 
-collier_link = "http://collier.hepforge.org/collier-latest.tar.gz" 
+collier_link = "http://collier.hepforge.org/collier-latest.tar.gz"
 misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
 ninja_link = "https://bitbucket.org/peraro/ninja/downloads/ninja-latest.tar.gz"
 misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 # Add the tarball for SMWidth
 swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
-misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
+misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz'))
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print('Fail to create OfflineHEPToolsInstaller')
