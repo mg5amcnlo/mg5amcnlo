@@ -15,7 +15,6 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import contextlib
 import itertools
@@ -149,10 +148,14 @@ def get_pkg_info(info_str=None):
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-        PACKAGE_INFO = info_dict
-        
-    return info_dict
-
+        if info_dict:                                          
+           PACKAGE_INFO = info_dict
+        else:
+           info_dict ={}
+           info_dict['version'] = '3.x.x'
+           info_dict['date'] = '20xx-xx-xx'
+           PACKAGE_INFO = info_dict        
+        return PACKAGE_INFO
 #===============================================================================
 # get_time_info
 #===============================================================================
@@ -283,16 +286,11 @@ def has_f2py():
     has_f2py = False
     if which('f2py'):
         has_f2py = True
-    elif sys.version_info[1] == 6:
-        if which('f2py-2.6'):
-            has_f2py = True
-        elif which('f2py2.6'):
-            has_f2py = True                 
-    else:
-        if which('f2py-2.7'):
-            has_f2py = True 
-        elif which('f2py2.7'):
-            has_f2py = True  
+    elif which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+        has_f2py = True
+    elif which('f2py%d' %(sys.version_info.major)):
+        has_f2py = True
+
     return has_f2py       
         
 #===============================================================================
@@ -1847,7 +1845,7 @@ class EasterEgg(object):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -1870,7 +1868,28 @@ class EasterEgg(object):
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
-    special_banner = {(4,5): May4_banner}
+    Zcommezorglub =  "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M::::::::::M       M::::::::::M                          *\n" + \
+        "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
+        "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
+        "* M::::::M   M:::::::M   M::::::M                          *\n" + \
+        "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
+        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M                          *\n" + \
+        "* MMMMMMMM               MMMMMMMM                          *\n" + \
+        "*                                                          *\n" + \
+        "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
+
+
+
+
+
+    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -1922,7 +1941,26 @@ class EasterEgg(object):
         if MADEVENT:
             return
         import madgraph.interface.madgraph_interface as madgraph_interface
-        madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
+        if date == (14,10):
+            def flip(text):
+                new_text = []
+                for line in text.split('\n'):
+                    new_line = []
+                    for word in line.split(' '):
+                        if "%" in word:
+                            new_line.append(word)
+                            continue
+                        new_line.append(''.join(list(reversed(list(word)))))
+                    new_text.append(' '.join(new_line))
+                return '\n'.join(new_text)
+
+            madgraph_interface.CmdExtended.intro_banner= flip(self.default_banner_1) + \
+                                                        self.special_banner[date] + \
+                                                        flip(self.default_banner_2) #+ \
+                                                        #"\n* homage to Franquin (text above in zorgland)              *" +\
+                                                        #"\n************************************************************"
+        else:
+            madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
 
     def call_apple(self, msg):

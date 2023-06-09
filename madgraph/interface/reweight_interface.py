@@ -15,7 +15,6 @@
 """ Command interface for Re-Weighting """
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import difflib
 import logging
 import math
@@ -694,9 +693,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
 
         # perform the scanning
-        reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
         if param_card_iterator:
-            reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            if self.options['rwgt_name']:
+                reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            else:
+                reweight_name = None
             for i,card in enumerate(param_card_iterator):
                 if reweight_name:
                     self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)

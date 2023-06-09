@@ -1,7 +1,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import itertools
 import filecmp
 import xml.etree.ElementTree as ET
@@ -31,8 +30,13 @@ class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
 
+class InvalidParam(Exception):
+    """ a class for invalid parameter input """
+    pass
+
 class Parameter (object):
     """A class for a param_card parameter"""
+
     
     def __init__(self, param=None, block=None, lhacode=None, value=None, comment=None):
         """Init the parameter"""
@@ -73,11 +77,15 @@ class Parameter (object):
             data = data[:position] + [' '.join(data[position:])] 
         if not len(data):
             return
+        
         try:
             self.lhacode = tuple([int(d) for d in data[:-1]])
         except Exception:
             self.lhacode = tuple([int(d) for d in data[:-1] if d.isdigit()])
             self.value= ' '.join(data[len(self.lhacode):])
+            # check that lhacode are the first entry otherwise return invalid param.
+            if ' '.join([str(i) for i in self.lhacode]) != ' '.join(data[:len(self.lhacode)]):
+                raise InvalidParam
         else:
             self.value = data[-1]
         
@@ -391,8 +399,12 @@ class ParamCard(dict):
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)
-                param.load_str(line)
-                cur_block.append(param)
+                try:
+                    param.load_str(line)
+                except InvalidParam:
+                    logger.warning("Block \"%s\" has line \"%s\" that is not in slha1 format: line is ignored" %(cur_block.name, line))
+                else:
+                    cur_block.append(param)
                   
         return self
     

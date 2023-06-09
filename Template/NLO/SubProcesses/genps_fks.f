@@ -1504,6 +1504,11 @@ c
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt,xjac)
 
+      if (xjac.lt.0d0) then
+        pass = .false.
+        return
+      endif
+
 C If we are not doing event projection, we need to boost the 
 C   born momenta in the partonic com frame 
       call boost_born_momenta_noevpr(p_born_l,xp,xi_i_fks,

@@ -2,7 +2,6 @@
 
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 from madgraph.interface import reweight_interface
 from six.moves import map
 from six.moves import range
@@ -2146,12 +2145,13 @@ class decay_all_events(object):
             self.outputfile = open(self.outputfile.name, 'w')
             self.write_banner_information(efficiency)
             pos = self.outputfile.tell()
-            old = open('%s_tmp' % self.outputfile.name)
-            line=''
-            while '</init>' not in line:
-                line = old.readline()
-            
-            self.outputfile.write(old.read())
+            header = True
+            for line in open('%s_tmp' % self.outputfile.name):
+                if header:
+                    if '</init>' in line:
+                        header = False
+                    continue
+                self.outputfile.write(line)
             files.rm('%s_tmp' % self.outputfile.name)
             
         # Closing all run

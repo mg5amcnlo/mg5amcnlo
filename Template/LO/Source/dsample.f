@@ -1561,11 +1561,12 @@ c
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       logical cutsdone, cutspassed
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
- 
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      character*7 pdsublabel(2)
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL,pdsublabel
+
+      include './PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      character*7 pdsublabel(2)
+c      INTEGER       LHAID
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL,pdsublabel
 c     
 c     Begin code
 c

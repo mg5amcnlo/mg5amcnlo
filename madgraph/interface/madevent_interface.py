@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import itertools
 import glob
@@ -3768,7 +3767,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
             if nb_event < self.run_card['nevents']:
                 logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
-                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", self.run_card['sde_strategy'] + 1 % 2)
+                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", 1 + self.run_card['sde_strategy'] % 2)
                 logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
                 logger.warning("  - reduce the number of requested events (if set too high)")
                 logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
@@ -7345,8 +7344,8 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6, 2.7 or python 3.7 or later).\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph/MadEvent 5 works only with python 3.7 or later).\n'+\
                'Please upgrate your version of python.')
 
     import os

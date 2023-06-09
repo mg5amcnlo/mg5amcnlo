@@ -4331,7 +4331,10 @@ class RunCardLO(RunCard):
                     logger.warning("Vector boson from lepton PDF is using fixed scale value of muf [dsqrt_q2fact%s]. Looks like you kept the default value (Mz). Is this really the cut-off that you want to use?" % i)
         
                 if abs(self['lpp%s' % i ]) == 2 and self['fixed_fac_scale%s' % i] and self['dsqrt_q2fact%s'%i] == 91.188:
-                    logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
+                    if self['pdlabel'] in ['edff','chff']:
+                        logger.warning("Since 3.5.0 exclusive photon-photon processes in ultraperipheral proton and nuclear collisions from gamma-UPC (arXiv:2207.03012) will ignore the factorisation scale.")
+                    else:
+                        logger.warning("Since 2.7.1 Elastic photon from proton is using fixed scale value of muf [dsqrt_q2fact%s] as the cut in the Equivalent Photon Approximation (Budnev, et al) formula. Please edit it accordingly." % i)
 
 
         if six.PY2 and self['hel_recycling']:
@@ -5288,18 +5291,25 @@ class RunCardNLO(RunCard):
              sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
+        # whether to include or not photon-initiated processes in lepton collisions
         self.add_param('photons_from_lepton', True)
-        self.add_param('has_bstrahl', False)
         self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         # stuff for lepton collisions 
-        self.add_param('alphascheme', 0)
-        self.add_param('nlep_run', -1)
-        self.add_param('nupq_run', -1)
-        self.add_param('ndnq_run', -1)
-        self.add_param('w_run', 1)
+        # these parameters are in general set automatically by eMELA in a consistent manner with the PDF set 
+        # whether the current PDF set has or not beamstrahlung 
+        self.add_param('has_bstrahl', False, system=True)
+        # renormalisation scheme of alpha
+        self.add_param('alphascheme', 0, system=True)
+        # number of leptons/up-/down-quarks relevant for the running of alpha
+        self.add_param('nlep_run', -1, system=True)
+        self.add_param('nupq_run', -1, system=True)
+        self.add_param('ndnq_run', -1, system=True)
+        # w contribution included or not in the running of alpha
+        self.add_param('w_run', 1, system=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
+        self.add_param('mcatnlo_delta', False)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
@@ -5331,7 +5341,10 @@ class RunCardNLO(RunCard):
         self.add_param('store_rwgt_info', False)
         self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
-             
+
+        #technical
+        self.add_param('folding', [1,1,1], include=False)
+        
         #merging
         self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MG5aMC)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
@@ -5534,6 +5547,15 @@ class RunCardNLO(RunCard):
         if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
                 raise InvalidRunCard("'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly.")
 
+    # Check the folding parameters
+        if len(self['folding']) != 3:
+            raise InvalidRunCard("'folding' should contain exactly three integers")
+        for ifold in self['folding']:
+            if ifold not in [1,2,4,8]: 
+                raise InvalidRunCard("The three 'folding' parameters should be equal to 1, 2, 4, or 8.")
+    # Check MC@NLO-Delta
+        if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
+            raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
 
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:

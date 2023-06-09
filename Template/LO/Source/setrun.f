@@ -200,12 +200,14 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=19)
+      parameter (npdfs=21)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
      $   'eva',
      $   'iww',
+     $   'edff',
+     $   'chff',
      $     'dressed', 
      $   'mrs02nl',
      $   'mrs02nn',
@@ -227,7 +229,9 @@ C-------------------------------------------------
      $   00000,
      $   00000,
      $   00000,
-     $   00000, 
+     $   00000,
+     $   00000,
+     $   00000,
      $   20250,
      $   20270,
      $   19150,

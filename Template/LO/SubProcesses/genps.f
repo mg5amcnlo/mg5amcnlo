@@ -146,10 +146,11 @@ c
 c     Global
 c
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      character*7 pdsublabel(2)
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
+      include '../../Source/PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      INTEGER       LHAID
+c      character*7 pdsublabel(2)
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
 
       double precision pmass(nexternal)
       common/to_mass/  pmass

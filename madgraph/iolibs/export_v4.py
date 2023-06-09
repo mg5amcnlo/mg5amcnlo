@@ -1788,6 +1788,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
                 pdf_lines = pdf_lines + "ELSE\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -2141,19 +2157,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler['f2py']
+        elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+            f2py_compiler = 'f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)
+        elif misc.which('f2py%d' %(sys.version_info.major)):
+            f2py_compiler = 'f2py%d' %(sys.version_info.major)            
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
-        elif sys.version_info[1] == 6:
-            if misc.which('f2py-2.6'):
-                f2py_compiler = 'f2py-2.6'
-            elif misc.which('f2py2.6'):
-                f2py_compiler = 'f2py2.6'
-        elif sys.version_info[1] == 7:
-            if misc.which('f2py-2.7'):
-                f2py_compiler = 'f2py-2.7'
-            elif misc.which('f2py2.7'):
-                f2py_compiler = 'f2py2.7'            
-        
+
+
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
         
@@ -2248,7 +2259,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             import platform
             version, _, _ = platform.mac_ver()
             if not version:# not linux 
-                version = 14 # set version to remove MACFLAG
+                majversion = 14 # set version to remove MACFLAG
             else:
                 majversion, version = [int(x) for x in version.split('.',3)[:2]]
 
@@ -8147,7 +8158,7 @@ C
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
         
@@ -9214,7 +9225,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
@@ -9252,7 +9263,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                        "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)

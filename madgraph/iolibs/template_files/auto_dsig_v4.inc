@@ -77,10 +77,8 @@ C     Keep track of whether cuts already calculated for this event
 %(define_subdiag_lines)s
       include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
+      include '../../Source/PDF/pdf.inc'
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       double precision RHEL, RCOL
       integer selected_hel(VECSIZE_MEMMAX)
       integer selected_col(VECSIZE_MEMMAX)

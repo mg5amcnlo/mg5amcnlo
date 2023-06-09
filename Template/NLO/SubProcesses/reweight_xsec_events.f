@@ -41,6 +41,7 @@ c Les Houches Event File info:
      $     ,ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,PUP(5,MAXNUP)
      $     ,VTIMUP(MAXNUP),SPINUP(MAXNUP)
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c
       call setrun                !Sets up run parameters
 
@@ -122,9 +123,10 @@ c start with central member of the first set
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
       do i=1,min(10,maxevt)
+         SCALUP_a=-1d0
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
          if(buff(1:1).ne.'#')then
             write (*,*) 'This event file cannot be reweighted [1]',i
             stop
@@ -197,9 +199,10 @@ c To keep track of the accumulated results:
 c Determine the flavor map between the NLO and Born
       call find_iproc_map()
       do i=1,maxevt
+         SCALUP_a=-1d0
          call read_lhef_event(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
          if(buff(1:1).ne.'#')then
             write(*,*)'This event file cannot be reweighted [3]',i
             stop
@@ -284,7 +287,7 @@ C  the entry inclusive on the various orderstag
 c Write event to disk:
          call write_lhef_event(ofile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
          
       enddo
       call deallocate_weight_lines

@@ -82,10 +82,8 @@ C     Keep track of whether cuts already calculated for this event
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
+      INCLUDE '../../Source/PDF/pdf.inc'
 C     Common blocks
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
       INCLUDE 'vector.inc'
 C     jamp2 information
       DOUBLE PRECISION JAMP2(0:MAXFLOW, NB_PAGE)

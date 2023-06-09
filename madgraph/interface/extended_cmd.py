@@ -16,7 +16,6 @@
 
 
 from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import math
 import os
@@ -1953,9 +1952,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if 'HOME' in os.environ and os.environ['HOME']  and \
-        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
-            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+        legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_config_dir):
+            config_dir = legacy_config_dir
+        else:
+            config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+        config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+
+        if 'HOME' in os.environ and os.environ['HOME'] and os.path.exists(config_file):
+            base = config_file
             if hasattr(self, 'me_dir'):
                 basedir = self.me_dir
             elif not MADEVENT:

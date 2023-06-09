@@ -28,13 +28,7 @@
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
-
-if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
-               Please upgrate your version of python.')
-
 import inspect
 import tarfile
 import logging

@@ -20,7 +20,6 @@ from __future__ import division
 
 
 from __future__ import absolute_import
-from __future__ import print_function
 import ast
 import logging
 import math
@@ -1889,11 +1888,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
-            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
-                if input.endswith('.gz'):
-                    misc.gunzip(input)
-                    input = input[:-3]
-                    
+
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
@@ -3907,8 +3902,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                config_path = os.path.join(config_dir, 'mg5_configuration.txt')
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path=config_path,  final=False)
             if amcatnlo:
@@ -7495,6 +7497,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
             self.write_card(os.path.basename(answer.replace('_card.dat','')))
 
+        start = time.time()
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd as error:
@@ -7512,6 +7515,8 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
+        if time.time() - start < .5:
+            self.mother_interface.ask("Are you really that fast? If you are using an editor that returns directly. Please confirm that you have finised to edit the file", 'y')
         self.reload_card(path)
         
     def reload_card(self, path): 
