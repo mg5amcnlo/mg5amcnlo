@@ -160,6 +160,11 @@ c
       maxcfig=mincfig
       minvar(1,1) = 0              !This tells it to map things invarients
       write(*,*) 'Attempting mappinvarients',nconfigs,nexternal
+      if (mincfig.lt.0)then
+         maxcfig = -1*mincfig
+         mincfig= 1
+         nconfigs=maxcfig-mincfig +1
+      endif
       call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
       write(*,*) "Completed mapping",nexternal
       ndim = 3*(nexternal-nincoming)-4
