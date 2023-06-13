@@ -551,7 +551,7 @@ c***************************************************
       return
       end
 
-      logical function setclscales(p, keepq2bck)
+      logical function setclscales(p, keepq2bck, ivec)
 c**************************************************
 c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
@@ -559,6 +559,7 @@ c     keepq2bck allow to not reset the parameter q2bck
 c**************************************************
       implicit none
 
+      integer ivec              ! for event number in batch for common block
       logical keepq2bck
       include 'message.inc'
       include 'genps.inc'
@@ -654,7 +655,7 @@ c      are flagged as jets)
       if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
       endif
- 100  clustered = cluster(p(0,1))
+ 100  clustered = cluster(p(0,1), ivec)
       if(.not.clustered) then
          if(init_mode) goto 999
          open(unit=26,file='../../../error',status='unknown',err=999)
@@ -676,7 +677,7 @@ c     Reset chcluster to run_card value
      $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
      $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
-          write(*,*)'   icluster(',i,')=',(icluster(j,i),j=1,4)
+          write(*,*)'   icluster(',i,',ivec)=',(icluster(j,i, ivec),j=1,4)
         enddo
         write(*,*)'  process: ',iproc
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
@@ -1307,7 +1308,7 @@ c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
 
       end
 
-      double precision function rewgt(p)
+      double precision function rewgt(p, ivec)
 c**************************************************
 c   reweight the hard me according to ckkw
 c   employing the information in common/cl_val/
@@ -1327,7 +1328,7 @@ C
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
-
+      integer ivec
 C
 C   global variables
 C     Present process number
@@ -1433,7 +1434,7 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p,.true.)) then ! assign the correct id information.(preserve q2bck)
+      if(.not.setclscales(p,.true., ivec)) then ! assign the correct id information.(preserve q2bck)
 c         write(*,*) "Fail to cluster the events from the rewgt function"
 c         stop 1
         rewgt = 0d0
@@ -1856,7 +1857,7 @@ c      save firsttime
             call set_fac_scale(all_p(1,i),q2fact)
          endif
 
-         if(.not.setclscales(all_p(1,i) , .false.))then
+         if(.not.setclscales(all_p(1,i) , .false., i))then
             all_wgt(i) = 0d0
          else
             all_q2fact(1,i) = q2fact(1)

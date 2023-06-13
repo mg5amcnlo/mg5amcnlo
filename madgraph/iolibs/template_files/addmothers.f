@@ -372,27 +372,27 @@ c
 c
 c     Set correct mother number for clustering info
 c
-        if (icluster(1,1).ne.0) then
+        if (icluster(1,1,ivec).ne.0) then
            do i=1,nexternal-2
-              if(icluster(4,i).gt.0)then
-                 icluster(4,i)=ito(icluster(4,i))
+              if(icluster(4,i,ivec).gt.0)then
+                 icluster(4,i,ivec)=ito(icluster(4,i,ivec))
               else
-                 icluster(4,i)=-1
+                 icluster(4,i,ivec)=-1
               endif
-              if(icluster(3,i).eq.0)then
-                 icluster(3,i)=-1
+              if(icluster(3,i,ivec).eq.0)then
+                 icluster(3,i,ivec)=-1
               endif
-              if(ito(icluster(1,i)).gt.0)
-     $             icluster(1,i)=ito(icluster(1,i))
-              if(ito(icluster(2,i)).gt.0)
-     $             icluster(2,i)=ito(icluster(2,i))
+              if(ito(icluster(1,i,ivec)).gt.0)
+     $             icluster(1,i,ivec)=ito(icluster(1,i,ivec))
+              if(ito(icluster(2,i,ivec)).gt.0)
+     $             icluster(2,i,ivec)=ito(icluster(2,i,ivec))
               if(flip)then
-                 if(icluster(1,i).le.2)
-     $             icluster(1,i)=3-icluster(1,i)
-                 if(icluster(2,i).le.2)
-     $             icluster(2,i)=3-icluster(2,i)
-                 if(icluster(3,i).ge.1.and.icluster(3,i).le.2)
-     $             icluster(3,i)=3-icluster(3,i)
+                 if(icluster(1,i,ivec).le.2)
+     $             icluster(1,i,ivec)=3-icluster(1,i,ivec)
+                 if(icluster(2,i,ivec).le.2)
+     $             icluster(2,i,ivec)=3-icluster(2,i,ivec)
+                 if(icluster(3,i,ivec).ge.1.and.icluster(3,i,ivec).le.2)
+     $             icluster(3,i,ivec)=3-icluster(3,i,ivec)
               endif
            enddo
         endif

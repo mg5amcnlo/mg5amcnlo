@@ -26,7 +26,7 @@ c     variable for keeping track of BWs
       logical isbw(n_max_cl)
       common/cl_isbw/nbw,isbw,ibwlist
 c     variable for LH output of clustering info (R,E,S,I)
-      integer icluster(4,nexternal)
+      integer icluster(4,nexternal, VECSIZE_MEMMAX)
       common/cl_iclus/icluster
 c     parameters for qcd jets
       double precision ptclus(nexternal)

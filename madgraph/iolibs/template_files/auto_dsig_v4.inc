@@ -151,7 +151,7 @@ C     Select a flavor combination (need to do here for right sign)
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
 	 
-         DSIGUU=DSIGUU*REWGT(PP)
+         DSIGUU=DSIGUU*REWGT(PP,1)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d,1)
@@ -328,7 +328,7 @@ C     Select a flavor combination (need to do here for right sign)
        channel = %(get_channel)s
 
 
-       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC))
+       ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
 
 	 if(frame_id.ne.6)then
            call boost_to_frame(ALL_PP(0,1,IVEC), frame_id, p_multi(0,1,IVEC))
@@ -362,7 +362,7 @@ c	 CM_RAP = ALL_CM_RAP(IVEC)
            P1 = ALL_PP(:,:,IVEC)
          endif
 C	 call restore_cl_val_to(ivec)
-c         DSIGUU=DSIGUU*REWGT(P1)
+c         DSIGUU=DSIGUU*REWGT(P1,ivec)
 	  DSIGUU=DSIGUU*ALL_RWGT(IVEC)
 
 C        Apply the bias weight specified in the run card (default is 1.0)

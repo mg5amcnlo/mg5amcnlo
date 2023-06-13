@@ -775,12 +775,12 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 
 c     Write out buffers for clustering info
       nclus=0
-      if(icluster(1,1).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
+      if(icluster(1,1,ivec).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
          nclus=nexternal
          write(buffclus(1),'(a)')'<clustering>'
          do i=1,nexternal-2
             write(buffclus(i+1),'(a13,f9.3,a2,4I3,a7)') '<clus scale="',
-     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i),j=1,4),'</clus>'
+     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i,ivec),j=1,4),'</clus>'
          enddo
          write(buffclus(nexternal),'(a)')'</clustering>'
       endif

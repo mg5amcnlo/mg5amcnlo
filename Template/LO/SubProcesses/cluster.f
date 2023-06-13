@@ -513,7 +513,7 @@ c     Check for common graphs
       end
 
 
-      logical function cluster(p)
+      logical function cluster(p, ivec)
 c**************************************************************************
 c     input:
 c            p(0:3,i)           momentum of i'th parton
@@ -528,6 +528,7 @@ c**************************************************************************
       include 'cluster.inc'
       include 'message.inc'
 
+      integer ivec
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)
       integer i, j, k, n, idi, idj, idij, icgs(0:n_max_cg)
@@ -546,7 +547,7 @@ c**************************************************************************
       double precision dj, pydj, djb, pyjb, dot, SumDot, zclus
       external dj, pydj, djb, pyjb, dot, SumDot, zclus, combid
       integer next4
-      parameter(next4=4*nexternal)
+      parameter(next4=4*nexternal*VECSIZE_MEMMAX)
       data icluster/next4*0/
 
       if (btest(mlevel,1))
@@ -651,9 +652,9 @@ c     Make sure that initial-state particles are daughters
          pt2ijcl(n)=pcl(4,imocl(n))
          zcl(n)=0.
 c        Set info for LH clustering output
-         icluster(1,n)=1
-         icluster(2,n)=3
-         icluster(3,n)=2
+         icluster(1,n,ivec)=1
+         icluster(2,n,ivec)=3
+         icluster(3,n,ivec)=2
          igraphs(0)=1
          igraphs(1)=this_config
          cluster=.true.
@@ -676,14 +677,14 @@ c     combine winner
      &           ' -> ',minpt2ij,', z = ',zcl(n)
          endif
 c        Set info for LH clustering output
-         icluster(1,n)=imap(iwin,1)
-         icluster(2,n)=imap(jwin,1)
-         icluster(3,n)=0
-         icluster(4,n)=0
+         icluster(1,n,ivec)=imap(iwin,1)
+         icluster(2,n,ivec)=imap(jwin,1)
+         icluster(3,n,ivec)=0
+         icluster(4,n,ivec)=0
          if (isbw(imocl(n))) then
             do i=1,nbw
                if(ibwlist(1,i).eq.imocl(n))then
-                  icluster(4,n)=ibwlist(2,i)
+                  icluster(4,n,ivec)=ibwlist(2,i)
                   exit
                endif
             enddo
@@ -706,7 +707,7 @@ c     Set mt2ij to m^2+pt^2
             endif
             iwinp=imap(3-iwin,2);
 c        Set partner info for LH clustering output
-            icluster(3,n)=imap(3-iwin,1)
+            icluster(3,n,ivec)=imap(3-iwin,1)
             do i=0,3
                pcl(i,imocl(n))=pcl(i,idacl(n,1))-pcl(i,idacl(n,2))
 c            enddo
@@ -788,10 +789,10 @@ c         Make sure that initial-state particle is always among daughters
 c            if(pcl(0,imocl(n)).gt.0d0)then
             pt2ijcl(n+1)=djb(pcl(0,imap(3,2)))
 c        Set info for LH clustering output
-            icluster(1,n+1)=1
-            icluster(2,n+1)=3
-            icluster(3,n+1)=2
-            icluster(4,n+1)=0
+            icluster(1,n+1,ivec)=1
+            icluster(2,n+1,ivec)=3
+            icluster(3,n+1,ivec)=2
+            icluster(4,n+1,ivec)=0
             if (btest(mlevel,3)) then
               write(*,*) 'Last vertex is ',imap(1,2),imap(2,2),imap(3,2)
               write(*,*) '            -> ',pt2ijcl(n+1),sqrt(pt2ijcl(n+1))
