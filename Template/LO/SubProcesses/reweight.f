@@ -1387,6 +1387,9 @@ c     ipart gives external particle number chain
       external isqcd,isjet,isparton,ispartonvx
       external alphas, isjetvx, getissud, pdg2pdf, xran1,  sudwgt
 
+      double precision all_scale(VECSIZE_MEMMAX)
+      common/to_scale_vec/all_scale
+      
       rewgt=1.0d0
       clustered=.false.
 
@@ -1532,7 +1535,11 @@ c   Perform alpha_s reweighting based on type of vertex
 c       scale for alpha_s reweighting
         q2now=pt2ijcl(n)
         if(n.eq.nexternal-2) then
-           q2now = scale**2
+           q2now = all_scale(ivec)**2
+           if (q2now.eq.0)then
+              q2now = scale**2
+           endif
+c           q2now = scale**2
         endif
         if (btest(mlevel,3)) then
           write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1),igraphs(1),iproc),
@@ -1839,6 +1846,9 @@ C      include 'maxparticles.inc'
 
       double precision alphas
       external alphas
+
+      double precision all_scale(VECSIZE_MEMMAX)
+      common/to_scale_vec/all_scale
       
 c     integer firsttime
 c      data firsttime/.true./
@@ -1850,7 +1860,10 @@ c      save firsttime
 
          if(.not.fixed_ren_scale) then
             call set_ren_scale(all_p(1,i),scale)
-            if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
+            if(scale.gt.0)then
+               G = SQRT(4d0*PI*ALPHAS(scale))
+               all_scale(i) = scale
+            endif
          endif
 
          if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
