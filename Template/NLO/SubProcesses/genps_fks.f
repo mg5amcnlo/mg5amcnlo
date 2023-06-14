@@ -1503,6 +1503,11 @@ c
       call generate_momenta_born(x,srec,dsqrt(srec),totmass,
      $      m,s,
      $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt,xjac)
+      write(*,*) 'MOMENTA BORN'
+      do i = 1, nexternal-1
+        write(*,*) i, p_born_l(:,i)
+      enddo
+      write(*,*) 'PASS', pass
 
       if (xjac.lt.0d0) then
         pass = .false.
@@ -1521,6 +1526,11 @@ C It will be employed to compute the multi-channel enhancement factor
            p_born_norad(0:3,i) = p_born_l(0:3,i)
          enddo
       endif
+
+      write(*,*) 'XPXP'
+      do i =1, nexternal
+      write(*,*)i,xp(:,i)
+      enddo
 
 C in the collinear limit, the momenta entering the collinear
 C  CT for initial-state splittings are different wrt the Born ones
@@ -1558,6 +1568,7 @@ c  Assign the masses; put i_fks mass equal to zero.
       enddo
 
 c All done, so check four-momentum conservation
+      write(*,*) 'XJAC', xjac
 
       if(xjac.gt.0.d0)then
          call phspncheck_nocms(nexternal,sqrtshat,m,xp,pass)
@@ -1568,6 +1579,7 @@ c All done, so check four-momentum conservation
       endif
 
       call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
+      write(*,*) 'XJAC2', xjac
 c      
  112  continue
 
@@ -1901,6 +1913,8 @@ c common blocks
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
 c local
       integer i,j,idir
       double precision yijdir,costh_i_fks,x1bar2,x2bar2,yij_sol,xi1,xi2
@@ -1909,6 +1923,7 @@ c local
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
      $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
+      double precision delta, x1p2b
 c external
 c
 c parameters
@@ -1986,8 +2001,7 @@ c
 c
 c Compute maximum allowed xi_i_fks
 C      xiimax=1-xmrec2/shat
-C MZ checked for single-top @NLO QCD
-      xiimax=1-tau_born_lower_bound/xbjrk_born(1)/xbjrk_born(2)
+      xiimax=1-tau_born
       xinorm=xiimax
 c
 c Define xi_i_fks
@@ -2035,12 +2049,21 @@ c singularity is performed when integrating over xi_i_hat
 c
 c Update the variables here.
 c
-      tau=tau_born
-      ycm=ycm_born
-      shat=shat_born
+      tau=tau_born/(1-xi_i_fks)
+      shat=shat_born/(1-xi_i_fks)
+      x1p2B = xbjrk_born(1) + xbjrk_born(2)
       sqrtshat=sqrt(shat)
-      xbjrk(1)=xbjrk_born(1)
-      xbjrk(2)=xbjrk_born(2)
+      delta = ((omx_ee(2) - xi_i_fks)**2 + omx_ee(1)**2*(-1 + omx_ee(2)*xi_i_fks)**2 - 
+     $    2*omx_ee(1)*(xi_i_fks + omx_ee(2)**2*xi_i_fks + omx_ee(2)*(1 - 4*xi_i_fks + xi_i_fks**2)))/(-1 + xi_i_fks)**2
+      if (xbjrk_born(1).lt.xbjrk_born(2)) then
+        xbjrk(1) = (x1p2b + (tau_born*xi_i_fks)/(1-xi_i_fks) - dsqrt(delta))/2d0
+        xbjrk(2) = (x1p2b + (tau_born*xi_i_fks)/(1-xi_i_fks) + dsqrt(delta))/2d0
+      else
+        xbjrk(2) = (x1p2b + (tau_born*xi_i_fks)/(1-xi_i_fks) - dsqrt(delta))/2d0
+        xbjrk(1) = (x1p2b + (tau_born*xi_i_fks)/(1-xi_i_fks) + dsqrt(delta))/2d0
+      endif
+      ! MZ improve numerical accuracy...
+      ycm= (dlog(xbjrk(1)) - dlog(xbjrk(2))) / 2d0
 
 C build the momentum of i_fks in the partonic com frame
 
@@ -4325,9 +4348,9 @@ C dressed lepton stuff
         stop 1
       endif
 
-      ! if tau is generated accodring to a BW, then force the momentum
-      ! mapping with event projection
-      use_evpr = generate_with_bw
+C      ! if tau is generated accodring to a BW, then force the momentum
+C      ! mapping with event projection
+      use_evpr = .false. !!!generate_with_bw
 
       if(generate_with_bw) then
         ! here we treat the case of resonances
