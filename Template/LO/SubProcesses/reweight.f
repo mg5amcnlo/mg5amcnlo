@@ -1525,7 +1525,7 @@ c        Set jet identities according to chosen subprocess
 c   
 c   Set strong coupling used
 c   
-      asref=G**2/(4d0*PI)
+      asref=all_G(ivec)**2/(4d0*PI)
 
 c   Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
