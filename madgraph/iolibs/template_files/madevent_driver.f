@@ -48,7 +48,8 @@ c     PARAM_CARD
 c
       character*30 param_card_name
       common/to_param_card_name/param_card_name
-cc
+c     c
+      include 'vector.inc'
       include 'run.inc'
       
       integer           mincfig, maxcfig
@@ -71,7 +72,6 @@ c      double precision xsec,xerr
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),ic
 c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 
-      include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       INTEGER VECSIZE_USED
       DATA VECSIZE_USED/VECSIZE_MEMMAX/ ! can be changed at runtime

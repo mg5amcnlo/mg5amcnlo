@@ -666,8 +666,9 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
+      include 'vector.inc'      ! defines VECSIZE_MEMMAX
       include 'run.inc'
-      include 'vector.inc' ! defines VECSIZE_MEMMAX
+
 c
 c     Arguments
 c

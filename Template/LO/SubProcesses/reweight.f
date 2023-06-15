@@ -24,7 +24,7 @@ c**************************************************
       include 'nexternal.inc'
       include 'message.inc'
       include 'maxamps.inc'
-c     include 'vector.inc' ! defines VECSIZE_MEMMAX
+c      include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'sudakov.inc'
       include 'maxparticles.inc'
@@ -205,6 +205,7 @@ c**************************************************
 
       include 'cuts.inc'
       include 'genps.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       integer ipdg, irfl
@@ -634,13 +635,13 @@ c     Variables for keeping track of jets
 
       if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.q2fact(2).gt.0.and.scale.gt.0) then
          if(use_syst)then
-            s_scale=scale
-            n_qcd=nqcd(iconfig)
-            n_alpsem=0
+            s_scale(ivec)=scale
+            n_qcd(ivec)=nqcd(iconfig)
+            n_alpsem(ivec)=0
             do i=1,2
-               n_pdfrw(i)=0
+               n_pdfrw(i,ivec)=0
             enddo
-            s_rwfact=1d0
+            s_rwfact(ivec)=1d0
          endif
       return
       endif
@@ -1251,13 +1252,13 @@ c     Store information for systematics studies
 c
 
       if(use_syst)then
-         s_scale=scale
-         n_qcd=nqcd(igraphs(1))
-         n_alpsem=0
+         s_scale(ivec)=scale
+         n_qcd(ivec)=nqcd(igraphs(1))
+         n_alpsem(ivec)=0
          do i=1,2
-            n_pdfrw(i)=0
+            n_pdfrw(i,ivec)=0
          enddo
-         s_rwfact=1d0
+         s_rwfact(ivec)=1d0
       endif
       return
       end
@@ -1272,6 +1273,7 @@ c***********************************************************
       include 'maxparticles.inc'
       include 'run_config.inc'
       include 'lhe_event_infos.inc'
+      include 'vector.inc'
       include 'run.inc'
 
       DOUBLE PRECISION P(0:3,NEXTERNAL)
@@ -1426,10 +1428,10 @@ c     Set incoming particle identities
 c     Store pdf information for systematics studies (initial)
          if(use_syst)then
             do j=1,2
-                n_pdfrw(j)=1
-                i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-                s_xpdf(1,j)=xbk(ib(j))
-                s_qpdf(1,j)=sqrt(q2fact(j))
+                n_pdfrw(j,ivec)=1
+                i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+                s_xpdf(1,j,ivec)=xbk(ib(j))
+                s_qpdf(1,j,ivec)=sqrt(q2fact(j))
             enddo
            endif
          asref=0 ! usefull for syscalc
@@ -1449,10 +1451,10 @@ c     Store pdf information for systematics studies (initial)
 c     need to be done after      setclscales since that one clean the syscalc value
       if(use_syst)then
          do j=1,2
-            n_pdfrw(j)=1
-            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-            s_xpdf(1,j)=xbk(ib(j))
-            s_qpdf(1,j)=sqrt(q2fact(j))
+            n_pdfrw(j,ivec)=1
+            i_pdgpdf(1,j,ivec)=ipdgcl(j,igraphs(1),iproc)
+            s_xpdf(1,j,ivec)=xbk(ib(j))
+            s_qpdf(1,j,ivec)=sqrt(q2fact(j))
          enddo
       endif
 
@@ -1569,8 +1571,8 @@ c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
 c             Store information for systematics studies
               if(use_syst)then
-                 n_alpsem=n_alpsem+1
-                 s_qalps(n_alpsem)=sqrt(q2now)
+                 n_alpsem(ivec)=n_alpsem(ivec)+1
+                 s_qalps(n_alpsem(ivec),ivec)=sqrt(q2now)
               endif
               if (btest(mlevel,3)) then
                  write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1),iproc),
@@ -1681,14 +1683,14 @@ c                          Scale too low for heavy quark
                         rewgt=rewgt*pdfj1/pdfj2
 c     Store information for systematics studies
                         if(use_syst)then
-                           n_pdfrw(j)=n_pdfrw(j)+1
-                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
+                           n_pdfrw(j,ivec)=n_pdfrw(j,ivec)+1
+                           i_pdgpdf(n_pdfrw(j,ivec),j,ivec)=ipdgcl(idacl(n,i),igraphs(1),iproc)
                            if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
-                              s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
+                              s_xpdf(n_pdfrw(j,ivec),j,ivec)=xnow(j)/zcl(n)
                            else
-                              s_xpdf(n_pdfrw(j),j)=xnow(j) 
+                              s_xpdf(n_pdfrw(j,ivec),j,ivec)=xnow(j) 
                            endif
-                           s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
+                           s_qpdf(n_pdfrw(j,ivec),j,ivec)=sqrt(q2now)
                         endif
                         if (btest(mlevel,3)) then
                            write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1),iproc),' by pdfs: '
@@ -1769,19 +1771,19 @@ c           fs sudakov weight
 
 c     Set reweight factor for systematics studies
       if(use_syst)then
-         s_rwfact = rewgt
+         s_rwfact(ivec) = rewgt
          
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
             if (lpp(IB(i)).ne.0) then
-                s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
-     $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),IB(i),
-     $           s_xpdf(1,i),s_qpdf(1,i))
+                s_rwfact(ivec)=s_rwfact(ivec)*pdg2pdf(abs(lpp(IB(i))),
+     $           i_pdgpdf(1,i,ivec)*sign(1,lpp(IB(i))),IB(i),
+     $           s_xpdf(1,i,ivec),s_qpdf(1,i,ivec))
             endif
          enddo
-         if (asref.gt.0d0.and.n_qcd.le.nexternal)then
-            s_rwfact=s_rwfact*asref**n_qcd
+         if (asref.gt.0d0.and.n_qcd(ivec).le.nexternal)then
+            s_rwfact(ivec)=s_rwfact(ivec)*asref**n_qcd(ivec)
 c         else
 c            s_rwfact=0d0
          endif
@@ -1800,11 +1802,12 @@ C
       parameter( PI = 3.14159265358979323846d0 )
       
       include 'genps.inc'
-      include 'run.inc'
+
       include 'nexternal.inc'
       include 'maxamps.inc'
 c     include 'vector.inc' ! defines VECSIZE_MEMMAX
-      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'cluster.inc'     ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 C      include 'maxparticles.inc'
       
@@ -1829,11 +1832,11 @@ C
       parameter( PI = 3.14159265358979323846d0 )
       
       include 'genps.inc'
-      include 'run.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
 c     include 'vector.inc' ! defines VECSIZE_MEMMAX
-      include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'cluster.inc'     ! includes vector.inc that defines VECSIZE_MEMMAX
+      include 'run.inc'
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 C      include 'maxparticles.inc'
       

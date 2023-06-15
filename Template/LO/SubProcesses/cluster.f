@@ -522,12 +522,11 @@ c            true if tree structure identified
 c**************************************************************************
       implicit none
       include 'genps.inc'
-      include 'run.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'
       include 'cluster.inc'
       include 'message.inc'
-
+      include 'run.inc'
       integer ivec
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)

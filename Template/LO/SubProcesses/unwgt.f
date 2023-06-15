@@ -34,8 +34,8 @@ C
       common/to_xpoints/tx, nzoom
       double precision xzoomfact
       common/to_zoom/  xzoomfact
+      include 'vector.inc'      ! defines VECSIZE_MEMMAX
       include 'run.inc'
-      include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 c
 c     DATA
@@ -716,12 +716,12 @@ c         print *,'i_pdgpdf: ',((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          s_buff(1) = '<mgrwt>'
-         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd-n_alpsem,
-     $        s_scale,'</rscale>'
-         if(n_alpsem.gt.0) then
-            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem,'E15.8,a)'
-            write(s_buff(3), cfmt) '<asrwt>',n_alpsem,
-     $           (s_qalps(I),I=1,n_alpsem) ,'</asrwt>'
+         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd(ivec)-n_alpsem(ivec),
+     $        s_scale(ivec),'</rscale>'
+         if(n_alpsem(ivec).gt.0) then
+            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem(ivec),'E15.8,a)'
+            write(s_buff(3), cfmt) '<asrwt>',n_alpsem(ivec),
+     $           (s_qalps(I,ivec),I=1,n_alpsem(ivec)) ,'</asrwt>'
          else
             write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
          endif
@@ -730,19 +730,19 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
             beam_number =2
          endif
          
-         if(n_pdfrw(1).gt.0.and.abs(lpp(1)).ne.2)then
-            if(2*n_pdfrw(1).lt.10) then
+         if(n_pdfrw(1,ivec).gt.0.and.abs(lpp(1)).ne.2)then
+            if(2*n_pdfrw(1,ivec).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+     $              n_pdfrw(1,ivec),'I9,',2*n_pdfrw(1,ivec),'E15.8,a)'
             else
                write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+     $              n_pdfrw(1,ivec),'I9,',2*n_pdfrw(1,ivec),'E15.8,a)'
             endif
             
             write(s_buff(4), cfmt) '<pdfrwt beam="', beam_number, '">',
-     $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
-     $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
-     $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
+     $           n_pdfrw(1,ivec),(i_pdgpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
+     $           (s_xpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
+     $           (s_qpdf(i,1,ivec),i=1,n_pdfrw(1,ivec)),
      $           '</pdfrwt>'
          else
             write(s_buff(4), '(a,I1,a)') '<pdfrwt beam="',
@@ -752,23 +752,23 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
          if (flip) then
             beam_number	= 1
          endif
-         if(n_pdfrw(2).gt.0.and.abs(lpp(2)).ne.2)then
-            if(2*n_pdfrw(2).lt.10) then
+         if(n_pdfrw(2,ivec).gt.0.and.abs(lpp(2)).ne.2)then
+            if(2*n_pdfrw(2,ivec).lt.10) then
                write(cfmt,'(a,I1,a,I1,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+     $              n_pdfrw(2,ivec),'I9,',2*n_pdfrw(2,ivec),'E15.8,a)'
             else
                write(cfmt,'(a,I1,a,I2,a)') '(a,I1,a,I3,',
-     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+     $              n_pdfrw(2,ivec),'I9,',2*n_pdfrw(2,ivec),'E15.8,a)'
             endif
             write(s_buff(5), cfmt) '<pdfrwt beam="',beam_number,'">',
-     $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
-     $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
-     $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
+     $           n_pdfrw(2,ivec),(i_pdgpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
+     $           (s_xpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
+     $           (s_qpdf(i,2,ivec),i=1,n_pdfrw(2,ivec)),
      $           '</pdfrwt>'
          else
             write(s_buff(5), '(a)') '<pdfrwt beam="2">0</pdfrwt>'
          endif
-         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact,
+         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact(ivec),
      $        '</totfact>'
          s_buff(7) = '</mgrwt>'
       endif

@@ -14,6 +14,7 @@ c
       include 'maxamps.inc'
       include 'nexternal.inc'
       include 'cuts.inc'
+      include '../../Source/vector.inc'
       include '../../Source/run.inc'
       
       double precision ZERO
@@ -38,7 +39,6 @@ c
 c
 c     Global
 c
-      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       logical gridpack
       common/to_gridpack/gridpack

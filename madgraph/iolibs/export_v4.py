@@ -7585,7 +7585,13 @@ C
                          )
 
 
-        if self.opt['export_format'] in ['madevent', 'madloop_optimized']:
+        if self.opt['export_format'] in ['madevent']:
+            fsock.writelines("""
+                            include \'../maxparticles.inc\'
+                            include \'../cuts.inc\'
+                            include \'../vector.inc\'
+                            include \'../run.inc\'""")        
+        elif self.opt['export_format'] in  ['madloop_optimized']:
             fsock.writelines("""
                             include \'../maxparticles.inc\'
                             include \'../cuts.inc\'
@@ -7601,7 +7607,6 @@ C
                             """)
 
         fsock.writelines("""include \'input.inc\'
-                            include \'../vector.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    

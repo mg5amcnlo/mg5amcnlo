@@ -69,9 +69,10 @@ C
 C
 C     GLOBAL
 C
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'cuts.inc'
-      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+
       
       double precision ptjet(nexternal)
       double precision ptheavyjet(nexternal)

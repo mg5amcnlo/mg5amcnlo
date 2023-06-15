@@ -55,6 +55,7 @@ c     TODO: MOVE THIS AS A COMMON BLOCK?
       INTEGER LMAPPED
 
       Double Precision DSIGPROC
+      include 'vector.inc'
       include 'run.inc'
 C     To limit the number of calls to switchmom, use in DSIGPROC the
 C      cached variable last_iconfig. It is in this subroutine as well
@@ -168,6 +169,7 @@ c
       INTEGER GROUPED_MC_GRID_STATUS
       REAL*8 MC_GROUPED_PROC_JACOBIAN
       INTEGER LMAPPED
+      include 'vector.inc'
       include 'run.inc'
 C     Perform the selection
       CALL RANMAR(R)
