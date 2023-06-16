@@ -434,7 +434,7 @@ def multiple_try(nb_try=5, sleep=20):
 
             if __debug__:
                 raise
-            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, error))
+            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, my_error))
         return deco_f_retry
     return deco_retry
 

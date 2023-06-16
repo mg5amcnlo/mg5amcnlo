@@ -2548,6 +2548,8 @@ class ControlSwitch(SmartQuestion):
             return getattr(self, 'check_value_%s' % key)(value)
         elif value in self.get_allowed(key):
             return True
+        elif not self.get_allowed(key) and value == "OFF":
+            return True
         else:
             return False
         

@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.5.0.beta (12/05/23)
+
+3.5.0 (12/05/23)
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
 	      NNL-accurate parton distributions for lepton collisions are provied by eMELA 
@@ -124,6 +125,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
 
 2.9.15 (12/05/23)
      OM: Fix a bug where the number of core sed was higher than requested

@@ -3112,13 +3112,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
         # Bypass initialization information
-        MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
+        try:
+            MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
                 loglevel=100,
                 forced=True,
                 compilation=True)
+        except SystemExit as error:
+            return
+        except Exception as error:
+            logger.warning("MA5 fails with: \n %s", error)
+            return
 
 
         # If failed to start MA5, then just leave
