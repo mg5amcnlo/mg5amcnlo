@@ -31,6 +31,10 @@ pdfcode      = 1     # 0 = internal, 1 = same as NLO, other = lhaglue
 ue_enabled   = F      # underlying event
 hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
 lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
+qed_shower   = T      # T = enable QED shower for Q and L !ONLY FOR PYTHIA8!
+primordialkt = F      # T = enable primordial parton k_T  !ONLY FOR PYTHIA8!
+tune_ee      = 7      # pythia8 tune for ee beams !ONLY FOR PYTHIA8!
+tune_pp      = 14     # pythia8 tune for pp beams !ONLY FOR PYTHIA8!
 #***********************************************************************
 # Stable or unstable particles                                         *
 #***********************************************************************

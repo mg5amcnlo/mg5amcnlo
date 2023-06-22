@@ -45,11 +45,12 @@ class ShowerCard(dict):
     false = ['.false.', 'f', 'false', '0']
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
-                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td']
+                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td', 
+                    'qed_shower', 'primordialkt']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         string_vars.append('dm_'+str(i))
-    int_vars = ['nsplit_jobs', 'maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax']
+    int_vars = ['nsplit_jobs', 'maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax','tune_ee','tune_pp']
     float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
     # names_dict has the following structure:
@@ -62,6 +63,10 @@ class ShowerCard(dict):
             'pdfcode' : {'HERWIG6':'pdfcode', 'PYTHIA6': 'pdfcode', 'HERWIGPP': 'pdfcode', 'PYTHIA8': 'pdfcode'},
             'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents', 'PYTHIA8': 'nevents'},
             'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp', 'PYTHIA8': 'hadronize_py8'},
+            'primordialkt' : {'PYTHIA8':'primordialkt'},
+            'qed_shower'   : {'PYTHIA8':'qed_shower'},
+            'tune_ee'  : {'PYTHIA8':'tune_ee'},
+            'tune_pp'  : {'PYTHIA8':'tune_pp'},
             'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp', 'PYTHIA8': 'b_stable_py8'},
             'pi_stable' : {'HERWIG6':'pi_stable_hw', 'PYTHIA6': 'pi_stable_py', 'HERWIGPP': 'pi_stable_hwpp', 'PYTHIA8': 'pi_stable_py8'},
             'wp_stable' : {'HERWIG6':'wp_stable_hw', 'PYTHIA6': 'wp_stable_py', 'HERWIGPP': 'wp_stable_hwpp', 'PYTHIA8': 'wp_stable_py8'},
