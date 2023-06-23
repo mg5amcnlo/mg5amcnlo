@@ -57,33 +57,7 @@ class ShowerCard(banner.RunCard):
     # where varpy, varhw6 and varhwpp are mc_dependent names
     # if a mc is not there, that variable is not supposed to be
     # used / written for thar mc
-    names_dict = {\
-            'ue_enabled' : {'HERWIG6':'lhsoft', 'PYTHIA6': 'mstp_81', 'HERWIGPP': 'ue_hwpp', 'PYTHIA8': 'ue_py8'},
-            'pdfcode' : {'HERWIG6':'pdfcode', 'PYTHIA6': 'pdfcode', 'HERWIGPP': 'pdfcode', 'PYTHIA8': 'pdfcode'},
-            'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents', 'PYTHIA8': 'nevents'},
-            'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp', 'PYTHIA8': 'hadronize_py8'},
-            'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp', 'PYTHIA8': 'b_stable_py8'},
-            'pi_stable' : {'HERWIG6':'pi_stable_hw', 'PYTHIA6': 'pi_stable_py', 'HERWIGPP': 'pi_stable_hwpp', 'PYTHIA8': 'pi_stable_py8'},
-            'wp_stable' : {'HERWIG6':'wp_stable_hw', 'PYTHIA6': 'wp_stable_py', 'HERWIGPP': 'wp_stable_hwpp', 'PYTHIA8': 'wp_stable_py8'},
-            'wm_stable' : {'HERWIG6':'wm_stable_hw', 'PYTHIA6': 'wm_stable_py', 'HERWIGPP': 'wm_stable_hwpp', 'PYTHIA8': 'wm_stable_py8'},
-            'z_stable' : {'HERWIG6':'z_stable_hw', 'PYTHIA6': 'z_stable_py', 'HERWIGPP': 'z_stable_hwpp', 'PYTHIA8': 'z_stable_py8'},
-            'h_stable' : {'HERWIG6':'h_stable_hw', 'PYTHIA6': 'h_stable_py', 'HERWIGPP': 'h_stable_hwpp', 'PYTHIA8': 'h_stable_py8'},
-            'tap_stable' : {'HERWIG6':'taup_stable_hw', 'PYTHIA6': 'taup_stable_py', 'HERWIGPP': 'taup_stable_hwpp', 'PYTHIA8': 'taup_stable_py8'},
-            'tam_stable' : {'HERWIG6':'taum_stable_hw', 'PYTHIA6': 'taum_stable_py', 'HERWIGPP': 'taum_stable_hwpp', 'PYTHIA8': 'taum_stable_py8'},
-            'mup_stable' : {'HERWIG6':'mup_stable_hw', 'PYTHIA6': 'mup_stable_py', 'HERWIGPP': 'mup_stable_hwpp', 'PYTHIA8': 'mup_stable_py8'},
-            'mum_stable' : {'HERWIG6':'mum_stable_hw', 'PYTHIA6': 'mum_stable_py', 'HERWIGPP': 'mum_stable_hwpp', 'PYTHIA8': 'mum_stable_py8'},
-            'is_4lep' : {'PYTHIA6':'is_4l_py'},
-            'is_bbar' : {'HERWIG6':'is_bb_hw'},
-            'maxprint' : {'HERWIG6':'maxpr_hw', 'PYTHIA6': 'maxpr_py', 'HERWIGPP': 'maxpr_hwpp', 'PYTHIA8': 'maxpr_py8'},
-            'rnd_seed' : {'HERWIG6':'rndevseed1_hw', 'PYTHIA6': 'rndevseed_py', 'HERWIGPP': 'rndevseed_hwpp', 'PYTHIA8': 'rndevseed_py8'},
-            'rnd_seed2' : {'HERWIG6':'rndevseed2_hw'},
-            'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp', 'PYTHIA8': 'err_fr_py8'},
-            'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth', 'HERWIGPP': 'lambdaherw', 'PYTHIA8': 'lambdapyth'},
-            'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass', 'PYTHIA8': 'b_mass'},
-            'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'},
-            'qcut' : {'PYTHIA8':'qcut'},
-            'njmax' : {'PYTHIA8':'njmax'}}
-    
+    names_dict = {}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
     def __new__(cls, *args, **opts):
@@ -98,41 +72,112 @@ class ShowerCard(banner.RunCard):
         super().__init__(card)
         
 
+    def add_param(self, name, *args, 
+                  py8='', py6='', hw6='', hwpp='',
+                  all_sh=None, sh_postfix=False,**opts):
+        
+        if all_sh:
+            if py8 is not None and not py8:
+                py8 = all_sh
+                if sh_postfix:
+                    py8 = py8 + "_py8"
+            if py6 is not None and not py6:
+                py6 = all_sh
+                if sh_postfix:
+                    py6 = py6 + "_py"
+            if hw6 is not None and not hw6:
+                hw6 = all_sh
+                if sh_postfix:
+                    hw6 = hw6 + "_hw"
+            if hwpp is not None and not hwpp:
+                hwpp = all_sh
+                if sh_postfix:
+                    hwpp = hwpp + "_hwpp"
+
+        name = name.lower()
+        self.names_dict[name] = {}
+        if py8:
+            self.names_dict[name]['PYTHIA8'] = py8
+        if py6:
+            self.names_dict[name]['PYTHIA6'] = py6
+        if hw6:
+            self.names_dict[name]['HERWIG6'] = hw6
+        if hwpp:
+            self.names_dict[name]['HERWIGPP'] = hwpp
+
+        super().add_param(name,*args, **opts)
+
+    def check_support(self, name, shower):
+        return shower in self.names_dict[name.lower()]
+
+
     def default_setup(self):
         """default value for all the parameters"""
 
         # Number of events, jobs, errors, and random seeds   
-        self.add_param("nevents", -1, comment="N evts to shower (< 0 = all)")
+        self.add_param("nevents", -1, comment="N evts to shower (< 0 = all)",
+                       all_sh='nevents')
         self.add_param("nsplit_jobs", 1, comment="N jobs to run in parallel (< 100!!)")
         self.add_param("combine_td", True, comment="combine the topdrawer/HwU files if nsplit_jobs>1")
-        self.add_param("maxprint", 2, comment="N evts to print in the log")
-        self.add_param("maxerrs", 0.1, comment="max fraction of errors")
-        self.add_param("rnd_seed", 0)
-        self.add_param("rnd_seed2", 0, comment="2nd random seed (0 = default) !ONLY FOR HWERIG6!")
+        self.add_param("maxprint", 2, comment="N evts to print in the log",
+                       all_sh='maxpr', sh_postfix=True)
+        self.add_param("maxerrs", 0.1, comment="max fraction of errors",
+                       all_sh="err_fr", sh_postfix=True)
+        self.add_param("rnd_seed", 0,
+                       all_sh='rndevseed', sh_postfix=True, hw6='rndevseed1_hw')
+        self.add_param("rnd_seed2", 0, comment="2nd random seed (0 = default) !ONLY FOR HWERIG6!",
+                       hw6='rndevseed2_hw')
+
+
         # PDFs and non-perturbative modelling 
-        self.add_param("pdfcode", 1, comment="0 = internal, 1 = same as NLO, other = lhaglue")
-        self.add_param("ue_enabled", False, comment="underlying event")
-        self.add_param("hadronize", True, comment=" hadronisation on/off        !IGNORED BY HERWIG6!")
-        self.add_param("lambda_5", -1., comment="Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!")
+        self.add_param("pdfcode", 1, comment="0 = internal, 1 = same as NLO, other = lhaglue",
+                       all_sh='pdfcode')
+        self.add_param("ue_enabled", False, comment="underlying event",
+                       hw6='lhsoft', py6='mstp_81', hwpp='ue_hwpp', py8='ue_py8')
+        self.add_param("hadronize", True, comment=" hadronisation on/off        !IGNORED BY HERWIG6!",
+                       py6='mstp_111', hwpp='hadronize_hwpp', py8='hadronize_py8')
+        self.add_param("lambda_5", -1., comment="Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!",
+                       hw6='lambdaherw', hwpp='lambdaherw',
+                       py6='lambdapyth', py8='lambdapyth')
+
+
+
         # Stable or unstable particles
-        self.add_param("b_stable", False, comment="set B hadrons stable")
-        self.add_param("pi_stable",  True, comment="set pi0's stable")
-        self.add_param("wp_stable",  False, comment="set w+'s stable")
-        self.add_param("wm_stable", False, comment="set w-'s stable")
-        self.add_param("z_stable",  False, comment="set z0's stable")
-        self.add_param("h_stable",  False, comment="set Higgs' stable")
-        self.add_param("tap_stable",  False, comment="set tau+'s stable")
-        self.add_param("tam_stable",  False, comment="set tau-'s stable")
-        self.add_param("mup_stable",  False, comment="set mu+'s stable")
-        self.add_param("mum_stable",  False, comment="set mu-'s stable")
+        self.add_param("b_stable", False, comment="set B hadrons stable",
+                       all_sh='b_stable', sh_postfix=True)
+        self.add_param("pi_stable",  True, comment="set pi0's stable",
+                       all_sh='pi_stable', sh_postfix=True)
+        self.add_param("wp_stable",  False, comment="set w+'s stable",
+                       all_sh='wp_stable', sh_postfix=True)
+        self.add_param("wm_stable", False, comment="set w-'s stable",
+                       all_sh='wm_stable', sh_postfix=True)
+        self.add_param("z_stable",  False, comment="set z0's stable",
+                       all_sh='z_stable', sh_postfix=True)
+        self.add_param("h_stable",  False, comment="set Higgs' stable",
+                       all_sh='h_stable', sh_postfix=True)
+        self.add_param("tap_stable",  False, comment="set tau+'s stable",
+                       all_sh='taup_stable', sh_postfix=True)
+        self.add_param("tam_stable",  False, comment="set tau-'s stable",
+                       all_sh='taum_stable', sh_postfix=True)
+        self.add_param("mup_stable",  False, comment="set mu+'s stable",
+                       all_sh='mup_stable', sh_postfix=True)
+        self.add_param("mum_stable",  False, comment="set mu-'s stable",
+                       all_sh='mum_stable', sh_postfix=True)
         # Mass of the b quark
-        self.add_param("b_mass", -1., comment="# if < 0 = read from SubProcesses/MCmasses_*.inc")
+        self.add_param("b_mass", -1., comment="# if < 0 = read from SubProcesses/MCmasses_*.inc",
+                       all_sh='b_mass')
         # Special settings
-        self.add_param("is_4lep", False, comment="T if 4-lepton production      !ONLY FOR PYTHIA6!")
-        self.add_param("is_bbar", False, comment="T if bb~ production           !ONLY FOR HERWIG6!")
+        self.add_param("is_4lep", False, comment="T if 4-lepton production      !ONLY FOR PYTHIA6!",
+                       py6='is_4l_py')
+        self.add_param("is_bbar", False, comment="T if bb~ production           !ONLY FOR HERWIG6!",
+                       hw6='is_bb_hw')
+
+
         # FxFx merging parameters 
-        self.add_param("Qcut",  -1.0, comment="Merging scale")
-        self.add_param("njmax", -1, comment="Maximal multiplicity in the merging. -1 means guessed  from the process definition")
+        self.add_param("Qcut",  -1.0, comment="Merging scale", 
+                       py8='qcut')
+        self.add_param("njmax", -1, comment="Maximal multiplicity in the merging. -1 means guessed  from the process definition",
+                       py8='njmax')
 
         # DECAY
         for i in range(1, 100):
@@ -142,13 +187,18 @@ class ShowerCard(banner.RunCard):
         self.add_param("EXTRALIBS", "stdhep Fmcfio", comment="Extra-libraries (not LHAPDF)")
         self.add_param("EXTRAPATHS", "../lib", comment="Path to the extra-libraries")
         self.add_param("INCLUDEPATHS", "", comment="Path to header files needed by c++. Dir names separated by white spaces")
-        self.add_param("ANALYSE", "", comment="User's analysis and histogramming routines; HwU.o should be linked first")
+        self.add_param("ANALYSE", "", comment="User's analysis and histogramming routines; HwU.o should be linked first",
+                       hw6='hwuti', hwpp='hwpputi',py6='pyuti', py8='py8uti')
 
         # Pythia8 specific
-        self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!")
-        self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!")
-        self.add_param("tune_ee", 7, comment="pythia8 tune for ee beams !ONLY FOR PYTHIA8!")
-        self.add_param("tune_pp", 14, comment="pythia8 tune for pp beams !ONLY FOR PYTHIA8!")
+        #self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!",
+        #               py8='qed_shower')
+        #self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
+        #               py8='primordialkt')
+        #self.add_param("tune_ee", 7, comment="pythia8 tune for ee beams !ONLY FOR PYTHIA8!",
+        #               py8="tune_ee")
+        #self.add_param("tune_pp", 14, comment="pythia8 tune for pp beams !ONLY FOR PYTHIA8!",
+        #               py8="tune_pp")
         #self.add_param("pythia8_options", {'__type__':""}, comment="specify (as dictionary) additional parameters that you want to setup within the pythia8 program")
 
 
@@ -253,6 +303,7 @@ class ShowerCard(banner.RunCard):
         
         for key in self:
             value = self[key]
+            key = key.lower()
             if isinstance(value, bool): 
                 # deal with special case for pythia:
                 if key in ['ue_enabled', 'hadronize'] and self.shower == 'PYTHIA6':
@@ -273,10 +324,10 @@ class ShowerCard(banner.RunCard):
                         lines.append(line)
                         continue
                     except KeyError as error:
-                        misc.sprint(error)
+                        misc.sprint(key,error)
                         continue
                     
-                elif key.startswith('DM_') and not value:
+                elif key.startswith('dm_') and not value:
                     continue
                 if value is None or not value:
                     value = ''
