@@ -69,6 +69,7 @@ class ShowerCard(banner.RunCard):
     def __init__(self, card=None, testing=False):
         """ if testing, card is the content"""
         self.testing = testing
+        self.text = None
         super().__init__(card)
         
 
@@ -251,42 +252,69 @@ class ShowerCard(banner.RunCard):
         #then update self.text and write the new card
         if write_to:
             logger.info('modify parameter %s of the shower_card.dat to %s' % (key, value))
-            key_re = re.compile('^(\s*)%s\s*=\s*(.+)\s*$' % key , re.IGNORECASE)
-            newlines = []
-            for line in self.text.split('\n'):
-                key_match = key_re.match(line)
-                if key_match and not ( str(key).upper().startswith('DM') ):
-                    try:
-                        comment = line.split('#')[1]
-                    except:
-                        comment = ''
-                    if not isinstance(self[key], bool):
-                        newlines.append('%s = %s #%s' % (key, value, comment))
-                    else:
-                        if self[key]:
-                            newlines.append('%s = %s #%s' % (key, 'T', comment))
-                        else:
-                            newlines.append('%s = %s #%s' % (key, 'F', comment))
-                elif key_match and ( str(key).upper().startswith('DM') ):
-                    pass
-                else:
-                    newlines.append(line)
-
-            if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
-                newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
-                logger.info('please specify a decay through set DM_1 decay; see shower_card.dat for details')
-                
-            self.text = '\n'.join(newlines) + '\n'
-
             if self.testing:
+                self.write(None)
                 return self.text
             else:
-                open(write_to, 'w').write(self.text)
+                self.write(write_to)
                 return ''
         else:
             return ''
 
+    def write(self, output_file, template=None, python_template=False,
+                    write_hidden=False, template_options=None, **opt):
+        """Write the shower_card in output_file according to template 
+           (a path to a valid shower_card)"""
+        
 
+        to_write = set(self.user_set)
+
+        if not self.text:
+            self.text = open(template,'r').read()
+
+
+        key_re = re.compile('^(\s*)([\S^#]+)(\s*)=(\s*)([^#]*?)(\s*)(\#.*|$)')
+        newlines = []
+        for line in self.text.split('\n'):
+            key_match = key_re.findall(line)
+            if key_match:
+
+                (s1, key, s2,s3, old_value,s4, comment) = key_match[0]
+                if len(s3) == 0:
+                    s3 = " "
+                try:
+                    to_write.remove(key.lower())
+                except:
+                    pass
+
+                if ( str(key).upper().startswith('DM') ) and self[key] in ['','none','default']:
+                    continue
+                value = self[key]
+                if isinstance(value, bool):
+                    if value:
+                        value = 'T'
+                    else:
+                        value = 'F'
+                # comment startswith "#" if not empty
+                newlines.append('%s%s%s=%s%s %s' % (s1,key,s2,s3,value,comment))
+            else:
+                newlines.append(line)
+                
+            for key in to_write:
+                newlines.append(' %s = %s #%s' % (key,self[key],self.comments[key]))
+
+        self.text = '\n'.join(newlines) + '\n'
+        if isinstance(output_file, str):
+            fsock = open(output_file,'w')
+            fsock.write(self.text)
+            fsock.close()
+        elif output_file is None:
+            return
+        else:
+            output_file.write(self.text)
+
+    def create_default_for_process(self, *args, **opts):
+        pass # will be usefull later on
 
     def write_card(self, shower, card_path):
         """write the shower_card for shower in card_path.

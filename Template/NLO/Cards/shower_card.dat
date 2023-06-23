@@ -17,47 +17,47 @@
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
-nevents      = -1     # N evts to shower (< 0 = all)
-nsplit_jobs  = 1      # N jobs to run in parallel (< 100!!)
-combine_td   = T      # combine the topdrawer/HwU files if nsplit_jobs>1
-maxprint     = 2      # N evts to print in the log
-maxerrs      = 0.1    # max fraction of errors
-rnd_seed     = 0      # 1st random seed (0 = default)
-rnd_seed2    = 0      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
+nevents      = XXX     # N evts to shower (< 0 = all)
+nsplit_jobs  = XXX      # N jobs to run in parallel (< 100!!)
+combine_td   = XXX      # combine the topdrawer/HwU files if nsplit_jobs>1
+maxprint     = XXX      # N evts to print in the log
+maxerrs      = XXX    # max fraction of errors
+rnd_seed     = XXX      # 1st random seed (0 = default)
+rnd_seed2    = XXX      # 2nd random seed (0 = default) !ONLY FOR HWERIG6!
 #***********************************************************************
 # PDFs and non-perturbative modelling                                  *
 #***********************************************************************
-pdfcode      = 1     # 0 = internal, 1 = same as NLO, other = lhaglue
-ue_enabled   = F      # underlying event
-hadronize    = T      # hadronisation on/off        !IGNORED BY HERWIG6!
-lambda_5     = -1     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
+pdfcode      = XXX     # 0 = internal, 1 = same as NLO, other = lhaglue
+ue_enabled   = XXX      # underlying event
+hadronize    = XXX      # hadronisation on/off        !IGNORED BY HERWIG6!
+lambda_5     = XXX     # Lambda_5 (< 0 = default)    !IGNORED BY PYTHIA8!
 #***********************************************************************
 # Stable or unstable particles                                         *
 #***********************************************************************
-b_stable     = F      # set B hadrons stable
-pi_stable    = T      # set pi0's stable
-wp_stable    = F      # set w+'s stable
-wm_stable    = F      # set w-'s stable
-z_stable     = F      # set z0's stable
-h_stable     = F      # set Higgs' stable
-tap_stable   = F      # set tau+'s stable
-tam_stable   = F      # set tau-'s stable
-mup_stable   = F      # set mu+'s stable
-mum_stable   = F      # set mu-'s stable
+b_stable     = XXX      # set B hadrons stable
+pi_stable    = XXX      # set pi0's stable
+wp_stable    = XXX      # set w+'s stable
+wm_stable    = XXX      # set w-'s stable
+z_stable     = XXX      # set z0's stable
+h_stable     = XXX      # set Higgs' stable
+tap_stable   = XXX      # set tau+'s stable
+tam_stable   = XXX      # set tau-'s stable
+mup_stable   = XXX      # set mu+'s stable
+mum_stable   = XXX      # set mu-'s stable
 #***********************************************************************
 # Mass of the b quark                                                  *
 #***********************************************************************
-b_mass       = -1     # if < 0 = read from SubProcesses/MCmasses_*.inc
+b_mass       = XXX     # if < 0 = read from SubProcesses/MCmasses_*.inc
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
-is_4lep      = F      # T if 4-lepton production      !ONLY FOR PYTHIA6!
-is_bbar      = F      # T if bb~ production           !ONLY FOR HERWIG6!
+is_4lep      = XXX      # T if 4-lepton production      !ONLY FOR PYTHIA6!
+is_bbar      = XXX      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
 # FxFx merging parameters                             !ONLY FOR PYTHIA8!
 #***********************************************************************
-Qcut       = -1.0     # Merging scale
-njmax      = -1       # Maximal multiplicity in the merging.
+Qcut       = XXX     # Merging scale
+njmax      = XXX       # Maximal multiplicity in the merging.
 #                     # -1 means guessed  from the process definition
 #***********************************************************************
 # Decay channels                                                       *
@@ -119,14 +119,14 @@ njmax      = -1       # Maximal multiplicity in the merging.
 # Remember that if your analysis uses hbook or is in the HwU format,   *
 # you must also add to hbook.o or HwU.o to the ANALYSE list as well.   *
 #***********************************************************************
-EXTRALIBS    = stdhep Fmcfio     # Extra-libraries (not LHAPDF) 
+EXTRALIBS    = XXX     # Extra-libraries (not LHAPDF) 
                                  # Default: "stdhep Fmcfio"
                                  # PYTHIA > 8.200 may require library dl
-EXTRAPATHS   = ../lib            # Path to the extra-libraries
+EXTRAPATHS   = XXX            # Path to the extra-libraries
                                  # Default: "../lib"
-INCLUDEPATHS =                   # Path to header files needed by c++
+INCLUDEPATHS = XXX                  # Path to header files needed by c++
                                  # Dir names separated by white spaces
-ANALYSE      =                   # User's analysis and histogramming
+ANALYSE      = XXX                  # User's analysis and histogramming
                                  # routines (please use .o as extension
                                  # and use spaces to separate files).
                                  # If the HwU.o files has to be linked,

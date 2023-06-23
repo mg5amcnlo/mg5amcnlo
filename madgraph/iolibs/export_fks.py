@@ -44,6 +44,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.various.q_polynomial as q_polynomial
 import madgraph.various.banner as banner_mod
+import madgraph.various.shower_card as shower_mod
 
 import aloha.create_aloha as create_aloha
 
@@ -167,8 +168,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         calls = self.write_make_opts(writers.MakefileWriter(filename),
                                                         link_tir_libs,tir_libs)
         
-        # Duplicate run_card and FO_analyse_card
-        for card in ['FO_analyse_card', 'shower_card']:
+
+        # Duplicate FO_analyse_card
+        for card in ['FO_analyse_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -793,6 +795,22 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.dat'))
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
 
+    #===========================================================================
+    #  create the shower_card 
+    #===========================================================================
+    def create_shower_card(self, processes, history):
+        """ """
+ 
+        shower_card = shower_mod.ShowerCard()
+        shower_card.create_default_for_process(self.proc_characteristic, 
+                                            history,
+                                            processes)
+        
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card_default.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
+        shower_card.write(pjoin(self.dir_path, 'Cards', 'shower_card.dat'),
+                          template=pjoin(MG5DIR, 'Template', 'NLO', 'Cards', 'shower_card.dat'))
+
 
     def pass_information_from_cmd(self, cmd):
         """pass information from the command interface to the exporter.
@@ -854,6 +872,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_orderstag_base_file(writers.FortranWriter(filename))
 
         self.create_run_card(matrix_elements.get_processes(), history)
+        self.create_shower_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
