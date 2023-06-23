@@ -6092,10 +6092,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the shower_card' % args[start],'$MG:BOLD')
                     del self.shower_card[args[start]]
-            elif args[start+1].lower() in ['t','.true.','true']:
-                self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
-            elif args[start+1].lower() in ['f','.false.','false']:
-                self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
+            #elif args[start+1].lower() in ['t','.true.','true']:
+            #    self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
+            #elif args[start+1].lower() in ['f','.false.','false']:
+            #    self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
             elif args[start] in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or\
                                                   args[start].startswith('dm_'):
                 #case sensitive parameters
