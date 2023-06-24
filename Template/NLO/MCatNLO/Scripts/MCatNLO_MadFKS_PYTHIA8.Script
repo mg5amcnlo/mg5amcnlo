@@ -648,9 +648,12 @@ then
 cat <<EOF >> $ifile
 Random:setSeed = on                ! random seed
 Random:seed = $RNDEVSEED_PY8
+
 EOF
 fi
 
+
+echo $PYTHIA8_OPTIONS >> $ifile
 
 arr=()
 numDM=0

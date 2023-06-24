@@ -119,7 +119,7 @@ class ShowerCard(banner.RunCard):
         self.add_param("nevents", -1, comment="N evts to shower (< 0 = all)",
                        all_sh='nevents')
         self.add_param("nsplit_jobs", 1, comment="N jobs to run in parallel (< 100!!)")
-        self.add_param("combine_td", True, comment="combine the topdrawer/HwU files if nsplit_jobs>1")
+        self.add_param("combine_td", True , comment="combine the topdrawer/HwU files if nsplit_jobs>1")
         self.add_param("maxprint", 2, comment="N evts to print in the log",
                        all_sh='maxpr', sh_postfix=True)
         self.add_param("maxerrs", 0.1, comment="max fraction of errors",
@@ -192,15 +192,16 @@ class ShowerCard(banner.RunCard):
                        hw6='hwuti', hwpp='hwpputi',py6='pyuti', py8='py8uti')
 
         # Pythia8 specific
-        #self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!",
-        #               py8='qed_shower')
-        #self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
-        #               py8='primordialkt')
+        self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!",
+                       py8='qed_shower')
+        self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
+                        py8='primordialkt')
         #self.add_param("tune_ee", 7, comment="pythia8 tune for ee beams !ONLY FOR PYTHIA8!",
         #               py8="tune_ee")
         #self.add_param("tune_pp", 14, comment="pythia8 tune for pp beams !ONLY FOR PYTHIA8!",
         #               py8="tune_pp")
-        #self.add_param("pythia8_options", {'__type__':""}, comment="specify (as dictionary) additional parameters that you want to setup within the pythia8 program")
+        self.add_param("pythia8_options", {'__type__':''}, comment="specify (as dictionary) additional parameters that you want to setup within the pythia8 program",
+                       py8='extra_line')
 
 
     def read(self, input, *opt):
@@ -369,6 +370,14 @@ class ShowerCard(banner.RunCard):
                 value = '%d' % value
             elif isinstance(self[key], float):
                 value = '%4.3f' % value
+            elif key == 'pythia8_options':
+                if self.shower=='PYTHIA8':
+                    value = '"'
+                    for k, v in self[key].items():
+                        value += " %s = %s \n" % (k,v)
+                    value += '"'
+                else:
+                    value = ''
             else:
                 raise ShowerCardError('Unknown key: %s = %s' % (key, value))
             try:

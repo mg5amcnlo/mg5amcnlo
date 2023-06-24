@@ -516,6 +516,8 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(shower['includepaths'], 'extra/1 ex/t/ra2 EXtra3')
         self.cmd.do_set('extralibs lib1 liB2 lIB3')
         self.assertEqual(shower['extralibs'], 'lib1 liB2 lIB3')
+        self.cmd.do_set('pythia8_options {"tune_ee": 11, "tune_pp":4}')
+        self.assertEqual(shower['pythia8_options'], {'tune_ee': '11', 'tune_pp': '4'})
 
         # finally reload the default shower card
         # and check that, when any variable is set, the others correspond to the new shower_card

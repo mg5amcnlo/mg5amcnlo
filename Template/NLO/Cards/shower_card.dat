@@ -54,11 +54,13 @@ b_mass       = XXX     # if < 0 = read from SubProcesses/MCmasses_*.inc
 is_4lep      = XXX      # T if 4-lepton production      !ONLY FOR PYTHIA6!
 is_bbar      = XXX      # T if bb~ production           !ONLY FOR HERWIG6!
 #***********************************************************************
-# FxFx merging parameters                             !ONLY FOR PYTHIA8!
+# Pythia8 Specific Options (FxFx and advanced options)
 #***********************************************************************
-Qcut       = XXX     # Merging scale
-njmax      = XXX       # Maximal multiplicity in the merging.
+Qcut       = XXX     # Merging scale for FxFx
+njmax      = XXX       # Maximal multiplicity in the merging (fxFx).
 #                     # -1 means guessed  from the process definition
+pythia8_options = XXXX # Dictionary specifying any additional entry in the pythia8 command file
+                       # Warning changing some parameter will break NLO accuracy.
 #***********************************************************************
 # Decay channels                                                       *
 #***********************************************************************

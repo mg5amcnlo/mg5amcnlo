@@ -796,7 +796,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
 
     #===========================================================================
-    #  create the shower_card 
+    #  create the run_card 
     #===========================================================================
     def create_shower_card(self, processes, history):
         """ """
