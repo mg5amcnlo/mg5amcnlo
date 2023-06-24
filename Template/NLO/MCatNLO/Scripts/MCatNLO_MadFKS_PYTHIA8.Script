@@ -379,6 +379,33 @@ Check:epTolErr = 0.001                ! Momentum-conservation tolerance
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
 Beams:setProductionScalesFromLHEF=on ! Identify the Weak Jets
+EOF
+
+# set tune for ee
+#if [ $TUNE_EE -lt -1 ]
+#then
+#cat <<EOF >> $ifile
+#Tune:ee = -1                       ! tuning for ee collisions
+#EOF
+#else
+#cat <<EOF >> $ifile
+#Tune:ee = $TUNE_EE                        ! tuning for ee collisions
+#EOF
+#fi
+# set tune for pp
+#if [ $TUNE_PP -lt -1 ]
+#then
+#cat <<EOF >> $ifile
+#Tune:pp = -1                       ! tuning for pp collisions
+#EOF
+#else
+#cat <<EOF >> $ifile
+#Tune:pp = $TUNE_PP                       ! tuning for pp collisions
+#EOF
+#fi
+
+# configure event generation
+cat <<EOF >> $ifile
 
 ! 4) Switch on/off the key event-generation steps.
 EOF
@@ -481,6 +508,21 @@ HadronLevel:Hadronize = on         ! Hadronisation
 EOF
 fi
 
+# set premordial kT
+PKT="off"
+if [ $PRIMORDIALKT = ".TRUE." ]
+then
+PKT="on"
+fi
+
+# set QED showering
+QEDSHOWER="off"
+if [ $QED_SHOWER = ".TRUE." ]
+then
+QEDSHOWER="on"
+fi
+
+
 cat <<EOF >> $ifile
 
 ! 5) Final-state shower.
@@ -496,11 +538,11 @@ TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
 TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-TimeShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
+TimeShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
+TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByGamma = on  ! Prevent photons from branching
+TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
@@ -515,9 +557,9 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-SpaceShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
+SpaceShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-SpaceShower:QEDshowerByL = on     ! Prevent leptons from radiating photons
+SpaceShower:QEDshowerByL = $QEDSHOWER     ! Prevent leptons from radiating photons
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 SpaceShower:MEcorrections = off    ! No Matrix-element corrections
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
@@ -526,7 +568,7 @@ SpaceShower:pTminChgQ = 0.01
 SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
-BeamRemnants:primordialKT = off    ! No primordial kT
+BeamRemnants:primordialKT = $PKT    ! off = no primordial kT
                                    ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 
 ! 8) Particle features.

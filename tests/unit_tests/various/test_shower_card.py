@@ -290,6 +290,9 @@ EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
+QED_SHOWER=.TRUE.
+PRIMORDIALKT=.FALSE.
+EXTRA_LINE=""
 """
         text = self.card.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -324,6 +327,9 @@ EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
 PY8UTI=""
+QED_SHOWER=.TRUE.
+PRIMORDIALKT=.FALSE.
+EXTRA_LINE=""
 """
         text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
