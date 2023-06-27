@@ -59,6 +59,8 @@ is_bbar      = XXX      # T if bb~ production           !ONLY FOR HERWIG6!
 Qcut       = XXX     # Merging scale for FxFx
 njmax      = XXX       # Maximal multiplicity in the merging (fxFx).
 #                     # -1 means guessed  from the process definition
+qed_shower   = T      # T = enable QED shower for Q and L 
+primordialkt = F      # T = enable primordial parton k_T  
 pythia8_options = XXXX # Dictionary specifying any additional entry in the pythia8 command file
                        # Warning changing some parameter will break NLO accuracy.
 #***********************************************************************
