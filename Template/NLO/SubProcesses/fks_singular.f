@@ -3403,12 +3403,21 @@ c on the imode we should or should not include the virtual corrections.
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer i,j,ict,iamp,ithree,isix
+      integer i,j,ict,iamp,ithree,isix,iFKS_soft
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight,sigint_noBorn
      $     ,sigint_ABS_noBorn,sigint_Born
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      iFKS_soft=0
+      do i=1,icontr
+         ! this defines iFKS_soft, which is the FKS-configration of the
+         ! S-event (i.e., the Born). Needed for the BornSmearing below.
+         if(itype(i).eq.2) then
+            iFKS_soft=nFKS(i)
+            exit
+         endif
+      enddo
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3493,7 +3502,6 @@ c$$$         i=int(n_BS_yij*(xxx(2)+1d0)/2d0)+1
          BornSmear(i,j,iFKS_soft,3)=
      $        BornSmear(i,j,iFKS_soft,3)+sigint_Born
       endif
-
 
       f(1)=sigint_ABS
       f(2)=sigint
