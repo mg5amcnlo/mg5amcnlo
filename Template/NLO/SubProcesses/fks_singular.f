@@ -3409,6 +3409,8 @@ c on the imode we should or should not include the virtual corrections.
      $     ,sigint_ABS_noBorn,sigint_Born
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      double precision xxx(2)
+      common /bornsmearing_variables/ xxx
       iFKS_soft=0
       do i=1,icontr
          ! this defines iFKS_soft, which is the FKS-configration of the
