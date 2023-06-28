@@ -71,6 +71,7 @@ module mint_module
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
   integer, parameter, public  :: n_ave_virt=10    ! max number of grids to set up to approx virtual
   integer, parameter, public  :: nintegrals=26    ! number of integrals to keep track of
+  integer, parameter, public  :: n_BS_xi=20, n_BS_yij=20  ! number of bins in the Born Smearing grids
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
@@ -78,6 +79,7 @@ module mint_module
   integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
+  integer, parameter, private :: BSpoints_min=10000 ! minimum numbers thrown in the imode=3 iteration to fill the BornSmear grids
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
   !     nintervals = min_inter * 2^n,
@@ -88,7 +90,7 @@ module mint_module
   !
 
 ! public variables 
-  integer, public :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi
+  integer, public :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi,fks_confs
   integer, dimension(ndimmax), public :: ifold
   integer, dimension(maxchannels), public :: iconfigs
   double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult
@@ -96,7 +98,11 @@ module mint_module
   double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
+  double precision, dimension(:,:,:,:), public, allocatable :: BornSmear
   logical :: only_virt,new_point,pass_cuts_check
+  logical :: BornSmearSetup_done
+  logical,parameter :: IncludeBornSmear=.true.
+
 
 ! private variables
   character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
@@ -183,7 +189,7 @@ module mint_module
        &,increase_gen_counters_middle,increase_gen_counters_before &
        &,increase_gen_counters_end,check_upper_bound &
        &,get_random_cell_flat,get_weighted_cell,initialise_mint_gen &
-       &,print_gen_counters
+       &,print_gen_counters,fresh_start
 contains
 
   subroutine mint(fun)
@@ -206,7 +212,8 @@ contains
        enddo
        call get_amount_of_points(enough_points)
        if (.not.enough_points) goto 2
-       if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+       if (imode.eq.0 .and. nit.eq.1 .and. double_events .and. &
+            (.not.BornSmearSetup_done)) then
           call check_for_special_channels_loop(channel_loop_done)
           if (.not.channel_loop_done) goto 2
           call combine_results_channels_special_loop
@@ -277,10 +284,22 @@ contains
        call update_integration_grids
     endif
     call check_desired_accuracy(iterations_done)
-    if (.not. iterations_done) then
+    if (.not. iterations_done .and. nit.ne.itmax .and. imode.ne.3) then
        call prepare_next_iteration
     else
-       nit=itmax
+       if (imode.eq.3) then
+          imode=0
+          BornSmearSetup_done=.true.
+          ! reset results
+          if (double_events) ncalls0=80*ndim*(nchans/3+1)
+          call fresh_start
+       elseif (.not.BornSmearSetup_done .and. IncludeBornSmear) then
+          ncalls0=max(ncalls0,BSpoints_min)
+          imode=3
+          nit=0
+       else
+          nit=itmax
+       endif
     endif
   end subroutine update_accumulated_results
 
@@ -507,14 +526,8 @@ contains
        if (bad_iteration .and. imode.eq.0 .and. double_events) then
 ! 2nd bad iteration is a row. Reset grids
           write (*,*)'2nd bad iteration in a row. Resetting grids and starting from scratch...'
-          if (double_events) then
-             if (imode.eq.0) nint_used=min_inter ! reset number of intervals
-             ncalls0=ncalls0/8   ! Start with larger number
-          endif
-          call reset_mint_grids
-          call reset_MC_grid  ! reset the grid for the integers
-          if (fixed_order) call initplot  ! Also reset all the plots
-          call setup_common
+          call fresh_start
+          if (double_events)ncalls0=ncalls0/8   ! Start with larger number
           bad_iteration=.false.
        else
           bad_iteration=.true.
@@ -524,7 +537,16 @@ contains
     endif
   end subroutine check_fractional_uncertainty
 
-  
+  subroutine fresh_start
+    implicit none
+    if (double_events) then
+       if (imode.eq.0) nint_used=min_inter ! reset number of intervals
+    endif
+    call reset_mint_grids
+    call reset_MC_grid  ! reset the grid for the integers
+    if (fixed_order) call initplot  ! Also reset all the plots
+    call setup_common
+  end subroutine fresh_start
 
   subroutine print_results_current_iteration(efrac)
     implicit none
@@ -857,7 +879,7 @@ contains
     implicit none
     call write_channel_info
     nit=nit+1
-    write (*,*) '------- iteration',nit
+    write (*,'(a,i4,a,i2,a)') '------- iteration:',nit,'   (imode:',imode,')'
     call check_evenly_random_numbers
     if (imode.eq.0) then
        call reset_accumulated_grids_for_updating
@@ -1031,6 +1053,7 @@ contains
     even_rn=.true.
     min_it=min_it0
     call reset_mint_grids
+    BornSmear(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:3)=0d0
   end subroutine setup_imode_0
 
   subroutine reset_mint_grids
@@ -1074,7 +1097,7 @@ contains
   subroutine write_grids_to_file
 ! Write the MINT integration grids to file
     implicit none
-    integer :: i,j,k,kchan
+    integer :: i,j,k,kchan,iFKS
     open (unit=12,file='mint_grids',status='unknown')
     do kchan=1,nchans
        do j=0,nintervals
@@ -1085,6 +1108,13 @@ contains
              write (12,*) 'MAX',(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
+       do iFKS=1,fks_confs
+          do j=1,n_BS_xi
+             write (12,*) 'AVE',(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
+          enddo
+       enddo
        if (.not.use_poly_virtual) then
           do j=1,nintervals_virt
              do k=0,n_ord_virt
@@ -1107,7 +1137,7 @@ contains
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum
+    integer :: i,j,k,kchan,idum,iFKS
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
     open (unit=12, file='mint_grids',status='old')
@@ -1122,6 +1152,13 @@ contains
              read (12,*) dummy,(ymax(j,i,kchan),i=1,ndim)
           enddo
        endif
+       do iFKS=1,fks_confs
+          do j=1,n_BS_xi
+             read (12,*) dummy,(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
+          enddo
+       enddo
        if (.not.use_poly_virtual) then
           do j=1,nintervals_virt
              do k=0,n_ord_virt

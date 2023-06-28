@@ -2978,6 +2978,10 @@ c various FKS configurations can be summed together.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      double precision bornsmear_weight,BornSmear_wgt
+      external bornsmear_weight
+      double precision xxx(2)
+      common /bornsmearing_variables/ xxx
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c Find the contribution to sum all the S-event ones. This should be one
@@ -3007,9 +3011,27 @@ c that has a soft singularity. We set it to 'i_soft'.
 c Main loop over contributions. For H-events we have to check explicitly
 c to which contribution we can sum the current contribution (if any),
 c while for the S-events we can sum it to the 'i_soft' one.
+      if (IncludeBornSmear) then
+         do i=1,icontr
+            if (itype(i).eq.2 .and. BornSmearSetup_done) then
+c$$$            xxx(1)=xi_i_fks_ev
+c$$$            xxx(2)=y_ij_fks_ev
+               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2)
+     $              ,nFKS(i))
+c$$$  $           ,1)
+               wgts(1,i)=wgts(1,i)*BornSmear_wgt
+               do j=1,niproc(i)
+                  parton_iproc(j,i)= parton_iproc(j,i)*BornSmear_wgt
+               enddo
+            endif
+         enddo
+      endif
+      
       do i=1,icontr
          do j=1,niproc(i)
             unwgt(j,i)=0d0
+            unwgt_noB(j,i)=0d0
+            unwgt_B(j,i)=0d0
          enddo
       enddo
       icontr_sum(0,1:icontr)=0
@@ -3065,7 +3087,14 @@ c virtual corrections. Exception: when computing only the virtual, do
 c include it here!
                      if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
      $                    only_virt) exit
-                     unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
+                     unwgt(j,i_soft)=unwgt(j,i_soft)+ parton_iproc(jj,i)
+                     if (itype(i).ne.2) then
+                        unwgt_noB(j,i_soft)=unwgt_noB(j,i_soft)
+     $                       +parton_iproc(jj,i)
+                     else
+                        unwgt_B(j,i_soft)=unwgt_B(j,i_soft)
+     $                       +parton_iproc(jj,i)
+                     endif
                   endif
                enddo
             enddo
@@ -3376,12 +3405,16 @@ c on the imode we should or should not include the virtual corrections.
       include 'orders.inc'
       integer i,j,ict,iamp,ithree,isix
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
-     $     ,n1body_wgt,tmp_wgt,max_weight
+     $     ,n1body_wgt,tmp_wgt,max_weight,sigint_noBorn
+     $     ,sigint_ABS_noBorn,sigint_Born
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
+      sigint_noBorn=0d0
+      sigint_ABS_noBorn=0d0
+      sigint_Born=0d0
       n1body_wgt=0d0
       max_weight=0d0
       if (icontr.eq.0) then
@@ -3395,7 +3428,10 @@ c on the imode we should or should not include the virtual corrections.
             if (icontr_sum(0,i).eq.0) cycle
             do j=1,niproc(i)
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
+               sigint_ABS_noBorn=sigint_ABS_noBorn+abs(unwgt_noB(j,i))
                sigint1=sigint1+unwgt(j,i) ! for consistency check
+               sigint_noBorn=sigint_noBorn+unwgt_noB(j,i)
+               sigint_Born=sigint_Born+unwgt_B(j,i)
                max_weight=max(max_weight,abs(unwgt(j,i)))
             enddo
          enddo
@@ -3443,6 +3479,22 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
       endif
+c
+      if (imode.eq.3.and.iFKS_soft.ne.0) then
+c$$$            xxx(1)=xi_i_fks_ev
+c$$$            xxx(2)=y_ij_fks_ev
+c$$$         i=int(n_BS_yij*(xxx(2)+1d0)/2d0)+1
+         i=int(n_BS_yij*xxx(2))+1
+         j=int(n_BS_xi*xxx(1))+1
+         BornSmear(i,j,iFKS_soft,1)=
+     $        BornSmear(i,j,iFKS_soft,1)+sigint_ABS_noBorn
+         BornSmear(i,j,iFKS_soft,2)=
+     $        BornSmear(i,j,iFKS_soft,2)+sigint_noBorn
+         BornSmear(i,j,iFKS_soft,3)=
+     $        BornSmear(i,j,iFKS_soft,3)+sigint_Born
+      endif
+
+
       f(1)=sigint_ABS
       f(2)=sigint
       f(4)=virtual_over_born
@@ -3467,6 +3519,108 @@ c n1body_wgt is used for the importance sampling over FKS directories
       end
 
 
+      double precision function BornSmear_weight(xi,y,iFKS)
+      ! note: arguments xi,y are the vegas x's corresponding do xi_i_fks and y_ij_fks
+      use mint_module
+      implicit none
+      include 'nFKSconfigs.inc'
+      integer i,j,iFKS
+      double precision xi,y
+      double precision sum_wgts,sum_Born,full_sum,fac
+      logical firsttime(fks_configs)
+      data firsttime/fks_configs*.true./
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+
+      if(.not.BornSmearSetup_done) then
+         write (*,*) 'BornSmear must be setup before '/
+     $        /'calling BornSmear_weight'
+         stop 1
+      endif
+c
+c     compute weight normalisation
+c$$$      if (firsttime(iFKS)) then
+c$$$         BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,0)=
+c$$$     &        ( BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,1) -
+c$$$     &          BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,2)   ) /2d0
+      do i=1,n_BS_yij
+         do j=1,n_BS_xi
+            BornSmear(i,j,iFKS,0)=
+     &           ( BornSmear(i,j,iFKS,1) -
+     &           BornSmear(i,j,iFKS,2)   ) /2d0
+c$$$            if (BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j,iFKS
+c$$$     $           ,3).ne.0d0) then
+c$$$               BornSmear(i,j,iFKS,0)=BornSmear(i,j,iFKS,3)
+c$$$            elseif (BornSmear(i,j,iFKS,0).eq.0d0) then
+c$$$               BornSmear(i,j,iFKS,0)=1000d0
+c$$$               BornSmear(i,j,iFKS,3)=1000d0
+c$$$            endif
+         enddo
+      enddo
+c$$$      do i=1,n_BS_yij
+c$$$         do j=1,n_BS_xi
+c$$$            BornSmear(i,j,iFKS,0)=dble(i*j)
+c$$$         enddo
+c$$$      enddo
+         
+         sum_wgts=1d0!sum(BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,0))
+         sum_Born=1d0!sum(BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,3))
+         full_sum=0d0
+         do i=1,n_BS_yij
+            do j=1,n_BS_xi
+               if(BornSmear(i,j,iFKS,0).eq.0d0 .or. BornSmear(i,j,iFKS
+     $              ,3).eq.0d0) then
+                  full_sum=full_sum+1d0
+               else
+                  full_sum=full_sum+
+     &                 BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
+               endif
+            enddo
+         enddo
+         full_sum=full_sum/(n_BS_yij*n_BS_xi)
+c$$$c     check
+c$$$         if(sum_wgts.eq.0d0 .or. sum_born.le.0d0)then
+c$$$            write(*,*)'Error in BornSmear, zero total weight',iFKS
+c$$$     $           ,sum_wgts,sum_born
+c$$$            stop
+c$$$         endif
+c$$$         BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,0)=
+c$$$     &        BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,0)/sum_wgts/
+c$$$     &                    full_sum
+c$$$         BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,3)=
+c$$$     &        BornSmear(1:n_BS_yij,1:n_BS_xi,iFKS,3)/sum_Born
+c$$$         firsttime(iFKS)=.false.
+c$$$         
+c$$$      endif
+
+c
+c     determine bin corresponding to actual xi and y values
+c$$$      i=int(n_BS_yij*(y+1d0)/2d0)+1
+      i=int(n_BS_yij*y)+1
+      j=int(n_BS_xi*xi)+1
+
+c     output weight at xi and y
+      
+c$$$      if(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j,iFKS
+c$$$     $     ,3).eq.0d0) then
+      if(BornSmear(i,j,iFKS,0).eq.0d0) then
+         BornSmear_weight=1d0/full_sum
+c$$$      elseif(BornSmear(i,j,iFKS,3).eq.0d0) then
+c$$$        write (*,*)'Born is zero in BornSmear',iFKS,
+c$$$     $   BornSmear(i,j,iFKS,0:3)
+c$$$         stop
+      else
+         BornSmear_weight=BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
+     $        /full_sum
+      endif
+
+c$$$! overwrite Bornsmearing for testing:
+c$$$      BornSmear_weight=(xi)**6*7d0 * (y)**3*4d0
+
+      
+      return
+      end
+      
       subroutine pick_unweight_contr(iFKS_picked,ifold_picked)
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.

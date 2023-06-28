@@ -89,12 +89,17 @@ c general MadFKS parameters
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
+      include 'nFKSconfigs.inc'
+
 C-----
 C  BEGIN CODE
 C-----  
 c Write the process PID in the log.txt files (i.e., to the screen)
       write (*,*) getpid()
 
+      fks_confs=fks_configs
+      allocate(BornSmear(n_BS_yij,n_BS_xi,fks_confs,0:3))
+      
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
@@ -199,6 +204,12 @@ c     Prepare the MINT folding
       ifold(ifold_phi)=iphi_i
       ifold(ifold_yij)=iy_ij
 
+      ! When already done imode0, must set BornSmearSetup_done to true.
+      if (imode.eq.0 .or. (.not. IncludeBornSmear)) then
+         BornSmearSetup_done=.false.
+      else
+         BornSmearSetup_done=.true.
+      endif
 c*************************************************************
 c     setting of the grids
 c*************************************************************
@@ -212,7 +223,7 @@ c*************************************************************
 c*************************************************************
 c     computation of upper bounding envelope
 c*************************************************************
-      elseif(imode.eq.1) then
+      elseif(imode.eq.1 .or. imode.eq.3) then
          write (*,*) 'imode is ',imode
          call mint(sigintF)
          call deallocate_weight_lines
