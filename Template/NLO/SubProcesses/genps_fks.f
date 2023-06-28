@@ -929,6 +929,8 @@ c saves
       common /c_isolsign/isolsign
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+      double precision xxx(2)
+      common /bornsmearing_variables/ xxx
 
       pass=.true.
       do i=1,nexternal-1
@@ -1175,6 +1177,13 @@ c y_ij and phi_i (changing this also requires changing folding parameters)
       ixEi=ndim-2
       ixyij=ndim-1
       ixpi=ndim
+c Born smearing variables. Take xi and y, but without integration
+c boundaries. This is easiest accomplished by taking the vegas x's, but
+c taking into account the relation between them and xi and y (see
+c "subroutine generate_momenta_*_*" below). In our code, there is a
+c quadratic importance sampling, hence take **2 here.
+      xxx(1)=x(ixEi)**2
+      xxx(2)=x(ixyij)**2
 c
       imother=min(j_fks,i_fks)
       m_j_fks=pmass(j_fks)
