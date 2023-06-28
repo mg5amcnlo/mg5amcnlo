@@ -929,8 +929,6 @@ c saves
       common /c_isolsign/isolsign
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
-      double precision xxx(2)
-      common /bornsmearing_variables/ xxx
 
       pass=.true.
       do i=1,nexternal-1
@@ -1121,6 +1119,9 @@ c Set all to negative values and exit
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
+
+      double precision xxx(2)
+      common /bornsmearing_variables/ xxx
 
       ! check that the starting PS point is meaningful
       if (xjac0.lt.0d0) then
