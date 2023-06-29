@@ -695,7 +695,7 @@ EOF
 fi
 
 
-echo $PYTHIA8_OPTIONS >> $ifile
+echo "$EXTRA_LINE" >> $ifile
 
 arr=()
 numDM=0
