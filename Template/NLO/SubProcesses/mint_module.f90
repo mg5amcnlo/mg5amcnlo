@@ -293,7 +293,7 @@ contains
           ! reset results
           if (double_events) ncalls0=80*ndim*(nchans/3+1)
           call fresh_start
-       elseif (.not.BornSmearSetup_done .and. IncludeBornSmear) then
+       elseif (.not.BornSmearSetup_done .and. IncludeBornSmear .and. (.not.fixed_order)) then
           ncalls0=max(ncalls0,BSpoints_min)
           imode=3
           nit=0
