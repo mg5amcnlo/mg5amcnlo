@@ -913,6 +913,8 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS,ifold_counter)
             call set_colour_connections(iFKS,ifold_counter)
          enddo
+c Include the weights from the Born Smearing
+         call include_BornSmear_weight(ifold_counter)
  12      continue
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
@@ -934,8 +936,6 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
          call include_bias_wgt
-c Include the weights from the Born Smearing
-         call include_BornSmear_weight
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have

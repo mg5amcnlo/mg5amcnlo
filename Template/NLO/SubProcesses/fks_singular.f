@@ -2963,25 +2963,22 @@ c S-event contribution
       return
       end
 
-      subroutine include_BornSmear_weight
+      subroutine include_BornSmear_weight(ifl)
 c Smear the Born according to the BornSmear_weight.       
       use weight_lines
       use mint_module
       implicit none
-      integer i,j
+      integer i,j,ifl
       double precision bornsmear_weight,BornSmear_wgt
       external bornsmear_weight
       double precision xxx(2)
       common /bornsmearing_variables/ xxx
       if (IncludeBornSmear) then
          do i=1,icontr
-            if (itype(i).eq.2 .and. BornSmearSetup_done) then
-               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2)
-     $              ,nFKS(i))
-               wgts(1,i)=wgts(1,i)*BornSmear_wgt
-               do j=1,niproc(i)
-                  parton_iproc(j,i)= parton_iproc(j,i)*BornSmear_wgt
-               enddo
+            if (itype(i).eq.2 .and. BornSmearSetup_done .and.
+     $           ifold_cnt(i).eq.ifl) then
+               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i))
+               wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
             endif
          enddo
       endif
@@ -3421,15 +3418,6 @@ c on the imode we should or should not include the virtual corrections.
       common /c_vob/   virtual_over_born
       double precision xxx(2)
       common /bornsmearing_variables/ xxx
-      iFKS_soft=0
-      do i=1,icontr
-         ! this defines iFKS_soft, which is the FKS-configration of the
-         ! S-event (i.e., the Born). Needed for the BornSmearing below.
-         if(itype(i).eq.2) then
-            iFKS_soft=nFKS(i)
-            exit
-         endif
-      enddo
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3498,15 +3486,26 @@ c n1body_wgt is used for the importance sampling over FKS directories
       endif
 
 c fill the BornSmear grids 
-      if (imode.eq.3.and.iFKS_soft.ne.0) then
-         i=int(n_BS_yij*xxx(2))+1
-         j=int(n_BS_xi*xxx(1))+1
-         BornSmear(i,j,iFKS_soft,1)=
-     $        BornSmear(i,j,iFKS_soft,1)+sigint_ABS_noBorn
-         BornSmear(i,j,iFKS_soft,2)=
-     $        BornSmear(i,j,iFKS_soft,2)+sigint_noBorn
-         BornSmear(i,j,iFKS_soft,3)=
-     $        BornSmear(i,j,iFKS_soft,3)+sigint_Born
+      if (imode.eq.3) then
+         iFKS_soft=0
+         do i=1,icontr
+            if(itype(i).eq.2) then
+!     this defines iFKS_soft, which is the FKS-configration of the
+!     S-event (i.e., the Born)
+               iFKS_soft=nFKS(i)
+               exit
+            endif
+         enddo
+         if (iFKS_soft.ne.0) then
+            i=int(n_BS_yij*xxx(2))+1
+            j=int(n_BS_xi*xxx(1))+1
+            BornSmear(i,j,iFKS_soft,1)=
+     $           BornSmear(i,j,iFKS_soft,1)+sigint_ABS_noBorn
+            BornSmear(i,j,iFKS_soft,2)=
+     $           BornSmear(i,j,iFKS_soft,2)+sigint_noBorn
+            BornSmear(i,j,iFKS_soft,3)=
+     $           BornSmear(i,j,iFKS_soft,3)+sigint_Born
+         endif
       endif
 
       f(1)=sigint_ABS
