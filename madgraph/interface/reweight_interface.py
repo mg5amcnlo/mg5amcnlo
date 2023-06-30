@@ -1111,8 +1111,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
-                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
-                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
+                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2**2)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2**2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
                 ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
