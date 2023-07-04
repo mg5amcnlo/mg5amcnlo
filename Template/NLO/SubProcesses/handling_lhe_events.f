@@ -709,6 +709,8 @@ c
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
+      double precision weights(4)
+      common /to_handling_events/weights
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -848,6 +850,10 @@ c
       endif
       if (ickkw.eq.3) then
          write(ifile,'(a)') trim(adjustl(ptclusstring))
+      endif
+      if (ifile.eq.93) then
+         write(ifile,*) '<WeightedEvent>',weights
+     $        ,'</WeightedEvent>'
       endif
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines

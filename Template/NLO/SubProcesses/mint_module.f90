@@ -91,12 +91,13 @@ module mint_module
   integer, public :: ncalls0,ndim,itmax,imode,n_ord_virt,nchans,iconfig,ichan,ifold_energy,ifold_yij,ifold_phi
   integer, dimension(ndimmax), public :: ifold
   integer, dimension(maxchannels), public :: iconfigs
-  double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult
+  double precision, public :: accuracy,min_virt_fraction_mint,wgt_mult,upper_bound,vol_fac
   double precision, dimension(0:n_ave_virt,maxchannels), public :: average_virtual
   double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
-  logical :: only_virt,new_point,pass_cuts_check
+  logical, public :: only_virt,new_point,pass_cuts_check
+  logical, parameter, public :: WriteWeightedEvent=.true.
 
 ! private variables
   character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
@@ -138,14 +139,14 @@ module mint_module
   logical, private :: double_events,reset,even_rn,firsttime
   logical, dimension(maxchannels), private :: regridded
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
-  double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
+  double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: ymax,xmmm
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
   double precision, dimension(nintegrals,3), private :: ans3,unc3
   double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
   double precision, dimension(0:maxchannels), private :: ymax_virt,ans_chan
   double precision, dimension(2), private :: HwU_values
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
-  double precision, private :: upper_bound,vol_chan
+  double precision, private :: vol_chan
   double precision, dimension(ndimmax), private :: rand
   double precision, dimension(0:nintervals,ndimmax) :: xgrid_new
 
@@ -1658,12 +1659,14 @@ contains
     double precision :: vol,r
     double precision, dimension(ndimmax) :: x
     call get_channel
+    vol_fac=1d0
     do kdim=1,ndim
        nintcurr=nintervals/ifold(kdim)
        r=ran3(.false.)
        do kint=1,nintcurr
           if(r.lt.xmmm(kint,kdim,ichan)) then
              ncell(kdim)=kint
+             vol_fac=vol_fac*(xmmm(kint,kdim,ichan)-xmmm(kint-1,kdim,ichan))*dble(nintcurr)
              exit
           endif
        enddo
@@ -1689,6 +1692,7 @@ contains
     even_rn=.false.
     nint_used=nintervals
     nint_used_virt=nintervals_virt
+    xmmm(0,1:ndim,1:nchans)=0d0
     do kdim=1,ndim
        nintcurr=nintervals/ifold(kdim)
        xmmm(1,kdim,1:nchans)=ymax(1,kdim,1:nchans)

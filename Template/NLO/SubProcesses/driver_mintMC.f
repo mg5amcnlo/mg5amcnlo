@@ -23,6 +23,8 @@ C
 
       integer lunlhe
       parameter (lunlhe=98)
+      integer lunlhe_w
+      parameter (lunlhe_w=93)
 c
 c     Global
 c
@@ -256,6 +258,7 @@ c determine how many events for the virtual and how many for the no-virt
      $        ,ncall_novi
 
          open(unit=lunlhe,file='events.lhe',status='unknown')
+         open(unit=lunlhe_w,file='weighted_events.lhe',status='unknown')
 
 c fill the information for the write_header_init common block
          ifile=lunlhe
@@ -315,6 +318,8 @@ c Randomly pick the contribution that will be written in the event file
          call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
+         write (lunlhe_w,'(a)') "</LesHouchesEvents>"
+         close(lunlhe_w)
       endif
 
       if(i_momcmp_count.ne.0)then
@@ -707,6 +712,14 @@ c
       common /c_vegas_x_fold/x_save,ifold_picked
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
       common /colour_connections/ icolup_s,icolup_h
+      double precision weight,inv_bias
+      integer iFKS_picked
+      character*7 event_norm
+      common /event_normalisation/event_norm
+      integer lunlhe_w
+      parameter (lunlhe_w=93)
+      double precision weights(4)
+      common /to_handling_events/weights
 c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -930,6 +943,31 @@ c determined which contributions are identical.
          call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+
+         if (imode.eq.2 .and. WriteWeightedEvent) then
+            call pick_unweight_contr(iFKS_picked,ifold_picked)
+            call update_fks_dir(iFKS_picked)
+            call fill_rwgt_lines
+            if (event_norm(1:4).eq.'bias') then
+               call include_inverse_bias_wgt(inv_bias)
+               weight=f(2)*inv_bias
+               write (*,*) 'Including bias event generation not '/
+     $              /'compatible with weighted event generation'
+               stop 1 
+            else
+               weight=abs(f(1))
+               weights(1:2)=f(1:2)
+               weights(3)=upper_bound
+               if (abrv.eq.'virt') then
+                  weights(4)=1d0
+               else
+                  weights(4)=vol_fac
+               endif
+            endif
+            call finalize_event(x_save(1,ifold_picked),weight,lunlhe_w
+     $           ,.true.)
+         endif
+         
       endif
       return
       end
