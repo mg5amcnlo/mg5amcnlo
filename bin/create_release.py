@@ -78,7 +78,7 @@ logging.basicConfig(level=vars(logging)[options.logging],
 
 # 0. check that all modification are committed in this directory
 #    and that the date/UpdateNote are up-to-date
-diff_result = subprocess.Popen(["bzr", "diff"], stdout=subprocess.PIPE).communicate()[0] 
+diff_result = subprocess.Popen(["git", "diff"], stdout=subprocess.PIPE).communicate()[0] 
 
 if diff_result:
     logging.warning("Directory is not up-to-date. The release follow the last committed version.")
@@ -86,6 +86,59 @@ if diff_result:
     if answer != 'y':
         exit()
 
+# 0. check that all modification are committed in this directory
+#    and that the date/UpdateNote are up-to-date
+diff_result = subprocess.Popen(["git", "diff", "--cached"], stdout=subprocess.PIPE).communicate()[0]
+
+if diff_result:
+    logging.warning("Index has non commited file/... The release will follow the last committed version.")
+    answer = input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()        
+        
+        
+auto_update = True
+
+# check that we are in the correct branch (note this file does not handle LTS)
+p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
+branch = p.stdout.read().decode().strip()
+if branch != 'LTS':
+    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
+    answer = input('Do you want to continue anyway? (y/n)')
+    if answer != 'y':
+        exit()
+    auto_update = False
+
+#check if current version has already a version flag matching the VERSION information
+if auto_update:
+    p = subprocess.Popen(['git', 'tag', '-l', '-n','\'LTS_%s\'' %version], stdout=subprocess.PIPE)
+    old_tag = p.stdout.read().decode().strip()
+    print('vtag', old_tag)
+    if old_tag:
+        print("tag v%s is already existing. Those tags should be added by this script.")
+        print("This will remove auto-update capabilities to this tarball")
+        answer = input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()
+        auto_update = False
+
+    p = subprocess.Popen("git tag -l 'L*' ", stdout=subprocess.PIPE, shell=True)
+    old_tag = p.stdout.read().decode().strip()
+    print("detected release tag (bzr format)", old_tag)
+    max_revnb = max([int(i[1:]) for i in old_tag.split('\n') if i])+1
+    print("latest tag found for auto-update: in current directory", max_revnb)
+    if not max_revnb:
+        print("no tag for auto-update found...")
+        answer = input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()
+        auto_update = False
+else:
+    max_revnb = 0
+
+
+    
+        
 release_date = date.fromtimestamp(time.time())
 for line in open(os.path.join(MG5DIR,'VERSION')):
     if 'version' in line:
@@ -124,16 +177,17 @@ else:
     rev_nb=None
 
 # checking that the rev_nb is in a reasonable range compare to the old one.
-if rev_nb:
+if auto_update:
     rev_nb_i = int(rev_nb)
     try:
-        import ssl
-        import urllib.request
+#        import ssl
+#        import urllib.request
 
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+#        ctx = ssl.create_default_context()
+#        ctx.check_hostname = False
+#        ctx.verify_mode = ssl.CERT_NONE
+#        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
         text = filetext.read().decode().split('\n')
         web_version = int(text[0].strip())
         last_message = int(text[1].strip())
@@ -177,15 +231,18 @@ if path.exists(filepath):
     shutil.rmtree(filepath)
 
 logging.info("Branching " + MG5DIR + " to directory " + filepath)
-status = subprocess.call(['bzr', 'branch', MG5DIR, filepath])
+status = subprocess.call(['git', 'clone', MG5DIR, filepath])
 if status:
-    logging.error("bzr branch failed. Script stopped")
+    logging.error("git clone failed. Script stopped")
     exit()
 
 # 1. Remove the .bzr directory and clean bin directory file,
 #    take care of README files.
-
-shutil.rmtree(path.join(filepath, '.bzr'))
+try:
+    shutil.rmtree(path.join(filepath, '.bzr'))
+except:
+    pass
+shutil.rmtree(path.join(filepath, '.git'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
     if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
         if 'compile.py' not in data:
@@ -198,12 +255,21 @@ shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README')
 
 
 # 1. Add information for the auto-update
-if rev_nb:
+if rev_nb and autou:
     fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
     fsock.write("version_nb   %s\n" % int(rev_nb))
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
+    # tag handling
+    p = subprocess.call("git tag  'L%s' " % int(rev_nb), shell=True)
+    p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
+    print('new tag added')
+    answer = input('Do you want to push commit and tag? (y/n)')
+    if answer == 'y':
+        p = subprocess.call("git push", shell=True)
+        p = subprocess.call("git push --tags", shell=True)
+
     
 # 1. Copy the .mg5_configuration_default.txt to it's default path
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
