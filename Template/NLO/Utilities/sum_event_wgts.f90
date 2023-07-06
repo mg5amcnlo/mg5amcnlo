@@ -11,6 +11,7 @@ program sum_weights
   real(kind=8),dimension(0:3,100) :: p
   real(kind=8) :: evt_wgt,abs_wgt,wgt,upper_bound,frac
   real(kind=8),dimension(2) :: sum_evt_wgt,sum_abs_wgt,sum_wgt
+  real(kind=8) :: absx,absv,xsec
   integer :: next
   write (*,*) 'Give LHE file name'
   read (*,'(a)') filename
@@ -21,9 +22,27 @@ program sum_weights
   sum_evt_wgt=0d0
   sum_wgt=0d0
   nPSpoints(1:2)=0
+  xsec=0d0
   do
      call read_event(ifile,done)
      if (done) exit
+!!$     if (frac.eq.1d0) then
+!!$        if (evt_wgt.lt.0d0) then
+!!$           xsec=xsec-(absv+absx)*abs_wgt/upper_bound
+!!$        else
+!!$           xsec=xsec+(absv+absx)*abs_wgt/upper_bound
+!!$        endif
+!!$     else
+!!$        if (evt_wgt.lt.0d0) then
+!!$           xsec=xsec-(absv+absx)*abs_wgt/upper_bound!/frac
+!!$        else
+!!$           xsec=xsec+(absv+absx)*abs_wgt/upper_bound!/frac
+!!$        endif
+!!$     endif
+
+     xsec=xsec+evt_wgt
+
+     
      if (frac.eq.1d0) then
         nPSpoints(1)=nPSpoints(1)+1
         sum_abs_wgt(1)=sum_abs_wgt(1)+abs_wgt
@@ -39,6 +58,11 @@ program sum_weights
 
   write (*,*) 'sum of weights is (1)',sum_abs_wgt(1)/nPSpoints(1),sum_evt_wgt(1)/nPSpoints(1),sum_wgt(1)/nPSpoints(1)
   write (*,*) 'sum of weights is (2)',sum_abs_wgt(2)/nPSpoints(2),sum_evt_wgt(2)/nPSpoints(2),sum_wgt(2)/nPSpoints(2)
+  write (*,*) xsec/(nPSpoints(1)+nPSpoints(2)),nPSpoints(1),nPSpoints(2)
+  write (*,*) xsec/dble(9192)
+  write (*,*) xsec
+
+
   close (ifile)
 
 contains
@@ -60,7 +84,7 @@ contains
           do i=1,next
              read (iunit,*,err=99,end=99) dum,p(1:3,i),p(0,i)
           enddo
-          read (iunit,*,err=99,end=99) dummy2,abs_wgt,wgt,upper_bound,frac
+          read (iunit,*,err=99,end=99) dummy2,abs_wgt,wgt,upper_bound,frac,absx,absv
           return
        endif
     enddo

@@ -709,7 +709,7 @@ c
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
-      double precision weights(4)
+      double precision weights(6)
       common /to_handling_events/weights
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it

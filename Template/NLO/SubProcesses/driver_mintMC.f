@@ -718,7 +718,7 @@ c
       common /event_normalisation/event_norm
       integer lunlhe_w
       parameter (lunlhe_w=93)
-      double precision weights(4)
+      double precision weights(6)
       common /to_handling_events/weights
 c
       if (new_point .and. ifl.ne.2) then
@@ -954,16 +954,17 @@ c determined which contributions are identical.
                write (*,*) 'Including bias event generation not '/
      $              /'compatible with weighted event generation'
                stop 1 
-            else
-               weight=abs(f(1))
-               weights(1:2)=f(1:2)
-               weights(3)=upper_bound
-               if (abrv.eq.'virt') then
-                  weights(4)=1d0
-               else
-                  weights(4)=vol_fac
-               endif
             endif
+            weights(1:2)=f(1:2)
+            weights(3)=upper_bound
+            if (abrv.eq.'virt') then
+               weights(4)=1d0
+            else
+               weights(4)=vol_fac
+            endif
+            weights(5)=ans(1,1)
+            weights(6)=ans(5,1)
+            weight=(ans(1,1)+ans(5,1))*f(1)/upper_bound/dble(ncalls0)
             call finalize_event(x_save(1,ifold_picked),weight,lunlhe_w
      $           ,.true.)
          endif
