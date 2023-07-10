@@ -3538,10 +3538,10 @@ c fill the BornSmear grids
       implicit none
       include 'nFKSconfigs.inc'
       integer i,j,iFKS
-      double precision xi,y,a,NormConst,IntegralNormConstPos
+      double precision xi,y,a,NormConst(fks_configs),IntegralNormConstPos
      $     ,IntegralNormConstNeg
       parameter (a=1.1d0)
-      double precision full_sum,fac
+      double precision full_sum(fks_configs),fac
       logical firsttime(fks_configs)
       data firsttime/fks_configs*.true./
       double precision xiimax_ev
@@ -3563,14 +3563,14 @@ c     compute weight normalisation
      &              BornSmear(i,j,iFKS,2)   ) /2d0
             enddo
          enddo
-         full_sum=0d0
+         full_sum(iFKS)=0d0
          IntegralNormConstPos=0d0
          IntegralNormConstNeg=0d0
          do i=1,n_BS_yij
             do j=1,n_BS_xi
                if(BornSmear(i,j,iFKS,0).ne.0d0 .and. BornSmear(i,j,iFKS
      $              ,3).ne.0d0) then
-                  full_sum=full_sum+
+                  full_sum(iFKS)=full_sum(iFKS)+
      &                 BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
                   IntegralNormConstNeg=IntegralNormConstNeg+a
      $                 *BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
@@ -3581,9 +3581,9 @@ c     compute weight normalisation
                endif
             enddo
          enddo
-         full_sum=full_sum/(n_BS_yij*n_BS_xi)
-         NormConst=(n_BS_yij*n_BS_xi-IntegralNormConstNeg/full_sum)
-     $        /IntegralNormConstPos
+         full_sum(iFKS)=full_sum(iFKS)/(n_BS_yij*n_BS_xi)
+         NormConst(iFKS)=(n_BS_yij*n_BS_xi-IntegralNormConstNeg
+     $        /full_sum(iFKS))/IntegralNormConstPos
       endif
       
       i=int(n_BS_yij*y)+1
@@ -3591,13 +3591,13 @@ c     compute weight normalisation
       if(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j,iFKS
      $     ,3).ne.0d0) then
 c$$$         BornSmear_weight=0d0
-         BornSmear_weight=-BornSmear(i,j,iFKS,2)/BornSmear(i,j,iFKS,3)
-     $     *NormConst
+         BornSmear_weight=BornSmear(i,j,iFKS,2)/BornSmear(i,j,iFKS,3)
+     $     *NormConst(iFKS)
       elseif(BornSmear(i,j,iFKS,3).eq.0d0) then
          BornSmear_weight=0d0
       else
          BornSmear_weight=a*BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
-     $        /full_sum
+     $        /full_sum(iFKS)
       endif
 
       return
