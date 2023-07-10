@@ -2913,9 +2913,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             run_analysis = "{0},{1}".format(run_analysis, analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
-            if not os.path.exits(pjoin(self.options['contur_path'], 'conturenv.sh')):
+            if not os.path.exists(pjoin(self.options['contur_path'], 'conturenv.sh')):
                 raise Exception("contur_path is not correctly setup. Should be the directory of contur and conturenv.sh script")
-            p = subprocess.Popen('source {0} &>/dev/null; echo $CONTUR_DATA_PATH'.format(pjoin(self.options['contur_path'], "conturenv.sh"))
+            p = subprocess.Popen('source {0} &>/dev/null; echo $CONTUR_USER_DIR'.format(pjoin(self.options['contur_path'], "conturenv.sh"))
                                  , shell=True, stdout=subprocess.PIPE)
             (out,_) = p.communicate()                            
             contur_user_dir = out.decode().strip()
