@@ -34,6 +34,7 @@ import six
 
 pjoin = os.path.join
 
+import madgraph
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
@@ -1731,7 +1732,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif line.startswith('define'):
                 try:
                     mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
-                except Exception:
+                except madgraph.InvalidCmd:
                     pass 
                           
         # 1. Load model---------------------------------------------------------  
@@ -1752,8 +1753,11 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
-                mgcmd.exec_cmd("define %s = %s" % (name, content))
-        
+                try:
+                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                except madgraph.InvalidCmd:
+                    pass
+                    
         if  second and 'tree_path' in self.dedicated_path:
             files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
             if 'virtual_path' in self.dedicated_path:
@@ -1899,7 +1903,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             allids, all_pids = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
-            all_prefix = [''.join([i for i in j.decode(errors='ignore')]).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}
