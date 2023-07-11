@@ -1,6 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-
+3.5.1 (11/07/23)
+      SH+OM: Update interface for contur
+      OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore
+      OM: Better determination of zero helicity for helicity recycling part of the code
+      OM: Fix issue for powheg output
+      
 3.5.0 (12/05/23)
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
