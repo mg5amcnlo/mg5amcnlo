@@ -98,7 +98,7 @@ c Write the process PID in the log.txt files (i.e., to the screen)
       write (*,*) getpid()
 
       fks_confs=fks_configs
-      allocate(BornSmear(n_BS_yij,n_BS_xi,fks_confs,0:3))
+      allocate(BornSmear(n_BS_yij,n_BS_xi,fks_confs,0:4))
       
       call cpu_time(tBefore)
       fixed_order=.false.

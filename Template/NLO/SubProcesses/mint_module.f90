@@ -71,7 +71,7 @@ module mint_module
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
   integer, parameter, public  :: n_ave_virt=10    ! max number of grids to set up to approx virtual
   integer, parameter, public  :: nintegrals=26    ! number of integrals to keep track of
-  integer, parameter, public  :: n_BS_xi=20, n_BS_yij=20  ! number of bins in the Born Smearing grids
+  integer, parameter, public  :: n_BS_xi=40, n_BS_yij=40  ! number of bins in the Born Smearing grids
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
@@ -79,7 +79,7 @@ module mint_module
   integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
-  integer, parameter, private :: BSpoints_min=10000 ! minimum numbers thrown in the imode=3 iteration to fill the BornSmear grids
+  integer, parameter, private :: BSpoints_min=1000000 ! minimum numbers thrown in the imode=3 iteration to fill the BornSmear grids
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
   !     nintervals = min_inter * 2^n,
@@ -1053,7 +1053,7 @@ contains
     even_rn=.true.
     min_it=min_it0
     call reset_mint_grids
-    BornSmear(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:3)=0d0
+    BornSmear(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:4)=0d0
   end subroutine setup_imode_0
 
   subroutine reset_mint_grids
@@ -1113,6 +1113,7 @@ contains
              write (12,*) 'AVE',(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
              write (12,*) 'AVE',(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
              write (12,*) 'AVE',(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSmear(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then
@@ -1157,6 +1158,7 @@ contains
              read (12,*) dummy,(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
              read (12,*) dummy,(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
              read (12,*) dummy,(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSmear(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then

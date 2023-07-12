@@ -509,7 +509,7 @@ c its value to the list of weights using the add_wgt subroutine
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
-      if (imode.eq.3 .and. sudakov_damp.ge.1d0) return ! skip real when setting up the BornSmear grids
+c$$$      if (imode.eq.3 .and. sudakov_damp.ge.1d0) return ! skip real when setting up the BornSmear grids
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -521,7 +521,8 @@ c its value to the list of weights using the add_wgt subroutine
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
-          if (imode.ne.3) call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
+c$$$          if (imode.ne.3) call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
+          call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
         endif
         if (sudakov_damp.lt.1d0) then
           call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
@@ -587,7 +588,8 @@ c the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
-          if (imode.ne.3) call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
+c$$$          if (imode.ne.3) call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
+          call add_wgt(8,orders,-wgt1*f_s_MC_H,0d0,0d0)
           wgt1=wgt1*f_s_MC_S
         else
           wgt1=0d0
@@ -682,7 +684,8 @@ c to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
-          if (imode.ne.3) call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
+c$$$          if (imode.ne.3) call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
+          call add_wgt(9,orders,-wgt1*f_c_MC_H,0d0,0d0)
           wgt1=wgt1*f_c_MC_S
         else
           wgt1=0d0
@@ -793,7 +796,8 @@ c value to the list of weights using the add_wgt subroutine
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
-          if (imode.ne.3) call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
+c$$$          if (imode.ne.3) call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
+          call add_wgt(10,orders,-wgt1*f_sc_MC_H,0d0,0d0)
           wgt1=wgt1*f_sc_MC_S
         else
           wgt1=0d0
@@ -892,7 +896,8 @@ c respectively.
                 call add_wgt(12,orders,wgt1,0d0,0d0)
                 wgt1=sevmc*f_MC_H*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
-                if (imode.ne.3) call add_wgt(13,orders,-wgt1,0d0,0d0)
+c$$$                if (imode.ne.3) call add_wgt(13,orders,-wgt1,0d0,0d0)
+                call add_wgt(13,orders,-wgt1,0d0,0d0)
               enddo
             endif
          enddo
@@ -2968,8 +2973,9 @@ c Smear the Born according to the BornSmear_weight.
       use weight_lines
       use mint_module
       implicit none
-      integer i,j,ifl
+      integer i,j,ifl,ii
       double precision bornsmear_weight,BornSmear_wgt
+     $     ,showerscalereweight
       external bornsmear_weight
       double precision xxx(2)
       common /bornsmearing_variables/ xxx
@@ -2977,8 +2983,15 @@ c Smear the Born according to the BornSmear_weight.
          do i=1,icontr
             if (itype(i).eq.2 .and. BornSmearSetup_done .and.
      $           ifold_cnt(i).eq.ifl) then
-               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i))
+               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i)
+     $              ,showerscalereweight)
                wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
+               do ii=1,icontr
+                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
+                     shower_scale(ii)=shower_scale(ii)
+     $                    *showerscalereweight
+                  endif
+               enddo
             endif
          enddo
       endif
@@ -3410,7 +3423,7 @@ c on the imode we should or should not include the virtual corrections.
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      integer i,j,ict,iamp,ithree,isix,iFKS_soft
+      integer i,j,ict,iamp,ithree,isix,iFKS_soft,ii,jj
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight,sigint_noBorn
      $     ,sigint_ABS_noBorn,sigint_Born
@@ -3505,8 +3518,25 @@ c fill the BornSmear grids
      $           BornSmear(i,j,iFKS_soft,2)+sigint_noBorn
             BornSmear(i,j,iFKS_soft,3)=
      $           BornSmear(i,j,iFKS_soft,3)+sigint_Born
+
+            do ii=1,icontr
+               if (icontr_sum(0,ii).eq.0) cycle
+               do jj=1,niproc(ii)
+                  if (unwgt_B(jj,ii).ne.0d0) then
+                     BornSmear(i,j,iFKS_soft,4)=BornSmear(i,j,iFKS_soft
+     $                    ,4)+shower_scale(ii)*unwgt_B(jj,ii)
+                     if (shower_scale(ii).eq.0d0 .and. 
+     $                    unwgt_B(jj,ii).ne.0d0) then
+                        write (*,*) 'Zero shower scale in Born Smearing'
+     $                       ,shower_scale(ii),unwgt_B(jj,ii),ii,jj
+                        stop 
+                     endif
+                  endif
+               enddo
+            enddo
          endif
       endif
+
 
       f(1)=sigint_ABS
       f(2)=sigint
@@ -3532,21 +3562,25 @@ c fill the BornSmear grids
       end
 
 
-      double precision function BornSmear_weight(xi,y,iFKS)
+      double precision function BornSmear_weight(xi,y,iFKS
+     $     ,showerScaleReweight)
       ! note: arguments xi,y are the vegas x's corresponding do xi_i_fks and y_ij_fks
       use mint_module
       implicit none
       include 'nFKSconfigs.inc'
-      integer i,j,iFKS
-      double precision xi,y,a,NormConst(fks_configs),IntegralNormConstPos
-     $     ,IntegralNormConstNeg
-      parameter (a=1.1d0)
+      integer i,j,iFKS,ii,jj
+      double precision xi,y,a,NormConst(fks_configs)
+     $     ,IntegralNormConstPos,IntegralNormConstNeg
+     $     ,max_BornSmear(fks_configs),ran2,maxvalue,target,sum
+     $     ,showerscalereweight
+      external ran2
+      parameter (a=1d0)
       double precision full_sum(fks_configs),fac
       logical firsttime(fks_configs)
       data firsttime/fks_configs*.true./
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
-      save full_sum,NormConst
+      save full_sum,NormConst,max_BornSmear
 
       if(.not.BornSmearSetup_done) then
          write (*,*) 'BornSmear must be setup before '/
@@ -3554,6 +3588,13 @@ c fill the BornSmear grids
          stop 1
       endif
 c
+
+      if (a.ne.1d0) then
+         write (*,*) 'a.ne.1 (This is needed for '/
+     $        /'shower scale reweighting)'
+         stop 1
+      endif
+      
 c     compute weight normalisation
       if (firsttime(iFKS)) then
          do i=1,n_BS_yij
@@ -3566,6 +3607,7 @@ c     compute weight normalisation
          full_sum(iFKS)=0d0
          IntegralNormConstPos=0d0
          IntegralNormConstNeg=0d0
+         max_BornSmear(iFKS)=0d0
          do i=1,n_BS_yij
             do j=1,n_BS_xi
                if(BornSmear(i,j,iFKS,0).ne.0d0 .and. BornSmear(i,j,iFKS
@@ -3574,6 +3616,8 @@ c     compute weight normalisation
      &                 BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
                   IntegralNormConstNeg=IntegralNormConstNeg+a
      $                 *BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
+                  max_BornSmear(iFKS)=max(max_BornSmear(iFKS),a
+     $                 *BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3))
                elseif(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j
      $                 ,iFKS,3).ne.0d0) then
                   IntegralNormConstPos=IntegralNormConstPos+
@@ -3584,10 +3628,14 @@ c     compute weight normalisation
          full_sum(iFKS)=full_sum(iFKS)/(n_BS_yij*n_BS_xi)
          NormConst(iFKS)=(n_BS_yij*n_BS_xi-IntegralNormConstNeg
      $        /full_sum(iFKS))/IntegralNormConstPos
+         max_BornSmear(iFKS)=max_BornSmear(iFKS)/full_sum(iFKS)
       endif
-      
+
+
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
+
+      
       if(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j,iFKS
      $     ,3).ne.0d0) then
 c$$$         BornSmear_weight=0d0
@@ -3599,6 +3647,43 @@ c$$$         BornSmear_weight=0d0
          BornSmear_weight=a*BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
      $        /full_sum(iFKS)
       endif
+      if (BornSmear_weight.gt.1d0) then
+         if (ran2().gt.(BornSmear_weight-1d0)/max_BornSmear(iFKS)) then
+
+            maxvalue=0d0
+            do ii=1,n_BS_yij
+               do jj=1,n_BS_xi
+                  if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
+                  if (a*BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
+     $                 /full_sum(iFKS).lt.1d0) then
+                     maxvalue=maxvalue+(1d0-a*BornSmear(ii,jj,iFKS,0)
+     $                    /BornSmear(ii,jj,iFKS,3)/full_sum(iFKS))
+                  endif
+               enddo
+            enddo
+            target=maxvalue*ran2()
+            sum=0d0
+            do ii=1,n_BS_yij
+               do jj=1,n_BS_xi
+                  if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
+                  if (a*BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
+     $                 /full_sum(iFKS).lt.1d0) then
+                     sum=sum+(1d0-a*BornSmear(ii,jj,iFKS,0)
+     $                    /BornSmear(ii,jj,iFKS,3)/full_sum(iFKS))
+                  endif
+                  if (sum.gt.target) exit
+               enddo
+               if (sum.gt.target) exit
+            enddo
+            showerscalereweight=(BornSmear(ii,jj,iFKS,4)/BornSmear(ii,jj,iFKS,3))
+     $                         /(BornSmear( i, j,iFKS,4)/BornSmear( i, j,iFKS,3))
+         endif
+      else
+         showerscalereweight=1d0
+      endif
+      
+c$$$      write (*,*) 'ss',showerscalereweight,BornSmear_weight,BornSmear(i,j,iFKS,4),BornSmear(i,j,iFKS,3),i,j
+
 
       return
       end
