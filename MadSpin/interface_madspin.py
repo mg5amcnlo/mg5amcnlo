@@ -772,13 +772,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         #replace run card if present in header (to make sure correct random seed is recorded in output file)
         if 'mgruncard' in self.banner:
             generate_all.banner['mgruncard'] = self.banner['mgruncard']   
-        
+
+
         # replace path to the ms_dir if they were relative path/ms_dir moved/...
         generate_all.options['ms_dir'] = self.options['ms_dir']
 
         # NOW we have all the information available for RUNNING
         
         if self.options['seed']:
+
+            # change the seed in the banner
+            if 'madspin' in self.banner:
+                if 'seed' in self.banner['madspin']:
+                    self.banner['madspin'] = re.sub('set\s+seed\s+\d+', 'set seed %d' % self.options['seed'])
+                else:
+                    self.banner['madspin'] = 'set seed %d '% self.options['seed'] + self.banner['madspin']
+
+            
             #seed is specified need to use that one:
             try:
                 open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.options['seed'])
