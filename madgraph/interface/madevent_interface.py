@@ -3746,22 +3746,38 @@ Beware that this can be dangerous for local multicore runs.""")
                              )
  
                 if len(AllEvent) >= 80: #perform a partial unweighting
-                    AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                          get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
-                    AllEvent = lhe_parser.MultiEventFile()
-                    AllEvent.banner = self.banner
-                    AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                                 sum_xsec,
-                                 math.sqrt(sum(x**2 for x in sum_xerru)),
-                                 sum_axsec) 
-                    partials +=1
+                    if self.run_card['unweighting_mode'] < 3:
+                        AllEvent.write(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials))
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.banner = self.banner
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                    sum_xsec,
+                                    math.sqrt(sum(x**2 for x in sum_xerru)),
+                                    sum_axsec) 
+                        partials +=1                    
+                    else:
+                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                            get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.banner = self.banner
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                    sum_xsec,
+                                    math.sqrt(sum(x**2 for x in sum_xerru)),
+                                    sum_axsec) 
+                        partials +=1
         
         if not hasattr(self,'proc_characteristic'):
             self.proc_characteristic = self.get_characteristics()
         if len(AllEvent) == 0:
             nb_event = 0 
         else:
-            nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+            if self.run_card['unweighting_mode'] < 3:
+                nb_event = AllEvent.get_nb_event()
+                AllEvent.define_init_banner(wgt=sum_axsec, lha_strategy=4, proc_charac=self.proc_characteristic)
+                AllEvent.write(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
+                               banner=AllEvent.banner)
+            else:
+                nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                           get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)

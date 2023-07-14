@@ -193,6 +193,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -230,6 +231,13 @@ c
 C-----
 C  BEGIN CODE
 C-----
+      if(unweighting_mode.eq.0.and.twgt.ge.0d0)then
+         if (abs(wgt).gt.1d-50)then
+            p(:,:)=px(:,:)
+            call write_leshouche(p,wgt/twgt,numproc,.True.)
+         endif
+         return
+      endif
       if (twgt .ge. 0d0) then
          do i=1,nexternal
             do j=0,3
@@ -241,10 +249,10 @@ C-----
          if (xwgt .eq. 0d0) return
          yran = xran1(idum)
          if (xwgt .gt. twgt*fudge*yran) then
-            uwgt = max(xwgt,twgt*fudge)
+               uwgt = max(xwgt,twgt*fudge)
 c           Set sign of uwgt to sign of wgt
-            uwgt = dsign(uwgt,wgt)
-            if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
+*            uwgt = dsign(uwgt,wgt)
+               if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
@@ -273,6 +281,7 @@ c
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run_config.inc'
+      include 'run.inc'
 c
 c     Arguments
 c
@@ -290,7 +299,7 @@ c
       double precision xscale
       logical store_event(maxevents)
       integer iseed, nover, nstore
-      double precision scale,aqcd,aqed
+      double precision evtscale,aqcd,aqed
       double precision random
       integer ievent
       character*1000 buff
@@ -372,7 +381,7 @@ c
       done = .false. 
       do i=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+            call read_event(lun,P,wgt,n,ic,ievent,evtscale,aqcd,aqed,buff,
      $           u_syst,s_buff,nclus,buffclus,done)
          else
             wgt = 0d0
@@ -411,12 +420,19 @@ c      endif
       nover = 0
       do j=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+            call read_event(lun,P,wgt,n,ic,ievent,evtscale,aqcd,aqed,buff,
      $           u_syst,s_buff,nclus,buffclus,done)
          else
             write(*,*) 'Error done early',j,nw
          endif
-         if (store_event(j) .and. .not. done) then
+         if(unweighting_mode.lt.2) then
+            wgt=wgt*xscale
+            wgt = dsign(max(dabs(wgt), target_wgt),wgt)
+            xtot = xtot + dabs(wgt)
+            i=i+1            
+            call write_Event(lunw,p,wgt,n,ic,ngroup,evtscale,aqcd,aqed,
+     $           buff,u_syst,s_buff,nclus,buffclus)
+         else if (store_event(j) .and. .not. done) then
             wgt=wgt*xscale
             wgt = dsign(max(dabs(wgt), target_wgt),wgt)
             if (dabs(wgt) .gt. target_wgt) then
@@ -425,7 +441,7 @@ c      endif
             endif
             xtot = xtot + dabs(wgt)
             i=i+1
-            call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,
+            call write_Event(lunw,p,wgt,n,ic,ngroup,evtscale,aqcd,aqed,
      $           buff,u_syst,s_buff,nclus,buffclus)
          endif
       enddo

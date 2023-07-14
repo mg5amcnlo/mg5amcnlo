@@ -1172,6 +1172,9 @@ class MultiEventFile(EventFile):
         
         return len(self.files)
     
+    def get_nb_event(self):
+        return sum(len(i) for i in self.files)
+
     def seek(self, pos):
         """ """
         
@@ -1249,8 +1252,12 @@ class MultiEventFile(EventFile):
                 banner = firstlhe.banner                
         else: 
             out = path
-        if banner:
-            out.write(banner)
+        if isinstance(banner, str):
+            out.write(str(banner))
+        elif banner:
+            banner.write(output_path=out, close_tag=False)
+            #banner.write(self, close_tag=False)
+
         nb_event = 0
         info = collections.defaultdict(float)
         if random and self.open:

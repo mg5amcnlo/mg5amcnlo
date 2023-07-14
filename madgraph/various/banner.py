@@ -3986,6 +3986,11 @@ class RunCardLO(RunCard):
         self.add_param('frame_id', 6,  system=True)
         self.add_param("event_norm", "average", allowed=['sum','average', 'unity'],
                         include=False, sys_default='sum', hidden=True)
+        self.add_param("unweighting_mode", 3, allowed=[0,1,2,3], hidden=True,
+                       comment="0: no unweighting (keeping last iteration)\n" +\
+                               "1: only first partial un-weighting\n" + \
+                               "2: old v4 mode (no third un-weighting)\n"+\
+                               "3: normal unweighting (three stage unweighting)\n")
         #cut
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
