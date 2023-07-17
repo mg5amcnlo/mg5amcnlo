@@ -2974,9 +2974,9 @@ c Smear the Born according to the BornSmear_weight.
       use mint_module
       implicit none
       integer i,j,ifl,ii
-      double precision bornsmear_weight,BornSmear_wgt
-     $     ,showerscalereweight
-      external bornsmear_weight
+      double precision BornSmear_weight,BornSmear_wgt
+     $     ,ShowerScaleReweight
+      external BornSmear_weight
       double precision xxx(2)
       common /bornsmearing_variables/ xxx
       if (IncludeBornSmear) then
@@ -2984,15 +2984,15 @@ c Smear the Born according to the BornSmear_weight.
             if (itype(i).eq.2 .and. BornSmearSetup_done .and.
      $           ifold_cnt(i).eq.ifl) then
                BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i)
-     $              ,showerscalereweight)
+     $              ,ShowerScaleReweight)
                wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
-               shower_scale(i)=shower_scale(i)*showerscalereweight
-c$$$               do ii=1,icontr
-c$$$                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
-c$$$                     shower_scale(ii)=shower_scale(ii)
-c$$$     $                    *showerscalereweight
-c$$$                  endif
-c$$$               enddo
+c$$$               shower_scale(i)=shower_scale(i)*ShowerScaleReweight
+               do ii=1,icontr
+                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
+                     shower_scale(ii)=shower_scale(ii)
+     $                    *ShowerScaleReweight
+                  endif
+               enddo
             endif
          enddo
       endif
@@ -3564,25 +3564,21 @@ c fill the BornSmear grids
 
 
       double precision function BornSmear_weight(xi,y,iFKS
-     $     ,showerScaleReweight)
+     $     ,ShowerScaleReweight)
       ! note: arguments xi,y are the vegas x's corresponding do xi_i_fks and y_ij_fks
       use mint_module
       implicit none
       include 'nFKSconfigs.inc'
       integer i,j,iFKS,ii,jj
       double precision xi,y,a,NormConst(fks_configs)
-     $     ,IntegralNormConstPos,IntegralNormConstNeg
-     $     ,max_BornSmear(fks_configs),ran2,maxvalue,target,sum
-     $     ,showerscalereweight,bornsmear_weight_mat(n_BS_yij,n_BS_xi
-     $     ,fks_configs)
+     $     ,IntegralNormConstPos,ran2,maxvalue,target,sum
+     $     ,ShowerScaleReweight,BornSmear_weight_mat(n_BS_yij,n_BS_xi
+     $     ,fks_configs),full_sum
       external ran2
       parameter (a=1d0)
-      double precision full_sum(fks_configs),fac
       logical firsttime(fks_configs)
       data firsttime/fks_configs*.true./
-      double precision xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      save full_sum,NormConst,max_BornSmear,bornsmear_weight_mat
+      save NormConst,BornSmear_weight_mat
 
       if(.not.BornSmearSetup_done) then
          write (*,*) 'BornSmear must be setup before '/
@@ -3597,41 +3593,34 @@ c
          stop 1
       endif
       
-c     compute weight normalisation
+! fill the weight normalisation matrix the first time we enter this
+! function (for each FKS configuration)
       if (firsttime(iFKS)) then
-         do i=1,n_BS_yij
-            do j=1,n_BS_xi
-               BornSmear(i,j,iFKS,0)=
-     &              ( BornSmear(i,j,iFKS,1) -
-     &              BornSmear(i,j,iFKS,2)   ) /2d0
+         firsttime(iFKS)=.false.
+         do ii=1,n_BS_yij
+            do jj=1,n_BS_xi
+               BornSmear(ii,jj,iFKS,0)=
+     &              ( BornSmear(ii,jj,iFKS,1) -
+     &              BornSmear(ii,jj,iFKS,2)   ) /2d0
             enddo
          enddo
-         full_sum(iFKS)=0d0
+         full_sum=0d0
          IntegralNormConstPos=0d0
-         IntegralNormConstNeg=0d0
-         max_BornSmear(iFKS)=0d0
-         do i=1,n_BS_yij
-            do j=1,n_BS_xi
-               if(BornSmear(i,j,iFKS,0).ne.0d0 .and. BornSmear(i,j,iFKS
-     $              ,3).ne.0d0) then
-                  full_sum(iFKS)=full_sum(iFKS)+
-     &                 BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
-                  IntegralNormConstNeg=IntegralNormConstNeg+a
-     $                 *BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
-                  max_BornSmear(iFKS)=max(max_BornSmear(iFKS),a
-     $                 *BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3))
-               elseif(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j
-     $                 ,iFKS,3).ne.0d0) then
+         do ii=1,n_BS_yij
+            do jj=1,n_BS_xi
+               if(BornSmear(ii,jj,iFKS,0).ne.0d0 .and. BornSmear(ii,jj
+     $              ,iFKS,3).ne.0d0) then
+                  full_sum=full_sum+
+     &                 BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
+               elseif(BornSmear(ii,jj,iFKS,0).eq.0d0 .and. BornSmear(ii
+     $                 ,jj,iFKS,3).ne.0d0) then
                   IntegralNormConstPos=IntegralNormConstPos+
-     $                 BornSmear(i,j,iFKS,2)/BornSmear(i,j,iFKS,3)
+     $                 BornSmear(ii,jj,iFKS,2)/BornSmear(ii,jj,iFKS,3)
                endif
             enddo
          enddo
-         full_sum(iFKS)=full_sum(iFKS)/(n_BS_yij*n_BS_xi)
-         NormConst(iFKS)=(n_BS_yij*n_BS_xi-IntegralNormConstNeg
-     $        /full_sum(iFKS))/IntegralNormConstPos
-         max_BornSmear(iFKS)=max_BornSmear(iFKS)/full_sum(iFKS)
-
+         full_sum=full_sum/(n_BS_yij*n_BS_xi)
+         NormConst(iFKS)=n_BS_yij*n_BS_xi*(1d0-a)/IntegralNormConstPos
          
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
@@ -3643,21 +3632,32 @@ c     compute weight normalisation
                   BornSmear_weight_mat(ii,jj,iFKS)=0d0
                else
                   BornSmear_weight_mat(ii,jj,iFKS)=a*BornSmear(ii,jj
-     $                 ,iFKS,0)/BornSmear(ii,jj,iFKS,3)/full_sum(iFKS)
+     $                 ,iFKS,0)/BornSmear(ii,jj,iFKS,3)/full_sum
+               endif
+               if ( BornSmear_weight_mat(ii,jj,iFKS).ne.
+     $              BornSmear_weight_mat(ii,jj,iFKS) ) then
+                  write (*,*) 'NAN found in BornSmear_weight_mat',ii,jj
+     $                 ,iFKS,BornSmear_weight_mat(ii,jj,iFKS)
+     $                 ,BornSmear(ii,jj,iFKS,0:4),NormConst(iFKS)
+     $                 ,IntegralNormConstPos
+                  stop
                endif
             enddo
          enddo
       endif
 
-
+! Determine the bin and the smearing weight      
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
-      bornsmear_weight=BornSmear_weight_mat(i,j,iFKS)
+      BornSmear_weight=BornSmear_weight_mat(i,j,iFKS)
 
-      
+! Compute the reweight factor for the shower starting scale: if we have
+! an excess of events in the current bin, take the ratio of the shower
+! scale starting scales from a random bin (weighted by the deficiency of
+! events in those bins) and the current bin. Do this only for the
+! *excess* of the events in the current bin.
       if (BornSmear_weight.gt.1d0) then
          if (ran2().lt.(BornSmear_weight-1d0)/BornSmear_weight) then
-
             maxvalue=0d0
             do ii=1,n_BS_yij
                do jj=1,n_BS_xi
@@ -3680,15 +3680,23 @@ c     compute weight normalisation
                enddo
                if (sum.gt.target) exit
             enddo
-            showerscalereweight=(BornSmear(ii,jj,iFKS,4)/BornSmear(ii,jj,iFKS,3))
-     $                         /(BornSmear( i, j,iFKS,4)/BornSmear( i, j,iFKS,3))
+            ShowerScaleReweight=
+     $           (BornSmear(ii,jj,iFKS,4)/BornSmear(ii,jj,iFKS,3))/
+     $           (BornSmear( i, j,iFKS,4)/BornSmear( i, j,iFKS,3))
+         else
+            ShowerScaleReweight=1d0
          endif
       else
-         showerscalereweight=1d0
+         ShowerScaleReweight=1d0
       endif
-      
-c$$$      write (*,*) 'ss',showerscalereweight,BornSmear_weight,BornSmear(i,j,iFKS,4),BornSmear(i,j,iFKS,3),i,j
 
+      if (ShowerScaleReweight.le.0d0 .or.
+     $     ShowerScaleReweight.ne.ShowerScaleReweight) then
+         write (*,*) 'ShowerScaleReweight is smaller or equal '/
+     $        /'to zero or NaN:',ShowerScaleReweight,i,j,ii,jj,sum
+     $        ,target,maxvalue,BornSmear_weight,iFKS
+         stop
+      endif
 
       return
       end
