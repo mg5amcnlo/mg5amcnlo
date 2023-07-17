@@ -2986,12 +2986,13 @@ c Smear the Born according to the BornSmear_weight.
                BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i)
      $              ,showerscalereweight)
                wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
-               do ii=1,icontr
-                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
-                     shower_scale(ii)=shower_scale(ii)
-     $                    *showerscalereweight
-                  endif
-               enddo
+               shower_scale(i)=shower_scale(i)*showerscalereweight
+c$$$               do ii=1,icontr
+c$$$                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
+c$$$                     shower_scale(ii)=shower_scale(ii)
+c$$$     $                    *showerscalereweight
+c$$$                  endif
+c$$$               enddo
             endif
          enddo
       endif
@@ -3572,7 +3573,8 @@ c fill the BornSmear grids
       double precision xi,y,a,NormConst(fks_configs)
      $     ,IntegralNormConstPos,IntegralNormConstNeg
      $     ,max_BornSmear(fks_configs),ran2,maxvalue,target,sum
-     $     ,showerscalereweight
+     $     ,showerscalereweight,bornsmear_weight_mat(n_BS_yij,n_BS_xi
+     $     ,fks_configs)
       external ran2
       parameter (a=1d0)
       double precision full_sum(fks_configs),fac
@@ -3580,7 +3582,7 @@ c fill the BornSmear grids
       data firsttime/fks_configs*.true./
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
-      save full_sum,NormConst,max_BornSmear
+      save full_sum,NormConst,max_BornSmear,bornsmear_weight_mat
 
       if(.not.BornSmearSetup_done) then
          write (*,*) 'BornSmear must be setup before '/
@@ -3629,35 +3631,40 @@ c     compute weight normalisation
          NormConst(iFKS)=(n_BS_yij*n_BS_xi-IntegralNormConstNeg
      $        /full_sum(iFKS))/IntegralNormConstPos
          max_BornSmear(iFKS)=max_BornSmear(iFKS)/full_sum(iFKS)
+
+         
+         do ii=1,n_BS_yij
+            do jj=1,n_BS_xi
+               if(BornSmear(ii,jj,iFKS,0).eq.0d0 .and. BornSmear(ii,jj
+     $              ,iFKS,3).ne.0d0) then
+                  BornSmear_weight_mat(ii,jj,iFKS)=BornSmear(ii,jj,iFKS
+     $                 ,2)/BornSmear(ii,jj,iFKS,3)*NormConst(iFKS)
+               elseif(BornSmear(ii,jj,iFKS,3).eq.0d0) then
+                  BornSmear_weight_mat(ii,jj,iFKS)=0d0
+               else
+                  BornSmear_weight_mat(ii,jj,iFKS)=a*BornSmear(ii,jj
+     $                 ,iFKS,0)/BornSmear(ii,jj,iFKS,3)/full_sum(iFKS)
+               endif
+            enddo
+         enddo
       endif
 
 
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
+      bornsmear_weight=BornSmear_weight_mat(i,j,iFKS)
 
       
-      if(BornSmear(i,j,iFKS,0).eq.0d0 .and. BornSmear(i,j,iFKS
-     $     ,3).ne.0d0) then
-c$$$         BornSmear_weight=0d0
-         BornSmear_weight=BornSmear(i,j,iFKS,2)/BornSmear(i,j,iFKS,3)
-     $     *NormConst(iFKS)
-      elseif(BornSmear(i,j,iFKS,3).eq.0d0) then
-         BornSmear_weight=0d0
-      else
-         BornSmear_weight=a*BornSmear(i,j,iFKS,0)/BornSmear(i,j,iFKS,3)
-     $        /full_sum(iFKS)
-      endif
       if (BornSmear_weight.gt.1d0) then
-         if (ran2().gt.(BornSmear_weight-1d0)/max_BornSmear(iFKS)) then
+         if (ran2().lt.(BornSmear_weight-1d0)/BornSmear_weight) then
 
             maxvalue=0d0
             do ii=1,n_BS_yij
                do jj=1,n_BS_xi
                   if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
-                  if (a*BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
-     $                 /full_sum(iFKS).lt.1d0) then
-                     maxvalue=maxvalue+(1d0-a*BornSmear(ii,jj,iFKS,0)
-     $                    /BornSmear(ii,jj,iFKS,3)/full_sum(iFKS))
+                  if (BornSmear_weight_mat(ii,jj,iFKS).lt.1d0) then
+                     maxvalue=maxvalue+(1d0-BornSmear_weight_mat(ii,jj
+     $                    ,iFKS))
                   endif
                enddo
             enddo
@@ -3666,10 +3673,8 @@ c$$$         BornSmear_weight=0d0
             do ii=1,n_BS_yij
                do jj=1,n_BS_xi
                   if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
-                  if (a*BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
-     $                 /full_sum(iFKS).lt.1d0) then
-                     sum=sum+(1d0-a*BornSmear(ii,jj,iFKS,0)
-     $                    /BornSmear(ii,jj,iFKS,3)/full_sum(iFKS))
+                  if (BornSmear_weight_mat(ii,jj,iFKS).lt.1d0) then
+                     sum=sum+(1d0-BornSmear_weight_mat(ii,jj,iFKS))
                   endif
                   if (sum.gt.target) exit
                enddo
