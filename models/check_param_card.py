@@ -85,7 +85,7 @@ class Parameter (object):
             self.value= ' '.join(data[len(self.lhacode):])
             # check that lhacode are the first entry otherwise return invalid param.
             if ' '.join([str(i) for i in self.lhacode]) != ' '.join(data[:len(self.lhacode)]):
-                raise InvalidParam
+                raise InvalidParam("line was %s" % str(data))
         else:
             self.value = data[-1]
         
