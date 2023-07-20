@@ -1108,9 +1108,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if alias:
             choices += list(alias.keys())
         
+
+
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
-        
+        if fct_timeout is None:
+            fct_timeout = lambda x: question_instance.postcmd(x, default) if x else False
         if first_cmd:
             if isinstance(first_cmd, str):
                 question_instance.onecmd(first_cmd)
