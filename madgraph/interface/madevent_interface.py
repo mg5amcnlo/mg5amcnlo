@@ -835,7 +835,7 @@ class AskRun(cmd.ControlSwitch):
         
         self.allowed_madspin = []
         if 'MadSpin'  in self.available_module:
-            self.allowed_madspin = ['OFF',"ON",'onshell',"full"]
+            self.allowed_madspin = ['OFF',"ON",'onshell',"full", "density"]
         return self.allowed_madspin
     
     def check_value_madspin(self, value):
@@ -869,12 +869,10 @@ class AskRun(cmd.ControlSwitch):
     def get_cardcmd_for_madspin(self, value):
         """set some command to run before allowing the user to modify the cards."""
         
-        if value == 'onshell':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode onshell"]
+        if value in  ['onshell', 'none', 'density']:
+            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode %s" % value ]
         elif value in ['full', 'madspin']:
             return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode full"]
-        elif value == 'none':
-            return ["edit madspin_card --replace_line='set spinmode' --before_line='decay' set spinmode none"]
         else:
             return []
         

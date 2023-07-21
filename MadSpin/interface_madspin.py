@@ -70,7 +70,7 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('ms_dir', '')
         self.add_param('max_running_process', 100)
         self.add_param('onlyhelicity', False)
-        self.add_param('spinmode', "madspin", allowed=['full','madspin','none','onshell'])
+        self.add_param('spinmode', "madspin", allowed=['full','madspin','none','onshell', 'density'])
         self.add_param('use_old_dir', False, comment='should be use only for faster debugging')
         self.add_param('run_card', '' , comment='define cut for spinmode==none. Path to run_card to use')
         self.add_param('fixed_order', False, comment='to activate fixed order handling of counter-event')
@@ -472,8 +472,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise self.InvalidCmd('second argument should be a path to a existing directory')
         
         elif args[0] == "spinmode":
-            if args[1].lower() not in ["full", "onshell", "none", "madspin"]:
-                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/onshell/none")
+            if args[1].lower() not in ["full", "onshell", "none", "madspin", "density"]:
+                raise self.InvalidCmd("spinmode can only take one of those 4 values: full/onshell/none/density")
              
         elif args[0] == "run_card":
             if self.options['spinmode'] == "madspin":
@@ -624,6 +624,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             return self.run_onshell(line)
         elif self.options["spinmode"] == "bridge":
             raise Exception("Bridge mode not available.")
+        elif self.options["spinmode"] == "density":
+            misc.sprint("DENSITY")
+            self.run_onshell(line, density_method=True)
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
@@ -1221,11 +1224,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if cumul:
                     mg5.exec_cmd("generate %s" % proc)
                     for j,proc2 in enumerate(self.list_branches[name][1:]):
+                        misc.sprint(proc2)
                         if restrict_file and j not in restrict_file:
                             raise Exception # Do not see how this can happen
                         mg5.exec_cmd("add process %s" % proc2)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 else:
+                    misc.sprint(proc)
                     mg5.exec_cmd("generate %s" % proc)
                     mg5.exec_cmd("output %s -f" % decay_dir)
                 
@@ -1350,7 +1355,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             return out, width
 
-    def run_onshell(self, line):
+    def run_onshell(self, line, density_method=False):
         """Run the onshell Algorithm"""
         
         # 1. Read the event file to check which decay to perform and the number
@@ -1358,6 +1363,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         #   otherwise efficiency=2
         # 2. Generate the associated events
         # 3. generate the various matrix-element (production/decay/production+decay) 
+        #    => no production+ decay if density_method on True
         
         # 3. comput
         # 3. perform the merge of the events.
@@ -1494,8 +1500,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.error *= self.branching_ratio
         
         # 3. generate the various matrix-element
-        self.update_status('generating Madspin matrix element')
-        self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
+        self.update_status('generating Madspin matrix element (density_method=%s)' % density_method)
+        if density_method:
+            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file, 
+                                                    self.options)
+        else:
+            self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
                                                     self.options)
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
@@ -1554,6 +1564,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 #        misc.sprint('Done so far. output written in %s' % output_lhe.name)
         
     
+
+
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
         """return a dictionary PDG -> list of associated decay"""
         
@@ -1698,12 +1710,23 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decay_me *= self.calculate_matrix_element(dec)
             random.shuffle(decays[pdg])
 
-        full_event = lhe_parser.Event(str(production))
-        full_event = full_event.add_decays(decays)
-        full_me = self.calculate_matrix_element(full_event)
+
+        if self.generate_all.mode == 'onshell':
+            full_event = lhe_parser.Event(str(production))
+            full_event = full_event.add_decays(decays)
+            full_me = self.calculate_matrix_element(full_event)
+        else:
+            full_me = self.calculate_matrix_element_from_density(production, decays)
+            #full_event need o be set after since modifies production
+            full_event = lhe_parser.Event(str(production))
+            full_event = full_event.add_decays(decays)
         return full_event, full_me/(production_me*decay_me)
         
-        
+    def calculate_matrix_element_from_density(self, production, decays):
+        print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
+        print("WARNING decays might not be boosted to the correct frame yet")
+        raise Exception("Not IMplemented")
+
     def calculate_matrix_element(self, event):
         """routine to return the matrix element"""        
         
