@@ -643,6 +643,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # should be onshell (True), as well as for forbidden s-channels (False).
         # Default is None
         self['onshell'] = None
+        # the offshell flag is used for external particles where momenta are not
+        # computed onshell (Standalone only for the moment). Used for madspin
+        self['offshell'] = False
         # conjugate_indices is a list [1,2,...] with fermion lines
         # that need conjugates. Default is "None"
         self['conjugate_indices'] = None
@@ -677,6 +680,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 if leg.get('onshell') == False:
                     # Denotes forbidden s-channel
                     self.set('onshell', leg.get('onshell'))
+                if leg.get('offshell'):
+                    self.set('offshell', True)
                 self.set('leg_state', leg.get('state'))
                 # Need to set 'decay' to True for particles which will be
                 # decayed later, in order to not combine such processes
@@ -1692,7 +1697,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 res.append(self.get('is_part'))
 
         res.append(tuple(self.get('polarization')) )
-
+        res.append(self.get('offshell'))
         # Check if we need to append a charge conjugation flag
         if self.needs_hermitian_conjugate():
             res.append(self.get('conjugate_indices'))

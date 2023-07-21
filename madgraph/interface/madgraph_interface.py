@@ -4939,6 +4939,12 @@ This implies that with decay chains:
                 state = True
                 continue
 
+            if part_name.endswith('*'):
+                part_name = part_name[:-1]
+                offshell = True
+            else:
+                offshell = False
+
             # check if the particle is tagged (!PART!)
             if part_name.startswith('!') and part_name.endswith('!'):
                 part_name = part_name[1:-1]
@@ -5083,7 +5089,8 @@ This implies that with decay chains:
 
                         myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                             'state':state,
-                                                            'polarization': polarization}))
+                                                            'polarization': polarization,
+                                                            'offshell':offshell}))
                     else:
                         myleglist.append(fks_tag.MultiTagLeg({'ids':mylegids,
                                                           'state':state,

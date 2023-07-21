@@ -1766,7 +1766,9 @@ class MultiProcess(base_objects.PhysicsObject):
                 
                 if not fstags:   
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 'polarization': fsleg['polarization']}) \
+                            base_objects.Leg({'id':id, 'state': True, 
+                                              'polarization': fsleg['polarization'],
+                                              'offshell': fsleg['offshell']}) \
                             for id, fsleg in zip(prod, fslegs)])
                 else:
                     leg_list.extend([\

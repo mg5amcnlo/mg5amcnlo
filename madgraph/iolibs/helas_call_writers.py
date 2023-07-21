@@ -1140,7 +1140,11 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = call + "(P(0,%(number_external)d),"
             if argument.get('spin') != 1:
                 # For non-scalars, need mass and helicity
-                call = call + "%(mass)s,NHEL(%(number_external)d),"
+                if argument.get('offshell'):
+                    call = call + "DSQRT(P(0,%(number_external)d)**2-P(1,%(number_external)d)**2-P(2,%(number_external)d)**2-P(3,%(number_external)d)**2),"
+                else:
+                    call = call + "%(mass)s,"
+                call = call + "NHEL(%(number_external)d),"
             call = call + "%(state_id)+d*IC(%(number_external)d),{0})".format(\
                                     self.format_helas_object('W(1,','%(me_id)d'))
 
