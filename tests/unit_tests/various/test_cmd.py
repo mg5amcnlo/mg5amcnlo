@@ -29,19 +29,36 @@ class TestInstall(unittest.TestCase):
     def test_install_update(self):
         """Check that the install update command point to the official link
         and not to the test one."""
-        check1 = "            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it//mg5amc_build_nb')\n"
-        check2 = "                    filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it//patch/build%s.patch' %(i+1))\n" 
-        
-        has1, has2 = False, False
+
+        check1 = "            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')"
+        check2 = "                    filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/patch/build%s.patch' %(i+1))\n" 
+        check3 = "            filetext = six.moves.urllib.request.urlopen('https://madgraph.phys.ucl.ac.be//mg5amc3_build_nb')\n"
+        check4 = "                    filetext = six.moves.urllib.request.urlopen('https://madgraph.phys.ucl.ac.be//patch/build%s.patch' %(i+1))\n" 
+
+        has1, has2, has3, has4  = False, False, False, False
         for line in  open(os.path.join(MG5DIR,'madgraph','interface',
                                                       'madgraph_interface.py')):
-            if line == check1:
+
+            if line.strip() == check1.strip():
                 has1 = True
-            elif line ==check2:
+            elif line.strip() == check2.strip():
                 has2 = True
-        self.assertTrue(has1, "The install update command point through the wrong path")
-        self.assertTrue(has2, "The install update command point through the wrong path")
-        
+            elif line.strip() ==check3.strip():
+                has3 = True
+            elif line.strip() ==check4.strip():
+                has4 = True
+
+        version = misc.get_pkg_info()['version']
+        if version.startswith('2'):
+            self.assertTrue(has1, "The install update command point through the wrong path")
+            self.assertTrue(has2, "The install update command point through the wrong path")
+            self.assertFalse(has3, "The install update command point through the wrong path")
+            self.assertFalse(has4, "The install update command point through the wrong path")
+        if version.startswith('3'):
+            self.assertTrue(has3, "The install update command point through the wrong path")
+            self.assertTrue(has4, "The install update command point through the wrong path")
+            self.assertFalse(has1, "The install update command point through the wrong path")
+            self.assertFalse(has2, "The install update command point through the wrong path")
         
     def test_configuration_file(self):
         """Check that the configuration file is not modified, if he is present"""
