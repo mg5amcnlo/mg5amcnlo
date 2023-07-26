@@ -127,8 +127,8 @@ class TestMECmdShell(unittest.TestCase):
             out = p.communicate('install MadAnalysis4'.encode())
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
-        if not misc.which('root'):
-            raise Exception('root is require for this test')
+        #if not misc.which('root'):
+        #    raise Exception('root is require for this test')
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
