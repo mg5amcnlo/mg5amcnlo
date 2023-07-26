@@ -1,5 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.16(26/07/23):
+     OM: fix for helicity recycling
+     OM: Update numpy support to latest version
+     OM: Fix some interface issue
+
 2.9.15 (12/05/23)
      OM: Fix a bug where the number of core sed was higher than requested
      OM: Reduce RAM used by madspin
