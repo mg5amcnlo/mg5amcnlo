@@ -109,6 +109,19 @@ if branch != 'LTS':
         exit()
     auto_update = False
 
+release_date = date.fromtimestamp(time.time())
+for line in open(os.path.join(MG5DIR,'VERSION')):
+    if 'version' in line:
+        logging.info(line)
+        version = line.rsplit('=')[1].strip()
+    if 'date' in line:
+        if not str(release_date.year) in line or not str(release_date.month) in line or \
+                                                           not str(release_date.day) in line:
+            logging.warning("WARNING: The release time information is : %s" % line)
+            answer = input('Do you want to continue anyway? (y/n)')
+            if answer != 'y':
+                exit()
+    
 #check if current version has already a version flag matching the VERSION information
 if auto_update:
     p = subprocess.Popen(['git', 'tag', '-l', '-n','\'LTS_%s\'' %version], stdout=subprocess.PIPE)

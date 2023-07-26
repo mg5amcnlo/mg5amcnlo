@@ -1,6 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.9.16(19/07/23):
+
+2.9.16(26/07/23):
      OM: fix for helicity recycling
      OM: Update numpy support to latest version
      OM: Fix some interface issue
