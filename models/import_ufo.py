@@ -513,6 +513,7 @@ class UFOMG5Converter(object):
         self.checked_lor = set()
 
         if hasattr(self.ufomodel, 'all_running_elements'):
+            misc.sprint("MODEL HAS RUNNING!!")
             self.model.set('running_elements', self.ufomodel.all_running_elements)
         
         if auto:

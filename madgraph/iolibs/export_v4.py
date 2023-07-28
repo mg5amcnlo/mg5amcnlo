@@ -6660,7 +6660,7 @@ class UFO_model_to_mg4(object):
         #    self.params_indep.insert(0, self.params_dep.pop(index))
         # No need to add it if not defined   
 
-        if 'aS' not in self.params_ext and 'aS' not in self.params_indep:
+        if 'aS' not in self.params_ext and 'aS' not in self.params_indep and 'aS' not in self.params_dep:
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
@@ -7497,8 +7497,16 @@ class UFO_model_to_mg4(object):
         if self.model['running_elements'] and running_block:
             self.write_running_blocks(fsock, running_block)
     
+    def write_running_ext(self, fsock, running_block):
+        """ """
+        fsock.writelines('C TO ADD')
+        return
+    
     def write_running_blocks(self, fsock, running_block):
         
+        if os.path.exists(pjoin(self.model.get('modelpath'), 'Running')):
+            return self.write_running_ext(fsock, running_block)
+
         for block_nb, runparams in enumerate(running_block):
             text = self.write_one_running_block(block_nb, runparams)
             fsock.writelines(text)
@@ -7672,11 +7680,11 @@ class UFO_model_to_mg4(object):
                     
                 if len(sparams) == 3:
                     if len(set(sparams)) !=1:
-                        raise Exception( "Not supported type of running")
+                        raise Exception( "Not supported type of running [!=1]")
                     mat3 = eval(elements.value)
                     continue
                 elif len(sparams) !=2:
-                    raise Exception("Not supported type of running")
+                    raise Exception("Not supported type of running [!=2]")
                 id1 = runparams.index(sparams[0])
                 id2 = runparams.index(sparams[1])
                 assert to_update[id1][id2] == 0
@@ -7722,11 +7730,11 @@ class UFO_model_to_mg4(object):
                     
                 if len(sparams) == 3:
                     if len(set(sparams)) !=1:
-                        raise Exception( "Not supported type of running")
+                        raise Exception( "Not supported type of running [3]")
                     mat3 = eval(elements.value)
                     continue
                 elif len(sparams) !=2:
-                    raise Exception("Not supported type of running")
+                    raise Exception("Not supported type of running [2]")
                 id1 = runparams.index(sparams[0])
                 id2 = runparams.index(sparams[1])
                 assert to_update[id1][id2] == 0
@@ -9110,7 +9118,11 @@ c         segments from -DABS(tiny*Ga) to Ga
                 for params in elements.run_objects:
                     for param in params:
                         scales.add(param.lhablock)
-
+                        if not param.lhablock:
+                            misc.sprint(param)
+                            raise Exception("internal parameter can not be running: %s"%param)
+                        
+            misc.sprint(scales)
             try:
                 scales.remove('SMINPUTS')
             except Exception:

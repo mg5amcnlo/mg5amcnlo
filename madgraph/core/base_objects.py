@@ -1674,7 +1674,9 @@ class Model(PhysicsObject):
             # change running
             if self['running_elements']:
                 for el in self['running_elements']:
-                    el.value = rep_pattern.sub(replace, el.value)
+                    if isinstance(el.value, str):
+                        misc.sprint(el.value)   
+                        el.value = rep_pattern.sub(replace, el.value)
 
         #ensure that the particle_dict is up-to-date
         self['particle_dict'] =''
