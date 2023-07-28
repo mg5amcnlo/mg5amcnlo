@@ -1725,7 +1725,27 @@ class MadSpinInterface(extended_cmd.Cmd):
     def calculate_matrix_element_from_density(self, production, decays):
         print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
         print("WARNING decays might not be boosted to the correct frame yet")
+
         raise Exception("Not IMplemented")
+        # below is pseudo code
+        assert len(decays) == 1
+        for pdg in decays:
+            init_momenta = [part for part in production if part.get('pdg_code') == pdg and part.get('satus')==1]
+            assert len(init_momenta) == 1 
+            for i,dec_event in enumerate(decays[pdg]):
+                part = init_momenta[i]
+                position_of_part_in_event = part.event_id # to check if this works
+                #production.find_decay(i) # function to define ?
+                boost = lhe_parser.FourMomentum(part)
+                dec_event.boost(boost) # decay now is boosted (need to check that this is done correctly)
+                assert lhe_parser.FourMomentum(dec_event[0]) == boost # this is the check
+
+        # compute full-matrix-element
+        full_me = 0
+        return full_me
+
+
+
 
     def calculate_matrix_element(self, event):
         """routine to return the matrix element"""        

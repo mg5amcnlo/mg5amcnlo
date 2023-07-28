@@ -1844,7 +1844,7 @@ class Event(list):
                 if list(filter(p)):
                     pboost += p
         else:
-            pboost = FourMomentum(pboost)
+            pboost = FourMomentum(filter)
 
         # change sign of three-component due to helas convention
         pboost.px *=-1
