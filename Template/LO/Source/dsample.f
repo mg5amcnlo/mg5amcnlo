@@ -676,8 +676,10 @@ c      endif
          stop
       endif
       if (p5 .gt. maxconfigs) then
-         write(*,*) 'Too many configs requested from Sample()',p5
-         stop
+         p5=maxconfigs
+         configs = maxconfigs
+c     write(*,*) 'Too many configs requested from Sample()',p5
+c         stop
       endif
 
       write(*,'(i3,a,i7,a,i3,a,i3,a,i3,a)') dim, ' dimensions', events,

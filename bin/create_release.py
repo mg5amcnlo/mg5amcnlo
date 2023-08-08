@@ -94,7 +94,6 @@ if diff_result:
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
-
         
 release_date = date.fromtimestamp(time.time())
 for line in open(os.path.join(MG5DIR,'VERSION')):
@@ -175,7 +174,6 @@ elif auto_update:
     auto_update = False
 
 # checking that the rev_nb is in a reasonable range compare to the old one.
-#rev_nb = None
 if auto_update:
     rev_nb_i = int(rev_nb)
     try:
@@ -247,11 +245,10 @@ if status:
 
 # 1. Remove the .bzr directory and clean bin directory file,
 #    take care of README files.
-
 try:
     shutil.rmtree(path.join(filepath, '.bzr'))
 except:
-    pass 
+    pass
 shutil.rmtree(path.join(filepath, '.git'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
     if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
@@ -271,7 +268,6 @@ if rev_nb and auto_update:
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
-
     # tag handling
     p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
     p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
@@ -280,7 +276,7 @@ if rev_nb and auto_update:
     if answer == 'y':
         p = subprocess.call("git push", shell=True)
         p = subprocess.call("git push --tags", shell=True)
-        
+
 # 1. Copy the .mg5_configuration_default.txt to it's default path
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
             path.join(filepath, 'input','mg5_configuration.txt'))
