@@ -2913,7 +2913,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             run_analysis = "{0},{1}".format(run_analysis, analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
-            set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
+            if not os.path.exists(pjoin(self.options['contur_path'], 'conturenv.sh')):
+                raise Exception("contur_path is not correctly setup. Should be the directory of contur and conturenv.sh script")
+            #4 Write Rivet lines
+            shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
+            shell = misc.which(shell)
+            p = subprocess.Popen('source {0} &>/dev/null; echo $CONTUR_USER_DIR'.format(pjoin(self.options['contur_path'], "conturenv.sh"))
+                                 , shell=True, stdout=subprocess.PIPE, executable=shell)
+            (out,_) = p.communicate()                            
+            contur_user_dir = out.decode().strip()
+            # ISSUE HERE TOO FOR DOCKER -> get from env?
+            #set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
+            set_env = "source {0}\n".format(pjoin(contur_user_dir,"analysis-list"))
             #ATLAS_2016_I1469071 sometimes give segmentation errors and also not so safe due to neutrino truth info. Need to force remove this?
             set_env = set_env + "{0}=`echo {1} | sed 's/,ATLAS_2016_I1469071//'`\n".format(run_analysis.replace("$",""), run_analysis)
 
@@ -3112,13 +3123,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
         # Bypass initialization information
-        MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
+        try:
+            MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
                 loglevel=100,
                 forced=True,
                 compilation=True)
+        except SystemExit as error:
+            return
+        except Exception as error:
+            logger.warning("MA5 fails with: \n %s", error)
+            return
 
 
         # If failed to start MA5, then just leave

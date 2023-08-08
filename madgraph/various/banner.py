@@ -868,7 +868,7 @@ class ProcCard(list):
                 self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'add model', 'output'])
-                if cmds[1] == 'model':
+                if cmds[1] == 'model' and len(cmds)>2:
                     self.info['model'] = cmds[2]
                 else:
                     self.info['model'] = None # not UFO model

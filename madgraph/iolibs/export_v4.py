@@ -3234,6 +3234,11 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     def make(self,*args,**opts):
         pass
 
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
+        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        return super().finalize(matrix_elements, history, mg5options, flaglist)
+    
+
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
                        JAMP_formatLC=None):
     

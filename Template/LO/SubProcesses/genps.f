@@ -684,6 +684,12 @@ c        Start graph mapping
          nconfigs = 1
          mincfig=iconfig
          maxcfig=iconfig
+         if (mincfig.eq.0) then
+            iconfig = 1
+            nconfigs = mapconfig(mapconfig(0))
+            mincfig=1
+            maxcfig=mapconfig(0)
+         endif
          call map_invarients(minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
 c         maxwgt=0d0
 c         nparticles   = nexternal

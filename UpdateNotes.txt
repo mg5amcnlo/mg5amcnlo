@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.5.1 (11/07/23)
+      SH+OM: Update interface for contur
+      OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore
+      OM: Better determination of zero helicity for helicity recycling part of the code
+      OM: Fix issue for powheg output
+      OM: bug fixing from LTS up to 2.9.16 (see below) 
+      
 3.5.0 (12/05/23)
       VB+MC+SF+GS+MZ+XZ: NLO EW implemented for lepton-lepton collisions with ISR and beamstrahlung
 	      See 2207.03265 and the FAQ https://answers.launchpad.net/mg5amcnlo/+faq/3324 for details. 
@@ -124,6 +131,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             - EW<=X / EW^2<=X is equivalent to QED<=X / QED^2<=X
 
                         ** Long Term Stable Update **
+
+2.9.16(11/07/23):
+     OM: fix for helicity recycling
+     OM: Update numpy support to latest version
+     OM: Fix some interface issue
 
 2.9.15 (12/05/23)
      OM: Fix a bug where the number of core sed was higher than requested
