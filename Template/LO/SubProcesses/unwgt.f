@@ -213,6 +213,9 @@ C
       integer                             lun, nw, itmin
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw, itmin
 
+      double precision twgt_it, local_twgt
+      common/to_unwgt_it/twgt_it
+      
       double precision    matrix
       common/to_maxmatrix/matrix
 
@@ -233,23 +236,31 @@ c
 C-----
 C  BEGIN CODE
 C-----
-      if (twgt .ge. 0d0) then
+      local_twgt = max(twgt_it, twgt)
+c      write(*,*) "twgt", twgt, twgt_it, local_twgt
+      if (local_twgt .ge. 0d0) then
          p(:,:) = px(:,:)
+         do i=1,nexternal
+            do j=0,3
+               p(j,i)=px(j,i)
+            enddo
+         enddo
          xwgt = abs(wgt)
+         twgt_it = max(twgt_it, xwgt/100d0)
          if (zooming) call zoom_event(xwgt,P)
          if (xwgt .eq. 0d0) return
          yran = xran1(idum)
-         if (xwgt .gt. twgt*fudge*yran) then
-            uwgt = max(xwgt,twgt*fudge)
+         if (xwgt .gt. local_twgt*fudge*yran) then
+            uwgt = max(xwgt,local_twgt*fudge)
 c           Set sign of uwgt to sign of wgt
             uwgt = dsign(uwgt,wgt)
-            if (twgt .gt. 0) uwgt=uwgt/twgt/fudge
+            if (local_twgt .gt. 0) uwgt=uwgt/twgt/fudge
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
             call write_leshouche(p,uwgt,numproc,.True., ihel, icol, ivec)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True., ihel, icol, ivec)
+            call write_leshouche(p,wgt/local_twgt*1d-6,numproc,.True., ihel, icol, ivec)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)

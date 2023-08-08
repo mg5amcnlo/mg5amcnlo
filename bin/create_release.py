@@ -93,6 +93,7 @@ if diff_result:
     logging.warning("Index has non commited file/... The release will follow the last committed version.")
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
+        exit()
         
 release_date = date.fromtimestamp(time.time())
 for line in open(os.path.join(MG5DIR,'VERSION')):
