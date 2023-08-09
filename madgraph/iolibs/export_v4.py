@@ -4495,7 +4495,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             ln('../' + file , cwd=Ppath)    
 
 
-    def finalize(self, matrix_elements, history, mg5options, flaglist):
+    def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
@@ -4627,7 +4627,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         stdout = devnull, cwd=self.dir_path)
 
 
-
+        if second_exporter:
+            second_exporter.finalize(matrix_elements, history, mg5options, flaglist)
 
 
 
@@ -6678,11 +6679,13 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         return True
 
 
-    def finalize(self,*args, **opts):
+    def finalize(self,*args, second_exporter=None, **opts):
 
-        super(ProcessExporterFortranMEGroup, self).finalize(*args, **opts)
+        super(ProcessExporterFortranMEGroup, self).finalize(*args, second_exporter=None, **opts)
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True        
+        if second_exporter:
+            second_exporter.finalize(*args, **opts)
 
         
 #===============================================================================

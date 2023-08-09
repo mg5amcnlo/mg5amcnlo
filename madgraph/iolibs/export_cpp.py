@@ -1769,7 +1769,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
         booldict = {False: "false", True: "true"}
 
-        if not matrix_element.get('color_basis'):
+        # Only want to include leading color flows, so find max_Nc
+        color_basis = matrix_element.get('color_basis')
+        if not color_basis:
             # No color, so only one color factor. Simply write a ".true." 
             # for each config (i.e., each diagram with only 3 particle
             # vertices
@@ -1779,17 +1781,13 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
 
         # There is a color basis - create a list showing which JAMPs have
         # contributions to which configs
-
-        # Only want to include leading color flows, so find max_Nc
-        color_basis = matrix_element.get('color_basis')
-        
         # We don't want to include the power of Nc's which come from the potential
         # loop color trace (i.e. in the case of a closed fermion loop for example)
         # so we subtract it here when computing max_Nc
         max_Nc = max(sum([[(v[4]-v[5]) for v in val] for val in 
                                                       color_basis.values()],[]))
 
-        # Crate dictionary between diagram number and JAMP number
+        # Create dictionary between diagram number and JAMP number
         diag_jamp = {}
         for ijamp, col_basis_elem in \
                 enumerate(sorted(matrix_element.get('color_basis').keys())):

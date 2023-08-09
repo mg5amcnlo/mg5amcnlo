@@ -3029,6 +3029,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_helas_model = None
     _curr_exporter = None
+    _second_exporter = None
     _done_export = False
     _curr_decaymodel = None
 
@@ -3086,6 +3087,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._comparisons = None
         self._cms_checks = []
         self._nlo_modes_for_completion = ['all','virt','real','LOonly']
+        self._second_exporter = None
 
         # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
@@ -7843,6 +7845,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_helas_model = None
             self._curr_exporter = None
+            self._second_exporter = None
             self._done_export = False
             import_ufo._import_once = []
             logger.info('Passing to gauge %s.' % args[1])
@@ -8030,6 +8033,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_exporter = None
+            self._second_exporter = None
             self.options[args[0]] = args[1]
 
         elif args[0] =='output_dependencies':
@@ -8119,6 +8123,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         me_exporter = False
         if any(arg.startswith('--me_exporter=') for arg in args):
+            #forbid helicity recycling with cpp/cuda mixed mode
+            if "--hel_recycling=False" not in args:
+                args.append('--hel_recycling=False')
             for arg in args:
                 if arg.startswith('--me_exporter='):
                     flaglist.append('me_exporter=%s' % arg.split("=",1)[1])
@@ -8511,6 +8518,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self._me_curr_exporter:
                 second_exporter = self._me_curr_exporter
                 second_helas = self._me_curr_helas_model
+                self._second_exporter = second_exporter
             else:
                 second_exporter = None
                 second_helas = None
@@ -8743,10 +8751,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                          to_keep={'mg5_path':MG5DIR})
 
         # Dedicated finalize function.
+        add_options = {}
+        if self._second_exporter:
+            add_options['second_exporter'] = self._second_exporter
         self._curr_exporter.finalize(self._curr_matrix_elements,
                                     self.history,
                                     self.options,
-                                    flaglist)
+                                    flaglist,
+                                    **add_options)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
