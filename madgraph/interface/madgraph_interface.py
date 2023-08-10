@@ -1397,16 +1397,15 @@ This will take effect only in a NEW terminal
             return 'pythia8'
         elif not os.path.isdir(os.path.join(path, 'SubProcesses')):
             raise self.InvalidCmd('%s : Not a valid directory' % path)
-
-        if os.path.isdir(src_path):
+        if os.path.isfile(pjoin(bin_path,'madevent')):
+            return 'madevent'
+        elif os.path.isdir(src_path):
             if any(p.endswith('.cu') for p in os.listdir(src_path)):
                 return 'standalone_gpu'
             else:   
                 return 'standalone_cpp'
         elif os.path.isdir(mw_path):
             return 'madweight'
-        elif os.path.isfile(pjoin(bin_path,'madevent')):
-            return 'madevent'
         elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
             return 'aMC@NLO'
         elif os.path.isdir(card_path):
