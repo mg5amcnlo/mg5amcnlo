@@ -8518,6 +8518,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 second_exporter = self._me_curr_exporter
                 second_helas = self._me_curr_helas_model
                 self._second_exporter = second_exporter
+                self._second_exporter.in_madevent_mode = True
             else:
                 second_exporter = None
                 second_helas = None
