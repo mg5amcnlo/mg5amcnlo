@@ -342,7 +342,12 @@ class EventFile(object):
                 text.append(line)
                 
             if '</event>' in line:
-                if self.parsing:
+                if self.parsing == "wgt_only":
+                    out = Event(text, parse_momenta=False)
+                    #if len(out) == 0  and not self.allow_empty_event:
+                    #    raise Exception
+                    return out
+                elif self.parsing:
                     out = Event(text)
                     if len(out) == 0  and not self.allow_empty_event:
                         raise Exception
@@ -448,6 +453,8 @@ class EventFile(object):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
+        self.parsing = 'wgt_only'
+
         if not get_wgt:
             def weight(event):
                 return event.wgt
@@ -914,6 +921,8 @@ class MultiEventFile(EventFile):
        The number of events in each file need to be provide in advance 
        (if not provide the file is first read to find that number"""
     
+    parsing = True # check if/when we need to parse the event.
+
     def __new__(cls, start_list=[],parse=True):
         return object.__new__(MultiEventFile)
     
@@ -986,6 +995,7 @@ class MultiEventFile(EventFile):
         nb_event = random.randint(1, remaining_event)
         sum_nb=0
         for i, obj in enumerate(self.files):
+            obj.parsing = "wgt_only"
             sum_nb += self.initial_nb_events[i] - self.curr_nb_events[i]
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
@@ -1115,6 +1125,7 @@ class MultiEventFile(EventFile):
         total_event = 0
         sum_cross = collections.defaultdict(int)
         for i,f in enumerate(self.files):
+            f.parsing = 'wgt_only'
             nb_event = 0 
             # We need to loop over the event file to get some information about the 
             # new cross-section/ wgt of event.
@@ -1302,7 +1313,7 @@ class Event(list):
 
     warning_order = True # raise a warning if the order of the particle are not in accordance of child/mother
 
-    def __init__(self, text=None):
+    def __init__(self, text=None, parse_momenta=True):
         """The initialization of an empty Event (or one associate to a text file)"""
         list.__init__(self)
         
@@ -1322,11 +1333,11 @@ class Event(list):
         self.matched_scale_data = None
         self.syscalc_data = {}
         if text:
-            self.parse(text)
+            self.parse(text, parse_momenta=parse_momenta)
 
 
             
-    def parse(self, text):
+    def parse(self, text, parse_momenta=True):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
@@ -1361,17 +1372,20 @@ class Event(list):
                 status = 'tag'
                 
             if 'part' == status:
-                part = Particle(line, event=self)
-                if part.E != 0 or part.status==-1:
-                    self.append(part)
-                elif self.nexternal:
-                    self.nexternal-=1
+                if parse_momenta:
+                    part = Particle(line, event=self)
+                    if part.E != 0 or part.status==-1:
+                        self.append(part)
+                    elif self.nexternal:
+                        self.nexternal-=1
+                else:
+                    self.tag += '%s\n' % line
             else:
                 if '</event>' in line:
                     line = line.replace('</event>','',1)
                 self.tag += '%s\n' % line
-                
-        self.assign_mother()
+        if parse_momenta:     
+            self.assign_mother()
     
     
     def assign_mother(self):

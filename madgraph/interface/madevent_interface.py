@@ -3693,6 +3693,7 @@ Beware that this can be dangerous for local multicore runs.""")
         """Advanced commands: Launch combine events"""
 
         args = self.split_arg(line)
+        start = time.time()
         # Check argument's validity
         self.check_combine_events(args)
         self.update_status('Combining Events', level='parton')
@@ -3784,6 +3785,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
         
+        logger.info("combine events done in %s", time.time()-start)
         
         
         self.to_store.append('event')
