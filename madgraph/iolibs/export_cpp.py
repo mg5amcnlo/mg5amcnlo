@@ -1804,7 +1804,9 @@ class OneProcessExporterGPU(OneProcessExporterCPP):
                 #    self.proc_characteristic['single_color'] = False
 
         colamps = ijamp + 1
-        for iconfig, num_diag in enumerate(mapconfigs):        
+        for iconfig, num_diag in enumerate(mapconfigs):  
+            # mapconfigs can be a list or a dictionary.
+            # In case of dictionary the num_diag will be the key of the dictionary.    
             if num_diag == 0:
                 continue
 
