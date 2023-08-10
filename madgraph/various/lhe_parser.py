@@ -1336,12 +1336,12 @@ class Event(list):
             self.parse(text, parse_momenta=parse_momenta)
 
 
-            
+    event_flag_pattern = re.compile(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""")   
     def parse(self, text, parse_momenta=True):
         """Take the input file and create the structured information"""
         #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
-
+        tags = []
         if not isinstance(text, list):
             text = text.split('\n')
 
@@ -1365,7 +1365,7 @@ class Event(list):
                 if '<rwgt>' in line:
                     status = 'tag'
                 else:
-                    self.assign_scale_line(line)
+                    self.assign_scale_line(line, convert=parse_momenta)
                     status = 'part' 
                     continue
             if '<' in line:
@@ -1379,11 +1379,12 @@ class Event(list):
                     elif self.nexternal:
                         self.nexternal-=1
                 else:
-                    self.tag += '%s\n' % line
+                    tags.append(line)
             else:
-                if '</event>' in line:
+                if line.endswith('</event>'):
                     line = line.replace('</event>','',1)
-                self.tag += '%s\n' % line
+                tags.append(line) 
+        self.tag += "\n".join(tags)
         if parse_momenta:     
             self.assign_mother()
     
@@ -1919,19 +1920,27 @@ class Event(list):
         #3. check mass
                    
          
-    def assign_scale_line(self, line):
+    def assign_scale_line(self, line, convert=True):
         """read the line corresponding to global event line
         format of the line is:
         Nexternal IEVENT WEIGHT SCALE AEW AS
         """
         inputs = line.split()
         assert len(inputs) == 6
-        self.nexternal=int(inputs[0])
-        self.ievent=int(inputs[1])
-        self.wgt=float(inputs[2])
-        self.scale=float(inputs[3])
-        self.aqed=float(inputs[4])
-        self.aqcd=float(inputs[5])
+        if convert:
+            self.nexternal=int(inputs[0])
+            self.ievent=int(inputs[1])
+            self.wgt=float(inputs[2])
+            self.scale=float(inputs[3])
+            self.aqed=float(inputs[4])
+            self.aqcd=float(inputs[5])
+        else:
+            self.nexternal=inputs[0]
+            self.ievent=inputs[1]
+            self.wgt=float(inputs[2])
+            self.scale=inputs[3]
+            self.aqed=inputs[4]
+            self.aqcd=inputs[5]
         
     def get_tag_and_order(self):
         """Return the unique tag identifying the SubProcesses for the generation.
@@ -2283,7 +2292,11 @@ class Event(list):
         else:
             event_flag = ''
 
-        scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+        try:
+            scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+            (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
+        except:
+            scale_str = "%s %s %+13.7e %s %s %s" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
 
             
