@@ -1502,15 +1502,23 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 3. generate the various matrix-element
         self.update_status('generating Madspin matrix element (density_method=%s)' % density_method)
         if density_method:
-            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file, 
+#            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file, 
+#                                                    self.options)
+             self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
                                                     self.options)
+
         else:
             self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
                                                     self.options)
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
         self.all_f2py = {}
-        
+        self.all_amp = {}
+        self.all_nhel = {}
+        self.all_jamp = {}
+        self.all_inter = {}
+        self.all_matrix = {}
+
         #4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
         
@@ -1716,16 +1724,87 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event = full_event.add_decays(decays)
             full_me = self.calculate_matrix_element(full_event)
         else:
-            full_me = self.calculate_matrix_element_from_density(production, decays)
+            full_event, full_me = self.calculate_matrix_element_from_density(production, decays)
             #full_event need o be set after since modifies production
-            full_event = lhe_parser.Event(str(production))
-            full_event = full_event.add_decays(decays)
         return full_event, full_me/(production_me*decay_me)
         
     def calculate_matrix_element_from_density(self, production, decays):
         print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
         print("WARNING decays might not be boosted to the correct frame yet")
+        
+        """routine to return all the possible inter for an event"""
 
+        full_event = lhe_parser.Event(str(production))
+        full_event.aqcd = 0.13
+        param_card = self.banner.param_card
+        
+        for pdg in decays:
+            init_part = [part for part in production if part.pid == pdg and part.status == 1]
+            assert len(init_part) == 1 
+
+            position = [k for k in range(len(production)) if production[k].pid == pdg]  
+            width = check_param_card.ParamCard(param_card).get_value('decay',abs(pdg))
+            mass = check_param_card.ParamCard(param_card).get_value('mass',pdg)
+            print('mass=',mass)
+            print('width=',width)
+#            width = self.model.get_particle(pdg).get('width')
+#            mass = self.model.get_particle(pdg).get('mass')
+            color = self.model.get_particle(pdg).get('color')
+            D = complex(0,mass * width)
+
+            full_event[position[0]].status = 2 
+            for i,decay_event in enumerate(decays[pdg]):
+                part = init_part[i]
+                boost = lhe_parser.FourMomentum(part)
+                decay_event.boost(boost)                      
+  #              print("decay event=",decay_event)         
+
+
+                nhel_p_tot,iden_p = self.get_nhel(production,position[0])
+  #              print('nhel prod=',nhel_p)
+                nhel_d_tot,iden_d = self.get_nhel(decay_event,0)
+   #             print('nhel dec=',nhel_d)
+
+                me = 0
+                for i,hel_p in enumerate(nhel_p_tot): 
+                    inter_prod = self.get_inter_value(production,hel_p)
+#    print("INTER_PROD=",inter_prod)
+                    for j,hel_d in enumerate(nhel_d_tot):
+                        inter_dec = self.get_inter_value(decay_event,hel_d)
+                        matrix_element = complex(0,0)
+                        for k in range(len(inter_prod)):
+                            matrix_element +=  (inter_prod[k] * inter_dec[k])/(D*D.conjugate())
+                        me += matrix_element
+                me = me.real/(iden_p*color)
+
+
+                for k in range(len(decay_event)-1): 
+                    full_event.append(decay_event[k+1])
+                
+ #               print('full_event=',full_event)
+                '''
+                nhel_full = self.get_nhel_full(full_event) 
+                for i,hel_full in enumerate(nhel_full) : 
+                    m,p_full = self.get_MG_matrix_element(full_event,hel_full)
+                pdir_full,orig_order_full = self.get_pdir(full_event)
+                print("self.all_f2py=",self.all_f2py)
+#                print('pdir full',pdir_full)
+                matrix = self.all_f2py[pdir_full](p_full,0.13,0)
+                '''
+                matrix = self.calculate_matrix_element(full_event)
+                print('Ratio=', matrix/me)
+            
+ #               print('--------------------------------------------')
+ #               print('Matrix Element QH=',me)
+#                print('Matrix Element MG=',matrix)
+#                print('--------------------------------------------')
+#                print('Ratio=', matrix/me)
+#            print('--------------------------------------------')
+             
+#            print('Ratio=',full_me / me)
+        return full_event,me
+
+        '''
         raise Exception("Not IMplemented")
         # below is pseudo code
         assert len(decays) == 1
@@ -1743,9 +1822,99 @@ class MadSpinInterface(extended_cmd.Cmd):
         # compute full-matrix-element
         full_me = 0
         return full_me
+        '''
+
+    def get_inter_value(self,event,nhel):
+        """routine to return all the possible inter for an event"""
+        
+        pdir,orig_order = self.get_pdir(event)
+
+        if pdir in self.all_amp:
+            all_p = event.get_all_momenta(orig_order)
+            for p in all_p:
+#                print(pdir,'Momenta=',p)
+                P = rwgt_interface.ReweightInterface.invert_momenta(p)
+#               print("Momenta =",P,"\n")
+                IC = [1]*len(p) 
+                amp = []
+                jamp = []
+                inter = []
+           
+                for i,hel in enumerate(nhel):
+                    amp.append(self.all_amp[pdir](P,hel,IC))
+                    jamp.append(self.all_jamp[pdir](amp[i]))
+                for i in range(len(jamp)): 
+                    for j in range(len(jamp)): 
+                        inter.append(self.all_inter[pdir](jamp[i],jamp[j]))
+                return inter
+        else : 
+            self.all_amp[pdir],self.all_jamp[pdir],self.all_inter[pdir],self.all_matrix[pdir]= self.get_mymod(pdir,'INTER')
+
+        return self.get_inter_value(event,nhel) 
 
 
+    def get_nhel(self,event,position):
 
+        pdir,orig_order = self.get_pdir(event)
+
+        if pdir in self.all_nhel:
+
+            iden,NHEL = self.all_nhel[pdir]()
+            nhel = rwgt_interface.ReweightInterface.invert_momenta(NHEL)
+            groups = {} 
+            nhel = sorted(nhel) 
+            for item in nhel:
+                a = item.copy()
+                del a[position]
+                t = tuple(a)
+                groups.setdefault(t, []).append(item)
+                grouped = list(groups.values())
+            return grouped,iden
+        else : 
+            self.all_nhel[pdir] = self.get_mymod(pdir,'NHEL')
+
+            return self.get_nhel(event,position)
+
+
+    def get_mymod(self,pdir,INTER_or_NHEL): 
+
+        if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
+                sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
+            
+        mymod = __import__("%s.matrix2py" % (pdir))
+        if six.PY3:
+            from importlib import reload
+        else:
+            from imp import reload
+        reload(mymod)
+        mymod = getattr(mymod, 'matrix2py')  
+        with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
+                        os.path.exists(pjoin(self.path_me,'param_card.dat')):
+                    mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                else:
+                    mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat')) 
+                    if INTER_or_NHEL == 'INTER':
+                        return mymod.get_amp,mymod.get_jamp,mymod.get_inter,mymod.get_matrix
+                    else : 
+                        return mymod.get_nhel
+
+    def get_pdir(self,event): 
+        tag, order = event.get_tag_and_order()
+        try:
+            orig_order = self.all_me[tag]['order']
+        except Exception:
+            # try to pass to full anti-particles for 1->N
+            init, final = tag
+            if len(init) == 2:
+                raise
+            init = (-init[0],)
+            final = tuple(-i for i in final)
+            tag = (init, final)
+            orig_order = self.all_me[tag]['order']
+        pdir = self.all_me[tag]['pdir']
+        return pdir,orig_order
 
     def calculate_matrix_element(self, event):
         """routine to return the matrix element"""        

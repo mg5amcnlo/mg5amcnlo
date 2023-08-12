@@ -206,8 +206,8 @@ C
 %(global_variable)s
 C  
 C COLOR DATA
-C  
 %(color_data_lines)s
+C  
 C ----------
 C BEGIN CODE
 C ----------
@@ -216,14 +216,170 @@ C ----------
 
       %(proc_prefix)sMATRIX = 0.D0 
       DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-          ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))
-	  ENDDO
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+        ENDDO
+        %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))           
+      ENDDO
+
+%(amp2_lines)s
+
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_NHEL(IDEN_STAR,NHEL_STAR)
+C CONSTANTS
+C
+CF2PY INTENT(OUT) :: NHEL_STAR
+CF2PY INTENT(OUT) :: IDEN_STAR
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB         
+      PARAMETER (             NCOMB=%(ncomb)d)
+  
+      INTEGER NHEL(NEXTERNAL,NCOMB),NHEL_STAR(NEXTERNAL,NCOMB)  
+      INTEGER IDEN,IDEN_STAR
+
+%(helicity_lines)s
+%(den_factor_line)s   
+      IDEN_STAR = IDEN
+      NHEL_STAR = NHEL
+      END
+      
+      SUBROUTINE %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
+C  
+%(process_lines)s
+C 
+CF2PY INTENT(OUT) :: AMP  
+CF2PY INTENT(IN) :: NHEL   
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+CF2PY INTENT(IN) :: IC
+
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d) 
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NWAVEFUNCS, NCOLOR
+      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
+      REAL*8     ZERO
+      PARAMETER (ZERO=0D0)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+C  
+C LOCAL VARIABLES 
+C  
+      COMPLEX*16 AMP(NGRAPHS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+C  
+C GLOBAL VARIABLES
+C  
+      include 'coupl.inc'
+%(global_variable)s
+C  
+C
+%(helas_calls)s
 %(amp2_lines)s
       END
+
+      SUBROUTINE %(proc_prefix)sGET_JAMP(AMP,JAMP)
+C  
+%(process_lines)s
+C 
+CF2PY INTENT(OUT) :: JAMP 
+CF2PY INTENT(IN) :: AMP
+
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d) 
+      INTEGER    NCOLOR
+      PARAMETER ( NCOLOR=%(ncolor)d) 
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
+
+%(jamp_lines)s
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,MATRIX) 
+C  
+%(process_lines)s
+C  
+      IMPLICIT NONE
+C  
+C CONSTANTS
+C  
+CF2PY INTENT(OUT) :: MATRIX 
+CF2PY INTENT(IN) :: JAMP
+
+
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d) 
+      REAL*8     ZERO,MATRIX
+      PARAMETER (ZERO=0D0)
+C  
+  
+C LOCAL VARIABLES 
+C  
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      REAL*8 CF(NCOLOR,NCOLOR)
+      COMPLEX*16 JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
+C
+
+C COLOR DATA
+C  
+%(color_data_lines)s
+
+      %(proc_prefix)sMATRIX = 0.D0 
+      DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = 1, NCOLOR
+          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+        ENDDO
+        %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))
+      ENDDO
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2,INTER)
+
+CF2PY INTENT(OUT) :: INTER   
+CF2PY INTENT(IN) :: JAMP_1
+CF2PY INTENT(IN) :: JAMP_2
+     
+      INTEGER I,J
+      INTEGER NCOLOR 
+      PARAMETER (NCOLOR=%(ncolor)d)
+      REAL*8 CF(NCOLOR,NCOLOR)
+      COMPLEX*16 JAMP_1(NCOLOR),JAMP_2(NCOLOR),ZTEMP,INTER
+
+C COLOR DATA
+C  
+%(color_data_lines)s
+      
+      INTER = (0.D0,0.D0)  
+      DO I = 1, NCOLOR 
+        ZTEMP = DCONJG(JAMP_2(I))
+	DO J=1, NCOLOR
+          INTER = INTER + CF(J,I) * JAMP_1(J) * ZTEMP 
+        ENDDO 
+      ENDDO
+
+      END       
+
 
       SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE   
