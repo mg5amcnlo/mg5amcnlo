@@ -43,7 +43,7 @@ models/sm/param_card.dat
 models/sm__taudecay_UFO/
 models/sm_v4/
 models/topphilic_NLO_EW_CM_UFO__REAL/
-PLUGIN/CUDACPP_SA_OUTPUT
+PLUGIN/CUDACPP*OUTPUT
 PLUGIN/python3/
 PLUGIN/maddm/
 *__pycache__*
