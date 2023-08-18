@@ -626,7 +626,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise Exception("Bridge mode not available.")
         elif self.options["spinmode"] == "density":
             misc.sprint("DENSITY")
-            self.run_onshell(line, density_method=True)
+            return self.run_onshell(line, density_method=True)
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
