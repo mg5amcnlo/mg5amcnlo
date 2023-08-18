@@ -1344,6 +1344,7 @@ class width_estimate(object):
                 to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
                 to_decay.remove(part)
         to_decay = list(set([p for p in to_decay if not p in self.br]))
+        print('to_decay=',to_decay)
         
         if to_decay:
             logger.info('We need to recalculate the branching fractions for %s' % ','.join(to_decay))
@@ -3236,7 +3237,6 @@ class decay_all_events(object):
         probe_weight = dict( (key,[]) for key in decay_set)
         while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
-
             if production_tag == 0 == event_map: #end of file
                 logger.info('Not enough events for at least one production mode.')
                 logger.info('This is ok as long as you don\'t reuse the max weight for other generations.')
@@ -4180,7 +4180,7 @@ class decay_all_events(object):
 
 
 
-'''
+
 class decay_all_events_onshell(decay_all_events):
     """special mode for onshell production"""
 
@@ -4416,7 +4416,7 @@ class decay_all_events_onshell(decay_all_events):
     
     def adapt_decay(self, line):
         return line
-    
+   
     
 class decay_all_events_density(decay_all_events_onshell):    
     
@@ -4435,6 +4435,12 @@ class decay_all_events_density(decay_all_events_onshell):
         "No need of full matrix-element in this mode"
         return ""
     
+    def adapt_production(self, line):
+        return line
+    
+    def adapt_decay(self, line):
+        return line
+    '''
     def adapt_production(self,line):
         """add * to all final state particle that are decaying"""
         to_decay = list(self.mscmd.list_branches.keys())
@@ -4451,20 +4457,40 @@ class decay_all_events_density(decay_all_events_onshell):
             element += '* '
             split[i] = element
         return '>'.join(adapt_decay)
+    '''
+    def compile(self):
+        logger.info('Compiling code')
+        #my_env = os.environ.copy()
+        #os.environ["GFORTRAN_UNBUFFERED_ALL"] = "y"
+        misc.compile(cwd=pjoin(self.path_me,'madspin_me', 'Source'),
+                     nb_core=self.mgcmd.options['nb_core'])        
+        misc.compile(['all'],cwd=pjoin(self.path_me,'madspin_me', 'SubProcesses'),
+                     nb_core=self.mgcmd.options['nb_core'])
+
+    def save_to_file(self, *args):
+        import sys
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            return super(decay_all_events_onshell,self).save_to_file(*args) 
+
+
 
 '''
 
-
-class decay_all_events_onshell(decay_all_events):
+class decay_all_events_density(decay_all_events):
     """special mode for onshell production"""
 
-    @misc.mute_logger()
+    mode = "density"
+ 
+    #@misc.mute_logger()
+    
     @misc.set_global()
+    
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
         i.e. the undecayed and the decay one. And associate those to the 
         madspin production_topo object"""
 
+        misc.sprint("GENERATE")
         # 1. compute the partial width        
         # 2. compute the production matrix element
         # 3. create the all_topology object 
@@ -4483,75 +4509,27 @@ class decay_all_events_onshell(decay_all_events):
         
         # 1. compute the partial width------------------------------------------
         #self.get_branching_ratio()
-        
+        start = time.time()
         # 2. compute the production matrix element -----------------------------
+        self.handle_model()
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
                       if re.search('^\s*add\s+process', line)]
-        
-        mgcmd = self.mgcmd
-        modelpath = self.model.get('modelpath+restriction')
 
-        commandline="import model %s" % modelpath
-        if not self.model.mg5_name:
-            commandline += ' --modelname'
-            
-        mgcmd.exec_cmd(commandline)
-        # Handle the multiparticle of the banner        
-        #for name, definition in self.mscmd.multiparticles:
-        if hasattr(self.mscmd, 'multiparticles_ms'):
-            for name, pdgs in  self.mscmd.multiparticles_ms.items():
-                if name == 'all':
-                    continue
-                #self.banner.get('proc_card').get('multiparticles'):
-                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
-            
-        
-        mgcmd.exec_cmd("set group_subprocesses False")
-        logger.info('generating the production square matrix element for onshell')
-        start = time.time()
-        commandline=''
-        for proc in processes:
-            if '[' in proc:
-                commandline += reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
-            else:
-                commandline += 'add process %s ;' % proc               
-            
-#        commandline = commandline.replace('add process', 'generate',1)
-#        logger.info(commandline)
-#        
-#        mgcmd.exec_cmd(commandline, precmd=True)
-#        commandline = 'output standalone_msP %s %s' % \
-#        (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
-#        mgcmd.exec_cmd(commandline, precmd=True)        
-#        logger.info('Done %.4g' % (time.time()-start))
 
+        commandline = self.get_production_command(processes)
+        misc.sprint(commandline)
         # 3. Create all_ME + topology objects ----------------------------------
 #        matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
 #        self.all_ME.adding_me(matrix_elements, pjoin(path_me,'production_me'))
         
+
         # 4. compute the full matrix element -----------------------------------
-        logger.info('generating the full matrix element squared (with decay)')
-#        start = time.time()
-        to_decay = list(self.mscmd.list_branches.keys())
-        decay_text = []
-        for decays in self.mscmd.list_branches.values():
-            for decay in  decays:
-                if '=' not in decay:
-                    decay += ' QCD=99'
-                if ',' in decay:
-                    decay_text.append('(%s)' % decay)
-                else:
-                    decay_text.append(decay)
-        decay_text = ', '.join(decay_text)
-#        commandline = '' 
-#        print("DECAY_TEXT=",decay_text)
-        
-        for proc in processes:
-            if not proc.strip().startswith(('add','generate')):
-                proc = 'add process %s' % proc
-            commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model)
+        commandline += self.get_full_matrix_command(processes)
+        misc.sprint(commandline)
+
+
         # 5. add the decay information to the all_topology object --------------                        
 #        for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
 #            me_path = pjoin(path_me,'full_me', 'SubProcesses', \
@@ -4581,16 +4559,12 @@ class decay_all_events_onshell(decay_all_events):
 #            return
 
         # 6. generate decay only part ------------------------------------------
-        logger.info('generate matrix element for decay only (1 - > N).')
-#        start = time.time()
-#        commandline = ''
-        i=0
-        for processes in self.list_branches.values():
-            for proc in processes:
-                commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
-                i+=1 
+        commandline += self.get_decay_command()
+
+
 
         commandline = commandline.replace('add process', 'generate',1)
+        mgcmd = self.mgcmd
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.
         #mgcmd.remove_pointless_decay(self.banner.param_card)
@@ -4615,8 +4589,106 @@ class decay_all_events_onshell(decay_all_events):
                 self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order}
 
         return self.all_me
-    
 
+    @misc.mute_logger()
+    def handle_model(self):
+        mgcmd = self.mgcmd
+        modelpath = self.model.get('modelpath+restriction')
+
+        commandline="import model %s" % modelpath
+        if not self.model.mg5_name:
+            commandline += ' --modelname'
+            
+        mgcmd.exec_cmd(commandline)
+        # Handle the multiparticle of the banner        
+        #for name, definition in self.mscmd.multiparticles:
+        if hasattr(self.mscmd, 'multiparticles_ms'):
+            for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                if name == 'all':
+                    continue
+                #self.banner.get('proc_card').get('multiparticles'):
+                mgcmd.do_define("%s = %s" % (name, ' '.join(repr(i) for i in pdgs)))
+        mgcmd.exec_cmd("set group_subprocesses False")
+
+
+    def get_production_command(self, processes):
+
+            
+        logger.info('generating the production square matrix element for %s' % self.mode)
+        commandline=''
+        for proc in processes:
+            if '[' in proc:
+                new_proc = reweight_interface.ReweightInterface.get_LO_definition_from_NLO(proc, mgcmd._curr_model)
+            else:
+                new_proc = 'add process %s ;' % proc               
+            commandline += self.adapt_production(new_proc)
+#        commandline = commandline.replace('add process', 'generate',1)
+#        logger.info(commandline)
+#        
+#        mgcmd.exec_cmd(commandline, precmd=True)
+#        commandline = 'output standalone_msP %s %s' % \
+#        (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
+#        mgcmd.exec_cmd(commandline, precmd=True)        
+#        logger.info('Done %.4g' % (time.time()-start))
+
+        return commandline
+
+    def get_full_matrix_command(self, processes):
+        """generate full matrix-element squared with decay"""
+        logger.info('generating the full matrix element squared (with decay)')
+
+        
+#        start = time.time()
+        commandline = ''
+        to_decay = list(self.mscmd.list_branches.keys())
+        decay_text = []
+        for decays in self.mscmd.list_branches.values():
+            for decay in  decays:
+                if '=' not in decay:
+                    decay += ' QCD=99'
+                if ',' in decay:
+                    decay_text.append('(%s)' % decay)
+                else:
+                    decay_text.append(decay)
+        decay_text = ', '.join(decay_text)
+#        commandline = ''
+        
+        for proc in processes:
+            if not proc.strip().startswith(('add','generate')):
+                proc = 'add process %s' % proc
+            commandline += self.get_proc_with_decay(proc, decay_text, self.mgcmd._curr_model)
+
+#        start = time.time()
+        to_decay = list(self.mscmd.list_branches.keys())
+        decay_text = []
+        for decays in self.mscmd.list_branches.values():
+            for decay in  decays:
+                if '=' not in decay:
+                    decay += ' QCD=99'
+                if ',' in decay:
+                    decay_text.append('(%s)' % decay)
+                else:
+                    decay_text.append(decay)
+        decay_text = ', '.join(decay_text)
+#        commandline = ''
+        
+        for proc in processes:
+            if not proc.strip().startswith(('add','generate')):
+                proc = 'add process %s' % proc
+            commandline += self.get_proc_with_decay(proc, decay_text, self.mgcmd._curr_model)
+
+        return commandline
+    
+    def get_decay_command(self):
+        logger.info('generate matrix element for decay only (1 - > N).')
+#        start = time.time()
+        commandline = ''
+        i=0
+        for processes in self.list_branches.values():
+            for proc in processes:
+                commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
+                i+=1 
+        return commandline
 
     def compile(self):
         logger.info('Compiling code')
@@ -4630,5 +4702,15 @@ class decay_all_events_onshell(decay_all_events):
     def save_to_file(self, *args):
         import sys
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
-            return super(decay_all_events_onshell,self).save_to_file(*args) 
+            return super(decay_all_events_onshell,self).save_to_file(*args)
+
+
+    def adapt_production(self, line):
+        return line
+    
+    def adapt_decay(self, line):
+        return line
+'''
+
+    
 

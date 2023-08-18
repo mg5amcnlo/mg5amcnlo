@@ -663,10 +663,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             msg = 'Random seed too large ' + str(self.options['seed']) + ' > 30081*30081'
             raise Exception(msg)
 
-        #self.options['seed'] = self.seed
+        #self.optio²    ns['seed'] = self.seed
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
-        
+            
         
         self.update_status('generating Madspin matrix element')
         generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
@@ -1502,14 +1502,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 3. generate the various matrix-element
         self.update_status('generating Madspin matrix element (density_method=%s)' % density_method)
         if density_method:
-#            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file, 
-#                                                    self.options)
-             self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
-                                                    self.options)
+            #            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file,self.options) 
+            self.generate_all = madspin.decay_all_events_density(self, self.banner, self.events_file,self.options)
 
         else:
-            self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
-                                                    self.options)
+            self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file,self.options)
+
+
         self.generate_all.compile()
         self.all_me = self.generate_all.all_me
         self.all_f2py = {}
@@ -1518,7 +1517,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.all_jamp = {}
         self.all_inter = {}
         self.all_matrix = {}
-
+        print(self.all_me)
         #4. determine the maxwgt
         maxwgt = self.get_maxwgt_for_onshell(orig_lhe, evt_decayfile)
         
@@ -1569,7 +1568,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             
         output_lhe.write('</LesHouchesEvents>\n')    
         self.efficiency = 1 # to let me5 to write the correct number of events
-#        misc.sprint('Done so far. output written in %s' % output_lhe.name)
+        misc.sprint('Done so far. output written in %s' % output_lhe.name)
         
     
 
@@ -1723,19 +1722,21 @@ class MadSpinInterface(extended_cmd.Cmd):
             full_event = lhe_parser.Event(str(production))
             full_event = full_event.add_decays(decays)
             full_me = self.calculate_matrix_element(full_event)
+#            print(full_event)
         else:
             full_event, full_me = self.calculate_matrix_element_from_density(production, decays)
+#            print(full_event)
             #full_event need o be set after since modifies production
         return full_event, full_me/(production_me*decay_me)
         
     def calculate_matrix_element_from_density(self, production, decays):
-        print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
-        print("WARNING decays might not be boosted to the correct frame yet")
+
+        #        print("MESSAGE TO QUENTIN: put the method to compute the full matrix-element here")
+ #        print("WARNING decays might not be boosted to the correct frame yet")
         
         """routine to return all the possible inter for an event"""
 
         full_event = lhe_parser.Event(str(production))
-        full_event.aqcd = 0.13
         param_card = self.banner.param_card
         
         for pdg in decays:
@@ -1745,8 +1746,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             position = [k for k in range(len(production)) if production[k].pid == pdg]  
             width = check_param_card.ParamCard(param_card).get_value('decay',abs(pdg))
             mass = check_param_card.ParamCard(param_card).get_value('mass',pdg)
-            print('mass=',mass)
-            print('width=',width)
+#            print('mass=',mass)
+#            print('width=',width)
 #            width = self.model.get_particle(pdg).get('width')
 #            mass = self.model.get_particle(pdg).get('mass')
             color = self.model.get_particle(pdg).get('color')
@@ -1791,8 +1792,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 #                print('pdir full',pdir_full)
                 matrix = self.all_f2py[pdir_full](p_full,0.13,0)
                 '''
-                matrix = self.calculate_matrix_element(full_event)
-                print('Ratio=', matrix/me)
+#                matrix = self.calculate_matrix_element(full_event)
+#                print('Ratio=', matrix/me)
             
  #               print('--------------------------------------------')
  #               print('Matrix Element QH=',me)
@@ -1902,6 +1903,7 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def get_pdir(self,event): 
         tag, order = event.get_tag_and_order()
+#        print(order)
         try:
             orig_order = self.all_me[tag]['order']
         except Exception:
@@ -1920,6 +1922,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """routine to return the matrix element"""        
         
         tag, order = event.get_tag_and_order()
+#        print(order)
         try:
             orig_order = self.all_me[tag]['order']
         except Exception:
