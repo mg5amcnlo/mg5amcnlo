@@ -546,7 +546,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
             print('EW module loaded')
-            type_rwgt = ['2001','2002','2003','2004','2005']
+
+            type_rwgt = ['2001','2002','2003','2004','2005','2006','2007','2008','2009','2010',
+                         '2011','2012','2013','2014','2015','2016','2017','2018','2019','2020',
+                        '2021','2022','2023','2024','2025','2026','2027'
+                        ]
 
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
@@ -1329,8 +1333,9 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.inc_sudakov:
                 try:
                     sud_order = int(rwgttype[-1]) -1
-                    self.banner['initrwgt'] += '<weight id=\'%s\'>%srwgt_sud%s</weight>\n' % \
-                                       (rwgttype, diff, sud_order)
+                    sud_order = '10' +rwgttype[-2:]
+                    self.banner['initrwgt'] += '<weight id=\'%s\'>%sscale_%s_sud</weight>\n' % \
+                            (rwgttype, diff, sud_order)
                 except IndexError:
                     logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
                     sys.exit(1)
@@ -1528,7 +1533,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     buff_event.pop(ip)
 
             x = 1.0
-            sud_cut= x*mW**2
+            sud_cut= x*(mW**2)
             min_inv=1000000000.0
             inv_dict={}
  
@@ -1711,7 +1716,7 @@ class ReweightInterface(extended_cmd.Cmd):
             sudrat4 = 1. + res[5]/res[0]
 
             large_sud_error=False
-            if sudrat1 < -200:
+            if abs(sudrat1) > 200:
                 logger.info('ERROR: event will not be reweighted because Sudakov ratio is too large: %s ' %sudrat1)
                 logger.info(buff_event)
                 sudrat0 = 1. 
@@ -1730,6 +1735,18 @@ class ReweightInterface(extended_cmd.Cmd):
             # Dummy step: needed to read in the parse_reweight function
             event.rescale_weights(1.)
 
+            rwgt_dict = event.parse_reweight()
+            rwgt_dict_new = {}
+            rwgt_dict_new['orig'] = orig_wgt
+
+            #for el in rwgt_dict:
+            #    rwgt_dict_new[el] = rwgt_dict[el]
+
+            for el in rwgt_dict:
+                ending = el[-2:]
+                tag = '20' + ending
+                rwgt_dict_new[tag] = rwgt_dict[el]*sudrat1
+                
             w_new0 = w_orig *sudrat0
             w_new1 = w_orig *sudrat1
             w_new2 = w_orig *sudrat2
@@ -1742,7 +1759,8 @@ class ReweightInterface(extended_cmd.Cmd):
  
             ## TV: use last line to output total weights as separate H1/S/H2 contributions. Use second line for standard usage. 
             #return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}
-            return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv, large_sud_error
+            #return {'orig': orig_wgt,'2001': w_new0, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv, large_sud_error
+            return rwgt_dict_new, type, buff_event.wgt, res, min_inv, large_sud_error
             #return {'orig': orig_wgt,'2001': w_new1_2, '2002': w_new1, '2003': w_new2,'2004': w_new3, '2005': w_new4}, type, buff_event.wgt, res, min_inv, large_sud_error
 
  
