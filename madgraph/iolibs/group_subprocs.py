@@ -497,7 +497,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                            amplitude.get('process').get('id')]
             
             if (criteria == "gpu"):
-              proc_class = [ [(p.is_fermion(), p.get('is_part')) \
+              proc_class = [ [(p.is_fermion(),) \
                             for p in is_parts], # p.get('is_part')
                            [(p.get('mass'), p.get('spin'), p.get('pdg_code'), 
                              p.get('pdg_code') % 2 if p.get('color') == 1 else 0,
