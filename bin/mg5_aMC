@@ -87,7 +87,7 @@ if sys.version_info[0] ==2:
 
 
 if ' ' in os.getcwd():
-    logging.warning("\033[91mPath does contains spaces. We advise that you change your current path to avoid to have space in the path.\033[0m")
+    logging.warning("\033[91mThe current working directory (%s) does contains spaces. We advise that you change the location of the code/working area to avoid to have space in such path.\033[0m", os.getcwd())
 
 try: 
     import readline
