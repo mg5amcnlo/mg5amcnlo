@@ -1002,13 +1002,14 @@ class ConfigFile(dict):
         self.allowed_value = {}
         
         self.default_setup()
+        self.plugin_input(finput)
         
 
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput, **opt)
         
-        self.plugin_input(finput)
+
 
 
     def plugin_input(self, finput=None):
