@@ -32,6 +32,7 @@ except ImportError:
 
     
 import os
+pjoin = os.path.join 
 import optparse
 
 # Get the directory of the script real path (bin)
@@ -160,10 +161,23 @@ except:
     pass
 import internal.madevent_interface as cmd_interface
 
+# check for plugin customization of the launch command
+launch_interface = cmd_interface.MadEventCmdShell
+if os.path.exists(pjoin(root_path, 'bin','internal', 'launch_plugin.py')):
+    with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(root_path, 'bin', 'internal')]):
+        from importlib import reload
+        try:
+            reload('launch_plugin')
+        except Exception as error:
+            import launch_plugin
+    launch_interface =  launch_plugin.MEINTERFACE
+
+
+
 # Call the cmd interface main loop
 try:
     if '-h' in args or '--help' in args:
-        launch = ME.MadEventCmdShell(me_dir=os.path.dirname(root_path), force_run=True)
+        launch = launch_interface(me_dir=os.path.dirname(root_path), force_run=True)
         launch.exec_cmd('help generate_events')
         sys.exit(0)
     with cmd_interface.MadEventCmdShell.RunWebHandling(os.path.dirname(root_path), ):
@@ -178,7 +192,7 @@ try:
                 cmd_line.run_cmd('import command ' + input_file)
                 cmd_line.run_cmd('quit')      
             else:
-                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+                cmd_line = launch_interface(force_run=True)
                 cmd_line.use_rawinput = False
                 cmd_line.haspiping = False
                 cmd_line.run_cmd('import command ' + input_file)
@@ -188,7 +202,7 @@ try:
             if options.web:
                 cmd_line = cmd_interface.MadEventCmd(force_run=True)
             else:
-                cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
+                cmd_line = launch_interface(force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print( parser_error)

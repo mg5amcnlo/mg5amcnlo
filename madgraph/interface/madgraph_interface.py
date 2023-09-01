@@ -7398,8 +7398,15 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                 options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
-                
-                if isinstance(self, cmd.CmdShell):
+                if os.path.exists(pjoin(args[1], 'bin','internal', 'launch_plugin.py')):
+                    with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(args[1], 'bin', 'internal')]):
+                        from importlib import reload
+                        try:
+                            reload('launch_plugin')
+                        except Exception as error:
+                            import launch_plugin
+                    ME = launch_plugin.MEINTERFACE(me_dir=args[1], options=self.options)
+                elif isinstance(self, cmd.CmdShell):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
                     ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
