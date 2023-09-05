@@ -400,6 +400,7 @@ c     since this is a common block with the Source directory
       double precision p(0:3,nexternal)
       double precision, intent(inout) :: pout(4,nexternal)
       common/madnis_api_p/p
+      double precision x1, x2
 
       integer                                        lpp(2)
       double precision    ebeam(2), xbk(2),q2fact(2)
