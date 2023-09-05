@@ -390,16 +390,24 @@ c     since this is a common block with the Source directory
       return
       end
 ************************************************************************
-      subroutine get_momenta(pout)
+      subroutine get_momenta(pout, x1, x2)
 ************************************************************************
 CF2PY double precision, intent(out), dimension(0:3,*) :: pout
+CF2PY double precision, intent(out) :: x1,x2      
 c     CAREFUL we use the max of nexternal for different process here
 c     since this is a common block with the Source directory                  
       include 'nexternal.inc'
       double precision p(0:3,nexternal)
       double precision, intent(inout) :: pout(4,nexternal)
       common/madnis_api_p/p
+
+      integer                                        lpp(2)
+      double precision    ebeam(2), xbk(2),q2fact(2)
+      common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
+      
       pout(:,:) = p(:,:)
+      x1 = xbk(1)
+      x2 = xbk(2)
       return
       end
 
