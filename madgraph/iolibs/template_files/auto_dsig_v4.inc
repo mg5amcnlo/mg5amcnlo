@@ -37,6 +37,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,ITYPE,LP,IPROC
+      double precision Qscale
 %(pdf_vars)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION DSIGUU,R,RCONF

@@ -1810,11 +1810,30 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     pdf_lines = pdf_lines + \
                            "IF (ABS(LPP(IB(%d))).GE.1) THEN\n!LP=SIGN(1,LPP(IB(%d)))\n" \
                                  % (i + 1, i + 1)
+                    if not vector:
+                        if i == 0:
+                            pdf_lines = pdf_lines + \
+                                "if (DSQRT(Q2FACT(IB(1))).eq.0d0) then\n" +\
+                                "  qscale=0d0\n"+\
+                                "    do i=3,nexternal\n"+\
+                                "      Qscale=Qscale+dsqrt(max(0d0,(PP(0,i)+PP(3,i))*(PP(0,i)-PP(3,i))))\n"+\
+                                "    enddo\n"+\
+                                "   qscale=qscale/2d0\n"+\
+                                "else\n"+\
+                                "   qscale=DSQRT(Q2FACT(IB(1)))\n"+\
+                                "endif\n"
+                        else:
+                            pdf_lines = pdf_lines + \
+                                "if (DSQRT(Q2FACT(IB(2))).ne.0d0) then\n" +\
+                                "   qscale=DSQRT(Q2FACT(IB(2)))\n" +\
+                                "endif\n"
                 else:
                     pdf_lines = pdf_lines + \
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
+                    
 
+                misc.sprint(vector, subproc_group,self.opt['vector_size'])
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
 
@@ -1832,7 +1851,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                 dressed_lep = False
                         elif subproc_group:
                             template = "%(part)s%(beam)d=PDG2PDF(LPP(IB(%(beam)d)),%(pdg)d, IB(%(beam)d)," + \
-                                         "XBK(IB(%(beam)d)),DSQRT(Q2FACT(IB(%(beam)d))))\n"
+                                         "XBK(IB(%(beam)d)), QSCALE)\n"
                         elif vector:
                             template = "%(part)s%(beam)d(IVEC)=PDG2PDF(LPP(%(beam)d),%(pdg)d, %(beam)d," + \
                                          "ALL_XBK(%(beam)d,IVEC),DSQRT(ALL_Q2FACT(%(beam)d,IVEC)))\n"
