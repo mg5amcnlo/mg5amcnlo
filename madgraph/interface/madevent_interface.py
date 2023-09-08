@@ -3784,11 +3784,11 @@ Beware that this can be dangerous for local multicore runs.""")
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
-        
-        logger.info("combine events done in %s", time.time()-start)
         elif self.run_card['custom_fcts']:
             self.correct_bias()
-        
+
+        logger.info("combine events done in %s", time.time()-start)
+
         
         self.to_store.append('event')
     

@@ -173,6 +173,10 @@ if os.path.exists(pjoin(root_path, 'bin','internal', 'launch_plugin.py')):
     launch_interface =  launch_plugin.MEINTERFACE
 
 
+#Source use this executable for compilation always allow it
+force_run = False
+if (args and args[0] == 'treatcards'):
+    force_run=True    
 
 # Call the cmd interface main loop
 try:
@@ -180,7 +184,7 @@ try:
         launch = launch_interface(me_dir=os.path.dirname(root_path), force_run=True)
         launch.exec_cmd('help generate_events')
         sys.exit(0)
-    with cmd_interface.MadEventCmdShell.RunWebHandling(os.path.dirname(root_path), ):
+    with cmd_interface.MadEventCmdShell.RunWebHandling(os.path.dirname(root_path), force_run=force_run):
         if (args and os.path.isfile(args[0])):
             # They are an input file 
             input_file = args[0]
