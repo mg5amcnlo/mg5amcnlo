@@ -1628,32 +1628,58 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if i+1 > nb_line:
                     nb_line = i+1
                 if j+1> nb_col:
-                    nb_col = j+1      
+                    nb_col = j+1  
+
+            if nb_col > 600 and added==0:
+                all_element1, all_element2 = {}, {}
+                for (k1,k2) in all_element:
+                    if k2 >= nb_col//2:
+                        all_element2[(k1,1+k2-nb_col//2)] = all_element[(k1,k2)]
+                    else:
+                        all_element1[(k1,k2)] = all_element[(k1,k2)]
+
+                all_element1, newdef1 = self.optimise_jamp(all_element1)
+                nb_added1 = len(newdef1)
+
+                all_element2, newdef2 = self.optimise_jamp(all_element2)
+
+                for (k1,k2) in all_element2:
+                    if k2 >= 0:
+                        all_element1[(k1,1+k2+nb_col//2)] = all_element2[(k1,k2)]
+                    if k2 < 0: 
+                        all_element1[(k1,k2-nb_added1)] = all_element2[(k1,k2)]
+                # new_def format: added,j1,j2,R, max_count
+                for k, j1,j2, R, c in newdef2:
+                    if j2 > 0:
+                        k2 = j2+nb_col//2 -1
+                    else:
+                        k2 = j2-nb_added1 
+                    if j1 > 0:
+                        k1 = j1+nb_col//2 -1
+                    else:
+                        k1 = j1-nb_added1
+                    newdef1.append((k+nb_added1, k1, k2, R, c))
+
+                all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
+                newdef1 = newdef1 + new_def
+                return all_element, newdef1
 
         max_count = 0
         all_index = []
         operation = collections.defaultdict(lambda: collections.defaultdict(int))
-        for i in range(nb_line):
-            for j1 in range(-added, nb_col):
-                v1 = all_element.get((i,j1), 0)
-                if not v1: 
-                    continue                    
-                for j2 in range(j1+1, nb_col):
-                    R = all_element.get((i,j2), 0)/v1
-                    if not R:
-                        continue
-                    
-                    operation[(j1,j2)][R] +=1 
-                    if operation[(j1,j2)][R] > max_count:
-                        max_count = operation[(j1,j2)][R]
-                        all_index = [(j1,j2, R)]
-                    elif operation[(j1,j2)][R] == max_count:
-                        all_index.append((j1,j2, R))
+        for (i,j1), v1 in all_element.items():
+            ratios = [(j2,all_element.get((i,j2), 0)/v1) for j2 in range(j1+1, nb_col) if all_element.get((i,j2), 0)]
+            for j2, R in ratios:                   
+                operation[(j1,j2)][R] +=1 
+                if operation[(j1,j2)][R] > max_count:
+                    max_count = operation[(j1,j2)][R]
+                    all_index = [(j1,j2, R)]
+                elif operation[(j1,j2)][R] == max_count:
+                    all_index.append((j1,j2, R))
+
         if max_count <= 1:
             return all_element, []
-        #added += 1
-        #misc.sprint(max_count, len(all_index))
-        #misc.sprint(operation)
+
         to_add = []
         for index in all_index:
             j1,j2,R = index
@@ -2306,6 +2332,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     MadGraph v4 StandAlone format."""
 
     matrix_template = "matrix_standalone_v4.inc"
+    jamp_optim = True
 
     def __init__(self, *args,**opts):
         """add the format information compare to standard init"""

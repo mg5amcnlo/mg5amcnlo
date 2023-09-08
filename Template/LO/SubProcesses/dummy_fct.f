@@ -32,7 +32,7 @@ c
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
-     . IS_A_ONIUM, do_cuts
+     & IS_A_ONIUM, do_cuts
 
       dummy_cuts=.true.
 
@@ -118,15 +118,16 @@ c     fixed scale
       
       
 C ************************************************************
-C default for the library implementing a dummt bias function
+C default for the library implementing a dummy bias function
 C ************************************************************
       subroutine bias_wgt_custom(p, original_weight, bias_weight)
-          implicit none
+      implicit none
 C
 C Parameters
 C
           include 'nexternal.inc'
-C
+
+C     
 C Arguments
 C
           double precision p(0:3, nexternal)
@@ -161,3 +162,4 @@ C --------------------
 
       return
       end subroutine bias_wgt_custom
+

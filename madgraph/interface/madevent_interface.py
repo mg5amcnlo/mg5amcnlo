@@ -3786,6 +3786,8 @@ Beware that this can be dangerous for local multicore runs.""")
             self.correct_bias()
         
         logger.info("combine events done in %s", time.time()-start)
+        elif self.run_card['custom_fcts']:
+            self.correct_bias()
         
         
         self.to_store.append('event')
