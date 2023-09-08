@@ -2625,6 +2625,7 @@ class RunCard(ConfigFile):
     default_include_file = 'run_card.inc'
     default_autodef_file = 'run.inc'
     donewarning = []
+    include_as_parameter = []
 
     def plugin_input(self, finput):
 
@@ -2710,7 +2711,7 @@ class RunCard(ConfigFile):
         self.system_default = {}
         
         self.display_block = [] # set some block to be displayed
-
+        self.fct_mod = {} # {param: (fct_pointer, *argument, **opts)}
 
         self.cut_class = {} 
         self.warned=False
@@ -2747,7 +2748,7 @@ class RunCard(ConfigFile):
 
     def add_param(self, name, value, fortran_name=None, include=True, 
                   hidden=False, legacy=False, cut=False, system=False, sys_default=None,
-                  autodef=False, 
+                  autodef=False, fct_mod=None,
                   **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
@@ -2761,6 +2762,7 @@ class RunCard(ConfigFile):
                  If a path (Source/PDF/pdf.inc) the definition will be added within that file
                  Default is False (does not add the definition)
                  entry added in the run_card will automatically have this on True.
+        fct_mod: defines a function to run if the parameter is modify in the include file
         options of **opts:
         - allowed: list of valid options. '*' means anything else should be allowed.
                  empty list means anything possible as well. 
@@ -2785,6 +2787,10 @@ class RunCard(ConfigFile):
         if autodef:
             self.definition_path[autodef].append(name)
             self.user_set.add(name)
+        # function to trigger if a value is modified in the include file
+        # main target is action to force correct recompilation (like for compilation flag/...)
+        if fct_mod:
+            self.fct_mod[name] = fct_mod
 
     def read(self, finput, consistency=True):
         """Read the input file, this can be a path to a file, 
@@ -2897,7 +2903,16 @@ class RunCard(ConfigFile):
                 return False 
         else:
             return True      
-                    
+
+
+    def reset_simd(self, *args, **opts):
+        raise Exception('pass in reset simd')
+
+    def make_clean(self, dir):
+        raise Exception('pass make clean for ', dir)
+
+    def make_Ptouch(self, reset):
+        raise Exception('pass Ptouch for ', reset)             
                 
     def write(self, output_file, template=None, python_template=False,
                     write_hidden=False, template_options=None, **opt):
@@ -3071,6 +3086,67 @@ class RunCard(ConfigFile):
             fsock.close()
         else:
             output_file.write(text)
+
+    def get_last_value_include(self, output_dir):
+        """For paraeter in self.fct_mod
+        parse the associate inc file to get the value of the previous run.
+        We return a dictionary {name: old_value}
+        if inc file does not exist we will return the current value (i.e. set has no change)
+        """
+
+        #remember that 
+        # default_include_file is a class variable
+        # self.includepath is on the form include_path : [list of param ]
+        out = {}
+
+        # setup inc_to_parse to be like self.includepath (include_path : [list of param ])
+        # BUT only containing the parameter that need to be tracked for the fct_mod option
+        inc_to_parse = {}
+        for inc_file, params in self.includepath.items():
+            if not inc_file:
+                continue
+            if any(p in params for p in self.fct_mod):
+                inc_to_parse[inc_file] = [name for name in self.includepath[inc_file] if name in self.fct_mod]
+
+        # now loop over the files and ask the associate function
+        for inc_file, params in inc_to_parse.items():
+            if inc_file is True:
+                inc_file = self.default_include_file
+            out.update(self.get_value_from_include(inc_file, params, output_dir))
+
+        return out
+
+    def get_value_from_include(self, path, list_of_params, output_dir):
+        """for a given include file return the current value of the requested parameter
+        return a dictionary {name: value}
+        if path does not exists return the current value in self for all parameter"""
+
+        #WARNING DOES NOT HANDLE LIST/DICT so far
+
+        # handle case where file is missing
+        if not os.path.exists(pjoin(output_dir,path)):
+            misc.sprint("include file not existing", pjoin(output_dir,path))
+            out = {name: self[name] for name in list_of_params}
+
+        with open(pjoin(output_dir,path), 'r') as fsock:
+            text = fsock.read()
+        
+        for name in list_of_params:
+            misc.sprint(name, name in self.fortran_name)
+            misc.sprint(self.fortran_name[name] if name in self.fortran_name[name] else name)
+        to_track = [self.fortran_name[name] if name in self.fortran_name else name for name in list_of_params]
+        pattern = re.compile(r"\(?(%(names)s)\s?=\s?(.*)\)?" % {'names':'|'.join(to_track)}, re.I)
+
+        out =  dict(pattern.findall(text))
+        misc.sprint(out)
+
+        if len(out) != len(list_of_params):
+            misc.sprint(list_of_params)
+            misc.sprint(to_track)
+            misc.sprint(self.fortran_name)
+            misc.sprint(text)
+            raise Exception
+        return out 
 
 
     def get_default(self, name, default=None, log_level=None):
@@ -3362,6 +3438,9 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
+        current_value = self.get_last_value_include(output_dir)
+
+
         if output_dir:
             self.write_autodef(output_dir, output_file=None)
             # check/fix status of customised functions
@@ -3378,7 +3457,9 @@ class RunCard(ConfigFile):
             if output_file:
                 fsock = output_file
             else:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))  
+                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))
+
+
             for key in self.includepath[incname]:                
                 #define the fortran name
                 if key in self.fortran_name:
@@ -3386,6 +3467,8 @@ class RunCard(ConfigFile):
                 else:
                     fortran_name = key
                     
+                if incname in self.include_as_parameter:
+                    fsock.writelines('INTEGER %s\n' % fortran_name)
                 #get the value with warning if the user didn't set it
                 value = self.get_default(key)
                 if hasattr(self, 'mod_inc_%s' % key):
@@ -3414,10 +3497,16 @@ class RunCard(ConfigFile):
                         line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
                         fsock.writelines(line)                       
                 elif isinstance(incname,str) and 'compile' in incname:
-                    line = '%s = %s \n' % (fortran_name, value)
+                    if incname in self.include_as_parameter:
+                        line = 'PARAMETER (%s=%s)' %( fortran_name, value)
+                    else:
+                        line = '%s = %s \n' % (fortran_name, value)
                     fsock.write(line)
                 else:
-                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
+                    if incname in self.include_as_parameter:
+                        line = 'PARAMETER (%s=%s)' %( fortran_name, self.f77_formatting(value))
+                    else:
+                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
             if not output_file:
                 fsock.close()
@@ -3765,13 +3854,14 @@ template_on = \
    %(tmin_for_channel)s = tmin_for_channel ! limit the non-singular reach of --some-- channel of integration related to T-channel diagram (value between -1 and 0), -1 is no impact
    %(survey_splitting)s = survey_splitting ! for loop-induced control how many core are used at survey for the computation of a single iteration.
    %(survey_nchannel_per_job)s = survey_nchannel_per_job ! control how many Channel are integrated inside a single job on cluster/multicore
-   %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)
+   %(refine_evt_by_job)s = refine_evt_by_job ! control the maximal number of events for the first iteration of the refine (larger means less jobs)  
 #*********************************************************************
-# Compilation flag. No automatic re-compilation (need manual "make clean" in Source)
+# Compilation flag. 
 #*********************************************************************   
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
+   %(vector_size)s = vector_size ! size designed for SIMD/OpenMP/GPU (number of events in lockstep)
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
@@ -3930,6 +4020,8 @@ class RunCardLO(RunCard):
                       "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
     
+    include_as_parameter = ['vector.inc']
+
     if MG5DIR:
         default_run_card = pjoin(MG5DIR, "internal", "default_run_card_lo.dat")
     
@@ -4163,10 +4255,15 @@ class RunCardLO(RunCard):
         self.add_param('hel_splitamp', True, hidden=True, include=False, comment='decide if amplitude aloha call can be splitted in two or not when doing helicity per helicity optimization.')
         self.add_param('hel_zeroamp', True, hidden=True, include=False, comment='decide if zero amplitude can be removed from the computation when doing helicity per helicity optimization.')
         self.add_param('SDE_strategy', 1, allowed=[1,2], fortran_name="sde_strat", comment="decide how Multi-channel should behaves \"1\" means full single diagram enhanced (hep-ph/0208156), \"2\" use the product of the denominator")
-        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check')
-        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math')
-        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3')        
-        
+        self.add_param('global_flag', '-O', include=False, hidden=True, comment='global fortran compilation flag, suggestion -fbound-check',
+                       fct_mod=(self.make_clean, ('Source'),{}))
+        self.add_param('aloha_flag', '', include=False, hidden=True, comment='global fortran compilation flag, suggestion: -ffast-math',
+                       fct_mod=(self.make_clean, ('Source/DHELAS'),{}))
+        self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3',
+                       fct_mod=(self.make_Ptouch, ('matrix'),{}))        
+        self.add_param('vector_size', 1, include='vector.inc', hidden=True, comment='lockstep size for parralelism run', 
+                       fortran_name='VECSIZE_MEMMAX', fct_mod=(self.reset_simd,(),{}))
+
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
         self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
