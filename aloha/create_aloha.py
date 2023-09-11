@@ -1315,7 +1315,7 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
         aloha_files.append('additional_aloha_function.o')
     
     text="ALOHARoutine = "
-    text += ' '.join(aloha_files)
+    text += ' '.join(sorted(aloha_files))
     text +='\n'
     
 
