@@ -1634,6 +1634,9 @@ This will take effect only in a NEW terminal
                 self._export_format = 'plugin'
                 self._export_plugin = output_cls
                 args.pop(0)
+                if hasattr(output_cls, 'change_output_args'):
+                    args[:] = output_cls.change_output_args(args, self) 
+                self.export
             else:
                 self._export_format = default
         else:
