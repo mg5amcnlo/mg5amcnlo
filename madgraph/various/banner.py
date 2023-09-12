@@ -537,7 +537,7 @@ class Banner(dict):
             self.param_card = param_card_reader.ParamCard(param_card)
             return self.param_card
         elif tag == 'mgruncard':
-            self.run_card = RunCard(self[tag])
+            self.run_card = RunCard(self[tag], unknown_warning=False)
             return self.run_card
         elif tag == 'mg5proccard':
             proc_card = self[tag].split('\n')
@@ -2672,18 +2672,40 @@ class RunCard(ConfigFile):
             elif isinstance(finput, cls):
                 target_class = finput.__class__
             elif isinstance(finput, str):
+                path = finput
                 if '\n' not in finput:
                     finput = open(finput).read()
                 if 'req_acc_FO' in finput:
                     target_class = RunCardNLO
                 else:
                     target_class = RunCardLO
+                    if MADEVENT and os.path.exists(pjoin(MEDIR, 'bin','internal', 'launch_plugin.py')):
+                        with  misc.TMP_variable(sys, 'path', sys.path + [pjoin(MEDIR, 'bin', 'internal')]):
+                            from importlib import reload
+                            try:
+                                reload('launch_plugin')
+                            except Exception as error:
+                                import launch_plugin
+                        target_class = launch_plugin.RunCard
+                    elif not MADEVENT and os.path.exists(path.replace('run_card.dat', '../bin/internal/launch_plugin.py')):
+                        misc.sprint('try to use plugin class')
+                        pydir = path.replace('run_card.dat', '../bin/internal/')
+                        with  misc.TMP_variable(sys, 'path', sys.path + [pydir]):
+                            from importlib import reload
+                            try:
+                                reload('launch_plugin')
+                            except Exception as error:
+                                import launch_plugin
+                        target_class = launch_plugin.RunCard
+
             else:
                 return None
 
             target_class.fill_post_set_from_blocks()
-
-            return super(RunCard, cls).__new__(target_class, finput, **opt)
+            out = super(RunCard, cls).__new__(target_class, finput, **opt)
+            if not isinstance(out, RunCard): #should not happen but in presence of missmatch of library loaded.
+                out.__init__(finput, **opt)
+            return out
         else:
             return super(RunCard, cls).__new__(cls, finput, **opt)
 
@@ -2792,7 +2814,7 @@ class RunCard(ConfigFile):
         if fct_mod:
             self.fct_mod[name] = fct_mod
 
-    def read(self, finput, consistency=True):
+    def read(self, finput, consistency=True, unknown_warning=True):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
            
@@ -2800,6 +2822,7 @@ class RunCard(ConfigFile):
             if "\n" in finput:
                 finput = finput.split('\n')
             elif os.path.isfile(finput):
+                self.path = finput
                 finput = open(finput)
             else:
                 raise Exception("No such file %s" % finput)
@@ -2814,7 +2837,7 @@ class RunCard(ConfigFile):
             name = name.lower().strip()
             if name not in self:
                 #looks like an entry added by a user -> add it nicely
-                self.add_unknown_entry(name, value)
+                self.add_unknown_entry(name, value, unknown_warning)
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
@@ -2826,7 +2849,7 @@ class RunCard(ConfigFile):
                         logger.warning(str(error))
                     else:
                         raise
-    def add_unknown_entry(self, name, value):
+    def add_unknown_entry(self, name, value, unknow_warning):
         """function to add an entry to the run_card when the associated parameter does not exists.
            This is based on the guess_entry_fromname for the various syntax providing input.
            This then call add_param accordingly.
@@ -2865,7 +2888,7 @@ class RunCard(ConfigFile):
                 raise Exception("dictionary need to have at least one entry")
             default['dict']['__type__'] = default[self.guess_type_from_value(default_value[0])]
 
-        if name not in RunCard.donewarning:
+        if name not in RunCard.donewarning and unknow_warning:
             logger.warning("Found unexpected entry in run_card: \"%s\" with value \"%s\".\n"+\
                 "  The type was assigned to %s. \n"+\
                 "  The definition of that variable will %sbe automatically added to fortran file %s\n"+\
@@ -2905,13 +2928,13 @@ class RunCard(ConfigFile):
             return True      
 
 
-    def reset_simd(self, *args, **opts):
+    def reset_simd(self, old_value, new_value, name, *args, **opts):
         raise Exception('pass in reset simd')
 
-    def make_clean(self, dir):
+    def make_clean(self,old_value, new_value, name, dir):
         raise Exception('pass make clean for ', dir)
 
-    def make_Ptouch(self, reset):
+    def make_Ptouch(self,old_value, new_value, name, reset):
         raise Exception('pass Ptouch for ', reset)             
                 
     def write(self, output_file, template=None, python_template=False,
@@ -3135,10 +3158,20 @@ class RunCard(ConfigFile):
             misc.sprint(name, name in self.fortran_name)
             misc.sprint(self.fortran_name[name] if name in self.fortran_name[name] else name)
         to_track = [self.fortran_name[name] if name in self.fortran_name else name for name in list_of_params]
-        pattern = re.compile(r"\(?(%(names)s)\s?=\s?(.*)\)?" % {'names':'|'.join(to_track)}, re.I)
-
+        pattern = re.compile(r"\(?(%(names)s)\s?=\s?([^)]*)\)?" % {'names':'|'.join(to_track)}, re.I)
         out =  dict(pattern.findall(text))
         misc.sprint(out)
+        for name in list_of_params:
+            if name in self.fortran_name:
+                value = out[self.fortran_name[name]]
+                del out[self.fortran_name[name]]
+                out[name] = value
+
+        for name, value in out.items():
+            try:
+                out[name] = self.format_variable(value, type(self[name]))
+            except Exception:
+                continue
 
         if len(out) != len(list_of_params):
             misc.sprint(list_of_params)
@@ -3438,7 +3471,7 @@ class RunCard(ConfigFile):
         #ensusre that system only parameter are correctly set
         self.update_system_parameter_for_include()
 
-        current_value = self.get_last_value_include(output_dir)
+        value_in_old_include = self.get_last_value_include(output_dir)
 
 
         if output_dir:
@@ -3516,6 +3549,10 @@ class RunCard(ConfigFile):
                 else:
                     os.remove(path+'.tmp')
 
+
+        for name,value in value_in_old_include.items():
+            if value != self[name]:
+                self.fct_mod[name][0](value, self[name], name, *self.fct_mod[name][1],**self.fct_mod[name][2])
 
     def write_autodef(self, output_dir, output_file=None):
         """ Add the definition of variable to run.inc if the variable is set with autodef.
