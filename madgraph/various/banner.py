@@ -3480,79 +3480,84 @@ class RunCard(ConfigFile):
             self.edit_dummy_fct_from_file(self["custom_fcts"], os.path.dirname(output_dir))
         
         for incname in self.includepath:
-            if incname is True:
-                pathinc = self.default_include_file
-            elif incname is False:
-                continue
-            else:
-                pathinc = incname
-
-            if output_file:
-                fsock = output_file
-            else:
-                fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))
-
-
-            for key in self.includepath[incname]:                
-                #define the fortran name
-                if key in self.fortran_name:
-                    fortran_name = self.fortran_name[key]
-                else:
-                    fortran_name = key
-                    
-                if incname in self.include_as_parameter:
-                    fsock.writelines('INTEGER %s\n' % fortran_name)
-                #get the value with warning if the user didn't set it
-                value = self.get_default(key)
-                if hasattr(self, 'mod_inc_%s' % key):
-                    value = getattr(self, 'mod_inc_%s' % key)(value)
-                # Special treatment for strings containing a list of
-                # strings. Convert it to a list of strings
-                if isinstance(value, list):
-                    # in case of a list, add the length of the list as 0th
-                    # element in fortran. Only in case of integer or float
-                    # list (not for bool nor string)
-                    targettype = self.list_parameter[key]                        
-                    if targettype is bool:
-                        pass
-                    elif targettype is int:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
-                        fsock.writelines(line)
-                    elif targettype is float:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
-                        fsock.writelines(line)
-                    # output the rest of the list in fortran
-                    for i,v in enumerate(value):
-                        line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
-                        fsock.writelines(line)
-                elif isinstance(value, dict):
-                    for fortran_name, onevalue in value.items():
-                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
-                        fsock.writelines(line)                       
-                elif isinstance(incname,str) and 'compile' in incname:
-                    if incname in self.include_as_parameter:
-                        line = 'PARAMETER (%s=%s)' %( fortran_name, value)
-                    else:
-                        line = '%s = %s \n' % (fortran_name, value)
-                    fsock.write(line)
-                else:
-                    if incname in self.include_as_parameter:
-                        line = 'PARAMETER (%s=%s)' %( fortran_name, self.f77_formatting(value))
-                    else:
-                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
-                    fsock.writelines(line)
-            if not output_file:
-                fsock.close()
-                path = pjoin(output_dir,pathinc)
-                if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
-                    files.mv(path+'.tmp', path)
-                else:
-                    os.remove(path+'.tmp')
-
-
+            self.write_one_include_file(output_dir, incname, output_file)
+ 
         for name,value in value_in_old_include.items():
             if value != self[name]:
                 self.fct_mod[name][0](value, self[name], name, *self.fct_mod[name][1],**self.fct_mod[name][2])
+
+    def write_one_include_file(self, output_dir, incname, output_file=None):
+        """write one include file at the time"""
+
+        misc.sprint(incname)
+        if incname is True:
+            pathinc = self.default_include_file
+        elif incname is False:
+            return
+        else:
+            pathinc = incname
+
+        if output_file:
+            fsock = output_file
+        else:
+            fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc+'.tmp'))
+
+
+        for key in self.includepath[incname]:                
+            #define the fortran name
+            if key in self.fortran_name:
+                fortran_name = self.fortran_name[key]
+            else:
+                fortran_name = key
+                
+            if incname in self.include_as_parameter:
+                fsock.writelines('INTEGER %s\n' % fortran_name)
+            #get the value with warning if the user didn't set it
+            value = self.get_default(key)
+            if hasattr(self, 'mod_inc_%s' % key):
+                value = getattr(self, 'mod_inc_%s' % key)(value)
+            # Special treatment for strings containing a list of
+            # strings. Convert it to a list of strings
+            if isinstance(value, list):
+                # in case of a list, add the length of the list as 0th
+                # element in fortran. Only in case of integer or float
+                # list (not for bool nor string)
+                targettype = self.list_parameter[key]                        
+                if targettype is bool:
+                    pass
+                elif targettype is int:
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+                    fsock.writelines(line)
+                elif targettype is float:
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
+                    fsock.writelines(line)
+                # output the rest of the list in fortran
+                for i,v in enumerate(value):
+                    line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
+                    fsock.writelines(line)
+            elif isinstance(value, dict):
+                for fortran_name, onevalue in value.items():
+                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
+                    fsock.writelines(line)                       
+            elif isinstance(incname,str) and 'compile' in incname:
+                if incname in self.include_as_parameter:
+                    line = 'PARAMETER (%s=%s)' %( fortran_name, value)
+                else:
+                    line = '%s = %s \n' % (fortran_name, value)
+                fsock.write(line)
+            else:
+                if incname in self.include_as_parameter:
+                    line = 'PARAMETER (%s=%s)' %( fortran_name, self.f77_formatting(value))
+                else:
+                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
+                fsock.writelines(line)
+        if not output_file:
+            fsock.close()
+            path = pjoin(output_dir,pathinc)
+            if not os.path.exists(path) or not filecmp.cmp(path,  path+'.tmp'):
+                files.mv(path+'.tmp', path)
+            else:
+                os.remove(path+'.tmp')
 
     def write_autodef(self, output_dir, output_file=None):
         """ Add the definition of variable to run.inc if the variable is set with autodef.
