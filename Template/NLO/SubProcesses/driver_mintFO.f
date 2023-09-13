@@ -377,6 +377,9 @@ c PineAPPL
       save ini_fin_fks_map
       include 'has_ewsudakov.inc'
 
+      logical use_evpr, passcuts_coll
+      common /to_use_evpr/use_evpr
+
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -460,6 +463,7 @@ c The n+1-body contributions (including counter terms)
          nFKS_max=iran_picked
          MC_int_wgt=1d0/vol
       endif
+
       do i=nFKS_min,nFKS_max
          iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
          calculatedBorn=.false. 
@@ -476,6 +480,9 @@ c The n+1-body contributions (including counter terms)
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
          passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+         ! needed for the mapping without event projection
+         call set_cms_stuff(ione)
+         passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
          call set_cms_stuff(mohdr)
          if (ickkw.eq.3) call set_FxFx_scale(3,p)
          passcuts_n1body=passcuts(p,rwgt)
@@ -485,10 +492,13 @@ c The n+1-body contributions (including counter terms)
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
-            call set_cms_stuff(ione)
-            call compute_collinear_counter_term(0d0)
             call set_cms_stuff(itwo)
             call compute_soft_collinear_counter_term(0d0)
+         endif
+         if (passcuts_coll .and. abrv.ne.'real') then
+           call set_alphaS(p1_cnt(0,1,1))
+           call set_cms_stuff(ione)
+           call compute_collinear_counter_term(0d0)
          endif
          if (passcuts_n1body) then
             pass_cuts_check=.true.
