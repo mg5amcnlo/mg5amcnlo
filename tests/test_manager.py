@@ -43,6 +43,8 @@ import optparse
 import os
 import re
 import unittest
+if not hasattr(unittest, 'debug'):
+    unittest.debug = False
 import time
 import datetime
 import shutil
@@ -182,12 +184,13 @@ class MyTextTestRunner(unittest.TextTestRunner):
 # run
 #===============================================================================
 def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
-        timelimit=[0,0]):
+        timelimit=[0,0], debug=False):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
     """
 
+    unittest.debug=debug
     #init a test suite
     testsuite = unittest.TestSuite()
     collect = unittest.TestLoader()
@@ -199,6 +202,7 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
         data = collect.loadTestsFromName(test_fct)        
         assert(isinstance(data,unittest.TestSuite))        
         data.__class__ = TestSuiteModified
+
         testsuite.addTest(data)
         
     output =  MyTextTestRunner(verbosity=verbosity).run(testsuite)
@@ -220,12 +224,13 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
 # run
 #===============================================================================
 def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
-        timelimit=[0,0]):
+        timelimit=[0,0],debug=False):
     """ running the test associated to expression one by one. and follow them by the to_crash one
         up to the time that to_crash is actually crashing. Then the run stops and print the list of the 
         routine tested. Then the code re-run itself(via a fork) to restrict the list. 
         The code stops when the list is of order 1. The order of the test is randomize at each level!
     """
+    unittest.debug = debug
     #init a test suite
     collect = unittest.TestLoader()
     TestSuiteModified.time_limit =  float(timelimit[1])
@@ -1000,7 +1005,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
           help="Running time, below which no notification is raised. (-1 for no notification)")        
     parser.add_option("", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
                   help='For mac user, forbids to use caffeinate when running with a script')
-    
+    parser.add_option("", "--debug", action="store_true", default=False, dest='debug',
+                  help='setting debug flag to keep output where relevant')    
     (options, args) = parser.parse_args()
 
     if options.IOTestsUpdate:
@@ -1089,10 +1095,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         if not options.border_effect:
             #logging.basicConfig(level=vars(logging)[options.logging])
             output = run(args, re_opt=options.reopt, verbosity=options.verbose, \
-                package=options.path, timelimit=[options.mintime,options.timed])
+                package=options.path, timelimit=[options.mintime,options.timed], debug=options.debug)
         else:
             output = run_border_search(options.border_effect, args, re_opt=options.reopt, verbosity=options.verbose, \
-                package=options.path, timelimit=[options.mintime,options.timed])
+                package=options.path, timelimit=[options.mintime,options.timed], debug=options.debug)
     else:
         if options.IOTests=='L':
             print("Listing all tests defined in the reference files ...")
@@ -1120,7 +1126,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                (output.failures, output.errors, output.skipped)))
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
-        misc.apple_notify("tests finished", str(output))
+        misc.system_notify("tests finished", str(output))
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

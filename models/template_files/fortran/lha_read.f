@@ -185,6 +185,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       integer npara
       logical fopened,found
       integer iunit,GL,logfile
+      integer start
       character*20 ctemp
       character*132 buff
       character*20 tag
@@ -227,6 +228,18 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
                  temp=buff(7:132)
                  call LHA_firststring(blockname,temp)
                  call LHA_case_trap(blockname)
+c                check if Q= is in string
+                 start=index(temp,'Q=')
+                 if (start.ne.0) then
+
+                   temp = temp(2+start:132)
+                   call LHA_firststring(val,temp)
+                   value(npara)=val
+                   ctemp='mdl__'//trim(blockname)//'__scale'
+                   call LHA_case_trap(ctemp)
+                   param(npara)=ctemp
+                   npara = npara + 1              
+                 endif
              else if (tag .eq. 'decay') then ! If we are in a decay, directly try to get back the correct name/value pair
                  blockname='decay'
                  temp=buff(7:132)

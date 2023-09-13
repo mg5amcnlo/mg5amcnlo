@@ -1851,7 +1851,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             param_card_iterator.write_summary(path)
             
         if self.allow_notification_center:    
-            misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
                               '%s: %s +- %s ' % (self.results.current['run_name'], 
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
@@ -4539,6 +4539,9 @@ RESTART = %(mint_mode)s
             if not hasattr(mod, 'parameter_dict'):
                 from models import model_reader
                 mod = model_reader.ModelReader(mod)
+                if "set EWscheme MZ_MW_alpha" in self.banner.get_detail('proc_card'):
+                    mod.change_electroweak_mode("MZ_MW_alpha")
+                #misc.sprint(self.banner.get_detail('proc_card'))
                 mod.set_parameters_and_couplings(self.banner.param_card)
             aewm1 = 0
             for key in ['aEWM1', 'AEWM1', 'aEWm1', 'aewm1']:

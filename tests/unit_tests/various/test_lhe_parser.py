@@ -24,12 +24,286 @@ import shutil
 from six.moves import zip
 pjoin = os.path.join
 from madgraph import MG5DIR
+import itertools
+
+
+class TestEvent(unittest.TestCase):
+
+
+    def test_equiv_sequence(self):
+        """ check the equiv_sequence: staticmethod"""
+
+        l1 = [3,4,5]
+        mapping = {0: "a", 1: "b", 2: "c"}
+        for l2 in itertools.permutations(l1):
+            out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+            if tuple(l1) == l2:
+                self.assertTrue(out)
+            else:
+                self.assertFalse(out)
+
+        l1 = [3,4,5]
+        mapping = {0: "a", 1: "a", 2: "c"}
+        l2 =[4,3,5]
+        out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+        self.assertTrue(out)
+        l2 =[4,5,3]
+        out = lhe_parser.Event.equiv_sequence(l1,l2, mapping)
+        self.assertFalse(out)        
+
+    
+    def test_get_permutation(self):
+        """ check the static method get_permutation"""
+
+
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAA")
+        self.assertEqual(len(out), 1)
+        
+        out = lhe_parser.Event.get_permutation([3,4,5], "AAB")
+        self.assertEqual(len(out), 3)
+        self.assertIn((3,4,5), out)
+        check = set()
+        for one in out:
+            check.add(one[-1])
+        self.assertEqual(len(check), 3)
+        self.assertEqual(check, set([3,4,5]))
+
+        out = lhe_parser.Event.get_permutation([3,4,5], "ABC")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5), out)
+        self.assertIn((4,3,5), out)
+
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "AACC")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5,6), out)
+        self.assertNotIn((4,3,6,5), out)
+        self.assertIn((4,5,3,6), out)
+
+        out = lhe_parser.Event.get_permutation([3,4,5, 6], "ACCA")
+        self.assertEqual(len(out), 6)
+        self.assertIn((3,4,5,6), out)
+        self.assertIn((4,3,6,5), out)
+  
+
+    def test_event_property(self):
+        """
+        test Event parsing and the function get_momenta and get_all_momenta
+        """
+
+        input = """
+    10      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
+            2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1463656627e+03 1.1463656627e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -2.1981849450e+02 2.1981849450e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        23  2    1    2    0    0 +5.7837338551e+01 +1.1718357879e+02 -7.4151825307e+01 1.7598875523e+02 9.1631871662e+01 0.0000e+00 0.0000e+00
+        23  2    1    2    0    0 +1.1433114561e+02 +1.4041658917e+02 +7.5301024612e+02 7.8190910735e+02 1.0755924887e+02 0.0000e+00 0.0000e+00
+        -11  1    1    2    0    0 -1.7327841208e+02 -1.9147557428e+02 +1.9134097396e+02 3.2140266327e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    1    2    0    0 +1.1099279128e+00 -6.6124593668e+01 +5.6347773431e+01 8.6883631360e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11  1    4    4    0    0 +4.0361765237e+01 -1.1075255459e+01 +1.6276183383e+02 1.6805697822e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    4    4    0    0 +7.3969380376e+01 +1.5149184462e+02 +5.9024841230e+02 6.1385212913e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11  1    3    3    0    0 -2.2637466291e+00 -1.4439319632e+01 -1.0004133265e+01 1.7711611520e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    3    3    0    0 +6.0101085180e+01 +1.3162289842e+02 -6.4147692042e+01 1.5827714371e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+
+        """
+
+        #first check that we can initialise the event
+        event = lhe_parser.Event(input)
+        self.assertEqual(10, len(event))
+
+        # check that we can get the momenta for a request order 
+        out = event.get_momenta([(2,-2), (-11,-11,-11,11,11,11)])
+        self.assertEqual(out, [(1146.3656627, 0.0, 0.0, 1146.3656627), (219.8184945, -0.0, -0.0, -219.8184945), (321.40266327, -173.27841208, -191.47557428, 191.34097396), (168.05697822, 40.361765237, -11.075255459, 162.76183383), (17.71161152, -2.2637466291, -14.439319632, -10.004133265), (86.88363136, 1.1099279128, -66.124593668, 56.347773431), (613.85212913, 73.969380376, 151.49184462, 590.2484123), (158.27714371, 60.10108518, 131.62289842, -64.147692042)])
+        
+        # and for a second order:
+        out2 = event.get_momenta([(2,-2), (-11,11,-11,11,-11,11)])
+        
+        self.assertEqual(out2, [(1146.3656627, 0.0, 0.0, 1146.3656627), (219.8184945, -0.0, -0.0, -219.8184945), (321.40266327, -173.27841208, -191.47557428, 191.34097396), (86.88363136, 1.1099279128, -66.124593668, 56.347773431), (168.05697822, 40.361765237, -11.075255459, 162.76183383), (613.85212913, 73.969380376, 151.49184462, 590.2484123), (17.71161152, -2.2637466291, -14.439319632, -10.004133265), (158.27714371, 60.10108518, 131.62289842, -64.147692042)])
+
+
+        # check that first data structure for get_all_momenta is constructed correctly
+        # here all particles are considered different
+        mother = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=1)
+        self.assertEqual(mother, {-11: {(0, 1): [2], (3, 3): [3], (2, 2): [4]}, 11: {(0, 1): [5], (3, 3): [6], (2, 2): [7]}})
+
+        mother2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=1)
+        self.assertNotEqual(mother2, mother)
+        self.assertEqual(mother2, {-11: {(0, 1): [2], (3, 3): [4], (2, 2): [6]}, 11: {(0, 1): [3], (3, 3): [5], (2, 2): [7]}})
+
+
+
+
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen), 2)
+        self.assertEqual(len(perm_gen[11]), 6)
+        self.assertEqual(len(perm_gen[-11]), 6)
+        self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(2, 2), (4, 3), (3, 4)], [(3, 2), (2, 3), (4, 4)], [(3, 2), (4, 3), (2, 4)], [(4, 2), (2, 3), (3, 4)], [(4, 2), (3, 3), (2, 4)]], 
+                                     11: [[(5, 5), (6, 6), (7, 7)], [(5, 5), (7, 6), (6, 7)], [(6, 5), (5, 6), (7, 7)], [(6, 5), (7, 6), (5, 7)], [(7, 5), (5, 6), (6, 7)], [(7, 5), (6, 6), (5, 7)]]}
+        )
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen2), 2)
+        self.assertEqual(len(perm_gen2[11]), 6)
+        self.assertEqual(len(perm_gen2[-11]), 6)
+        self.assertNotEqual(perm_gen, perm_gen2)
+        self.assertEqual(perm_gen2, {-11: [[(2, 2), (4, 4), (6, 6)], [(2, 2), (6, 4), (4, 6)], [(4, 2), (2, 4), (6, 6)], [(4, 2), (6, 4), (2, 6)], [(6, 2), (2, 4), (4, 6)], [(6, 2), (4, 4), (2, 6)]], 
+                                     11: [[(3, 3), (5, 5), (7, 7)], [(3, 3), (7, 5), (5, 7)], [(5, 3), (3, 5), (7, 7)], [(5, 3), (7, 5), (3, 7)], [(7, 3), (3, 5), (5, 7)], [(7, 3), (5, 5), (3, 7)]]}
+        
+        )
+        
+        
+    
+        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0)
+        self.assertEqual(len(all_perms), 36)
+        for i in range(len(all_perms)):
+            for j in range(i+1, len(all_perms)):
+                # check that initial state are the same
+                self.assertEqual(all_perms[i][0], all_perms[j][0])
+                self.assertEqual(all_perms[i][1], all_perms[j][1])
+                # check that each combination are unique
+                self.assertNotEqual(all_perms[i][2:], all_perms[j][2:])
+        # check that a given momenta is repeated the correct amount of time at a given position
+        nb_identical = [0] * len(all_perms[0])
+        for i in range(len(all_perms)):
+            for j in range(len(all_perms[0])):
+                if all_perms[i][j] == all_perms[0][j]:
+                    nb_identical[j] +=1
+        self.assertEqual(nb_identical, [36,36,12,12,12,12,12,12]) # for the electron permuation: 2 repetition and from the positron one 6 repetition.
+
+        # redo the same but where two pair of electron/positron are indistiguishable
+        input = """
+    10      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
+            2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1463656627e+03 1.1463656627e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -2.1981849450e+02 2.1981849450e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        23  2    1    2    0    0 +5.7837338551e+01 +1.1718357879e+02 -7.4151825307e+01 1.7598875523e+02 9.1631871662e+01 0.0000e+00 0.0000e+00
+        23  2    1    2    0    0 +1.1433114561e+02 +1.4041658917e+02 +7.5301024612e+02 7.8190910735e+02 1.0755924887e+02 0.0000e+00 0.0000e+00
+        -11  1    1    2    0    0 -1.7327841208e+02 -1.9147557428e+02 +1.9134097396e+02 3.2140266327e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    1    2    0    0 +1.1099279128e+00 -6.6124593668e+01 +5.6347773431e+01 8.6883631360e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11  1    1    2    0    0 +4.0361765237e+01 -1.1075255459e+01 +1.6276183383e+02 1.6805697822e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    1    2    0    0 +7.3969380376e+01 +1.5149184462e+02 +5.9024841230e+02 6.1385212913e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11  1    3    3    0    0 -2.2637466291e+00 -1.4439319632e+01 -1.0004133265e+01 1.7711611520e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    4    4    0    0 +6.0101085180e+01 +1.3162289842e+02 -6.4147692042e+01 1.5827714371e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+
+        """
+        #first check that we can initialise the event
+        event = lhe_parser.Event(input)
+        self.assertEqual(10, len(event))
+
+        # check that we can get the momenta for a request order 
+        out = event.get_momenta([(2,-2), (-11,-11,-11,11,11,11)])
+        self.assertEqual(out, [(1146.3656627, 0.0, 0.0, 1146.3656627), (219.8184945, -0.0, -0.0, -219.8184945), (321.40266327, -173.27841208, -191.47557428, 191.34097396), (168.05697822, 40.361765237, -11.075255459, 162.76183383), (17.71161152, -2.2637466291, -14.439319632, -10.004133265), (86.88363136, 1.1099279128, -66.124593668, 56.347773431), (613.85212913, 73.969380376, 151.49184462, 590.2484123), (158.27714371, 60.10108518, 131.62289842, -64.147692042)])
+        
+        # and for a second order:
+        out2 = event.get_momenta([(2,-2), (-11,11,-11,11,-11,11)])
+        
+        self.assertEqual(out2, [(1146.3656627, 0.0, 0.0, 1146.3656627), (219.8184945, -0.0, -0.0, -219.8184945), (321.40266327, -173.27841208, -191.47557428, 191.34097396), (86.88363136, 1.1099279128, -66.124593668, 56.347773431), (168.05697822, 40.361765237, -11.075255459, 162.76183383), (613.85212913, 73.969380376, 151.49184462, 590.2484123), (17.71161152, -2.2637466291, -14.439319632, -10.004133265), (158.27714371, 60.10108518, 131.62289842, -64.147692042)])
+
+
+        # check that first data structure for get_all_momenta is constructed correctly
+        # here all particles are considered different
+        mother = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=1)
+        self.assertEqual(mother, {-11: {(0, 1): [2, 3], (2, 2): [4]}, 11: {(0, 1): [5, 6], (3, 3): [7]}})
+
+
+        mother2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=1)
+
+        self.assertNotEqual(mother2, mother)
+        self.assertEqual(mother2, {-11: {(0, 1): [2, 4], (2, 2): [6]}, 11: {(0, 1): [3, 5], (3, 3): [7]}})
+
+
+
+
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen), 2)
+        self.assertEqual(len(perm_gen[11]), 3)
+        self.assertEqual(len(perm_gen[-11]), 3)
+        self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3), (4, 4)], [(2, 2), (4, 3), (3, 4)], [(3, 2), (4, 3), (2, 4)]], 
+                                     11: [[(5, 5), (6, 6), (7, 7)], [(5, 5), (7, 6), (6, 7)], [(6, 5), (7, 6), (5, 7)]]}
+        )
+
+        perm_gen2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen2), 2)
+        self.assertEqual(len(perm_gen2[11]), 3)
+        self.assertEqual(len(perm_gen2[-11]), 3)
+        self.assertNotEqual(perm_gen, perm_gen2)
+        self.assertEqual(perm_gen2, {-11: [[(2, 2), (4, 4), (6, 6)], [(2, 2), (6, 4), (4, 6)], [(4, 2), (6, 4), (2, 6)]], 
+                                      11: [[(3, 3), (5, 5), (7, 7)], [(3, 3), (7, 5), (5, 7)], [(5, 3), (7, 5), (3, 7)]]}
+        )
+        
+        
+        all_perms = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=0)
+        self.assertEqual(len(all_perms), 9)
+        for i in range(len(all_perms)):
+            for j in range(i+1, len(all_perms)):
+                # check that initial state are the same
+                self.assertEqual(all_perms[i][0], all_perms[j][0])
+                self.assertEqual(all_perms[i][1], all_perms[j][1])
+                # check that each combination are unique
+                self.assertNotEqual(all_perms[i][2:], all_perms[j][2:])
+        # check that a given momenta is repeated the correct amount of time at a given position
+        nb_identical = [0] * len(all_perms[0])
+        for i in range(len(all_perms)):
+            for j in range(len(all_perms[0])):
+                if all_perms[i][j] == all_perms[0][j]:
+                    nb_identical[j] +=1
+        self.assertIn(nb_identical, [[9,9,3,3,3,3,3,3],
+                                     [9,9,6,3,3,6,3,3]]) # technically other combination are possible 
+
+
+        # redo the same but with less particles (simpler case so should go trough)
+        input = """
+    8      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
+            2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1463656627e+03 1.1463656627e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -2 -1    0    0    0  501 -0.0000000000e+00 -0.0000000000e+00 -2.1981849450e+02 2.1981849450e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        23  2    1    2    0    0 +5.7837338551e+01 +1.1718357879e+02 -7.4151825307e+01 1.7598875523e+02 9.1631871662e+01 0.0000e+00 0.0000e+00
+        23  2    1    2    0    0 +1.1433114561e+02 +1.4041658917e+02 +7.5301024612e+02 7.8190910735e+02 1.0755924887e+02 0.0000e+00 0.0000e+00
+        -11  1    1    2    0    0 -1.7327841208e+02 -1.9147557428e+02 +1.9134097396e+02 3.2140266327e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    1    2    0    0 +1.1099279128e+00 -6.6124593668e+01 +5.6347773431e+01 8.6883631360e+01 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        -11  1    3    3    0    0 -2.2637466291e+00 -1.4439319632e+01 -1.0004133265e+01 1.7711611520e+01 0.0000000000e+00 0.0000e+00 1.0000e+00
+        11  1    4    4    0    0 +6.0101085180e+01 +1.3162289842e+02 -6.4147692042e+01 1.5827714371e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+
+        """
+        #first check that we can initialise the event
+        event = lhe_parser.Event(input)
+        self.assertEqual(8, len(event))
+
+
+        # check that first data structure for get_all_momenta is constructed correctly
+        # here all particles are considered different
+        mother = event.get_all_momenta([(2,-2), (-11,-11,11,11)], debug_output=1)
+        self.assertEqual(mother, {-11: {(0, 1): [2], (2, 2): [3]}, 11: {(0, 1): [4], (3, 3): [5]}})
+
+
+
+        perm_gen = event.get_all_momenta([(2,-2), (-11,-11,11,11)], debug_output=2)
+        self.assertEqual(len(perm_gen), 2)
+        self.assertEqual(len(perm_gen[11]), 2)
+        self.assertEqual(len(perm_gen[-11]), 2)
+        self.assertEqual(perm_gen, {-11: [[(2, 2), (3, 3)], [(3, 2), (2, 3)]], 
+                                     11: [[(4, 4), (5, 5)], [(5, 4), (4, 5)]]}
+        )
+        
+        all_perms = event.get_all_momenta([(2,-2), (-11,-11,11,11)], debug_output=0)
+        self.assertEqual(len(all_perms), 4)
+        for i in range(len(all_perms)):
+            for j in range(i+1, len(all_perms)):
+                # check that initial state are the same
+                self.assertEqual(all_perms[i][0], all_perms[j][0])
+                self.assertEqual(all_perms[i][1], all_perms[j][1])
+                # check that each combination are unique
+                self.assertNotEqual(all_perms[i][2:], all_perms[j][2:])
+        # check that a given momenta is repeated the correct amount of time at a given position
+        nb_identical = [0] * len(all_perms[0])
+        for i in range(len(all_perms)):
+            for j in range(len(all_perms[0])):
+                if all_perms[i][j] == all_perms[0][j]:
+                    nb_identical[j] +=1
+        self.assertEqual(nb_identical, [4,4,2,2,2,2])
+
+
 
 class TESTLHEParser(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = False
+        debugging = unittest.debug
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_test")
             if os.path.exists(self.path):

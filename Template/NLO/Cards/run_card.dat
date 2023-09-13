@@ -92,6 +92,7 @@
            ! first are included via reweighting
  %(mur_over_ref)s  = muR_over_ref  ! ratio of current muR over reference muR
  %(muf_over_ref)s  = muF_over_ref  ! ratio of current muF over reference muF
+ $RUNNING
 #*********************************************************************** 
 # Reweight variables for scale dependence and PDF uncertainty          *
 #***********************************************************************

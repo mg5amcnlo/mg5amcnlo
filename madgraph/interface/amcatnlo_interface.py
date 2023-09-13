@@ -466,8 +466,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         elif args[0] != 'process': 
             raise self.InvalidCmd("The add command can only be used with process or model")
         else:
+            if any ([a.startswith("--loop_filter=") for a in args]):
+                for a in args:
+                    if a.startswith("--loop_filter="):
+                        self._fks_multi_proc['loop_filter'] = a.split('=',1)[1]
+                        args.remove(a)
+                        break
+
             line = ' '.join(args[1:])
-            
+
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
@@ -678,13 +685,15 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
                        'ewsudakov': self.ewsudakov,
-                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion']}
+                       'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
+                       'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
 
         fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
             self._fks_multi_proc.add(fksproc)
         except AttributeError: 
             self._fks_multi_proc = fksproc
+            self._fks_multi_proc['loop_filter'] = fks_options['loop_filter']
 
         if not aMCatNLOInterface.display_expansion and  self.options['nlo_mixed_expansion']:
             base = {}
@@ -754,7 +763,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # Make a Template Copy
         if self._export_format in ['NLO', 'ewsudsa']:
-            self._curr_exporter.copy_fkstemplate()
+            self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
         self._done_export = False

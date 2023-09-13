@@ -279,7 +279,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
             
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         return
     
     def write_f2py_check_sa(self, matrix_element, output_path):

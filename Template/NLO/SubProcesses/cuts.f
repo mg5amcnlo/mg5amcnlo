@@ -216,6 +216,12 @@ c Photon isolation
 
       REAL*8 pt,eta
       external pt,eta
+
+      include "orders.inc"
+      logical split_type_used(nsplitorders)
+      common/to_split_type_used/split_type_used
+
+      integer n_needed_photons
  
       passcuts_photons = .true.
 
@@ -353,7 +359,18 @@ c First of list must be the photon: check this, and drop it
          enddo
 c End of loop over photons
 
-         if(nphiso.lt.get_n_tagged_photons())then
+C now check that there are enough photons
+         if (split_type_used(QED_pos)) then
+         ! if the process has QED splittings, use the 
+         ! get_n_tagged_photons function
+             n_needed_photons = get_n_tagged_photons()
+         else
+         ! otherwise, just use the number of photons
+         ! that has been counted
+             n_needed_photons = nph
+         endif
+
+         if(nphiso.lt.n_needed_photons)then
             passcuts_photons=.false.
             return
          endif
