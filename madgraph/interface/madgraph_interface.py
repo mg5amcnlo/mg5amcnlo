@@ -2499,7 +2499,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_output(self, text, line, begidx, endidx,
                         possible_options = ['f', 'noclean', 'nojpeg'],
                         possible_options_full = ['-f', '-noclean', '-nojpeg', '--noeps=True','--hel_recycling=False',
-                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4']):
+                                                 '--jamp_optim=', '--t_strategy=', '--vector_size=4', '--nb_wrap=1']):
         "Complete the output command"
 
         possible_format = self._export_formats
@@ -8146,6 +8146,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             flaglist.append('no_helrecycling')
             args.append('--hel_recycling=False')
                     
+        misc.sprint(args)
         line_options = dict( (arg[2:].split('=')  if "=" in arg else (arg[2:], True))
                              for arg in args if arg.startswith('--'))
 #        line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' not in arg)

@@ -3904,6 +3904,7 @@ template_on = \
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
    %(vector_size)s = vector_size ! size designed for SIMD/OpenMP/GPU (number of events in lockstep)
+   %(nb_wrap)s = nb_wrap ! total number of wrap/frontwave
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
@@ -4305,7 +4306,10 @@ class RunCardLO(RunCard):
         self.add_param('matrix_flag', '', include=False, hidden=True, comment='fortran compilation flag	for the	matrix-element files, suggestion -O3',
                        fct_mod=(self.make_Ptouch, ('matrix'),{}))        
         self.add_param('vector_size', 1, include='vector.inc', hidden=True, comment='lockstep size for parralelism run', 
-                       fortran_name='VECSIZE_MEMMAX', fct_mod=(self.reset_simd,(),{}))
+                       fortran_name='WRAP_SIZE', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('nb_wrap', 1, include='vector.inc', hidden=True, comment='number of wrap for parralelism run', 
+                       fortran_name='NB_WRAP', fct_mod=(self.reset_simd,(),{}))
+        self.add_param('vecsize_memmax', 0, include='vector.inc', system=True)
 
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
@@ -4596,7 +4600,7 @@ class RunCardLO(RunCard):
             self['mxxmin4pdg'] =[0.] 
             self['mxxpart_antipart'] = [False]
             
-                    
+        self['vecsize_memmax'] = self['nb_wrap'] * self['vector_size']       
            
     def create_default_for_process(self, proc_characteristic, history, proc_def):
         """Rules

@@ -1858,8 +1858,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\n!LP=SIGN(1,LPP(%d))\n" \
                                  % (i + 1, i + 1)
                     
-
-                misc.sprint(vector, subproc_group,self.opt['vector_size'])
                 for nbi,initial_state in enumerate(init_states):
                     if initial_state in list(pdf_codes.keys()):
 
@@ -4162,6 +4160,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             self.opt['vector_size'] = 0
 
+        if opt and isinstance(opt['output_options'], dict) and \
+                                       'nb_wrap' in opt['output_options']:
+            self.opt['nb_wrap'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['nb_wrap'], int, 'nb_wrap')
+        else:
+            self.opt['nb_wrap'] = 1
+
     # helper function for customise helas writter
     @staticmethod
     def custom_helas_call(call, arg):
@@ -4990,7 +4995,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
-                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=self.opt['vector_size'])
+                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", 
+                                   vector=self.opt['vector_size'])
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines
@@ -5067,6 +5073,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             vector_size = 1
         vector_size = banner_mod.ConfigFile.format_variable(vector_size, int, name='vector_size')
         vector_size = max(1, vector_size)
+
+        try:
+            nb_wrap = self.opt['output_options']['nb_wrap']
+        except KeyError:
+            nb_wrap = 1
+        nb_wrap = banner_mod.ConfigFile.format_variable(nb_wrap, int, name='nb_wrap')
+        nb_wrap = max(1, nb_wrap)
+
         text=["""C
 C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
 C this is designed for offloading MEs to GPUs or vectorized C++,
@@ -5096,8 +5110,14 @@ C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
 C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
 C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
 C
+      INTEGER WRAP_SIZE
+      PARAMETER (WRAP_SIZE=%i)
+      INTEGER NB_WRAP
+      PARAMETER (NB_WRAP=%i)
       INTEGER VECSIZE_MEMMAX
-      PARAMETER (VECSIZE_MEMMAX=%i)""" % vector_size]
+      PARAMETER (VECSIZE_MEMMAX=%i)
+              
+              """ % (vector_size,nb_wrap, vector_size*nb_wrap)]
         fsock.writelines(text)
         return vector_size
 
@@ -6779,8 +6799,14 @@ class UFO_model_to_mg4(object):
         except KeyError:
             vector_size = 1
         self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
+        try:
+            nb_wrap = self.opt['output_options']['nb_wrap']
+        except KeyError:
+            nb_wrap = 1
+        self.nb_wrap = max(1, banner_mod.ConfigFile.format_variable(nb_wrap, int, 'nb_wrap'))
         if self.opt['mp']:
             self.vector_size = 0
+            self.nb_wrap = 1
         self.scales = []
         self.MUE = None # extra parameter loop #2 which is running
         
@@ -7559,10 +7585,10 @@ C
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                        dp=True, mp=False, vec=self.vector_size)
+                                        dp=True, mp=False, vec=self.vector_size*self.nb_wrap)
             if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                           dp=False, mp=True, vec=self.vector_size)
+                                           dp=False, mp=True, vec=self.vector_size*self.nb_wrap)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
