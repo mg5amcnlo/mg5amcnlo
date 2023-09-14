@@ -38,7 +38,10 @@ c
       integer itmax_adjust
 
       integer imirror, iproc, iconf
-      integer ivec ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+      integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
+      integer ilock             !  position of the event in the current wrap (max is WRAP_SIZE)
+      integer iwrap               ! position of the current wrap (max is NB_WRAP)
+c     NOTE THAT IVEC = (IWRAP-1)*NB_WRAP + ILOCK      
 
 c
 c     External
@@ -161,6 +164,8 @@ c
       ievent = 0
       iter = 1
       ivec = 0
+      ilock = 0
+      iwrap = 1
       do while(iter .le. itmax)
 c
 c     Get integration point
@@ -174,6 +179,11 @@ c            write(*,*) 'iter/ievent/ivec', iter, ievent, ivec
             CUTSPASSED=.FALSE.
             if (passcuts(p,VECSIZE_USED)) then
                ivec=ivec+1
+               ilock = ilock+1
+               if (ilock.gt.WRAP_SIZE)then
+                  ilock = 1
+                  iwrap = iwrap +1
+               endif
 c              write(*,*) 'pass_point ivec is ', ivec
                all_p(:,ivec) = p(:)
                all_wgt(ivec) = wgt
@@ -187,23 +197,33 @@ c               fx = dsig(all_p(1,i),all_wgt(i),0)
 c               bckp(i) = fx
 c               write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
 c               all_wgt(i) = all_wgt(i)*fx
-               if (ivec.lt.VECSIZE_USED)then
+               if (ilock.ne.WRAP_SIZE)then
                   cycle
                endif
-               ivec=0
+
                if (VECSIZE_USED.le.1) then
                   all_fx(1) = dsig(all_p, all_wgt,0)
                else
-               do i=1, VECSIZE_USED
+c                 Here "i" is the position in the full grid of the event                  
+                  do i=(iwrap-1)*WRAP_SIZE+1, iwrap*wrap_size
+                     
 c                 need to restore common block                  
                   xbk(:) = all_xbk(:, i)
                   cm_rap = all_cm_rap(i)
                   q2fact(:) = all_q2fact(:,i)
                   CUTSDONE=.TRUE.
                   CUTSPASSED=.TRUE.
-                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.1)
+                  call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.(iwrap-1)*WRAP_SIZE+1)
                enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, VECSIZE_USED)
+               call select_grouping(imirror, iproc, iconf, all_wgt, iwrap)
+               if (ivec.lt.VECSIZE_USED)then
+                  cycle
+               endif
+c              reset variable for the next grid               
+               ivec = 0
+               ilock = 0
+               iwrap =1
+               
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
      &                          iconf, iproc, imirror, all_fx,VECSIZE_USED)
 

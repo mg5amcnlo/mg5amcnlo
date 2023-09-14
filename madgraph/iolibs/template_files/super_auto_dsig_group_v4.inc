@@ -115,7 +115,7 @@ C     Cannot make a selection with all PDFs to zero, so we return now
       ENDIF
       END
       
-      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, VECSIZE_USED)
+      SUBROUTINE select_grouping(imirror, iproc, iconf, wgt, IWRAP)
       USE DISCRETESAMPLER
       IMPLICIT NONE
 c     
@@ -131,7 +131,8 @@ c     OUTPUT
 c
 c     iconf, iproc, imirror
 c
-      integer VECSIZE_USED
+      integer  IWRAP
+      integer IVEC
       double precision WGT(*)
       integer imirror, iproc, iconf
 
@@ -205,16 +206,18 @@ C      all, then we pick a point based on PDF only.
  50     CONTINUE
 C       Update weigth w.r.t SELPROC normalized to selection probability
 
-	DO I=1, VECSIZE_USED
-	   WGT(i)=WGT(i)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
+	DO I=1, WRAP_SIZE
+	   IVEC = (IWRAP -1) *WRAP_SIZE + I
+	   WGT(IVEC)=WGT(IVEC)*(SUMPROB/SELPROC(IMIRROR,IPROC,ICONF))
 	ENDDO	
 
       ELSE
 C       We are using the grouped_processes grid and it is initialized.
         CALL DS_GET_POINT('grouped_processes',R,LMAPPED
      $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
-     	DO I=1, VECSIZE_USED
-	  WGT(i)=WGT(i)*MC_GROUPED_PROC_JACOBIAN
+     	DO I=1, WRAP_SIZE
+          IVEC = (IWRAP -1) *WRAP_SIZE + I
+	  WGT(IVEC)=WGT(IVEC)*MC_GROUPED_PROC_JACOBIAN
 	ENDDO	
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
       ENDIF
