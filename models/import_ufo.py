@@ -1037,8 +1037,8 @@ class UFOMG5Converter(object):
         translate_lorentz = {}
         for i, lor in enumerate(gold_vertex.get('lorentz')):
             if lor in vertex.get('lorentz'):
-                raise Exception("lorentz should not repeat. Please report for investigation.")
-                translate_color[i] = vertex.get('lorentz').index(color)
+                #raise Exception("lorentz should not repeat. Please report for investigation.")
+                translate_lorentz[i] = vertex.get('lorentz').index(lor)
             else:
                 translate_lorentz[i] = len(vertex.get('lorentz'))
                 vertex.get('lorentz').append(lor)
