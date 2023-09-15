@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.5.X 
+      DP+TV+MZ: Implementation of EW Sudakov corrections. See 2110.03714 and 2309.00452
+
 3.5.1 (11/07/23)
       SH+OM: Update interface for contur
       OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore

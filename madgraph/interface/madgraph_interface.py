@@ -1812,7 +1812,7 @@ This will take effect only in a NEW terminal
                         return
 
 
-        if self._export_format == 'NLO':
+        if self._export_format in ['NLO', 'ewsudsa']:
             name_dir = lambda i: 'PROCNLO_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -7748,8 +7748,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info("Change EW scheme to %s for the model %s. Note that YOU are responsible of the full validity of the input in that scheme." %\
                                               (self._curr_model.get('name'), args[1]))
             else:
-                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.",self._curr_model.get('name'), args[1])
+                logger.info("Change EW scheme to %s for the model %s. Note that SM is assume here.")
             logger.info("Importing a new model will restore the default scheme")
+
             self._curr_model.change_electroweak_mode(args[1])
         elif args[0] == "complex_mass_scheme":
             old = self.options[args[0]]
@@ -8585,7 +8586,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
             
 
-        if self._export_format in ['NLO']:
+        if self._export_format in ['NLO', 'ewsudsa']:
             ## write fj_lhapdf_opts file            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')

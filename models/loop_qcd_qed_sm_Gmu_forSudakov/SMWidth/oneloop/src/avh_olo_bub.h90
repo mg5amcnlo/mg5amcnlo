@@ -1,0 +1,163 @@
+!!
+!! Copyright (C) 2014 Andreas van Hameren. 
+!!
+!! This file is part of OneLOop-3.4.
+!!
+!! OneLOop-3.4 is free software: you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation, either version 3 of the License, or
+!! (at your option) any later version.
+!!
+!! OneLOop-3.4 is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
+!!
+  include 'avh_olo_complex.h90'
+    ,intent(in)  :: pp,m0i,m1i
+  include 'avh_olo_real.h90'
+    ,intent(in)  :: app,am0i,am1i,rmu2
+  include 'avh_olo_complex.h90'
+    :: m0,m1,a0(0:2,0:1),lna,x1,x2,lambda
+  include 'avh_olo_real.h90'
+    :: am0,am1,maxm
+  logical :: switch !|r1=yes
+  integer :: rank
+![CALLINGME  write(*,*) 'MESSAGE from OneLOop bub: you are calling me'
+!
+  maxm = max(am0i,am1i)
+  if (maxm.eq.RZRO) then
+    if (app.eq.RZRO) then
+      b0(0)=0 ;b0(1)=0 ;b0(2)=0
+      b1(0)=0 ;b1(1)=0 ;b1(2)=0 !|r1=yes
+      b00(0)=0 ;b00(1)=0 ;b00(2)=0 !|r2=yes
+      b11(0)=0 ;b11(1)=0 ;b11(2)=0 !|r2=yes
+      b001(0)=0 ;b001(1)=0 ;b001(2)=0 !|r3=yes
+      b111(0)=0 ;b111(1)=0 ;b111(2)=0 !|r3=yes
+      b0000(0)=0 ;b0000(1)=0 ;b0000(2)=0 !|r4=yes
+      b0011(0)=0 ;b0011(1)=0 ;b0011(2)=0 !|r4=yes
+      b1111(0)=0 ;b1111(1)=0 ;b1111(2)=0 !|r4=yes
+      return
+    endif
+  endif
+!
+  if (am1i.ge.maxm) then
+    m0=m0i ;am0=am0i
+    m1=m1i ;am1=am1i
+    switch = .false. !|r1=yes
+  else
+    m0=m1i ;am0=am1i
+    m1=m0i ;am1=am0i
+    switch = .true. !|r1=yes
+  endif
+!
+  b0(2) = 0
+  b0(1) = CONE
+  b1(2) = 0      !|r1=yes
+  b1(1) =-CONE/2 !|r1=yes
+  b11(2) = 0      !|r2=yes
+  b11(1) = CONE/3 !|r2=yes
+  b111(2) = 0      !|r3=yes
+  b111(1) =-CONE/4 !|r3=yes
+  b1111(2) = 0      !|r4=yes
+  b1111(1) = CONE/5 !|r4=yes
+!
+  if (app.eq.RZRO) then
+    if (abs(m0-m1).le.am1*EPSN*10) then
+      lna = -logc(qonv(m1/rmu2,-1))
+      b0(0) = lna
+      b1(0) =-lna/2 !|r1=yes
+      b11(0) = lna/3 !|r2=yes
+      b111(0) =-lna/4 !|r3=yes
+      b1111(0) = lna/5 !|r4=yes
+    else
+      lna = -logc(qonv(m1/rmu2,-1))
+      x1 = (m1-am1*IEPS)/(m1-m0)
+      b0(0) =   lna - bnlog(0,x1)
+      b1(0) =-( lna - bnlog(1,x1) )/2 !|r1=yes
+      b11(0) = ( lna - bnlog(2,x1) )/3 !|r2=yes
+      b111(0) =-( lna - bnlog(3,x1) )/4 !|r3=yes
+      b1111(0) = ( lna - bnlog(4,x1) )/5 !|r4=yes
+    endif
+!{r1=yes
+    if (switch) then
+      x2=m0;m0=m1;m1=x2
+    else
+      b1111(0) =-b1111(0)-4*b111(0)-6*b11(0)-4*b1(0)-b0(0) !|r4=yes
+      b111(0) =-b111(0)-3*b11(0)-3*b1(0)-b0(0) !|r3=yes
+      b11(0) = b11(0)+2*b1(0)+b0(0) !|r2=yes 
+      b1(0) =-b0(0)-b1(0)
+    endif
+!}r1=yes
+  elseif (am0.eq.RZRO) then
+    if (abs(pp-m1).le.am1*EPSN*10) then
+      lna = -logc(qonv(m1/rmu2,-1))
+      b0(0) = ( lna   + 2 )
+      b1(0) =-( lna*2 + 2 )/4 !|r1=yes
+      b11(0) = ( lna*3 + 2 )/9 !|r2=yes
+      b111(0) =-( lna*4 + 2 )/16 !|r3=yes
+      b1111(0) = ( lna*5 + 2 )/25 !|r4=yes
+    else
+      lna = -logc(qonv((m1-pp)/rmu2,-1))
+      x1  = (pp-m1+am1*IEPS)/pp
+      b0(0) = ( lna-bnlog(0,x1) + 1 )
+      b1(0) =-( (lna-bnlog(1,x1))*2 + 1 )/4 !|r1=yes
+      b11(0) = ( (lna-bnlog(2,x1))*3 + 1 )/9 !|r2=yes
+      b111(0) =-( (lna-bnlog(3,x1))*4 + 1 )/16 !|r3=yes
+      b1111(0) = ( (lna-bnlog(4,x1))*5 + 1 )/25 !|r4=yes
+    endif
+!{r1=yes
+    if (switch) then
+      x2=m0;m0=m1;m1=x2
+      b1111(0) =-b1111(0)-4*b111(0)-6*b11(0)-4*b1(0)-b0(0) !|r4=yes
+      b111(0) =-b111(0)-3*b11(0)-3*b1(0)-b0(0) !|r3=yes
+      b11(0) = b11(0)+2*b1(0)+b0(0) !|r2=yes 
+      b1(0) =-b0(0)-b1(0)
+    endif
+!}r1=yes
+  else
+    lna = -logc(qonv(m0/rmu2,-1))
+    call solabc( x1,x2 ,lambda ,pp ,(m1-m0)-pp ,m0-am0*IEPS ,0 )
+    b0(0) = ( lna - bnlog(0,x1) - bnlog(0,x2) ) 
+    b1(0) =-( lna - bnlog(1,x1) - bnlog(1,x2) )/2 !|r1=yes 
+    b11(0) = ( lna - bnlog(2,x1) - bnlog(2,x2) )/3 !|r2=yes 
+    b111(0) =-( lna - bnlog(3,x1) - bnlog(3,x2) )/4 !|r3=yes 
+    b1111(0) = ( lna - bnlog(4,x1) - bnlog(4,x2) )/5 !|r4=yes 
+!{r1=yes
+    if (switch) then
+      x2=m0;m0=m1;m1=x2
+      b1111(0) =-b1111(0)-4*b111(0)-6*b11(0)-4*b1(0)-b0(0) !|r4=yes
+      b111(0) =-b111(0)-3*b11(0)-3*b1(0)-b0(0) !|r3=yes
+      b11(0) = b11(0)+2*b1(0)+b0(0) !|r2=yes 
+      b1(0) =-b0(0)-b1(0)
+    endif
+!}r1=yes
+  endif
+!
+  rank = 0 !|r2=yes
+  rank = 1 !|r3=yes
+  rank = 2 !|r4=yes
+!{r2=yes
+  call tadpn( a0 ,rank ,m1 ,am1 ,rmu2 )
+  x1 = (m1-m0)-pp
+  x2 = 2*m0
+  b00(2) = 0
+  b00(1) = ( a0(1,0) - x1*b1(1) + x2*b0(1) )/6
+  b00(0) = ( a0(0,0) - x1*b1(0) + x2*b0(0) + 4*b00(1) )/6
+!}r2=yes
+!{r3=yes
+  b001(2) = 0
+  b001(1) = (-a0(1,0) - x1*b11(1) + x2*b1(1) )/8
+  b001(0) = (-a0(0,0) - x1*b11(0) + x2*b1(0) + 4*b001(1) )/8
+!}r3=yes
+!{r4=yes
+  b0000(2) = 0
+  b0000(1) = ( a0(1,1) - x1*b001(1) + x2*b00(1) )/10
+  b0000(0) = ( a0(0,1) - x1*b001(0) + x2*b00(0) + 4*b0000(1) )/10
+  b0011(2) = 0
+  b0011(1) = ( a0(1,0) - x1*b111(1) + x2*b11(1) )/10
+  b0011(0) = ( a0(0,0) - x1*b111(0) + x2*b11(0) + 4*b0011(1) )/10
+!}r4=yes
