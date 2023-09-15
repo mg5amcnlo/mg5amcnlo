@@ -806,7 +806,7 @@ class UFOMG5Converter(object):
         # create an easy way (dict) to find the equivalent vertex with boson
         search_int = {}
         for vertex in vector_interactions:
-            names = tuple([p.get_name() for p in vertex.get('particles')])
+            names = tuple(sorted([p.get_name() for p in vertex.get('particles')]))
             if names in search_int:
                 search_int[names].append(vertex)
             else:
@@ -818,9 +818,9 @@ class UFOMG5Converter(object):
         for vertex in goldstone_interactions:
             self.interactions.remove(vertex)
 
-            old_names = tuple([p.get_name() for p in vertex.get('particles')])
-            names = tuple([p.get_name() if p.get_name() != g_name else v_name
-                      for p in vertex.get('particles')])
+            #old_names = tuple(sorted([p.get_name() for p in vertex.get('particles')]))
+            names = tuple(sorted([p.get_name() if p.get_name() != g_name else v_name
+                      for p in vertex.get('particles')]))
             if names in search_int:
                 self.update_vertex_for_goldstone(search_int[names], vertex, goldstone, vector)
             else:
@@ -870,7 +870,37 @@ class UFOMG5Converter(object):
         else:
             return vertex
 
-    def get_symmetric_lorentz(self, old_lorentz, substitution):
+    def reorder_vertex(self, vertex, mapping):
+        """change the order of the particle within a given interaction"""
+
+        new_vertex = copy.deepcopy(vertex)
+
+        # reorder the particle within the new vertex
+        misc.sprint(new_vertex)
+        old_particles = vertex.get('particles')
+        new_particles = old_particles.__class__()
+        for i in range(len(old_particles)):
+            new_particles.append(old_particles[mapping[i]])
+        new_vertex.set('particles', new_particles)
+
+        restricted_mapping = {i:j for i,j in mapping.items() if i!=j}
+
+        # change the lorentz structure within the new vertex
+        all_lor = new_vertex.get('lorentz')
+        for i,lor in enumerate(all_lor):
+            new_lorentz = self.get_symmetric_lorentz(lor, restricted_mapping, change_number=True)
+            all_lor[i] = str(new_lorentz)
+        misc.sprint(str(new_vertex.get('color')))
+        if str(new_vertex.get('color')) != "[1 ]":
+            raise Exception('not corect color')
+
+        misc.sprint(new_vertex)
+        return new_vertex
+
+
+
+
+    def get_symmetric_lorentz(self, old_lorentz, substitution, change_number=False):
         """ """
         
         lor_orig = [l for l in self.model['lorentz'] if l.name==old_lorentz][0]
@@ -886,6 +916,19 @@ class UFOMG5Converter(object):
             for old,new in substitution.items():
                 new_name[new] = old_lorentz[old]
             new_name = ''.join(new_name)
+
+        if change_number:
+            base = new_name[:len(lor_orig.spins)]
+            try:
+                index = int(new_name[len(lor_orig.spins):]) + 1
+            except:
+                base = new_name
+                index = 1
+            if not hasattr(self.model, 'lorentz_name2obj'):
+                self.model.create_lorentz_dict()
+            while str(base)+str(index) in self.model.lorentz_name2obj:
+                index += 1
+            new_name = str(base)+str(index)
 
         if not hasattr(self, 'all_aloha_obj'):
             self.all_aloha_obj = [n for n, obj in aloha_object.__dict__.items() 
@@ -911,13 +954,22 @@ class UFOMG5Converter(object):
 
                     new_expr += ','.join(indices)+')'
         new_formfact = lor_orig.formfactors if hasattr(lor_orig, 'formfactors') else None
-        try:
-            new_lor = self.add_lorentz(new_name, new_spins, new_expr, formfact=new_formfact)
-        except AssertionError:
-            prev_def = [l for l in self.model['lorentz'] if l.name==new_name][0]
-            if prev_def.structure != new_expr:
-                misc.sprint("WARNING, two different definition for one lorentz name", prev_def.structure, new_expr)
-            new_lor = prev_def
+
+        if change_number:
+            #need to check that the new structure does not exists yet
+            all_prev_expr = [(l.structure,l.spins) for l in self.model.get('lorentz')]
+            if (new_expr,new_spins) in all_prev_expr:
+                return self.model.get('lorentz')[all_prev_expr.index((new_expr,new_spins))]
+            else:
+                new_lor = self.add_lorentz(new_name, new_spins, new_expr, formfact=new_formfact)
+        else:
+            try:
+                new_lor = self.add_lorentz(new_name, new_spins, new_expr, formfact=new_formfact)
+            except AssertionError:
+                prev_def = [l for l in self.model['lorentz'] if l.name==new_name][0]
+                if prev_def.structure != new_expr:
+                    misc.sprint("WARNING, two different definition for one lorentz name", prev_def.structure, new_expr)
+                new_lor = prev_def
         return new_lor
 
 
@@ -929,17 +981,43 @@ class UFOMG5Converter(object):
 
         if len(vertex) !=1 :
             raise Exception
+        vertex = vertex[0]
 
         nb_vector = 0
         nb_gold = 0
         for p in gold_vertex.get('particles'):
             if p.get_pdg_code() == goldstone.get_pdg_code():
                 nb_gold += 1
-        for p in vertex[0].get('particles'):
+        for p in vertex.get('particles'):
             if p.get_pdg_code() == vector.get_pdg_code():
                 nb_vector += 1
+        misc.sprint("Merge", gold_vertex, "in", vertex)
+        # need to check here if the ordering is the same.
+        gold_pdg = [p.get_pdg_code() if p.get_pdg_code() != goldstone.get_pdg_code() else vector.get_pdg_code()
+                    for p in gold_vertex.get('particles')]
+        vert_pdg = [p.get_pdg_code() for p in vertex.get('particles')]
+        misc.sprint(gold_pdg, vert_pdg)
 
-        vertex = vertex[0]
+        # check if the order of the particle is the same
+        if gold_pdg != vert_pdg:
+            misc.sprint(gold_pdg, vert_pdg)
+            mapping = {}
+            for orig in range(len(gold_pdg)):
+                if vert_pdg[orig] == gold_pdg[orig]:
+                    mapping[orig] = orig
+                    vert_pdg[orig] = 0
+            misc.sprint(mapping, vert_pdg)
+            for orig in range(len(gold_pdg)):
+                if orig in mapping:
+                    continue
+                new_pos = vert_pdg.index(gold_pdg[orig])
+                mapping[orig] = new_pos
+                vert_pdg[new_pos] = 0
+            misc.sprint(mapping)
+            misc.sprint(gold_pdg, vert_pdg)
+
+            gold_vertex = self.reorder_vertex(gold_vertex, mapping)
+
         # check how to translate the color:
         # the translate_color track the index of the color in gold_vertex (key)
         # and the value is associate to the identical color in vertex. 
