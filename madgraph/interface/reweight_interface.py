@@ -68,10 +68,10 @@ nb_f2py_module = 0 # each time the process/model is changed this number is modif
 
 
 class ReweightInterface(extended_cmd.Cmd):
-"""Basic interface for reweighting operation"""
+    """Basic interface for reweighting operation"""
 
-prompt = 'Reweight>'
-debug_output = 'Reweight_debug'
+    prompt = 'Reweight>'
+    debug_output = 'Reweight_debug'
 
 @misc.mute_logger()
 def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
