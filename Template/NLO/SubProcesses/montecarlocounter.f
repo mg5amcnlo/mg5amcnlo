@@ -1431,25 +1431,25 @@ c Emsca stuff
          if(emscasharp)then
             if(qMC.le.scalemax)then
                emscwgt(npartner)=1d0
-               emscav(npartner)=emsca_bare
+c$$$               emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
+c$$$               emscav(npartner)=scalemax
             endif
          else
             ptresc=(qMC-scalemin)/(scalemax-scalemin)
             if(ptresc.le.0d0)then
                emscwgt(npartner)=1d0
-               emscav(npartner)=emsca_bare
+c$$$               emscav(npartner)=emsca_bare
             elseif(ptresc.lt.1d0)then 
                emscwgt(npartner)=1-emscafun(ptresc,one)
-               emscav(npartner)=emsca_bare
+c$$$               emscav(npartner)=emsca_bare
             else
                emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
+c$$$               emscav(npartner)=scalemax
             endif
          endif
-         emscav_tmp(npartner)=emscav(npartner)
+c$$$         emscav_tmp(npartner)=emscav(npartner)
       else
          write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
          stop
@@ -2675,11 +2675,12 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
             if(jpartner.eq.0)then
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
-            else
-               emsca=emscav_tmp(mpartner)
+c$$$            else
+c$$$               emsca=emscav_tmp(mpartner)
             endif
          endif
-         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+c$$$         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+         emsca = emsca_bare
 
       else                      ! mcatnlo-delta = .false.
 c Compute MC cross section
@@ -2704,11 +2705,12 @@ c Assign emsca on statistical basis
             if(jpartner.eq.0)then
                write(*,*)'Error in xmcsubt: emsca unweighting failed'
                stop
-            else
-               emsca=emscav_tmp(mpartner)
+c$$$            else
+c$$$               emsca=emscav_tmp(mpartner)
             endif
          endif
-         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+c$$$         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
+         emsca = emsca_bare
       endif
 
 
@@ -4546,22 +4548,26 @@ c Consistency check
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,xm12,dum(1)
      $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
-      emsca=2d0*sqrt(ebeam(1)*ebeam(2))
+c$$$      emsca=2d0*sqrt(ebeam(1)*ebeam(2))
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
      $        ,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
          if(emscasharp)then
             emsca_bare=scalemax
-            emsca=emsca_bare
+c$$$            emsca=emsca_bare
          else
             rrnd=ran2()
             rrnd=emscainv(rrnd,1d0)
             emsca_bare=scalemin+rrnd*(scalemax-scalemin)
-            ptresc=(qMC-scalemin)/(scalemax-scalemin)
-            if(ptresc.lt.1d0)emsca=emsca_bare
-            if(ptresc.ge.1d0)emsca=scalemax
+c$$$            ptresc=(qMC-scalemin)/(scalemax-scalemin)
+c$$$            if(ptresc.lt.1d0)emsca=emsca_bare
+c$$$            if(ptresc.ge.1d0)emsca=scalemax
          endif
+         emsca=emsca_bare
+      else
+         write(*,*)'use dampMCsubt!!'
+         stop
       endif
 
       return
