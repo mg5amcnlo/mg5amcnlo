@@ -6713,11 +6713,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         def handle_alarm(signum, frame): 
             raise TimeOutError
         signal.signal(signal.SIGALRM, handle_alarm)
-        if timer:
-            signal.alarm(timer)
-            log_level=30
-        else:
-            log_level=20
+
 
         if run_card:
             as_for_pdf = {'cteq6_m': 0.118,
@@ -6776,6 +6772,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  as_for_pdf[pdlabel])
                     modify = True
+
+        if timer:
+            signal.alarm(timer)
+            log_level=30
+        else:
+            log_level=20
 
         # Try to load the model in the limited amount of time allowed
         try:
