@@ -876,7 +876,6 @@ class UFOMG5Converter(object):
         new_vertex = copy.deepcopy(vertex)
 
         # reorder the particle within the new vertex
-        misc.sprint(new_vertex)
         old_particles = vertex.get('particles')
         new_particles = old_particles.__class__()
         for i in range(len(old_particles)):
@@ -890,11 +889,9 @@ class UFOMG5Converter(object):
         for i,lor in enumerate(all_lor):
             new_lorentz = self.get_symmetric_lorentz(lor, restricted_mapping, change_number=True)
             all_lor[i] = str(new_lorentz)
-        misc.sprint(str(new_vertex.get('color')))
         if str(new_vertex.get('color')) != "[1 ]":
             raise Exception('not corect color')
 
-        misc.sprint(new_vertex)
         return new_vertex
 
 
@@ -991,30 +988,25 @@ class UFOMG5Converter(object):
         for p in vertex.get('particles'):
             if p.get_pdg_code() == vector.get_pdg_code():
                 nb_vector += 1
-        misc.sprint("Merge", gold_vertex, "in", vertex)
+
         # need to check here if the ordering is the same.
         gold_pdg = [p.get_pdg_code() if p.get_pdg_code() != goldstone.get_pdg_code() else vector.get_pdg_code()
                     for p in gold_vertex.get('particles')]
         vert_pdg = [p.get_pdg_code() for p in vertex.get('particles')]
-        misc.sprint(gold_pdg, vert_pdg)
 
         # check if the order of the particle is the same
         if gold_pdg != vert_pdg:
-            misc.sprint(gold_pdg, vert_pdg)
             mapping = {}
             for orig in range(len(gold_pdg)):
                 if vert_pdg[orig] == gold_pdg[orig]:
                     mapping[orig] = orig
                     vert_pdg[orig] = 0
-            misc.sprint(mapping, vert_pdg)
             for orig in range(len(gold_pdg)):
                 if orig in mapping:
                     continue
                 new_pos = vert_pdg.index(gold_pdg[orig])
                 mapping[orig] = new_pos
                 vert_pdg[new_pos] = 0
-            misc.sprint(mapping)
-            misc.sprint(gold_pdg, vert_pdg)
 
             gold_vertex = self.reorder_vertex(gold_vertex, mapping)
 
