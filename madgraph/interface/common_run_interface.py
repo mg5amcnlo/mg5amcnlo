@@ -6714,6 +6714,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             raise TimeOutError
         signal.signal(signal.SIGALRM, handle_alarm)
 
+        if timer:
+            log_level=30
+        else:
+            log_level=20
+
 
         if run_card:
             as_for_pdf = {'cteq6_m': 0.118,
@@ -6775,9 +6780,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         if timer:
             signal.alarm(timer)
-            log_level=30
-        else:
-            log_level=20
+
 
         # Try to load the model in the limited amount of time allowed
         try:
