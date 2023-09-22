@@ -224,7 +224,7 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
-      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk,all_q2fact,all_cm_rap,ICONF,IPROC,IMIRROR,ALL_OUT,VECSIZE_USED)
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk,all_q2fact,all_cm_rap,ICONF_vec,IPROC,IMIRROR_vec,ALL_OUT,VECSIZE_USED)
 c     ******************************************************
 c
 c     INPUT: ALL_PP(0:3, NEXTERNAL, VECSIZE_USED)
@@ -237,13 +237,14 @@ c     ******************************************************
       IMPLICIT NONE
 
       integer VECSIZE_USED
+      include 'vector.inc'
       include 'genps.inc'
       double precision all_p(4*maxdim/3+14,*)
       double precision all_wgt(*)
       double precision all_xbk(2,*)
       double precision all_q2fact(2,*)
       double precision all_cm_rap(*)
-      integer iconf, iproc, imirror
+      integer iconf_vec(NB_WRAP), iproc, imirror_vec(NB_WRAP)
       double precision all_out(*)
       include 'maxconfigs.inc'
       include 'maxamps.inc'
@@ -281,7 +282,7 @@ C     IB gives which beam is which (for mirror processes)
       LOGICAL CUTSDONE,CUTSPASSED
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED      
 
-      INTEGER I
+      INTEGER I, CURR_WRAP
       integer grouped_MC_grid_status
 
       integer                                      lpp(2)
@@ -299,11 +300,11 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
 
 
        grouped_MC_grid_status = DS_get_dim_status('grouped_processes')
-       IMIRROR_GLOBAL = IMIRROR
+       IMIRROR_GLOBAL = IMIRROR_VEC(1)
        IPROC_GLOBAL = IPROC
-       ICONFIG=SYMCONF(ICONF)
+       ICONFIG=SYMCONF(ICONF_VEC(1))
        DO I=1,MAXSPROC
-       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
       	ENDDO
 
 c     set the running scale 
@@ -315,7 +316,7 @@ C       If we were in the initialization phase of the grid for MC over grouped p
       	  ALLOW_HELICITY_GRID_ENTRIES = .False.
       endif
 
-      call DSIGPROC_vec(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,0,ALL_OUT,VECSIZE_USED)
+      call DSIGPROC_vec(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF_VEC,IPROC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,0,ALL_OUT,VECSIZE_USED)
 
       
       Do i =1,VECSIZE_USED
@@ -331,12 +332,15 @@ c		call DS_add_entry('grouped_processes',Lmapped,(ALL_OUT(i)/SELPROC(IMIRROR,IPR
 c	  ENDIF
 
 	  ENDDO
-      DO I=1, VECSIZE_USED
-      	 IF(ALL_OUT(I).GT.0d0)THEN
+
+      DO CURR_WRAP=1, NB_WRAP
+         DO I=(CURR_WRAP-1)*WRAP_SIZE+1,CURR_WRAP*WRAP_SIZE
+	    IF(ALL_OUT(I).GT.0d0)THEN
 C     Update summed weight and number of events
-             SUMWGT(IMIRROR,IPROC,ICONF)=SUMWGT(IMIRROR,IPROC,ICONF)+DABS(ALL_OUT(I)*ALL_WGT(I))
-             NUMEVTS(IMIRROR,IPROC,ICONF)=NUMEVTS(IMIRROR,IPROC,ICONF)+1
-      	 ENDIF  
+             SUMWGT(IMIRROR_VEC(CURR_WRAP),IPROC,ICONF_VEC(CURR_WRAP))=SUMWGT(IMIRROR_VEC(CURR_WRAP),IPROC,ICONF_VEC(CURR_WRAP))+DABS(ALL_OUT(I)*ALL_WGT(I))
+             NUMEVTS(IMIRROR_VEC(CURR_WRAP),IPROC,ICONF_VEC(CURR_WRAP))=NUMEVTS(IMIRROR_VEC(CURR_WRAP),IPROC,ICONF_VEC(CURR_WRAP))+1
+      	    ENDIF  
+         ENDDO
       ENDDO
 
       RETURN
@@ -856,7 +860,7 @@ C     ccccccccccccccccccccccccc
 C      vectorize version
 C     ccccccccccccccccccccccccc
 
-      subroutine DSIGPROC_VEC(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF,IPROC,IMIRROR,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out,VECSIZE_USED)
+      subroutine DSIGPROC_VEC(ALL_P,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF_VEC,IPROC,IMIRROR_VEC,SYMCONF,CONFSUB,ALL_WGT,IMODE,all_out,VECSIZE_USED)
 C     ****************************************************
 C     RETURNS DIFFERENTIAL CROSS SECTION 
 C     FOR A PROCESS
@@ -874,7 +878,7 @@ C     ****************************************************
       include 'maxconfigs.inc'
       INCLUDE 'nexternal.inc'
       INCLUDE 'maxamps.inc'
-      include 'vector.inc' ! defines VECSIZE_MEMMAX
+      include 'vector.inc' ! defines VECSIZE_MEMMAX/WRAP_SIZE
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       INCLUDE 'run.inc'
 C     
@@ -888,6 +892,8 @@ C
       double precision all_out(VECSIZE_MEMMAX)
       DOUBLE PRECISION DSIGPROC
       INTEGER ICONF,IPROC,IMIRROR,IMODE
+      INTEGER ICONF_VEC(NB_WRAP), IMIRROR_VEC(NB_WRAP)
+      INTEGER CURR_WRAP, IWRAP
       INTEGER SYMCONF(0:LMAXCONFIGS)
       INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
       INTEGER VECSIZE_USED
@@ -924,65 +930,79 @@ C
       INCLUDE 'symperms.inc'
 	  SAVE ALL_P1,JC
 
-      if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF) then
-        ICONFIG=SYMCONF(ICONF)
-        DO I=1,MAXSPROC
-          SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
-        ENDDO
-
-C       Set momenta according to this permutation
-	do IVEC=1, VECSIZE_USED
-	   CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
-
-	    if (LAST_ICONF.ne.-1) then
-		  LAST_ICONF = ICONF
-		endif
-	enddo
+      IF(LAST_ICONF.ne.-1) then
+      	stop 25
+      endif
+      LAST_ICONF = 0 
+      IWRAP = 0 ! position within the current wrap
+      CURR_WRAP = 1 ! current_wrap used
+      do IVEC=1, VECSIZE_USED
+        IWRAP = IWRAP + 1
+	if (IWRAP.eq.1) then
+           if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF_VEC(CURR_WRAP)) then
+              ICONFIG=SYMCONF(ICONF_VEC(CURR_WRAP))
+              DO I=1,MAXSPROC
+                 SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+              ENDDO
+	  endif
+c	  ICONF = ICONF_VEC(CURR_WRAP)
+c	  IMIRROR = IMIRROR_VEC(CURR_WRAP)
 	endif	
+C       Set momenta according to this permutation
+	CALL SWITCHMOM(ALL_P(1,IVEC),All_P1(0,1,IVEC),PERMS(1,MAPCONFIG(ICONFIG)),JC,NEXTERNAL)
+	LAST_ICONF = ICONF_VEC(CURR_WRAP)
+	if (IWRAP.eq.WRAP_SIZE) then
+	CURR_WRAP = CURR_WRAP + 1 
+	IWRAP = 0 
+	endif
+      enddo
+      LAST_ICONF=-1
 
-
-      IB(1)=1
-      IB(2)=2
-
-
-      IF(IMIRROR.EQ.2)THEN
-             DO IVEC=1,VECSIZE_USED
+      DO CURR_WRAP=1,NB_WRAP
+      	   IB(1)=1 ! TODO -> move to a vector?
+      	   IB(2)=2 ! TODO -> move to a vector?
+	   IMIRROR = IMIRROR_VEC(CURR_WRAP)
+	   IF(IMIRROR.EQ.2)THEN
 C       Flip momenta (rotate around x axis)
-        DO I=1,NEXTERNAL
-          ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
-	enddo
-          XDUM=ALL_XBK(1, ivec)
-	  ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
-	  ALL_XBK(2, ivec) = XDUM
-	  all_cm_rap(ivec) = - all_cm_rap(ivec)
+	     DO IVEC = (CURR_WRAP-1)*WRAP_SIZE+1,CURR_WRAP*WRAP_SIZE
+	        DO I=1,NEXTERNAL
+                   ALL_P1(2,I, IVEC)=-ALL_P1(2,I,IVEC)
+                   ALL_P1(3,I, IVEC)=-ALL_P1(3,I,IVEC)
+	        enddo
+                XDUM=ALL_XBK(1, ivec)
+	        ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
+	        ALL_XBK(2, ivec) = XDUM
+	        all_cm_rap(ivec) = - all_cm_rap(ivec)
 C       Flip beam identity
-        IB(1)=2
-        IB(2)=1
+                IB(1)=2 ! TODO (check if need vector)
+                IB(2)=1 ! TODO (check if need vector)
+             ENDDO
+      
+           ENDIF
       ENDDO
-      ENDIF
+
 
       ALL_OUT(:)=0D0
 
-c      IF (PASSCUTS(P1)) THEN
-       DO IVEC=1,VECSIZE_USED
-      if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
-        nb_pass_cuts = nb_pass_cuts + 1
-      endif
+      DO IVEC=1,VECSIZE_USED
+        if (IMODE.eq.0d0.and.nb_pass_cuts.lt.2**12.and.all_wgt(ivec).ne.0d0)then
+          nb_pass_cuts = nb_pass_cuts + 1
+        endif
       ENDDO
       
 %(call_dsig_proc_lines_vec)s
-c      ENDIF
 
-	  IF (LAST_ICONF.ne.-1.and.IMIRROR.EQ.2) then
-C       Flip back local momenta P1 if cached
-	DO IVEC=1,VECSIZE_USED
-        DO I=1,NEXTERNAL	
-          ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
-          ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
-        ENDDO
-	ENDDO
-	  endif
+C    FLIPPING BACK IF NEEDED
+      DO CURR_WRAP=1,NB_WRAP
+      	  IF (IMIRROR_VEC(CURR_WRAP).eq.2) then
+	     DO IVEC = (CURR_WRAP-1)*WRAP_SIZE+1,CURR_WRAP*WRAP_SIZE
+	        DO I=1,NEXTERNAL	
+                  ALL_P1(2,I,IVEC)=-ALL_P1(2,I,IVEC)
+                  ALL_P1(3,I,IVEC)=-ALL_P1(3,I,IVEC)
+		ENDDO
+      	     ENDDO
+	  ENDIF
+      ENDDO
 
       RETURN
 

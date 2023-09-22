@@ -37,7 +37,8 @@ c
       integer jmax,i,j,ipole
       integer itmax_adjust
 
-      integer imirror, iproc, iconf
+c      integer imirror, iproc, iconf
+      integer imirror_vec(NB_WRAP), iproc, ICONF_VEC(NB_WRAP) 
       integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
       integer ilock             !  position of the event in the current wrap (max is WRAP_SIZE)
       integer iwrap               ! position of the current wrap (max is NB_WRAP)
@@ -215,7 +216,7 @@ c                 need to restore common block
                   CUTSPASSED=.TRUE.
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i), i.eq.(iwrap-1)*WRAP_SIZE+1)
                enddo
-               call select_grouping(imirror, iproc, iconf, all_wgt, iwrap)
+               call select_grouping(imirror_vec(iwrap), iproc, iconf_vec(iwrap), all_wgt, iwrap)
                if (ivec.lt.VECSIZE_USED)then
                   cycle
                endif
@@ -225,7 +226,7 @@ c              reset variable for the next grid
                iwrap =1
                
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf, iproc, imirror, all_fx,VECSIZE_USED)
+     &                          iconf_vec, iproc, imirror_vec, all_fx,VECSIZE_USED)
 
                 do i=1, VECSIZE_USED
 c                 need to restore common block                  
