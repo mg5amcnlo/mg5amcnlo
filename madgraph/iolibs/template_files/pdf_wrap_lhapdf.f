@@ -5,6 +5,7 @@ C     INCLUDE
 C
       include 'pdf.inc'
       include '../alfas.inc'
+      include '../vector.inc'
       include '../coupl.inc'
       real*8 zmass
       data zmass/91.188d0/
