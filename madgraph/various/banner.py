@@ -2687,16 +2687,23 @@ class RunCard(ConfigFile):
                             except Exception as error:
                                 import launch_plugin
                         target_class = launch_plugin.RunCard
-                    elif not MADEVENT and os.path.exists(path.replace('run_card.dat', '../bin/internal/launch_plugin.py')):
-                        misc.sprint('try to use plugin class')
-                        pydir = path.replace('run_card.dat', '../bin/internal/')
-                        with  misc.TMP_variable(sys, 'path', sys.path + [pydir]):
-                            from importlib import reload
-                            try:
-                                reload('launch_plugin')
-                            except Exception as error:
-                                import launch_plugin
-                        target_class = launch_plugin.RunCard
+                    elif not MADEVENT:
+                        if 'run_card.dat' in path:
+                            launch_plugin_path = path.replace('run_card.dat', '../bin/internal/launch_plugin.py')
+                        elif 'run_card_default.dat' in path:
+                             launch_plugin_path = path.replace('run_card_default.dat', '../bin/internal/launch_plugin.py')
+                        else:
+                            launch_plugin_path = None
+                        if launch_plugin_path and os.path.exists(launch_plugin_path):
+                            misc.sprint('try to use plugin class', path.replace('run_card.dat', '../bin/internal/launch_plugin.py'))
+                            pydir = os.path.dirname(launch_plugin_path)
+                            with  misc.TMP_variable(sys, 'path', sys.path + [pydir]):
+                                from importlib import reload
+                                try:
+                                    reload('launch_plugin')
+                                except Exception as error:
+                                    import launch_plugin
+                            target_class = launch_plugin.RunCard
 
             else:
                 return None
@@ -2929,6 +2936,7 @@ class RunCard(ConfigFile):
 
 
     def reset_simd(self, old_value, new_value, name, *args, **opts):
+        #return
         raise Exception('pass in reset simd')
 
     def make_clean(self,old_value, new_value, name, dir):

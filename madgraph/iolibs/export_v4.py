@@ -4990,7 +4990,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
-                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=self.opt['vector_size'])
+                self.get_pdf_lines(matrix_element, ninitial, proc_id != "", vector=max(self.opt['vector_size'],1))
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines

@@ -229,7 +229,8 @@ C BEGIN CODE
 C ----------
 C  
 C LOCAL VARIABLES 
-C  
+C
+      double precision QSCALE
       INTEGER I,ITYPE,LP,IPROC
 %(pdf_vars_vec)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
