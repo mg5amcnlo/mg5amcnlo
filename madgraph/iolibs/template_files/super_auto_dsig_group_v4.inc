@@ -942,7 +942,7 @@ C
            if (LAST_ICONF.eq.-1.or.LAST_ICONF.ne.ICONF_VEC(CURR_WRAP)) then
               ICONFIG=SYMCONF(ICONF_VEC(CURR_WRAP))
               DO I=1,MAXSPROC
-                 SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF))
+                 SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(CURR_WRAP)))
               ENDDO
 	  endif
 c	  ICONF = ICONF_VEC(CURR_WRAP)
