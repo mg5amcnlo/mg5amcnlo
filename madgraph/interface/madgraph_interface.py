@@ -743,7 +743,7 @@ class HelpToCmd(cmd.HelpCmd):
                                           range((len(self._set_options)//4)+1)]:
             logger.info("%s"%(','.join(opts)),'$MG:color:GREEN')
         logger.info("Details of each option:")
-        logger.info("group_subprocesses True/False/Auto: ",'$MG:color:GREEN')
+        logger.info("group_subprocesses True/False/Auto/gpu: ",'$MG:color:GREEN')
         logger.info(" > (default Auto) Smart grouping of subprocesses into ")
         logger.info("   directories, mirroring of initial states, and ")
         logger.info("   combination of integration channels.")
@@ -1533,7 +1533,7 @@ This will take effect only in a NEW terminal
                                   self._set_options)
 
         if args[0] in ['group_subprocesses']:
-            if args[1].lower() not in ['false', 'true', 'auto']:
+            if args[1].lower() not in ['false', 'true', 'auto', 'gpu']:
                 raise self.InvalidCmd('%s needs argument False, True or Auto, got %s' % \
                                       (args[0], args[1]))
         if args[0] in ['ignore_six_quark_processes']:
@@ -7736,11 +7736,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             for q in self.options[args[0]]]))
 
         elif args[0] == 'group_subprocesses':
-            if args[1].lower() not in ['auto', 'nlo']:
+            if args[1].lower() not in ['auto', 'nlo', 'gpu']:
                 self.options[args[0]] = banner_module.ConfigFile.format_variable(args[1], bool, name="group_subprocesses")
             else:
                 if args[1].lower() == 'nlo':
                     self.options[args[0]] = "NLO"
+                elif args[1].lower() == 'gpu':
+                    self.options[args[0]] = "gpu"
                 else:
                     self.options[args[0]] = "Auto"
             if log:
@@ -7750,6 +7752,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            if self.options[args[0]] == 'gpu':
+                export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'gpu'
+            else:
+                export_v4.ProcessExporterFortranMEGroup.grouped_mode = 'madevent'
 
         elif args[0] == "stdout_level":
             if args[1].isdigit():
@@ -8288,6 +8294,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 ||   -> add process <proc_def>
 """)
                     group_processes = False
+        else:
+            group_processes = True
     
         #Exporter + Template
         if options['exporter'] == 'v4':
