@@ -405,7 +405,7 @@ C
 
 
      SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col, VECSIZE_USED)
-     USE OMP_LIB
+%(OMP_LIB)s
      implicit none
 
      include 'nexternal.inc'
@@ -424,9 +424,10 @@ C
 
      integer ivec
 
+%(additional_header)s
 
-!$OMP PARALLEL
-!$OMP DO
+
+%(OMP_PREFIX)s
       DO IVEC=1, VECSIZE_USED
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
@@ -438,8 +439,8 @@ C
      &				 selected_col(IVEC)
      &				 )
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
+%(OMP_POSTFIX)s
+
      return
      end
 

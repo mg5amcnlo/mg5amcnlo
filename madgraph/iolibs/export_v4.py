@@ -4960,6 +4960,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError("""Need ninitial = 1 or 2 to write auto_dsig file""")
 
         replace_dict = {}
+        replace_dict['additional_header'] = ''
+        replace_dict['OMP_LIB'] = " USE OMP_LIB"
+        replace_dict['OMP_PREFIX'] = "!$OMP PARALLEL\n!$OMP DO"
+        replace_dict['OMP_POSTFIX'] = "!$OMP END DO\n!$OMP END PARALLEL"
+
 
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -9763,6 +9768,8 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                 import madgraph.loop.loop_exporters as loop_exporters
                 return  loop_exporters.LoopInducedExporterMEGroup( 
                                                cmd._export_dir,loop_induced_opt)
+            elif cmd._export_plugin:
+                return cmd._export_plugin(cmd._export_dir,opt) 
             else:
                 return  ProcessExporterFortranMEGroup(cmd._export_dir,opt)                
         elif format in ['madevent']:
