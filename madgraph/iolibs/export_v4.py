@@ -1723,7 +1723,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = " DO iVEC=1,VECSIZE_USED\n"
+            pdf_lines = """ DO CURR_WRAP=1, NB_WRAP
+        IF(IMIRROR_VEC(CURR_WRAP).EQ.1)THEN
+          IB(1) = 1
+          IB(2) = 2
+        ELSE
+          IB(1) = 2
+          IB(2) = 1
+        ENDIF
+        DO IWRAP=1, WRAP_SIZE
+          IVEC = (CURR_WRAP-1)*WRAP_SIZE+IWRAP
+          """
+
 
 
         if ninitial == 1:
@@ -1927,7 +1938,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         ee_pdf_definition_lines = ""
             else:
                 # Add up PDFs for the different initial state particles
-                pdf_lines += "ENDDO\n"
+                pdf_lines += "ENDDO ! IWRAP LOOP\n"
+                pdf_lines += "ENDDO ! CURRWRAP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
                 for proc in processes:
                     process_line = proc.base_string()
@@ -5001,7 +5013,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Extract pdf lines vectorised code
         pdf_vars, pdf_data, pdf_lines, eepdf_vars = \
                 self.get_pdf_lines(matrix_element, ninitial, proc_id != "", 
-                                   vector=self.opt['vector_size'])
+                                   vector=max(1,int(self.opt['vector_size'])))
         replace_dict['pdf_vars_vec'] = pdf_vars
         replace_dict['pdf_data_vec'] = pdf_data
         replace_dict['pdf_lines_vec'] = pdf_lines
@@ -6478,7 +6490,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,VECSIZE_USED) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,IMIRROR_VEC,VECSIZE_USED) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)

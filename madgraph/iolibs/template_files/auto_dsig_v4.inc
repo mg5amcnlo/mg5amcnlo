@@ -182,7 +182,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, VECSIZE_USED)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, IMIRROR_VEC, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -223,6 +223,7 @@ C
       DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
       INTEGER IMODE
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER IMIRROR_VEC(*)
       INTEGER VECSIZE_USED
 C ----------
 C BEGIN CODE
@@ -231,6 +232,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,ITYPE,LP,IPROC
+      DOUBLE PRECISION QSCALE
 %(pdf_vars_vec)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
       DOUBLE PRECISION ALL_PD(0:MAXPROC, VECSIZE_MEMMAX) 
@@ -286,7 +288,7 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec
+	   integer ivec, curr_wrap, iwrap
 
 C  
 C DATA
@@ -313,11 +315,21 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO IVEC=1,VECSIZE_USED
-c        Do not need those three here do I?	 
-	 XBK(:) = ALL_XBK(:,IVEC)
-c	 CM_RAP = ALL_CM_RAP(IVEC)
-	 Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+	 DO CURR_WRAP=1, NB_WRAP
+	   if(IMIRROR_VEC(CURR_WRAP).EQ.1)then
+	     IB(1) = 1
+	     IB(2) = 2
+	   else
+	     IB(1) = 2
+	     IB(2) = 1	   
+	   endif
+	   DO IWRAP=1, WRAP_SIZE
+	      IVEC = (CURR_WRAP-1)*WRAP_SIZE+IWRAP
+c        Do not need those three here. do I?	 
+	      XBK(:) = ALL_XBK(:,IVEC)
+c	      CM_RAP = ALL_CM_RAP(IVEC)
+	      Q2FACT(:) = ALL_Q2FACT(:, IVEC)
+
 
 C     Select a flavor combination (need to do here for right sign)
        CALL RANMAR(R)
@@ -338,7 +350,8 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-	 ENDDO
+	 ENDDO ! end loop on IWRAP/IVEC	 
+	 ENDDO ! end loop on the CURR_WRAP
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 

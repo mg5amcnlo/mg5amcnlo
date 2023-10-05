@@ -959,8 +959,8 @@ C       Set momenta according to this permutation
       LAST_ICONF=-1
 
       DO CURR_WRAP=1,NB_WRAP
-      	   IB(1)=1 ! TODO -> move to a vector?
-      	   IB(2)=2 ! TODO -> move to a vector?
+      	   IB(1)=0 ! This is set in auto_dsigX. set it to zero to create segfault if used at wrong time
+      	   IB(2)=0 ! Same
 	   IMIRROR = IMIRROR_VEC(CURR_WRAP)
 	   IF(IMIRROR.EQ.2)THEN
 C       Flip momenta (rotate around x axis)
@@ -973,9 +973,9 @@ C       Flip momenta (rotate around x axis)
 	        ALL_XBK(1, ivec) = ALL_XBK(2, ivec)
 	        ALL_XBK(2, ivec) = XDUM
 	        all_cm_rap(ivec) = - all_cm_rap(ivec)
-C       Flip beam identity
-                IB(1)=2 ! TODO (check if need vector)
-                IB(2)=1 ! TODO (check if need vector)
+		IB(1) = 0
+		IB(2) = 0
+C       Flip beam identity -> moved to auto_dsigX (since depend of the wrap)
              ENDDO
       
            ENDIF
