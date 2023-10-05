@@ -302,10 +302,10 @@ C     To be able to control when the matrix<i> subroutine can add entries to the
        grouped_MC_grid_status = DS_get_dim_status('grouped_processes')
        IMIRROR_GLOBAL = IMIRROR_VEC(1)
        IPROC_GLOBAL = IPROC
-       ICONFIG=SYMCONF(ICONF_VEC(1))
-       DO I=1,MAXSPROC
-       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
-      	ENDDO
+c       ICONFIG=SYMCONF(ICONF_VEC(1))
+c       DO I=1,MAXSPROC
+c       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
+c      	ENDDO
 
 c     set the running scale 
 c     and update the couplings accordingly
