@@ -182,7 +182,7 @@ C
 
 ## }
 
-DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, IMIRROR_VEC, VECSIZE_USED)
+DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
 C ****************************************************
 C
 %(info_lines)s
@@ -224,7 +224,10 @@ C
       INTEGER IMODE
       DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
       INTEGER IMIRROR_VEC(*)
+      INTEGER ICONF_VEC(*)
       INTEGER VECSIZE_USED
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)      
 C ----------
 C BEGIN CODE
 C ----------
@@ -289,7 +292,7 @@ c     local
 c
 	   double precision P1(0:3, nexternal)
 	   integer ivec, curr_wrap, iwrap
-
+	   integer channels(VECSIZE_MEMMAX)
 C  
 C DATA
 C  
@@ -338,7 +341,7 @@ C     Select a flavor combination (need to do here for right sign)
           IPSEL=IPSEL+1
           R=R-DABS(ALl_PD(IPSEL,IVEC))/ALL_PD(0,IVEC)
        ENDDO
-       channel = %(get_channel)s
+       %(get_channel_vec)s
 
 
        ALL_RWGT(IVEC) = REWGT(all_PP(0,1,IVEC), ivec)
@@ -352,7 +355,7 @@ C     Select a flavor combination (need to do here for right sign)
 	 CALL RANMAR(col_rand(IVEC))
 	 ENDDO ! end loop on IWRAP/IVEC	 
 	 ENDDO ! end loop on the CURR_WRAP
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
+         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 
 	 DO IVEC=1,VECSIZE_USED
@@ -417,7 +420,7 @@ C
      end
 
 
-     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, out, selected_hel, selected_col, VECSIZE_USED)
+     SUBROUTINE SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, out, selected_hel, selected_col, VECSIZE_USED)
 %(OMP_LIB)s
      implicit none
 
@@ -429,7 +432,7 @@ C
      double precision p_multi(0:3, nexternal, VECSIZE_MEMMAX)
      double precision hel_rand(VECSIZE_MEMMAX)
      double precision col_rand(VECSIZE_MEMMAX)
-     integer channel
+     integer channels(VECSIZE_MEMMAX)
      double precision out(VECSIZE_MEMMAX)
      integer selected_hel(VECSIZE_MEMMAX)
      integer selected_col(VECSIZE_MEMMAX)
@@ -445,7 +448,7 @@ C
       	 call SMATRIX%(proc_id)s(p_multi(0,1,IVEC),
      &	                         hel_rand(IVEC),
      &                           col_rand(IVEC),
-     &				 channel,
+     &				 channels(IVEC),
      &                           IVEC,
      &				 out(IVEC),
      &				 selected_hel(IVEC),

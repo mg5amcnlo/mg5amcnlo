@@ -5031,12 +5031,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
             replace_dict['cutsdone'] = ""
             replace_dict['get_channel'] = "SUBDIAG(%s)" % proc_id
+            replace_dict['get_channel_vec'] = """
+            CHANNELS(IVEC) = CONFSUB(%s,SYMCONF(ICONF_VEC(CURR_WRAP)))
+            SUBDIAG(%s) = CHANNELS(IVEC) ! only valid if a single process
+            channel = SUBDIAG(%s)""" % (proc_id,proc_id, proc_id)
+            #SUBDIAG(%s)" % proc_id
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
+            replace_dict['get_channel_vec'] = " channel  = MAPCONFIG(ICONFIG)"
 
         # extract and replace ncombinations, helicity lines
         ncomb=matrix_element.get_helicity_combinations()
@@ -6490,7 +6496,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                 "IF(IPROC.EQ.%(num)d) DSIGPROC=DSIG%(num)d(P1,WGT,IMODE) ! %(proc)s" % data
                 )
             call_dsig_proc_lines_vec.append(\
-                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,IMIRROR_VEC,VECSIZE_USED) ! %(proc)s" % data
+                "IF(IPROC.EQ.%(num)d) CALL DSIG%(num)d_VEC(ALL_P1,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ALL_WGT,IMODE,ALL_OUT,SYMCONF, CONFSUB,ICONF_VEC,IMIRROR_VEC,VECSIZE_USED) ! %(proc)s" % data
                 )
 
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
