@@ -3376,9 +3376,13 @@ c on the imode we should or should not include the virtual corrections.
       include 'orders.inc'
       integer i,j,ict,iamp,ithree,isix
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
-     $     ,n1body_wgt,tmp_wgt,max_weight
+     $     ,n1body_wgt,tmp_wgt,max_weight,sigint_B,sigint_nonB
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
+      if (EnhanceFlavour) then
+         sigint_B=0d0
+         sigint_nonB=0d0
+      endif
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3397,6 +3401,22 @@ c on the imode we should or should not include the virtual corrections.
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
                sigint1=sigint1+unwgt(j,i) ! for consistency check
                max_weight=max(max_weight,abs(unwgt(j,i)))
+               if (EnhanceFlavour) then
+                  if (H_event(i)) then
+                     if (any(abs(parton_pdg(1:nexternal,j,i)).eq.5))then
+                        sigint_B=sigint_B+abs(unwgt(j,i))
+                     else
+                        sigint_nonB=sigint_nonB+abs(unwgt(j,i))
+                     endif
+                  else
+                     if (any(abs(parton_pdg_uborn(1:nexternal-1,j,i))
+     &                    .eq.5)) then
+                        sigint_B=sigint_B+abs(unwgt(j,i))
+                     else
+                        sigint_nonB=sigint_nonB+abs(unwgt(j,i))
+                     endif
+                  endif
+               endif
             enddo
          enddo
 c check the consistency of the results up to machine precision (10^-10 here)
@@ -3463,6 +3483,11 @@ c n1body_wgt is used for the importance sampling over FKS directories
             f(isix)=born_wgt_mint(iamp)
          endif
       enddo
+      if (EnhanceFlavour) then
+         f(25)=sigint_nonB
+         f(26)=sigint_B
+      endif
+      
       return
       end
 
@@ -3471,12 +3496,14 @@ c n1body_wgt is used for the importance sampling over FKS directories
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
       use weight_lines
+      use mint_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'timing_variables.inc'
+      include 'run.inc'
       integer i,j,k,l,iFKS_picked,ict,ifold_picked,jj,ii
       double precision tot_sum,rnd,ran2,current,target
       external ran2
@@ -3510,7 +3537,23 @@ c PS point that should be written in the event file.
       tot_sum=0d0
       do i=1,icontr
          do j=1,niproc(i)
-            tot_sum=tot_sum+abs(unwgt(j,i))
+            if (.not.EnhanceFlavour) then
+               tot_sum=tot_sum+abs(unwgt(j,i))
+            else
+               if (H_event(i)) then
+                  if (any(abs(parton_pdg(1:nexternal,j,i)).eq.5))then
+                     tot_sum=tot_sum+abs(unwgt(j,i))*enhancement_factor
+                  else
+                     tot_sum=tot_sum+abs(unwgt(j,i))
+                  endif
+               else
+                  if (any(abs(parton_pdg_uborn(1:nexternal-1,j,i)).eq.5))then
+                     tot_sum=tot_sum+abs(unwgt(j,i))*enhancement_factor
+                  else
+                     tot_sum=tot_sum+abs(unwgt(j,i))
+                  endif
+               endif
+            endif
          enddo
       enddo
       rnd=ran2()
@@ -3524,7 +3567,23 @@ c PS point that should be written in the event file.
             j=1
             i=i+1
          endif
-         current=current+abs(unwgt(j,i))
+         if (.not. EnhanceFlavour) then
+            current=current+abs(unwgt(j,i))
+         else
+            if (H_event(i)) then
+               if (any(abs(parton_pdg(1:nexternal,j,i)).eq.5))then
+                  current=current+abs(unwgt(j,i))*enhancement_factor
+               else
+                  current=current+abs(unwgt(j,i))
+               endif
+            else
+               if (any(abs(parton_pdg_uborn(1:nexternal-1,j,i)).eq.5))then
+                  current=current+abs(unwgt(j,i))*enhancement_factor
+               else
+                  current=current+abs(unwgt(j,i))
+               endif
+            endif
+         endif
       enddo
 c found the contribution that should be written:
       icontr_picked=i

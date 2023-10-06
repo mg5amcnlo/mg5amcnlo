@@ -61,6 +61,10 @@ c
       logical chcluster,pdfwgt
       common/to_cluster/ktscheme,chcluster,pdfwgt
 
+
+      integer enhancement_factor
+      common /cEnhanceFlavour / enhancement_factor
+
 c
 c     Shower MonteCarlo
 c     

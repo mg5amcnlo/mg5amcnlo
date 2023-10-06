@@ -2351,7 +2351,7 @@ RESTART = %(mint_mode)s
         for job in jobs:
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
                 if self.run_card['event_norm'].lower()=='bias':
-                    f.write('%i %f\n' % (job['nevents'],self.cross_sect_dict['xseca']))
+                    f.write('%i %f %f %f\n' % (job['nevents'],self.cross_sect_dict['xseca'],self.cross_sect_dict['xseca_nonB'],self.cross_sect_dict['xseca_B']))
                 else:
                     f.write('%i\n' % job['nevents'])
 
@@ -2671,6 +2671,12 @@ RESTART = %(mint_mode)s
             return jobs_new
         elif step+1 <= 2:
             nevents=self.run_card['nevents']
+            flav_enh=self.run_card['enhancement_factor']
+            totABS_nonB=self.cross_sect_dict['xseca_nonB']
+            totABS_B=self.cross_sect_dict['xseca_B']
+
+            totABS=totABS_nonB+totABS_B*flav_enh
+            
             # Total required accuracy for the upper bounding envelope
             if req_acc<0: 
                 req_acc2_inv=nevents
@@ -2697,7 +2703,7 @@ RESTART = %(mint_mode)s
                     i = 0
                     while i<len(jobs) and crosssum < target:
                         job = jobs[i]
-                        crosssum += job['resultABS']
+                        crosssum += (job['resultABS_nonB']+flav_enh*job['resultABS_B'])
                         i += 1            
                     totevts -= 1
                     i -= 1
@@ -2743,6 +2749,13 @@ RESTART = %(mint_mode)s
             job['niters_done']=int(results[4])
             job['npoints_done']=int(results[5])
             job['time_spend']=float(results[6])
+            try:
+                job['resultABS_nonB']=float(results[7])
+                job['resultABS_B']=float(results[8])
+            except:
+                job['resultABS_nonB']=float(results[0])
+                job['resultABS_B']=0.
+                
             if job['resultABS'] != 0:
                 job['err_percABS'] = job['errorABS']/job['resultABS']*100.
                 job['err_perc'] = job['error']/job['result']*100.
@@ -2793,11 +2806,15 @@ RESTART = %(mint_mode)s
             content.append(('%20s' % ddir) + '   %(result)10.8e    %(error)6.4e ' %  res)
 
         totABS=0
+        totABS_nonB=0
+        totABS_B=0
         errABS=0
         tot=0
         err=0
         for job in jobs:
             totABS+= job['resultABS']*job['wgt_frac']
+            totABS_nonB+= job['resultABS_nonB']*job['wgt_frac']
+            totABS_B+= job['resultABS_B']*job['wgt_frac']
             errABS+= math.pow(job['errorABS'],2)*job['wgt_frac']
             tot+= job['result']*job['wgt_frac']
             err+= math.pow(job['error'],2)*job['wgt_frac']
@@ -2809,7 +2826,7 @@ RESTART = %(mint_mode)s
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
         return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
-                'erra':math.sqrt(errABS),'randinit':randinit}
+                'erra':math.sqrt(errABS),'randinit':randinit,'xseca_nonB':totABS_nonB,'xseca_B':totABS_B}
         
 
     def collect_scale_pdf_info(self,options,jobs):

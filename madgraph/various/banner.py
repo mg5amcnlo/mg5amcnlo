@@ -5343,6 +5343,9 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
 
+
+        self.add_param('enhancement_factor',1.0,hidden=True)
+        
         #technical
         self.add_param('folding', [1,1,1], include=False)
         

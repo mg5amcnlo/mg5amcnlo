@@ -3,6 +3,7 @@ c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
+      use weight_lines
       use mint_module
       use FKSParams
       implicit none
@@ -51,14 +52,14 @@ c Vegas stuff
       common/c_vob/virtual_over_born
       include 'orders.inc'
 
-      double precision weight,event_weight,inv_bias
+      double precision weight,event_weight,inv_bias,xsec_nonB,xsec_B
       character*7 event_norm
       common /event_normalisation/event_norm
       integer ixi_i,iphi_i,iy_ij,vn
       logical putonshell
-      logical unwgt
+      logical lunwgt
       double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
+      common /c_unwgt/evtsgn,lunwgt
       double precision ran2,x(ndimmax)
       external ran2
       
@@ -183,7 +184,7 @@ c at the NLO)
       write(*,*) "about to integrate ", ndim,ncalls0,itmax,iconfig
       i_momcmp_count=0
       xratmax=0.d0
-      unwgt=.false.
+      lunwgt=.false.
 c     Prepare the MINT folding
       do j=1,ndimmax
          if (j.le.ndim) then
@@ -228,12 +229,12 @@ c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
          putonshell=.true.
          if (ickkw.eq.-1) putonshell=.false.
-         unwgt=.true.
+         lunwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
          if (event_norm(1:4).ne.'bias') then
             read (99,*) nevts
          else
-            read (99,*) nevts,event_weight
+            read (99,*) nevts,event_weight,xsec_nonB,xsec_B
          endif
          close(99)
          write(*,*) 'Generating ', nevts, ' events'
@@ -306,6 +307,21 @@ c Randomly pick the contribution that will be written in the event file
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
+               if (EnhanceFlavour) then
+                  if (H_event(icontr_picked)) then
+                     if (any(abs(parton_pdg(1:nexternal,iproc_picked,icontr_picked)).eq.5))then
+                        weight=weight*(ans(26,1)+ans(25,1)/enhancement_factor)/(ans(25,1)+ans(26,1))
+                     else
+                        weight=weight*(ans(25,1)+enhancement_factor*ans(26,1))/(ans(25,1)+ans(26,1))
+                     endif
+                  else
+                     if (any(abs(parton_pdg_uborn(1:nexternal-1,iproc_picked,icontr_picked)).eq.5)) then
+                        weight=weight*(ans(26,1)+ans(25,1)/enhancement_factor)/(ans(25,1)+ans(26,1))
+                     else
+                        weight=weight*(ans(25,1)+enhancement_factor*ans(26,1))/(ans(25,1)+ans(26,1))
+                     endif
+                  endif
+               endif
             endif
             call finalize_event(x_save(1,ifold_picked),weight,lunlhe
      $           ,putonshell)
@@ -396,10 +412,19 @@ c Randomly pick the contribution that will be written in the event file
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
+         if (EnhanceFlavour) then
+            write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot,ans(25,1),ans(26,1)
+         else
+            write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
+         endif
       else
-         write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
-     $        ,unc(2,1),itmax,ncalls0,tTot
+         if (EnhanceFlavour) then
+            write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
+     $           ,unc(2,1),itmax,ncalls0,tTot,ans(25,1),ans(26,1)
+         else
+            write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
+     $           ,unc(2,1),itmax,ncalls0,tTot
+         endif
       endif
       close(12)
 

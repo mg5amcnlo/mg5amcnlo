@@ -98,6 +98,8 @@ module mint_module
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
   logical :: only_virt,new_point,pass_cuts_check
 
+  logical,parameter :: EnhanceFlavour=.true.
+  
 ! private variables
   character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
                                                    'ABS integral ', & !  1
@@ -124,8 +126,8 @@ module mint_module
                                                    'B  8         ', & ! 22
                                                    'V  9         ', & ! 23
                                                    'B  9         ', & ! 24
-                                                   'V 10         ', & ! 25
-                                                   'B 10         '/)  ! 26
+                                                   'non-B        ', & ! 25
+                                                   'with-B       '/)  ! 26
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
