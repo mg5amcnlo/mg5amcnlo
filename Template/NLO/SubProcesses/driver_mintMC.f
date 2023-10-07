@@ -310,15 +310,15 @@ c Randomly pick the contribution that will be written in the event file
                if (EnhanceFlavour) then
                   if (H_event(icontr_picked)) then
                      if (any(abs(parton_pdg(1:nexternal,iproc_picked,icontr_picked)).eq.5))then
-                        weight=weight*(ans(26,1)+ans(25,1)/enhancement_factor)/(ans(25,1)+ans(26,1))
+                        weight=weight*(xsec_nonB/enhancement_factor+xsec_B)/event_weight
                      else
-                        weight=weight*(ans(25,1)+enhancement_factor*ans(26,1))/(ans(25,1)+ans(26,1))
+                        weight=weight*(xsec_nonB+xsec_B*enhancement_factor)/event_weight
                      endif
                   else
                      if (any(abs(parton_pdg_uborn(1:nexternal-1,iproc_picked,icontr_picked)).eq.5)) then
-                        weight=weight*(ans(26,1)+ans(25,1)/enhancement_factor)/(ans(25,1)+ans(26,1))
+                        weight=weight*(xsec_nonB/enhancement_factor+xsec_B)/event_weight
                      else
-                        weight=weight*(ans(25,1)+enhancement_factor*ans(26,1))/(ans(25,1)+ans(26,1))
+                        weight=weight*(xsec_nonB+xsec_B*enhancement_factor)/event_weight
                      endif
                   endif
                endif
