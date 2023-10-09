@@ -5561,6 +5561,11 @@ class RunCardNLO(RunCard):
         if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
             raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
 
+        # Check that the event weight normalisation is set to 'bias' when there is a non-trivial enhancement-factor
+        if self['enhancement_factor'] != 1.0:
+            logger.warning('Non-trivial enhancement factor: setting event normalisation to "bias"')
+            self['event_norm']='bias'
+            
         # check that ebeam is bigger than the proton mass.
         for i in [1,2]:
             if self['lpp%s' % i ] not in [1,2]:
