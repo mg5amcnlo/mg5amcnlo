@@ -6511,6 +6511,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if returncode:
             raise MadGraph5Error('Fail to download correctly the File. Stop')
 
+        if name == "RunningCoupling":
+            name = "Template/Running"
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
