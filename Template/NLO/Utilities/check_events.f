@@ -36,7 +36,8 @@ c negative number of events
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
      # SCALUP_a(MAXNUP,MAXNUP)
-      double precision sum_wgt,sum_abs_wgt,err_wgt,toterr,diff
+      double precision sum_wgt,sum_abs_wgt2,sum_abs_wgt,err_wgt,toterr
+     $     ,diff
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
@@ -347,6 +348,7 @@ c
 
       sum_wgt=0d0
       sum_abs_wgt=0d0
+      sum_abs_wgt2=0d0
       nevS_lhe=0
       npartS_lhe=0
       nevH_lhe=0
@@ -488,6 +490,7 @@ c
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
          sum_abs_wgt=sum_abs_wgt+abs(XWGTUP)
+         sum_abs_wgt2=sum_abs_wgt2+abs(XWGTUP)**2
 
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
@@ -752,9 +755,10 @@ c Don't check momentum conservation in that case
 
       if(event_norm.eq.'ave'.or.event_norm.eq.'bia')
      #   sum_wgt=sum_wgt/maxevt
-      if(event_norm.eq.'ave'.or.event_norm.eq.'bia')
-     #   sum_abs_wgt=sum_abs_wgt/maxevt
-      err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
+      if(event_norm.eq.'ave'.or.event_norm.eq.'bia') then
+         sum_abs_wgt=sum_abs_wgt/maxevt
+         err_wgt=sqrt(sum_abs_wgt2)/sqrt(dfloat(maxevt))
+      endif
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
       write (*,*) ' of which:',ipos,' w>0',ineg,' w<0'

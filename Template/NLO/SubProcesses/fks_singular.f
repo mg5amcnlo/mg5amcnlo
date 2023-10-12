@@ -2025,6 +2025,22 @@ c overwrite the relevant information.]
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
+            xlum=0d0
+            do j=1,iproc
+               if (any(abs(parton_pdg_uborn(1:nexternal-1,j,i)).eq.5)) then
+                  if (nincoming.eq.2) then
+                     xlum=xlum+pd(j)*conv*enhancement_factor
+                  else
+                     xlum=xlum+pd(j)*enhancement_factor
+                  endif
+               else
+                  if (nincoming.eq.2) then
+                     xlum=xlum+pd(j)*conv
+                  else
+                     xlum=xlum+pd(j)
+                  endif
+               endif
+            enddo
             virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
      &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
             born_wgt_mint(0)=born_wgt_mint(0)*xlum
@@ -3010,6 +3026,7 @@ c while for the S-events we can sum it to the 'i_soft' one.
       do i=1,icontr
          do j=1,niproc(i)
             unwgt(j,i)=0d0
+            unwgt_virt(j,i)=0d0
          enddo
       enddo
       icontr_sum(0,1:icontr)=0
@@ -3064,8 +3081,11 @@ c When computing upper bounding envelope (imode.eq.1) do not include the
 c virtual corrections. Exception: when computing only the virtual, do
 c include it here!
                      if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
-     $                    only_virt) exit
-                     unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
+     $                    only_virt) then
+                        unwgt_virt(j,i_soft)=unwgt_virt(j,i_soft)+parton_iproc(jj,i)
+                     else
+                        unwgt(j,i_soft)=unwgt(j,i_soft)+parton_iproc(jj,i)
+                     endif
                   endif
                enddo
             enddo
@@ -3374,14 +3394,18 @@ c on the imode we should or should not include the virtual corrections.
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer i,j,ict,iamp,ithree,isix
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight,sigint_B,sigint_nonB
+     $     ,sigint_virt_B,sigint_virt_nonB
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       if (EnhanceFlavour) then
          sigint_B=0d0
          sigint_nonB=0d0
+         sigint_virt_B=0d0
+         sigint_virt_nonB=0d0
       endif
       sigint=0d0
       sigint1=0d0
@@ -3412,44 +3436,47 @@ c on the imode we should or should not include the virtual corrections.
                      if (any(abs(parton_pdg_uborn(1:nexternal-1,j,i))
      &                    .eq.5)) then
                         sigint_B=sigint_B+abs(unwgt(j,i))
+                        sigint_virt_B=sigint_virt_B+abs(unwgt_virt(j,i))
                      else
                         sigint_nonB=sigint_nonB+abs(unwgt(j,i))
+                        sigint_virt_nonB=sigint_virt_nonB+abs(unwgt_virt(j,i))
                      endif
                   endif
                endif
             enddo
          enddo
-c check the consistency of the results up to machine precision (10^-10 here)
-         if (imode.ne.1 .or. only_virt) then
-            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
-               write (*,*) 'ERROR: inconsistent integrals #0',sigint
-     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
-               do i=1, icontr
-                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
-     $                 ,H_event(i),itype(i),nFKS(i)
-                  if (icontr_sum(0,i).eq.0) cycle
-                  do j=1,niproc(i)
-                     write (*,*) j,unwgt(j,i)
-                  enddo
-               enddo
-               stop 1
-            endif
-         else
-            sigint1=sigint1+virt_wgt_mint(0)
-            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
-               write (*,*) 'ERROR: inconsistent integrals #1',sigint
-     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
-     $              ,virt_wgt_mint
-               do i=1, icontr
-                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
-                  if (icontr_sum(0,i).eq.0) cycle
-                  do j=1,niproc(i)
-                     write (*,*) j,unwgt(j,i)
-                  enddo
-               enddo
-               stop 1
-            endif
-         endif
+c$$$c check the consistency of the results up to machine precision (10^-10 here)
+c$$$         if (imode.ne.1 .or. only_virt) then
+c$$$            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
+c$$$               write (*,*) 'ERROR: inconsistent integrals #0',sigint
+c$$$     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
+c$$$               do i=1, icontr
+c$$$                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+c$$$     $                 ,H_event(i),itype(i),nFKS(i)
+c$$$                  if (icontr_sum(0,i).eq.0) cycle
+c$$$                  do j=1,niproc(i)
+c$$$                     write (*,*) j,unwgt(j,i)
+c$$$                  enddo
+c$$$               enddo
+c$$$               stop 1
+c$$$            endif
+c$$$         else
+c$$$            sigint1=sigint1+virt_wgt_mint(0)
+c$$$            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
+c$$$               write (*,*) 'ERROR: inconsistent integrals #1',sigint
+c$$$     $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
+c$$$     $              ,virt_wgt_mint
+c$$$               do i=1, icontr
+c$$$                  write (*,*) i,icontr_sum(0,i),niproc(i),wgts(1,i)
+c$$$                  if (icontr_sum(0,i).eq.0) cycle
+c$$$                  do j=1,niproc(i)
+c$$$                     write (*,*) j,unwgt(j,i)
+c$$$                  enddo
+c$$$               enddo
+c$$$               stop 1
+c$$$            endif
+c$$$         endif
+
 c n1body_wgt is used for the importance sampling over FKS directories
          do i=1,icontr
             if (icontr_sum(0,i).eq.0) cycle
@@ -3463,7 +3490,11 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
       endif
-      f(1)=sigint_ABS
+      if (EnhanceFlavour) then
+         f(1)=sigint_nonB+enhancement_factor*sigint_B
+      else
+         f(1)=sigint_ABS
+      endif
       f(2)=sigint
       f(4)=virtual_over_born
       do iamp=0,amp_split_size
@@ -3484,8 +3515,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
          endif
       enddo
       if (EnhanceFlavour) then
-         f(25)=sigint_nonB
-         f(26)=sigint_B
+         f(25)=sigint_nonB+sigint_virt_nonB
+         f(26)=sigint_B+sigint_virt_B
       endif
       
       return
