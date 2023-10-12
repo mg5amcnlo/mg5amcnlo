@@ -1802,6 +1802,9 @@ class OrganizeModelExpression:
             depend_on = self.find_dependencies(expr)
             parameter = base_objects.ModelVariable(coupling.name, expr, 'complex', depend_on)
             # Add consistently in the couplings/all_expr
+            if 'aS' in depend_on and 'QCD' not in coupling.order:
+                logger.warning('coupling %s=%s has direct dependence in aS but has QCD order set to 0. Automatic computation of scale uncertainty can be wrong for such model.',
+                               coupling.name, coupling.value)
             try:
                 self.couplings[depend_on].append(parameter)
             except KeyError:
