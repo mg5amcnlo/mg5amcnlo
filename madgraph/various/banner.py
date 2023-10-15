@@ -3661,6 +3661,9 @@ class RunCardLO(RunCard):
                 continue
             break
 
+        if proc_characteristic['ninitial'] == 1:
+            self['SDE_strategy'] =1
+
         if 'MLM' in proc_characteristic['limitations']:
             if self['dynamical_scale_choice'] ==  -1:
                 self['dynamical_scale_choice'] = 3
