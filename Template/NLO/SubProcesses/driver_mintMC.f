@@ -318,7 +318,7 @@ c Randomly pick the contribution that will be written in the event file
          call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
-         write (lunlhe_w,'(a)') "</LesHouchesEvents>"
+c$$$         write (lunlhe_w,'(a)') "</LesHouchesEvents>"
          close(lunlhe_w)
       endif
 
@@ -944,7 +944,7 @@ c determined which contributions are identical.
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
 
-         if (imode.eq.2 .and. WriteWeightedEvent) then
+         if (imode.eq.2 .and. WriteWeightedEvent .and. icontr.gt.0) then
             call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines

@@ -627,7 +627,7 @@ c if the file is a partial file the header is non-standard
       common /lhef_init/XSECUP2,XERRUP2,XMAXUP2,LPRUP2
 c
       write(ifile,'(a)')
-     # '  <init>'
+     # '<init>'
       write(ifile,501)IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2),
      #                PDFGUP(1),PDFGUP(2),PDFSUP(1),PDFSUP(2),
      #                IDWTUP,NPRUP
@@ -638,7 +638,7 @@ c
          enddo
       endif
       write(ifile,'(a)')
-     # '  </init>'
+     # '</init>'
  501  format(2(1x,i6),2(1x,e14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
  502  format(3(1x,e14.8),1x,i6)
 c
@@ -721,23 +721,23 @@ c
       if (event_id.ge.0) then
          event_id=event_id+1
          if (event_id.le.9) then
-            write(ifile,'(a,i1,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i1,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.99) then
-            write(ifile,'(a,i2,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i2,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.999) then
-            write(ifile,'(a,i3,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i3,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.9999) then
-            write(ifile,'(a,i4,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i4,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.99999) then
-            write(ifile,'(a,i5,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i5,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.999999) then
-            write(ifile,'(a,i6,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i6,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.9999999) then
-            write(ifile,'(a,i7,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i7,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.99999999) then
-            write(ifile,'(a,i8,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i8,a)') "<event id='",event_id,"'>"
          elseif(event_id.le.999999999) then
-            write(ifile,'(a,i9,a)') "  <event id='",event_id,"'>"
+            write(ifile,'(a,i9,a)') "<event id='",event_id,"'>"
          else
             write (ifile,*) "ERROR: EVENT ID TOO LARGE",event_id
             write (*,*) "ERROR: EVENT ID TOO LARGE",event_id
@@ -746,23 +746,23 @@ c
       elseif(nattr.eq.2) then
          if ( (npLO.ge.10.or.npLO.lt.0) .and.
      &        (npNLO.ge.10.or.npNLO.lt.0)) then
-            write(ifile,'(a,i2,a,i2,a)') "  <event npLO=' ",npLO
+            write(ifile,'(a,i2,a,i2,a)') "<event npLO=' ",npLO
      $           ," ' npNLO=' ",npNLO," '>"
          elseif( (npLO.lt.10.or.npLO.ge.0) .and.
      &        (npNLO.ge.10.or.npNLO.lt.0)) then
-            write(ifile,'(a,i1,a,i2,a)') "  <event npLO=' ",npLO
+            write(ifile,'(a,i1,a,i2,a)') "<event npLO=' ",npLO
      $           ," ' npNLO=' ",npNLO," '>"
          elseif( (npLO.ge.10.or.npLO.lt.0) .and.
      &        (npNLO.lt.10.or.npNLO.ge.0)) then
-            write(ifile,'(a,i2,a,i1,a)') "  <event npLO=' ",npLO
+            write(ifile,'(a,i2,a,i1,a)') "<event npLO=' ",npLO
      $           ," ' npNLO=' ",npNLO," '>"
          elseif( (npLO.lt.10.or.npLO.ge.0) .and.
      &        (npNLO.lt.10.or.npNLO.ge.0)) then
-            write(ifile,'(a,i1,a,i1,a)') "  <event npLO=' ",npLO
+            write(ifile,'(a,i1,a,i1,a)') "<event npLO=' ",npLO
      $           ," ' npNLO=' ",npNLO," '>"
          endif
       else
-         write(ifile,'(a)') '  <event>'
+         write(ifile,'(a)') '<event>'
       endif
       write(ifile,503)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
       do i=1,nup
@@ -887,7 +887,7 @@ c Write the <scales> block only for scales related to valid colour lines
          write(ifile,'(a)')"  "//trim(scale_str)//">"
          write(ifile,'(a)') "  </scales>"
       endif
-      write(ifile,'(a)') '  </event>'
+      write(ifile,'(a)') '</event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
