@@ -3835,6 +3835,15 @@ plot \\"""
                     s=line
         word_list = s.split()
         Energy2=float(word_list[0])
+        
+        
+        if (Energy1<=0.938 or Energy2<=0.938):
+                sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
+        else: 
+                sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
+        
+        
+        
 
         sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
         # Add a margin on upper and lower bound.

@@ -4684,8 +4684,8 @@ class RunCardNLO(RunCard):
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
-            if self['lpp1'] == 1 or self['lpp2']==1:
-                raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
+            #if self['lpp1'] == 1 or self['lpp2']==1:
+                #raise InvalidRunCard('Process like Deep Inelastic scattering not supported at NLO accuracy.')
         
             if self['lpp1'] == 0  == self['lpp2']:
                 if self['pdlabel']!='nn23nlo' or self['reweight_pdf']:
