@@ -3990,8 +3990,10 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] != 'none':
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to none" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                if self[pdlabelX] not in ['none', 'iww'] :
+                    logger.warning("%s \'%s\' not compatible with %s \'%s\' " % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
+#                if self[pdlabelX] != 'none':
+#                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to none" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'none')
                     mod = True
 
