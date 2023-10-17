@@ -11,7 +11,6 @@
 #
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 from aloha.aloha_object import *
 import aloha.aloha_lib as aloha_lib
 import cmath

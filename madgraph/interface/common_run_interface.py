@@ -20,7 +20,6 @@ from __future__ import division
 
 
 from __future__ import absolute_import
-from __future__ import print_function
 import ast
 import logging
 import math
@@ -1889,11 +1888,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
-            if sys.version_info[1] == 6 and sys.version_info[0] == 2:
-                if input.endswith('.gz'):
-                    misc.gunzip(input)
-                    input = input[:-3]
-                    
+
             for i in range(nb_submit):
                 #computing start/stop event
                 event_requested = event_per_job
@@ -2918,7 +2913,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             run_analysis = "{0},{1}".format(run_analysis, analysis)
         run_analysis = run_analysis.split(",", 1)[1]
         if "$CONTUR_" in run_analysis:
-            set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
+            if not os.path.exists(pjoin(self.options['contur_path'], 'conturenv.sh')):
+                raise Exception("contur_path is not correctly setup. Should be the directory of contur and conturenv.sh script")
+            #4 Write Rivet lines
+            shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
+            shell = misc.which(shell)
+            p = subprocess.Popen('source {0} &>/dev/null; echo $CONTUR_USER_DIR'.format(pjoin(self.options['contur_path'], "conturenv.sh"))
+                                 , shell=True, stdout=subprocess.PIPE, executable=shell)
+            (out,_) = p.communicate()                            
+            contur_user_dir = out.decode().strip()
+            # ISSUE HERE TOO FOR DOCKER -> get from env?
+            #set_env = "source {0}\n".format(pjoin(self.options['contur_path'], "contur", "data", "share", "analysis-list"))
+            set_env = "source {0}\n".format(pjoin(contur_user_dir,"analysis-list"))
             #ATLAS_2016_I1469071 sometimes give segmentation errors and also not so safe due to neutrino truth info. Need to force remove this?
             set_env = set_env + "{0}=`echo {1} | sed 's/,ATLAS_2016_I1469071//'`\n".format(run_analysis.replace("$",""), run_analysis)
 
@@ -3117,13 +3123,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
         # Bypass initialization information
-        MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
+        try:
+            MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
                 loglevel=100,
                 forced=True,
                 compilation=True)
+        except SystemExit as error:
+            return
+        except Exception as error:
+            logger.warning("MA5 fails with: \n %s", error)
+            return
 
 
         # If failed to start MA5, then just leave
@@ -3907,8 +3919,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
                 self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5',
-                                                        'mg5_configuration.txt')
+                legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+                if os.path.exists(legacy_config_dir):
+                    config_dir = legacy_config_dir
+                else:
+                    config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+                config_path = os.path.join(config_dir, 'mg5_configuration.txt')
+
                 if os.path.exists(config_path):
                     self.set_configuration(config_path=config_path,  final=False)
             if amcatnlo:
@@ -4508,7 +4527,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     
                     
             #check that the pdfset is not already there
-            elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
+            if not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
                not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
     
                 if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
@@ -6713,24 +6732,45 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           'ct14q14': 0.118,
                           'ct14q21':0.118}
 
+            # run_card full validity not run at this stage. 
+            # since we need the pdlabel here, just run that part of the check
+            if 'pdlabel' in run_card.parameter_in_block:
+                run_card.parameter_in_block['pdlabel'].check_validity(run_card)
             pdlabel = run_card['pdlabel']
             if pdlabel == 'mixed':
                 pdlabel1 = run_card['pdlabel1']
                 if pdlabel1 == 'lhapdf' or pdlabel1 in as_for_pdf:
                     pdlabel = pdlabel1
 
-            if pdlabel == 'lhapdf':
+            try:
+                old_value = param_card.get('sminputs').get((3,)).value
+            except (KeyError, AttributeError):
+                old_value = None
+
+            if old_value is None:
+                pass
+            elif pdlabel == 'lhapdf':
                 lhapdf = misc.import_python_lhapdf(lhapdfconfig)
+
                 if lhapdf:
+                    if isinstance(run_card['lhaid'], list):
+                        lhaid= run_card['lhaid'][0]
+                    else:
+                        lhaid = run_card['lhaid']
+
+                    # if supported check first that pdfset is installed (and do it if not)
+                    if hasattr(mecmd, 'copy_lhapdf_set'):
+                        pdfsetsdir = mecmd.get_lhapdf_pdfsetsdir()
+                        mecmd.copy_lhapdf_set([lhaid], pdfsetsdir)
+
                     old_value = param_card.get('sminputs').get((3,)).value
                     lhapdf.setVerbosity(0)
-                    pdf = lhapdf.mkPDF(run_card['lhaid'])
+                    pdf = lhapdf.mkPDF(lhaid)
                     new_value = pdf.alphasQ(91.1876)
                     param_card.get('sminputs').get((3,)).value = new_value
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  new_value)
                     modify = True
             elif pdlabel in as_for_pdf:
-                old_value = param_card.get('sminputs').get((3,)).value
                 new_value = as_for_pdf[pdlabel]
                 if old_value != new_value:
                     param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]
@@ -7472,6 +7512,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.basename(answer.replace('_card.dat','')) in self.modified_card:
             self.write_card(os.path.basename(answer.replace('_card.dat','')))
 
+        start = time.time()
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd as error:
@@ -7489,6 +7530,8 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
+        if time.time() - start < .5:
+            self.mother_interface.ask("Are you really that fast? If you are using an editor that returns directly. Please confirm that you have finised to edit the file", 'y')
         self.reload_card(path)
         
     def reload_card(self, path): 

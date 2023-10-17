@@ -76,7 +76,7 @@ c
       double precision virtgrannybar
       integer i,j,igranny_fail
       data igranny_fail /0/
-      double precision dot,dummy,pgranny(0:3),jac
+      double precision dot,pgranny(0:3),jac
       external dot
       double precision rat_xi_orig
       common /c_rat_xi/ rat_xi_orig
@@ -613,6 +613,247 @@ c better compute it again to set all the common blocks correctly.
       end
 
 
+      subroutine generate_tau_y_wrapper(one_body,ns_channel,nt_channel,
+     $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
+      ! generates tau and y, calling the functions that correpsond to the
+      ! case at hand
+      implicit none
+      logical one_body
+      integer ns_channel, nt_channel
+      include 'nexternal.inc'
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+      double precision totmass, stot
+      double precision rndx(2)
+      double precision tau_born, ycm_born, ycmhat, xjac
+C
+      include 'run.inc'
+      integer ndim_dummy
+      double precision fksmass
+c Conflicting BW stuff
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
+     $     ,cBW_level
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+
+      ndim_dummy=-1 ! this is actually not used anymore
+
+      if (abs(lpp(1)).ne.abs(lpp(2))) then
+          write(*,*) 'Different beams not implemented', lpp
+          stop 1
+      endif
+      if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
+     &     .not.(softtest.or.colltest)) then
+         if (abs(lpp(1)).eq.1.or.abs(lpp(2)).eq.1) then ! this is for pp or ap collisions
+c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
+C  rndx(1) -> tau; rndx(2) -> ycm
+           if (one_body) then
+c tau is fixed by the mass of the final state particle
+              call compute_tau_one_body(totmass,stot,tau_born,xjac)
+           else
+               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+     $           cBW(-ns_channel-1).ne.2)then
+c Generate tau according to a Breit-Wiger function
+                 call generate_tau_BW(stot,ndim_dummy,rndx(1),qmass(
+     $              -ns_channel-1),qwidth(-ns_channel-1),cBW(-ns_channel
+     $              -1),cBW_mass(-1, -ns_channel-1),cBW_width(-1,
+     $              -ns_channel-1),tau_born,xjac)
+               else 
+c     not a Breit Wigner
+                 call generate_tau(stot,ndim_dummy,rndx(1),tau_born,xjac)
+               endif
+           endif
+         
+c Generate the rapditity of the Born system
+           call generate_y(tau_born,rndx(2),ycm_born,ycmhat,xjac)
+
+        else                    ! this is for dressed ee collisions
+           call generate_ee_tau_y(rndx(1), rndx(2), one_body, totmass,
+     $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
+     $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
+     $        cBW_width(-1,-ns_channel-1),
+     $        tau_born, ycm_born, ycmhat, xjac)
+           ! for non-physical configurations, xjac=-1000
+           if (xjac.eq.-1000d0) return
+         endif
+      elseif (abs(lpp(1)).ge.1 .and.
+     &     .not.(softtest.or.colltest)) then
+         write(*,*)'Option x1 not implemented in one_tree'
+         stop
+      elseif (abs(lpp(2)).ge.1 .and.
+     &     .not.(softtest.or.colltest)) then
+         write(*,*)'Option x2 not implemented in one_tree'
+         stop
+      else
+c No PDFs (also use fixed energy when performing tests)
+         call compute_tau_y_epem(j_fks,one_body,totmass,stot,
+     &        tau_born,ycm_born,ycmhat)
+         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
+            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
+     &           /'not allowed for processes generated at NLO.'
+            stop 1
+         endif
+      endif
+
+      return
+      end
+
+
+      subroutine generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
+     $          m,s,
+     $          qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+      ! generate the momenta for the reduced born system
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+
+      double precision x(99), shat_born, sqrtshat_born, totmass
+      double precision S(-max_branch:max_particles),M(-max_branch:max_particles)
+      double precision xpswgt0, xjac0
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),
+     &                 granny_m2_red(-1:1),m_born(nexternal-1)
+      logical input_granny_m2
+
+      integer itree(2,-max_branch:-1)
+      integer ns_channel, nt_channel, ionebody, nbranch
+      logical one_body
+      common/born_trees/itree,ns_channel,nt_channel,ionebody,nbranch,one_body
+
+      logical pass
+      double precision pb(0:3,-max_branch:nexternal-1),p_born_CHECK(0:3,nexternal-1)
+C
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
+c Conflicting BW stuff
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
+     $     ,cBW_level
+c Common block with granny information
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+
+      integer i,j
+
+      pass = .true.
+
+c Generate the momenta for the initial state of the Born system
+      if(nincoming.eq.2) then
+        call mom2cx(sqrtshat_born,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+      else
+         pb(0,1)=sqrtshat_born
+         do i=1,2
+            pb(i,1)=0d0
+         enddo
+      endif
+      s(-nbranch)  = shat_born
+      m(-nbranch)  = sqrtshat_born
+      pb(0,-nbranch)= m(-nbranch)
+      pb(1,-nbranch)= 0d0
+      pb(2,-nbranch)= 0d0
+      pb(3,-nbranch)= 0d0
+c     
+c Generate Born-level momenta
+c
+c Start by generating all the invariant masses of the s-channels
+      if (granny_is_res) then
+         call generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &        ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass
+     &        ,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
+      else
+         call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
+     $        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
+     $        ,pass)
+      endif
+      if (.not.pass) then
+         xjac0=-139
+         return
+      endif
+c If only s-channels, also set the p1+p2 s-channel
+      if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
+         s(-nbranch+1)=s(-nbranch) 
+         m(-nbranch+1)=m(-nbranch)       !Basic s-channel has s_hat 
+         pb(0,-nbranch+1) = m(-nbranch+1)!and 0 momentum
+         pb(1,-nbranch+1) = 0d0
+         pb(2,-nbranch+1) = 0d0
+         pb(3,-nbranch+1) = 0d0
+      endif
+c
+c     Next do the T-channel branchings
+c
+      if (nt_channel.ne.0) then
+         call generate_t_channel_branchings(ns_channel,nbranch,itree
+     $        ,m,s,x,pb,xjac0,xpswgt0,pass)
+        if (.not.pass) then
+           xjac0=-140
+           return
+        endif
+      endif
+c
+c     Now generate momentum for all intermediate and final states
+c     being careful to calculate from more massive to less massive states
+c     so the last states done are the final particle states.
+c
+      call fill_born_momenta(nbranch,nt_channel,one_body,ionebody
+     &     ,x,itree,m,s,pb,xjac0,xpswgt0,pass)
+      if (.not.pass) then
+         xjac0=-141
+         return
+      endif
+c
+c  Now I have the Born momenta
+c
+      do i=1,nexternal-1
+         do j=0,3
+            p_born_l(j,i)=pb(j,i)
+            p_born_CHECK(j,i)=pb(j,i)
+         enddo
+         m_born(i)=m(i)
+      enddo
+      call phspncheck_born(sqrtshat_born,m_born,p_born_CHECK,pass)
+      if (.not.pass) then
+         xjac0=-142
+         return
+      endif
+
+      if (.not.only_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+
+      if (.not. skip_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born_ev(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+
+      return
+      end
+
+
+
       subroutine generate_momenta_conf(input_granny_m2,ndim,jac,x
      &     ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
 c
@@ -648,50 +889,10 @@ c     2 soft-collinear
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision p_born_l(0:3,nexternal-1)
-      common/pborn_l/p_born_l
-      double precision p_born_ev(0:3,nexternal-1)
-      common/pborn_ev/p_born_ev
-      double precision p_ev(0:3,nexternal)
-      common/pev/p_ev
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-      double precision xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
-      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
-      double complex xij_aor
-      common/cxij_aor/xij_aor
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     &                        sqrtshat,shat
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-      logical softtest,colltest
-      common/sctests/softtest,colltest
       logical nocntevents
       common/cnocntevents/nocntevents
-      double precision xiimax_ev
-      common /cxiimaxev/xiimax_ev
-      double precision xiimax_cnt(-2:2)
-      common /cxiimaxcnt/xiimax_cnt
-      logical nbody
-      common/cnbody/nbody
-      double precision xinorm_ev
-      common /cxinormev/xinorm_ev
-      double precision xinorm_cnt(-2:2)
-      common /cxinormcnt/xinorm_cnt
       integer iconfig0,iconfigsave
       common/ciconfig0/iconfig0
       save iconfigsave
@@ -700,16 +901,14 @@ c Masses of particles. Should be filled in setcuts.f
       common /to_mass/pmass
 c local
       integer i,j,nbranch,ns_channel,nt_channel,ionebody
-     &     ,fksconfiguration,icountevts,imother,ixEi,ixyij,ixpi,isolsign
+     &     ,isolsign
       double precision M(-max_branch:max_particles),totmassin,totmass
-     &     ,stot,xp(0:3,nexternal),pb(0:3,-max_branch:nexternal-1),xjac0
+     &     ,stot,xjac0,S(-max_branch:max_particles)
      &     ,tau_born,ycm_born,ycmhat,fksmass,xbjrk_born(2),shat_born
-     &     ,sqrtshat_born,S(-max_branch:max_particles),xpswgt0
-     &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
-     &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
-     &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1),xi_i_hat
-     &     ,rat_xi
-      logical one_body,pass,check_cnt
+     &     ,sqrtshat_born,xpswgt0,m_born(nexternal-1),rat_xi
+      logical one_body,pass
+      logical use_evpr
+      common /to_use_evpr/use_evpr
 c external
       double precision lambda
       external lambda
@@ -726,22 +925,9 @@ c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
      &     ,ionebody,fksmass,nbranch
       common /c_isolsign/isolsign
-c Conflicting BW stuff
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
-     $     ,cBW_level
-c Common block with granny information
-      logical granny_is_res
-      integer igranny,iaunt
-      logical granny_chain(-nexternal:nexternal)
-     &     ,granny_chain_real_final(-nexternal:nexternal)
-      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
-     &     ,granny_chain_real_final
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
-      
+
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -762,7 +948,6 @@ c Make sure have enough mass for external particles
             totmassin=totmassin+m(i)
          enddo
          totmass=0d0
-         nbranch = nexternal-3 ! nexternal is for n+1-body, while itree uses n-body
          do i=nincoming+1,nexternal-1
             totmass=totmass+m(i)
          enddo
@@ -772,93 +957,22 @@ c Make sure have enough mass for external particles
      &           /'insufficient collider energy'
             stop
          endif
-c Determine number of s- and t-channel branches, at this point it
-c includes the s-channel p1+p2
-         ns_channel=1
-         do while(itree(1,-ns_channel).ne.1 .and.
-     &        itree(1,-ns_channel).ne.2 .and. ns_channel.lt.nbranch)
-            m(-ns_channel)=0d0                 
-            ns_channel=ns_channel+1         
-         enddo
-         ns_channel=ns_channel - 1
-         nt_channel=nbranch-ns_channel-1
-c If no t-channles, ns_channels is one less, because we want to exclude
-c the s-channel p1+p2
-         if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
-            ns_channel=ns_channel-1
-         endif
-c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1-body)
-         if((nexternal-nincoming).eq.2)then
-            one_body=.true.
-            ionebody=nexternal-1
-            ns_channel=0
-            nt_channel=0
-         elseif((nexternal-nincoming).gt.2)then
-            one_body=.false.
-         else
-            write(*,*)'Error #1 in genps_fks.f',nexternal,nincoming
-            stop
-         endif
+
+         call fill_genmom_born_commons(itree,m)
+
          firsttime=.false.
          iconfigsave=iconfig0
       endif                     ! firsttime
 c
       xjac0=1d0
       xpswgt0=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c Generate Bjorken x's if need be cccccccccccccccccccccccccccccccccccccccccccc
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         if (abs(lpp(1)).eq.1.or.abs(lpp(2)).eq.1) then ! this is for pp or ap collisions
-c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
-            if (one_body) then
-c tau is fixed by the mass of the final state particle
-               call compute_tau_one_body(totmass,stot,tau_born,xjac0)
-            else
-               if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
-     $           cBW(-ns_channel-1).ne.2)then
-c Generate tau according to a Breit-Wiger function
-                  call generate_tau_BW(stot,ndim-4,x(ndim-4),qmass(
-     $              -ns_channel-1),qwidth(-ns_channel-1),cBW(-ns_channel
-     $              -1),cBW_mass(-1, -ns_channel-1),cBW_width(-1,
-     $              -ns_channel-1),tau_born,xjac0)
-               else 
-c     not a Breit Wigner
-                  call generate_tau(stot,ndim-4,x(ndim-4),tau_born,xjac0)
-               endif
-            endif
-         
-c Generate the rapditity of the Born system
-           call generate_y(tau_born,x(ndim-3),ycm_born,ycmhat,xjac0)
 
-        else                    ! this is for dressed ee collisions
-           call generate_ee_tau_y(x(ndim-4), x(ndim-3), one_body,
-     $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
-     $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
-     $        cBW_width(-1,-ns_channel-1),
-     $        tau_born, ycm_born, ycmhat, xjac0)
-           ! for non-physical configurations, xjac=-1000
-           if (xjac0.eq.-1000d0) goto 222
-         endif
-      elseif (abs(lpp(1)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         write(*,*)'Option x1 not implemented in one_tree'
-         stop
-      elseif (abs(lpp(2)).ge.1 .and.
-     &     .not.(softtest.or.colltest)) then
-         write(*,*)'Option x2 not implemented in one_tree'
-         stop
-      else
-c No PDFs (also use fixed energy when performing tests)
-         call compute_tau_y_epem(j_fks,one_body,fksmass,stot,
-     &        tau_born,ycm_born,ycmhat)
-         if (j_fks.le.nincoming .and. .not.(softtest.or.colltest)) then
-            write (*,*) 'Process has incoming j_fks, but fixed shat: '/
-     &           /'not allowed for processes generated at NLO.'
-            stop 1
-         endif
-      endif
+      ! generate tau and y
+      call generate_tau_y_wrapper(one_body,ns_channel,nt_channel,
+     $ qmass,qwidth,totmass,stot,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
+      ! filter unphysical configurations
+      if (xjac0.lt.0d0) goto 222
+
 c Compute Bjorken x's from tau and y
       xbjrk_born(1)=sqrt(tau_born)*exp(ycm_born)
       xbjrk_born(2)=sqrt(tau_born)*exp(-ycm_born)
@@ -868,100 +982,149 @@ c Compute shat and sqrt(shat)
         sqrtshat_born=sqrt(shat_born)
       else
 c Trivial, but prevents loss of accuracy
-        shat_born=fksmass**2
-        sqrtshat_born=fksmass
+        shat_born=totmass**2
+        sqrtshat_born=totmass
       endif
-c Generate the momenta for the initial state of the Born system
-      if(nincoming.eq.2) then
-        call mom2cx(sqrtshat_born,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+
+      !!!!! for dressed-lepton collisions only !!!!
+      ! if j_fks is initial state, then use the mapping without
+      ! event-projection if use_evpr is set to false
+      !(note that in e+e- collisions, if tau is generated with a BW
+      ! then use_evpr is set to true)
+      if ((lpp(1).eq.1.and.lpp(2).eq.1).or.
+     $   (lpp(1).eq.0.and.lpp(2).eq.0)) then
+          use_evpr = .true.
+      else if ((abs(lpp(1)).eq.3.and.abs(lpp(2)).eq.3).or.
+     $         (abs(lpp(1)).eq.4.and.abs(lpp(2)).eq.4)) then
+          use_evpr = use_evpr.or.j_fks.gt.nincoming 
+      endif
+
+      if (use_evpr) then
+        ! standard mapping with event-projection
+        call generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
+     $      m,s,
+     $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt0,xjac0)
+
+        call generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
+     $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $      xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+
       else
-         pb(0,1)=sqrtshat_born
-         do i=1,2
-            pb(i,1)=0d0
-         enddo
-         p(3,1)=1e-14           ! For HELAS routine ixxxxx for neg. mass
+        ! new mapping without event-projection, suitable for e+e-
+        ! collisions with ISR(+beamstrahlung)
+        call generate_noevpr_kinematics(x,ndim,xjac0,xpswgt0,
+     $      stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,totmass,
+     $      xbjrk_born,input_granny_m2,granny_m2_red,m,s,qmass,qwidth,m_born,jac,p,pass)
       endif
-      s(-nbranch)  = shat_born
-      m(-nbranch)  = sqrtshat_born
-      pb(0,-nbranch)= m(-nbranch)
-      pb(1,-nbranch)= 0d0
-      pb(2,-nbranch)= 0d0
-      pb(3,-nbranch)= 0d0
-c     
-c Generate Born-level momenta
+
+      !MZ check that adding .or.xjac0<0 does not screw things up
+      if(.not.pass.or.xjac0.lt.0d0)goto 222
+      return
+
+ 222  continue
 c
-c Start by generating all the invariant masses of the s-channels
-      if (granny_is_res) then
-         call generate_inv_mass_sch_granny(input_granny_m2,ns_channel
-     &        ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass
-     &        ,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
-      else
-         call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
-     $        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
-     $        ,pass)
-      endif
-      if (.not.pass) goto 222
-c If only s-channels, also set the p1+p2 s-channel
-      if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
-         s(-nbranch+1)=s(-nbranch) 
-         m(-nbranch+1)=m(-nbranch)       !Basic s-channel has s_hat 
-         pb(0,-nbranch+1) = m(-nbranch+1)!and 0 momentum
-         pb(1,-nbranch+1) = 0d0
-         pb(2,-nbranch+1) = 0d0
-         pb(3,-nbranch+1) = 0d0
-      endif
-c
-c     Next do the T-channel branchings
-c
-      if (nt_channel.ne.0) then
-         call generate_t_channel_branchings(ns_channel,nbranch,itree
-     $        ,m,s,x,pb,xjac0,xpswgt0,pass)
-         if (.not.pass) goto 222
-      endif
-c
-c     Now generate momentum for all intermediate and final states
-c     being careful to calculate from more massive to less massive states
-c     so the last states done are the final particle states.
-c
-      call fill_born_momenta(nbranch,nt_channel,one_body,ionebody
-     &     ,x,itree,m,s,pb,xjac0,xpswgt0,pass)
-      if (.not.pass) goto 222
-c
-c  Now I have the Born momenta
-c
-      do i=1,nexternal-1
-         do j=0,3
-            p_born_l(j,i)=pb(j,i)
-            p_born_CHECK(j,i)=pb(j,i)
-         enddo
-         m_born(i)=m(i)
+c Born momenta have not been generated. Neither events nor counterevents exist.
+c Set all to negative values and exit
+      jac=-222
+      jac_cnt(0)=-222
+      jac_cnt(1)=-222
+      jac_cnt(2)=-222
+      p(0,1)=-99
+      do i=-2,2
+        p1_cnt(0,1,i)=-99
       enddo
-      call phspncheck_born(sqrtshat_born,m_born,p_born_CHECK,pass)
-      if (.not.pass) then
-         xjac0=-142
-         goto 222
-      endif
+      if (.not.only_event_phsp) p_born(0,1)=-99
+      nocntevents=.true.
 
-      if (.not.only_event_phsp) then
-         do i=1,nexternal-1
-            do j=0,3
-               p_born(j,i)=p_born_l(j,i)
-            enddo
-         enddo
-      endif
+      return
+      end
 
-      if (.not. skip_event_phsp) then
-         do i=1,nexternal-1
-            do j=0,3
-               p_born_ev(j,i)=p_born_l(j,i)
-            enddo
-         enddo
+
+
+      subroutine generate_FKS_kinematics(x,ndim,xjac0,xpswgt0,
+     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
+     $  xbjrk_born,input_granny_m2,m,m_born,jac,p,pass)
+      implicit none
+
+      include 'genps.inc'
+      include 'nexternal.inc'
+
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),
+     $   stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,jac
+      double precision xbjrk_born(2)
+      double precision M(-max_branch:max_particles),m_born(nexternal-1)
+      integer ndim
+      logical input_granny_m2, pass
+
+      integer icountevts
+      integer ixEi,ixyij,ixpi,imother
+      double precision xmrec2,m_j_fks,phi_i_fks,rat_xi,tau,
+     $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
+     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
+      integer i,j
+
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
+
+      logical nocntevents
+      common/cnocntevents/nocntevents
+
+      logical nbody
+      common/cnbody/nbody
+
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+
+      double complex xij_aor
+      common/cxij_aor/xij_aor
+
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     &                        sqrtshat,shat
+
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+
+      integer isolsign
+      common /c_isolsign/isolsign
+
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
+      logical fks_as_is
+      parameter (fks_as_is=.false.)
+
+      ! check that the starting PS point is meaningful
+      if (xjac0.lt.0d0) then
+         pass = .false.
+         return
       endif
-c
 c
 c Here we start with the FKS Stuff
-c
-c
 c
 c icountevts=-100 is the event, -2 to 2 the counterevents
       icountevts = -100
@@ -1019,7 +1182,7 @@ c For final state j_fks, compute the recoil invariant mass
          call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
          if (.not.pass) then
             xjac0=-44
-            goto 222
+            return
          endif
       endif
 
@@ -1108,9 +1271,419 @@ c All done, so check four-momentum conservation
             goto 112
          endif
       endif
+
+      call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
 c      
+ 112  continue
+
+      call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+c
+      if(icountevts.eq.-100)then
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c skips counterevents when integrating over second fold for massive
+c j_fks
+         if( isolsign.eq.-1 )icountevts=5
+         if (only_event_phsp) return
+      else
+         icountevts=icountevts+1
+      endif
+      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
+     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
+     &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
+         goto 111 ! back to the top of the loop
+
+      elseif(icountevts.eq.5) then
+c icountevts=5 only when integrating over the second fold with j_fks
+c massive. The counterevents have been skipped, so make sure their
+c momenta are unphysical. Born are physical if event was generated, and
+c must stay so for the computation of enhancement factors.
+         do i=0,2
+            jac_cnt(i)=-299
+            p1_cnt(0,1,i)=-99
+         enddo
+      endif
+
+      nocntevents=(jac_cnt(0).le.0.d0) .and.
+     &            (jac_cnt(1).le.0.d0) .and.
+     &            (jac_cnt(2).le.0.d0)
+      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
+c
+      return
+      end
+
+
+
+      subroutine generate_noevpr_kinematics(x,ndim,xjac0,xpswgt0,
+     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,totmass,
+     $  xbjrk_born,input_granny_m2,granny_m2_red,m,s,qmass,qwidth,m_born,jac,p,pass)
+      ! generate the kinematics without event projection.
+      ! In this case, the bjorken x's are kept the same for all contributions
+      ! (event and coutnerevents).
+      ! First one generates the radiation (I_fks), then the reduced Born 
+      ! system with a com energy sborn=(1-xi)*shat
+      implicit none
+
+      include 'genps.inc'
+      include 'nexternal.inc'
+
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),
+     $   stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,totmass,jac
+      double precision xbjrk_born(2)
+      double precision M(-max_branch:max_particles),S(-max_branch:max_particles),
+     $   m_born(nexternal-1)
+      integer ndim
+      logical input_granny_m2, pass
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+     &     ,granny_m2_red(-1:1)
+
+      integer icountevts
+      integer ixEi,ixyij,ixpi,imother
+      double precision xmrec2,m_j_fks,phi_i_fks,rat_xi,tau,
+     $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
+     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3)
+      integer i,j
+
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
+      double precision p_born_coll(0:3,nexternal-1)
+      common/pborn_coll/p_born_coll
+      double precision p_born_norad(0:3,nexternal-1)
+      common/pborn_norad/p_born_norad
+
+      logical nocntevents
+      common/cnocntevents/nocntevents
+
+      logical nbody
+      common/cnbody/nbody
+
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+
+      double complex xij_aor
+      common/cxij_aor/xij_aor
+
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     &                        sqrtshat,shat
+
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+
+      integer isolsign
+      common /c_isolsign/isolsign
+
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
+      integer skip
+      double precision srec
+      double precision pb(0:3,-max_branch:nexternal-1)
+
+      logical fks_as_is
+      parameter (fks_as_is=.false.)
+
+c Generate the momenta for the initial state of the Born system
+      if(nincoming.eq.2) then
+        call mom2cx(sqrtshat_born,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+      else
+         pb(0,1)=sqrtshat_born
+         do i=1,2
+            pb(i,1)=0d0
+         enddo
+         p(3,1)=1e-14           ! For HELAS routine ixxxxx for neg. mass
+      endif
+
+c
+c Here we start with the FKS Stuff
+c
+c icountevts=-100 is the event, -2 to 2 the counterevents
+      icountevts = -100
+c if event/counterevents will not be generated, the following
+c energy components will stay negative. Also set the upper limits of
+c the xi ranges to negative values to force crash if something
+c goes wrong. The jacobian of the counterevents are set negative
+c to prevent using those skipped because e.g. m(j_fks)#0
+      if (skip_event_phsp) then
+         xi_i_hat=xi_i_hat_ev
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c     skips counterevents when integrating over second fold for massive
+c     j_fks
+c     FIXTHIS FIXTHIS FIXTHIS FIXTHIS:         
+         if( isolsign.eq.-1 )then
+            write (*,*) 'ERROR, when doing 2nd fold of massive j_fks,'
+     &           //' cannot skip event_phsp'
+            stop
+         endif
+      else
+         p_i_fks_ev(0)=-1.d0
+         xiimax_ev=-1.d0
+      endif
+      if (.not.only_event_phsp) then
+         do i=-2,2
+            p_i_fks_cnt(0,i)=-1.d0
+            xiimax_cnt(i)=-1.d0
+            jac_cnt(i)=-1.d0
+         enddo
+      endif
+c set cm stuff to values to make the program crash if not set elsewhere
+      ybst_til_tolab=1.d14
+      ybst_til_tocm=1.d14
+      sqrtshat=0.d0
+      shat=0.d0
+c if collinear counterevent will not be generated, the following
+c quantity will stay zero
+      if (.not.only_event_phsp) xij_aor=(0.d0,0.d0)
+
+      ! if we do not do event projection, we first generate y/xi FKS
+      ! and p_i_fks, then the other momenta
+      isolsign=1
+c
+c These will correspond to the vegas x's for the FKS variables xi_i,
+c y_ij and phi_i (changing this also requires changing folding parameters)
+      ixEi=ndim-2
+      ixyij=ndim-1
+      ixpi=ndim
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc
+c Here is the beginning of the loop over the momenta for the event and
+c counter-events. This will fill the xp momenta with the event and
+c counter-event momenta.
+ 111  continue
+      xjac   = xjac0
+      xpswgt = xpswgt0
+c
+c set-up phi_i_fks
+c
+      phi_i_fks=2d0*pi*x(ixpi)
+      xjac=xjac*2d0*pi
+
+      call generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,xbjrk_born
+     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x(ixEi)
+     &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
+     &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
+
+      if (.not.pass) return
+
+      ! here we should call generate_momenta_born
+      call generate_momenta_born(x,srec,dsqrt(srec),totmass,
+     $      m,s,
+     $      qmass,qwidth,granny_m2_red,input_granny_m2,m_born,xpswgt,xjac)
+
+      if (xjac.lt.0d0) then
+        pass = .false.
+        return
+      endif
+
+C If we are not doing event projection, we need to boost the 
+C   born momenta in the partonic com frame 
+      call boost_born_momenta_noevpr(p_born_l,xp,xi_i_fks,
+     &                      i_fks,shat,srec)
+
+C In the case of the event, store the born momenta without the radiation
+C It will be employed to compute the multi-channel enhancement factor
+      if (icountevts.eq.-100) then
+         do i=1,nexternal-1
+           p_born_norad(0:3,i) = p_born_l(0:3,i)
+         enddo
+      endif
+
+C in the collinear limit, the momenta entering the collinear
+C  CT for initial-state splittings are different wrt the Born ones
+      !write(*,*) 'XP BEFORE PBORN_COLL', icountevts
+      !do i =1, nexternal
+      !  write(*,*) xp(:,i)
+      !enddo
+      if (icountevts.eq.1.and.j_fks.le.nincoming) then
+        skip = 0
+        do i = 1, nexternal
+          if (i.eq.i_fks) then
+            skip = skip + 1
+            p_born_coll(0:3,j_fks) = p_born_coll(0:3,j_fks) - xp(0:3,i)
+            !!write(*,*) 'JJ', j_fks, skip, p_born_coll(:, j_fks)
+            cycle
+          endif
+          p_born_coll(0:3,i-skip) = xp(0:3,i)
+          !!write(*,*) 'II', i, skip, p_born_coll(:, i-skip)
+        enddo
+      elseif (icountevts.eq.1) then
+        do i = 1, nexternal
+          p_born_coll(0:3,i) = p_born(0:3,i)
+        enddo
+      endif
+c
+c  Assign the masses; put i_fks mass equal to zero.
+      do i=1,nexternal
+         if(i.lt.i_fks) then
+            m(i)=m_born(i)
+         elseif(i.eq.i_fks) then
+            m(i)=0d0
+         elseif(i.ge.i_fks) then
+            m(i)=m_born(i-1)
+         endif
+      enddo
+
+c All done, so check four-momentum conservation
+
+      if(xjac.gt.0.d0)then
+         call phspncheck_nocms(nexternal,sqrtshat,m,xp,pass)
+         if (.not.pass) then
+            xjac=-199
+            goto 112
+         endif
+      endif
+
+      call compute_flux(shat,sqrtshat,m(1),m(2),xpswgt,xjac)
+c      
+ 112  continue
+
+      call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+c
+      if(icountevts.eq.-100)then
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c skips counterevents when integrating over second fold for massive
+c j_fks
+         if( isolsign.eq.-1 )icountevts=5
+         if (only_event_phsp) return
+      else
+         icountevts=icountevts+1
+      endif
+      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
+     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
+     &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
+         goto 111 ! back to the top of the loop
+
+      elseif(icountevts.eq.5) then
+c icountevts=5 only when integrating over the second fold with j_fks
+c massive. The counterevents have been skipped, so make sure their
+c momenta are unphysical. Born are physical if event was generated, and
+c must stay so for the computation of enhancement factors.
+         do i=0,2
+            jac_cnt(i)=-299
+            p1_cnt(0,1,i)=-99
+         enddo
+      endif
+
+      nocntevents=(jac_cnt(0).le.0.d0) .and.
+     &            (jac_cnt(1).le.0.d0) .and.
+     &            (jac_cnt(2).le.0.d0)
+CC      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
+c
+      return
+      end
+
+
+
+      subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,i_fks,shat,srec)
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      double precision pborn(0:3,nexternal-1),xp(0:3,nexternal)
+      double precision xi_i_fks, shat, srec
+      integer i_fks
+      double precision chy_tbst, shy_tbst, chy_tbstmo, xdir_t(3)
+
+      integer i, skip
+      double precision p_i_fks(0:3), p_i_fks_red(0:3)
+
+      p_i_fks(0:3) = xp(0:3,i_fks)
+      p_i_fks_red(0:3) = p_i_fks(0:3) / (dsqrt(shat)/2d0*xi_i_fks)
+
+      ! pborn are in the recoil center of frame. Must be boosted in the
+      ! partonic center of frame, where p_rec+p_i_fks = (sqrtshat,0,0,0)
+      ! Note that p_rec^2 = srec == (1-xi)*shat
+      ! In the partonic com frame one must have 
+      ! P_rec = sqrtshat/2 * ( 2-xi, -p_i_fks_red(1:3) * xi )
+
+      xdir_t(1:3) = p_i_fks_red(1:3)
+      chy_tbst = (1-xi_i_fks/2d0)/dsqrt(1-xi_i_fks)
+      chy_tbstmo = (1-xi_i_fks/2d0)/dsqrt(1-xi_i_fks)-1d0
+      shy_tbst = (xi_i_fks/2d0)/dsqrt(1-xi_i_fks)
+
+      pborn(0,1) = sqrt(shat)/2d0
+      pborn(1,1) = 0d0
+      pborn(2,1) = 0d0
+      pborn(3,1) = sqrt(shat)/2d0
+
+      pborn(0,2) = sqrt(shat)/2d0
+      pborn(1,2) = 0d0
+      pborn(2,2) = 0d0
+      pborn(3,2) =-sqrt(shat)/2d0
+
+c Boost the momenta
+      skip=0
+      do i=1,nexternal-1
+        if (i.le.nincoming) then
+          xp(0:3,i)=pborn(0:3,i) 
+        else
+          if (i.eq.i_fks) skip = skip+1
+          !if(i.ne.i_fks.and.shy_tbst.ne.0.d0)
+          if (shy_tbst.ne.0.d0) then
+            call boostwdir2(chy_tbst,shy_tbst,chy_tbstmo,xdir_t,
+     &                        pborn(0,i),xp(0,i+skip)) 
+          else
+            xp(0:3,i+skip)=pborn(0:3,i)
+          endif
+        endif
+      enddo
+        
+      return
+      end
+
+
+
+
+      subroutine compute_flux(shat,sqrtshat,m1,m2,xpswgt,xjac)
+      implicit none
+      include 'nexternal.inc'
+      double precision shat,sqrtshat,m1,m2,xpswgt,xjac
+
+      double precision pwgt, flux
+
+      double precision lambda
+      external lambda
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+
       if(nincoming.eq.2)then
-         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m(1)**2,m(2)**2)))
+         flux  = 1d0 /(2.D0*SQRT(LAMBDA(shat,m1**2,m2**2)))
       else                      ! Decays
          flux = 1d0/(2d0*sqrtshat)
       endif
@@ -1125,7 +1698,115 @@ c the correct normalization of the phase space
       pwgt=max(xjac*xpswgt,1d-99)
       xjac = pwgt*flux
 c
- 112  continue
+      return
+      end
+
+
+
+      subroutine fill_genmom_born_commons(itree,m)
+      implicit none
+      include 'genps.inc'
+c arguments
+      integer itree(2,-max_branch:-1)
+      double precision M(-max_branch:max_particles)
+
+      include 'nexternal.inc'
+
+      integer itree_c(2,-max_branch:-1)
+      integer ns_channel, nt_channel, ionebody, nbranch
+      logical one_body
+      common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
+
+      itree_c(:,:) = itree(:,:)
+
+      nbranch = nexternal-3 ! nexternal is for n+1-body, while itree uses n-body
+
+c Determine number of s- and t-channel branches, at this point it
+c includes the s-channel p1+p2
+      ns_channel=1
+      do while(itree(1,-ns_channel).ne.1 .and.
+     &        itree(1,-ns_channel).ne.2 .and. ns_channel.lt.nbranch)
+        m(-ns_channel)=0d0                 
+        ns_channel=ns_channel+1         
+      enddo
+      ns_channel=ns_channel - 1
+      nt_channel=nbranch-ns_channel-1
+c If no t-channles, ns_channels is one less, because we want to exclude
+c the s-channel p1+p2
+      if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
+        ns_channel=ns_channel-1
+      endif
+c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1-body)
+      if((nexternal-nincoming).eq.2)then
+        one_body=.true.
+        ionebody=nexternal-1
+        ns_channel=0
+        nt_channel=0
+      elseif((nexternal-nincoming).gt.2)then
+        one_body=.false.
+      else
+        write(*,*)'Error #1 in genps_fks.f',nexternal,nincoming
+        stop
+      endif
+
+      return
+      end
+
+
+      subroutine fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat,sqrtshat,xbjrk,
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+
+      implicit none
+      integer icountevts
+      include 'nexternal.inc'
+      double precision tau,ycm,ycm_born,shat,sqrtshat,xbjrk(2),xiimax,xinorm,
+     $ xi_i_fks,xi_i_hat,p_i_fks(0:3),y_ij_fks,xp(0:3,nexternal),p(0:3,nexternal),
+     $ xjac,jac
+
+      integer i,j
+
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+
+      double precision xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+
+      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+
+      double precision sqrtshat_ev,shat_ev
+      common/parton_cms_ev/sqrtshat_ev,shat_ev
+      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+
+      double precision tau_ev,ycm_ev
+      common/cbjrk12_ev/tau_ev,ycm_ev
+      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+      common/cbjrk12_cnt/tau_cnt,ycm_cnt
+
+      double precision xiimax_ev
+      common /cxiimaxev/xiimax_ev
+      double precision xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+
+      double precision xinorm_ev
+      common /cxinormev/xinorm_ev
+      double precision xinorm_cnt(-2:2)
+      common /cxinormcnt/xinorm_cnt
+
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+
+      double precision p_ev(0:3,nexternal)
+      common/pev/p_ev
+
 c Catch the points for which there is no viable phase-space generation
 c (still fill the common blocks with some information that is needed
 c (e.g. ycm_cnt)).
@@ -1187,64 +1868,226 @@ c so give some non-physical values
          wgt_cnt(icountevts)=-1d99
          pswgt_cnt(icountevts)=-1d99
       endif
-c
-      if(icountevts.eq.-100)then
-         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
-            icountevts=-2
-         else
-            icountevts=0
-         endif
-c skips counterevents when integrating over second fold for massive
-c j_fks
-         if( isolsign.eq.-1 )icountevts=5
-         if (only_event_phsp) return
-      else
-         icountevts=icountevts+1
-      endif
-      if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
-     &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
-     &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
-         goto 111
-      elseif(icountevts.eq.5) then
-c icountevts=5 only when integrating over the second fold with j_fks
-c massive. The counterevents have been skipped, so make sure their
-c momenta are unphysical. Born are physical if event was generated, and
-c must stay so for the computation of enhancement factors.
-         do i=0,2
-            jac_cnt(i)=-299
-            p1_cnt(0,1,i)=-99
-         enddo
-      endif
-      nocntevents=(jac_cnt(0).le.0.d0) .and.
-     &            (jac_cnt(1).le.0.d0) .and.
-     &            (jac_cnt(2).le.0.d0)
-      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
-     &                  p_i_fks_ev,p_i_fks_cnt,
-     &                  xi_i_fks_ev,y_ij_fks_ev,check_cnt)
-c check_cnt=.false. is an exceedingly rare situation -- just dump the event
-      if(.not.check_cnt)goto 222
-c
-c If all went well, we are done and can exit
-c
-      return
-c
- 222  continue
-c
-c Born momenta have not been generated. Neither events nor counterevents exist.
-c Set all to negative values and exit
-      jac=-222
-      jac_cnt(0)=-222
-      jac_cnt(1)=-222
-      jac_cnt(2)=-222
-      p(0,1)=-99
-      do i=-2,2
-        p1_cnt(0,1,i)=-99
-      enddo
-      if (.not.only_event_phsp) p_born(0,1)=-99
-      nocntevents=.true.
+
       return
       end
-      
+
+
+      subroutine generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,
+     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
+     &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
+     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,srec, pass)
+      implicit none
+      include 'nexternal.inc'
+c arguments
+      integer icountevts,i_fks,j_fks
+      double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
+     &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
+     &     ,x(2),y_ij_fks,xi_i_hat
+      double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3),srec
+      logical pass
+c common blocks
+      double precision tau_Born_lower_bound,tau_lower_bound_resonance
+     &     ,tau_lower_bound
+      common/ctau_lower_bound/tau_Born_lower_bound
+     &     ,tau_lower_bound_resonance,tau_lower_bound
+      double precision  veckn_ev,veckbarn_ev,xp0jfks
+      common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+      double complex xij_aor
+      common/cxij_aor/xij_aor
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+      double precision xi_i_fks_fix,y_ij_fks_fix
+      common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
+c local
+      integer i,j,idir
+      double precision yijdir,costh_i_fks,x1bar2,x2bar2,yij_sol,xi1,xi2
+     $     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
+     $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
+     $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
+     $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
+      double complex resAoR0
+c external
+c
+c parameters
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+      double precision xi_i_fks_matrix(-2:2)
+      data xi_i_fks_matrix/0.d0,-1.d8,0.d0,-1.d8,0.d0/
+      double precision y_ij_fks_matrix(-2:2)
+      data y_ij_fks_matrix/-1.d0,-1.d0,-1.d8,1.d0,1.d0/
+      logical fks_as_is
+      parameter (fks_as_is=.false.)
+      double complex ximag
+      parameter (ximag=(0d0,1d0))
+      double precision stiny,sstiny,qtiny,zero,ctiny,cctiny
+      parameter (stiny=1d-6)
+      parameter (qtiny=1d-7)
+      parameter (zero=0d0)
+      parameter (ctiny=5d-7)
+c
+      pass=.true.
+      if(softtest)then
+        sstiny=0.d0
+      else
+        sstiny=stiny
+      endif
+      if(colltest)then
+        cctiny=0.d0
+      else
+        cctiny=ctiny
+      endif
+
+c
+c FKS for left or right incoming parton
+c
+      idir=0
+      if(.not.fks_as_is)then
+         if(j_fks.eq.1)then
+            idir=1
+         elseif(j_fks.eq.2)then
+            idir=-1
+         endif
+      else
+         idir=1
+         write(*,*)'One_tree: option not checked'
+         stop
+      endif
+
+c
+c set-up y_ij_fks
+c
+      if( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+     &     ((.not.softtest) .or. 
+     &             (softtest.and.y_ij_fks_fix.eq.-2.d0)) .and.
+     &     (.not.colltest)  )then
+c importance sampling towards collinear singularity
+c insert here further importance sampling towards y_ij_fks->1
+         y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+      elseif( (icountevts.eq.-100.or.icountevts.eq.0) .and.
+     &        ((softtest.and.y_ij_fks_fix.ne.-2.d0) .or.
+     &          colltest)  )then
+         y_ij_fks=y_ij_fks_fix
+      elseif(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
+         y_ij_fks=y_ij_fks_matrix(icountevts)
+      else
+         write(*,*)'Error #3 in genps_fks.f',icountevts
+         stop
+      endif
+c importance sampling towards collinear singularity
+      xjac=xjac*2d0*x(2)*2d0
+c
+c Compute costh_i_fks
+c
+      yijdir=idir*y_ij_fks
+      costh_i_fks=yijdir
+c
+c Compute maximum allowed xi_i_fks
+C      xiimax=1-xmrec2/shat
+C MZ checked for single-top @NLO QCD
+      xiimax=1-tau_born_lower_bound/xbjrk_born(1)/xbjrk_born(2)
+      xinorm=xiimax
+c
+c Define xi_i_fks
+c
+      if( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+     &     ((.not.colltest) .or. 
+     &     (colltest.and.xi_i_fks_fix.eq.-2.d0)) .and.
+     &     (.not.softtest)  )then
+         if(icountevts.eq.-100)then
+c importance sampling towards soft singularity
+c insert here further importance sampling towards xi_i_hat->0
+            xi_i_hat=sstiny+(1-sstiny)*x(1)**2
+         endif
+c in the case of counter events, xi_i_hat is an input to this function
+         xi_i_fks=xi_i_hat*xiimax
+      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+     &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
+     &        (.not.softtest)  )then
+c This is to keep xi_i_hat, rather than xi_i, fixed in the tests.
+c Changed in the context of granny stuff       
+         if(xi_i_fks_fix.lt.xiimax)then
+            xi_i_fks=xi_i_fks_fix*xiimax
+         else
+            xi_i_fks=xi_i_fks_fix*xiimax
+         endif
+      elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
+     &        softtest )then
+         if(xi_i_fks_fix.lt.1d0)then
+            xi_i_fks=xi_i_fks_fix*xiimax
+         else
+            xjac=-102
+            pass=.false.
+            return
+         endif
+      elseif(abs(icountevts).eq.2.or.icountevts.eq.0)then
+         xi_i_fks=xi_i_fks_matrix(icountevts)
+      else
+         write(*,*)'Error #4 in genps_fks.f',icountevts
+         stop
+      endif
+c remove the following if no importance sampling towards soft
+c singularity is performed when integrating over xi_i_hat
+      xjac=xjac*2d0*x(1)
+
+c
+c Update the variables here.
+c
+      tau=tau_born
+      ycm=ycm_born
+      shat=shat_born
+      sqrtshat=sqrt(shat)
+      xbjrk(1)=xbjrk_born(1)
+      xbjrk(2)=xbjrk_born(2)
+
+C build the momentum of i_fks in the partonic com frame
+
+      encmso2=sqrtshat/2.d0
+      p_i_fks(0)=encmso2
+      E_i_fks=xi_i_fks*encmso2
+      xp(0,i_fks)=E_i_fks
+      sinth_i_fks=dsqrt(1-costh_i_fks**2)
+      cosphi_i_fks=cos(phi_i_fks)
+      sinphi_i_fks=sin(phi_i_fks)
+      xpifksred(1)=sinth_i_fks*cosphi_i_fks    
+      xpifksred(2)=sinth_i_fks*sinphi_i_fks    
+      xpifksred(3)=yijdir
+      do j=1,3
+         xp(j,i_fks)=E_i_fks*xpifksred(j)
+         p_i_fks(j)=encmso2*xpifksred(j)
+      enddo
+
+C Now we need to generate the momenta for the born
+C system, taking into account the radiation of i_fks
+      srec = shat * (1-xi_i_fks)
+      !write(*,*)'XI', xi_i_fks
+
+c
+c
+c Collinear limit of <ij>/[ij]. See innerpin.m. 
+      if( icountevts.eq.-100 .or.
+     &     (icountevts.eq.1.and.xij_aor.eq.0) )then
+         resAoR0=-exp( 2*idir*ximag*phi_i_fks )
+         xij_aor=resAoR0
+      endif
+c
+c Phase-space factor for (xii,yij,phii) * (tau,ycm)
+      !write(*,*) 'SHAT END', xpswgt,shat
+      xpswgt=xpswgt*shat
+      !write(*,*) 'XPSWGT', xpswgt, xi_i_fks
+      !xpswgt=xpswgt*srec
+      xpswgt=xpswgt/(4*pi)**3!!/(1-xi_i_fks) MZ no need to include this
+      !factor as it was related to the old (event-projection) mapping of x1x2
+      xpswgt=abs(xpswgt)
+
+
+      ! this is what happens in _massless_final
+C      xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
+C     &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+c
+      return
+      end
+
 
       subroutine generate_momenta_massless_final(icountevts,i_fks,j_fks
      &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
@@ -1870,6 +2713,12 @@ c local
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
      $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
+
+      double precision omx1_ee, omx2_ee
+      double precision omx_ee(2)
+      common /to_ee_omx1/ omx_ee
+      double precision omx1bar2, omx2bar2
+      double precision ltau_born,e2ycm_born,em2ycm_born
 c external
 c
 c parameters
@@ -1910,24 +2759,41 @@ c
          write(*,*)'One_tree: option not checked'
          stop
       endif
+
+      ! this is to overcome numerical instabilities in ee collisions
+      omx1_ee = omx_ee(1)
+      omx2_ee = omx_ee(2)
+      if (1d0-tau_born.gt.stiny) then
+        ltau_born = log(tau_born)
+      else
+        ltau_born = tau_born-1d0
+      endif
+      if (abs(ycm_born).gt.stiny) then
+        e2ycm_born = exp(2*ycm_born)
+        em2ycm_born = exp(-2*ycm_born)
+      else
+        e2ycm_born = 1d0 + 2*ycm_born + 2*ycm_born**2
+        em2ycm_born = 1d0 - 2*ycm_born + 2*ycm_born**2
+      endif
+
 c
 c set-up lower and upper bounds on y_ij_fks
 c
       if( tau_born.le.tau_lower_bound .and.ycm_born.gt.
-     &         (0.5d0*log(tau_born)-log(tau_lower_bound)) )then
+     &         (0.5d0*ltau_born-log(tau_lower_bound)) )then
          yij_upp= (tau_lower_bound+tau_born)*
-     &        ( 1-exp(2*ycm_born)*tau_lower_bound ) /
+     &        ( 1-e2ycm_born*tau_lower_bound ) /
      &                  ( (tau_lower_bound-tau_born)*
-     &                    (1+exp(2*ycm_born)*tau_lower_bound) )
+     &                    (1+e2ycm_born*tau_lower_bound) )
       else
          yij_upp=1.d0
       endif
       if( tau_born.le.tau_lower_bound .and. ycm_born.lt.
-     &        (-0.5d0*log(tau_born)+log(tau_lower_bound)) )then
+     &        (-0.5d0*ltau_born+log(tau_lower_bound)) )then
          yij_low=-(tau_lower_bound+tau_born)*
-     &        ( 1-exp(-2*ycm_born)*tau_lower_bound ) / 
+     &        ( 1-em2ycm_born*tau_lower_bound ) / 
      &                   ( (tau_lower_bound-tau_born)*
-     &                     (1+exp(-2*ycm_born)*tau_lower_bound) )
+     &                     (1+em2ycm_born*tau_lower_bound) )
       else
          yij_low=-1.d0
       endif
@@ -1990,28 +2856,83 @@ c
 c
 c Compute maximal xi_i_fks
 c
-      x1bar2=xbjrk_born(1)**2
-      x2bar2=xbjrk_born(2)**2
-      if(1-tau_born.gt.1.d-5)then
+      ! these are to prevent numerical inaccuracies
+      ! when x->1 (relevant for ee collisions)
+      if (1d0-xbjrk_born(1).lt.ctiny.and.omx1_ee.gt.0d0) then
+        x1bar2 = 1d0 - 2d0*omx1_ee + omx1_ee**2
+        omx1bar2 = 2d0*omx1_ee - omx1_ee**2
+      else
+        x1bar2 = xbjrk_born(1)**2
+        omx1bar2 = 1d0-x1bar2
+      endif
+
+      if (1d0-xbjrk_born(2).lt.ctiny.and.omx2_ee.gt.0d0) then
+        x2bar2 = 1d0 - 2d0*omx2_ee + omx2_ee**2
+        omx2bar2 = 2d0*omx2_ee - omx2_ee**2
+      else
+        x2bar2 = xbjrk_born(2)**2
+        omx2bar2 = 1d0-x2bar2
+      endif
+
+      if(1-tau_born.gt.1.d-5.and.omx1_ee.eq.0d0.and.omx2_ee.eq.0d0)then
          yij_sol=-sinh(ycm_born)*(1+tau_born)/
      &            ( cosh(ycm_born)*(1-tau_born) )
+      else if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+         yij_sol = (omx1_ee - omx2_ee) * ( 1 + xbjrk_born(1)*xbjrk_born(2)) / 
+     $ (xbjrk_born(1)+xbjrk_born(2)) / (omx1_ee+omx2_ee-omx1_ee*omx2_ee)
       else
          yij_sol=-ycmhat
       endif
       if(abs(yij_sol).gt.1.d0)then
-         write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
-         write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         if (abs(yij_sol).lt.1d0+qtiny) then
+           yij_sol = sign(1d0, yij_sol)
+         else
+           write(*,*)'Error #9 in genps_fks.f',yij_sol,icountevts
+           write(*,*)xbjrk_born(1),xbjrk_born(2),yijdir
+         endif
       endif
-      if(yijdir.ge.yij_sol)then
-         xi1=2*(1+yijdir)*x1bar2/(
+
+      if(yijdir.eq.yij_sol)then
+         ! this may be relevant only for ee collisions
+         if (omx1_ee.ne.0d0.and.omx2_ee.ne.0d0) then
+           ximaxtmp=omx1_ee+omx2_ee-omx1_ee*omx2_ee
+         else
+           ximaxtmp=1-xbjrk_born(1)*xbjrk_born(2)
+         endif
+      elseif(yijdir.ge.yij_sol)then
+         !this is an expansion when both yij->-1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir+1d0).lt.ctiny.and.omx1bar2.lt.ctiny) then
+           xi1=(4*x1bar2 + yijdir + 11*x1bar2*yijdir - 5*x1bar2**2*yijdir +
+     &          x1bar2**3*yijdir+4*yijdir**2)/(2*(1 + yijdir)**2)
+           ximaxtmp=1-xi1
+         else if (omx1bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx1bar2 / (1+yijdir)
+         else
+           xi1=2*(1+yijdir)*x1bar2/(
      &        sqrt( ((1+x1bar2)*(1-yijdir))**2+16*yijdir*x1bar2 ) +
-     &        (1-yijdir)*(1-x1bar2) )
-         ximaxtmp=1-xi1
+     &        (1-yijdir)*(omx1bar2) )
+           ximaxtmp=1-xi1
+         endif
       elseif(yijdir.lt.yij_sol)then
-         xi2=2*(1-yijdir)*x2bar2/(
+         !this is an expansion when both yij->+1 and x1->1
+         ! in this case there may be precision loosses
+         ! from the argument in the sqrt
+         if (abs(yijdir-1d0).lt.ctiny.and.omx2bar2.lt.ctiny) then
+           xi2=(4*x2bar2 - yijdir - 11*x2bar2*yijdir + 5*x2bar2**2*yijdir -
+     &          x2bar2**3*yijdir +4*yijdir**2)/(4*(-1 + yijdir)**2)
+           ximaxtmp=1-xi2
+         else if (omx2bar2.lt.ctiny) then
+           ! compute directly ximaxtmp
+           ximaxtmp = omx2bar2 / (1-yijdir)
+         else
+           xi2=2*(1-yijdir)*x2bar2/(
      &        sqrt( ((1+x2bar2)*(1+yijdir))**2-16*yijdir*x2bar2 ) +
-     &        (1+yijdir)*(1-x2bar2) )
-         ximaxtmp=1-xi2
+     &        (1+yijdir)*(omx2bar2) )
+           ximaxtmp=1-xi2
+         endif
       else
          write(*,*)'Fatal error #14 in one_tree: unknown option'
          write(*,*)y_ij_fks,yij_sol,idir
@@ -3035,7 +3956,7 @@ c
       integer itype,idim
       double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
      $     ,cBW_width(-1:1),jac,s
-      double precision fract,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      double precision fract,A,B,C,bs(-1:1),maxi,mini
       integer j
 c
       if (itype.eq.1) then
@@ -3239,7 +4160,6 @@ c     S=A/(B-x) transformation:
       double precision y_settozero
       parameter (y_settozero=1e-12)
       double precision lx1, lx2
-      double precision ylim0, ycm0
 
       tau = x1*x2
 
@@ -3288,6 +4208,7 @@ c     S=A/(B-x) transformation:
       return 
       end
 
+
       subroutine generate_x_ee(rnd, xmin, x, omx, jac)
       implicit none
       ! generates the momentum fraction with importance
@@ -3325,12 +4246,12 @@ c     S=A/(B-x) transformation:
       end
 
 
-      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, stot, nt_channel,
-     $     qmass, qwidth, cBW, cBW_mass, cBW_width,
+      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, totmass, 
+     $     stot, nt_channel, qmass, qwidth, cBW, cBW_mass, cBW_width,
      $     tau_born, ycm_born, ycmhat, xjac0)
       implicit none
       double precision rnd1_in, rnd2_in
-      double precision rnd1, rnd2, stot, qmass, qwidth
+      double precision rnd1, rnd2, totmass, stot, qmass, qwidth
       double precision cBW_mass(-1:1), cBW_width(-1:1)
       integer nt_channel, cBW
       logical one_body
@@ -3360,6 +4281,8 @@ C dressed lepton stuff
       ! as e.g. one may want to plot random numbers, etc.
       double precision r1, r2, x1bk, x2bk
       common /to_random_numbers/r1,r2, x1bk, x2bk
+      logical use_evpr
+      common /to_use_evpr/use_evpr
 
 
       ! copy the random numbers, as they may be rescaled
@@ -3377,8 +4300,10 @@ C dressed lepton stuff
       tau_w = qwidth**2/stot
 
       bw_exists = nt_channel.eq.0.and.qwidth.ne.0.d0.and.cBW.ne.2
-     $ .and.tau_m.lt.1d0
+     $ .and.tau_m.lt.1d0.and.totmass.lt.qmass
+
       generate_with_bw=.false.
+
       ! if there are BWs, decide whether to generate flat or
       ! to use the BW-specific generation (half and half, or
       ! as determined by frac_bw)
@@ -3397,6 +4322,10 @@ C dressed lepton stuff
         write(*,*) 'one body with ee collisions not implemented'
         stop 1
       endif
+
+      ! if tau is generated accodring to a BW, then force the momentum
+      ! mapping with event projection
+      use_evpr = generate_with_bw
 
       if(generate_with_bw) then
         ! here we treat the case of resonances

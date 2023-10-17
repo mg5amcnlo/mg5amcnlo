@@ -437,6 +437,8 @@ class HelicityRecycler():
 
     def set_output(self, file):
         self.output_file = file
+        if os.path.islink(self.output_file):
+            os.remove(self.output_file)
 
     def set_template(self, file):
         self.template_file = file
@@ -766,7 +768,7 @@ def get_arguments(line):
             element += 1
             arguments.append('')
             continue
-        if bracket_depth > 0:
+        if bracket_depth > 0 and char != ' ':
             arguments[element] += char
     return arguments
 
@@ -879,9 +881,13 @@ def undo_multiline(old_line, new_line):
     return f'{old_line}{new_line}'
 
 def do_multiline(line):
+    if "!" in line:
+        line,comment  = line.split("!",1)
+    else: 
+        comment = None
     char_limit = 72
     num_splits = len(line)//char_limit
-    if num_splits != 0 and len(line) != 72 and '!' not in line:
+    if num_splits != 0 and len(line) != 72:
         split_line = [line[i*char_limit:char_limit*(i+1)] for i in range(num_splits+1)]
         indent = ''
         for char in line[6:]:
@@ -891,8 +897,10 @@ def do_multiline(line):
                 break
 
         line = f'\n     ${indent}'.join(split_line)
-    return line
-
+    if not comment:
+        return line
+    else:
+        return f"{line} ! {comment}"
 def int_to_string(i):
     if i == 1:
         return '+1'

@@ -15,7 +15,6 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import contextlib
 import itertools
@@ -59,6 +58,7 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+misc = locals
    
 #===============================================================================
 # parse_info_str
@@ -148,10 +148,14 @@ def get_pkg_info(info_str=None):
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-        PACKAGE_INFO = info_dict
-        
-    return info_dict
-
+        if info_dict:                                          
+           PACKAGE_INFO = info_dict
+        else:
+           info_dict ={}
+           info_dict['version'] = '3.x.x'
+           info_dict['date'] = '20xx-xx-xx'
+           PACKAGE_INFO = info_dict        
+        return PACKAGE_INFO
 #===============================================================================
 # get_time_info
 #===============================================================================
@@ -282,16 +286,11 @@ def has_f2py():
     has_f2py = False
     if which('f2py'):
         has_f2py = True
-    elif sys.version_info[1] == 6:
-        if which('f2py-2.6'):
-            has_f2py = True
-        elif which('f2py2.6'):
-            has_f2py = True                 
-    else:
-        if which('f2py-2.7'):
-            has_f2py = True 
-        elif which('f2py2.7'):
-            has_f2py = True  
+    elif which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+        has_f2py = True
+    elif which('f2py%d' %(sys.version_info.major)):
+        has_f2py = True
+
     return has_f2py       
         
 #===============================================================================
@@ -309,6 +308,8 @@ def deactivate_dependence(dependency, cmd=None, log = None):
     
 
     if dependency in ['pjfry','golem','samurai','ninja','collier']:
+        if dependency not in cmd.options:
+            return
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = None
@@ -412,12 +413,14 @@ def multiple_try(nb_try=5, sleep=20):
 
     def deco_retry(f):
         def deco_f_retry(*args, **opt):
+            my_error = None
             for i in range(nb_try):
                 try:
                     return f(*args, **opt)
                 except KeyboardInterrupt:
                     raise
                 except Exception as error:
+                    my_error = error
                     global wait_once
                     if not wait_once:
                         text = """Start waiting for update. (more info in debug mode)"""
@@ -431,7 +434,7 @@ def multiple_try(nb_try=5, sleep=20):
 
             if __debug__:
                 raise
-            raise error.__class__('[Fail %i times] \n %s ' % (i+1, error))
+            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, my_error))
         return deco_f_retry
     return deco_retry
 
@@ -865,8 +868,8 @@ def rm_old_compile_file():
     
     # remove related libraries
     libraries = ['libblocks.a', 'libgeneric_mw.a', 'libMWPS.a', 'libtools.a', 'libdhelas3.a',
-                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libdhelas3.so', 'libTF.a', 
-                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so']
+                 'libdsample.a', 'libgeneric.a', 'libmodel.a', 'libpdf.a', 'libgammaUPC.a','libdhelas3.so', 'libTF.a', 
+                 'libdsample.so', 'libgeneric.so', 'libmodel.so', 'libpdf.so', 'libgammaUPC.so']
     lib_pos='./lib'
     [os.remove(os.path.join(lib_pos, lib)) for lib in libraries \
                                  if os.path.exists(os.path.join(lib_pos, lib))]
@@ -1308,7 +1311,7 @@ class open_file(object):
             configuration = {'text_editor': None,
                              'eps_viewer':None,
                              'web_browser':None}
-        
+
         for key in configuration:
             if key == 'text_editor':
                 # Treat text editor ONLY text base editor !!
@@ -1332,13 +1335,24 @@ class open_file(object):
             elif key == 'eps_viewer':
                 if configuration[key]:
                     cls.eps_viewer = configuration[key]
-                    continue
+                if sys.platform == 'darwin':
+                    import platform
+                    ver, _, _ =  platform.mac_ver()
+                    # open does not support eps anymore since 13.0
+                    # pass by a converter first
+                    if int(ver.split('.')[0]) > 12: 
+                        if which('pstopdf'):
+                            cls.eps_viewer = 'pstopdf'
+                        elif  which('ps2pdf'):
+                            cls.eps_viewer = 'ps2pdf'
+
                 # else keep None. For Mac this will use the open command.
             elif key == 'web_browser':
                 if configuration[key]:
                     cls.web_browser = configuration[key]
                     continue
                 # else keep None. For Mac this will use the open command.
+
 
     @staticmethod
     def find_valid(possibility, program='program'):
@@ -1377,11 +1391,21 @@ class open_file(object):
 
     def open_mac_program(self, program, file_path):
         """ open a text with the text editor """
-        
+
         if not program:
             # Ask to mac manager
             os.system('open %s' % file_path)
-        elif which(program):
+        elif program == 'pstopdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, '-o', output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif program == 'ps2pdf':
+            output = file_path.rsplit('.',1)[0]+ '.pdf'
+            arguments = [program, file_path, output]
+            subprocess.call(arguments, stdout=open(os.devnull,"w"))
+            return self.open_mac_program(None, output)
+        elif which(program): 
             # shell program
             arguments = program.split() # Allow argument in program definition
             arguments.append(file_path)
@@ -1821,7 +1845,7 @@ class EasterEgg(object):
         "%s" + \
         "*                                                          *\n" + \
         "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
         "*                            and                           *\n" + \
         "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
@@ -1844,7 +1868,28 @@ class EasterEgg(object):
         "*          *          ^.             .^          *         *\n" + \
         "*        *              \"-.._____.,-\"              *       *\n"
 
-    special_banner = {(4,5): May4_banner}
+    Zcommezorglub =  "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M:::::::::M         M:::::::::M                          *\n" + \
+        "* M::::::::::M       M::::::::::M                          *\n" + \
+        "* M:::::::::::M     M:::::::::::M   (_)___                 *\n" + \
+        "* M:::::::M::::M   M::::M:::::::M   | / __|                *\n" + \
+        "* M::::::M M::::M M::::M M::::::M   | \__ \                *\n" + \
+        "* M::::::M  M::::M::::M  M::::::M   |_|___/                *\n" + \
+        "* M::::::M   M:::::::M   M::::::M                          *\n" + \
+        "* M::::::M    M:::::M    M::::::M    / _| ___  _ __        *\n" + \
+        "* M::::::M     MMMMM     M::::::M   | |_ / _ \| '__|       *\n" + \
+        "* M::::::M               M::::::M   |  _| (_) | |          *\n" + \
+        "* M::::::M               M::::::M   |_/\/\___/|_|          *\n" + \
+        "* M::::::M               M::::::M                          *\n" + \
+        "* MMMMMMMM               MMMMMMMM                          *\n" + \
+        "*                                                          *\n" + \
+        "*     https://en.wikipedia.org/wiki/Z_comme_Zorglub        *\n"    
+
+
+
+
+
+    special_banner = {(4,5): May4_banner, (14,10): Zcommezorglub}
 
     
     def __init__(self, msgtype):
@@ -1896,7 +1941,26 @@ class EasterEgg(object):
         if MADEVENT:
             return
         import madgraph.interface.madgraph_interface as madgraph_interface
-        madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
+        if date == (14,10):
+            def flip(text):
+                new_text = []
+                for line in text.split('\n'):
+                    new_line = []
+                    for word in line.split(' '):
+                        if "%" in word:
+                            new_line.append(word)
+                            continue
+                        new_line.append(''.join(list(reversed(list(word)))))
+                    new_text.append(' '.join(new_line))
+                return '\n'.join(new_text)
+
+            madgraph_interface.CmdExtended.intro_banner= flip(self.default_banner_1) + \
+                                                        self.special_banner[date] + \
+                                                        flip(self.default_banner_2) #+ \
+                                                        #"\n* homage to Franquin (text above in zorgland)              *" +\
+                                                        #"\n************************************************************"
+        else:
+            madgraph_interface.CmdExtended.intro_banner= self.default_banner_1 + self.special_banner[date] + self.default_banner_2
         
 
     def call_apple(self, msg):

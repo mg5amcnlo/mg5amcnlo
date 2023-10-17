@@ -15,7 +15,6 @@
 """ Command interface for Re-Weighting """
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 import difflib
 import logging
 import math
@@ -35,6 +34,7 @@ import six
 
 pjoin = os.path.join
 
+import madgraph
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
@@ -695,9 +695,13 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # perform the scanning
         if param_card_iterator:
+            if self.options['rwgt_name']:
+                reweight_name = self.options['rwgt_name'].rsplit('_',1)[0] # to avoid side effect during the scan
+            else:
+                reweight_name = None
             for i,card in enumerate(param_card_iterator):
-                if self.options['rwgt_name']:
-                    self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
+                if reweight_name:
+                    self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)
                 self.new_param_card = card
                 #card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
@@ -1108,8 +1112,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
-                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
-                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
+                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2**2)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2**2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
                 ratio_V = w_newV/w_origV if w_origV else  "should not be used"
             else:
@@ -1728,7 +1732,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif line.startswith('define'):
                 try:
                     mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
-                except Exception:
+                except madgraph.InvalidCmd:
                     pass 
                           
         # 1. Load model---------------------------------------------------------  
@@ -1749,8 +1753,11 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
-                mgcmd.exec_cmd("define %s = %s" % (name, content))
-        
+                try:
+                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                except madgraph.InvalidCmd:
+                    pass
+                    
         if  second and 'tree_path' in self.dedicated_path:
             files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
             if 'virtual_path' in self.dedicated_path:
@@ -1896,7 +1903,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # get all the information
             allids, all_pids = mymod.get_pdg_order()
             all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  allids]
-            all_prefix = [''.join([i.decode(errors='ignore') for i in j]).strip().lower() for j in mymod.get_prefix()]
+            all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
             prefix_set = set(all_prefix)
 
             hel_dict={}

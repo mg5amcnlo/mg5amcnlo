@@ -75,6 +75,7 @@ module mint_module
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
   integer, parameter, private :: min_it1=5        ! minimal number of iterations in the mint step 1 phase
+  integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
@@ -790,6 +791,7 @@ contains
     ifirst=0
     if(imode.eq.0) then
        dummy=fun(x,vol,ifirst,f1)
+       if (.not. fixed_order) dummy=fun(x,vol,2,f1)
        f(1:nintegrals)=f1(1:nintegrals)
     else
        f(1:nintegrals)=0d0
@@ -1086,7 +1088,7 @@ contains
        if (.not.use_poly_virtual) then
           do j=1,nintervals_virt
              do k=0,n_ord_virt
-                write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim)
+                write (12,*) 'AVE',(ave_virt(j,i,k,kchan),i=1,ndim-3)
              enddo
           enddo
        endif
@@ -1098,7 +1100,6 @@ contains
        write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan)
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
-    write (12,*) 'IDE',(ifold(i),i=1,ndim)
     if (use_poly_virtual) call save_polyfit(12)
     close (12)
   end subroutine write_grids_to_file
@@ -1124,7 +1125,7 @@ contains
        if (.not.use_poly_virtual) then
           do j=1,nintervals_virt
              do k=0,n_ord_virt
-                read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim)
+                read (12,*) dummy,(ave_virt(j,i,k,kchan),i=1,ndim-3)
              enddo
           enddo
        endif
@@ -1138,7 +1139,6 @@ contains
        ans(1,0)=ans(1,0)+ans(1,kchan)
        unc(1,0)=unc(1,0)+unc(1,kchan)**2
     enddo
-    read (12,*) dummy,(ifold(i),i=1,ndim)
     unc(1,0)=sqrt(unc(1,0))
     ! polyfit stuff:
     if (use_poly_virtual) then
@@ -1331,11 +1331,11 @@ contains
        write (*,*) 'Too many grids to keep track off',n_ord_virt,n_ave_virt
        stop 1
     endif
-    nvirt(1:nint_used_virt,1:ndim,0:n_ord_virt,1:nchans)=0
-    ave_virt(1:nint_used_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
-    nvirt_acc(1:nint_used_virt,1:ndim,0:n_ord_virt,1:nchans)=0
-    ave_virt_acc(1:nint_used_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
-    ave_born_acc(1:nint_used_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
+    nvirt(1:nint_used_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0
+    ave_virt(1:nint_used_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0d0
+    nvirt_acc(1:nint_used_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0
+    ave_virt_acc(1:nint_used_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0d0
+    ave_born_acc(1:nint_used_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0d0
   end subroutine init_ave_virt
 
   subroutine get_ave_virt(x,k_ord_virt)
@@ -1343,12 +1343,12 @@ contains
     integer :: kdim,ncell,k_ord_virt
     double precision, dimension(ndimmax) :: x
     average_virtual(k_ord_virt,ichan)=0d0
-    do kdim=1,ndim
+    do kdim=1,ndim-3
        ncell=min(int(x(kdim)*nint_used_virt)+1,nint_used_virt)
        average_virtual(k_ord_virt,ichan)=average_virtual(k_ord_virt,ichan) &
                                         +ave_virt(ncell,kdim,k_ord_virt,ichan)
     enddo
-    average_virtual(k_ord_virt,ichan)=average_virtual(k_ord_virt,ichan)/ndim
+    average_virtual(k_ord_virt,ichan)=average_virtual(k_ord_virt,ichan)/(ndim-3)
   end subroutine get_ave_virt
 
   subroutine fill_ave_virt(x,k_ord_virt,virtual,born)
@@ -1356,7 +1356,7 @@ contains
     integer :: kdim,ncell,k_ord_virt
     double precision,dimension(ndimmax) :: x(ndimmax)
     double precision :: virtual,born
-    do kdim=1,ndim
+    do kdim=1,ndim-3
        ncell=min(int(x(kdim)*nint_used_virt)+1,nint_used_virt)
        nvirt_acc(ncell,kdim,k_ord_virt,ichan)=nvirt_acc(ncell,kdim,k_ord_virt,ichan)+1
        ave_virt_acc(ncell,kdim,k_ord_virt,ichan)=ave_virt_acc(ncell,kdim,k_ord_virt,ichan)+virtual
@@ -1369,7 +1369,7 @@ contains
     integer kchan,kdim,i,k_ord_virt
 ! need to solve for k_new = (virt+k_old*born)/born = virt/born + k_old
     do kchan=1,nchans
-       do kdim=1,ndim
+       do kdim=1,ndim-3
           do i=1,nint_used_virt
              if (ave_born_acc(i,kdim,k_ord_virt,kchan).eq.0d0) cycle
              if (ave_virt(i,kdim,k_ord_virt,kchan).eq.0d0) then ! i.e. first iteration
@@ -1385,12 +1385,12 @@ contains
        enddo
     enddo
 ! reset the acc values
-    nvirt(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)= &
-                 nvirt(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)  &
-                 + nvirt_acc(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)
-    nvirt_acc(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)=0
-    ave_born_acc(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)=0d0
-    ave_virt_acc(1:nint_used_virt,1:ndim,k_ord_virt,1:nchans)=0d0
+    nvirt(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)= &
+                 nvirt(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)  &
+                 + nvirt_acc(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)
+    nvirt_acc(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)=0
+    ave_born_acc(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)=0d0
+    ave_virt_acc(1:nint_used_virt,1:ndim-3,k_ord_virt,1:nchans)=0d0
   end subroutine regrid_ave_virt
 
 
@@ -1398,7 +1398,7 @@ contains
     implicit none
     integer :: kdim,i,k_ord_virt,kchan
     do kchan=1,nchans
-       do kdim=1,ndim
+       do kdim=1,ndim-3
           do i=nint_used_virt,1,-1
              ave_virt(i*2,kdim,k_ord_virt,kchan)=ave_virt(i,kdim,k_ord_virt,kchan)
              if (nvirt(i,kdim,k_ord_virt,kchan).ne.0) then
@@ -1473,7 +1473,7 @@ contains
     integer :: kchan
     xgrid(0:nintervals,1:ndim,1:nchans)=0d0
     ymax(1:nintervals,1:ndim,1:nchans)=0d0
-    ave_virt(1:nintervals_virt,1:ndim,0:n_ord_virt,1:nchans)=0d0
+    ave_virt(1:nintervals_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0d0
     ymax_virt(1:nchans)=0d0
     ans(1:nintegrals,1:nchans)=0d0
     unc(1:nintegrals,1:nchans)=0d0
@@ -1482,6 +1482,7 @@ contains
     average_virtual(0,1:nchans)=0d0
     call write_grids_to_file
     call write_results
+    call regrid_MC_integer
     open (unit=12, file='res.dat',status='unknown')
     do kchan=0,nchans
        write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan) &

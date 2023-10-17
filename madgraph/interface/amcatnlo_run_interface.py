@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import atexit
 import glob
 import logging
@@ -2200,6 +2199,10 @@ RESTART = %(mint_mode)s
 """ \
               % job
         else:
+            if job['mint_mode'] == 0:
+                job['fold_string']='1 1 1'
+            else:
+                job['fold_string']=' '.join(map(str, self.run_card['folding']))
             content = \
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
@@ -2209,7 +2212,7 @@ RESTART = %(mint_mode)s
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
 %(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%(fold_string)s      ! if imode is 1: Folding parameters for xi_i, y_ij and phi_i
 %(run_mode)s        ! all, born, real, virt
 """ \
                     % job
@@ -3117,8 +3120,12 @@ RESTART = %(mint_mode)s
                 logger.warning('Impossible to detect the number of cores => Using one.\n'+
                         'Use set nb_core X in order to set this number and be able to '+
                         'run in multicore.')
+            if not (hasattr(self, 'cluster') or not isinstance(self.cluster, cluster.MultiCore)):                
+                self.cluster = cluster.MultiCore(**self.options)
+                self.cluster.nb_core = self.nb_core
+            else:
+                self.cluster.nb_core = self.nb_core
 
-            self.cluster = cluster.MultiCore(**self.options)
 
 
     def clean_previous_results(self,options,p_dirs,folder_name):
@@ -4057,8 +4064,8 @@ RESTART = %(mint_mode)s
             arg_list = [[shower, out_id, self.run_name]]
 
         self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
-        self.njobs = 1
-        self.wait_for_complete('shower')
+        #self.njobs = 1
+        #self.wait_for_complete('shower')
 
         # now collect the results
         message = ''
@@ -4660,6 +4667,10 @@ RESTART = %(mint_mode)s
             content += 'PDFCODE=0\n'
 
         content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        if self.banner.get_detail('run_card', 'mcatnlo_delta') :
+            content += 'DELTA=ON\n'
+        else:
+            content += 'DELTA=OFF\n'
         content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
@@ -4885,8 +4896,9 @@ RESTART = %(mint_mode)s
             for args in arg_list:
                 [(cwd, exe)] = list(job_dict.items())
                 self.run_exe(exe, args, run_type, cwd)
-        
-        self.wait_for_complete(run_type)
+
+        if self.njobs:
+            self.wait_for_complete(run_type)
 
 
 
@@ -5144,11 +5156,107 @@ RESTART = %(mint_mode)s
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
 
+    def activate_Pythia8_compilation(self, mode, options):
+        """ Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. """
+        # Also write dummies if we do fixed-order for now
+        if mode in ['NLO', 'LO'] or not self.run_card['mcatnlo_delta'] :
+            # Write dummy entries
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=.
+PYTHIA8TARGETS=pythia8_fortran_dummy.o
+PYTHIA8LINKLIBS=""")
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/-1/
+      data pythia_cmd_file/500*' '/""")
+        else:
+            if not self.options['pythia8_path']:
+                raise aMCatNLOError('Cannot find Pythia8 path in configuration file')
+            os.environ["PYTHIA8DATA"] = pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc')
+            # Write entries accoridng to the pythia8_path
+            # Probably need to do something a bit more careful to asses when '-lz' really is necessary
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=-I%(pythia8_prefix)s/include
+PYTHIA8TARGETS=pythia8_wrapper.o
+PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix':self.options['pythia8_path']})
+            # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
+            # For now, we don't use any pythia8.cmd card for initialization
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/0/
+      data pythia_cmd_file/500*' '/""")
+
+    def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
+        """links and copies the libraries/PDFs from ePDF/eMELA
+        pdlabel is in the form epdf:setname
+        """
+        logger.info('Using eMELA for leptonic densities')
+
+        epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        epdfdatadir = subprocess.Popen([self.options['eMELA'], '--data'],
+                 stdout = subprocess.PIPE).stdout.read().decode().strip()
+
+        # update the LHAPDF data path
+
+        if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
+            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
+        else:
+            os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
+
+        pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
+        pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
+
+        # link the static library in lib
+        lib = 'libeMELA.a'
+
+        if os.path.exists(pjoin(libdir, lib)):
+            files.rm(pjoin(libdir, lib))
+        files.ln(pjoin(epdflibdir, lib), libdir)
+
+        # create the PDFsets dir
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+
+        #clean previous set of pdf used
+        for name in os.listdir(pjoin(libdir, 'PDFsets')):
+            if name not in pdfsetname:
+                try:
+                    if os.path.isdir(pjoin(libdir, 'PDFsets', name)):
+                        shutil.rmtree(pjoin(libdir, 'PDFsets', name))
+                    else:
+                        os.remove(pjoin(libdir, 'PDFsets', name))
+                except Exception as error:
+                    logger.debug('%s', error)
+
+        # copy the ePDF set in the PDFsets dir
+        for setname in pdfsetname:
+            shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
+
+        # finally return the parsed info file
+        return banner_mod.eMELA_info(os.path.join(libdir, 'PDFsets', setname, setname + '.info'), self.me_dir)
+
+
+    def copy_lep_densities(self, name, sourcedir):
+        """copies the leptonic densities so that they are correctly compiled
+        """
+        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
+        pdf_path = os.path.join(sourcedir, 'PDF')
+        # check that the name is correct, ie that the path exists
+        if not os.path.isdir(lep_d_path):
+            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
+                    'The corresponding directory cannot be found in \n' + \
+                    'Source/PDF/lep_densities')
+
+        # now copy the files
+        for filename in ['eepdf.f', 'gridpdfaux.f']:
+            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -5191,11 +5299,15 @@ RESTART = %(mint_mode)s
             with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
                 fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
 
+        # Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. 
+        self.activate_Pythia8_compilation(mode, options)
+
         #directory where to compile exe
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
-        # create param_card.inc and run_card.inc
-        self.do_treatcards('', amcatnlo=True, mode=mode)
+
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
@@ -5223,8 +5335,39 @@ RESTART = %(mint_mode)s
             # force not to use LHAPDF in this case
             if self.run_card['pdlabel'] == 'lhapdf':
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
-            # copy the files for the chosen density
-            if self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+
+            elif self.run_card['pdlabel'].startswith('emela'):
+                logger.warning('For informations on the simulation of leptonic collisions at NLO accuracy')
+                logger.warning('please refer to arXiv:2207.03265 and to the FAQ')
+                logger.warning('https://answers.launchpad.net/mg5amcnlo/+faq/3324')
+
+                # this is if the PDFs from ePDF/eMELA are employed
+                self.make_opts_var['epdf'] = self.options['eMELA']
+                self.update_make_opts()
+                # link the LHAPDF libraries, but unset the corresponding keys in make_opts
+                self.link_lhapdf(libdir)
+                for kk in ['lhapdf', 'lhapdfversion', 'lhapdfsubversion', 'lhapdf_config']:
+                    self.make_opts_var[kk] = None
+                # and link eMELA
+                emela_info = self.link_and_copy_epdf(self.run_card['pdlabel'], self.run_card['lhaid'], libdir)
+
+                # find the uv scheme of the model. if a file called 'TOYXS' exists, use msbar
+                #  (for testing purposes only) 
+                if os.path.exists(pjoin(self.me_dir, 'TOYXS')):
+                    uvscheme = 0
+                else:
+                    try:
+                        Gmu = self.banner.get_detail('param_card', 'sminputs', 2)
+                        uvscheme = 2 # Gmu scheme
+                    except KeyError:
+                        uvscheme = 1 # Alpha(mz) scheme
+                # update the run_card variables (PDFscheme, alpha running params, etc) accordingly
+                emela_info.update_epdf_emela_variables(self.banner, uvscheme)
+                self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner2.txt' % (self.run_name, self.run_tag)))
+
+            elif self.run_card['pdlabel'] in  sum(self.run_card.allowed_lep_densities.values(),[]):
+                # using internal densities: copy the files for the chosen density
                 self.copy_lep_densities(self.run_card['pdlabel'], sourcedir)
 
         # bare leptons, or anything else
@@ -5233,6 +5376,9 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
 
             self.make_opts_var['lhapdf'] = ""
+
+        # create param_card.inc and run_card.inc
+        self.do_treatcards('', amcatnlo=True, mode=mode)
 
         # read the run_card to find if PineAPPL is used or not
         if self.run_card['pineappl']:
@@ -5251,7 +5397,7 @@ RESTART = %(mint_mode)s
 
         if 'fastjet' in list(self.options.keys()) and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
-        
+
         # add the make_opts_var to make_opts
         self.update_make_opts()
         
@@ -5355,6 +5501,7 @@ RESTART = %(mint_mode)s
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
+            pass
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -5463,7 +5610,7 @@ RESTART = %(mint_mode)s
         
         file = open(pjoin(self.me_dir, '%s_input.txt' % test), 'w')
         if test == 'test_MC':
-            shower = self.run_card['parton_shower']
+            shower = self.run_card['parton_shower'].upper()
             header = "1 \n %s\n 1 -0.1\n-1 -0.1\n" % shower
             file.write(header + content)
         elif test == 'test_ME':
@@ -5737,8 +5884,8 @@ if '__main__' == __name__:
     # This can ONLY run a single command !!
     import sys
 
-    if sys.version_info[1] < 7:
-        sys.exit('MadGraph5_aMc@NLO works only with python 2.7 or python3.7 and later.\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph5_aMc@NLO works only with python 3.7 and later.\n'+\
                'Please upgrade your version of python or specify a compatible version.')
 
     import os

@@ -580,11 +580,11 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
           enddo
           tmp=tmp/2d0
           temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
-      elseif(dynamical_scale_choice.eq.0) then
-c         fixed scale
+       elseif(dynamical_scale_choice.eq.-2) then
+c     fixed scale
           tmp=muR_ref_fixed
-          temp_scale_id='fixed scale'
-      elseif(dynamical_scale_choice.eq.10) then
+          temp_scale_id='fixed scale'          
+      elseif(dynamical_scale_choice.eq.10.or.dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: ENTER YOUR CODE HERE                                 cc
 cc      to use this code you must set                                            cc

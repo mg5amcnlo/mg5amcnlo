@@ -14,7 +14,6 @@
 ################################################################################
 
 from __future__ import absolute_import
-from __future__ import print_function
 import os
 
 from madgraph import MG5DIR
@@ -29,9 +28,11 @@ class TestInstall(unittest.TestCase):
     def test_install_update(self):
         """Check that the install update command point to the official link
         and not to the test one."""
+        check1 = "            filetext = six.moves.urllib.request.urlopen('http://madgraph.mi.infn.it//mg5amc_build_nb')\n"
+        check2 = "                    filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it//patch/build%s.patch' %(i+1))\n" 
         
-        checklts1 = "http://madgraph.physics.illinois.edu/mg5amc_build_nb"
-        checklts2 = "http://madgraph.physics.illinois.edu/patch/build%s.patch" 
+        checklts1 = "http://madgraph.mi.infn.it/mg5amc_build_nb"
+        checklts2 = "http://madgraph.mi.infn.it/patch/build%s.patch" 
         check_dev1 = "http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb"
         check_dev2 = "http://madgraph.phys.ucl.ac.be/patch/build%s.patch" 
         

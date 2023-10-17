@@ -6,10 +6,6 @@ import os
 import optparse
 import logging
 
-if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('ALOHA works only with python 2.6 or later (but not python 3.X).\n\
-               Please upgrade your version of python.')
-
 # Get the parent directory (mg root) of the script real path (bin)
 # and add it to the current PYTHONPATH
 

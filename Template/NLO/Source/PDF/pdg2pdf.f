@@ -120,7 +120,6 @@ c          ! change e/mu/tau = 8/9/10 to 11/13/15
         do i_ee = 1, n_ee 
            ee_components(i_ee) = compute_eepdf(x, omx_ee(ibeam), xmu,i_ee,ipart,ih_local)
         enddo
-c           write(*,*) x, omx_ee(ibeam), xmu,i_ee,ipart,ih_local,  ee_components(1)
         return
       endif
 
@@ -273,7 +272,5 @@ c The actual call to the PDFs (in Source/PDF/pdf.f)
       enddo
       return
       end
-
-
 
 

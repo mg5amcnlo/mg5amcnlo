@@ -124,7 +124,7 @@ c
 c     parameter to allow to include run_card.inc 
       include './run.inc'
       include './cuts.inc'
-      integer lhaid
+      integer lhaid,pdfscheme
       character*20 pdlabel
       logical pineappl
       character*7 event_norm
@@ -489,6 +489,17 @@ c
            ii=iistr(string)
            event_norm=string(ii:ii+2)
         endif
+        if(index(string,'MCatNLO_DELTA').ne.0 .or.
+     &       index(string,'mcatnlo_delta').ne.0) then
+           ii=iistr(string)
+           if (string(ii:ii).eq.'t' .or. string(ii:ii).eq.'T' .or.
+     $          string(ii:ii+1).eq.'.t' .or. string(ii:ii+1).eq.'.T')
+     $          then
+              mcatnlo_delta=.true.
+           else
+              mcatnlo_delta=.false.
+           endif
+        endif
         if( index(string,'<montecarlomasses>').ne.0 .or.
      #      index(string,'<MonteCarloMasses>').ne.0 )then
           read(ifile,'(a)')string
@@ -667,7 +678,7 @@ c
 
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
@@ -686,10 +697,15 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
+      character*500 scale_str
+      character*50 str_tmp
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
       include './run.inc'
       include 'unlops.inc'
+      include 'madfks_mcatnlo.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
+      logical are_col_conn(MAXNUP,MAXNUP)
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
@@ -833,6 +849,38 @@ c
       if (ickkw.eq.3) then
          write(ifile,'(a)') trim(adjustl(ptclusstring))
       endif
+      if (mcatnlo_delta) then
+c Write the <scales> block only for scales related to valid colour lines
+         are_col_conn=.false.
+         scale_str="<scales muf='-.10000000E+01' mur='-.1000000E+01'"
+         do i=1,NUP
+            if (abs(ISTUP(i)).ne.1) cycle
+            do j=1,NUP
+               if (abs(ISTUP(j)).ne.1) cycle
+               if(i.eq.j)cycle
+               are_col_conn(i,j)=
+     &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(1,j)).or.
+     &             (ICOLUP(1,i).ne.0.and.ICOLUP(1,i).eq.ICOLUP(2,j)).or.
+     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(1,j)).or.
+     &             (ICOLUP(2,i).ne.0.and.ICOLUP(2,i).eq.ICOLUP(2,j))
+               if(are_col_conn(i,j) .and. SCALUP_a(i,j)
+     $              .lt.scaleMCcut)then
+                  write(*,*)'Colour error in write_lhef_event',i,j
+                  do ii=1,NUP
+                     write (*,*) scalup_a(ii,1:NUP)
+                  enddo
+                  stop
+               endif
+               if(are_col_conn(i,j))then
+                  write(str_tmp,701)
+     &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+                  scale_str=trim(scale_str)//trim(str_tmp)
+               endif
+            enddo
+         enddo
+         write(ifile,'(a)')"  "//trim(scale_str)//">"
+         write(ifile,'(a)') "  </scales>"
+      endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -845,6 +893,7 @@ c
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
+ 701  format(a8,i1,a1,i1,a2,e14.8,a1)
 c
       return
       end
@@ -852,15 +901,15 @@ c
 
       subroutine read_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk,oo
+      integer ifile,i,kk,jj,oo
       character*1000 buff
-      character*80 string
+      character*500 string
       character*12 dummy12
       character*2 dummy2
       character*9 ch1
@@ -879,6 +928,7 @@ c
       common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
 c
       read(ifile,'(a)')string
       nattr=0
@@ -986,7 +1036,6 @@ c
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
-         read(ifile,'(a)')string
       else
          if (ickkw.eq.3) then
             ptclusstring=buff
@@ -994,6 +1043,38 @@ c
          endif
          string=buff(1:len_trim(buff))
          buff=' '
+         backspace(ifile)
+      endif
+      if (mcatnlo_delta) then
+c Read the <scales> block
+         do i=1,NUP
+            do j=1,NUP
+               SCALUP_a(i,j)=-1d0
+            enddo
+         enddo
+         read(ifile,'(a)')string
+         do i=1,len(trim(string))-6
+            if(string(i:i+5).eq.'scalup' .or.
+     &           string(i:i+5).eq.'SCALUP')then
+               read(string(i+7:i+7),*)ii
+               read(string(i+9:i+9),*)jj
+               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+            endif
+         enddo
+         read(ifile,'(a)')string
+         if(index(string,'</scales').eq.0)then
+            write(*,*)'In read_lhef_event:'
+            write(*,*)'Could not find the end of scales block:'
+            write(*,*)string(1:len_trim(string))
+            stop
+         endif
+      endif
+      read(ifile,'(a)')string
+      if(index(string,'</event').eq.0) then
+         write (*,*) 'ERROR #3: Cannot find end of event in'/
+     $        /' handling_lhe_event.f'
+         write (*,*) string
+         stop 1
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -1013,15 +1094,15 @@ c
 c Same as read_lhef_event, except for the end-of-file catch
       subroutine read_lhef_event_catch(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff,SCALUP_a)
       use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk,oo
+      integer ifile,i,kk,jj,oo
       character*1000 buff
-      character*80 string
+      character*500 string
       character*12 dummy12
       character*2 dummy2
       character*9 ch1
@@ -1038,6 +1119,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       common /c_orderstags_glob/n_orderstags, orderstags_glob
       include 'unlops.inc'
       include 'run.inc'
+      DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
 c
@@ -1132,8 +1214,8 @@ c
                               enddo
                            enddo
                         else
-                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo,1,1
-     $                       ,kk))
+                           call read_rwgt_line(ifile,idwgt,wgtxsecmu(oo
+     $                          ,1,1,kk))
                         endif
                      enddo
                   enddo
@@ -1156,7 +1238,6 @@ c
          if (ickkw.eq.3) then
             read(ifile,'(a)') ptclusstring
          endif
-         read(ifile,'(a)')string
       else
          if (ickkw.eq.3) then
             ptclusstring=buff
@@ -1164,6 +1245,37 @@ c
          endif
          string=buff(1:len_trim(buff))
          buff=' '
+         backspace(ifile)
+      endif
+      if (mcatnlo_delta) then
+c Read the <scales> block
+         do i=1,NUP
+            do j=1,NUP
+               SCALUP_a(i,j)=-1d0
+            enddo
+         enddo
+         read(ifile,'(a)')string
+         do i=1,len(trim(string))-6
+            if(string(i:i+5).eq.'scalup' .or.
+     &           string(i:i+5).eq.'SCALUP')then
+               read(string(i+7:i+7),*)ii
+               read(string(i+9:i+9),*)jj
+               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
+            endif
+         enddo
+         read(ifile,'(a)')string
+         if(index(string,'</scales').eq.0)then
+            write(*,*)'In read_lhef_event:'
+            write(*,*)'Could not find the end of scales block:'
+            write(*,*)string(1:len_trim(string))
+            stop
+         endif
+      endif
+      read(ifile,'(a)')string
+      if(index(string,'</event').eq.0) then
+         write (*,*) 'ERROR #4: Cannot find end of event in'/
+     $        /' handling_lhe_event.f'
+         stop 1
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))

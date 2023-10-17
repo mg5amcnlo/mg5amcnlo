@@ -13,7 +13,6 @@
 #
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 from madgraph.iolibs import helas_call_writers
 from six.moves import range
 from six.moves import zip

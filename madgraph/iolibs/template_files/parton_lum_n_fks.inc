@@ -44,13 +44,7 @@ C
       double precision ee_comp_prod
 %(ee_comp_vars)s
       integer i_ee
-c
-c
-c
-c Common blocks
-      character*7         pdlabel,epa_label
-      integer       lhaid
-      common/to_pdf/lhaid,pdlabel,epa_label
+      include "../../Source/PDF/pdf.inc"
 C                                                                     
 C DATA                                                                
 C                                                                     
