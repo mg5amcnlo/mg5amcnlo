@@ -643,10 +643,10 @@ c Conflicting BW stuff
 
       ndim_dummy=-1 ! this is actually not used anymore
 
-      if (abs(lpp(1)).ne.abs(lpp(2))) then
-          write(*,*) 'Different beams not implemented', lpp
-          stop 1
-      endif
+c      if (abs(lpp(1)).ne.abs(lpp(2))) then
+c          write(*,*) 'Different beams not implemented', lpp
+c          stop 1
+c      endif
       if (abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1 .and.
      &     .not.(softtest.or.colltest)) then
          if (abs(lpp(1)).eq.1.or.abs(lpp(2)).eq.1) then ! this is for pp or ap collisions
