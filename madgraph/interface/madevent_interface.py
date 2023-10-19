@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -3663,7 +3663,7 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull.close()
     
     ############################################################################ 
-    def do_combine_iteration(self, line):
+    def do_comine_iteration(self, line):
         """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
             S is for survey 
             R is for refine
@@ -3691,7 +3691,7 @@ Beware that this can be dangerous for local multicore runs.""")
     ############################################################################ 
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
-
+        start=time.time()
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
@@ -3786,6 +3786,7 @@ Beware that this can be dangerous for local multicore runs.""")
         elif self.run_card['custom_fcts']:
             self.correct_bias()
         
+        logger.info("combination of events done in %s s ", time.time()-start)
         
         self.to_store.append('event')
     

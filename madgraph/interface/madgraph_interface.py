@@ -5648,7 +5648,7 @@ This implies that with decay chains:
                         if 1 not in self._curr_model.get('gauge') :
                             logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
-                                                'QCD loop cmputations with it.')
+                                                'and QCD loop computations with it.')
                         else:
                             logger.info('Change to the gauge to Feynman because '+\
                           'this loop model allows for more than just tree level'+\
