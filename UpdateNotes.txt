@@ -1,6 +1,10 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
+2.9.17(19/10/23):
+    OM: change integration strategy (SDE=1) for width computation
+    OM: clearer error message in some situation
+
 2.9.16(26/07/23):
      OM: fix for helicity recycling
      OM: Update numpy support to latest version
