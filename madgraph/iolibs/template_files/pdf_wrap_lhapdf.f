@@ -5,6 +5,7 @@ C     INCLUDE
 C
       include 'pdf.inc'
       include '../alfas.inc'
+      include '../coupl.inc'
       real*8 zmass
       data zmass/91.188d0/
       Character*150 LHAPath
@@ -23,10 +24,15 @@ c     initialize the pdf set
       CALL SetPDFPath(LHAPath)
       value(1)=lhaid
       parm(1)='DEFAULT'
-      call pdfset(parm,value)
-      call GetOrderAs(nloop)
-      nloop=nloop+1  
-      asmz=alphasPDF(zmass)
+      if (pdlabel.eq.'lhapdf') then
+         call pdfset(parm,value)
+         call GetOrderAs(nloop)
+         nloop=nloop+1  
+         asmz=alphasPDF(zmass)
+      else
+          write(*,*) 'Unknown PDLABEL', pdlabel
+          stop 1
+      endif
       
       return
       end

@@ -15,7 +15,6 @@
 """Methods and classes to export matrix elements to fks format."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
 import glob
 import logging
@@ -62,6 +61,18 @@ logger = logging.getLogger('madgraph.export_fks')
 if madgraph.ordering:
     set	= misc.OrderedSet
 
+# the base to compute the orders_tag
+orderstag_base = 100
+
+def get_orderstag(ords):
+    step = 1
+    tag = 0
+    for o in ords:
+        tag += step*o
+        step *= orderstag_base
+    return tag
+
+
 def make_jpeg_async(args):
     Pdir = args[0]
     old_pos = args[1]
@@ -85,7 +96,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -174,6 +185,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
@@ -226,6 +241,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # We need to create the correct open_data for the pdf
         self.write_pdf_opendata()
+        
+        if model["running_elements"]:
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
+                raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
+                
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
+        
         
     # I put it here not in optimized one, because I want to use the same makefile_loop.inc
     # Also, we overload this function (i.e. it is already defined in 
@@ -516,11 +540,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         filename = 'fks_info.inc'
         # write_fks_info_list returns a set of the splitting types
+        split_types = self.write_fks_info_file(writers.FortranWriter(filename), 
+                                 matrix_element, 
+                                 fortran_model)
+
+        # update the splitting types
         self.proc_characteristic['splitting_types'] = list(\
                 set(self.proc_characteristic['splitting_types']).union(\
-                    self.write_fks_info_file(writers.FortranWriter(filename), 
-                                 matrix_element, 
-                                 fortran_model)))
+                    split_types))
 
         filename = 'leshouche_info.dat'
         nfksconfs,maxproc,maxflow,nexternal=\
@@ -605,7 +632,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         filename = 'rescale_alpha_tagged.f'
         self.write_rescale_a0gmu_file(
                             writers.FortranWriter(filename),
-                            startfroma0, matrix_element)
+                            startfroma0, matrix_element, split_types)
 
         filename = 'orders.h'
         self.write_orders_c_header_file(
@@ -644,6 +671,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'add_write_info.f',
                      'coupl.inc',
                      'cuts.f',
+                     'dummy_fct.f',
                      'FKS_params.dat',
                      'initial_states_map.dat',
                      'OLE_order.olc',
@@ -709,6 +737,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pineappl_maxproc.inc',
                      'pineappl_maxproc.h',
                      'timing_variables.inc',
+                     'pythia8_fortran_dummy.cc',
+                     'pythia8_fortran.cc',
+                     'pythia8_wrapper.cc',
+                     'pythia8_control_setup.inc',
+                     'pythia8_control.inc',
+                     'dire_fortran.cc',
+                     'LHAFortran_aMCatNLO.h',
+                     'sudakov.f',
+                     'hep_event_streams.inc',
+                     'orderstag_base.inc',
+                     'orderstags_glob.dat',
                      'polfit.f']
 
         for file in linkfiles:
@@ -737,7 +776,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         gen_infohtml.make_info_html_nlo(self.dir_path)
 
 
-        return calls
+        return calls, amp_split_orders
 
     #===========================================================================
     #  create the run_card 
@@ -810,6 +849,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.proc_characteristic['perturbation_order'] = perturbation_order 
         
         self.create_proc_charac()
+
+        filename = os.path.join(self.dir_path,'SubProcesses','orderstag_base.inc')
+        self.write_orderstag_base_file(writers.FortranWriter(filename))
 
         self.create_run_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
@@ -1061,6 +1103,21 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         writer.writelines(text)
 
+    def write_orderstag_file(self, splitorders, outdir):
+        outfile = open(os.path.join(outdir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
+        outfile.write('%d\n' % len(splitorders))
+        tags = ['%d' % get_orderstag(ords) for ords in splitorders]
+        outfile.write(' '.join(tags) + '\n')
+        outfile.close()
+
+    def write_orderstag_base_file(self, writer):
+        """write a small include file containing the 'base'
+        to compute the orders_tag"""
+
+        text = "integer orders_tag_base\n"
+        text+= "parameter (orders_tag_base=%d)\n" % orderstag_base
+        writer.writelines(text)
+
 
     def write_a0gmuconv_file(self, writer, matrix_element):
         """writes an include file with the informations about the 
@@ -1088,9 +1145,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(text)
 
 
-    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element):
+    def write_rescale_a0gmu_file(self, writer, startfroma0, matrix_element, split_types):
         """writes the function that computes the rescaling factor needed in
-        the case of external photons
+        the case of external photons.
+        If split types does not contain [QED] or if there are not tagged photons,
+        dummy informations are filled
         """
 
         # get the model parameters
@@ -1099,7 +1158,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         bornproc = matrix_element.born_me['processes'][0]
         # this is to ensure compatibility with standard processes
-        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']]):
+        if not any([l['is_tagged'] and l['id'] == 22 for l in bornproc['legs']])\
+                or 'QED' not in split_types:
             to_check = []
             expr = '1d0'
             conv_pol = '0d0'
@@ -1244,12 +1304,25 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             pass
 
         amp_split_size=len(amp_split_orders)
-
         text = '! The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
-        text += 'character*3 ordernames(nsplitorders)\n'
-        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
+        step = 5
+        if len(split_orders) < step:
+            text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        else:
+            # this file is linked from f77 and f90 so need to be smart about line splitting
+            text += "INTEGER ORDERNAMEINDEX\n"
+            for i in range(1,len(split_orders),step):
+                start = i
+                stop = i+step -1
+                data = ', '.join(['"%3s"' % o for o in split_orders[start-1: stop]])
+                if stop > len(split_orders):
+                    stop = len(split_orders)
+                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
+
+
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
@@ -1268,7 +1341,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double precision amp_split(amp_split_size)\n'
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
-
+        writer.line_length=132
         writer.writelines(text)
 
         return amp_split_orders, amp_split_size, amp_split_size_born
@@ -3655,6 +3728,7 @@ Parameters              %(params)s\n\
                            "IF (ABS(LPP(%d)) .GE. 1) THEN\n" \
                                  % (ibeam)
 
+#                for iproc, initial_state in enumerate(init_states):
                 for initial_state in init_states:
                     if initial_state in list(pdf_codes.keys()):
                         if subproc_group:
@@ -3972,7 +4046,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
-    def copy_fkstemplate(self):
+    def copy_fkstemplate(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
@@ -4107,7 +4181,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+
+        # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
+        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
+                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
@@ -4159,6 +4237,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         self.write_pdf_opendata()
 
 
+        if model["running_elements"]:
+            shutil.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
+        
         # Return to original PWD
         os.chdir(cwd)
         

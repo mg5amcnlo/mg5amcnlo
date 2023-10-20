@@ -40,7 +40,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import array
 import cmath
 import collections
@@ -1780,7 +1779,7 @@ class DecayModel(model_reader.ModelReader):
         # create a process:
         process = base_objects.ProcessDefinition()
         process['model'] = self
-        process['orders'] = interaction['orders']
+        process['orders'] = dict(interaction['orders'])
         for order in self.get('coupling_orders'):
             if order not in interaction['orders']:
                 process['orders'][order] = 0
@@ -1812,15 +1811,18 @@ class DecayModel(model_reader.ModelReader):
                     one_subdiag = True
                 else:
                     continue
-                
                 #check that all substructure are valid
-                #remove if any radiation and two times the same particle in a vertex
+                #remove if any radiation add two times the same particle in a vertex
                 # 2020: relaxed to avoid only twice initial particle in the vertex
                 for v in proc['vertices']:
                     if any([get_mass(l)==0 for l in v.get('legs')]):
                         self['invalid_Npoint'].append(vertex['id'])
                         return False
-                    init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    try:
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==1][0]
+                    except:
+                        l_num = min([l['number'] for l in v.get('legs')])
+                        init_pdg = [l['id'] for l in v.get('legs') if l['number'] ==l_num][0]
                     nb_part = [1 for l in v.get('legs') if abs(l['id']) in [abs(init_pdg), abs(initpart.get('pdg_code'))]]
                     if len(nb_part) > 1:
                         self['invalid_Npoint'].append(vertex['id'])
@@ -3397,16 +3399,16 @@ class Channel(base_objects.Diagram):
             return [self]
         elif len(self['vertices']) == 1:
             return [self]
-        elif len(self['final_legs']) == len(set(l['id'] for l in self['final_legs'])):
+        elif len(self.get_final_legs()) == len(set(l['id'] for l in self.get_final_legs())):
             return [self]
 
         # check if all symetry are already handle:
-        if len(set(l['id'] for l in self['final_legs'] if l['id'] not in ignore)) ==\
-           len([   l['id'] for l in self['final_legs'] if l['id'] not in ignore]):
+        if len(set(l['id'] for l in self.get_final_legs() if l['id'] not in ignore)) ==\
+           len([   l['id'] for l in self.get_final_legs() if l['id'] not in ignore]):
             return [self]
         
         nb_id = collections.defaultdict(int)
-        for l in self['final_legs']:
+        for l in self.get_final_legs():
             nb_id[l['id']] += 1
         
         id_to_handle = [id for id in nb_id if nb_id[id] > 1 and id not in ignore]
@@ -3420,11 +3422,11 @@ class Channel(base_objects.Diagram):
         for new_numbers in itertools.permutations(numbers):
             
             mapping_id = dict([(o,n) for o,n in zip(numbers, new_numbers) if o!=n])        
-
             if not mapping_id:
                 out.append(self)
                 continue
             channel = copy.copy(self)
+            channel['final_legs'] = base_objects.LegList()
             channel['vertices'] = base_objects.VertexList()
                     # (real) DiagramTag
             channel['tag'] = []
@@ -3434,7 +3436,6 @@ class Channel(base_objects.Diagram):
             channel['helas_number'] = None
             # diagram written by IdentifyHelasTag
             channel['std_diagram'] = None
-            
             for l,vertex in enumerate(self['vertices']):
                 new_vertex = copy.copy(vertex)
                 new_vertex['legs'] = base_objects.LegList()
@@ -3454,6 +3455,7 @@ class Channel(base_objects.Diagram):
                     mapping_id[vertex['legs'][-1]['number']] = min_id
 
                 channel['vertices'].append(new_vertex)
+
             out.append(channel)                      
         
         # do the recursion

@@ -2,7 +2,6 @@
 
 from __future__ import division
 from __future__ import absolute_import
-from __future__ import print_function
 from madgraph.interface import reweight_interface
 from six.moves import map
 from six.moves import range
@@ -1042,13 +1041,15 @@ class AllMatrixElement(dict):
         
         decay_struct = {}
         to_decay = collections.defaultdict(list)
-        
+        orig_decay = collections.defaultdict(list)
         for i, proc in enumerate(me.get('decay_chains')):
             pid =  proc.get('legs')[0].get('id')
             to_decay[pid].append((i,proc))
-                  
-                
+            orig_decay[pid].append((i,proc))
+
         for leg in me.get('legs'):
+            if not leg.get('state'): # initial state particle does not decay ...
+                continue
             pid =  leg.get('id')
             nb = leg.get('number')
             if pid in to_decay:
@@ -2144,12 +2145,13 @@ class decay_all_events(object):
             self.outputfile = open(self.outputfile.name, 'w')
             self.write_banner_information(efficiency)
             pos = self.outputfile.tell()
-            old = open('%s_tmp' % self.outputfile.name)
-            line=''
-            while '</init>' not in line:
-                line = old.readline()
-            
-            self.outputfile.write(old.read())
+            header = True
+            for line in open('%s_tmp' % self.outputfile.name):
+                if header:
+                    if '</init>' in line:
+                        header = False
+                    continue
+                self.outputfile.write(line)
             files.rm('%s_tmp' % self.outputfile.name)
             
         # Closing all run
@@ -2469,7 +2471,11 @@ class decay_all_events(object):
         #no decays for this production mode, run in passthrough mode, only adding the helicities to the events
         nb_mc_masses=0
         p, p_str=self.curr_event.give_momenta(event_map)
-        stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, self.options['frame_id'])
+        try: 
+            frameid = self.options['frame_id']
+        except KeyError:
+            frameid = 6
+        stdin_text=' %s %s %s %s %s\n' % ('2', self.options['BW_cut'], self.Ecollider, 1.0, frameid)
         stdin_text+=p_str
         # here I also need to specify the Monte Carlo Masses
         stdin_text+=" %s \n" % nb_mc_masses
@@ -2828,23 +2834,42 @@ class decay_all_events(object):
             logger.info('generating the full matrix element squared (with decay)')
             start = time.time()
             to_decay = list(self.mscmd.list_branches.keys())
-            decay_text = []
+            decay_text_correlated = {'':[]}
             for decays in self.mscmd.list_branches.values():
                 for decay in  decays:
+                    correlated = ''
+                    if '@' in decay:
+                        decay, correlated = decay.split('@')
+                        correlated = correlated.strip()
+                        if correlated not in decay_text_correlated:
+                            decay_text_correlated[correlated] = []
+                    curr = decay_text_correlated[correlated]
                     if '=' not in decay:
                         decay += ' QCD=99'
                     if ',' in decay:
-                        decay_text.append('(%s)' % decay)
+                        curr.append('(%s)' % decay)
                     else:
-                        decay_text.append(decay)
-            decay_text = ', '.join(decay_text)
+                        curr.append(decay)
+            decay_text = ', '.join(decay_text_correlated[''])
+            del decay_text_correlated['']
             commandline = ''
-            for proc in processes:
-                if not proc.strip().startswith(('add','generate')):
-                    proc = 'add process %s' % proc
-                commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
-                
-            commandline = commandline.replace('add process', 'generate',1)
+            if not decay_text_correlated:
+                for proc in processes:
+                    if not proc.strip().startswith(('add','generate')):
+                        proc = 'add process %s' % proc
+                    commandline += self.get_proc_with_decay(proc, decay_text, mgcmd._curr_model, self.options)
+                commandline = commandline.replace('add process', 'generate',1)
+            else:
+                for key in decay_text_correlated:
+                    for proc in processes:
+                        if not proc.strip().startswith(('add','generate')):
+                            proc = 'add process %s' % proc
+                        if decay_text:
+                            one_decay = decay_text + ',' + ', '.join(decay_text_correlated[key])
+                        else:
+                            one_decay = ', '.join(decay_text_correlated[key])
+                        commandline += self.get_proc_with_decay(proc, one_decay, mgcmd._curr_model, self.options)
+                commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             # remove decay with 0 branching ratio.
@@ -2897,6 +2922,8 @@ class decay_all_events(object):
         i=0
         for processes in self.list_branches.values():
             for proc in processes:
+                if "@" in proc:
+                    proc = proc.split("@",1)[0]
                 commandline+="add process %s @%i --no_warning=duplicate;" % (proc,i)
                 i+=1        
         commandline = commandline.replace('add process', 'generate',1)
@@ -3411,22 +3438,24 @@ class decay_all_events(object):
         except IOError as error:
             if not first:
                 raise
+            #misc.sprint(error)
             try:
                 external.stdin.close()
             except Exception as  error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stdout.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.stderr.close()
             except Exception as error:
-                misc.sprint(error)
+                misc.sprint(error, cond=self.nb_load<=250)
             try:
                 external.terminate()
-            except:
-                pass
+            except Exception as error:
+                misc.sprint(error, cond=self.nb_load<=250)
+
             del self.calculator[('full',path,)]
             return self.loadfortran(mode, path, stdin_text, first=False)
 
@@ -3465,7 +3494,9 @@ class decay_all_events(object):
                         path=key[1]
                         end_signal="5 0 0 0 0\n"  # before closing, write down the seed 
                         external.stdin.write(end_signal.encode())
-                        ranmar_state=external.stdout.readline().decode()
+                        external.stdin.flush()
+                        external.stdout.flush()
+                        ranmar_state=external.stdout.readline().decode(errors='ignore')
                         ranmar_file=pjoin(path,'ranmar_state.dat')
                         ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
@@ -3512,7 +3543,7 @@ class decay_all_events(object):
 
         external.stdin.write(stdin_text.encode())
         if mode == 'prod':
-            info = int(external.stdout.readline().decode())
+            info = int(external.stdout.readline().decode(errors='ignore'))
             nb_output = abs(info)+1
         else:
             info = 1
@@ -3520,10 +3551,10 @@ class decay_all_events(object):
         std = []
         for i in range(nb_output):
             external.stdout.flush()
-            line = external.stdout.readline().decode()
+            line = external.stdout.readline().decode(errors='ignore')
             std.append(line)
         prod_values = ' '.join(std)
-        #prod_values = ' '.join([external.stdout.readline().decode() for i in range(nb_output)])
+        #prod_values = ' '.join([external.stdout.readline().decode(errors='ignore') for i in range(nb_output)])
         if info < 0:
             print('ZERO DETECTED')
             print(prod_values)
@@ -4106,7 +4137,7 @@ class decay_all_events(object):
                         misc.sprint(error)
                         raise
                         continue
-                    ranmar_state=external.stdout.readline().decode()
+                    ranmar_state=external.stdout.readline().decode(errors='ignore')
                     ranmar_file=pjoin(path,'ranmar_state.dat')
                     ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)

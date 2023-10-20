@@ -269,17 +269,19 @@ c clustering scale in 'cluster_one_step'.
          imo=cluster_pdg(0,ibr)
          ico=get_color(imo)
          mass=get_mass_from_id(imo)
-         call set_particle_type(cluster_type(iclus),ico,mass) 
+         call set_particle_type(cluster_type(iclus),ico,mass,.false.) 
       enddo
       return
       end
 
-      subroutine set_particle_type(itype,ico,mass)
+      subroutine set_particle_type(itype,ico,mass,ext)
 c Based on the colour (ico) and mass of the particle, use a binary
-c labeling for the particle-type.
+c labeling for the particle-type. Colour singlets are always treated as
+c massive, except when they are external particles (ie., ext=.true.).
       implicit none
       integer ico,itype
       double precision mass
+      logical ext
       if (ico.eq.8 .and. mass.eq.0d0) then
          if (.not.btest(itype,0)) 
      $        itype = itype+1
@@ -289,10 +291,14 @@ c labeling for the particle-type.
       elseif (abs(ico).eq.3 .and. mass.ne.0d0 ) then
          if (.not.btest(itype,2)) 
      $        itype = itype+4
-      elseif (abs(ico).eq.1 .and. mass.eq.0d0) then
+      elseif (abs(ico).eq.1 .and. mass.eq.0d0 .and. ext) then
          if (.not.btest(itype,3)) 
      $        itype = itype+8
-      elseif (abs(ico).eq.1 .and. mass.ne.0d0) then
+      elseif (abs(ico).eq.1) then
+!        for intermediate colour singlets, we do not care if it is
+!        massive or not (they should always be far enough
+!        off-shell). Treat them always as massive to avoid issues with
+!        Z/gamma^* interference.
          if (.not.btest(itype,4)) 
      $        itype = itype+16
       else
@@ -340,7 +346,7 @@ c fill the type for the external particles
          particle_type(i)=0
          ico=get_color(ipdg(i))
          mass=get_mass_from_id(ipdg(i))
-         call set_particle_type(particle_type(i),ico,mass)
+         call set_particle_type(particle_type(i),ico,mass,.true.)
       enddo
 c Set all diagrams (according to which we cluster) as valid
       call reset_valid_confs(nconf,nvalid,valid_conf)
@@ -1183,7 +1189,7 @@ c     final state clustering
             do i=0,2
                if (popcnt(cl(i)).gt.1)  then
                   write (*,*) 'more than one possibility for clustering'
-     $                 ,cl(i)
+     $                 ,i,cl(i)
                   stop 1
                endif
             enddo
@@ -1204,6 +1210,12 @@ c Different scale depending on itype:
       end
 
       subroutine get_clustering_type(cl,itype)
+      ! This sets the type of clustering based on the masses of the
+      ! particles involved. If need be, this can be extended to include
+      ! colour information: the latter is already available in the cl()
+      ! array. Note that internal colour singlets are always treated as
+      ! massive particles in the cl() array (set by the
+      ! set_particle_type() subroutine).
       implicit none
       integer cl(0:2),itype
       if ( (btest(cl(0),0).or.btest(cl(0),1).or.btest(cl(0),3)) .and.

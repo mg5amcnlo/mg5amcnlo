@@ -279,7 +279,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams_default.dat'))
         MLCard.write(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat'))
             
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         return
     
     def write_f2py_check_sa(self, matrix_element, output_path):
@@ -3080,6 +3080,11 @@ class LoopProcessExporterFortranMatchBox(LoopProcessOptimizedExporterFortranSA,
         """ To not mix notations between borns and virtuals we call it here also MG5 """
         return 'MG5_%d_'%matrix_element.get('processes')[0].get('id')         
       
+
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        out = super().finalize(matrix_element, cmdhistory, MG5options, outputflag)
+        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        return out
 
 #===============================================================================
 # LoopInducedExporter

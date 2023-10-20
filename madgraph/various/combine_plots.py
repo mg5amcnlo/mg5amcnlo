@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ################################################################################
 #
 # Copyright (c) 2013 The MadGraph5_aMC@NLO Development team and Contributors
@@ -14,7 +14,6 @@
 #
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import glob
 import os
 import re

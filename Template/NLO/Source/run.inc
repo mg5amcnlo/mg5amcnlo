@@ -4,10 +4,11 @@ c**************************************************************
 c
 c     Scales
 c
-      real*8          scale,scalefact,ellissextonfact,alpsfact
-      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
+      real*8          scale,scalefact,ellissextonfact,alpsfact, mue_ref_fixed, mue_over_ref
+      logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult, fixed_extra_scale
       integer         ickkw,nhmult,dynamical_scale_choice
       common/to_scale/scale,scalefact,ellissextonfact,alpsfact,fixed_ren_scale,
+     $                mue_ref_fixed, mue_over_ref, fixed_extra_scale, 
      $                fixed_fac_scale,fixed_couplings,ickkw,nhmult,hmult,
      $                dynamical_scale_choice
 
@@ -65,6 +66,10 @@ c     Shower MonteCarlo
 c     
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
+
+      logical mcatnlo_delta
+      common /cMCatNLO_Delta/ mcatnlo_delta
+
 c
 c     Reweight info
 c
@@ -93,3 +98,12 @@ c     RpA-choice
 c
       logical    rpa_choice                                    
       common/RPA/ rpa_choice
+
+C stuff for alpha running in lepton collisions
+      integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+      common/to_alphascheme/alphascheme, nlep_run, nupq_run, ndnq_run, w_run
+
+      logical photons_from_lepton, has_bstrahl
+      common /to_afromee/ photons_from_lepton
+C  PDFs with beamstrahlung use specific initialisation/evaluation
+      common /to_has_bs/ has_bstrahl

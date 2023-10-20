@@ -1486,6 +1486,13 @@ class LoopModel(base_objects.Model):
         return ['name', 'particles', 'parameters', 'interactions', 'couplings',
                 'lorentz','perturbation_couplings','conserved_charge']
 
+    def change_electroweak_mode(self, mode, bypass_check=False):
+        bypass_check=True
+        if not bypass_check:
+            if 'QED' in self.get('perturbation_couplings') or 'EW' in self.get('perturbation_couplings'):
+                raise Exception("can not change EW scheme for model handling EW correction")
+        return super(LoopModel, self).change_electroweak_mode(mode)
+
 #===============================================================================
 # DGLoopLeg
 #===============================================================================
@@ -1504,7 +1511,8 @@ class DGLoopLeg(base_objects.Leg):
         else:
             super(DGLoopLeg,self).__init__()
             for key in argument.get_sorted_keys():
-                self.set(key,argument[key])
+                if key in self.get_sorted_keys():
+                    self.set(key,argument[key])
 
     def default_setup(self):
        super(DGLoopLeg,self).default_setup()         

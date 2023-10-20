@@ -70,10 +70,11 @@ C
 C GLOBAL VARIABLES
 C  
 C     Common blocks
- 
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+
+      include '../../Source/PDF/pdf.inc'
+C      CHARACTER*7         PDLABEL,EPA_LABEL
+C      INTEGER       LHAID
+C      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 
       integer nb_spin_state(2)
       data  nb_spin_state /%(nb_spin_state1)i,%(nb_spin_state2)i/
@@ -543,6 +544,6 @@ C
       implicit none
       integer hel,partid
       write(*,*) "this type of pdf is not support with group_subprocess=True. regenerate process with: set group_subprocesses false"
-      stop 1
+      stop 5
       return
       end

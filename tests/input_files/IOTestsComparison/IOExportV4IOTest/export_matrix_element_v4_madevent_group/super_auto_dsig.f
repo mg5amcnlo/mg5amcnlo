@@ -74,9 +74,10 @@ C     GLOBAL VARIABLES
 C     
 C     Common blocks
 
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
+      INCLUDE '../../Source/PDF/pdf.inc'
+C     CHARACTER*7         PDLABEL,EPA_LABEL
+C     INTEGER       LHAID
+C     COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL
 
       INTEGER NB_SPIN_STATE(2)
       DATA  NB_SPIN_STATE /2,2/
@@ -623,8 +624,8 @@ C
 
       SUBROUTINE PRINT_ZERO_AMP()
 
-      CALL PRINT_ZERO_AMP_1()
-      CALL PRINT_ZERO_AMP_2()
+      CALL PRINT_ZERO_AMP1()
+      CALL PRINT_ZERO_AMP2()
       RETURN
       END
 
@@ -635,6 +636,6 @@ C
       WRITE(*,*) 'this type of pdf is not support with'
      $ //' group_subprocess=True. regenerate process with: set'
      $ //' group_subprocesses false'
-      STOP 1
+      STOP 5
       RETURN
       END

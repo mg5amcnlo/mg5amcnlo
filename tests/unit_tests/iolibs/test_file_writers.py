@@ -24,6 +24,7 @@ import tests.unit_tests as unittest
 
 import madgraph.iolibs.file_writers as writers
 from six.moves import zip
+import madgraph.various.misc as misc
 
 #===============================================================================
 # FortranWriterTest
@@ -159,6 +160,51 @@ C       Test
             self.assertRaises(AssertionError,
                               writer.write_line,
                               nonstring)
+
+    def test_remove_routine(self):
+      """test that the remove routine works
+         and test that it does not complains if they are no routine to remove
+      """
+
+      input_string = """      Subroutine TO_RM(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHHHH
+     $ +ASDASD, WSPEDFTEISPD)
+      INCLUDE 'test.inc'
+      PRINT *, 'Hej \\'Da\\' Mo'
+      IF (TEST) THEN
+        IF(MUTT) CALL HEJ
+      ELSE IF(TEST) THEN
+C       Test
+        C = HEJ
+        CALL HEJ
+C       Test
+ 20   ELSE
+        BAH=2
+      ENDIF
+      Return
+      end
+
+      Subroutine TO_KEEP(BBB)
+        integer BBB
+        BBB = 1
+        return 
+        end
+    """
+
+      writer = writers.FortranWriter(self.give_pos('fortran_test'))
+
+      writer.remove_routine(input_string, ["TO_RM", "TO_RM2"])
+
+      goal_string = """
+      SUBROUTINE TO_KEEP(BBB)
+      INTEGER BBB
+      BBB = 1
+      RETURN
+      END"""
+
+      # Check that the output stays the same
+      self.assertFileContains('fortran_test',
+                                 goal_string)
+
 
 #===============================================================================
 # CPPWriterTest

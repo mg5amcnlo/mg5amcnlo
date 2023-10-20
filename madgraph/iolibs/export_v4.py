@@ -16,10 +16,12 @@ from __future__ import absolute_import, division
 from madgraph.iolibs.helas_call_writers import HelasCallWriter
 from six.moves import range
 from six.moves import zip
-from fractions import Fraction
+import six
+from madgraph.core import base_objects
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+import math, cmath
 from six import StringIO
 import itertools
 import fractions
@@ -561,9 +563,16 @@ class ProcessExporterFortran(VirtualExporter):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
+        # this is for LHAPDF
         ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
         #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
+        ff.writelines(template % changer)
+
+        # this is for eMELA
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_emela.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_emela.f"),"r").read()
         ff.writelines(template % changer)
         
         
@@ -686,6 +695,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
+                '$(LIBDIR)libgammaUPC.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
                 '$(LIBDIR)libcernlib.$(libext)',
                 '$(LIBDIR)libbias.$(libext)']
@@ -709,7 +719,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': ''} 
+
+        if self.opt['running']:
+            replace_dict['running'] ="  $(LIBDIR)librunning.$(libext): RUNNING\n\tcd RUNNING; make"
+            replace_dict['libraries'] += " $(LIBDIR)librunning.$(libext) "
         
         if writer:
             text = open(path).read() % replace_dict
@@ -1301,8 +1316,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             # Mutliply by -1 for those which have an imaginary coefficient.
             ampnumbers_list=[coefficient[1]*(-1 if coefficient[0][2] else 1) \
                               for coefficient in coeff_list]
-            # Find the common denominator.      
-            commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            # Find the common denominator.  
+            if six.PY2:    
+                commondenom=abs(reduce(fractions.gcd, coefs_list).denominator)
+            else:
+                commondenom=abs(reduce(math.gcd, coefs_list).denominator)
             num_list=[(coefficient*commondenom).numerator \
                       for coefficient in coefs_list]
             res_list.append("DATA NCONTRIBAMPS%s(%i)/%i/"%(tag_letter,\
@@ -1509,7 +1527,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         #misc.sprint("number of iteration", self.myjamp_count)
         def format(frac):
-            if isinstance(frac, Fraction):
+            if isinstance(frac, fractions.Fraction):
                 if frac.denominator == 1:
                     return str(frac.numerator)
                 else:
@@ -1704,6 +1722,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  "/%d*1D0/" % len(initial_states[i]) + \
                                                  "\n"
 
+            # Get PDF lines for UPC (non-factorized PDF)
+            if 22 in initial_states[0] and 22 in initial_states[1]:
+                if subproc_group:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(IB(1))).EQ.2.AND.ABS(LPP(IB(2))).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(IB(1)),XBK(IB(2)))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                else:
+                    pdf_lines = pdf_lines + \
+                        "IF (ABS(LPP(1)).EQ.2.AND.ABS(LPP(2)).EQ.2.AND.(PDLABEL(1:4).EQ.'edff'.OR.PDLABEL(1:4).EQ.'chff'))THEN\n"
+                    pdf_lines = pdf_lines + \
+                        ("%s%d=PHOTONPDFSQUARE(XBK(1),XBK(2))\n%s%d=DSQRT(%s%d)\n%s%d=%s%d\n") % \
+                        (pdf_codes[22],1,pdf_codes[22],2,pdf_codes[22],1,pdf_codes[22],1,pdf_codes[22],2)
+                pdf_lines = pdf_lines + "ELSE\n"
+
             # Get PDF lines for all different initial states
             for i, init_states in enumerate(initial_states):
                 if subproc_group:
@@ -1738,6 +1772,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                             if dressed_lep:
                                 pdf_lines += "IF (PDLABEL.EQ.'dressed') %s%d_components(1:4) = ee_components(1:4)\n" %\
                                 (pdf_codes[initial_state],i + 1)
+                pdf_lines = pdf_lines + "ENDIF\n"
+
+            if 22 in initial_states[0] and 22 in initial_states[1]:
                 pdf_lines = pdf_lines + "ENDIF\n"
 
             # Add up PDFs for the different initial state particles
@@ -1943,7 +1980,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -2020,19 +2057,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler['f2py']
+        elif misc.which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+            f2py_compiler = 'f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)
+        elif misc.which('f2py%d' %(sys.version_info.major)):
+            f2py_compiler = 'f2py%d' %(sys.version_info.major)            
         elif misc.which('f2py'):
             f2py_compiler = 'f2py'
-        elif sys.version_info[1] == 6:
-            if misc.which('f2py-2.6'):
-                f2py_compiler = 'f2py-2.6'
-            elif misc.which('f2py2.6'):
-                f2py_compiler = 'f2py2.6'
-        elif sys.version_info[1] == 7:
-            if misc.which('f2py-2.7'):
-                f2py_compiler = 'f2py-2.7'
-            elif misc.which('f2py2.7'):
-                f2py_compiler = 'f2py2.7'            
-        
+
+
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
         
@@ -2058,7 +2090,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE) 
             out, _ = p.communicate()
-            out = out.decode()
+            out = out.decode(errors='ignore')
             if 'clang' in str(out) and  misc.which('clang'):
                 compiler = 'clang'
             else:
@@ -2127,7 +2159,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             import platform
             version, _, _ = platform.mac_ver()
             if not version:# not linux 
-                version = 14 # set version to remove MACFLAG
+                majversion = 14 # set version to remove MACFLAG
             else:
                 majversion, version = [int(x) for x in version.split('.',3)[:2]]
 
@@ -2172,6 +2204,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """Additional actions needed for setup of Template
         """
 
+        self.model = model
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
@@ -2205,6 +2238,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
+
+        if model['running_elements']:
+            fsock = open( pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 'r')
+            text = fsock.read()
+            fsock.close()
+            fsock = open(pjoin(self.dir_path, 'SubProcesses', 'makefileP'),'w')
+            text = text.replace('LINKLIBS =  -L../../lib/', 'LINKLIBS =  -L../../lib/ -lrunning')
+            text = text.replace('LIBS =', 'LIBS = $(LIBDIR)/librunning.$(libext)')
+            fsock.write(text)
+            fsock.close()
+        else:
+            # Add file in SubProcesses
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
@@ -2215,7 +2262,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     pjoin(self.dir_path, 'Source'))        
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))          
+        self.write_source_makefile(writers.FileWriter(filename),model)          
         
     #===========================================================================
     # export model files
@@ -2265,10 +2312,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """
 
         source_dir = pjoin(self.dir_path, "Source")
-        logger.info("Running make for Helas")
-        misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
-        logger.info("Running make for Model")
-        misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for Source directory")
+        try:
+            misc.compile(cwd=source_dir, mode='fortran')
+        except:
+            misc.compile(arg=['../lib/libdhelas.a'], cwd=source_dir, mode='fortran')
+            misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
 
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
@@ -2306,7 +2355,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             
         if self.prefix_info: 
             self.write_f2py_splitter()
-            self.write_f2py_makefile()
+            self.write_f2py_makefile(self.model)
             self.write_f2py_check_sa(matrix_elements,
                             pjoin(self.dir_path,'SubProcesses','check_sa.py'))
         else:
@@ -2345,10 +2394,14 @@ CF2PY double precision, intent(in) :: SCALE2
   double precision ANS, ALPHAS, PI,SCALE2
   include 'coupl.inc'
   
-  PI = 3.141592653589793D0
-  G = 2* DSQRT(ALPHAS*PI)
-  CALL UPDATE_AS_PARAM()
-c  if (scale2.ne.0d0) stop 1
+  
+  if (scale2.eq.0)then
+       PI = 3.141592653589793D0
+       G = 2* DSQRT(ALPHAS*PI)
+       CALL UPDATE_AS_PARAM()
+  else
+       CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
+  endif
 
 %(smatrixhel)s
 
@@ -2418,7 +2471,95 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
   RETURN
   END 
  
+
+
+    subroutine set_fixed_extra_scale(new_value)
+    implicit none
+CF2PY logical, intent(in) :: new_value
+    logical new_value
+                logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
   
+        fixed_extra_scale = new_value
+        return 
+        end
+
+    subroutine set_mue_over_ref(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_over_ref = new_value
+        
+    return 
+    end
+
+    subroutine set_mue_ref_fixed(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    mue_ref_fixed = new_value
+        
+    return 
+    end
+
+
+    subroutine set_maxjetflavor(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+    logical fixed_extra_scale
+    integer maxjetflavor
+    double precision mue_over_ref
+    double precision mue_ref_fixed
+    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+  
+    maxjetflavor = new_value
+        
+    return 
+    end
+
+
+    subroutine set_asmz(new_value)
+    implicit none
+CF2PY double precision, intent(in) :: new_value
+    double precision new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    asmz = new_value
+    write(*,*) "asmz is set to ", new_value
+        
+    return 
+    end
+
+    subroutine set_nloop(new_value)
+    implicit none
+CF2PY integer, intent(in) :: new_value
+    integer new_value
+          integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+    nloop = new_value
+     write(*,*) "nloop is set to ", new_value
+        
+    return 
+    end
+
         """
         
         allids = list(self.prefix_info.keys())
@@ -2500,22 +2641,41 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
             lha = '_'.join([str(i) for i in p.lhacode])
             params['%s_%s' % (block.upper(), lha)] = name
 
+        if model['running_elements']:
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        add_scale.add(one_element.lhablock)
+            for block in add_scale:
+                if block.upper() == "SMINPUTS":
+                    continue
+                name = block
+                params['%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+                params['mdl__%s__scale' % (block.upper())] = 'mdl__%s__scale' % (block.upper())
+
         return params                      
                                         
         
         
-        
-         
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
         return
     
-    def write_f2py_makefile(self):
+    def write_f2py_makefile(self, model):
         """ """
+        template = pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py')
+        destination = pjoin(self.dir_path, 'SubProcesses', 'makefile')
+
         # Add file in SubProcesses
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+        if model['running_elements']:
+            text = open(template,'r').read()
+            text = text.replace('LINKLIBS_ME =  -L../lib/', 'LINKLIBS_ME =  -L../lib/ -lrunning ')
+            text = text.replace('LINKLIBS_ALL =  -L../lib/', 'LINKLIBS_ALL =  -L../lib/ -lrunning ')
+            open(destination, 'w').write(text)
+        else:
+             shutil.copy(template, destination)
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -2674,17 +2834,24 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
     #===========================================================================
     # write_source_makefile
     #===========================================================================
-    def write_source_makefile(self, writer):
+    def write_source_makefile(self, writer, model):
         """Write the nexternal.inc file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_makefile_source')
         set_of_lib = '$(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)'
         model_line='''$(LIBDIR)libmodel.$(libext): MODEL\n\t cd MODEL; make\n'''
 
+        if model['running_elements']:
+            running_line = '''$(LIBDIR)librunning.$(libext): RUNNING\n\t cd RUNNING; make\n'''
+            set_of_lib += ' $(LIBDIR)librunning.$(libext) '
+        else:
+            running_line  = '' 
+
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
                        'additional_dsample': '',
-                       'additional_dependencies':''} 
+                       'additional_dependencies':'',
+                       'running': running_line} 
 
         text = open(path).read() % replace_dict
         
@@ -2966,6 +3133,11 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     def make(self,*args,**opts):
         pass
 
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
+        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        return super().finalize(matrix_elements, history, mg5options, flaglist)
+    
+
     def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)", split=-1,
                        JAMP_formatLC=None):
     
@@ -3209,6 +3381,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         misc.compile(arg=['../lib/libmodel.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for PDF")
         misc.compile(arg=['../lib/libpdf.a'], cwd=source_dir, mode='fortran')
+        logger.info("Running make for gammaUPC")
+        misc.compile(arg=['../lib/libgammaUPC.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for CERNLIB")
         misc.compile(arg=['../lib/libcernlib.a'], cwd=source_dir, mode='fortran')
         logger.info("Running make for GENERIC")
@@ -3520,7 +3694,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libgammaUPC.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 
@@ -3772,7 +3946,7 @@ c     channel position
 #                                  ",".join([str(d) for d in pdgs])))
 #                    lines.append("data tprid(%d,%d)/0/" % \
 #                                 (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append(line+" T "+str(last_leg.get('id')))
 #		    lines.append("data tprid(%d,%d)/%d/" % \
 #                                 (last_leg.get('number'), nconfigs,
@@ -3810,6 +3984,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         }
     jamp_optim = True
     
+
+    def __new__(cls, *args, **opts):
+        """wrapper needed for some plugin"""
+
+        return super(ProcessExporterFortranME, cls).__new__(cls)
+
+
     def __init__(self,  dir_path = "", opt=None):
         
         super(ProcessExporterFortranME, self).__init__(dir_path, opt)
@@ -3854,6 +4035,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
+        
+        if model["running_elements"]:
+            if not os.path.exists(pjoin(MG5DIR, 'Template',"Running")):
+                raise Exception("Library for the running have not been installed. To install them please run \"install RunningCoupling\"")
+            misc.copytree(pjoin(MG5DIR, 'Template',"Running"), 
+                            pjoin(self.dir_path,'Source','RUNNING'))
         
         
 
@@ -4018,7 +4205,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
-        if self.opt['hel_recycling']:
+        if 'hel_recycling' in self.opt and self.opt['hel_recycling']:
             filename = pjoin(Ppath, 'matrix_orig.f')
         else:
             filename = pjoin(Ppath, 'matrix.f')
@@ -5031,7 +5218,7 @@ c           This is dummy particle used in multiparticle vertices
                                   ",".join([str(d) for d in pdgs])))
                     lines.append("data tprid(%d,%d)/0/" % \
                                  (last_leg.get('number'), nconfigs))
-                elif verts in tchannels[:-1]:
+                elif verts in tchannels:
                     lines.append("data tprid(%d,%d)/%d/" % \
                                  (last_leg.get('number'), nconfigs,
                                   abs(last_leg.get('id'))))
@@ -5682,6 +5869,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     """Class to take care of exporting a set of matrix elements to
     MadEvent subprocess group format."""
 
+
     matrix_file = "matrix_madevent_group_v4.inc"
     grouped_mode = 'madevent'
     default_opt = {'clean': False, 'complex_mass':False,
@@ -6024,7 +6212,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         printzeroamp = []
         for iproc in range(len(matrix_elements)):
             printzeroamp.append(\
-                "        call print_zero_amp_%i()" % ( iproc + 1))
+                "        call print_zero_amp%i()" % ( iproc + 1))
         replace_dict['print_zero_amp'] = "\n".join(printzeroamp)
         
         
@@ -6307,8 +6495,32 @@ class UFO_model_to_mg4(object):
         self.params_indep = [] # (name, expression, type)
         self.params_ext = []   # external parameter
         self.p_to_f = parsers.UFOExpressionParserFortran(self.model)
-        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model)   
-       
+        self.mp_p_to_f = parsers.UFOExpressionParserMPFortran(self.model) 
+        self.scales = []
+        self.MUE = None # extra parameter loop #2 which is running
+        
+        if self.model.get('running_elements'):
+            all_elements = set()
+            add_scale = set()
+            for runs in self.model.get('running_elements'):
+                for line_run in runs.run_objects:
+                    for one_element in line_run:
+                        all_elements.add(one_element.name)
+                        add_scale.add(one_element.lhablock)
+            all_elements.union(set(self.PS_dependent_key))
+            self.PS_dependent_key = list(all_elements)
+            MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+            
+            if MUE:
+                self.MUE = MUE[0]
+                self.PS_dependent_key.append(MUE[0].name)
+            
+            try:
+                add_scale.remove('SMINPUTS')
+            except Exception:
+                pass
+            self.scales = add_scale
+
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
@@ -6380,9 +6592,10 @@ class UFO_model_to_mg4(object):
     def refactorize(self, wanted_couplings = []):    
         """modify the couplings to fit with MG4 convention """
             
-        # Keep only separation in alphaS        
+        # Keep only separation in alphaS + running one        
         keys = list(self.model['parameters'].keys())
         keys.sort(key=len)
+
         for key in keys:
             to_add = [o for o in self.model['parameters'][key] if o.name]
 
@@ -6392,19 +6605,25 @@ class UFO_model_to_mg4(object):
                 self.params_dep += to_add
             else:
                 self.params_indep += to_add
-        # same for couplings
+                
+        # same for couplings + tracking which running happens
         keys = list(self.model['couplings'].keys())
         keys.sort(key=len)
+        used_running_key = set()
         for key, coup_list in self.model['couplings'].items():
             if any([(k in key) for k in self.PS_dependent_key]):
-                self.coups_dep += [c for c in coup_list if
+                to_add = [c for c in coup_list if
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
+                if to_add:
+                    self.coups_dep += to_add
+                    used_running_key.update(set(key))
             else:
                 self.coups_indep += [c for c in coup_list if
                                      (not wanted_couplings or c.name in \
                                       wanted_couplings)]
-                
+        #store the running parameter that are used
+        self.used_running_key = used_running_key     
         # MG4 use G and not aS as it basic object for alphas related computation
         #Pass G in the  independant list
         if 'G' in self.params_dep:
@@ -6413,12 +6632,13 @@ class UFO_model_to_mg4(object):
         #    G.expr = '2*cmath.sqrt(as*pi)'
         #    self.params_indep.insert(0, self.params_dep.pop(index))
         # No need to add it if not defined   
-            
-        if 'aS' not in self.params_ext:
+
+        if 'aS' not in self.params_ext and 'aS' not in self.params_indep:
             logger.critical('aS not define as external parameter adding it!')
             #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
             self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
             self.params_indep.append( base_objects. ModelVariable('G', '4.1643','real'))
+            
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
@@ -6559,10 +6779,28 @@ class UFO_model_to_mg4(object):
                                   'madweight','matchbox','madloop_matchbox', 'plugin']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
-        #elif self.opt['export_format'] in []:
-            #pass
         else:
             raise MadGraph5Error('Unknown format')
+
+        if self.opt['export_format'].startswith('standalone'):
+            cp( MG5DIR + '/Template/LO/Source/alfas_functions.f', 
+                self.dir_path)
+            cp( MG5DIR + '/Template/LO/Source/alfas.inc', 
+                self.dir_path)
+
+            fsock = open(pjoin(self.dir_path, '..', 'cuts.inc'),'w')
+            fsock.write('''            
+            logical fixed_extra_scale
+            integer maxjetflavor
+            double precision mue_over_ref
+            double precision mue_ref_fixed
+            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+            ''')
+
+            if self.model['running_elements']:
+                cp( MG5DIR + '/Template/Running',  pjoin(self.dir_path, '..', 'RUNNING'))
+
+
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -6733,18 +6971,20 @@ class UFO_model_to_mg4(object):
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]
-
+        
         # check the parameter is a CT parameter or not
         # if yes, just use the needed ones        
         real_parameters = [param for param in real_parameters \
                                            if self.check_needed_param(param)]
 
+        real_parameters += ['mdl__%s__scale' % s for s in self.scales]
+        
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
             mp_fsock.writelines(self.mp_real_format+' '+','.join([\
                               self.mp_prefix+p for p in real_parameters])+'\n')
-            mp_fsock.writelines('common/MP_params_R/ '+','.join([\
+            mp_fsock.writelines('common/MP_T_params_R/ '+','.join([\
                             self.mp_prefix+p for p in real_parameters])+'\n\n')        
         
         complex_parameters = [param.name for param in self.params_dep + 
@@ -6842,20 +7082,22 @@ class UFO_model_to_mg4(object):
            this file only need the correct name for the mass for the W and Z
         """
 
-        
         try:
             fsock = self.open(pjoin(self.dir_path,'../PDF/ElectroweakFlux.inc'), format='fortran')
         except:
             logger.debug('No PDF directory do not cfeate ElectroweakFlux.inc')
             return
 
-        masses = {}
+        masses = {'MZ': '0d0', 'MW': '0d0'}
+        count = 0
         for particle in self.model['particles']:
             if particle.get('pdg_code') == 24:
                 masses['MW'] = particle.get('mass')
+                count += 1
             elif particle.get('pdg_code') == 23:
                 masses['MZ'] =  particle.get('mass')
-            if len(masses) == 2:
+                count += 1
+            if count == 2:
                 break
 
         template = open(pjoin(MG5DIR,'madgraph/iolibs/template_files/madevent_electroweakFlux.inc')).read()
@@ -6988,11 +7230,11 @@ class UFO_model_to_mg4(object):
                                  %(mp_prefix)sgal(2) = 1e0_16
                              """%{'mp_prefix':self.mp_prefix})
 
-    
+    nb_def_by_file = 50
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
         
-        nb_def_by_file = 25
+        nb_def_by_file = self.nb_def_by_file
         
         self.create_couplings_main(nb_def_by_file)
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file
@@ -7067,19 +7309,73 @@ class UFO_model_to_mg4(object):
 
                             implicit none
                             double precision PI, ZERO
-                            logical READLHA
+                            logical READLHA, FIRST
+                            data first /.true./
+                            save first
                             parameter  (PI=3.141592653589793d0)            
                             parameter  (ZERO=0d0)
                             logical updateloop
                             common /to_updateloop/updateloop
-                            include \'model_functions.inc\'""")
+                            include \'model_functions.inc\'
+                            double precision Gother
+                            
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
+
+        if self.opt['export_format'] in ['madevent', 'madloop_optimized']:
+            fsock.writelines("""
+                            include \'../maxparticles.inc\'
+                            include \'../cuts.inc\'
+                            include \'../run.inc\'""")
+        else:
+            fsock.writelines("""
+                            include \'../cuts.inc\'
+                            data maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed /5,.false.,1d0,91.188/
+                            include \'../run.inc\'""")
+        fsock.writelines("""
+                            double precision alphas 
+                            external alphas
+                            """)
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
         fsock.writelines("""    
                             include \'intparam_definition.inc\'\n
+                            
                          """)
-            
+        
+        if self.model['running_elements']:
+            running_block = self.model.get_running(self.used_running_key) 
+            if running_block:
+                MUE = [p for p in self.model.get('parameters')[('external',)] if p.lhablock.lower() == 'loop' and tuple(p.lhacode) == (2,)]
+
+                
+                
+                fsock.write_comments('calculate the running parameter')
+                fsock.writelines(' if(fixed_extra_scale.and.first) then')
+                if self.MUE:
+                    fsock.writelines(' %s = mue_ref_fixed' % self.MUE.name)
+                fsock.writelines(' Gother = SQRT(4.0D0*PI*ALPHAS(mue_ref_fixed))') 
+                fsock.writelines(' first = .false.') 
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines(' elseif(.not.fixed_extra_scale) then')
+                fsock.writelines(' Gother = G')
+                
+                if self.MUE:
+                    fsock.writelines(' %s = mue_over_ref*model_scale' % self.MUE.name)
+                else:
+                    misc.sprint('NO MUE')
+                    #raise Exception
+                
+                fsock.writelines(' if(mue_over_ref.ne.1d0)then')
+                fsock.writelines('  Gother = SQRT(4.0D0*PI*ALPHAS(mue_over_ref*model_scale))')
+                fsock.writelines(' endif')
+                
+                for i in range(len(running_block)):
+                    fsock.writelines(" call C_RUNNING_%s(Gother) ! %s \n" % (i+1,list(running_block[i])))   
+                fsock.writelines('endif')
         nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
         nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
                 
@@ -7098,15 +7394,41 @@ class UFO_model_to_mg4(object):
                             double precision mu_r2, as2
                             include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
-                            include \'coupl.inc\'""")
+                            include \'coupl.inc\'
+                            double precision model_scale
+                            common /model_scale/model_scale
+                            """)
         fsock.writelines("""
-                            if (mu_r2.gt.0d0) MU_R = mu_r2
+                            if (mu_r2.gt.0d0) MU_R = DSQRT(mu_r2)
+                            model_scale = DSQRT(mu_r2)
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
                             CALL UPDATE_AS_PARAM()
                          """)
         fsock.writelines('''\n return \n end\n''')
+
+        # fsock.writelines("""subroutine update_model_to_scale(scale)
+        #                     ! scale in GeV
+        #                     implicit none
+        #                     double precision scale
+        #                     double precision PI
+        #                     double precision alphas
+        #                     external alphas
+        #                     parameter  (PI=3.141592653589793d0)
+        #                     double precision mu_r2, as2
+        #                     include \'model_functions.inc\'""")
+        # fsock.writelines("""include \'input.inc\'
+        #                     include \'coupl.inc\'
+        #                     """)
+        # fsock.writelines("""
+        #                     AS = ALPHAS(scale)
+        #                     AS2 = AS*AS
+        #                     call update_as_param2(scale**2, AS2)
+        #                  """)
+        # fsock.writelines('''\n return \n end\n''')
+
+
 
         if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
@@ -7129,6 +7451,14 @@ class UFO_model_to_mg4(object):
             
             nb_coup_indep = 1 + len(self.coups_indep) // nb_def_by_file 
             nb_coup_dep = 1 + len(self.coups_dep) // nb_def_by_file 
+
+            if self.model['running_elements']:
+                #running_block = self.model.get_running(self.used_running_key) 
+                if running_block:
+                    fsock.write_comments('calculate the running parameter')
+                    for i in range(len(running_block)):
+                        fsock.writelines(" call MP_C_RUNNING_%s(G) ! %s \n" % (i+1,list(running_block[i])))   
+            
                     
             fsock.write_comments('\ncouplings needed to be evaluated points by points\n')
     
@@ -7136,6 +7466,354 @@ class UFO_model_to_mg4(object):
                         ['call mp_coup%s()' %  (nb_coup_indep + i + 1) \
                           for i in range(nb_coup_dep)]))
             fsock.writelines('''\n return \n end\n''')
+            
+        if self.model['running_elements'] and running_block:
+            self.write_running_blocks(fsock, running_block)
+    
+    def write_running_blocks(self, fsock, running_block):
+        
+        for block_nb, runparams in enumerate(running_block):
+            text = self.write_one_running_block(block_nb, runparams)
+            fsock.writelines(text)
+            
+    
+    template_running_gs_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include 'input.inc'
+      %(mpinput)s
+
+      include '../cuts.inc'
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+
+      double complex mat1(%(size)i,%(size)i), mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      data mat1 /%(mat1)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r1 = (1/GMU -1/G0)/ beta0
+      r2 = DLOG(G0/GMU)/beta0
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat1(j,i) *r1 + mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_gs2 = """
+                  SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+      include '../cuts.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat2(%(size)i,%(size)i), fullmat(%(size)i,%(size)i), matexp(%(size)i,%(size)i)
+      data mat2 /%(mat2)s/
+      double precision C0(%(size)i),Cout(%(size)i)
+      data C0 /%(size)i * 0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      double precision G0,beta0, alphas
+      external alphas
+      data G0 /0d0/
+      double precision r1,r2
+      if (first) then
+         %(initc0)s
+         G0 = SQRT(4.0D0*PI*ALPHAS(mdl__%(scale)s__scale))
+         %(check_scale)s
+         first = .false.
+      endif
+      beta0 = 11. - 2./3. * maxjetflavor
+      r2 = DLOG(G0/GMU) / beta0 
+      do j=1,%(size)i
+         do i=1,%(size)i
+            fullmat(j,i) = mat2(j,i)*r2
+         enddo
+      enddo
+      call c8mat_expm1( %(size)i, fullmat, matexp)
+      do j=1,%(size)i
+         Cout(j) = 0d0
+      enddo
+
+      do i=1,%(size)i
+         do j=1,%(size)i
+            Cout(j) = Cout(j) + matexp(j,i) * c0(i)
+         enddo
+      enddo
+
+      %(assignc)s
+
+      return
+      end
+            """
+            
+    template_running_x3 = """
+    SUBROUTINE %(mp)sC_RUNNING_%(block_nb)i(GMU)
+
+      IMPLICIT NONE
+      DOUBLE PRECISION PI
+      PARAMETER  (PI=3.141592653589793D0)
+
+       include '../cuts.inc'
+      INCLUDE 'input.inc'
+      %(mpinput)s
+      INCLUDE 'coupl.inc'
+      double precision GMU
+
+      double complex mat3
+      data mat3 /%(mat3)s/
+      double precision C0
+      data C0 /0d0/
+      logical first
+      data first /.true./
+      integer i,j,k
+      if (first) then
+         C0 = %(mp)s%(initc0)s
+         first = .false.
+         %(check_scale)s
+      endif
+      
+      %(mp)s%(assignc)s =  1/DSQRT( 1/C0/C0 - 2*mat3 *DLOG(MU_R/mdl__%(scale)s__scale))
+      
+      return
+      end
+      """
+    
+    def get_scales(self):
+
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                to_update[id1][id2] = eval(elements.value)*prefact
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+
+        return scales
+
+
+    def write_one_running_block(self, block_nb, runparams):
+               
+        runparams = list(runparams)
+        
+        size = len(runparams) 
+        mat1=[[0]*size for _ in range(size)]
+        mat2=[[0]*size for _ in range(size)]
+        mat3=0
+        scales = set()
+        
+        for elements in self.model["running_elements"]:
+            for params in elements.run_objects:
+                sparams = [str(p) for p in params]
+                if not any(param in runparams for param in sparams):
+                    continue
+                if 'aS' in sparams or sparams.count('G') == 2:
+                    to_update = mat2
+                    prefact = 4*math.pi
+                    try:
+                        sparams.remove('aS')
+                    except:
+                        sparams.remove('G')
+                        sparams.remove('G')
+                else:
+                    to_update = mat1
+                    sparams.remove('G')
+                    prefact = 16*math.pi**2
+                    
+                if len(sparams) == 3:
+                    if len(set(sparams)) !=1:
+                        raise Exception( "Not supported type of running")
+                    mat3 = eval(elements.value)
+                    continue
+                elif len(sparams) !=2:
+                    raise Exception("Not supported type of running")
+                id1 = runparams.index(sparams[0])
+                id2 = runparams.index(sparams[1])
+                assert to_update[id1][id2] == 0
+                try:
+                    to_update[id1][id2] = eval(elements.value)*prefact
+                except Exception:
+                    to_update[id1][id2] = '%s *( %s)' % (prefact, elements.value) 
+
+                for param in params:
+                    scales.add(param.lhablock)
+
+        try:
+            scales.remove('SMINPUTS')
+        except Exception:
+            pass
+        
+        data = {}
+        data['block_nb'] = block_nb+1
+        data['size'] = size
+        data['mp'] = ''
+        if mat3:
+            template = self.template_running_x3
+            data['mat3']
+            data['initc0'] = "MDL_%s" % runparams[0]
+            data['assignc'] = "MDL_%s" % runparams[0]
+            text = template % data
+            if self.opt['mp']:
+                data['mp'] = 'MP_'
+                data['initc0'] = "MP__MDL_%s" % runparams[0]
+                data['assignc'] = "MP__MDL_%s" % runparams[0]
+                text += template % data 
+            return text
+        
+        data['initc0'] = "\n".join(["c0(%i) = MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+        data['assignc'] = "\n".join(["MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+        data['mp'] = ''
+        data['check_scale'] = ''
+        
+        if len(scales) == 1:
+            data['scale'] = scales.pop()
+        else:
+            one_scale = scales.pop()
+            data['scale'] = one_scale
+            for scale in scales:
+                check_scale = """ if (MDL__%(1)s__SCALE.ne.MDL__%(2)s__SCALE) then
+                write(*,*) 'ERROR scale %(1)s and %(2)s need to be equal for the running'
+                stop 5
+                endif
+                """
+                data['check_scale'] += check_scale % {'1': one_scale, '2': scale}           
+
+        # need to compute the matrices
+        # carefull some component are proportional to aS
+        # need to convert those to G^2
+        # need to be carefull with prefactor included (none yet)
+
+        
+        
+        
+        
+        data['mat1'] = ",".join(["%e" % mat1[j][i] if not isinstance(mat1[j][i], str) else "%e" %0  for i in range(data['size']) for j in range(data['size'])])
+        data['mat2'] = ",".join(["%e" % mat2[j][i] if not isinstance(mat2[j][i], str) else "%e" %0 for i in range(data['size']) for j in range(data['size'])])
+        
+        # add initialization for parameter that have coupling parameter
+        for i in range(data['size']):
+            for j in range(data['size']):
+                if isinstance(mat1[i][j], str):
+                    towrite = mat1[i][j].replace('cmath.pi', 'pi')
+                    towrite = towrite.replace('cmath.sqrt(', 'SQRT(1d0*')
+                    towrite = towrite.replace('math.pi', 'pi')
+                    towrite = towrite.replace('math.sqrt(', 'SQRT(1d0*')
+                    data['initc0'] += "\n   MAT1(%i,%i) = %s" % (i+1, j+1, towrite)
+                if isinstance(mat2[i][j], str):
+                    towrite = mat2[i][j].replace('cmath.pi', 'pi')
+                    towrite = towrite.replace('cmath.sqrt(', 'SQRT(1d0*')
+                    towrite = towrite.replace('math.pi', 'pi')
+                    towrite = towrite.replace('math.sqrt(', 'SQRT(1d0*')
+                    data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, towrite)
+
+        data['mpinput'] =''
+        if any(mat1[i][j] for i,j in zip(range(size),range(size))):
+            template = self.template_running_gs_gs2
+        else:
+            template = self.template_running_gs2
+        
+        text = template % data
+        if self.opt['mp']:
+            data['mp'] = 'MP_'
+            data['mpinput']="INCLUDE 'mp_input.inc'"
+            data['initc0'] = "\n".join(["c0(%i) = MP__MDL_%s" % (i+1, name)
+                                    for i, name in enumerate(runparams)])
+            # add initialization for parameter that have coupling parameter
+            for i in range(data['size']):
+                for j in range(data['size']):
+                    if isinstance(mat1[i][j], str):
+                        towrite = mat1[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT1(%i,%i) = %s" % (i+1, j+1, mat1[i][j].replace('MDL_', 'MP__MDL_'))
+                    if isinstance(mat2[i][j], str):
+                        towrite = mat2[i][j].replace('cmath.pi', 'MP__pi')
+                        towrite = towrite.replace('cmath.sqrt(', 'SQRT((1_E16*')
+                        towrite = towrite.replace('math.pi', 'MP__pi')
+                        towrite = towrite.replace('math.sqrt(', 'SQRT(1_E16*')
+                        data['initc0'] += "\n   MAT2(%i,%i) = %s" % (i+1, j+1, mat2[i][j].replace('MDL_', 'MP__MDL_'))
+
+            data['assignc'] = "\n".join(["MP__MDL_%s = COUT(%i)" % (name,i+1)
+                                    for i, name in enumerate(runparams)])
+            text += template % data   
+            
+        return text
 
     def create_couplings_part(self, nb_file, data, dp=True, mp=False):
         """ create couplings[nb_file].f containing information coming from data.
@@ -7189,7 +7867,7 @@ class UFO_model_to_mg4(object):
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
                        "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory",
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)
         
@@ -8256,7 +8934,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                 # already handle by default
                 if str(fct.name.lower()) not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc", "condif",
                                     "theta_function", "cond", "reglog", "reglogp", "reglogm", "recms","arg",
-                                    "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                    "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
@@ -8294,7 +8972,7 @@ c         segments from -DABS(tiny*Ga) to Ga
                     # already handle by default
                     if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc","condif",
                                         "theta_function", "cond", "reglog", "reglogp","reglogm", "recms","arg",
-                                        "grreglog","regsqrt","B0F","sqrt_trajectory","log_trajectory"]:
+                                        "grreglog","regsqrt","B0F","b0f","sqrt_trajectory","log_trajectory"]:
 
                         ufo_fct_template = """
           %(complex_mp_format)s function mp_%(name)s(mp__%(args)s)
@@ -8338,9 +9016,12 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('makeinc.inc', comment='#')
         text = 'MODEL = couplings.o lha_read.o printout.o rw_para.o'
         text += ' model_functions.o '
-        
-        nb_coup_indep = 1 + len(self.coups_dep) // 25 
-        nb_coup_dep = 1 + len(self.coups_indep) // 25
+        if self.opt['export_format'].startswith('standalone'):
+            text += ' alfas_functions.o '
+
+
+        nb_coup_indep = 1 + len(self.coups_dep) // self.nb_def_by_file
+        nb_coup_dep = 1 + len(self.coups_indep) // self.nb_def_by_file
         couplings_files=['couplings%s.o' % (i+1) \
                                 for i in range(nb_coup_dep + nb_coup_indep) ]
         if self.opt['mp']:
@@ -8395,6 +9076,25 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('ident_card.dat')
      
         external_param = [format(param) for param in self.params_ext]
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b.lower(),
+                     91.188, b, [0])
+                external_param.append(format(param))
+
         fsock.writelines('\n'.join(external_param))
 
     def create_actualize_mp_ext_param_inc(self):
@@ -8450,6 +9150,25 @@ c         segments from -DABS(tiny*Ga) to Ga
         fsock = self.open('param_read.inc', format='fortran')
         res_strings = [format_line(param) \
                           for param in self.params_ext]
+        
+        if self.model['running_elements']:
+            scales = set()
+            
+            for elements in self.model["running_elements"]:
+                for params in elements.run_objects:
+                    for param in params:
+                        scales.add(param.lhablock)
+
+            try:
+                scales.remove('SMINPUTS')
+            except Exception:
+                pass
+            #entry should be a parameter ... not a string
+            for b in scales:
+                param = base_objects.ParamCardVariable(
+                    'mdl__%s__scale' % b,
+                     91.188, b, 0)
+                res_strings.append(format_line(param))
         
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        
@@ -8606,6 +9325,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         ExporterClass=None
         amcatnlo_options = dict(opt)
         amcatnlo_options.update(MadLoop_SA_options)
+        amcatnlo_options['running'] = cmd._curr_model.get('running_elements')
         amcatnlo_options['mp'] = len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
@@ -8629,7 +9349,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'mp': False,  
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name'),
-               'v5_model': False if cmd._model_v4_path else True })
+               'v5_model': False if cmd._model_v4_path else True,
+               'running': cmd._curr_model.get('running_elements'),
+                })
 
         format = cmd._export_format #shortcut
 

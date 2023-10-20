@@ -16,7 +16,6 @@
 
 
 from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import math
 import os
@@ -1510,20 +1509,20 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 stop = self.nice_user_error(error, line)
 
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Invalid Command: %s' % error.__class__.__name__)
 
         except self.ConfigurationError as error:
             stop = self.nice_config_error(error, line)
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Configuration error')
         except Exception as error:
             stop = self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
             if self.allow_notification_center:
-                misc.apple_notify('Run %sfailed' % me_dir,
+                misc.system_notify('Run %sfailed' % me_dir,
                               'Exception: %s' % error.__class__.__name__)
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
@@ -1953,9 +1952,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if 'HOME' in os.environ and os.environ['HOME']  and \
-        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
-            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+        legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_config_dir):
+            config_dir = legacy_config_dir
+        else:
+            config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+        config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+
+        if 'HOME' in os.environ and os.environ['HOME'] and os.path.exists(config_file):
+            base = config_file
             if hasattr(self, 'me_dir'):
                 basedir = self.me_dir
             elif not MADEVENT:
@@ -2541,6 +2548,8 @@ class ControlSwitch(SmartQuestion):
             return getattr(self, 'check_value_%s' % key)(value)
         elif value in self.get_allowed(key):
             return True
+        elif not self.get_allowed(key) and value == "OFF":
+            return True
         else:
             return False
         
@@ -2838,7 +2847,7 @@ class ControlSwitch(SmartQuestion):
                 rules = dict([(k, None) for k in self.switch])
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
-                rules = self.check_consistency_with_all(key2)
+                rules = self.check_consistency_with_all(key2, value2)
                         
             for key, replacement in rules.items():
                 if replacement:

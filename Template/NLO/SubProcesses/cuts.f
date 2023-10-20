@@ -61,7 +61,7 @@ c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
       logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
      $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
-
+      logical dummy_cuts
       passcuts_user=.true. ! event is okay; otherwise it is changed
 
 C***************************************************************
@@ -120,7 +120,11 @@ C***************************************************************
 C PUT HERE YOUR USER-DEFINED CUTS
 C***************************************************************
 C***************************************************************
-C
+C     advise way to implement user-defined cuts:
+C     define the function dummy_cuts in a file
+C      (template in SubProcesses/dummy_fct.f)
+C     then in the run_card set the custom_fct variable to [PATH_TO_THE_FILE_CONTAINING_THE_FCT]      
+      passcuts_user = dummy_cuts(P,istatus,ipdg)
 c$$$C EXAMPLE: cut on top quark pT
 c$$$C          Note that PDG specific cut are more optimised than simple user cut
 c$$$      do i=1,nexternal   ! loop over all external particles
@@ -216,6 +220,12 @@ c Photon isolation
 
       REAL*8 pt,eta
       external pt,eta
+
+      include "orders.inc"
+      logical split_type_used(nsplitorders)
+      common/to_split_type_used/split_type_used
+
+      integer n_needed_photons
  
       passcuts_photons = .true.
 
@@ -353,7 +363,18 @@ c First of list must be the photon: check this, and drop it
          enddo
 c End of loop over photons
 
-         if(nphiso.lt.get_n_tagged_photons())then
+C now check that there are enough photons
+         if (split_type_used(QED_pos)) then
+         ! if the process has QED splittings, use the 
+         ! get_n_tagged_photons function
+             n_needed_photons = get_n_tagged_photons()
+         else
+         ! otherwise, just use the number of photons
+         ! that has been counted
+             n_needed_photons = nph
+         endif
+
+         if(nphiso.lt.n_needed_photons)then
             passcuts_photons=.false.
             return
          endif
@@ -1227,50 +1248,9 @@ c
       return
       end
 
-
-      subroutine bias_weight_function(p,ipdg,bias_wgt)
-c This is a user-defined function to which to bias the event generation.
-c A non-flat distribution will generate events with a certain weight
-c inversely proportinal to the bias_wgt. This is particularly useful to
-c generate more events (with smaller weight) in tails of distributions.
-c It computes the bias_wgt factor from the momenta and multiplies the
-c weight that goes into MINT (or vegas) with this factor.  Before
-c writing out the events (or making the plots), this factor is again
-c divided out. A value different from 1 makes that MINT (or vegas) does
-c not list the correct cross section, but the cross section can still be
-c computed from summing all the weights of the events (and dividing by
-c the number of events). Since the weights of the events are no longer
-c identical for all events, the statistical uncertainty on this total
-c cross section can be much larger than without including the bias.
-c
-c The 'bias_wgt' should be a IR-safe function of the momenta.
-c      
-c For this to be used, the 'event_norm' option in the run_card should be
-c set to
-c      'bias' = event_norm      
-c
-      implicit none
-      include 'nexternal.inc'
-      double precision bias_wgt,p(0:3,nexternal),H_T
-      integer ipdg(nexternal),i
-
-      bias_wgt=1d0
-
-c How to enhance the tails is very process dependent. For example for
-c top quark production one could use:
-c      do i=1,nexternal
-c         if (ipdg(i).eq.6) then
-c            bias_wgt=sqrt(p(1,i)**2+p(2,i)**2)**3
-c         endif
-c      enddo
-c Or to use H_T^2 one does     
-c      H_T=0d0
-c      do i=3,nexternal
-c         H_T=H_T+sqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
-c      enddo
-c      bias_wgt=H_T**2
-      return
-      end
+c     NOTE:   subroutine bias_weight_function has been moved to file dummy_fct.f
+c     The recommended way to edit this file is now via the user_hook functionality of the run_card
+c     (entry custom_fct of the run_card)  
 
       integer function get_n_tagged_photons()
       implicit none

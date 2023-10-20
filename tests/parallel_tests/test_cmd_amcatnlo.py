@@ -40,6 +40,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 
+from tests import test_manager
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -55,9 +56,10 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    
     
     def setUp(self):
+        self.debugging = unittest.debug
         
         if not self.debugging:
             self.tmpdir = tempfile.mkdtemp(prefix='amc')
@@ -343,7 +345,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-        self.assertFalse(self.debugging)
     
 
     def test_short_launch_amcatnlo_name(self):
@@ -369,7 +370,7 @@ class MECmdShell(IOTests.IOTestManager):
         works fine"""
         
         self.generate_production()
-        misc.call([pjoin('.','bin','calculate_xsect'), '-f'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','calculate_xsect'), '-f'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
 
         # test the plot file exists
@@ -403,7 +404,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path))
-        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
         self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path))
         # sanity check on the size
@@ -447,7 +448,7 @@ class MECmdShell(IOTests.IOTestManager):
         # to check that the cleaning of files work well
         os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
         self.do('quit')
-        misc.call([pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
+        misc.call([sys.executable, pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
                 stdout = open(os.devnull, 'w'))
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
@@ -562,7 +563,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         
         
-
+    @test_manager.bypass_for_py3
     def test_short_jet_veto_xsec(self):
         """tests the jet-veto cross section at NNLL+NLO"""    
 

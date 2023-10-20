@@ -51,7 +51,7 @@ extern "C" {
 #define cevwgt cevwgt_
 
 extern "C" { 
-  void pyabeg_(int&,char(*)[50]);
+  void pyabeg_(int&,char(*)[wgts_info_len_used]);
   void pyaend_(double&);
   void pyanal_(int&,double(*));
 }
@@ -64,7 +64,7 @@ int main() {
   //
 
   int cwgtinfo_nn;
-  char cwgtinfo_weights_info[1024][50];
+  char cwgtinfo_weights_info[1024][wgts_info_len_used];
   double cwgt_ww[1024];
 
 

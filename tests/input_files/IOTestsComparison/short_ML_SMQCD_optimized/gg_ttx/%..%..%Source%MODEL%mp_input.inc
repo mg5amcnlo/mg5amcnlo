@@ -22,7 +22,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $ ,MP__AEWM1,MP__MDL_GF,MP__AS,MP__MDL_YMB,MP__MDL_YMT
      $ ,MP__MDL_YMTAU
 
-      COMMON/MP_PARAMS_R/ MP__MDL_SQRT__AS,MP__MDL_G__EXP__4
+      COMMON/MP_T_PARAMS_R/ MP__MDL_SQRT__AS,MP__MDL_G__EXP__4
      $ ,MP__MDL_G__EXP__2,MP__MDL_G_UVG_1EPS_,MP__MDL_G_UVB_1EPS_
      $ ,MP__MDL_G__EXP__3,MP__MDL_MU_R__EXP__2,MP__MDL_G_UVB_FIN_
      $ ,MP__MDL_G_UVT_FIN_,MP__MDL_LHV,MP__MDL_CONJG__CKM3X3

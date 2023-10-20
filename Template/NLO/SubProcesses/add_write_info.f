@@ -1,5 +1,5 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       implicit none
@@ -13,7 +13,8 @@ c intermediate resonances. It also boosts the events to the lab frame
 
 c Arguments
       double precision p_born(0:3,nexternal-1),pp(0:3,nexternal)
-      double precision ybst_til_tolab,shower_scale
+      double precision ybst_til_tolab,shower_scale ,shower_scale_a(
+     $     -nexternal+3:2*nexternal-3,-nexternal+3:2*nexternal-3)
       integer iconfig
       logical Hevents,putonshell
       integer ndim,jpart(7,-nexternal+3:2*nexternal-3),npart
@@ -115,10 +116,14 @@ c cFKSprocess
       integer save_nFKSprocess
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision SCALUP_a(fks_configs*2,nexternal,nexternal)
+      common /cshowerscale_a/SCALUP_a
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
+      integer colour_connections(2,nexternal)
+      common /colour_connections_to_write/ colour_connections
 c pt_clust string
       integer need_matching(nexternal)
       common /c_need_matching_to_write/ need_matching
@@ -159,31 +164,44 @@ c to determine possible intermediate s-channel resonances. Note that the
 c set_itree subroutine does not properly set the t-channel info.
 c
       if (firsttime) then
-         save_nFKSprocess=nFKSprocess
-         do nFKSprocess=1,FKS_configs
-            call fks_inc_chooser()
-c For the S-events
-            call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
-     $           ,pmass_tree_S_t,pwidth_tree_S_t)
-c For the H-events
-            call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
-     $           ,pmass_tree_H_t,pwidth_tree_H_t)
-            do j=-max_branch,-1
-               itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
-               itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
-               sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
-               pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
-               pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
-               itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
-               itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
-               sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
-               pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
-               pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+         if (firsttime2) then
+c     For the S-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.false.,itree_S_t,sprop_tree_S_t
+     $              ,pmass_tree_S_t,pwidth_tree_S_t)
+               do j=-max_branch,-1
+                  itree_S(1,j,nFKSprocess)=itree_S_T(1,j)
+                  itree_S(2,j,nFKSprocess)=itree_S_t(2,j)
+                  sprop_tree_S(j,nFKSprocess)=sprop_tree_S_t(j)
+                  pmass_tree_S(j,nFKSprocess)=pmass_tree_S_t(j)
+                  pwidth_tree_S(j,nFKSprocess)=pwidth_tree_S_t(j)
+               enddo
             enddo
-         enddo
-         firsttime=.false.
-         nFKSprocess=save_nFKSprocess
-         call fks_inc_chooser()
+            firsttime2=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
+         if (Hevents) then
+c     For the H-events
+            save_nFKSprocess=nFKSprocess
+            do nFKSprocess=1,FKS_configs
+               call fks_inc_chooser()
+               call set_itree(iconfig,.true.,itree_H_t,sprop_tree_H_t
+     $              ,pmass_tree_H_t,pwidth_tree_H_t)
+               do j=-max_branch,-1
+                  itree_H(1,j,nFKSprocess)=itree_H_t(1,j)
+                  itree_H(2,j,nFKSprocess)=itree_H_t(2,j)
+                  sprop_tree_H(j,nFKSprocess)=sprop_tree_H_t(j)
+                  pmass_tree_H(j,nFKSprocess)=pmass_tree_H_t(j)
+                  pwidth_tree_H(j,nFKSprocess)=pwidth_tree_H_t(j)
+               enddo
+            enddo
+            firsttime=.false.
+            nFKSprocess=save_nFKSprocess
+            call fks_inc_chooser()
+         endif
       endif
 c Copy the saved information to the arrays actually used
       if (Hevents) then
@@ -208,8 +226,18 @@ c Copy the saved information to the arrays actually used
 c Set the shower scale
       if (Hevents) then
          shower_scale=SCALUP(nFKSprocess*2)
+         do i=1,nexternal
+            do j=1,nexternal
+               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2,i,j)
+            enddo
+         enddo
       else
          shower_scale=SCALUP(nFKSprocess*2-1)
+         do i=1,nexternal
+            do j=1,nexternal
+               shower_scale_a(i,j)=SCALUP_a(nFKSprocess*2-1,i,j)
+            enddo
+         enddo
       endif
 
 c This is an (n+1)-body process (see update_unwgt_table in
@@ -240,53 +268,63 @@ c Assume helicity summed
       do i=1,nexternal
          jpart(7,i)=9
       enddo
-      if (firsttime2 .and. isum_hel.ne.0) then
-         write (*,*) 'WARNING: for writing the events, no helicity '//
-     &        'info is used even though some info could be available.'
-         firsttime2=.false.
-      endif
 c Can be filled when doing MC over helicities...
 c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
-c
-c Get color flow that is consistent with iconfig from Born 
-c
-      call sborn(p_born,wgt1)
-      sumborn=0.d0
-      do i=1,max_bcol
-         if (icolamp(i,iBornGraph,1)) then
-            sumborn=sumborn+jamp2(i)
-         endif
-      enddo
-      if (sumborn.eq.0d0) then
-         write (*,*) 'Error #1 in add_write_info:'
-         write (*,*) 'in MadFKS, sumborn should always be larger'//
-     $        ' than zero, because always QCD partons around',sumborn
-     $        ,max_bcol
+
+      if (colour_connections(1,1).lt.0) then
+         ! colour not yet set: Get color flow that is consistent with
+         ! iconfig from Born
+         call sborn(p_born,wgt1)
+         sumborn=0.d0
          do i=1,max_bcol
-            write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
+            if (icolamp(i,iBornGraph,1)) then
+               sumborn=sumborn+jamp2(i)
+            endif
          enddo
-         stop
-      endif
-      xtarget=ran2()*sumborn
-
-      iflow=1
-      if (icolamp(1,iBornGraph,1)) then
-         jampsum=jamp2(1)
-      else
-         jampsum=0d0
-      endif
-      do while (jampsum .lt. xtarget)
-         iflow=iflow+1
-         if (icolamp(iflow,iBornGraph,1)) then
-            jampsum=jampsum+jamp2(iflow)
+         if (sumborn.eq.0d0) then
+            write (*,*) 'Error #1 in add_write_info:'
+            write (*,*) 'in MadFKS, sumborn should always be larger'//
+     $           ' than zero, because always QCD partons around',sumborn
+     $           ,max_bcol
+            do i=1,max_bcol
+               write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
+            enddo
+            stop
          endif
-      enddo
-      if (iflow.gt.max_bcol) then
-         write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol
-         stop
-      endif
+         xtarget=ran2()*sumborn
 
+         iflow=1
+         if (icolamp(1,iBornGraph,1)) then
+            jampsum=jamp2(1)
+         else
+            jampsum=0d0
+         endif
+         do while (jampsum .lt. xtarget)
+            iflow=iflow+1
+            if (icolamp(iflow,iBornGraph,1)) then
+               jampsum=jampsum+jamp2(iflow)
+            endif
+         enddo
+         if (iflow.gt.max_bcol) then
+            write (*,*) 'ERROR #2 in add_write_info',iflow,max_bcol
+            stop
+         endif
+         if (Hevents) then
+            call fill_icolor_H(iflow,jpart)
+         else
+            call fill_icolor_S(iflow,jpart,idum)
+         endif
+         do i=1,nexpart
+            icolalt(1,i)=jpart(4,i)
+            icolalt(2,i)=jpart(5,i)
+         enddo
+      else ! colour already determined through a call to complete_xmcsubt
+         do i=1,nexpart
+            icolalt(1,i)=colour_connections(1,i)
+            icolalt(2,i)=colour_connections(2,i)
+         enddo
+      endif
 c
 c Shift particle momenta to put them on the mass shell as given in the
 c subroutine fill_MC_mshell().
@@ -403,19 +441,6 @@ c
             endif
          enddo
       endif
-
-c
-c Fill color of external particles
-c
-      if (Hevents) then
-         call fill_icolor_H(iflow,jpart)
-      else
-         call fill_icolor_S(iflow,jpart,idum)
-      endif
-      do i=1,nexpart
-         icolalt(1,i)=jpart(4,i)
-         icolalt(2,i)=jpart(5,i)
-      enddo
 
 c
 c Set-up the external momenta that should be written in event file
@@ -575,7 +600,7 @@ c     Remove non-resonant mothers, set position of particles
         
 c
 c Shift particles to right place
-c     
+c
       do i=nexpart,-ns,-1
          if(ito(i).le.0) cycle
          do j=1,7
@@ -587,6 +612,10 @@ c
          endif
          do j=0,4
             pb(j,ito(i))=pb(j,i)
+         enddo
+         do j=nexpart,-ns,-1
+            if(j.eq.i.or.ito(j).le.0)cycle
+            shower_scale_a(ito(i),ito(j))=shower_scale_a(i,j)
          enddo
       enddo
 

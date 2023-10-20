@@ -675,8 +675,10 @@ c      endif
          stop
       endif
       if (p5 .gt. maxconfigs) then
-         write(*,*) 'Too many configs requested from Sample()',p5
-         stop
+         p5=maxconfigs
+         configs = maxconfigs
+c     write(*,*) 'Too many configs requested from Sample()',p5
+c         stop
       endif
 
       write(*,'(i3,a,i7,a,i3,a,i3,a,i3,a)') dim, ' dimensions', events,
@@ -1457,11 +1459,12 @@ c
       COMMON/TO_MATRIX/ISUM_HEL, MULTI_CHANNEL
       logical cutsdone, cutspassed
       COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
- 
-      CHARACTER*7         PDLABEL,EPA_LABEL
-      character*7 pdsublabel(2)
-      INTEGER       LHAID
-      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL,pdsublabel
+
+      include './PDF/pdf.inc'
+c      CHARACTER*7         PDLABEL,EPA_LABEL
+c      character*7 pdsublabel(2)
+c      INTEGER       LHAID
+c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL,pdsublabel
 c     
 c     Begin code
 c
@@ -1478,7 +1481,9 @@ c       that they shouldn't be added here.
         endif
 
         if(pdlabel.eq.'dressed'.and.ee_picked.ne.-1) then
-          call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))           
+           if(ee_jacobian.ne.0d0) then
+              call DS_add_entry('ee_mc',EE_PICKED,(wgt/ee_jacobian))
+           endif
        endif
        
       end subroutine add_entry_to_discrete_dimensions

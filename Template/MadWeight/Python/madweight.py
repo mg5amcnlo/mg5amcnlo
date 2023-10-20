@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # idea have 2 script
 # madweight.py -> direct submission 
@@ -7,7 +7,6 @@
 
 #Extension
 from __future__ import absolute_import
-from __future__ import print_function
 import string
 import sys
 import os

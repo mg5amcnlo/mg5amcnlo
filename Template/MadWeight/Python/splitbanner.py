@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##########################################################################
 ##                                                                      ##
 ##                               MadWeight                              ##
@@ -15,7 +15,6 @@
 ##                                                                      ##
 ##########################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 from six.moves import input
 # patch if symbolic directory replace by real file

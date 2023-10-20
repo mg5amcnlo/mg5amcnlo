@@ -13,13 +13,12 @@
 #
 ################################################################################
 from __future__ import absolute_import
-from __future__ import print_function
 from madgraph.iolibs import helas_call_writers
 from six.moves import range
 from six.moves import zip
 
 """Unit test library for the helas_objects module"""
-
+import unittest as uni
 import copy
 
 import tests.unit_tests as unittest
@@ -2832,11 +2831,10 @@ class HelasMultiProcessTest(unittest.TestCase):
 
     def tearDown(self):
         unittest.TestCase.tearDown(self)
-        self.assertFalse(self.debugging)
         
     def setUp(self):
 
-        self.debugging = False
+        self.debugging = uni.debug
         # Set up model
 
         mypartlist = base_objects.ParticleList()
