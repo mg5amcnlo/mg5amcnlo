@@ -4906,6 +4906,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.load_default()        
         self.define_paths(**opt)
         self.last_editline_pos = 0
+        self.update_dependent_done = False
 
         if 'allow_arg' not in opt or not opt['allow_arg']:
             # add some mininal content for this:
@@ -6581,7 +6582,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.check_card_consistency()
             if self.param_consistency:
                 try:
-                    self.do_update('dependent', timer=20)
+                    if not self.update_dependent_done:
+                        self.do_update('dependent', timer=20)
+                    self.update_dependent_done = False
                 except MadGraph5Error as error:
                     if 'Missing block:' in str(error):
                         self.fail_due_to_format +=1
@@ -6634,6 +6637,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
                                    self.paths['param'], timer, run_card=self.run_card,
                                    lhapdfconfig=self.lhapdf)
+            self.update_dependent_done = True
+            
 
         elif args[0] == 'missing':
             self.update_missing()
@@ -6910,7 +6915,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def check_answer_consistency(self):
         """function called if the code reads a file"""
         self.check_card_consistency()
-        self.do_update('dependent', timer=20) 
+        if not self.update_dependent_done:
+            self.do_update('dependent', timer=20) 
       
     def help_set(self):
         '''help message for set'''
