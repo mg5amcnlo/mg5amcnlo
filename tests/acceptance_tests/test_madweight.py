@@ -50,8 +50,14 @@ class Testmadweight(unittest.TestCase):
     def generate(self, process, model):
         """Create a process"""
 
+        self.path = ''
+        if unittest.debug:
+            self.path = 'MGPROCESS'
+
+        misc.sprint(self.debug)
+
         try:
-            shutil.rmtree('/tmp/MGPROCESS/')
+            shutil.rmtree('self.path')
         except Exception as error:
             pass
 
@@ -63,7 +69,7 @@ class Testmadweight(unittest.TestCase):
         else:
             for p in process:
                 interface.onecmd('add process %s' % p)
-        interface.onecmd('output madweight /tmp/MGPROCESS/ -f')
+        interface.onecmd('output madweight %s -f' % self.path)
 
 
 
@@ -76,38 +82,38 @@ class Testmadweight(unittest.TestCase):
         self.generate('p p > Z h , Z > mu+ mu- , h > b b~ ' , 'sm')
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
         
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix1.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix2.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig1.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig2.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/gen_ps.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/configs.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/coupl.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/driver.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/initialization.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/leshouche.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/madweight_param.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/makefile'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/nexternal.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/mirrorprocs.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/phasespace.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/pmass.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/props.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/run.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/setscales.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/run_card_default.dat'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/MadWeight_card_default.dat'))
+        self.assertTrue(os.path.exists(pjoin(self.path, 'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix1.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix2.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig1.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig2.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/gen_ps.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/configs.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/coupl.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/driver.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/initialization.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/leshouche.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/madweight_param.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/makefile')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/nexternal.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/mirrorprocs.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/phasespace.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/pmass.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/props.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/run.inc')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_qq_zh_z_mupmum_h_bbx/setscales.f')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'Cards/run_card_default.dat')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'Cards/MadWeight_card_default.dat')))
 
         # test that all libraries have been compiled
 
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libblocks.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libcernlib.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libdhelas.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libgeneric.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libmodel.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libpdf.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libtools.a'))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libblocks.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libcernlib.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libdhelas.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libgeneric.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libmodel.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libpdf.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libtools.a')))
     
     def test_tt_semi(self):
         """test output madweight for one specific process"""
@@ -115,17 +121,17 @@ class Testmadweight(unittest.TestCase):
         cmd = os.getcwd()
         self.generate('p p > t t~ , t > e+ ve b , ( t~ > W- b~ , W- > j j )' , 'sm')
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_gg_ttx_t_epveb_tx_wmbx_wm_qq'))
+        self.assertTrue(os.path.exists(pjoin(self.path,'SubProcesses/P0_gg_ttx_t_epveb_tx_wmbx_wm_qq')))
                         
         # test that all libraries have been compiled
 
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libblocks.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libcernlib.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libdhelas.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libgeneric.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libmodel.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libpdf.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/lib/libtools.a'))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libblocks.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libcernlib.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libdhelas.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libgeneric.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libmodel.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libpdf.a')))
+        self.assertTrue(os.path.exists(pjoin(self.path,'lib/libtools.a')))
 
 class TestMadWeight(unittest.TestCase):
     """A couple of points in order to ensure the MW is working fine."""

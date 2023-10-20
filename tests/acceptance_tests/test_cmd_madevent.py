@@ -1006,6 +1006,7 @@ class TestMEfromfile(unittest.TestCase):
         output %(path)s
         launch
         madspin=ON
+        analysis=OFF
         shower=pythia8    
         %(path)s/../madspin_card.dat
         set nevents 1000

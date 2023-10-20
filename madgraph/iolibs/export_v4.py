@@ -3161,7 +3161,10 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
         pass
 
     def finalize(self, matrix_elements, history, mg5options, flaglist):
-        misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        try:
+            misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
+        except OSError:
+            pass
         return super().finalize(matrix_elements, history, mg5options, flaglist)
     
 
@@ -3240,6 +3243,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         filename = os.path.join(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
 
+        self.handle_cuts_inc()
+
         try:
             subprocess.call([os.path.join(self.dir_path, 'Source','MadWeight','bin','internal','pass_to_madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
@@ -3261,6 +3266,23 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_source_makefile(writers.FortranWriter(filename))
 
 
+
+    def handle_cuts_inc(self):
+
+        text = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'r').read()
+        text = text.replace('maxjetflavor','dummy_maxjetflavor')
+
+        fsock = open(pjoin(self.dir_path, 'Source', 'cuts.inc'),'w')
+        fsock.write(text)
+
+        fsock.write('''            
+                logical fixed_extra_scale
+                integer maxjetflavor
+                double precision mue_over_ref
+                double precision mue_ref_fixed
+                common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+                ''')
+        fsock.close()
 
         
     #===========================================================================
