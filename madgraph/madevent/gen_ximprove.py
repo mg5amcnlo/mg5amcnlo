@@ -162,6 +162,9 @@ class gensym(object):
             else:
                 for matrix_file in misc.glob('matrix*orig.f', Pdir):
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                P_zero_result.append(Pdir)
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
                 continue # bypass bad process
             
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
@@ -184,11 +187,13 @@ class gensym(object):
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(" ".encode())
             stdout = stdout.decode('ascii',errors='ignore')
-            if os.path.exists(pjoin(self.me_dir,'error')):
+            if os.path.exists(pjoin(self.me_dir, 'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
                 # note a continue is not enough here, we have in top to link
                 # the matrixX_optim.f to matrixX_orig.f to let the code to work
                 # after this error.
+                #                for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                #    files.cp(matrix_file, matrix_file.replace('orig','optim'))
 
             if 'no events passed cuts' in stdout:
                 raise Exception

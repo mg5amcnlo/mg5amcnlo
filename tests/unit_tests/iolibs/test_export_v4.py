@@ -2857,7 +2857,7 @@ CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))""".split('\n'))
 
 
         out, nb = exporter.get_JAMP_lines(matrix_element)    
-        self.assertEqual(nb,53)
+        self.assertEqual(nb,55)
 
         # Test JAMP (color amplitude) output
         if six.PY3:

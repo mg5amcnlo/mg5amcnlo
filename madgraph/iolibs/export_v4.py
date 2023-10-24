@@ -9609,7 +9609,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'dummy_fct.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)
@@ -9623,7 +9623,6 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         if not tot_calls:
             tot_calls = 0
         return tot_calls
-
 
     #===========================================================================
     # Helper functions
