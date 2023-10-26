@@ -424,7 +424,7 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             sudo apt-get install imagemagick
-            sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
+            sudo sed -i '/disable ghostscript format types/,+6d' /etc/ImageMagick-6/policy.xml
             ./tests/test_manager.py test_set_wavefunctions test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob test_schedular -t0
 
 
