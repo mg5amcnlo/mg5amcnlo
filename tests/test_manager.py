@@ -1141,11 +1141,13 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
         misc.system_notify("tests finished", str(output))
-
-    failed, errored, skipped = list(map(len,
+        if failed or errored or skipped:
+            sys.exit(1)
+    else:
+        failed, errored, skipped = list(map(len,
                                (output.failures, output.errors, output.skipped)))
-    if failed or errored or skipped:
-        sys.exit(1)
+        if failed or errored or skipped:
+            sys.exit(1)
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')
