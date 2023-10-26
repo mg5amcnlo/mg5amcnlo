@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: 'running unittest'     
+        description: 'running aloha test'     
         required: true
 
 env:
