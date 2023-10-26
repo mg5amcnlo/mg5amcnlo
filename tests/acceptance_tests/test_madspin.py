@@ -41,7 +41,7 @@ class TestMadSpin(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False 
+        self.debuging = unittest.debug
         if self.debuging:
             self.path = pjoin(MG5DIR, 'MS_TEST')
             if os.path.exists(self.path):
