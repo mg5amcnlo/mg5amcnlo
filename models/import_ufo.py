@@ -2096,6 +2096,17 @@ class RestrictModel(model_reader.ModelReader):
         keys.sort()
         for name in keys:
             value = self['coupling_dict'][name]
+
+            def limit_to_6_digit(a):
+                x = a.real
+                if x != 0:
+                    x = round(x, int(abs(round(math.log(abs(x), 10),0))+10))
+                y = a.imag
+                if y !=0:
+                    y = round(y, int(abs(round(math.log(abs(y), 10),0))+10))
+                return complex(x,y)
+            
+
             if value == 0:
                 zero_coupling.append(name)
                 continue
@@ -2107,7 +2118,8 @@ class RestrictModel(model_reader.ModelReader):
             elif not strict_zero and abs(value) < 1e-10:
                 return self.detect_identical_couplings(strict_zero=True)
 
-            
+            value = limit_to_6_digit(value)
+
             if value in dict_value_coupling or -1*value in dict_value_coupling:
                 if value in dict_value_coupling:
                     iden_key.add(value)
@@ -2334,6 +2346,7 @@ class RestrictModel(model_reader.ModelReader):
         logger_mod.log(self.log_level, ' Fuse the Following coupling (they have the same value): %s '% \
                         ', '.join([str(obj) for obj in couplings]))
 
+        #names = [name for (name,ratio) in couplings if ratio ==1]
         main = couplings[0][0]
         assert couplings[0][1] == 1
         self.del_coup += [c[0] for c in couplings[1:]] # add the other coupl to the suppress list

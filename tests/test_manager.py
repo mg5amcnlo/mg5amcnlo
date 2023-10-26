@@ -1140,10 +1140,12 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                (output.failures, output.errors, output.skipped)))
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
+        else:
+            failed, errored, skipped = 0, 0 ,0
         misc.system_notify("tests finished", str(output))
         if failed or errored or skipped:
             sys.exit(1)
-    else:
+    elif isinstance(output, unittest.runner.TextTestResult):
         failed, errored, skipped = list(map(len,
                                (output.failures, output.errors, output.skipped)))
         if failed or errored or skipped:
