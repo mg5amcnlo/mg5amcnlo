@@ -54,5 +54,4 @@ jobs:
       - name: test one of the test test_short_mssm_subset_creation
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py -pP -t0 test_short_mssm_subset_creation #excluded from aloha
-	    
+            ./tests/test_manager.py -pP -t0 test_short_mssm_subset_creation #excluded from aloha	    
