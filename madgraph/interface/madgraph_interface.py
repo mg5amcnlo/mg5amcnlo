@@ -2985,7 +2985,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_size':100,
                        'output_dependencies':'external',
                        'crash_on_error':False,
-                       'auto_convert_model': False,
+                       'auto_convert_model': True,
                        'acknowledged_v3.1_syntax': False
                        }
 
