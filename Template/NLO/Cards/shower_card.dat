@@ -60,6 +60,13 @@ Qcut       = -1.0     # Merging scale
 njmax      = -1       # Maximal multiplicity in the merging.
 #                     # -1 means guessed  from the process definition
 #***********************************************************************
+# Matrix-element corrections                          !ONLY FOR PYTHIA8!
+#***********************************************************************
+space_shower_me_corrections = F     # MECs for ISR
+time_shower_me_corrections  = T     # MECs for FSR
+time_shower_me_extended     = F     # see Pythia8 manual as well as
+time_shower_me_after_first  = F     # hep-ph/2308.06389 for details
+#***********************************************************************
 # Decay channels                                                       *
 #***********************************************************************
 # Syntax for HERWIG6                                                   *

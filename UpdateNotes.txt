@@ -6,6 +6,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       RF: update test at NLO to better include phase-space cut
       OM: Change restriction model to be less sensitive to numerical accuracy
       OM: bug fixing from LTS up to 2.9.17 (see below)
+      PT: added options for matrix-element corrections in shower card fot PY8
       
 3.5.1 (11/07/23)
       SH+OM: Update interface for contur
