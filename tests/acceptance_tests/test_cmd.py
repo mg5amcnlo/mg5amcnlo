@@ -306,7 +306,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'get_color.f')))
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -314,7 +315,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
         self.do('set group_subprocesses True')
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))

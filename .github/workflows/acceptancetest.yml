@@ -722,6 +722,7 @@ jobs:
       - name: test one of the test test_mass_reweighting
         run: |
             cd $GITHUB_WORKSPACE
+            sudo pip install numpy
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_mass_reweighting -pA -t0 -l INFO
 
