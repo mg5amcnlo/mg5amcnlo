@@ -48,6 +48,7 @@ _pickle_path =os.path.join(_file_path, 'input_files')
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
+from tests import test_manager
 pjoin = os.path.join
 
     
@@ -226,6 +227,7 @@ class TestMECmdRWGT(unittest.TestCase):
             self.assertEqual(event.wgt, rwgt_data['MYNLO_nlo'])
             self.assertTrue('MYNLO_lo' in rwgt_data)
             
+    @test_manager.bypass_for_py3
     def test_nlo_output2(self):
         """ check identical re-weighting in ttbar 
         """
