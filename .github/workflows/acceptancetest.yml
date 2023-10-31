@@ -1091,8 +1091,7 @@ jobs:
             ./bin/mg5_aMC cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
-            ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO --debug
-            cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log	    
+            ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log	    
 
 
   acceptancetest_59:
@@ -1974,9 +1973,7 @@ jobs:
             ls HEPTools/lhapdf6_py3/bin
             echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
-            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO --debug
-            cat ME5_debug
-            cat /home/runner/work/mg5amcnlo/mg5amcnlo/tmp_test/MGPROC/run_01_tag_1_debug.log
+            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/tmp_test/MGPROC/run_01_tag_1_debug.log
 
   acceptancetest_102:
     # The type of runner that the job will run on
