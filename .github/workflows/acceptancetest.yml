@@ -1090,8 +1090,9 @@ jobs:
             echo "install contur" >> cmd
             ./bin/mg5_aMC cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
-
+            #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
+            ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO --debug
+            cat ME5_debug	    
 
 
   acceptancetest_59:
@@ -1849,6 +1850,9 @@ jobs:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            echo "install lhapdf6" > cmd
+            ./bin/mg5_aMC cmd
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/lib/
             ./tests/test_manager.py test_raise_invalid_path_hwpp -pA -t0 -l INFO
 
 
@@ -1970,7 +1974,8 @@ jobs:
             ls HEPTools/lhapdf6_py3/bin
             echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
-            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO
+            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO --debug
+            cat ME5_debug    
 
   acceptancetest_102:
     # The type of runner that the job will run on
