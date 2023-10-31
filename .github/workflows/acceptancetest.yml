@@ -1087,7 +1087,7 @@ jobs:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             echo "install contur" > cmd
-            ./bin_mg5 cmd
+            ./bin/mg5_aMC cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
 

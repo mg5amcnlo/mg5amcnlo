@@ -399,6 +399,10 @@ class IOTestManager(unittest.TestCase):
                     continue
                 elif ",.FALSE.,.FALSE." in a:
                     continue
+                elif 'The Ninja version installed does not support quadruple precision' in a:
+                    return
+                elif a.startswith('C'):
+                    continue
                 else:
                     raise
         self.assertEqual(len(list_sol), len(list_cur))
