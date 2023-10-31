@@ -7354,7 +7354,7 @@ if '__main__' == __name__:
     import optparse
     # Get the directory of the script real path (bin)                                                                                                                                                           
     # and add it to the current PYTHONPATH                                                                                                                                                                      
-    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    #root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath( __file__ ))))
     sys.path.insert(0, root_path)
 
     class MyOptParser(optparse.OptionParser):    
@@ -7397,7 +7397,13 @@ if '__main__' == __name__:
     import logging.config
     # Set logging level according to the logging level given by options                                                                                                                                         
     #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal
     import internal.coloring_logging
+    # internal.file = XXX/bin/internal/__init__.py
+    # => need three dirname to get XXX
+    # we use internal to have any issue with pythonpath finding the wrong file
+    me_dir = os.path.dirname(os.path.dirname(os.path.dirname(internal.__file__)))
+    print("me_dir is", me_dir)
     try:
         if __debug__ and options.logging == 'INFO':
             options.logging = 'DEBUG'
@@ -7405,7 +7411,8 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        log_path = os.path.join(me_dir, 'bin', 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(log_path)
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)
     except:
@@ -7419,9 +7426,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line = MadEventCmd(os.path.dirname(root_path),force_run=True)
+                cmd_line = MadEventCmd(me_dir, force_run=True)
             else:
-                cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
+                cmd_line = MadEventCmdShell(me_dir, force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print(parser_error)

@@ -347,7 +347,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     if dependency=='ninja':
         if cmd.options['ninja'] in ['None',None,''] or\
          (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
-         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'lib','libninja.a')) is None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
