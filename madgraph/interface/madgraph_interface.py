@@ -6195,7 +6195,7 @@ This implies that with decay chains:
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
         elif tool == 'eMELA':
-            self.options['eMELA'] = pjoin(prefix,'eMELA','bin', 'eMELA-config')
+            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
             self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
