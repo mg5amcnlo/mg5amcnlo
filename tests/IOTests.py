@@ -395,9 +395,9 @@ class IOTestManager(unittest.TestCase):
                     continue
                 elif ",.TRUE.,.TRUE." in a:
                     continue
-                elif ",.False.,.TRUE." in a:
+                elif ",.FALSE.,.TRUE." in a:
                     continue
-                elif ",.False.,.False." in a:
+                elif ",.FALSE.,.FALSE." in a:
                     continue
                 else:
                     raise

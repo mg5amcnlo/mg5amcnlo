@@ -1086,8 +1086,10 @@ jobs:
             sudo pip install numpy
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            echo "install contur" > cmd
+            ./bin_mg5 cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_contur_from_file -pA -t0 -l INFO
+            ./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
 
 
 
@@ -1133,27 +1135,6 @@ jobs:
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_generation_from_file_1 -pA -t0 -l INFO
 
-
-
-  acceptancetest_61:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_rivet_from_file
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_rivet_from_file -pA -t0 -l INFO
 
 
   acceptancetest_63:
@@ -1664,6 +1645,9 @@ jobs:
             sudo pip install numpy
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            echo "install lhapdf6" > cmd
+            echo "install eMELA" >> cmd
+            ./bin/mg5_aMC cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_generate_eett_lo_emela_clusterpath -pA -t0 -l INFO
 
