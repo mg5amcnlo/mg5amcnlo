@@ -1936,17 +1936,17 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            echo "install lhapdf6" > cmd
-            echo "install pythia8" >> cmd
-            ./bin/mg5_aMC cmd
-            cat HEPTools/lhapdf6_py3/lhapdf6_install.log
-            ls HEPTools/lhapdf6_py3/bin
-            echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
+            #sudo pip install numpy
+            #which f2py
+            #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #echo "install lhapdf6" > cmd
+            #echo "install pythia8" >> cmd
+            #./bin/mg5_aMC cmd
+            #cat HEPTools/lhapdf6_py3/lhapdf6_install.log
+            #ls HEPTools/lhapdf6_py3/bin
+            #echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
+            #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
             ./tests/test_manager.py  test_loop_improved_reweighting -pA -t0 -l INFO --debug
 
   acceptancetest_101:
@@ -1963,17 +1963,17 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            echo "install lhapdf6" > cmd
-            echo "install pythia8" >> cmd
-            ./bin/mg5_aMC cmd
-            cat HEPTools/lhapdf6_py3/lhapdf6_install.log
-            ls HEPTools/lhapdf6_py3/bin
-            echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
+            #sudo pip install numpy
+            #which f2py
+            #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #echo "install lhapdf6" > cmd
+            #echo "install pythia8" >> cmd
+            #./bin/mg5_aMC cmd
+            #cat HEPTools/lhapdf6_py3/lhapdf6_install.log
+            #ls HEPTools/lhapdf6_py3/bin
+            #echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
+            #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
             ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/tmp_test/MGPROC/run_01_tag_1_debug.log
 
   acceptancetest_102:

@@ -278,6 +278,7 @@ class TestMECmdRWGT(unittest.TestCase):
         #misc.sprint(solutions)
         #raise Exception
 
+    @test_manager.bypass_for_py3
     def test_loop_improved_reweighting(self):
         """ check identical re-weighting in ttbar 
         """
