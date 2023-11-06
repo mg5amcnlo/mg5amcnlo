@@ -2704,7 +2704,8 @@ class RunCard(ConfigFile):
                                 except Exception as error:
                                     import launch_plugin
                             target_class = launch_plugin.RunCard
-
+            elif issubclass(finput, RunCard):
+                target_class = finput
             else:
                 return None
 
@@ -2968,11 +2969,12 @@ class RunCard(ConfigFile):
         if python_template and not to_write:
             import string
             if self.blocks:
-                text = string.Template(text)
                 mapping = {}
                 for b in self.blocks:
                     mapping[b.name] =  b.get_template(self)
-                text = text.substitute(mapping)
+                    if "$%s" % b.name not in text:
+                        text += "\n$%s\n" % b.name
+                text = string.Template(text).substitute(mapping)
 
             if not self.list_parameter:
                 text = text % self
