@@ -1602,7 +1602,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 all_element1, all_element2 = {}, {}
                 for (k1,k2) in all_element:
                     if k2 >= nb_col//2:
-                        all_element2[(k1,1+k2-nb_col//2)] = all_element[(k1,k2)]
+                        all_element2[(k1,1+k2-(nb_col//2))] = all_element[(k1,k2)]
                     else:
                         all_element1[(k1,k2)] = all_element[(k1,k2)]
 
@@ -1613,7 +1613,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
                 for (k1,k2) in all_element2:
                     if k2 >= 0:
-                        all_element1[(k1,1+k2+nb_col//2)] = all_element2[(k1,k2)]
+                        all_element1[(k1,k2+(nb_col//2)-1)] = all_element2[(k1,k2)]
                     if k2 < 0: 
                         all_element1[(k1,k2-nb_added1)] = all_element2[(k1,k2)]
                 # new_def format: added,j1,j2,R, max_count
