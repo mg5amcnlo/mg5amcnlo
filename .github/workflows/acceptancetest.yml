@@ -1071,7 +1071,7 @@ jobs:
 
   acceptancetest_contur:
     # The type of runner that the job will run on
-    runs-on: ubuntu-cern
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -1082,7 +1082,6 @@ jobs:
       - name: test one of the test test_contur_from_file
         run: |
             cd $GITHUB_WORKSPACE
-            pwd
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             sudo pip install numpy
             sudo apt install python3-pip
@@ -1095,8 +1094,8 @@ jobs:
             ls /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/
             #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO
-            ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO 
+            #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFOi
+            PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file test_contur_from_file -pA -t0 -l INFO 
             #|| cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log	    
 
 
