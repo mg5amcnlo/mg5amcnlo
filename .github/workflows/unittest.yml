@@ -8,7 +8,7 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
-      - '.github/**'
+#      - '.github/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -576,6 +576,7 @@ jobs:
       - name: test one of the test test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu
         run: |
             cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu -t0
 
 
