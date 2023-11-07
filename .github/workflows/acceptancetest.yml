@@ -1095,8 +1095,8 @@ jobs:
             #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO 
-        PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO 
-            #|| cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log	    
+            PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO 
+            #|| cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log        
 
 
   acceptancetest_59:
@@ -1269,8 +1269,8 @@ jobs:
             sudo pip install numpy
             which f2py
             echo "install ninja" > cmd
-            echo "install collier" >> cmd	    
-            ./bin/mg5_aMC cmd	    
+            echo "install collier" >> cmd       
+            ./bin/mg5_aMC cmd       
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
@@ -1429,9 +1429,9 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             echo "install collier" > cmd
             echo "install ninja" >> cmd
-            ./bin/mg5_aMC cmd	    
+            ./bin/mg5_aMC cmd       
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib	    
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib      
             ./tests/test_manager.py testIO_MatchBoxOutput -pA -t0 -l INFO
 
 
