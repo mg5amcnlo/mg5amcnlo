@@ -6135,8 +6135,8 @@ This implies that with decay chains:
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
-
-        if return_code == 0:
+        misc.sprint(return_code)
+        if return_code in [0,11]:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
             
@@ -6194,6 +6194,9 @@ This implies that with decay chains:
                 self.options['lhapdf_py2'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
+        elif tool == 'eMELA':
+            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
+            self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            

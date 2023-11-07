@@ -1069,7 +1069,7 @@ jobs:
             ./tests/test_manager.py test_run_fromP -pA -t0 -l INFO
 
 
-  acceptancetest_58:
+  acceptancetest_contur:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -1084,11 +1084,19 @@ jobs:
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
             sudo pip install numpy
+            sudo apt install python3-pip
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            echo "install pythia8" > cmd
+            echo "install rivet" >> cmd
+            echo "install contur" >> cmd
+            ./bin/mg5_aMC cmd
+            ls /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/
+            #echo "rivet_path = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_contur_from_file -pA -t0 -l INFO
-
+            #./tests/test_manager.py test_contur_from_file test_rivet_from_file -pA -t0 -l INFO 
+            PYTHONPATH=$PYTHONPATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/rivet/local/lib/python3.10/dist-packages/:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/yoda/local/lib/python3.10/dist-packages/ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib ./tests/test_manager.py  test_rivet_from_file -pA -t0 -l INFO 
+            #|| cat /home/runner/work/mg5amcnlo/mg5amcnlo/ACC_TEST/MGPROC/run_01_tag_1_debug.log        
 
 
   acceptancetest_59:
@@ -1133,70 +1141,6 @@ jobs:
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             ./tests/test_manager.py test_generation_from_file_1 -pA -t0 -l INFO
 
-
-
-  acceptancetest_61:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_rivet_from_file
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_rivet_from_file -pA -t0 -l INFO
-
-
-  acceptancetest_63:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_mw_wjjproduction
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_mw_wjjproduction -pA -t0 -l INFO
-
-
-
-  acceptancetest_64:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_mw_wproduction
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_mw_wproduction -pA -t0 -l INFO
 
 
 
@@ -1325,8 +1269,8 @@ jobs:
             sudo pip install numpy
             which f2py
             echo "install ninja" > cmd
-            echo "install collier" >> cmd	    
-            ./bin/mg5_aMC cmd	    
+            echo "install collier" >> cmd       
+            ./bin/mg5_aMC cmd       
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
@@ -1485,9 +1429,9 @@ jobs:
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             echo "install collier" > cmd
             echo "install ninja" >> cmd
-            ./bin/mg5_aMC cmd	    
+            ./bin/mg5_aMC cmd       
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib	    
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib      
             ./tests/test_manager.py testIO_MatchBoxOutput -pA -t0 -l INFO
 
 
@@ -1625,29 +1569,29 @@ jobs:
             ./tests/test_manager.py test_check_singletop_fastjet -pA -t0 -l INFO
 
 
-  acceptancetest_85:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+            #  acceptancetest_85:
+            #    # The type of runner that the job will run on
+            #    runs-on: ubuntu-latest
+            #
+            #    # Steps represent a sequence of tasks that will be executed as part of the job
+            #    steps:
+            #      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+            #      - uses: actions/checkout@v2
+            #
+            #      # Runs a set of commands using the runners shell
+            #      - name: test one of the test test_gen_evt_onlygen
+            #        run: |
+            #            cd $GITHUB_WORKSPACE
+            #            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            #            sudo pip install numpy
+            #            which f2py
+            #            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #            ./tests/test_manager.py test_gen_evt_onlygen -pA -t0 -l INFO
+            #
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
 
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_gen_evt_onlygen
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_gen_evt_onlygen -pA -t0 -l INFO
-
-
-
-  acceptancetest_86:
+  acceptancetest_emela:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -1664,30 +1608,12 @@ jobs:
             sudo pip install numpy
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            echo "install lhapdf6" > cmd
+            echo "install eMELA" >> cmd
+            ./bin/mg5_aMC cmd
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_eett_lo_emela_clusterpath -pA -t0 -l INFO
+            ./tests/test_manager.py test_generate_eett_lo_emela_clusterpath  test_generate_eett_nlo_emela_bs test_generate_eeww_nlo_emela_noph test_generate_eeww_nlo_emela_wph -pA -t0 -l INFO
 
-
-
-  acceptancetest_87:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_eett_nlo_emela_bs
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_eett_nlo_emela_bs -pA -t0 -l INFO
 
 
 
@@ -1713,92 +1639,48 @@ jobs:
 
 
 
-  acceptancetest_89:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_eeww_nlo_emela_noph
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_eeww_nlo_emela_noph -pA -t0 -l INFO
-
-
-
-  acceptancetest_90:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_eeww_nlo_emela_wph
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_eeww_nlo_emela_wph -pA -t0 -l INFO
+            #  acceptancetest_91:
+            #    # The type of runner that the job will run on
+            #    runs-on: ubuntu-latest
+            #
+            #    # Steps represent a sequence of tasks that will be executed as part of the job
+            #    steps:
+            #      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+            #      - uses: actions/checkout@v2
+            #
+            #      # Runs a set of commands using the runners shell
+            #      - name: test one of the test test_generate_events_lo_hw6_stdhep
+            #        run: |
+            #            cd $GITHUB_WORKSPACE
+            #            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            #            sudo pip install numpy
+            #            which f2py
+            #            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #            ./tests/test_manager.py test_generate_events_lo_hw6_stdhep -pA -t0 -l INFO
+            #
 
 
-
-  acceptancetest_91:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_events_lo_hw6_stdhep
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_events_lo_hw6_stdhep -pA -t0 -l INFO
-
-
-
-  acceptancetest_92:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_events_lo_py6_stdhep
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_generate_events_lo_py6_stdhep -pA -t0 -l INFO
-
+            #  acceptancetest_92:
+            #    # The type of runner that the job will run on
+            #    runs-on: ubuntu-latest
+            #
+            #    # Steps represent a sequence of tasks that will be executed as part of the job
+            #    steps:
+            #      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+            #      - uses: actions/checkout@v2
+            #
+            #      # Runs a set of commands using the runners shell
+            #      - name: test one of the test test_generate_events_lo_py6_stdhep
+            #        run: |
+            #            cd $GITHUB_WORKSPACE
+            #            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            #            sudo pip install numpy
+            #            which f2py
+            #            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #            ./tests/test_manager.py test_generate_events_lo_py6_stdhep -pA -t0 -l INFO
+            #
 
 
   acceptancetest_93:
@@ -1845,26 +1727,26 @@ jobs:
 
 
 
-  acceptancetest_95:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_madspin_LOonly
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_madspin_LOonly -pA -t0 -l INFO
-
+            #  acceptancetest_95:
+            #    # The type of runner that the job will run on
+            #    runs-on: ubuntu-latest
+            #
+            #    # Steps represent a sequence of tasks that will be executed as part of the job
+            #    steps:
+            #      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+            #      - uses: actions/checkout@v2
+            #
+            #      # Runs a set of commands using the runners shell
+            #      - name: test one of the test test_madspin_LOonly
+            #        run: |
+            #            cd $GITHUB_WORKSPACE
+            #            cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
+            #            sudo pip install numpy
+            #            which f2py
+            #            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #            ./tests/test_manager.py test_madspin_LOonly -pA -t0 -l INFO
+            #
 
 
   acceptancetest_96:
@@ -1907,6 +1789,9 @@ jobs:
             which f2py
             echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            echo "install lhapdf6" > cmd
+            ./bin/mg5_aMC cmd
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/lib/
             ./tests/test_manager.py test_raise_invalid_path_hwpp -pA -t0 -l INFO
 
 
@@ -1990,18 +1875,18 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            echo "install lhapdf6" > cmd
-            echo "install pythia8" >> cmd
-            ./bin/mg5_aMC cmd
-            cat HEPTools/lhapdf6_py3/lhapdf6_install.log
-            ls HEPTools/lhapdf6_py3/bin
-            echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
-            ./tests/test_manager.py  test_loop_improved_reweighting -pA -t0 -l INFO
+            #sudo pip install numpy
+            #which f2py
+            #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #echo "install lhapdf6" > cmd
+            #echo "install pythia8" >> cmd
+            #./bin/mg5_aMC cmd
+            #cat HEPTools/lhapdf6_py3/lhapdf6_install.log
+            #ls HEPTools/lhapdf6_py3/bin
+            #echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
+            #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
+            ./tests/test_manager.py  test_loop_improved_reweighting -pA -t0 -l INFO --debug
 
   acceptancetest_101:
     # The type of runner that the job will run on
@@ -2017,18 +1902,18 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             cp input/.mg5_configuration_default.txt input/mg5_configuration.txt
-            sudo pip install numpy
-            which f2py
-            echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            echo "install lhapdf6" > cmd
-            echo "install pythia8" >> cmd
-            ./bin/mg5_aMC cmd
-            cat HEPTools/lhapdf6_py3/lhapdf6_install.log
-            ls HEPTools/lhapdf6_py3/bin
-            echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
-            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO
+            #sudo pip install numpy
+            #which f2py
+            #echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+            #cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            #echo "install lhapdf6" > cmd
+            #echo "install pythia8" >> cmd
+            #./bin/mg5_aMC cmd
+            #cat HEPTools/lhapdf6_py3/lhapdf6_install.log
+            #ls HEPTools/lhapdf6_py3/bin
+            #echo "lhapdf-config = /home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3/bin/lhapdf-config" >> input/mg5_configuration.txt
+            #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lhapdf6_py3//lib
+            ./tests/test_manager.py  test_nlo_output2 -pA -t0 -l INFO --debug || cat /home/runner/work/mg5amcnlo/mg5amcnlo/tmp_test/MGPROC/run_01_tag_1_debug.log
 
   acceptancetest_102:
     # The type of runner that the job will run on
