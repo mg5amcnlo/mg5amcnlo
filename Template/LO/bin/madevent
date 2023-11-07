@@ -169,7 +169,7 @@ try:
     elif 'treatcards' in args:
         cmd_line = cmd_interface.MadEventCmdShell(force_run=True)
         cmd_line.run_cmd(' '.join(args))
-	    cmd_line.run_cmd('quit')
+        cmd_line.run_cmd('quit')
         sys.exit(0)
     with cmd_interface.MadEventCmdShell.RunWebHandling(os.path.dirname(root_path), ):
         if (args and os.path.isfile(args[0])):
