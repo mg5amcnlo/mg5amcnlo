@@ -119,6 +119,8 @@ class VirtualExporter(object):
         helas_call_writers.HelasCallWriter.customize_argument_for_all_other_helas_object = \
                 self.helas_call_writer_custom
         
+        self.has_second_exporter = None
+        
 
     # helper function for customise helas writter
     @staticmethod
@@ -142,7 +144,7 @@ class VirtualExporter(object):
     def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[]):
         return
     
-    def finalize(self,matrix_element, cmdhistory, MG5options, outputflag):
+    def finalize(self,matrix_element, cmdhistory, MG5options, outputflag, second_exporter=None):
         return
     
     
@@ -177,6 +179,7 @@ class ProcessExporterFortran(VirtualExporter):
                         }
     grouped_mode = False
     jamp_optim = False
+    run_card_class = None
 
     def __init__(self,  dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
@@ -251,8 +254,8 @@ class ProcessExporterFortran(VirtualExporter):
         if isinstance(matrix_elements, loop_helas_objects.LoopHelasMatrixElement):
             matrix_elements = None
 
-        run_card = banner_mod.RunCard()
-        
+
+        run_card = banner_mod.RunCard(self.run_card_class)
         
         default=True
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):            
@@ -471,10 +474,17 @@ class ProcessExporterFortran(VirtualExporter):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[]):
+    def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[], second_exporter=None):
         """Function to finalize v4 directory, for inheritance.""" 
         
-        self.create_run_card(matrix_elements, history)
+        if second_exporter:
+            self.has_second_exporter = second_exporter
+
+        if self.has_second_exporter:
+            with misc.TMP_variable(self, 'run_card_class', self.has_second_exporter.run_card_class):
+                self.create_run_card(matrix_elements, history)
+        else:
+            self.create_run_card(matrix_elements, history)
         self.create_MA5_cards(matrix_elements, history)
     
     def create_MA5_cards(self,matrix_elements,history):
@@ -2479,7 +2489,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize(self, matrix_elements, history, mg5options, flaglist):
+    def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize Standalone MG4 directory by 
            generation proc_card_mg5.dat
            generate a global makefile
@@ -3290,7 +3300,7 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     def make(self,*args,**opts):
         pass
 
-    def finalize(self, matrix_elements, history, mg5options, flaglist):
+    def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         misc.compile(cwd=pjoin(self.dir_path,'Source','MODEL'))
         return super().finalize(matrix_elements, history, mg5options, flaglist)
     
@@ -3552,7 +3562,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for MadWeight directory
     #===========================================================================
-    def finalize(self, matrix_elements, history, mg5options, flaglist):
+    def finalize(self, matrix_elements, history, mg5options, flaglist, second_exporter=None):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
@@ -4562,6 +4572,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
+
+        if second_exporter:
+            self.has_second_exporter = second_exporter
+
         if 'nojpeg' in flaglist:
             makejpg = False
         else:
@@ -6770,6 +6784,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
     def finalize(self,*args, second_exporter=None, **opts):
 
+        if second_exporter:
+            self.has_second_exporter = second_exporter
         super(ProcessExporterFortranMEGroup, self).finalize(*args, second_exporter=None, **opts)
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True        

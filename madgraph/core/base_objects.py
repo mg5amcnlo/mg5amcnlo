@@ -1491,7 +1491,28 @@ class Model(PhysicsObject):
         
         return correlated   
 
+    def get_all_running_coupling(self):
+        """ return the list of all coupling which are running for this model """
+
+        all_running_coupling = []
+        all_running_type = ['aS'] + self.get_running()
+        not_running_index = [] # to allow to add at the end of the list the non running one
+        for type_coup, coup_list in self.get('couplings').items():
+            if any([c in all_running_type for c in type_coup]):
+                all_running_coupling += coup_list
+        return all_running_coupling
+    
+    def is_running_coupling(self, name, reset_cache=False):
+        """check if a coupling runs or not"""
+
+        if reset_cache or not hasattr(self, 'cache_running_coupling'):
+            self.cache_running_coupling = self.get_all_running_coupling()
         
+        if name.startswith('-'):
+            name = name[1:]
+        return name in self.cache_running_coupling
+
+
 
     def check_majoranas(self):
         """Return True if there is fermion flow violation, False otherwise"""
