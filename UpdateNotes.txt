@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-3.5.2 ()
+3.5.2 (08/11/23)
       MZ: fixing issue for 2>1 processes at NLO accuracy (like p p > Z [QCD])
           For most compiler, the process was just crashing but some compiler were returning absurdly large cross-section
       RF: update test at NLO to better include phase-space cut
