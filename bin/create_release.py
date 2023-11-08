@@ -176,14 +176,14 @@ if auto_update:
     rev_nb_i = int(rev_nb)
     try:
         if MG_branch == 'LTS':
-#        import ssl
-#        import urllib.request
-
-#        ctx = ssl.create_default_context()
-#        ctx.check_hostname = False
-#        ctx.verify_mode = ssl.CERT_NONE
-#        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
+            import ssl
+            import urllib.request
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+        else:
+            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
         print(text)
         web_version = int(text[0].strip())
