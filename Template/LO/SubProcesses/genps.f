@@ -1877,12 +1877,12 @@ c      write(*,*) 'T-channel found: ',nb_tchannel
          d1 = iforest(1, -i, config)
          d2 = iforest(2, -i, config)
          do j=0,3
-            if (d1.gt.0.and.d1.le.2) then
+            if (d1.gt.0.and.d1.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d1)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d1)
             endif
-            if (d2.gt.0.and.d2.le.2) then
+            if (d2.gt.0.and.d2.le.nincoming) then
                ptemp(j,-i) = ptemp(j,-i) - ptemp(j, d2)
             else
                ptemp(j,-i) = ptemp(j,-i)+ptemp(j, d2)

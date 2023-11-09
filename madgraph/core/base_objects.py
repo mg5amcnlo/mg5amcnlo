@@ -1230,7 +1230,8 @@ class Model(PhysicsObject):
 
         if name == 'particles':
             # Ensure no doublets in particle list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['particle_dict'] = {}
             self['ref_dict_to0'] = {}
@@ -1238,7 +1239,8 @@ class Model(PhysicsObject):
 
         if name == 'interactions':
             # Ensure no doublets in interaction list
-            make_unique(value)
+            if value:
+                make_unique(value)
             # Reset dictionaries
             self['interaction_dict'] = {}
             self['ref_dict_to1'] = {}
@@ -4154,6 +4156,9 @@ def make_unique(doubletlist):
     Note that this is a slow implementation, so don't use if speed 
     is needed"""
 
+    if not doubletlist:
+        return
+    
     assert isinstance(doubletlist, list), \
            "Argument to make_unique must be list"
     

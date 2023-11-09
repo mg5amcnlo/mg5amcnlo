@@ -45,7 +45,9 @@ class ShowerCard(dict):
     false = ['.false.', 'f', 'false', '0']
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
-                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td']
+                    'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td',
+                    'space_shower_me_corrections', 'time_shower_me_corrections',
+                    'time_shower_me_extended', 'time_shower_me_after_first']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         string_vars.append('dm_'+str(i))
@@ -82,7 +84,11 @@ class ShowerCard(dict):
             'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass', 'PYTHIA8': 'b_mass'},
             'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'},
             'qcut' : {'PYTHIA8':'qcut'},
-            'njmax' : {'PYTHIA8':'njmax'}}
+            'njmax' : {'PYTHIA8':'njmax'},
+            'space_shower_me_corrections' : {'PYTHIA8':'space_shower_me_corrections'},
+            'time_shower_me_corrections' : {'PYTHIA8':'time_shower_me_corrections'},
+            'time_shower_me_extended' : {'PYTHIA8':'time_shower_me_extended'},
+            'time_shower_me_after_first' : {'PYTHIA8':'time_shower_me_after_first'}}
     
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     

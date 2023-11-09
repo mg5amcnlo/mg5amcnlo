@@ -1,5 +1,13 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+3.5.2 (08/11/23)
+      MZ: fixing issue for 2>1 processes at NLO accuracy (like p p > Z [QCD])
+          For most compiler, the process was just crashing but some compiler were returning absurdly large cross-section
+      RF: update test at NLO to better include phase-space cut
+      OM: Change restriction model to be less sensitive to numerical accuracy
+      OM: bug fixing from LTS up to 2.9.17 (see below)
+      PT: added options for matrix-element corrections in shower card fot PY8
+      
 3.5.1 (11/07/23)
       SH+OM: Update interface for contur
       OM: fix an issue with NLO reweighting introduced in 3.4.0 where loop scale was not correctly set anymore
@@ -132,7 +140,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
                         ** Long Term Stable Update **
 
-2.9.16(11/07/23):
+2.9.17(19/10/23):
+    OM: change integration strategy (SDE=1) for width computation
+    OM: clearer error message in some situation
+
+2.9.16(26/07/23):
      OM: fix for helicity recycling
      OM: Update numpy support to latest version
      OM: Fix some interface issue

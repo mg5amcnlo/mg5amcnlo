@@ -268,10 +268,12 @@ C     Amplitude(s) for diagram number 1
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
-      JAMP(1,1)=+1D0/2D0*(+1D0/3D0*AMP(1)+AMP(2))
-      JAMP(2,1)=+1D0/2D0*(-AMP(1)-1D0/3D0*AMP(2))
-      LNJAMP(1,1)=+1D0/2D0*(+AMP(2))
-      LNJAMP(2,1)=+1D0/2D0*(-AMP(1))
+      JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
+     $ -01)*AMP(2)
+      JAMP(2,1) = (-5.000000000000000D-01)*AMP(1)+(-1.666666666666667D
+     $ -01)*AMP(2)
+      LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
+      LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
       RES = 0.D0
       DO M = 1, NAMPSO
@@ -399,10 +401,12 @@ C     Amplitude(s) for diagram number 1
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,2),W(1,5),GC_5,AMP(2))
 C     JAMPs contributing to orders QCD=2
-      JAMP(1,1)=+1D0/2D0*(+1D0/3D0*AMP(1)+AMP(2))
-      JAMP(2,1)=+1D0/2D0*(-AMP(1)-1D0/3D0*AMP(2))
-      LNJAMP(1,1)=+1D0/2D0*(+AMP(2))
-      LNJAMP(2,1)=+1D0/2D0*(-AMP(1))
+      JAMP(1,1) = (1.666666666666667D-01)*AMP(1)+(5.000000000000000D
+     $ -01)*AMP(2)
+      JAMP(2,1) = (-5.000000000000000D-01)*AMP(1)+(-1.666666666666667D
+     $ -01)*AMP(2)
+      LNJAMP(1,1) = (5.000000000000000D-01)*AMP(2)
+      LNJAMP(2,1) = (-5.000000000000000D-01)*AMP(1)
 
       END
 

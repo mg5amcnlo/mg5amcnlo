@@ -52,7 +52,11 @@ class IOExportFKSTest(IOTests.IOTestManager):
         """Create a process"""
 
         def run_cmd(cmd):
-            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+            opt = dict(interface.options)
+            opt['ninja'] = None
+            opt['collier'] = None
+            with misc.TMP_variable(interface, 'options', opt):
+                interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
 
         interface = MGCmd.MasterCmd()

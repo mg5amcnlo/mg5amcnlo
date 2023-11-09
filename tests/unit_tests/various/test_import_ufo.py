@@ -378,6 +378,7 @@ class TestRestrictModel(unittest.TestCase):
                     #[('GC_53', 1), ('GC_52', -1)], #GC_52 is not assigned to a vertex to they are consider as different coupling order and not merged... not relevant anyway
                     [('GC_54', 1), ('GC_56', -1)],
                     [('GC_66', 1), ('GC_67', -1)],
+                    [('GC_68', 1), ('GC_80', 1)],
                     [('GC_7', 1), ('GC_9', -1)],
                     [('GC_70', 1), ('GC_73', -1)],
                     [('GC_74', 1), ('GC_75', -1)],
@@ -432,7 +433,7 @@ class TestRestrictModel(unittest.TestCase):
         
         self.model.locate_coupling()
         zero, iden = self.model.detect_identical_couplings()
-        self.assertEqual(len(iden), 13)
+        self.assertEqual(len(iden), 14)
         
         # Check that All the code/model is the one intended for this test
         target = [i for i in iden if len(i)==7][0] 
