@@ -4267,7 +4267,7 @@ class RunCardLO(RunCard):
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
-                if self[pdlabelX] not in ['none','chff','edff']:
+                if self[pdlabelX] not in ['none','chff','edff', 'iww']:
                     logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
