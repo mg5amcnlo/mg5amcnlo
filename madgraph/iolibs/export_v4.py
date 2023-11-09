@@ -480,7 +480,7 @@ class ProcessExporterFortran(VirtualExporter):
         if second_exporter:
             self.has_second_exporter = second_exporter
 
-        if self.has_second_exporter:
+        if self.has_second_exporter and hasattr(self.has_second_exporter, 'run_card_class'):
             with misc.TMP_variable(self, 'run_card_class', self.has_second_exporter.run_card_class):
                 self.create_run_card(matrix_elements, history)
         else:
