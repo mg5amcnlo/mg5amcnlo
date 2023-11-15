@@ -3191,7 +3191,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
       
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
-                run_card = banner_mod.RunCard(opt['run_card'])
+                run_card = banner_mod.RunCard(opt['run_card'], path=pjoin(self.me_dir, 'Cards', 'run_card.dat'))
             else:
                 run_card = self.run_card
             self.run_card = run_card

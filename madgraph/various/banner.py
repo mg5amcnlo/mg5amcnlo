@@ -2822,13 +2822,15 @@ class RunCard(ConfigFile):
         if fct_mod:
             self.fct_mod[name] = fct_mod
 
-    def read(self, finput, consistency=True, unknown_warning=True):
+    def read(self, finput, consistency=True, unknown_warning=True, **opt):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
            
         if isinstance(finput, str):
             if "\n" in finput:
                 finput = finput.split('\n')
+                if 'path' in opt:
+                    self.path = opt['path']
             elif os.path.isfile(finput):
                 self.path = finput
                 finput = open(finput)
