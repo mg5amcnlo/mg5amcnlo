@@ -3915,7 +3915,7 @@ template_on = \
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
-   %(vector_size)s = vector_size ! size designed for SIMD/OpenMP/GPU (number of events in lockstep)
+   %(vector_size)s = vector_size ! size of fortran arrays allocated in the multi-event API for SIMD/GPU (VECSIZE_MEMMAX)
 """
 
 template_off = '# To see advanced option for Phase-Space optimization: type "update psoptim"'
