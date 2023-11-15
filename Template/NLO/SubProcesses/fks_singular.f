@@ -2975,7 +2975,6 @@ c Smear the Born according to the BornSmear_weight.
       implicit none
       integer i,j,ifl,ii
       double precision BornSmear_weight,BornSmear_wgt
-     $     ,ShowerScaleReweight
       external BornSmear_weight
       double precision xxx(2)
       common /bornsmearing_variables/ xxx
@@ -2983,16 +2982,8 @@ c Smear the Born according to the BornSmear_weight.
          do i=1,icontr
             if (itype(i).eq.2 .and. BornSmearSetup_done .and.
      $           ifold_cnt(i).eq.ifl) then
-               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i)
-     $              ,ShowerScaleReweight)
+               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i))
                wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
-c$$$               shower_scale(i)=shower_scale(i)*ShowerScaleReweight
-               do ii=1,icontr
-                  if (.not.H_event(ii) .and. ifold_cnt(ii).eq.ifl) then
-                     shower_scale(ii)=shower_scale(ii)
-     $                    *ShowerScaleReweight
-                  endif
-               enddo
             endif
          enddo
       endif
@@ -3520,21 +3511,6 @@ c fill the BornSmear grids
             BornSmear(i,j,iFKS_soft,3)=
      $           BornSmear(i,j,iFKS_soft,3)+sigint_Born
 
-            do ii=1,icontr
-               if (icontr_sum(0,ii).eq.0) cycle
-               do jj=1,niproc(ii)
-                  if (unwgt_B(jj,ii).ne.0d0) then
-                     BornSmear(i,j,iFKS_soft,4)=BornSmear(i,j,iFKS_soft
-     $                    ,4)+shower_scale(ii)*unwgt_B(jj,ii)
-                     if (shower_scale(ii).eq.0d0 .and. 
-     $                    unwgt_B(jj,ii).ne.0d0) then
-                        write (*,*) 'Zero shower scale in Born Smearing'
-     $                       ,shower_scale(ii),unwgt_B(jj,ii),ii,jj
-                        stop 
-                     endif
-                  endif
-               enddo
-            enddo
          endif
       endif
 
@@ -3563,16 +3539,15 @@ c fill the BornSmear grids
       end
 
 
-      double precision function BornSmear_weight(xi,y,iFKS
-     $     ,ShowerScaleReweight)
+      double precision function BornSmear_weight(xi,y,iFKS)
       ! note: arguments xi,y are the vegas x's corresponding do xi_i_fks and y_ij_fks
       use mint_module
       implicit none
       include 'nFKSconfigs.inc'
       integer i,j,iFKS,ii,jj
       double precision xi,y,a,NormConst(fks_configs)
-     $     ,IntegralNormConstPos,ran2,maxvalue,target,sum
-     $     ,ShowerScaleReweight,BornSmear_weight_mat(n_BS_yij,n_BS_xi
+     $     ,IntegralNormConstPos
+     $     ,BornSmear_weight_mat(n_BS_yij,n_BS_xi
      $     ,fks_configs),full_sum
       external ran2
       parameter (a=1d0)
@@ -3638,7 +3613,7 @@ c
      $              BornSmear_weight_mat(ii,jj,iFKS) ) then
                   write (*,*) 'NAN found in BornSmear_weight_mat',ii,jj
      $                 ,iFKS,BornSmear_weight_mat(ii,jj,iFKS)
-     $                 ,BornSmear(ii,jj,iFKS,0:4),NormConst(iFKS)
+     $                 ,BornSmear(ii,jj,iFKS,0:3),NormConst(iFKS)
      $                 ,IntegralNormConstPos
                   stop
                endif
@@ -3650,53 +3625,6 @@ c
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
       BornSmear_weight=BornSmear_weight_mat(i,j,iFKS)
-
-! Compute the reweight factor for the shower starting scale: if we have
-! an excess of events in the current bin, take the ratio of the shower
-! scale starting scales from a random bin (weighted by the deficiency of
-! events in those bins) and the current bin. Do this only for the
-! *excess* of the events in the current bin.
-      if (BornSmear_weight.gt.1d0) then
-         if (ran2().lt.(BornSmear_weight-1d0)/BornSmear_weight) then
-            maxvalue=0d0
-            do ii=1,n_BS_yij
-               do jj=1,n_BS_xi
-                  if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
-                  if (BornSmear_weight_mat(ii,jj,iFKS).lt.1d0) then
-                     maxvalue=maxvalue+(1d0-BornSmear_weight_mat(ii,jj
-     $                    ,iFKS))
-                  endif
-               enddo
-            enddo
-            target=maxvalue*ran2()
-            sum=0d0
-            do ii=1,n_BS_yij
-               do jj=1,n_BS_xi
-                  if (BornSmear(ii,jj,iFKS,3).eq.0d0) cycle
-                  if (BornSmear_weight_mat(ii,jj,iFKS).lt.1d0) then
-                     sum=sum+(1d0-BornSmear_weight_mat(ii,jj,iFKS))
-                  endif
-                  if (sum.gt.target) exit
-               enddo
-               if (sum.gt.target) exit
-            enddo
-            ShowerScaleReweight=
-     $           (BornSmear(ii,jj,iFKS,4)/BornSmear(ii,jj,iFKS,3))/
-     $           (BornSmear( i, j,iFKS,4)/BornSmear( i, j,iFKS,3))
-         else
-            ShowerScaleReweight=1d0
-         endif
-      else
-         ShowerScaleReweight=1d0
-      endif
-
-      if (ShowerScaleReweight.le.0d0 .or.
-     $     ShowerScaleReweight.ne.ShowerScaleReweight) then
-         write (*,*) 'ShowerScaleReweight is smaller or equal '/
-     $        /'to zero or NaN:',ShowerScaleReweight,i,j,ii,jj,sum
-     $        ,target,maxvalue,BornSmear_weight,iFKS
-         stop
-      endif
 
       return
       end
