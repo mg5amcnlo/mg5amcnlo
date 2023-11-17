@@ -234,7 +234,6 @@ C ----------
 C  
 C LOCAL VARIABLES 
 C
-      double precision QSCALE
       INTEGER I,ITYPE,LP,IPROC
       DOUBLE PRECISION QSCALE
 %(pdf_vars_vec)s      
@@ -292,16 +291,8 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-<<<<<<< HEAD
 	   integer ivec, curr_wrap, iwrap
 	   integer channels(VECSIZE_MEMMAX)
-||||||| parent of ec1d9fea5 (set IB identity such that this is correctly set for each wrap (for PDF call and MLM weight))
-	   integer ivec
-
-=======
-	   integer ivec, curr_wrap, iwrap
-
->>>>>>> ec1d9fea5 (set IB identity such that this is correctly set for each wrap (for PDF call and MLM weight))
 C  
 C DATA
 C  
@@ -362,18 +353,9 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-<<<<<<< HEAD
 	 ENDDO ! end loop on IWRAP/IVEC	 
 	 ENDDO ! end loop on the CURR_WRAP
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
-||||||| parent of ec1d9fea5 (set IB identity such that this is correctly set for each wrap (for PDF call and MLM weight))
-	 ENDDO
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
-=======
-	 ENDDO ! end loop on IWRAP/IVEC	 
-	 ENDDO ! end loop on the CURR_WRAP
-         call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channel, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
->>>>>>> ec1d9fea5 (set IB identity such that this is correctly set for each wrap (for PDF call and MLM weight))
 
 
 	 DO IVEC=1,VECSIZE_USED
