@@ -170,8 +170,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.top' % self.path))
 
-    @IOTests.createIOTest()
-    def testIO_check_html_long_process_strings(self):
+    #@IOTests.createIOTest()
+    def test_check_html_long_process_strings(self):
         """ target: info.html
         """
         #check that the info.html file correctly lists all the subprocesses,
@@ -186,7 +186,12 @@ class MECmdShell(IOTests.IOTestManager):
         #       'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
         info_html_this = open(os.path.join(self.path, 'HTML', 'info.html')).read()
         #self.assertEqual(info_html_target, info_html_this)
-        open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        #open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        self.assertEqual(info_html_this.count('<TD> born </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> virt </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> real </TD>'), 6)
+        self.assertEqual(info_html_this.count('<TR class=first>'), 2)
+        self.assertEqual(info_html_this.count('<TR class=second>'), 8)
 
 
     def test_raise_invalid_path_hwpp(self):

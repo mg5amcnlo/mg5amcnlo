@@ -2822,13 +2822,15 @@ class RunCard(ConfigFile):
         if fct_mod:
             self.fct_mod[name] = fct_mod
 
-    def read(self, finput, consistency=True, unknown_warning=True):
+    def read(self, finput, consistency=True, unknown_warning=True, **opt):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
            
         if isinstance(finput, str):
             if "\n" in finput:
                 finput = finput.split('\n')
+                if 'path' in opt:
+                    self.path = opt['path']
             elif os.path.isfile(finput):
                 self.path = finput
                 finput = open(finput)
@@ -3913,7 +3915,7 @@ template_on = \
    %(global_flag)s = global_flag ! fortran optimization flag use for the all code.
    %(aloha_flag)s  = aloha_flag ! fortran optimization flag for aloha function. Suggestions: '-ffast-math'
    %(matrix_flag)s = matrix_flag ! fortran optimization flag for matrix.f function. Suggestions: '-O3'
-   %(vector_size)s = vector_size ! size designed for SIMD/OpenMP/GPU (number of events in lockstep)
+   %(vector_size)s = vector_size ! size of fortran arrays allocated in the multi-event API for SIMD/GPU (VECSIZE_MEMMAX)
    %(nb_wrap)s = nb_wrap ! total number of wrap/frontwave
 """
 
@@ -4880,6 +4882,9 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        if proc_characteristic['ninitial'] == 1:
+            self['SDE_strategy'] =1
 
         if 'MLM' in proc_characteristic['limitations']:
             if self['dynamical_scale_choice'] ==  -1:
@@ -5946,7 +5951,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-13)
+        self.add_param("OSThres", 1.0e-8)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

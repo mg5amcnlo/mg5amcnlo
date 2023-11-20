@@ -494,16 +494,12 @@ TimeShower:globalRecoil = on       ! All final-state particles recoil against th
 TimeShower:nMaxGlobalRecoil = 1    ! Number of splittings with TimeShower:globalRecoil = on
 TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first emission is FSR
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
-TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
+TimeShower:nPartonsInBorn = -1     ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-TimeShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
-                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
-                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-TimeShower:QEDshowerByGamma = on  ! Prevent photons from branching
-                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
+TimeShower:QEDshowerByQ = on       ! Photons from quarks
+TimeShower:QEDshowerByL = on       ! Photons from leptons
+TimeShower:QEDshowerByGamma = on   ! Photon ranchings
 
-TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
 TimeShower:pTminChgQ = 0.01
@@ -515,11 +511,8 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-SpaceShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
-                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-SpaceShower:QEDshowerByL = on     ! Prevent leptons from radiating photons
-                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
-SpaceShower:MEcorrections = off    ! No Matrix-element corrections
+SpaceShower:QEDshowerByQ = on      ! Photons from quarks
+SpaceShower:QEDshowerByL = on      ! Photons from leptons
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 SpaceShower:pTminChgQ = 0.01
@@ -574,8 +567,58 @@ JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
 
 EOF
 fi
+
 cat <<EOF >> $ifile
-! 10) Decays.
+! 10) Matrix-element corrections.
+EOF
+
+if [ $space_shower_me_corrections = ".TRUE." ]
+then
+cat <<EOF >> $ifile
+SpaceShower:MEcorrections = on     ! MECs for ISR
+EOF
+else
+cat <<EOF >> $ifile
+SpaceShower:MEcorrections = off     ! no MECs for ISR
+EOF
+fi
+
+if [ $time_shower_me_corrections = ".TRUE." ]
+then
+cat <<EOF >> $ifile
+TimeShower:MEcorrections = on     ! MECs for FSR
+EOF
+else
+cat <<EOF >> $ifile
+TimeShower:MEcorrections = off     ! no MECs for FSR
+EOF
+fi
+
+if [ $time_shower_me_extended = ".TRUE." ]
+then
+cat <<EOF >> $ifile
+TimeShower:MEextended = on     ! Extended MECs for FSR
+EOF
+else
+cat <<EOF >> $ifile
+TimeShower:MEextended = off     ! no extended MECs for FSR
+EOF
+fi
+
+if [ $time_shower_me_after_first = ".TRUE." ]
+then
+cat <<EOF >> $ifile
+TimeShower:MEafterFirst = on     ! MECs after frst FSR
+EOF
+else
+cat <<EOF >> $ifile
+TimeShower:MEafterFirst = off     ! no MECS MECs after first FSR
+EOF
+fi
+
+
+cat <<EOF >> $ifile
+! 11) Decays.
 EOF
 
 if [ $PI_STABLE_PY8 = ".TRUE." ]

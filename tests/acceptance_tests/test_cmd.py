@@ -216,7 +216,7 @@ class TestCmdShell1(unittest.TestCase):
                     'samurai': None,
                     'max_t_for_channel': 99,
                     'zerowidth_tchannel': True,
-                     'auto_convert_model': False,
+                     'auto_convert_model': True,
                      'nlo_mixed_expansion': True,
                      'acknowledged_v3.1_syntax': False,
                      'contur_path': './HEPTools/contur',
@@ -306,7 +306,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'get_color.f')))
-        self.assertFalse(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertFalse(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -314,7 +315,8 @@ class TestCmdShell2(unittest.TestCase,
                                                     'madevent.tar.gz')))
         self.do('output %s -f' % self.out_dir)
         self.do('set group_subprocesses True')
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P0_epem_epem',
                                                     'matrix1.jpg')))
@@ -1072,11 +1074,12 @@ C
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+        if misc.which('gs'):
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'SubProcesses',
                                                     'P2_gg_qq',
                                                     'matrix11.jpg')))
-        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+            self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'HTML',
                                                     'card.jpg')))
         # Check that the run_config.inc file has been modified correctly

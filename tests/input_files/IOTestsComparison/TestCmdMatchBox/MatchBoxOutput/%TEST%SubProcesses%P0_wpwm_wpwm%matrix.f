@@ -215,8 +215,8 @@ C     Amplitude(s) for diagram number 6
       CALL VVV1_3(W(1,1),W(1,3),GC_53,MDL_MZ,MDL_WZ,W(1,5))
 C     Amplitude(s) for diagram number 7
       CALL VVV1_0(W(1,4),W(1,2),W(1,5),GC_53,AMP(7))
-      JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
-      LNJAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      JAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      LNJAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
 
       MG5_0_MATRIX = 0.D0
       DO I = 1, NCOLOR
@@ -321,8 +321,8 @@ C     Amplitude(s) for diagram number 6
       CALL VVV1_3(W(1,1),W(1,3),GC_53,MDL_MZ,MDL_WZ,W(1,5))
 C     Amplitude(s) for diagram number 7
       CALL VVV1_0(W(1,4),W(1,2),W(1,5),GC_53,AMP(7))
-      JAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
-      LNJAMP(1)=+AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      JAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
+      LNJAMP(1) = AMP(1)+AMP(2)+AMP(3)+AMP(4)+AMP(5)+AMP(6)+AMP(7)
 
       END
 

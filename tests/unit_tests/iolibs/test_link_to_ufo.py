@@ -85,7 +85,12 @@ class TestUFOExpressionParsers(unittest.TestCase):
         converted = ufo_to_fortran.parse(expr)
         self.assertEqual(converted, 
         '(ee**2*imag/(2.000000d+00*sw**2)*(sin(sqrt(dcmplx(2.000000d+00))*ee)**2/3.000000d+00))')
-    
+
+        expr = '-((mdl_complexi*mdl_yc)/mdl_sqrt__2)'
+        converted = ufo_to_fortran.parse(expr)
+        self.assertEqual(converted, 
+        '-((mdl_complexi*mdl_yc)/mdl_sqrt__2)')
+        
     def test_convert_number_to_fortran(self):
         """ test it can convert number in fortran string"""
         

@@ -17,9 +17,12 @@ import copy
 import subprocess
 import shutil
 import os
+import tempfile
 
-import tests.unit_tests as unittest
+#import tests.unit_tests as unittest
+import unittest
 import logging
+import tests.unit_tests as unit_tests
 
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
@@ -44,11 +47,16 @@ class CheckFileCreate():
     created_files =[]
 
     def setUp(self):
-        try:
-            os.system('rm -rf %s &> /dev/null' % self.output_path)
-        except:
-            pass
-        os.mkdir(self.output_path)
+        self.debuging = unittest.debug
+        if self.debuging:
+            self.output_path = pjoin(MG5DIR, 'MODEL_TEST')
+            if os.path.exists(self.output_path):
+                shutil.rmtree(self.output_path)
+                import time
+                time.sleep(1)
+            os.mkdir(self.output_path) 
+        else:
+            self._output_path = tempfile.mkdtemp(prefix='test_mg5')
         
     def tearDown(self):
         os.system('rm -rf %s ' % self.output_path)
@@ -80,7 +88,7 @@ class CheckFileCreate():
     
 
 
-class CompareMG4WithUFOModel(unittest.TestCase):
+class CompareMG4WithUFOModel(unit_tests.TestCase):
     """checking if the MG4 model and the UFO model are coherent when they should"""
     
     
@@ -276,7 +284,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         
     
         
-class TestModelCreation(unittest.TestCase, CheckFileCreate):
+class TestModelCreation(unit_tests.TestCase, CheckFileCreate):
 
     created_files = ['couplings.f', 'couplings1.f', 'couplings2.f', 'couplings3.f', 
                      'couplings4.f', 'coupl.inc', 'intparam_definition.inc',
@@ -373,7 +381,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                         msg='fail to be equal for param %s : %s != %s' % \
                             (variable, singlevalue, solutions[variable][i]))
                 #except Exception as error:
-                #    print variable
+                #    print(variable, singlevalue, solutions[variable][i])
                 #    if i == 0:
                 #        solutions[variable] = [singlevalue]
                 #    else:
