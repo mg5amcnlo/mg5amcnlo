@@ -2188,7 +2188,10 @@ def import_python_lhapdf(lhapdfconfig):
         
     if use_lhapdf:
         python_lhapdf = lhapdf
-        python_lhapdf.setVerbosity(0)
+        try:
+            python_lhapdf.setVerbosity(0)
+        except Exception:
+            pass
     else:
         python_lhapdf = None
     return python_lhapdf
