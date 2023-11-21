@@ -3545,87 +3545,80 @@ c fill the BornSpread grids
       implicit none
       include 'nFKSconfigs.inc'
       integer i,j,iFKS,ii,jj
-      double precision xi,y,a,NormConst(fks_configs)
-     $     ,IntegralNormConstPos
-     $     ,BornSpread_weight_mat(n_BS_yij,n_BS_xi
-     $     ,fks_configs),full_sum
+      double precision xi,y,a,NormConst(fks_configs),neg_sum,pos_sum
+     &,BornSpread_weight_mat(n_BS_yij,n_BS_xi,fks_configs)
       external ran2
       parameter (a=1d0)
       logical firsttime(fks_configs)
       data firsttime/fks_configs*.true./
-      save NormConst,BornSpread_weight_mat
-
+      save BornSpread_weight_mat
+c
       if(.not.BornSpreadSetup_done) then
          write (*,*) 'BornSpread must be setup before '/
      $        /'calling BornSpread_weight'
          stop 1
       endif
-c
-
-      if (a.ne.1d0) then
-         write (*,*) 'a.ne.1 (This is needed for '/
-     $        /'shower scale reweighting)'
-         stop 1
-      endif
-      
-! fill the weight normalisation matrix the first time we enter this
-! function (for each FKS configuration)
+c      
+!     Fill the weight normalisation matrix the first time we enter
+!     this function (for each FKS configuration)
       if (firsttime(iFKS)) then
          firsttime(iFKS)=.false.
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               BornSpread(ii,jj,iFKS,0)=
-     &              ( BornSpread(ii,jj,iFKS,1) -
-     &              BornSpread(ii,jj,iFKS,2)   ) /2d0
+               BornSpread(ii,jj,iFKS,0) =
+     &        (BornSpread(ii,jj,iFKS,1)-BornSpread(ii,jj,iFKS,2))/2d0
+!     BornSpread(1) = absNoBorn
+!     BornSpread(2) = NoBorn
+!     BornSpread(3) = Born
+!     BornSpread(0) = 0 <==> NoBorn is locally positive
             enddo
          enddo
-         full_sum=0d0
-         IntegralNormConstPos=0d0
+         neg_sum=0d0
+         pos_sum=0d0
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               if(BornSpread(ii,jj,iFKS,0).ne.0d0 .and. BornSpread(ii,jj
-     $              ,iFKS,3).ne.0d0) then
-                  full_sum=full_sum+
-     &                 BornSpread(ii,jj,iFKS,0)/BornSpread(ii,jj,iFKS,3)
-               elseif(BornSpread(ii,jj,iFKS,0).eq.0d0 .and. BornSpread(ii
-     $                 ,jj,iFKS,3).ne.0d0) then
-                  IntegralNormConstPos=IntegralNormConstPos+
-     $                 BornSpread(ii,jj,iFKS,2)/BornSpread(ii,jj,iFKS,3)
+               if(BornSpread(ii,jj,iFKS,0).ne.0d0 .and.
+     &            BornSpread(ii,jj,iFKS,3).ne.0d0) then
+                  neg_sum = neg_sum +
+     &            BornSpread(ii,jj,iFKS,0)/BornSpread(ii,jj,iFKS,3)
+               elseif(BornSpread(ii,jj,iFKS,0).eq.0d0 .and.
+     &                BornSpread(ii,jj,iFKS,3).ne.0d0) then
+                  pos_sum = pos_sum +
+     &            BornSpread(ii,jj,iFKS,2)/BornSpread(ii,jj,iFKS,3)
                endif
             enddo
          enddo
-         full_sum=full_sum/(n_BS_yij*n_BS_xi)
-         NormConst(iFKS)=n_BS_yij*n_BS_xi*(1d0-a)/IntegralNormConstPos
-         
+         neg_sum=neg_sum/(n_BS_yij*n_BS_xi)
+         pos_sum=pos_sum/(n_BS_yij*n_BS_xi)
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               if(BornSpread(ii,jj,iFKS,0).eq.0d0 .and. BornSpread(ii,jj
-     $              ,iFKS,3).ne.0d0) then
-                  BornSpread_weight_mat(ii,jj,iFKS)=BornSpread(ii,jj,iFKS
-     $                 ,2)/BornSpread(ii,jj,iFKS,3)*NormConst(iFKS)
-               elseif(BornSpread(ii,jj,iFKS,3).eq.0d0) then
-                  BornSpread_weight_mat(ii,jj,iFKS)=0d0
-               else
-                  BornSpread_weight_mat(ii,jj,iFKS)=a*BornSpread(ii,jj
-     $                 ,iFKS,0)/BornSpread(ii,jj,iFKS,3)/full_sum
+               BornSpread_weight_mat(ii,jj,iFKS)=0d0
+               if(BornSpread(ii,jj,iFKS,0).ne.0d0 .and.
+     &            BornSpread(ii,jj,iFKS,3).ne.0d0) then
+                  BornSpread_weight_mat(ii,jj,iFKS) =
+     &            BornSpread(ii,jj,iFKS,0)/BornSpread(ii,jj,iFKS,3)
+     &            /neg_sum * a
+               elseif(BornSpread(ii,jj,iFKS,0).eq.0d0 .and.
+     &                BornSpread(ii,jj,iFKS,3).ne.0d0) then
+                  BornSpread_weight_mat(ii,jj,iFKS) = 
+     &            BornSpread(ii,jj,iFKS,2)/BornSpread(ii,jj,iFKS,3)
+     &            /pos_sum * (1-a)
                endif
-               if ( BornSpread_weight_mat(ii,jj,iFKS).ne.
-     $              BornSpread_weight_mat(ii,jj,iFKS) ) then
-                  write (*,*) 'NAN found in BornSpread_weight_mat',ii,jj
-     $                 ,iFKS,BornSpread_weight_mat(ii,jj,iFKS)
-     $                 ,BornSpread(ii,jj,iFKS,0:3),NormConst(iFKS)
-     $                 ,IntegralNormConstPos
+               if ( BornSpread_weight_mat(ii,jj,iFKS) .ne.
+     &              BornSpread_weight_mat(ii,jj,iFKS) ) then
+                  write (*,*) 'NAN found in BornSpread_weight_mat'
+     &                 ,ii,jj,iFKS,BornSpread_weight_mat(ii,jj,iFKS)
+     &                 ,BornSpread(ii,jj,iFKS,0:3),neg_sum,pos_sum
                   stop
                endif
             enddo
          enddo
       endif
-
-! Determine the bin and the spreading weight      
+!     Determine the bin and the spreading weight      
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
       BornSpread_weight=BornSpread_weight_mat(i,j,iFKS)
-
+c
       return
       end
       
