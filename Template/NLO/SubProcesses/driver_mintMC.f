@@ -98,7 +98,7 @@ c Write the process PID in the log.txt files (i.e., to the screen)
       write (*,*) getpid()
 
       fks_confs=fks_configs
-      allocate(BornSmear(n_BS_yij,n_BS_xi,fks_confs,0:3))
+      allocate(BornSpread(n_BS_yij,n_BS_xi,fks_confs,0:3))
       
       call cpu_time(tBefore)
       fixed_order=.false.
@@ -204,11 +204,11 @@ c     Prepare the MINT folding
       ifold(ifold_phi)=iphi_i
       ifold(ifold_yij)=iy_ij
 
-      ! When already done imode0, must set BornSmearSetup_done to true.
-      if (imode.eq.0 .or. (.not. IncludeBornSmear)) then
-         BornSmearSetup_done=.false.
+      ! When already done imode0, must set BornSpreadSetup_done to true.
+      if (imode.eq.0 .or. (.not. IncludeBornSpread)) then
+         BornSpreadSetup_done=.false.
       else
-         BornSmearSetup_done=.true.
+         BornSpreadSetup_done=.true.
       endif
 c*************************************************************
 c     setting of the grids
@@ -913,8 +913,8 @@ c subtraction terms.
             call include_shape_in_shower_scale(p,iFKS,ifold_counter)
             call set_colour_connections(iFKS,ifold_counter)
          enddo
-c Include the weights from the Born Smearing
-         call include_BornSmear_weight(ifold_counter)
+c Include the weights from the Born Spreading
+         call include_BornSpread_weight(ifold_counter)
  12      continue
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.

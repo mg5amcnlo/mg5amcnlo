@@ -509,7 +509,7 @@ c its value to the list of weights using the add_wgt subroutine
       if (f_r.eq.0d0) return
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
-c$$$      if (imode.eq.3 .and. sudakov_damp.ge.1d0) return ! skip real when setting up the BornSmear grids
+c$$$      if (imode.eq.3 .and. sudakov_damp.ge.1d0) return ! skip real when setting up the BornSpread grids
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -2968,22 +2968,22 @@ c S-event contribution
       return
       end
 
-      subroutine include_BornSmear_weight(ifl)
-c Smear the Born according to the BornSmear_weight.       
+      subroutine include_BornSpread_weight(ifl)
+c Spread the Born according to the BornSpread_weight.       
       use weight_lines
       use mint_module
       implicit none
       integer i,j,ifl,ii
-      double precision BornSmear_weight,BornSmear_wgt
-      external BornSmear_weight
+      double precision BornSpread_weight,BornSpread_wgt
+      external BornSpread_weight
       double precision xxx(2)
-      common /bornsmearing_variables/ xxx
-      if (IncludeBornSmear) then
+      common /bornspreading_variables/ xxx
+      if (IncludeBornSpread) then
          do i=1,icontr
-            if (itype(i).eq.2 .and. BornSmearSetup_done .and.
+            if (itype(i).eq.2 .and. BornSpreadSetup_done .and.
      $           ifold_cnt(i).eq.ifl) then
-               BornSmear_wgt=BornSmear_weight(xxx(1),xxx(2),nFKS(i))
-               wgt(1:3,i)=wgt(1:3,i)*BornSmear_wgt
+               BornSpread_wgt=BornSpread_weight(xxx(1),xxx(2),nFKS(i))
+               wgt(1:3,i)=wgt(1:3,i)*BornSpread_wgt
             endif
          enddo
       endif
@@ -3099,7 +3099,7 @@ c include it here!
                      if (itype(i).eq.14 .and. imode.eq.1 .and. .not.
      $                    only_virt) exit
                      unwgt(j,i_soft)=unwgt(j,i_soft)+ parton_iproc(jj,i)
-                     ! unwgt_noB and unwgt_B are used for the BornSmearing
+                     ! unwgt_noB and unwgt_B are used for the BornSpreading
                      if (itype(i).ne.2) then
                         unwgt_noB(j,i_soft)=unwgt_noB(j,i_soft)
      $                       +parton_iproc(jj,i)
@@ -3422,7 +3422,7 @@ c on the imode we should or should not include the virtual corrections.
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       double precision xxx(2)
-      common /bornsmearing_variables/ xxx
+      common /bornspreading_variables/ xxx
       sigint=0d0
       sigint1=0d0
       sigint_ABS=0d0
@@ -3490,7 +3490,7 @@ c n1body_wgt is used for the importance sampling over FKS directories
          enddo
       endif
 
-c fill the BornSmear grids 
+c fill the BornSpread grids 
       if (imode.eq.3) then
          iFKS_soft=0
          do i=1,icontr
@@ -3504,12 +3504,12 @@ c fill the BornSmear grids
          if (iFKS_soft.ne.0) then
             i=int(n_BS_yij*xxx(2))+1
             j=int(n_BS_xi*xxx(1))+1
-            BornSmear(i,j,iFKS_soft,1)=
-     $           BornSmear(i,j,iFKS_soft,1)+sigint_ABS_noBorn
-            BornSmear(i,j,iFKS_soft,2)=
-     $           BornSmear(i,j,iFKS_soft,2)+sigint_noBorn
-            BornSmear(i,j,iFKS_soft,3)=
-     $           BornSmear(i,j,iFKS_soft,3)+sigint_Born
+            BornSpread(i,j,iFKS_soft,1)=
+     $           BornSpread(i,j,iFKS_soft,1)+sigint_ABS_noBorn
+            BornSpread(i,j,iFKS_soft,2)=
+     $           BornSpread(i,j,iFKS_soft,2)+sigint_noBorn
+            BornSpread(i,j,iFKS_soft,3)=
+     $           BornSpread(i,j,iFKS_soft,3)+sigint_Born
 
          endif
       endif
@@ -3539,7 +3539,7 @@ c fill the BornSmear grids
       end
 
 
-      double precision function BornSmear_weight(xi,y,iFKS)
+      double precision function BornSpread_weight(xi,y,iFKS)
       ! note: arguments xi,y are the vegas x's corresponding do xi_i_fks and y_ij_fks
       use mint_module
       implicit none
@@ -3547,17 +3547,17 @@ c fill the BornSmear grids
       integer i,j,iFKS,ii,jj
       double precision xi,y,a,NormConst(fks_configs)
      $     ,IntegralNormConstPos
-     $     ,BornSmear_weight_mat(n_BS_yij,n_BS_xi
+     $     ,BornSpread_weight_mat(n_BS_yij,n_BS_xi
      $     ,fks_configs),full_sum
       external ran2
       parameter (a=1d0)
       logical firsttime(fks_configs)
       data firsttime/fks_configs*.true./
-      save NormConst,BornSmear_weight_mat
+      save NormConst,BornSpread_weight_mat
 
-      if(.not.BornSmearSetup_done) then
-         write (*,*) 'BornSmear must be setup before '/
-     $        /'calling BornSmear_weight'
+      if(.not.BornSpreadSetup_done) then
+         write (*,*) 'BornSpread must be setup before '/
+     $        /'calling BornSpread_weight'
          stop 1
       endif
 c
@@ -3574,23 +3574,23 @@ c
          firsttime(iFKS)=.false.
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               BornSmear(ii,jj,iFKS,0)=
-     &              ( BornSmear(ii,jj,iFKS,1) -
-     &              BornSmear(ii,jj,iFKS,2)   ) /2d0
+               BornSpread(ii,jj,iFKS,0)=
+     &              ( BornSpread(ii,jj,iFKS,1) -
+     &              BornSpread(ii,jj,iFKS,2)   ) /2d0
             enddo
          enddo
          full_sum=0d0
          IntegralNormConstPos=0d0
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               if(BornSmear(ii,jj,iFKS,0).ne.0d0 .and. BornSmear(ii,jj
+               if(BornSpread(ii,jj,iFKS,0).ne.0d0 .and. BornSpread(ii,jj
      $              ,iFKS,3).ne.0d0) then
                   full_sum=full_sum+
-     &                 BornSmear(ii,jj,iFKS,0)/BornSmear(ii,jj,iFKS,3)
-               elseif(BornSmear(ii,jj,iFKS,0).eq.0d0 .and. BornSmear(ii
+     &                 BornSpread(ii,jj,iFKS,0)/BornSpread(ii,jj,iFKS,3)
+               elseif(BornSpread(ii,jj,iFKS,0).eq.0d0 .and. BornSpread(ii
      $                 ,jj,iFKS,3).ne.0d0) then
                   IntegralNormConstPos=IntegralNormConstPos+
-     $                 BornSmear(ii,jj,iFKS,2)/BornSmear(ii,jj,iFKS,3)
+     $                 BornSpread(ii,jj,iFKS,2)/BornSpread(ii,jj,iFKS,3)
                endif
             enddo
          enddo
@@ -3599,21 +3599,21 @@ c
          
          do ii=1,n_BS_yij
             do jj=1,n_BS_xi
-               if(BornSmear(ii,jj,iFKS,0).eq.0d0 .and. BornSmear(ii,jj
+               if(BornSpread(ii,jj,iFKS,0).eq.0d0 .and. BornSpread(ii,jj
      $              ,iFKS,3).ne.0d0) then
-                  BornSmear_weight_mat(ii,jj,iFKS)=BornSmear(ii,jj,iFKS
-     $                 ,2)/BornSmear(ii,jj,iFKS,3)*NormConst(iFKS)
-               elseif(BornSmear(ii,jj,iFKS,3).eq.0d0) then
-                  BornSmear_weight_mat(ii,jj,iFKS)=0d0
+                  BornSpread_weight_mat(ii,jj,iFKS)=BornSpread(ii,jj,iFKS
+     $                 ,2)/BornSpread(ii,jj,iFKS,3)*NormConst(iFKS)
+               elseif(BornSpread(ii,jj,iFKS,3).eq.0d0) then
+                  BornSpread_weight_mat(ii,jj,iFKS)=0d0
                else
-                  BornSmear_weight_mat(ii,jj,iFKS)=a*BornSmear(ii,jj
-     $                 ,iFKS,0)/BornSmear(ii,jj,iFKS,3)/full_sum
+                  BornSpread_weight_mat(ii,jj,iFKS)=a*BornSpread(ii,jj
+     $                 ,iFKS,0)/BornSpread(ii,jj,iFKS,3)/full_sum
                endif
-               if ( BornSmear_weight_mat(ii,jj,iFKS).ne.
-     $              BornSmear_weight_mat(ii,jj,iFKS) ) then
-                  write (*,*) 'NAN found in BornSmear_weight_mat',ii,jj
-     $                 ,iFKS,BornSmear_weight_mat(ii,jj,iFKS)
-     $                 ,BornSmear(ii,jj,iFKS,0:3),NormConst(iFKS)
+               if ( BornSpread_weight_mat(ii,jj,iFKS).ne.
+     $              BornSpread_weight_mat(ii,jj,iFKS) ) then
+                  write (*,*) 'NAN found in BornSpread_weight_mat',ii,jj
+     $                 ,iFKS,BornSpread_weight_mat(ii,jj,iFKS)
+     $                 ,BornSpread(ii,jj,iFKS,0:3),NormConst(iFKS)
      $                 ,IntegralNormConstPos
                   stop
                endif
@@ -3621,10 +3621,10 @@ c
          enddo
       endif
 
-! Determine the bin and the smearing weight      
+! Determine the bin and the spreading weight      
       i=int(n_BS_yij*y)+1
       j=int(n_BS_xi*xi)+1
-      BornSmear_weight=BornSmear_weight_mat(i,j,iFKS)
+      BornSpread_weight=BornSpread_weight_mat(i,j,iFKS)
 
       return
       end

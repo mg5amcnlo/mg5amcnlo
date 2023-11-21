@@ -71,7 +71,7 @@ module mint_module
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
   integer, parameter, public  :: n_ave_virt=10    ! max number of grids to set up to approx virtual
   integer, parameter, public  :: nintegrals=26    ! number of integrals to keep track of
-  integer, parameter, public  :: n_BS_xi=40, n_BS_yij=40  ! number of bins in the Born Smearing grids
+  integer, parameter, public  :: n_BS_xi=40, n_BS_yij=40  ! number of bins in the Born Spreading grids
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
@@ -79,7 +79,7 @@ module mint_module
   integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
-  integer, parameter, private :: BSpoints_min=1000000 ! minimum numbers thrown in the imode=3 iteration to fill the BornSmear grids
+  integer, parameter, private :: BSpoints_min=1000000 ! minimum numbers thrown in the imode=3 iteration to fill the BornSpread grids
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
   !     nintervals = min_inter * 2^n,
@@ -98,10 +98,10 @@ module mint_module
   double precision, dimension(0:n_ave_virt), public :: virt_wgt_mint,born_wgt_mint,polyfit
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
-  double precision, dimension(:,:,:,:), public, allocatable :: BornSmear
+  double precision, dimension(:,:,:,:), public, allocatable :: BornSpread
   logical :: only_virt,new_point,pass_cuts_check
-  logical :: BornSmearSetup_done
-  logical,parameter :: IncludeBornSmear=.true.
+  logical :: BornSpreadSetup_done
+  logical,parameter :: IncludeBornSpread=.true.
 
 
 ! private variables
@@ -213,7 +213,7 @@ contains
        call get_amount_of_points(enough_points)
        if (.not.enough_points) goto 2
        if (imode.eq.0 .and. nit.eq.1 .and. double_events .and. &
-            (.not.BornSmearSetup_done)) then
+            (.not.BornSpreadSetup_done)) then
           call check_for_special_channels_loop(channel_loop_done)
           if (.not.channel_loop_done) goto 2
           call combine_results_channels_special_loop
@@ -289,11 +289,11 @@ contains
     else
        if (imode.eq.3) then
           imode=0
-          BornSmearSetup_done=.true.
+          BornSpreadSetup_done=.true.
           ! reset results
           if (double_events) ncalls0=80*ndim*(nchans/3+1)
           call fresh_start
-       elseif (.not.BornSmearSetup_done .and. IncludeBornSmear .and. (.not.fixed_order)) then
+       elseif (.not.BornSpreadSetup_done .and. IncludeBornSpread .and. (.not.fixed_order)) then
           ncalls0=max(ncalls0,BSpoints_min)
           imode=3
           nit=0
@@ -1053,7 +1053,7 @@ contains
     even_rn=.true.
     min_it=min_it0
     call reset_mint_grids
-    BornSmear(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:4)=0d0
+    BornSpread(1:n_BS_yij,1:n_BS_xi,1:fks_confs,0:4)=0d0
   end subroutine setup_imode_0
 
   subroutine reset_mint_grids
@@ -1110,10 +1110,10 @@ contains
        endif
        do iFKS=1,fks_confs
           do j=1,n_BS_xi
-             write (12,*) 'AVE',(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
-             write (12,*) 'AVE',(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
-             write (12,*) 'AVE',(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
-             write (12,*) 'AVE',(BornSmear(i,j,iFKS,4),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSpread(i,j,iFKS,1),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSpread(i,j,iFKS,2),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSpread(i,j,iFKS,3),i=1,n_BS_yij)
+             write (12,*) 'AVE',(BornSpread(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then
@@ -1155,10 +1155,10 @@ contains
        endif
        do iFKS=1,fks_confs
           do j=1,n_BS_xi
-             read (12,*) dummy,(BornSmear(i,j,iFKS,1),i=1,n_BS_yij)
-             read (12,*) dummy,(BornSmear(i,j,iFKS,2),i=1,n_BS_yij)
-             read (12,*) dummy,(BornSmear(i,j,iFKS,3),i=1,n_BS_yij)
-             read (12,*) dummy,(BornSmear(i,j,iFKS,4),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSpread(i,j,iFKS,1),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSpread(i,j,iFKS,2),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSpread(i,j,iFKS,3),i=1,n_BS_yij)
+             read (12,*) dummy,(BornSpread(i,j,iFKS,4),i=1,n_BS_yij)
           enddo
        enddo
        if (.not.use_poly_virtual) then

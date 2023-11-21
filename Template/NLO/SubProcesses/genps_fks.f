@@ -1121,7 +1121,7 @@ c Set all to negative values and exit
       parameter (fks_as_is=.false.)
 
       double precision xxx(2)
-      common /bornsmearing_variables/ xxx
+      common /bornspreading_variables/ xxx
 
       ! check that the starting PS point is meaningful
       if (xjac0.lt.0d0) then
@@ -1178,7 +1178,7 @@ c y_ij and phi_i (changing this also requires changing folding parameters)
       ixEi=ndim-2
       ixyij=ndim-1
       ixpi=ndim
-c Born smearing variables. Take xi and y, but without integration
+c Born spreading variables. Take xi and y, but without integration
 c boundaries. This is easiest accomplished by taking the vegas x's, but
 c taking into account the relation between them and xi and y (see
 c "subroutine generate_momenta_*_*" below). In our code, there is a
