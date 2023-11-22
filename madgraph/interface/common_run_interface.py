@@ -6427,6 +6427,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
             
+            # ensure that for fixed order ICKKW model are not set to FxFx and/or UNLOPS
+            if 'shower_cards' not in self.cards:
+                if self.run_card['ickkw'] in [3,4]:
+                    # 3 is FxFx and 4 is UNLOPS
+                    mergemode = {3:'FxFx', 4:'UNLOPS'}
+                    raise Exception("You are running in fixed order mode but ICKKW is set to %s (%s). This does not make sense. Please fix and retry" %(self.run_card['ickkw'], mergemode[self.run_card['ickkw']]))
+
+
             if 'fix_scale' in proc_charac['limitations']:
                 raise Exception( "Your model is identified as not fully supported within MG5aMC.\n" +\
                                  "Your model does not have a SM like running of the strong coupling.")
