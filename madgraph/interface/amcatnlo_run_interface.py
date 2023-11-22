@@ -4895,7 +4895,10 @@ RESTART = %(mint_mode)s
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
-            misc.call(['./'+exe] + args, cwd=cwd)
+            if exe.startswith('/'):
+                misc.call([exe] + args, cwd=cwd)
+            else:
+                misc.call(['./'+exe] + args, cwd=cwd)
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
