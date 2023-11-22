@@ -109,11 +109,9 @@ class MadSpinOptions(banner.ConfigFile):
         elif os.path.isfile(value):
             self.run_card = banner.RunCard(value)
         else:
-            misc.sprint(value)
             args = value.split()
             if  len(args) >1:
                 if not hasattr(self, 'run_card'):
-                    misc.sprint("init run_card")
                     self.run_card =  banner.RunCardLO()
                     self.run_card.remove_all_cut()
                 self.run_card[args[0]] = ' '.join(args[1:])
@@ -211,7 +209,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             else: 
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
 
-        self.inputfile = inputfile
+        self.inputeventfile = inputfile
         if self.options['spinmode'] == 'none' and \
            (self.options['input_format'] not in ['lhe','auto'] or 
              (self.options['input_format'] == 'auto' and '.lhe'  not in inputfile[-7:])):  
@@ -683,7 +681,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+        if os.path.exists(pjoin(self.options['curr_dir'],'decayed_events.lhe')): 
+            misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
+        elif self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'],'decayed_events.lhe')): 
+            misc.gzip(pjoin(self.options['ms_dir'],'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
@@ -770,17 +772,34 @@ class MadSpinInterface(extended_cmd.Cmd):
         #replace run card if present in header (to make sure correct random seed is recorded in output file)
         if 'mgruncard' in self.banner:
             generate_all.banner['mgruncard'] = self.banner['mgruncard']   
-        
+
+
+        # replace path to the ms_dir if they were relative path/ms_dir moved/...
+        generate_all.options['ms_dir'] = self.options['ms_dir']
+
         # NOW we have all the information available for RUNNING
         
         if self.options['seed']:
+
+            # change the seed in the banner
+            if 'madspin' in self.banner:
+                if 'seed' in self.banner['madspin']:
+                    self.banner['madspin'] = re.sub('set\s+seed\s+\d+', 'set seed %d' % self.options['seed'])
+                else:
+                    self.banner['madspin'] = 'set seed %d '% self.options['seed'] + self.banner['madspin']
+
+            
             #seed is specified need to use that one:
-            open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.options['seed'])
-            #remove all ranmar_state
-            for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
-                                                        self.options['ms_dir']):
-                os.remove(name)    
-        
+            try:
+                open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.options['seed'])
+                #remove all ranmar_state
+                for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
+                                                            self.options['ms_dir']):
+                    os.remove(name)    
+                self.readonly = False
+            except (PermissionError,FileNotFoundError):
+                self.readonly = True
+                open('seeds.dat','w').write('%s\n'%self.options['seed']) 
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
         self.cross = generate_all.cross
@@ -798,11 +817,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             pass
         misc.gzip(evt_path)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
-        misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+        if os.path.exists(pjoin(self.options['curr_dir'],'decayed_events.lhe')):
+            misc.gzip(pjoin(self.options['curr_dir'],'decayed_events.lhe'),
+                  stdout=decayed_evt_file)
+        else:
+            curr_dir = os.path.dirname(self.inputeventfile)
+            misc.gzip(pjoin(curr_dir, 'decayed_events.lhe'),
                   stdout=decayed_evt_file)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
-    
     
 
     def run_bridge(self, line):
@@ -840,7 +863,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.events_file.close()
             filename = self.events_file.name
         else:
-            filename = self.inputfile
+            filename = self.inputeventfile
 
         if self.options['input_format'] == 'auto':
             if '.lhe' in filename :

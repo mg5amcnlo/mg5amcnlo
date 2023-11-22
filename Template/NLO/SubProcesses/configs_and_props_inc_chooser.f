@@ -87,9 +87,10 @@ C read the various information from the configs_and_props_info.dat file
       integer ndau, idau, dau, id
       character *200 buff
       double precision get_mass_from_id, get_width_from_id
+      logical fopened
       include 'configs_and_props_decl.inc'
 
-      open(unit=78, file='configs_and_props_info.dat', status='old')
+      call open_file(78, 'configs_and_props_info.dat', fopened)
       do while (.true.)
         read(78,'(a)',end=999) buff
         if (buff(:1).eq.'#') cycle

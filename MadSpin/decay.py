@@ -2006,10 +2006,18 @@ class decay_all_events(object):
 
 
         # write down the seed:
-        seedfile=open(pjoin(self.path_me, 'seeds.dat'),'w')
+        try:
+            seedfile=open(pjoin(self.path_me, 'seeds.dat'),'w')
+            self.readonly = False
+        except:
+            if not self.options['ms_dir']:
+                raise
+            seedfile=open('seeds.dat','w')
+            self.readonly = True
+            raise Exception
         seedfile.write('  %s \n' % self.options['seed'])
         seedfile.close()       
- 
+
         # width and mass information will be filled up later
         self.pid2width = lambda pid: self.banner.get('param_card', 'decay', abs(pid)).value
         self.pid2mass = lambda pid: self.banner.get('param_card', 'mass', abs(pid)).value
@@ -2291,7 +2299,15 @@ class decay_all_events(object):
 
         logger.info(' ' )
         logger.info('Decaying the events... ')
-        self.outputfile = open(pjoin(self.path_me,'decayed_events.lhe'), 'w')
+        if self.options['ms_dir']:
+            try:
+                self.outputfile = open(pjoin(self.options['curr_dir'],'decayed_events.lhe'), 'w')
+            except (PermissionError, FileNotFoundError):
+                self.outputfile = open('decayed_events.lhe', 'w')
+                self.readonly = True
+                self.setupseed_forreadonly(self.options['seed'])
+        else:
+            self.outputfile = open(pjoin(self.path_me,'decayed_events.lhe'), 'w')
         self.write_banner_information()
         
         
@@ -2462,6 +2478,24 @@ class decay_all_events(object):
             logger.info('Number of failures in reshuffling (event skipped): %s ' % fail_nb)
         
         return  event_nb/(event_nb+nb_skip)       
+
+
+    def setupseed_forreadonly(self, seed):
+
+        for pdir in misc.glob('*_me/SubProcesses/P*', self.options['ms_dir']):
+            a, d = os.path.split(pdir)
+            a, c = os.path.split(a)
+            a, b = os.path.split(a)
+            if not os.path.exists(pjoin(b,c,d)):
+                if not os.path.exists(pjoin(b,c)):
+                    if not os.path.exists(b):
+                        os.mkdir(b)
+                    os.mkdir(pjoin(b,c))
+                os.mkdir(pjoin(b,c,d)) 
+
+        #raise Exception
+
+
 
 
     def adding_only_helicity(self, event_map, production_tag):
@@ -3406,6 +3440,15 @@ class decay_all_events(object):
             executable_prod="./check"
             my_env = os.environ.copy()
             my_env["GFORTRAN_UNBUFFERED_ALL"] = "y"
+            
+            if self.readonly:
+                a,d = os.path.split(path)
+                a,c = os.path.split(a)
+                a,b = os.path.split(a)
+                tmpdir = pjoin(b,c,d)
+                executable_prod = pjoin('../../../',path, executable_prod)
+                files.ln(pjoin(path, 'offset.dat'), tmpdir)
+                files.ln(pjoin(tmpdir, '..', '..', '..', 'seeds.dat'), tmpdir)
             external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
                                           stderr=STDOUT, cwd=tmpdir, env=my_env)
             self.calculator[('full',path,)] = external 
@@ -3417,7 +3460,6 @@ class decay_all_events(object):
         except IOError as error:
             if not first:
                 raise
-            #misc.sprint(error)
             try:
                 external.stdin.close()
             except Exception as  error:
@@ -3476,8 +3518,17 @@ class decay_all_events(object):
                         external.stdin.flush()
                         external.stdout.flush()
                         ranmar_state=external.stdout.readline().decode(errors='ignore')
-                        ranmar_file=pjoin(path,'ranmar_state.dat')
-                        ranmar=open(ranmar_file, 'w')
+                        try:
+                            ranmar_file=pjoin(path,'ranmar_state.dat')
+                            ranmar=open(ranmar_file, 'w')
+                        except (PermissionError,FileNotFoundError):
+                            if not self.readonly:
+                                raise
+                            a, d = os.path.split(path)
+                            a, c = os.path.split(a)
+                            a, b = os.path.split(a)
+                            ranmar_file=pjoin(b,c,d,'ranmar_state.dat')
+                            ranmar=open(ranmar_file, 'w')
                         ranmar.write(ranmar_state)
                         ranmar.close()
                     external.stdin.close()
@@ -4117,8 +4168,15 @@ class decay_all_events(object):
                         raise
                         continue
                     ranmar_state=external.stdout.readline().decode(errors='ignore')
-                    ranmar_file=pjoin(path,'ranmar_state.dat')
-                    ranmar=open(ranmar_file, 'w')
+                    try:
+                        ranmar_file=pjoin(path,'ranmar_state.dat')
+                        ranmar=open(ranmar_file, 'w')
+                    except:
+                        a, d = os.path.split(path)
+                        a, c = os.path.split(a)
+                        a, b = os.path.split(a)
+                        ranmar_file=pjoin(pjoin(b,c,d),'ranmar_state.dat')
+                        ranmar=open(ranmar_file, 'w')
                     ranmar.write(ranmar_state)
                     ranmar.close()
                     try:

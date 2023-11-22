@@ -2118,7 +2118,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         # Information at top-level
         #Write version info
-        shutil.copy(pjoin(temp_dir, 'TemplateVersion.txt'), self.dir_path)
+        #shutil.copy(pjoin(temp_dir, 'TemplateVersion.txt'), self.dir_path)
         try:
             shutil.copy(pjoin(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
