@@ -1597,7 +1597,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     nb_line = i+1
                 if j+1> nb_col:
                     nb_col = j+1  
-            misc.sprint(nb_line, nb_col, set([i for i,j in all_element]) )
             if nb_col > 600 and added==0:
                 all_element1, all_element2 = {}, {}
                 for (k1,k2) in all_element:
