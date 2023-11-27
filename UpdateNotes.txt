@@ -1,5 +1,20 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.9.18 ():
+    OM: Fix a bug for processes extremelly close to threshold, where the 
+        the initial grid for some angle was wrongly biased towards \tetha=\pi.
+        In extreme case, the determination of the non-zero helicity was starting to 
+        remove helicity proportional to (1+\cos\theta) since theta was so close to \pi.
+        While the grid bias was corrected after the first iteration, the accidental removal of helicity
+        could lead to a bias in the cross-section. One way to detect if you are impacted by such bug is to 
+        run 5 times with different seed, if the cross-section fluctuates between two values then you are 
+        impacted by such issue.
+    OM: Implement better handling of the phase-space when you have a S-channel breit-wigner but that cut prevent 
+        such resonance to be onshell.
+    OM: Implement better handling of the MMNL cut if the process has exactly two leptons (including neutrino).
+        This improves the phase-space integrator when MMNL is used for putting invariant mass cut on single W production
+    OM: Change the support of the function "cot" within ufo model to have it consistent with UFO convntion. 
+        It might potentially impact old UFO model, please contact us if this is the case    
 
 2.9.17(19/10/23):
     OM: change integration strategy (SDE=1) for width computation

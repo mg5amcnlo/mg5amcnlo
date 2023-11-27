@@ -6987,7 +6987,7 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg",
                                     "grreglog","regsqrt"]:
                     additional_fct.append(fct.name)
         
