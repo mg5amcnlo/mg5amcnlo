@@ -577,7 +577,7 @@ class Test_ADDON_UFO(unittest.TestCase):
              Y = 0)
         
         number_particles = len(self.base_model.particles)
-        
+        self.assertEqual( number_particles, len(self.sm.all_particles)) 
         #Add a particle which is exactly the Higgs like in the Standard Model
         self.base_model.add_particle(H)
         self.assertEqual( number_particles, len(self.base_model.particles))

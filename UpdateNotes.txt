@@ -15,6 +15,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         This improves the phase-space integrator when MMNL is used for putting invariant mass cut on single W production
     OM: Change the support of the function "cot" within ufo model to have it consistent with UFO convntion. 
         It might potentially impact old UFO model, please contact us if this is the case    
+    OM: Fix a critical bug when exporting code with two different model where the second model was not correctly imported
+        (likely a python3 only bug)
+
 
 2.9.17(19/10/23):
     OM: change integration strategy (SDE=1) for width computation
