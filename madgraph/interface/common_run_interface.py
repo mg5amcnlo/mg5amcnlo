@@ -6572,7 +6572,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     fail_due_to_format = 0 #parameter to avoid infinite loop
     def postcmd(self, stop, line):
 
-        if line not in [None, '0', 'done', '']:
+        if line not in [None, '0', 'done', '',0]:
             ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
         else:
             ending_question = True
@@ -6713,11 +6713,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         def handle_alarm(signum, frame): 
             raise TimeOutError
         signal.signal(signal.SIGALRM, handle_alarm)
+
         if timer:
-            signal.alarm(timer)
             log_level=30
         else:
             log_level=20
+
 
         if run_card:
             as_for_pdf = {'cteq6_m': 0.118,
@@ -6776,6 +6777,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     param_card.get('sminputs').get((3,)).value = as_for_pdf[pdlabel]
                     logger.log(log_level, "update the strong coupling value (alpha_s) to the value from the pdf selected: %s",  as_for_pdf[pdlabel])
                     modify = True
+
+        if timer:
+            signal.alarm(timer)
+
 
         # Try to load the model in the limited amount of time allowed
         try:
@@ -7531,7 +7536,8 @@ You can also copy/paste, your event file here.''')
             else:
                 raise
         if time.time() - start < .5:
-            self.mother_interface.ask("Are you really that fast? If you are using an editor that returns directly. Please confirm that you have finised to edit the file", 'y')
+            self.mother_interface.ask("Are you really that fast? If you are using an editor that returns directly. Please confirm that you have finised to edit the file", 'y',
+                                      timeout=False)
         self.reload_card(path)
         
     def reload_card(self, path): 

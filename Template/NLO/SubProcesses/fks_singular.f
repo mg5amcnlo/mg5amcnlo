@@ -4003,7 +4003,7 @@ c H-event
          endif
       enddo
       return
- 30   format(i15,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
+ 30   format(i15,1x,i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12,1x,d18.12)
       end
       
       
@@ -6483,7 +6483,7 @@ c analogous routine written for VBF
 c     same as checkres, but also limits are arrays.
       implicit none
       include 'nexternal.inc'
-      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(15,0:3,nexternal+1)
+      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(0:3,nexternal+1)
      &     ,xp(15,0:3,nexternal+1)
       real*8 ckc(15),rckc(15),rat
       integer iflag,imax,iev,i_fks,j_fks,iret,ithrs,istop,
@@ -6572,7 +6572,7 @@ c
             do l=0,3
               write(78,*)'comp:',l
               do i=1,imax
-                call xprintout(78,xp(i,l,k),lxp(i,l,k))
+                call xprintout(78,xp(i,l,k),lxp(l,k))
               enddo
             enddo
           enddo
@@ -6583,7 +6583,7 @@ c
               write(78,*)'comp:',l
               do i=1,imax
                 call xprintout(78,xp(i,l,nexternal+1),
-     #                            lxp(i,l,nexternal+1))
+     #                            lxp(l,nexternal+1))
               enddo
             enddo
             write(78,*)''
@@ -6602,7 +6602,7 @@ c
               write(78,*)'comp:',l
               do i=1,imax
                 call xprintout(78,xp(i,l,i_fks)+xp(i,l,j_fks),
-     #                            lxp(i,l,i_fks)+lxp(i,l,j_fks))
+     #                            lxp(l,i_fks)+lxp(l,j_fks))
               enddo
             enddo
           endif

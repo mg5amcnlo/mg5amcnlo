@@ -3904,6 +3904,7 @@ class RunCardLO(RunCard):
                       "get_dummy_x1_x2": pjoin("SubProcesses","dummy_fct.f"), 
                       "dummy_boostframe": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
+                      "bias_wgt_custom": pjoin("SubProcesses","dummy_fct.f"),
                       "user_": pjoin("SubProcesses","dummy_fct.f") # all function starting by user will be added to that file
                       }
     
@@ -5774,7 +5775,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("CheckCycle", 3)
         self.add_param("MaxAttempts", 10)
         self.add_param("ZeroThres", 1e-9)
-        self.add_param("OSThres", 1.0e-13)
+        self.add_param("OSThres", 1.0e-8)
         self.add_param("DoubleCheckHelicityFilter", True)
         self.add_param("WriteOutFilters", True)
         self.add_param("UseLoopFilter", False)

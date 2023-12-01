@@ -154,10 +154,15 @@ class gensym(object):
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
+            
             (stdout, _) = p.communicate(''.encode())
             stdout = stdout.decode('ascii',errors='ignore')
-            nb_channel = max([math.floor(float(d)) for d in stdout.split()])
-            
+            try:
+                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
+            except Exception as error:
+                misc.sprint(stdout, 'no channel or error for %s' % Pdir)
+                continue
+
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
                 raise Exception('Error make madevent_forhel not successful')  
