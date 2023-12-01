@@ -153,7 +153,7 @@ class TestMECmdRWGT(unittest.TestCase):
             rwgt_data = event.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1'])
             #continue
-            self.assertTrue('rwgt_1' in rwgt_data)
+            self.assertIn('rwgt_1', rwgt_data)
             self.assertTrue(misc.equal(rwgt_data['rwgt_1'], solutions[i]))
         #misc.sprint(solutions)
         
@@ -182,7 +182,7 @@ class TestMECmdRWGT(unittest.TestCase):
             for part in event:
                 if part.status ==1: #final state
                     self.assertEqual(part.mass, 173)
-            self.assertFalse('rwgt_1' in rwgt_data)
+            self.assertNotIn('rwgt_1', rwgt_data)
 
         # check new file
         lhe = lhe_parser.EventFile(pjoin(self.run_dir,'Events','run_01', 'rwgt_events_rwgt_1.lhe.gz'))
@@ -195,7 +195,7 @@ class TestMECmdRWGT(unittest.TestCase):
             for part in event:
                 if part.status ==1: #final state
                     self.assertEqual(part.mass, 200)
-            self.assertFalse('rwgt_1' in rwgt_data)
+            self.assertNotIn('rwgt_1', rwgt_data)
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
         #misc.sprint(solutions)
         
@@ -225,7 +225,7 @@ class TestMECmdRWGT(unittest.TestCase):
         for i,event in enumerate(lhe): 
             rwgt_data = event.parse_reweight()
             self.assertEqual(event.wgt, rwgt_data['MYNLO_nlo'])
-            self.assertTrue('MYNLO_lo' in rwgt_data)
+            self.assertIn('MYNLO_lo', rwgt_data)
             
     def test_nlo_output2(self):
         """ check identical re-weighting in ttbar 
@@ -265,7 +265,7 @@ class TestMECmdRWGT(unittest.TestCase):
             i+=1
             rwgt_data = event_orig.parse_reweight()
             #solutions.append(rwgt_data['rwgt_1_tree'])
-            self.assertTrue('rwgt_1_tree' in rwgt_data)
+            self.assertIn('rwgt_1_tree', rwgt_data)
             self.assertEqual(event.wgt, rwgt_data['rwgt_1_tree'])
             #misc.sprint(i, event.wgt, solutions[i])
             self.assertTrue(misc.equal(event.wgt, solutions[i]))
@@ -350,9 +350,9 @@ class TestMECmdRWGT(unittest.TestCase):
             
             rwgt_data = event.parse_reweight()
             #misc.sprint(rwgt_data)
-            self.assertTrue('SINGLE' in rwgt_data)
-            self.assertTrue('NAME_0' in rwgt_data)
-            self.assertTrue('NAME_1' in rwgt_data)
+            self.assertIn('SINGLE', rwgt_data)
+            self.assertIn('NAME_0', rwgt_data)
+            self.assertIn('NAME_1', rwgt_data)
             self.assertEqual(rwgt_data['NAME_1'],rwgt_data['SINGLE'])
             
             solutions1.append(rwgt_data['NAME_0'])

@@ -147,7 +147,7 @@ class ParticleTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_part.set(test['prop'], x))
+                self.assertTrue(temp_part.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_part.set(test['prop'], x), '%s not allowd for %s ' %(x, test['prop']))
 
@@ -369,7 +369,7 @@ class InteractionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(mytestinter.set(test['prop'], x))
+                self.assertTrue(mytestinter.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(mytestinter.set(test['prop'], x))
 
@@ -1082,7 +1082,7 @@ class LegTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_leg.set(test['prop'], x))
+                self.assertTrue(temp_leg.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_leg.set(test['prop'], x))
 
@@ -1227,7 +1227,7 @@ class MultiLegTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_multi_leg.set(test['prop'], x))
+                self.assertTrue(temp_multi_leg.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_multi_leg.set(test['prop'], x))
 
@@ -1339,7 +1339,7 @@ class VertexTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_vertex.set(test['prop'], x))
+                self.assertTrue(temp_vertex.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_vertex.set(test['prop'], x))
 
@@ -1446,7 +1446,7 @@ class DiagramTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_diagram.set(test['prop'], x))
+                self.assertTrue(temp_diagram.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_diagram.set(test['prop'], x))
 
@@ -1595,7 +1595,7 @@ class ProcessTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_process.set(test['prop'], x))
+                self.assertTrue(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
 
@@ -1682,7 +1682,7 @@ class ProcessTest(unittest.TestCase):
         decay3.set('decay_chains', base_objects.ProcessList([decay4]))
         decay4.set('decay_chains', base_objects.ProcessList([decay5]))
         decay5.set('decay_chains', base_objects.ProcessList([decay6]))
-        self.assertTrue(len(self.myprocess.shell_string()) < 70)
+        self.assertLess(len(self.myprocess.shell_string()), 70)
         self.assertEqual(goal_str, self.myprocess.shell_string())
         
     def test_get_final_ids_after_decay(self):
@@ -1950,7 +1950,7 @@ class ProcessDefinitionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_process.set(test['prop'], x))
+                self.assertTrue(temp_process.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_process.set(test['prop'], x))
 

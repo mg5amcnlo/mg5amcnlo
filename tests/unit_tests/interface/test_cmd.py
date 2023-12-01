@@ -181,8 +181,8 @@ class TestValidCmd(unittest.TestCase):
             except Exception as error:
                 self.assertTrue(False, 'error are not treated correctly: %s' % error)
             text = open('/tmp/fatalerror.log').read()
-            self.assertTrue('{' not in text)
-            self.assertTrue('MS_debug' in text)
+            self.assertNotIn('{', text)
+            self.assertIn('MS_debug', text)
 
     def test_help_category(self):
         """Check that no help category are introduced by mistake.

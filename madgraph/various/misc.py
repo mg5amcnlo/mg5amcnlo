@@ -30,7 +30,6 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-from distutils.version import LooseVersion, StrictVersion
 import six
 from six.moves import zip_longest
 from six.moves import range
@@ -176,6 +175,42 @@ def get_time_info():
 def is_MA5_compatible_with_this_MG5(ma5path):
     """ Returns None if compatible or, it not compatible, a string explaining 
     why it is so."""
+
+    class version:
+        def __init__(input):
+            self.info = input.split('.')
+
+        def __lt__(input):
+            if isinstance(input, str):
+                input = version(input)
+            
+            for a,b in zip(self.info, input.info):
+                both_int = True
+                try:
+                    a = int(a)
+                except Exception:
+                     both_int = False
+                try:
+                    b = int(b)
+                except Exception:
+                    both_int = False
+                if both_int:
+                    if a !=b:
+                        return a<b
+                    continue
+                elif isinstance(a, int):
+                    return False
+                elif isinstance(a, False):
+                    return False
+                elif a == b:
+                    continue
+                else:
+                    return a < b
+            else:
+                return len(self.info) < len(input.info)                   
+
+    def LooseVersion(input):
+        return version(input)
 
     ma5_version = None
     try:

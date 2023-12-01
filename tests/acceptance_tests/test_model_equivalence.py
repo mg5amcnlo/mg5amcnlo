@@ -210,7 +210,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
             print('%s non equivalent particle' % mg4_part['name'])
             return
         elif mg4_part['pdg_code'] != ufo_part['pdg_code']:
-            self.assertFalse(mg4_part.get('is_part') == ufo_part.get('is_part'))
+            self.assertNotEqual(mg4_part.get('is_part'), ufo_part.get('is_part'))
             not_equiv.append('is_part')
             not_equiv.append('pdg_code')
             not_equiv.append('name')
@@ -352,7 +352,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
         checked_solutions = list(solutions.keys())
         for line in testprog.stdout:
             line = line.decode()
-            self.assertTrue('Warning' not in line)
+            self.assertNotIn('Warning', line)
             if '=' not in line:
                 continue
             split = line.split('=')
@@ -400,7 +400,7 @@ class TestModelCreation(unittest.TestCase, CheckFileCreate):
                 continue
             new_def = line.split('=')[0].lstrip()
             # Check that is the firsttime that this definition is done
-            self.assertFalse(new_def in alreadydefine)
+            self.assertNotIn(new_def, alreadydefine)
             alreadydefine.append(new_def)
         alreadydefine = [name.lower() for name in alreadydefine]
         alreadydefine.sort()

@@ -155,11 +155,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             wf_rank = lwf.get_analytic_info('wavefunction_rank', \
                                                         alohaModel = alohaModel)
             self.assertEqual(wf_rank,trgt_wavefunction_rank)
-            self.assertTrue('wavefunction_rank' in list(lwf['analytic_info'].keys()))
+            self.assertIn('wavefunction_rank', list(lwf['analytic_info'].keys()))
             inter_rank = lwf.get_analytic_info('interaction_rank', \
                                                         alohaModel = alohaModel)
             self.assertEqual(inter_rank,trgt_interaction_rank)
-            self.assertTrue('interaction_rank' in list(lwf['analytic_info'].keys()))
+            self.assertIn('interaction_rank', list(lwf['analytic_info'].keys()))
             
             # Now make sure it is recovered without the alohaModel (so that the
             # caching works
@@ -339,11 +339,13 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                     for amp in myME['diagrams'][i]['amplitudes']:
                         # Check that the amplitude 'color_indices' is in the
                         # color keys tuples generated
-                        self.assertTrue(tuple(amp['color_indices']) in \
-                                        list(colorize_obj[i].keys()))
+                        self.assertIn(
+                            tuple(amp['color_indices']),
+                            list(colorize_obj[i].keys())
+                        )
                         # Check that this amplitude number appear in the result
                         # from get_color_amplitude
-                        self.assertTrue(amp['number'] in amp_number_apparition)                  
+                        self.assertIn(amp['number'], amp_number_apparition)
                         # For the verbose mode, show to which color basis element each
                         # amplitude contributes to
                         contribution_list=[]
@@ -590,11 +592,13 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # Check that the amplitude attribute 'color_indices' is in the
                         # color keys tuples generated
                         for amp in myloopME['diagrams'][i]['amplitudes']:
-                            self.assertTrue(tuple(amp['color_indices']) in \
-                                        list(this_born_colorize_obj[0].keys()))
+                            self.assertIn(
+                                tuple(amp['color_indices']),
+                                list(this_born_colorize_obj[0].keys())
+                            )
                             # Make sure the born amplitude number appear in the color key
                             # generated
-                            self.assertTrue(amp['number'] in born_amp_number_apparition)
+                            self.assertIn(amp['number'], born_amp_number_apparition)
                             # For the verbose mode, show to which color basis element each
                             # born amplitude contributes to
                             contribution_list=[]
@@ -619,11 +623,13 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # Check that the amplitude attribute 'color_indices' is in the
                         # color keys tuples generated
                         for amp in myloopME['diagrams'][i]['amplitudes']:
-                            self.assertTrue(tuple(amp['color_indices']) in \
-                                        list(this_loop_colorize_obj[0].keys()))
+                            self.assertIn(
+                                tuple(amp['color_indices']),
+                                list(this_loop_colorize_obj[0].keys())
+                            )
                             # Make sure the born amplitude number appear in the color key
                             # generated
-                            self.assertTrue(amp['number'] in loop_amp_number_apparition)
+                            self.assertIn(amp['number'], loop_amp_number_apparition)
                             # For the verbose mode, show to which color basis element each
                             # born amplitude contributes to
                             contribution_list=[]
@@ -661,9 +667,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                         # Check that the loop amplitudes attributes 'color_indices' are in the
                         # color keys tuples generated
                         for amp in loop_amps:
-                            self.assertTrue(tuple(amp['color_indices']) in \
-                              list(this_loop_colorize_obj[0].keys()))
-                            self.assertTrue(amp['number'] in loop_amp_number_apparition)
+                            self.assertIn(
+                                tuple(amp['color_indices']),
+                                list(this_loop_colorize_obj[0].keys())
+                            )
+                            self.assertIn(amp['number'], loop_amp_number_apparition)
                             # For the verbose mode, show to which color basis element each
                             # loop amplitude contributes to
                             contribution_list=[]
@@ -700,9 +708,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                                 # Check that the ct amplitudes attributes 'color_indices' are in the
                                 # color keys tuples generated
                                 for amp in ct_amps:
-                                    self.assertTrue(tuple(amp['color_indices']) in \
-                                    list(this_loop_colorize_obj[ct_number].keys()))
-                                    self.assertTrue(amp['number'] in loop_amp_number_apparition)
+                                    self.assertIn(
+                                        tuple(amp['color_indices']),
+                                        list(this_loop_colorize_obj[ct_number].keys())
+                                    )
+                                    self.assertIn(amp['number'], loop_amp_number_apparition)
                                     # For the verbose mode, show to which color basis element each
                                     # CT amplitude contributes to
                                     contribution_list=[]

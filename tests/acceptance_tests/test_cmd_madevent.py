@@ -163,13 +163,13 @@ class TestMECmdShell(unittest.TestCase):
             self.generate('d d~ > u u~', 'sm')
             run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
             # Some test checking that some cut are absent/present by default
-            self.assertTrue('ptj' in run_card.user_set)
-            self.assertTrue('drjj' in run_card.user_set)
-            self.assertTrue('ptj2min' in run_card.user_set)
-            self.assertFalse('ptj3min' in run_card.user_set)
-            self.assertTrue('mmjj'  in run_card.user_set)
-            self.assertFalse('ptheavy'  in run_card.user_set)
-            self.assertFalse('Ej'  in run_card.user_set)
+            self.assertIn('ptj', run_card.user_set)
+            self.assertIn('drjj', run_card.user_set)
+            self.assertIn('ptj2min', run_card.user_set)
+            self.assertNotIn('ptj3min', run_card.user_set)
+            self.assertIn('mmjj', run_card.user_set)
+            self.assertNotIn('ptheavy', run_card.user_set)
+            self.assertNotIn('Ej', run_card.user_set)
             
             
             run_card.set('bias_module','ptj_bias',user=True)
@@ -229,16 +229,16 @@ class TestMECmdShell(unittest.TestCase):
         ff.close()
         
         run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
-        self.assertFalse('ptj' in run_card.user_set)
-        self.assertFalse('drjj' in run_card.user_set)
-        self.assertFalse('ptj2min' in run_card.user_set)
-        self.assertFalse('ptj3min' in run_card.user_set)
-        self.assertFalse('mmjj'  in run_card.user_set)
-        self.assertTrue('ptheavy'  in run_card.user_set)
-        self.assertFalse('el'  in run_card.user_set)
-        self.assertFalse('ej'  in run_card.user_set)
-        self.assertFalse('polbeam1'  in run_card.user_set)
-        self.assertFalse('ptl' in run_card.user_set)
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertNotIn('polbeam1', run_card.user_set)
+        self.assertNotIn('ptl', run_card.user_set)
         
         #reduce the number of events
         files.cp(pjoin(_file_path, 'input_files', 'run_card_matching.dat'),
@@ -275,16 +275,16 @@ class TestMECmdShell(unittest.TestCase):
         # check that the run_card do not have cut
         run_card = banner.RunCard(pjoin(self.run_dir,'Cards','run_card.dat'))
         self.assertEqual(run_card['ptj'], 0)
-        self.assertTrue('ptj' in run_card.user_set)
-        self.assertTrue('drjj' in run_card.user_set)
-        self.assertTrue('ptj2min' in run_card.user_set)
-        self.assertFalse('ptj3min' in run_card.user_set)
-        self.assertTrue('mmjj'  in run_card.user_set)
-        self.assertFalse('ptheavy'  in run_card.user_set)
-        self.assertFalse('el'  in run_card.user_set)
-        self.assertFalse('ej'  in run_card.user_set)
-        self.assertFalse('polbeam1'  in run_card.user_set)
-        self.assertTrue('ptl' in run_card.user_set)
+        self.assertIn('ptj', run_card.user_set)
+        self.assertIn('drjj', run_card.user_set)
+        self.assertIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertIn('mmjj', run_card.user_set)
+        self.assertNotIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertNotIn('polbeam1', run_card.user_set)
+        self.assertIn('ptl', run_card.user_set)
         
         self.do('calculate_decay_widths -f')        
         
@@ -444,12 +444,12 @@ class TestMECmdShell(unittest.TestCase):
         val2 = self.cmd_line.results.current['cross']
         err2 = self.cmd_line.results.current['error']        
         
-        self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
+        self.assertLess(abs(val2 - val1) / (err1 + err2), 5)
         target = 1310200.0
-        self.assertTrue(abs(val2 - target) / (err2) < 5)
+        self.assertLess(abs(val2 - target) / (err2), 5)
         #check precision
-        self.assertTrue(err2 / val2 < 0.005)
-        self.assertTrue(err1 / val1 < 0.005)
+        self.assertLess(err2 / val2, 0.005)
+        self.assertLess(err1 / val1, 0.005)
         
     def test_e_p_collision(self):
         """check that e p > e j gives the correct result"""
@@ -466,16 +466,16 @@ class TestMECmdShell(unittest.TestCase):
         
         #check validity of the default run_card
         run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
-        self.assertTrue('ptj' in run_card.user_set)
-        self.assertFalse('drjj' in run_card.user_set)
-        self.assertFalse('ptj2min' in run_card.user_set)
-        self.assertFalse('ptj3min' in run_card.user_set)
-        self.assertFalse('mmjj'  in run_card.user_set)
-        self.assertFalse('ptheavy'  in run_card.user_set)
-        self.assertFalse('el'  in run_card.user_set)
-        self.assertFalse('ej'  in run_card.user_set)
-        self.assertTrue('polbeam1'  in run_card.user_set)
-        self.assertTrue('ptl' in run_card.user_set)
+        self.assertIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertNotIn('ptheavy', run_card.user_set)
+        self.assertNotIn('el', run_card.user_set)
+        self.assertNotIn('ej', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertIn('ptl', run_card.user_set)
         
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir) 
@@ -485,8 +485,12 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 3978.0
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
-                        (target, val1, err1))
+        self.assertLess(
+            abs(val1 - target) / err1,
+            1.,
+            'large diference between %s and %s +- %s'%
+                        (target, val1, err1)
+        )
         
     def test_complex_mass_scheme(self):
         """check that auto-width and Madspin works nicely with complex-mass-scheme"""
@@ -621,15 +625,15 @@ class TestMECmdShell(unittest.TestCase):
         
         # couple of test checking that default run_card is as expected
         run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards','run_card.dat'))
-        self.assertFalse('ptj' in run_card.user_set)
-        self.assertFalse('drjj' in run_card.user_set)
-        self.assertFalse('ptj2min' in run_card.user_set)
-        self.assertFalse('ptj3min' in run_card.user_set)
-        self.assertFalse('mmjj'  in run_card.user_set)
-        self.assertFalse('ptheavy'  in run_card.user_set)
-        self.assertTrue('el'  in run_card.user_set)
-        self.assertTrue('polbeam1'  in run_card.user_set)
-        self.assertTrue('ptl' in run_card.user_set)
+        self.assertNotIn('ptj', run_card.user_set)
+        self.assertNotIn('drjj', run_card.user_set)
+        self.assertNotIn('ptj2min', run_card.user_set)
+        self.assertNotIn('ptj3min', run_card.user_set)
+        self.assertNotIn('mmjj', run_card.user_set)
+        self.assertNotIn('ptheavy', run_card.user_set)
+        self.assertIn('el', run_card.user_set)
+        self.assertIn('polbeam1', run_card.user_set)
+        self.assertIn('ptl', run_card.user_set)
         
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
@@ -639,7 +643,7 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 155.9
-        self.assertTrue(abs(val1 - target) / err1 < 2.)
+        self.assertLess(abs(val1 - target) / err1, 2.)
         
     def load_result(self, run_name):
         
@@ -655,16 +659,16 @@ class TestMECmdShell(unittest.TestCase):
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
-        self.assertTrue('lhe' in data[0].parton)
+        self.assertIn('lhe', data[0].parton)
         
         if syst:
             # check that the html has the information
-            self.assertTrue('syst' in data[0].parton)
+            self.assertIn('syst', data[0].parton)
             # check that the code was runned correctly
             fsock = open('%s/Events/%s/parton_systematics.log' % \
                   (self.run_dir, data[0]['run_name']),'r')
             text = fsock.read()
-            self.assertTrue(text.count('dynamical scheme') >= 3)
+            self.assertGreaterEqual(text.count('dynamical scheme'), 3)
         
         # check that the html link makes sense
         #check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
@@ -677,8 +681,8 @@ class TestMECmdShell(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('hep' in data[0].pythia)
-        self.assertTrue('log' in data[0].pythia)
+        self.assertIn('hep', data[0].pythia)
+        self.assertIn('log', data[0].pythia)
 
 #        if syst:
 #            # check that the html has the information
@@ -692,7 +696,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists(path))
         
         if mintime:
-            self.assertTrue(os.path.getctime(path) > mintime)
+            self.assertGreater(os.path.getctime(path), mintime)
         
         return open(path).read()
 #===============================================================================
@@ -954,16 +958,18 @@ class TestMEfromfile(unittest.TestCase):
             if delta_event == 0:
                 self.assertEqual(target_event, int(data[0]['nb_event']))
             else:
-                self.assertTrue(abs(int(data[0]['nb_event'])-target_event) <= delta_event)
-        self.assertTrue('lhe' in data[0].parton)
+                self.assertLessEqual(abs(int(data[0]['nb_event'])-target_event), delta_event)
+        self.assertIn('lhe', data[0].parton)
         
         if cross:
             import math
             new_error = math.sqrt(error**2 + float(data[0]['error'])**2)
-            self.assertTrue(abs(cross - float(data[0]['cross']))/new_error < 3,
-                            'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
-                            )
-            self.assertTrue(float(data[0]['error']) < 3 * error)
+            self.assertLess(
+                abs(cross - float(data[0]['cross']))/new_error,
+                3,
+                'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/new_error)
+            )
+            self.assertLess(float(data[0]['error']), 3 * error)
             
         check_html_page(self, pjoin(self.run_dir, 'crossx.html'))
         if 'decayed' not in run_name:
@@ -1041,9 +1047,9 @@ class TestMEfromPdirectory(unittest.TestCase):
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
-        self.assertTrue('lhe' in data[0].parton)
+        self.assertIn('lhe', data[0].parton)
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)
+            self.assertLess(abs(cross - float(data[0]['cross']))/float(data[0]['error']), 3)
 
 
     def test_run_fromP(self):

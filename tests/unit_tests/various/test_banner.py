@@ -59,7 +59,7 @@ class TestBanner(unittest.TestCase):
                           open(pjoin(_file_path,'..', 'input_files', 'param_card_0.dat')).read())
 
         mybanner.add_text('run_card', open(pjoin(_file_path, '..', 'input_files', 'run_card_ee.dat')).read())
-        self.assertTrue('slha' in mybanner)
+        self.assertIn('slha', mybanner)
         
         #check that the banner can be written        
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
@@ -68,8 +68,8 @@ class TestBanner(unittest.TestCase):
         #charge a card
         mybanner.charge_card('param_card')
         self.assertTrue(hasattr(mybanner, 'param_card'))
-        self.assertTrue(isinstance(mybanner.param_card, models.check_param_card.ParamCard))
-        self.assertTrue('mass' in mybanner.param_card)
+        self.assertIsInstance(mybanner.param_card, models.check_param_card.ParamCard)
+        self.assertIn('mass', mybanner.param_card)
         
 
         # access element of the card
@@ -106,7 +106,7 @@ class TestConfigFileCase(unittest.TestCase):
 
         self.assertEqual(type(config2), bannermod.ConfigFile)
         self.assertFalse(dict.__contains__(config2, 'UPPER2'))
-        self.assertTrue('UPPER2' in config2)
+        self.assertIn('UPPER2', config2)
         
         # from a dictionary add a config file
         config3 = a + self.config
@@ -254,8 +254,8 @@ class TestConfigFileCase(unittest.TestCase):
         self.config['lower'] = 'auto'
         self.assertEqual(self.config['lower'],'auto')
         self.assertEqual(dict.__getitem__(self.config,'lower'),1)
-        self.assertTrue('lower' in self.config.auto_set)
-        self.assertFalse('lower' in self.config.user_set)
+        self.assertIn('lower', self.config.auto_set)
+        self.assertNotIn('lower', self.config.user_set)
         
         self.config['lower'] = 2 
         self.assertEqual(self.config['lower'], 2)
@@ -328,8 +328,8 @@ class TestConfigFileCase(unittest.TestCase):
         for key in self.config:
             keys.append(key)
         self.assertEqual(set(keys), set(self.config.keys()))
-        self.assertTrue('upper' not in keys)
-        self.assertTrue('UPPER' in keys)
+        self.assertNotIn('upper', keys)
+        self.assertIn('UPPER', keys)
     
 #    def test_in(self):
 #        """actually tested in sum_object"""
@@ -533,27 +533,27 @@ class TestRunCard(unittest.TestCase):
         
         # check the class factory works        
         run_card = bannermod.RunCard()
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardNLO)
         
         path = pjoin(_file_path, '..', 'input_files', 'run_card_matching.dat')
         run_card = bannermod.RunCard(path)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardNLO))        
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardNLO)
         
         path = pjoin(_file_path,'..', 'input_files', 'run_card_nlo.dat')
         run_card = bannermod.RunCard(path)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardNLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardLO)
         
         #check the copy
         run_card2 = bannermod.RunCard(run_card)
-        self.assertTrue(isinstance(run_card, bannermod.RunCard))
-        self.assertTrue(isinstance(run_card, bannermod.RunCardNLO))
-        self.assertFalse(isinstance(run_card, bannermod.RunCardLO))         
+        self.assertIsInstance(run_card, bannermod.RunCard)
+        self.assertIsInstance(run_card, bannermod.RunCardNLO)
+        self.assertNotIsInstance(run_card, bannermod.RunCardLO)
         #check all list/dict are define
         self.assertTrue(hasattr(run_card2, 'user_set'))
         self.assertTrue(hasattr(run_card2, 'hidden_param'))
@@ -597,11 +597,11 @@ class TestRunCard(unittest.TestCase):
             key = key.lower()
             if run_card[key] != run_card3[key]:
                 has_difference = True
-                self.assertTrue(key.lower() in run_card.hidden_param) 
-                self.assertTrue(key.lower not in run_card3.user_set)
+                self.assertIn(key.lower(), run_card.hidden_param)
+                self.assertNotIn(key.lower, run_card3.user_set)
             if key in run_card3.user_set:
                 has_userset=True   
-                self.assertFalse(key in run_card.user_set)            
+                self.assertNotIn(key, run_card.user_set)
         self.assertTrue(has_difference)
         self.assertTrue(has_userset)
         
@@ -709,7 +709,7 @@ class TestMadLoopParam(unittest.TestCase):
             for i,value in enumerate(data['correct']):
                 param1[name] = value
                 self.assertEqual(param1[name],  data['target'][i])
-                self.assertTrue(name.lower() not in param1.user_set)
+                self.assertNotIn(name.lower(), param1.user_set)
                 self.assertEqual(type(data['target'][i]), type(param1[name]))
             for value in data['wrong']:
                 self.assertRaises(Exception, param1.__setitem__, (name, value))
@@ -730,7 +730,7 @@ class TestMadLoopParam(unittest.TestCase):
         #check that they are correct
         for key, value in param1.items():
             self.assertEqual(value, param2[key])
-            self.assertTrue(key.lower() in param2.user_set)
+            self.assertIn(key.lower(), param2.user_set)
             
     def test_sum_object(self):
         
@@ -745,18 +745,18 @@ class TestMadLoopParam(unittest.TestCase):
         ########################################################################        
         param2 = param1 + new
 
-        self.assertTrue(isinstance(param2, MadLoopParam))
-        self.assertTrue(isinstance(param2, dict))
+        self.assertIsInstance(param2, MadLoopParam)
+        self.assertIsInstance(param2, dict)
         self.assertNotEqual(id(param1), id(param2))
         
         #check that they are correct
         for key, value in param1.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)        
+            self.assertNotIn(key.lower(), param2.user_set)
         for key, value in new.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)  
-        self.assertTrue('test' not in param1)
+            self.assertNotIn(key.lower(), param2.user_set)
+        self.assertNotIn('test', param1)
                    
         
         
@@ -769,11 +769,11 @@ class TestMadLoopParam(unittest.TestCase):
         for key, value in param1.items():
             if key != 'CTLoopLibrary':
                 self.assertEqual(value, param2[key])
-                self.assertFalse(key.lower() in param2.user_set)   
+                self.assertNotIn(key.lower(), param2.user_set)
                      
         for key, value in new.items():
             self.assertEqual(value, param2[key])
-            self.assertFalse(key.lower() in param2.user_set)   
+            self.assertNotIn(key.lower(), param2.user_set)
             
             
         ########################################################################
@@ -782,8 +782,8 @@ class TestMadLoopParam(unittest.TestCase):
         param2 = new + param1   
         
         #check sanity
-        self.assertFalse(isinstance(param2, MadLoopParam))
-        self.assertTrue(isinstance(param2, dict))
+        self.assertNotIsInstance(param2, MadLoopParam)
+        self.assertIsInstance(param2, dict)
         self.assertNotEqual(id(new), id(param2))
         self.assertNotEqual(id(param1), id(param2))
         
