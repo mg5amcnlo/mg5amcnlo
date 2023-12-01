@@ -93,11 +93,6 @@ c
       double precision mxxmin4pdg(0:25) 
       logical mxxpart_antipart(1:25) 
       common/TO_PDG_SPECIFIC_CUT/pdg_cut, ptmin4pdg,ptmax4pdg, mxxmin4pdg, mxxpart_antipart
-c
-c     RpA-choice
-c
-      logical    rpa_choice                                    
-      common/RPA/ rpa_choice
 
 C stuff for alpha running in lepton collisions
       integer alphascheme, nlep_run, nupq_run, ndnq_run, w_run
@@ -107,3 +102,10 @@ C stuff for alpha running in lepton collisions
       common /to_afromee/ photons_from_lepton
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       common /to_has_bs/ has_bstrahl
+      
+      
+c
+c     Asym.system-choice
+c
+      logical    asymm_choice                                    
+      common/asymm_flag/ asymm_choice

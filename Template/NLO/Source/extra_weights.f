@@ -16,6 +16,8 @@
      $        ,wgtxsecPDF(0:maxPDFs,maxPDFsets),wgtbpower,wgtcpower
      $        ,veto_multiplier,H1_factor_virt,veto_compensating_factor
      $        ,born_wgt_veto
+         double precision :: wgtxsecPDF1(0:maxPDFs,maxPDFsets)
+     $        ,wgtxsecPDF2(0:maxPDFs,maxPDFsets) !<<two arrays for pA hadronization
          double precision,allocatable :: momenta_str(:,:,:)
          character(len= 100) :: LHAPDFsetname(maxPDFsets) 
          character(len=1024),allocatable :: n_ctr_str(:)
