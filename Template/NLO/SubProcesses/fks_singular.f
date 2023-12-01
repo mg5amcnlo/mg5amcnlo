@@ -2352,16 +2352,16 @@ c wgts() array to include the weights.
               
         if (nn.eq.1) then    
             jmax=1
-        else if (rpa_choice.eqv..true.) then
+        else if (asymm_choice.eqv..true.) then
             jmax=3
-        else if (rpa_choice.eqv..false.) then
+        else if (asymm_choice.eqv..false.) then
             jmax=1
         endif
 
         
         do j=1,jmax
 
-        if (nn.eq.1.and.rpa_choice.eqv..true.) then
+        if (nn.eq.1.and.asymm_choice.eqv..true.) then
         allocate(f1_p(nint(scalevarF(0)),icontr,MAXPROC))
         allocate(f2_p(nint(scalevarF(0)),icontr,MAXPROC))
         endif
@@ -2399,7 +2399,7 @@ c factorisation scale variation (require recomputation of the PDFs)
                if (nn.EQ.1) then! ---> central proton PDFs to be stored;
                       xlum(kf) = dlum()
                       
-                      if (rpa_choice.eqv..true.) then
+                      if (asymm_choice.eqv..true.) then
                       do ii=1,IPROC
                         f1_p(kf,i,ii)=PD1(ii)
                         f2_p(kf,i,ii)=PD2(ii)
@@ -2496,7 +2496,7 @@ c add the weights to the array
         enddo
       enddo
       
-      if (rpa_choice.eqv..true.) then
+      if (asymm_choice.eqv..true.) then
       deallocate(f1_p)
       deallocate(f2_p)
       endif
@@ -2652,9 +2652,9 @@ c wgts() array to include the weights.
       
        if (nn.eq.1) then    
            jmax=1
-       else if (rpa_choice.eqv..true.) then
+       else if (asymm_choice.eqv..true.) then
            jmax=3
-       else if (rpa_choice.eqv..false.) then
+       else if (asymm_choice.eqv..false.) then
            jmax=1
        endif                         
 
@@ -2669,7 +2669,7 @@ c wgts() array to include the weights.
             iwgt=iwgt-2
             endif
             
-            if (nn.EQ.1 .and.n.EQ.0.and.rpa_choice.eqv..true.) then
+            if (nn.EQ.1 .and.n.EQ.0.and.asymm_choice.eqv..true.) then
             allocate(f1_p(icontr,MAXPROC))
             allocate(f2_p(icontr,MAXPROC))
             endif
@@ -2694,7 +2694,7 @@ c Compute the luminosity
                xlum_mod(2)=0D0
                xlum_mod(3)=0D0
 	                    
-               if (nn.EQ.1 .and. n.EQ.0 .and.rpa_choice.eqv..true.) then
+               if (nn.EQ.1 .and. n.EQ.0 .and.asymm_choice.eqv..true.) then
                       do ii=1,IPROC
                         f1_p(i,ii)=PD1(ii)
                         f2_p(i,ii)=PD2(ii)
@@ -2769,7 +2769,7 @@ c add the weights to the array
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
       
-      if (rpa_choice.eqv..true.) then
+      if (asymm_choice.eqv..true.) then
       deallocate(f1_p)
       deallocate(f2_p)
       endif

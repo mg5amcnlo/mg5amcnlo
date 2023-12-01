@@ -868,7 +868,7 @@ class ProcCard(list):
                 self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'add model', 'output'])
-                if cmds[1] == 'model' and len(cmds)>2:
+                if cmds[1] == 'model':
                     self.info['model'] = cmds[2]
                 else:
                     self.info['model'] = None # not UFO model
@@ -5288,11 +5288,13 @@ class RunCardNLO(RunCard):
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')
+        
 ##############Anton
-        self.add_param('rpa_choice', False, fortran_name='rpa_choice',comment='some help here')
-##############Anton
+        self.add_param('asymm_choice', False, fortran_name='asymm_choice',comment='Can be True/False. Works only with reweight_scale or/and reweight_PDF flags = True ')
+##############Anton      
+  
         self.add_param('pdlabel', 'nn23nlo', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21'] +\
-             sum(self.allowed_lep_densities.values(),[]) )                                               
+             sum(self.allowed_lep_densities.values(),[]) )                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         self.add_param('pdfscheme', 0)
         # whether to include or not photon-initiated processes in lepton collisions

@@ -2435,25 +2435,25 @@ set output "%(output_base_name)s.ps"
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line  1 lt 1 lc rgb "blue" lw 2.5
+set style line  1 lt 1 lc rgb "%(col1)s" lw 2.5
 set style line 11 lt 2 lc rgb "%(col1)s" lw 2.5
 set style line 21 lt 4 lc rgb "%(col1)s" lw 2.5
 set style line 31 lt 6 lc rgb "%(col1)s" lw 2.5
 set style line 41 lt 8 lc rgb "%(col1)s" lw 2.5
 
-set style line  2 lt 1 lc rgb "red" lw 2.5
+set style line  2 lt 1 lc rgb "%(col2)s" lw 2.5
 set style line 12 lt 2 lc rgb "%(col2)s" lw 2.5
 set style line 22 lt 4 lc rgb "%(col2)s" lw 2.5
 set style line 32 lt 6 lc rgb "%(col2)s" lw 2.5
 set style line 42 lt 8 lc rgb "%(col2)s" lw 2.5
 
-set style line  3 lt 1 lc rgb "green" lw 2.5
+set style line  3 lt 1 lc rgb "%(col3)s" lw 2.5
 set style line 13 lt 2 lc rgb "%(col3)s" lw 2.5
 set style line 23 lt 4 lc rgb "%(col3)s" lw 2.5
 set style line 33 lt 6 lc rgb "%(col3)s" lw 2.5
 set style line 43 lt 8 lc rgb "%(col3)s" lw 2.5
 
-set style line  4 lt 1 lc rgb "purple" lw 2.5
+set style line  4 lt 1 lc rgb "%(col4)s" lw 2.5
 set style line 14 lt 2 lc rgb "%(col4)s" lw 2.5
 set style line 24 lt 4 lc rgb "%(col4)s" lw 2.5
 set style line 34 lt 6 lc rgb "%(col4)s" lw 2.5
@@ -2523,28 +2523,28 @@ set output "%(output_base_name)s.ps"
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line   1 lt 1 lc rgb "blue" lw 1.7
+set style line   1 lt 1 lc rgb "%(col1)s" lw 1.3
 set style line 101 lt 1 lc rgb "%(col1)s" lw 1.3 dt (6,3)
 set style line  11 lt 2 lc rgb "%(col1)s" lw 1.3 dt (6,3)
 set style line  21 lt 4 lc rgb "%(col1)s" lw 1.3 dt (3,2)
 set style line  31 lt 6 lc rgb "%(col1)s" lw 1.3 dt (2,1)
 set style line  41 lt 8 lc rgb "%(col1)s" lw 1.3 dt (4,3)
 
-set style line   2 lt 1 lc rgb "red" lw 1.3
+set style line   2 lt 1 lc rgb "%(col2)s" lw 1.3
 set style line 102 lt 1 lc rgb "%(col2)s" lw 1.3 dt (6,3)
 set style line  12 lt 2 lc rgb "%(col2)s" lw 1.3 dt (6,3)
 set style line  22 lt 4 lc rgb "%(col2)s" lw 1.3 dt (3,2)
 set style line  32 lt 6 lc rgb "%(col2)s" lw 1.3 dt (2,1)
 set style line  42 lt 8 lc rgb "%(col2)s" lw 1.3 dt (4,3)
 
-set style line   3 lt 1 lc rgb "green" lw 1.7
+set style line   3 lt 1 lc rgb "%(col3)s" lw 1.3
 set style line 103 lt 1 lc rgb "%(col3)s" lw 1.3 dt (6,3)
 set style line  13 lt 2 lc rgb "%(col3)s" lw 1.3 dt (6,3)
 set style line  23 lt 4 lc rgb "%(col3)s" lw 1.3 dt (3,2)
 set style line  33 lt 6 lc rgb "%(col3)s" lw 1.3 dt (2,1)
 set style line  43 lt 8 lc rgb "%(col3)s" lw 1.3 dt (4,3)
 
-set style line   4 lt 1 lc rgb "purple" lw 1.3
+set style line   4 lt 1 lc rgb "%(col4)s" lw 1.3
 set style line 104 lt 1 lc rgb "%(col4)s" lw 1.3 dt (6,3)
 set style line  14 lt 2 lc rgb "%(col4)s" lw 1.3 dt (6,3)
 set style line  24 lt 4 lc rgb "%(col4)s" lw 1.3 dt (3,2)
@@ -3188,27 +3188,27 @@ plot \\"""
         
         
 ##############S.A
-
-
-                if not RPA_var_pos is None and len(RPA_var_pos)>0:
-                    if 'pdf' in use_band:
-                        uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
-                     HwU_name,block_position+i, RPA_var_pos[0]+4, color_index+20,
-                             '%s, RPA variation'%title, band='rpa' in use_band)
-                    else:
-                        uncertainty_plot_lines[-1]['rpa'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RPA variation'%title)]
-
-
-                if not RAP_var_pos is None and len(RAP_var_pos)>0:
-                    if 'pdf' in use_band:
-                        uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
-                     HwU_name,block_position+i, RAP_var_pos[0]+4, color_index+20,
-                             '%s, RAP variation'%title, band='rap' in use_band)
-                    else:
-                        uncertainty_plot_lines[-1]['rap'] = \
-        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, RAP variation'%title)]
-
+#
+#
+#                if not RPA_var_pos is None and len(RPA_var_pos)>0:
+#                    if 'pdf' in use_band:
+#                        uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+#                     HwU_name,block_position+i, RPA_var_pos[0]+4, color_index+20,
+#                             '%s, RPA variation'%title, band='rpa' in use_band)
+#                    else:
+#                        uncertainty_plot_lines[-1]['rpa'] = \
+#        ["sqrt(-1) ls %d title '%s'"%(color_index+21,'%s, RPA variation'%title)]
+#
+#
+#                if not RAP_var_pos is None and len(RAP_var_pos)>0:
+#                    if 'pdf' in use_band:
+#                        uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+#                     HwU_name,block_position+i, RAP_var_pos[0]+4, color_index+20,
+#                             '%s, RAP variation'%title, band='rap' in use_band)
+#                    else:
+#                        uncertainty_plot_lines[-1]['rap'] = \
+#        ["sqrt(-1) ls %d title '%s'"%(color_index+22,'%s, RAP variation'%title)]
+#
 ###############S.A
         
         
@@ -3241,8 +3241,9 @@ plot \\"""
 # %(HwU_name,block_position+i,color_index))
             plot_lines.extend(
                 get_main_central_plot_lines(HwU_name, block_position+i,
-                      color_index, major_title, 'statistical' in uncertainties))
-
+                      color_index, major_title, 'statistical' in uncertainties))           
+            
+            
             # Add additional central scale/PDF curves
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
@@ -3255,7 +3256,7 @@ plot \\"""
 '%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
-                for j,PDF_var in enumerate(PDF_var_pos):
+                for j,PDF_var in enumerate(PDF_var_pos):                    
                     if j!=0:
                         n=n+1
                         color_index = n%self.number_line_colors_defined+1
@@ -3264,11 +3265,11 @@ plot \\"""
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
 '%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
 
-
 ##############S.A
+
             if not RPA_var_pos is None:
-                for j,RPA_var in enumerate(RPA_var_pos):
-                    if j!=0:
+                for j,RPA_var in enumerate(RPA_var_pos):                  
+                    #if j!=0:
                         n=n+1
                         color_index = n%self.number_line_colors_defined+1
                         plot_lines.append(
@@ -3276,17 +3277,16 @@ plot \\"""
 %(HwU_name,block_position+i,RPA_var+3,color_index,\
 '%s RPA=%s' % (title,rpa[j].replace('_','\_'))))
 
-
-
             if not RAP_var_pos is None:
                 for j,RAP_var in enumerate(RAP_var_pos):
-                    if j!=0:
+                    #if j!=0:
                         n=n+1
                         color_index = n%self.number_line_colors_defined+1
+                        n=n-2
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,RAP_var+3,color_index,\
-'%s RPA=%s' % (title,rap[j].replace('_','\_'))))
+'%s RAP=%s' % (title,rap[j].replace('_','\_'))))
 
 ##############S.A
 
@@ -3429,44 +3429,44 @@ plot \\"""
                                         
                                         
 ##############S.A
-
-            if not RPA_var_pos is None:
-                for j,RPA_var in enumerate(RPA_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rpa[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-                      %(HwU_name,block_position+i,RPA_var+3,color_index))
-                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
-                    HwU_name, block_position+i, RPA_var+4, color_index+20,'',
-                                        ratio=True, band='rpa' in use_band)
-
-
-
-            if not RAP_var_pos is None:
-                for j,RAP_var in enumerate(RAP_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0:
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Add the central line only if advanced pdf variation                            
-                    if j>0 or rap[j]!='none':
-                        plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-                      %(HwU_name,block_position+i,RAP_var+3,color_index))
-                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
-                    HwU_name, block_position+i, RAP_var+4, color_index+20,'',
-                                        ratio=True, band='rap' in use_band)
+#
+#            if not RPA_var_pos is None:
+#               for j,RPA_var in enumerate(RPA_var_pos):
+#                    uncertainty_plot_lines.append({})
+#                    if j==0:
+#                        color_index = k%self.number_line_colors_defined+1
+#                    else:
+#                        n=n+1
+#                        color_index = n%self.number_line_colors_defined+1
+#                    # Add the central line only if advanced pdf variation                            
+#                    if j>0 or rpa[j]!='none':
+#                        plot_lines.append(
+#"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+#                      %(HwU_name,block_position+i,RPA_var+3,color_index))
+#                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+#                    HwU_name, block_position+i, RPA_var+4, color_index+1,'',
+#                                        ratio=True, band='rpa' in use_band)
 
 
+
+#            if not RAP_var_pos is None:
+#                for j,RAP_var in enumerate(RAP_var_pos):
+#                    uncertainty_plot_lines.append({})
+#                    if j==0:
+#                        color_index = k%self.number_line_colors_defined+1
+#                    else:
+#                        n=n+1
+#                        color_index = n%self.number_line_colors_defined+1
+#                    # Add the central line only if advanced pdf variation                            
+#                    if j>0 or rap[j]!='none':
+#                        plot_lines.append(
+#"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+#                      %(HwU_name,block_position+i,RAP_var+3,color_index))
+#                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+#                    HwU_name, block_position+i, RAP_var+4, color_index+2,'',
+#                                        ratio=True, band='rap' in use_band)
+#
+#
 ##############S.A
                                         
                                         
@@ -3587,14 +3587,14 @@ plot \\"""
                 if j!=0: n=n+1
                 
 ###########S.A
-        if not RPA_var_pos is None:
-            for j,RPA_var in enumerate(RPA_var_pos):
-                if j!=0: n=n+1
+#        if not RPA_var_pos is None:
+#            for j,RPA_var in enumerate(RPA_var_pos):
+#                if j!=0: n=n+1
 
 
-        if not 	RAP_var_pos is None:
-            for j,RAP_var in enumerate(RAP_var_pos):
-                if j!=0: n=n+1
+#        if not 	RAP_var_pos is None:
+#            for j,RAP_var in enumerate(RAP_var_pos):
+#                if j!=0: n=n+1
 ###########S.A
                 
         if not merging_var_pos is None:
@@ -3653,45 +3653,45 @@ plot \\"""
                                                        band='pdf' in use_band)
                                                        
 ###############S.A
-
-            if not RPA_var_pos is None:
-                for j,RPA_var in enumerate(RPA_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0: 
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Only print out the additional central value for advanced pdf variation
-                    if j>0 or pdf[j]!='none':                        
-                      plot_lines.append(
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,RPA_var+3,color_index))
-                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
-                      HwU_name, block_ratio_pos, RPA_var+4, color_index+20,'',
-                                                       band='rpa' in use_band)
-
-
+#
+#            if not RPA_var_pos is None:
+#                for j,RPA_var in enumerate(RPA_var_pos):
+#                    uncertainty_plot_lines.append({})
+#                    if j==0: 
+#                        color_index = k%self.number_line_colors_defined+1
+#                    else:
+#                        n=n+1
+#                        color_index = n%self.number_line_colors_defined+1
+#                    # Only print out the additional central value for advanced pdf variation
+#                    if j>0 or pdf[j]!='none':                        
+#                      plot_lines.append(
+#    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+#    %(HwU_name,block_ratio_pos,RPA_var+3,color_index))
+#                    uncertainty_plot_lines[-1]['rpa'] = get_uncertainty_lines(
+#                      HwU_name, block_ratio_pos, RPA_var+4, color_index+20,'',
+#                                                       band='rpa' in use_band)
 
 
-            if not RAP_var_pos is None:
-                for j,RAP_var in enumerate(RAP_var_pos):
-                    uncertainty_plot_lines.append({})
-                    if j==0: 
-                        color_index = k%self.number_line_colors_defined+1
-                    else:
-                        n=n+1
-                        color_index = n%self.number_line_colors_defined+1
-                    # Only print out the additional central value for advanced pdf variation
-                    if j>0 or pdf[j]!='none':                        
-                      plot_lines.append(
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,RAP_var+3,color_index))
-                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
-                      HwU_name, block_ratio_pos, RAP_var+4, color_index+20,'',
-                                                       band='rap' in use_band)
 
 
+#            if not RAP_var_pos is None:
+#                for j,RAP_var in enumerate(RAP_var_pos):
+#                    uncertainty_plot_lines.append({})
+#                    if j==0: 
+#                        color_index = k%self.number_line_colors_defined+1
+#                    else:
+#                        n=n+1
+#                        color_index = n%self.number_line_colors_defined+1
+#                    # Only print out the additional central value for advanced pdf variation
+#                    if j>0 or pdf[j]!='none':                        
+#                      plot_lines.append(
+#    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+#    %(HwU_name,block_ratio_pos,RAP_var+3,color_index))
+#                    uncertainty_plot_lines[-1]['rap'] = get_uncertainty_lines(
+#                      HwU_name, block_ratio_pos, RAP_var+4, color_index+20,'',
+#                                                       band='rap' in use_band)
+#
+#
 ###############S.A
                                                        
             if not merging_var_pos is None:
@@ -3750,7 +3750,7 @@ plot \\"""
 
         Reg=0
         path_to_card = os.path.abspath('Cards/run_card.dat')
-        sub_string = 'True = rpa_choice'
+        sub_string = 'True = asymm_choice'
         with open(str(path_to_card)) as file:
             lines = file.readlines()
             for line in lines:
@@ -3787,7 +3787,7 @@ plot \\"""
         PDFs=['','']
         PDFL=['','']
         for i in range(2):
-            if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1:
+            if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1 or pdf[i].find("CT1")!=-1:
                 PDFs[i]='p'
                 PDFL[i]='p'
             elif pdf[i].find("D2")!=-1 or pdf[i].find("2_1")!=-1:

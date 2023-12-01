@@ -24,9 +24,9 @@ c Wrapper routines for the fixed order analyses
       
         if (nn.eq.1) then    
             jmax=1
-        else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+        else if (nn.ne.1.and.asymm_choice.eqv..true.) then
             jmax=3
-        else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+        else if (nn.ne.1.and.asymm_choice.eqv..false.) then
             jmax=1
         endif
       
@@ -240,9 +240,9 @@ c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                 if (nn.eq.1) then    
                     jmax=1
-                else if (nn.ne.1.and.rpa_choice.eqv..true.) then
+                else if (nn.ne.1.and.asymm_choice.eqv..true.) then
                     jmax=3
-                else if (nn.ne.1.and.rpa_choice.eqv..false.) then
+                else if (nn.ne.1.and.asymm_choice.eqv..false.) then
                     jmax=1
                 endif
            
