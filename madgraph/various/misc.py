@@ -1274,7 +1274,8 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read().encode())
+        with ziplib.open(stdout, 'wb') as f:
+            f.write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
