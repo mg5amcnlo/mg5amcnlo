@@ -1031,14 +1031,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None, from_banner=None,
-                       banner=None):
+                       banner=None, **opts):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
                                   self.ask, first_cmd=first_cmd, from_banner=from_banner,
-                                  banner=banner, lhapdf=self.options['lhapdf'])
+                                  banner=banner, lhapdf=self.options['lhapdf'], **opts)
         
         for c in cards:
             if not os.path.isabs(c):
@@ -4943,8 +4943,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             new_vars = set(getattr(self, 'init_%s' % name)(cards))
             new_conflict = self.all_vars.intersection(new_vars)
             self.conflict.union(new_conflict)
-            self.all_vars.union(new_vars)
-            
+            self.all_vars.union(new_vars
+            )
+        
+        self.opt = opt
 
     def init_from_banner(self, from_banner, banner):
         """ defined card that need to be initialized from the banner file 
@@ -6428,7 +6430,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                       "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MG5aMC are suitable or refrain to use merging with this model")
             
             # ensure that for fixed order ICKKW model are not set to FxFx and/or UNLOPS
-            if 'shower_cards' not in self.cards:
+            if 'shower_cards' not in self.cards and self.opt['switch']['fixed_order'] == 'ON':
                 if self.run_card['ickkw'] in [3,4]:
                     # 3 is FxFx and 4 is UNLOPS
                     mergemode = {3:'FxFx', 4:'UNLOPS'}

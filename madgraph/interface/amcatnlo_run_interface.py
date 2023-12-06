@@ -5716,7 +5716,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         first_cmd = cmd_switch.get_cardcmd()
                 
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd, switch=switch)
 
         self.banner = banner_mod.Banner()
 
