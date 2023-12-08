@@ -179,13 +179,14 @@ if auto_update:
     rev_nb_i = int(rev_nb)
     try:
         if MG_branch == 'LTS':
-#        import ssl
-#        import urllib.request
+            import ssl
+            import urllib.request
 
-#        ctx = ssl.create_default_context()
-#        ctx.check_hostname = False
-#        ctx.verify_mode = ssl.CERT_NONE
-            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+            #filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb')
         elif MG_branch == '3.x':
             filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
@@ -195,7 +196,8 @@ if auto_update:
             last_message = int(text[1].strip())
         else:
             last_message = 99
-    except (ValueError, IOError):
+    except (ValueError, IOError) as error:
+        print(error)
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
