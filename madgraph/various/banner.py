@@ -3282,7 +3282,7 @@ class RunCard(ConfigFile):
         elif formatv == 'float':
             if isinstance(value, str):
                 value = value.replace('d','e')
-            return ('%.10e' % float(value)).replace('e','d')
+            return ('%.15e' % float(value)).replace('e','d')
         
         elif formatv == 'str':
             # Check if it is a list

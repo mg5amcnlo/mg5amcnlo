@@ -59,6 +59,8 @@ c*****************************************************************************
       double precision etmax(nincoming+1:nexternal-1)
       double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
       common /to_cuts/etmin,etmax, mxxmin
+      logical             new_point
+      common /c_new_point/new_point
       double precision alsf,besf
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
