@@ -480,6 +480,7 @@ class Particles_file(Card):
                 import internal.ufomodel.particles as particles
             except Exception:
                 sys.path.append(pjoin(os.getcwd(), 'bin'))
+                sys.path.append(pjoin(os.getcwd(), 'bin','internal','ufomodel'))
                 import internal.ufomodel.particles as particles
             
             v4_part_info = []
