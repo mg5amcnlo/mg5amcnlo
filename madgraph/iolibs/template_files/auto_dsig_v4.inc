@@ -291,7 +291,7 @@ c
 c     local
 c
 	   double precision P1(0:3, nexternal)
-	   integer ivec, curr_wrap, iwrap
+	   integer ivec, curr_warp, iwarp
 	   integer channels(VECSIZE_MEMMAX)
 C  
 C DATA
@@ -318,16 +318,16 @@ C     Continue only if IMODE is 0, 4 or 5
             RETURN
          ENDIF
 
-	 DO CURR_WRAP=1, NB_WRAP
-	   if(IMIRROR_VEC(CURR_WRAP).EQ.1)then
+	 DO CURR_WARP=1, NB_WARP
+	   if(IMIRROR_VEC(CURR_WARP).EQ.1)then
 	     IB(1) = 1
 	     IB(2) = 2
 	   else
 	     IB(1) = 2
 	     IB(2) = 1	   
 	   endif
-	   DO IWRAP=1, WRAP_SIZE
-	      IVEC = (CURR_WRAP-1)*WRAP_SIZE+IWRAP
+	   DO IWARP=1, WARP_SIZE
+	      IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
 c        Do not need those three here. do I?	 
 	      XBK(:) = ALL_XBK(:,IVEC)
 c	      CM_RAP = ALL_CM_RAP(IVEC)
@@ -353,8 +353,8 @@ C     Select a flavor combination (need to do here for right sign)
          endif
 	 CALL RANMAR(hel_rand(IVEC))
 	 CALL RANMAR(col_rand(IVEC))
-	 ENDDO ! end loop on IWRAP/IVEC	 
-	 ENDDO ! end loop on the CURR_WRAP
+	 ENDDO ! end loop on IWARP/IVEC	 
+	 ENDDO ! end loop on the CURR_WARP
          call SMATRIX%(proc_id)s_MULTI(p_multi, hel_rand, col_rand, channels, ALL_OUT , selected_hel, selected_col, VECSIZE_USED)
 
 

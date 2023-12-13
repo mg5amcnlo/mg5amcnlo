@@ -1733,16 +1733,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = """ DO CURR_WRAP=1, NB_WRAP
-        IF(IMIRROR_VEC(CURR_WRAP).EQ.1)THEN
+            pdf_lines = """ DO CURR_WARP=1, NB_WARP
+        IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
           IB(2) = 2
         ELSE
           IB(1) = 2
           IB(2) = 1
         ENDIF
-        DO IWRAP=1, WRAP_SIZE
-          IVEC = (CURR_WRAP-1)*WRAP_SIZE+IWRAP
+        DO IWARP=1, warp_SIZE
+          IVEC = (CURR_WARP-1)*WARP_SIZE+IWARP
           """
 
 
@@ -1948,8 +1948,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         ee_pdf_definition_lines = ""
             else:
                 # Add up PDFs for the different initial state particles
-                pdf_lines += "ENDDO ! IWRAP LOOP\n"
-                pdf_lines += "ENDDO ! CURRWRAP LOOP\n"
+                pdf_lines += "ENDDO ! IWARP LOOP\n"
+                pdf_lines += "ENDDO ! CURRWARP LOOP\n"
                 pdf_lines = pdf_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
                 for proc in processes:
                     process_line = proc.base_string()
@@ -4205,11 +4205,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             self.opt['vector_size'] = 0
 
         if opt and isinstance(opt['output_options'], dict) and \
-                                       'nb_wrap' in opt['output_options']:
-            self.opt['nb_wrap'] = banner_mod.ConfigFile.format_variable(
-                  opt['output_options']['nb_wrap'], int, 'nb_wrap')
+                                       'nb_warp' in opt['output_options']:
+            self.opt['nb_warp'] = banner_mod.ConfigFile.format_variable(
+                  opt['output_options']['nb_warp'], int, 'nb_warp')
         else:
-            self.opt['nb_wrap'] = 1
+            self.opt['nb_warp'] = 1
 
     # helper function for customise helas writter
     @staticmethod
@@ -5068,7 +5068,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['cutsdone'] = ""
             replace_dict['get_channel'] = "SUBDIAG(%s)" % proc_id
             replace_dict['get_channel_vec'] = """
-            CHANNELS(IVEC) = CONFSUB(%s,SYMCONF(ICONF_VEC(CURR_WRAP)))
+            CHANNELS(IVEC) = CONFSUB(%s,SYMCONF(ICONF_VEC(CURR_WARP)))
             SUBDIAG(%s) = CHANNELS(IVEC) ! only valid if a single process
             channel = SUBDIAG(%s)""" % (proc_id,proc_id, proc_id)
             #SUBDIAG(%s)" % proc_id
@@ -5134,11 +5134,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         vector_size = max(1, vector_size)
 
         try:
-            nb_wrap = self.opt['output_options']['nb_wrap']
+            nb_warp = self.opt['output_options']['nb_warp']
         except KeyError:
-            nb_wrap = 1
-        nb_wrap = banner_mod.ConfigFile.format_variable(nb_wrap, int, name='nb_wrap')
-        nb_wrap = max(1, nb_wrap)
+            nb_warp = 1
+        nb_warp = banner_mod.ConfigFile.format_variable(nb_warp, int, name='nb_warp')
+        nb_warp = max(1, nb_warp)
 
         text=["""C
 C If VECSIZE_MEMMAX is greater than 1, a vector API is used:
@@ -5169,14 +5169,14 @@ C NB: THIS FILE CANNOT CONTAIN #ifdef DIRECTIVES
 C BECAUSE IT DOES NOT GO THROUGH THE CPP PREPROCESSOR
 C (see https://github.com/madgraph5/madgraph4gpu/issues/458).
 C
-      INTEGER WRAP_SIZE
-      PARAMETER (WRAP_SIZE=%i)
-      INTEGER NB_WRAP
-      PARAMETER (NB_WRAP=%i)
+      INTEGER WARP_SIZE
+      PARAMETER (WARP_SIZE=%i)
+      INTEGER NB_WARP
+      PARAMETER (NB_WARP=%i)
       INTEGER VECSIZE_MEMMAX
       PARAMETER (VECSIZE_MEMMAX=%i)
               
-              """ % (vector_size,nb_wrap, vector_size*nb_wrap)]
+              """ % (vector_size,nb_warp, vector_size*nb_warp)]
         fsock.writelines(text)
         return vector_size
 
@@ -6861,13 +6861,13 @@ class UFO_model_to_mg4(object):
             vector_size = 1
         self.vector_size = max(1, banner_mod.ConfigFile.format_variable(vector_size, int, 'vector_size'))
         try:
-            nb_wrap = self.opt['output_options']['nb_wrap']
+            nb_warp = self.opt['output_options']['nb_warp']
         except KeyError:
-            nb_wrap = 1
-        self.nb_wrap = max(1, banner_mod.ConfigFile.format_variable(nb_wrap, int, 'nb_wrap'))
+            nb_warp = 1
+        self.nb_warp = max(1, banner_mod.ConfigFile.format_variable(nb_warp, int, 'nb_warp'))
         if self.opt['mp']:
             self.vector_size = 0
-            self.nb_wrap = 1
+            self.nb_warp = 1
         self.scales = []
         self.MUE = None # extra parameter loop #2 which is running
         
@@ -7646,10 +7646,10 @@ C
             data = self.coups_dep[nb_def_by_file * i: 
                                min(len(self.coups_dep), nb_def_by_file * (i+1))]
             self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                        dp=True, mp=False, vec=self.vector_size*self.nb_wrap)
+                                        dp=True, mp=False, vec=self.vector_size*self.nb_warp)
             if self.opt['mp']:
                 self.create_couplings_part( i + 1 + nb_coup_indep , data, 
-                                           dp=False, mp=True, vec=self.vector_size*self.nb_wrap)
+                                           dp=False, mp=True, vec=self.vector_size*self.nb_warp)
         
         
     def create_couplings_main(self, nb_def_by_file=25):
