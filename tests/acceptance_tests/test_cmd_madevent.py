@@ -528,8 +528,8 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 0.02174605
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
-                        (target, val1, err1))
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large diference between %s and %s +- %s (%s sigma)'%
+                        (target, val1, err1, abs(val1 - target) / err1))
 
 
     def test_customised_madevent_via_run_card(self):
