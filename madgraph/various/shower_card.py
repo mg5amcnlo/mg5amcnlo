@@ -46,7 +46,9 @@ class ShowerCard(banner.RunCard):
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td', 
-                    'qed_shower', 'primordialkt']
+                    'qed_shower', 'primordialkt',
+                    'space_shower_me_corrections', 'time_shower_me_corrections',
+                    'time_shower_me_extended', 'time_shower_me_after_first']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         string_vars.append('dm_'+str(i))
@@ -197,6 +199,17 @@ class ShowerCard(banner.RunCard):
                        py8='qed_shower')
         self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
                         py8='primordialkt')
+
+        # ME correction
+        self.add_param('space_shower_me_corrections', False, comment= "MECs for ISR",
+                       py8='space_shower_me_corrections')
+        self.add_param('time_shower_me_corrections', True, comment= "MECs for FSR",
+                       py8='time_shower_me_corrections')
+        self.add_param('time_shower_me_extended', False, comment= "see Pythia8 manual as well as hep-ph/2308.06389 for details",
+                       py8='time_shower_me_extended')
+        self.add_param('time_shower_me_after_first', False, comment= "see Pythia8 manual as well as hep-ph/2308.06389 for details",
+                       py8='time_shower_me_after_first')
+
         #self.add_param("tune_ee", 7, comment="pythia8 tune for ee beams !ONLY FOR PYTHIA8!",
         #               py8="tune_ee")
         #self.add_param("tune_pp", 14, comment="pythia8 tune for pp beams !ONLY FOR PYTHIA8!",

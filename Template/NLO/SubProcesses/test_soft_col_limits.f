@@ -55,6 +55,10 @@ c*****************************************************************************
       LOGICAL IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
+      double precision etmin(nincoming+1:nexternal-1)
+      double precision etmax(nincoming+1:nexternal-1)
+      double precision mxxmin(nincoming+1:nexternal-1,nincoming+1:nexternal-1)
+      common /to_cuts/etmin,etmax, mxxmin
       double precision alsf,besf
       common /cgfunsfp/alsf,besf
       double precision alazi,beazi
@@ -152,23 +156,7 @@ c-----
       call setrun               !Sets up run parameters
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
-      call setcuts              !Sets up cuts 
 
-c When doing hadron-hadron collision reduce the effect collision energy.
-c Note that tests are always performed at fixed energy with Bjorken x=1.
-      totmass = 0.0d0
-      include 'pmass.inc' ! make sure to set the masses after the model has been included
-      do i=nincoming+1,nexternal
-         if (is_a_j(i) .and. i.ne.nexternal) then
-            totmass = totmass + max(ptj,pmass(i))
-         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
-            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
-         else
-            totmass = totmass + pmass(i)
-         endif
-      enddo
-      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
-      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
 c
       write (*,*) 'Give FKS configuration number ("0" loops over all)'
       read (*,*) fks_conf_number
@@ -198,6 +186,38 @@ c
       if (abs(lpp(1)).ge.1) ndim=ndim+1
       if (abs(lpp(2)).ge.1) ndim=ndim+1
       nndim=ndim
+
+
+      call setcuts              !Sets up cuts 
+c When doing hadron-hadron collision reduce the effect collision energy.
+c Note that tests are always performed at fixed energy with Bjorken x=1.
+      totmass = 0.0d0
+      include 'pmass.inc' ! make sure to set the masses after the model has been included
+      do i=nincoming+1,nexternal
+         if (is_a_j(i) .and. i.ne.nexternal) then
+            totmass = totmass + max(ptj,pmass(i))
+         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
+            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
+         elseif (is_a_ph(i)) then
+            totmass = totmass + ptgmin
+         else
+            if (any(mxxmin(i,i+1:nexternal-1).gt.0d0)) then
+               do k=i+1,nexternal-1
+                  if (mxxmin(i,k).gt.0d0) then
+                     totmass = totmass + mxxmin(i,k)
+                  endif
+               enddo
+            elseif (etmin(i).gt.0d0) then
+               totmass=totmass+max(etmin(i),pmass(i))
+            else
+               totmass = totmass + pmass(i)
+           endif
+         endif
+      enddo
+      if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
+      if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
+
+      
       write(*,*)'  '
       write(*,*)'  '
       write(*,*)"Enter graph number (iconfig), "

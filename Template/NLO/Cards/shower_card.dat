@@ -64,6 +64,13 @@ primordialkt = XXX      # T = enable primordial parton k_T
 pythia8_options = XXXX # Dictionary specifying any additional entry in the pythia8 command file
                        # Warning changing some parameter will break NLO accuracy.
 #***********************************************************************
+# Matrix-element corrections                          !ONLY FOR PYTHIA8!
+#***********************************************************************
+space_shower_me_corrections = XX     # MECs for ISR
+time_shower_me_corrections  = XX    # MECs for FSR
+time_shower_me_extended     = XX     # see Pythia8 manual as well as
+time_shower_me_after_first  = XX    # hep-ph/2308.06389 for details
+#***********************************************************************
 # Decay channels                                                       *
 #***********************************************************************
 # Syntax for HERWIG6                                                   *

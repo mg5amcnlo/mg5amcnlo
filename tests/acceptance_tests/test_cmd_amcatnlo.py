@@ -137,7 +137,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.generate(['p p > t j QED^2=4 QCD^2=0 [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
+        self.assertIn('10000 = nevents', card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
@@ -149,9 +149,9 @@ class MECmdShell(IOTests.IOTestManager):
         os.system('cp  %s/Cards/param_card_default.dat %s/Cards/param_card.dat' % (self.path, self.path))
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
-        self.assertTrue( 'ANALYSE      =' in card)
+        self.assertIn('ANALYSE      =', card)
         card = card.replace('ANALYSE      =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
-        self.assertTrue( 'EXTRALIBS    = stdhep Fmcfio' in card)
+        self.assertIn('EXTRALIBS    = stdhep Fmcfio', card)
         card = card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/shower_card_default.dat %s/Cards/shower_card.dat'% (self.path, self.path))
@@ -170,8 +170,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.top' % self.path))
 
-    @IOTests.createIOTest()
-    def testIO_check_html_long_process_strings(self):
+    #@IOTests.createIOTest()
+    def test_check_html_long_process_strings(self):
         """ target: info.html
         """
         #check that the info.html file correctly lists all the subprocesses,
@@ -186,7 +186,12 @@ class MECmdShell(IOTests.IOTestManager):
         #       'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
         info_html_this = open(os.path.join(self.path, 'HTML', 'info.html')).read()
         #self.assertEqual(info_html_target, info_html_this)
-        open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        #open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
+        self.assertEqual(info_html_this.count('<TD> born </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> virt </TD>'), 2)
+        self.assertEqual(info_html_this.count('<TD> real </TD>'), 6)
+        self.assertEqual(info_html_this.count('<TR class=first>'), 2)
+        self.assertEqual(info_html_this.count('<TR class=second>'), 8)
 
 
     def test_raise_invalid_path_hwpp(self):
@@ -195,7 +200,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        self.assertIn('HERWIG6   = parton_shower', card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -220,7 +225,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( 'HERWIG6   = parton_shower' in card)
+        self.assertIn('HERWIG6   = parton_shower', card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -247,7 +252,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve QED^2=4 QCD^2=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertIn(' -1 = nevt_job', card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/ --no_save')
@@ -350,7 +355,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 0.1*wt < m_inv_tbar < mt + 0.1*wt)
                     #else:
                     #    self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [2,3])
+            self.assertIn(nb_final, [2,3])
         self.assertEqual(nb_event, nevents)        
         
         
@@ -379,7 +384,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 15*wt < m_inv_tbar < mt + 15*wt)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [4,5])
+            self.assertIn(nb_final, [4,5])
         self.assertEqual(nb_event, nevents)
 
         # check that each events has the decay ON mode
@@ -407,7 +412,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( mt - 1 < m_inv_tbar < mt + 1)
                     else:
                         self.assertTrue(False, 'not top-antitop decaying')
-            self.assertTrue(nb_final in [4,5])
+            self.assertIn(nb_final, [4,5])
         self.assertEqual(nb_event, nevents)        
 
         
@@ -458,7 +463,7 @@ class MECmdShell(IOTests.IOTestManager):
                     else:
                         misc.sprint(p.pdg, p.status)
                         self.assertTrue(False, 'not W decaying')
-            self.assertTrue(nb_final in [2])
+            self.assertIn(nb_final, [2])
         self.assertEqual(nb_event, 10)      
         
         self.assertTrue(lhe_onshell)        
@@ -481,7 +486,7 @@ class MECmdShell(IOTests.IOTestManager):
                         self.assertTrue( 80 < m_inv_w < 81)
                     else:
                         self.assertTrue(False, 'not W decaying')
-            self.assertTrue(nb_final in [2])
+            self.assertIn(nb_final, [2])
         self.assertEqual(nb_event, 10)  
           
 
@@ -501,7 +506,7 @@ class MECmdShell(IOTests.IOTestManager):
                     self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
 
                     card = open('%s/Cards/run_card_default.dat' % self.path).read()
-                    self.assertTrue( '10000 = nevents' in card)
+                    self.assertIn('10000 = nevents', card)
                     card = card.replace('10000 = nevents', '100 = nevents')
                     open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
                     os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat'% (self.path, self.path))
@@ -514,7 +519,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertEqual(cmd, os.getcwd())
         self.do('quit')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
+        self.assertIn('10000 = nevents', card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
@@ -638,8 +643,10 @@ class MECmdShell(IOTests.IOTestManager):
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
+        self.assertGreater(
+            os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+        )
         
 
 
@@ -665,8 +672,10 @@ class MECmdShell(IOTests.IOTestManager):
         # test the hep event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
+        self.assertGreater(
+            os.path.getsize('%s/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz' % self.path),
+            os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path)
+        )
 
 
 
@@ -764,7 +773,7 @@ class MECmdShell(IOTests.IOTestManager):
             if 'Summary:' in line:
                 break
         #      Run at p-p collider (6500.0 + 6500.0 GeV)
-        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
+        self.assertIn('Run at p-p collider (6500.0 + 6500.0 GeV)', data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
@@ -774,7 +783,7 @@ class MECmdShell(IOTests.IOTestManager):
             self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
 
         #      Number of events generated: 10000        
-        self.assertTrue('Number of events generated: 100' in data[i+3])
+        self.assertIn('Number of events generated: 100', data[i+3])
 
 
     def load_result(self, run_name='run_01'):
