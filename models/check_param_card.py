@@ -1,6 +1,3 @@
-from __future__ import division
-
-from __future__ import absolute_import
 import itertools
 import filecmp
 import xml.etree.ElementTree as ET
@@ -13,7 +10,6 @@ import logging
 import random
 import six
 StringIO = six
-from six.moves import range
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 
@@ -34,7 +30,7 @@ class InvalidParam(Exception):
     """ a class for invalid parameter input """
     pass
 
-class Parameter (object):
+class Parameter :
     """A class for a param_card parameter"""
 
     
@@ -138,22 +134,22 @@ class Parameter (object):
         
         self.comment = self.comment.strip()
         if format == 'float':
-            if self.lhablock == 'decay' and not isinstance(self.value,six.string_types):
-                return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+            if self.lhablock == 'decay' and not isinstance(self.value,str):
+                return f'DECAY %s %.{precision}e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
-                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
+                return 'DECAY {} Auto # {}'.format(' '.join([str(d) for d in self.lhacode]), self.comment)
             elif self.lhablock and self.lhablock.startswith('qnumbers'):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
-                return '      %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return f'      %s %.{precision}e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif format == 'str':
             if self.lhablock == 'decay':
-                return 'DECAY %s %s # %s' % (' '.join([str(d) for d in self.lhacode]),self.value, self.comment)
-            return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return 'DECAY {} {} # {}'.format(' '.join([str(d) for d in self.lhacode]),self.value, self.comment)
+            return '      {} {} # {}'.format(' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
-            return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
+            return '      {:e} {} # {}'.format( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
         elif self.format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         else:
@@ -189,7 +185,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise KeyError('id %s is not in %s' % (tuple(lhacode), self.name))
+                raise KeyError('id {} is not in {}'.format(tuple(lhacode), self.name))
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
@@ -307,9 +303,9 @@ class Block(list):
             text = '' # avoid block definition
         #general case 
         elif not self.scale:
-            text += 'BLOCK %s # %s\n' % (self.name.upper(), self.comment)
+            text += 'BLOCK {} # {}\n'.format(self.name.upper(), self.comment)
         else:
-            text += 'BLOCK %s Q= %e # %s\n' % (self.name.upper(), self.scale, self.comment)
+            text += 'BLOCK {} Q= {:e} # {}\n'.format(self.name.upper(), self.scale, self.comment)
         
         text += '\n'.join([param.__str__(precision) for param in self])
         return text + '\n'
@@ -511,9 +507,9 @@ class ParamCard(dict):
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
+                        logger.info('For consistency, the mass of particle {} ({}) is changed to {}.'.format(lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
-                        logger.log(loglevel, 'For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
+                        logger.log(loglevel, 'For consistency, the mass of particle {} ({}) is changed to {}.'.format(lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
                 if model_value != param_value:
                     self.get('mass').get(abs(particle.get_pdg_code())).value = model_value
@@ -534,9 +530,9 @@ class ParamCard(dict):
                 if not misc.equal(abs(model_value), param_value, 4):
                     modify = True
                     if loglevel == 20:
-                        logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:BOLD')
+                        logger.info('For consistency, the width of particle {} ({}) is changed to {}.'.format(lhacode, particle.get('name'), model_value), '$MG:BOLD')
                     else:
-                        logger.log(loglevel,'For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value))
+                        logger.log(loglevel,'For consistency, the width of particle {} ({}) is changed to {}.'.format(lhacode, particle.get('name'), model_value))
                     #logger.debug('was %s', param_value)
                 if abs(model_value) != param_value:   
                     self.get('decay').get(abs(particle.get_pdg_code())).value = abs(model_value)
@@ -619,7 +615,7 @@ class ParamCard(dict):
         missing_set, unknow_set = self.get_missing_block(identpath)
         
         apply_conversion = []
-        if missing_set == set(['fralpha']) and 'alpha' in unknow_set:
+        if missing_set == {'fralpha'} and 'alpha' in unknow_set:
             apply_conversion.append('alpha')
         elif all([b in missing_set for b in ['te','msl2','dsqmix','tu','selmix','msu2','msq2','usqmix','td', 'mse2','msd2']]) and\
                      all(b in unknow_set for b in ['ae','ad','sbotmix','au','modsel','staumix','stopmix']):
@@ -649,7 +645,7 @@ class ParamCard(dict):
         #check if we need to write the value of scale for some block
         if os.path.exists(input_inc):
             text = open(input_inc).read()
-            scales = list(set(re.findall('mdl__(\w*)__scale', text, re.I)))
+            scales = list(set(re.findall(r'mdl__(\w*)__scale', text, re.I)))
         else: 
             scales = []
 
@@ -697,13 +693,13 @@ class ParamCard(dict):
                 if self['mass'].get(tuple(lhaid)).value < 0:
                     value = '-%s' % value
 
-            fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
+            fout.writelines(' {} = {}'.format(variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
-                fout.writelines(' mp__%s = %s_16' % (variable, value))
+                fout.writelines(' mp__{} = {}_16'.format(variable, value))
                 
         for block in scales:
             value = self[block].scale
-            fout.writelines(' mdl__%s__scale = %s' % (block, ('%e'%float(value)).replace('e','d')))
+            fout.writelines(' mdl__{}__scale = {}'.format(block, ('%e'%float(value)).replace('e','d')))
 
         fout.close()
         # compare if we need to update the file (allowing to skip some recompilation)
@@ -858,10 +854,10 @@ class ParamCard(dict):
                         valid_name = name
                         break
                 logger.info("Information for parameter %s of the param_card" % valid_name, '$MG:color:BLUE')
-                print(("Part of Block \"%s\" with identification number %s" % (block, lhacode)))        
-                print(("Current value: %s" % self[block].get(lhacode).value))
-                print(("Default value: %s" % default[block].get(lhacode).value))
-                print(("comment present in the cards: %s " %  default[block].get(lhacode).comment))
+                print("Part of Block \"{}\" with identification number {}".format(block, lhacode))        
+                print("Current value: %s" % self[block].get(lhacode).value)
+                print("Default value: %s" % default[block].get(lhacode).value)
+                print("comment present in the cards: %s " %  default[block].get(lhacode).comment)
 
             
      
@@ -915,7 +911,7 @@ class ParamCard(dict):
             param = self[block].get(lhacode)
             if param.value != value:
                 error_msg = 'This card is not suitable to be convert to SLAH1\n'
-                error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
+                error_msg += 'Parameter {} {} should be {}'.format(block, lhacode, value)
                 raise InvalidParamCard(error_msg)   
             self.remove_param(block, lhacode)
 
@@ -926,7 +922,7 @@ class ParamCardMP(ParamCard):
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""
         
-        return super(ParamCardMP, self).write_inc_file(outpath, identpath, default, need_mp=True)
+        return super().write_inc_file(outpath, identpath, default, need_mp=True)
         
 
   
@@ -938,7 +934,7 @@ class ParamCardIterator(ParamCard):
 
     logging = True
     def __init__(self, input_path=None):
-        super(ParamCardIterator, self).__init__(input_path=input_path)
+        super().__init__(input_path=input_path)
         self.itertag = [] #all the current value use
         self.cross = []   # keep track of all the cross-section computed 
         self.param_order = []
@@ -997,7 +993,7 @@ class ParamCardIterator(ParamCard):
         #store the type of parameter
         for key in keys:
             for param, values in all_iterators[key]:
-                self.param_order.append("%s#%s" % (param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
+                self.param_order.append("{}#{}".format(param.lhablock, '_'.join(repr(i) for i in param.lhacode)))
         # do the loop
         lengths = [list(range(len(all_iterators[key][0][1]))) for key in keys]
         for positions in itertools.product(*lengths):
@@ -1080,7 +1076,7 @@ class ParamCardIterator(ParamCard):
                 identVar = identLine.split(" ")[2].lower()
                 if identVar.startswith("mdl_"):
                     identVar = identVar.replace("mdl_", "", 1)
-                ident['{0}#{1}'.format(identBlock, identPid)] = identVar
+                ident[f'{identBlock}#{identPid}'] = identVar
             except:
                 continue
 
@@ -1119,7 +1115,7 @@ class ParamCardIterator(ParamCard):
     
 
 
-class ParamCardRule(object):
+class ParamCardRule:
     """ A class for storing the linked between the different parameter of
             the param_card.
         Able to write a file 'param_card_rule.dat' 
@@ -1173,29 +1169,29 @@ class ParamCardRule(object):
         # ZERO
         text +='<zero>\n'
         for name, id, comment in self.zero:
-            text+='     %s %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+            text+='     {} {} # {}\n'.format(name, '    '.join([str(i) for i in id]), 
                                                                         comment)
         # ONE
         text +='</zero>\n<one>\n'
         for name, id, comment in self.one:
-            text+='     %s %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+            text+='     {} {} # {}\n'.format(name, '    '.join([str(i) for i in id]), 
                                                                         comment)
         # IDENTICAL
         text +='</one>\n<identical>\n'
         for name, id,id2, comment in self.identical:
-            text+='     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+            text+='     {} {} : {} # {}\n'.format(name, '    '.join([str(i) for i in id]), 
                                       '    '.join([str(i) for i in id2]), comment)
 
         # OPPOSITE
         text +='</identical>\n<opposite>\n'
         for name, id,id2, comment in self.opposite:
-            text+='     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+            text+='     {} {} : {} # {}\n'.format(name, '    '.join([str(i) for i in id]), 
                                       '    '.join([str(i) for i in id2]), comment)
         
         # CONSTRAINT
         text += '</opposite>\n<constraint>\n'
         for name, id, rule, comment in self.rule:
-            text += '     %s %s : %s # %s\n' % (name, '    '.join([str(i) for i in id]), 
+            text += '     {} {} : {} # {}\n'.format(name, '    '.join([str(i) for i in id]), 
                                                                   rule, comment)
         text += '</constraint>\n</file>'
     
@@ -1211,7 +1207,7 @@ class ParamCardRule(object):
         
         try:
             tree = ET.parse(inputpath)
-        except IOError:
+        except OSError:
             if '\n' in inputpath:
                 # this is convinient for the tests
                 tree = ET.fromstring(inputpath)

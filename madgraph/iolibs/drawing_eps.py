@@ -37,9 +37,7 @@ DrawDiagramsEPS:
     This contains all the routines to represent a set of diagrams in Encapsuled 
     PostScript (EPS)."""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import os
 import math
 import madgraph.core.drawing as draw
@@ -88,7 +86,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
 
         # Open file 
-        super(EpsDiagramDrawer, self).initialize()
+        super().initialize()
 
         # File Header
         text = "%!PS-Adobe-2.0\n"
@@ -114,7 +112,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += '%%trailer\n'
 
         #write the diagram file
-        super(EpsDiagramDrawer, self).conclude()
+        super().conclude()
 
 
     def rescale(self, x, y):
@@ -146,9 +144,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
             c = random.random()
             d = random.random()
             e = random.random()
-            return "%s %s %s setrgbcolor\n %s %s %s %s %s \n" % (c,d,e,x1, y1, x2, y2, name)
+            return "{} {} {} setrgbcolor\n {} {} {} {} {} \n".format(c,d,e,x1, y1, x2, y2, name)
         else:
-            return "%s %s %s %s %s \n" % (x1, y1, x2, y2, name)
+            return "{} {} {} {} {} \n".format(x1, y1, x2, y2, name)
     def draw_vertex(self, vertex, bypass = ['QED','QCD']  ):
         """Add blob in case on non QED-QCD information"""
         
@@ -160,7 +158,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
             if order:
                 x1, y1 = self.rescale(vertex.pos_x, vertex.pos_y)
-                self.text += " %s %s %s 1.0 Fblob \n" % (x1, y1, self.blob_size)
+                self.text += " {} {} {} 1.0 Fblob \n".format(x1, y1, self.blob_size)
 
 
 
@@ -184,7 +182,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
         #add the code in the correct format
         x1, y1 = self.rescale(line.begin.pos_x, line.begin.pos_y)
-        self.text += ' %s  %s moveto \n' % (x1, y1)
+        self.text += ' {}  {} moveto \n'.format(x1, y1)
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, '%s Fhiggsl' %\
                          curvature)
@@ -452,7 +450,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
         self.text += self.line_format(line.end.pos_x,
                         line.end.pos_y, line.begin.pos_x,
-                        line.begin.pos_y, '0 %s Fgluonl%s' % (-1*curvature, type))
+                        line.begin.pos_y, '0 {} Fgluonl{}'.format(-1*curvature, type))
         
                     
     
@@ -498,10 +496,10 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Compute the EPS coordinate
         x, y = self.rescale(x, y)
         #write the text
-        self.text += ' %s  %s moveto \n' % (x, y)
+        self.text += ' {}  {} moveto \n'.format(x, y)
         
         if hasattr(self, 'diagram_type'):
-            self.text += '(%s diagram %s )   show\n' % (self.diagram_type, number + 1) # +1 python
+            self.text += '({} diagram {} )   show\n'.format(self.diagram_type, number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
         else:
@@ -517,7 +515,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         y = -0.17
         x, y = self.rescale(x, y)
         #write the text
-        self.text += ' %s  %s moveto \n' % (x, y)
+        self.text += ' {}  {} moveto \n'.format(x, y)
         self.text += '%s   show\n' % (mystr)                                                             
         
         
@@ -546,7 +544,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Re-scale x,y in order to pass in EPS coordinate
         x, y = self.rescale(x, y)
         # Write the EPS text associate
-        self.text += ' %s  %s moveto \n' % (x, y)
+        self.text += ' {}  {} moveto \n'.format(x, y)
         self.text += '(%s)   show\n' % (number)
 
     def associate_name(self, line, name, loop=False, reverse=False):
@@ -620,7 +618,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Pass in EPS coordinate
         x_pos, y_pos = self.rescale(x_pos, y_pos)
         #write EPS code
-        self.text += ' %s  %s moveto \n' % (x_pos, y_pos)
+        self.text += ' {}  {} moveto \n'.format(x_pos, y_pos)
         self.text += '(' + name + ')   show\n'
 
 
@@ -678,7 +676,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
             order to adjust fermion flow in case of Majorana fermion."""
 
         #use standard initialization but without any diagram
-        super(MultiEpsDiagramDrawer, self).__init__(None, filename , model, \
+        super().__init__(None, filename , model, \
                                                                       amplitude)
         self.legend = legend
         #additional information
@@ -738,7 +736,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         diagram."""
 
         # Standard method
-        super(MultiEpsDiagramDrawer, self).draw_diagram(diagram, self.block_nb)
+        super().draw_diagram(diagram, self.block_nb)
         # But keep track how many diagrams are already drawn
         
         self.block_nb += 1
@@ -768,7 +766,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 50         770  moveto\n'
         self.text += ' (%s) show\n' % self.legend
         self.text += ' 525         770  moveto\n'
-        self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
+        self.text += ' (page {}/{}) show\n'.format(self.curr_page + 1, self.npage)
         self.text += ' 260         50  moveto\n'
         self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'       
         # Loop on all diagram
@@ -799,14 +797,14 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         
         
         self.text += 'showpage\n'
-        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page+1, self.curr_page+1)
+        self.text += '%%' + 'Page: {} {} \n'.format(self.curr_page+1, self.curr_page+1)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
         self.text += ' 50         770  moveto\n'
         self.text += ' (%s) show\n' % self.legend
         self.text += ' 525         770  moveto\n'
-        self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
+        self.text += ' (page {}/{}) show\n'.format(self.curr_page + 1, self.npage)
         self.text += ' 260         40  moveto\n'
         self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'
         

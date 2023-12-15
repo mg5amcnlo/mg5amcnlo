@@ -16,7 +16,6 @@
    Uses the cmd package for command interpretation and tab completion.
 """
 
-from __future__ import absolute_import
 import os
 import shutil
 import time
@@ -349,7 +348,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
-                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=True)
+                    self.exec_cmd(" import model loop_{}{}".format(add_on,model_name), precmd=True)
                     self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
@@ -581,10 +580,10 @@ This installation can take some time but only needs to be performed once.""" %{'
                         additional_options=additional_options)
                     except self.InvalidCmd:
                             logger.warning(
-"""The offline installation of %(p)s was unsuccessful, and MG5aMC disabled it.
+"""The offline installation of {p} was unsuccessful, and MG5aMC disabled it.
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
-its online installation with the command 'install %(p)s' or install it on your
-own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key})
+its online installation with the command 'install {p}' or install it on your
+own and set the path to its library in the MG5aMC option '{p}'.""".format(p=key))
                             self.exec_cmd("set %s ''" % key)
                             self.exec_cmd('save options %s' % key)
             
@@ -600,7 +599,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 self.exec_cmd("set %s ''" % key)
                 self.exec_cmd('save options %s' % key)
             else:
-                self.exec_cmd("set %s %s" % (key,value))
+                self.exec_cmd("set {} {}".format(key,value))
                 self.exec_cmd('save options %s' % key)                
         
         
@@ -781,7 +780,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
@@ -821,7 +820,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         # Check the validity of the arguments
         self.check_add(args)
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings=""
         if perturbation_couplings_re:
@@ -873,7 +872,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                     succes += 1
                 except Exception:
                     failed +=1
-            logger.info("%s/%s processes succeeded" % (succes, failed+succes))
+            logger.info("{}/{} processes succeeded".format(succes, failed+succes))
             if succes == 0:
                 raise
             else:
@@ -995,7 +994,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         " perform the reduction of loop Feynman diagrams using OPP-based and/or TIR approaches.\n"+\
         "\nWhich one do you want to install? (this needs to be done only once)\n"
         
-        allowed_answer = set(['0','done'])
+        allowed_answer = {'0','done'}
         
         descript =  {'cuttools': ['cuttools','(OPP)','[0711.3596]'],
                      'iregi': ['iregi','(TIR)','[1405.0301]'],
@@ -1113,7 +1112,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
 
         if line.startswith('='):
             line = line[1:]
-        return self.default('%s %s' % (name,line))
+        return self.default('{} {}'.format(name,line))
 
 
     do_ninja = lambda self,line : self.apply_name('ninja', line)

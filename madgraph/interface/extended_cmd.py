@@ -15,7 +15,6 @@
 """  A file containing different extension of the cmd basic python library"""
 
 
-from __future__ import absolute_import
 import logging
 import math
 import os
@@ -26,12 +25,8 @@ import subprocess
 import sys
 import traceback
 import six
-if six.PY3:
-    import io
-    file = io.IOBase
-from six.moves import map
-from six.moves import range
-from six.moves import input
+import io
+file = io.IOBase
 try:
     import readline
     GNU_SPLITTING = ('GNU' in readline.__doc__)
@@ -86,7 +81,7 @@ import string
 __all__ = ["Cmd"]
 PROMPT = '(Cmd) '
 IDENTCHARS = string.ascii_letters + string.digits + '_'            
-class OriginalCmd(object):
+class OriginalCmd:
     """A simple framework for writing line-oriented command interpreters.
 
     These are often useful for test harnesses, administrative tools, and
@@ -475,7 +470,7 @@ class BasicCmd(OriginalCmd):
 
     def preloop(self):
         self.set_readline_completion_display_matches_hook()
-        super(BasicCmd, self).preloop()
+        super().preloop()
 
     def deal_multiple_categories(self, dico, formatting=True, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
@@ -493,7 +488,7 @@ class BasicCmd(OriginalCmd):
 
         # check if more than one categories but only one value:
         if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
-            values = set((s[0] for s in dico.values() if len(s)==1))
+            values = {s[0] for s in dico.values() if len(s)==1}
             if len(values) == 1:
                 return values
                 
@@ -539,7 +534,7 @@ class BasicCmd(OriginalCmd):
                     if val.endswith('@@'):
                         category = val.rsplit('@@',2)[1]
                         category = category.replace('_',' ')
-                        self.stdout.write('\n %s:\n%s\n' % (category, '=' * (len(category)+2)))
+                        self.stdout.write('\n {}:\n{}\n'.format(category, '=' * (len(category)+2)))
                         start = 0
                         pos = 0
                         continue
@@ -624,12 +619,12 @@ class BasicCmd(OriginalCmd):
                 compfunc = self.completenames
 
             # correct wrong splittion with '\ '
-            if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
+            if line and begidx > 2 and line[begidx-2:begidx] == r'\ ':
                 Ntext = line.split(os.path.sep)[-1]
-                self.completion_prefix = Ntext.rsplit('\ ', 1)[0] + '\ '
+                self.completion_prefix = Ntext.rsplit(r'\ ', 1)[0] + r'\ '
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
-                data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                data = compfunc(Ntext.replace(r'\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="
@@ -742,13 +737,13 @@ class BasicCmd(OriginalCmd):
             completion += [prefix + f for f in ['.'+os.path.sep, '..'+os.path.sep] if \
                        f.startswith(text) and not prefix.startswith('.')]
         
-        completion = [a.replace(' ','\ ') for a in completion]
+        completion = [a.replace(' ',r'\ ') for a in completion]
         return completion
 
 
 
 
-class CheckCmd(object):
+class CheckCmd:
     """Extension of the cmd object for only the check command"""
 
     def check_history(self, args):
@@ -785,7 +780,7 @@ class CheckCmd(object):
             else:
                 args.pop(0)           
 
-class HelpCmd(object):
+class HelpCmd:
     """Extension of the cmd object for only the help command"""
 
     def help_quit(self):
@@ -816,7 +811,7 @@ class HelpCmd(object):
         logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
         logger.info("syntax: display " + "|".join(self._display_opts),'$MG:BOLD')
         
-class CompleteCmd(object):
+class CompleteCmd:
     """Extension of the cmd object for only the complete command"""
 
     def complete_display(self,text, line, begidx, endidx):        
@@ -910,7 +905,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.log = True
         self.history = []
         self.save_line = '' # for line splitting
-        super(Cmd, self).__init__(*arg, **opt)
+        super().__init__(*arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
@@ -1086,7 +1081,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # add choice info to the question
         if choices + path_msg:
             question += ' ['
-            question += "\033[%sm%s\033[0m, " % (text_format, default)    
+            question += "\033[{}m{}\033[0m, ".format(text_format, default)    
             for data in choices[:9] + path_msg:
                 if default == data:
                     continue
@@ -1097,7 +1092,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 question += '... , ' 
             question = question[:-2]+']'
         else:
-            question += "[\033[%sm%s\033[0m] " % (text_format, default)    
+            question += "[\033[{}m{}\033[0m] ".format(text_format, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
@@ -1253,7 +1248,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return possibility[0]
         if '=' in line and ' ' in line.strip():
             leninit = len(line)
-            line,n = re.subn('\s*=\s*','=', line)
+            line,n = re.subn(r'\s*=\s*','=', line)
             if n and len(line) != leninit:
                 return self.check_answer_in_input_file(question_instance, default, path=path, line=line)
             
@@ -1311,7 +1306,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
+            super().onecmd('history %s' % self.debug_output.replace(' ', r'\ '))
         except Exception as error:
             logger.error(error)
 
@@ -1327,7 +1322,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text += '\"%s\" with error:\n' % self.history[-1]
         else:
             error_text = ''
-        error_text += '%s : %s\n' % (error.__class__.__name__, 
+        error_text += '{} : {}\n'.format(error.__class__.__name__, 
                                             str(error).replace('\n','\n\t'))
         error_text += self.error_debug % {'debug':self.debug_output}
         logger_stderr.critical(error_text)
@@ -1382,7 +1377,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
             error_text += '\"%s\" with error:\n' % self.history[-1] 
-        error_text += '%s : %s' % (error.__class__.__name__, 
+        error_text += '{} : {}'.format(error.__class__.__name__, 
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
         
@@ -1420,7 +1415,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = 'Error detected in sub-command %s\n' % self.history[-1]
         error_text += 'write debug file %s \n' % self.debug_output
         self.log = False
-        super(Cmd,self).onecmd('history %s' % self.debug_output)
+        super().onecmd('history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         try:
@@ -1428,7 +1423,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except:
             error = str(error)
         error_text += self.config_debug % {'debug' :self.debug_output}
-        error_text += '%s : %s' % (error.__class__.__name__,
+        error_text += '{} : {}'.format(error.__class__.__name__,
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
         
@@ -1650,7 +1645,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             cur_line = self.history[-i]
             if i == 1:
                 new_history.append(cur_line)
-            elif not any((cur_line.startswith(text) for text in no_break)):
+            elif not any(cur_line.startswith(text) for text in no_break):
                 to_add = self.history[:-i+1]
                 to_add.reverse()
                 new_history += to_add
@@ -1753,7 +1748,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         signal.signal(signal.SIGALRM, handle_alarm)
     
         if fct is None:
-            fct = six.moves.input
+            fct = input
         
         if timeout:
             signal.alarm(timeout)
@@ -1811,7 +1806,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 
         # if they are an argument use the default help
         if line:
-            return super(Cmd, self).do_help(line)
+            return super().do_help(line)
         
         
         names = self.get_names()
@@ -1874,7 +1869,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             args = self.history[-1 * pos].split()
             last_action = args[0]
             if len(args)>1: 
-                last_action_2 = '%s %s' % (last_action, args[1])
+                last_action_2 = '{} {}'.format(last_action, args[1])
             else: 
                 last_action_2 = 'none'
         
@@ -1928,7 +1923,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             for i, name in enumerate(split):
                 try:
                     __import__('.'.join(split[:i+1]))                    
-                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
+                    exec('{}=sys.modules[\'{}\']'.format(split[i], '.'.join(split[:i+1])))
                 except ImportError:
                     try:
                         var = eval(args[1])
@@ -2032,10 +2027,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 # check if absolute path
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
-            text += '%s = %s # %s \n' % (key, value, comment)
+            text += '{} = {} # {} \n'.format(key, value, comment)
         for key in to_write:
             if key in to_keep:
-                text += '%s = %s \n' % (key, to_keep[key])
+                text += '{} = {} \n'.format(key, to_keep[key])
         
         if not MADEVENT and not has_mg5_path:
             text += """\n# MG5 MAIN DIRECTORY\n"""
@@ -2119,7 +2114,7 @@ class SmartQuestion(BasicCmd):
             del opt['casesensitive']            
         else:
             self.casesensistive = True
-        super(SmartQuestion, self).__init__(*arg, **opt)
+        super().__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
         
@@ -2143,7 +2138,7 @@ class SmartQuestion(BasicCmd):
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)
-            out[' Recognized command'] = super(SmartQuestion, self).completenames(text,line, *ignored)
+            out[' Recognized command'] = super().completenames(text,line, *ignored)
             
             return self.deal_multiple_categories(out)
         except Exception as error:
@@ -2190,7 +2185,7 @@ class SmartQuestion(BasicCmd):
                 raise
             
     def reask(self, reprint_opt=True):
-        pat = re.compile('\[(\d*)s to answer\]')
+        pat = re.compile(r'\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
         
         if prev_timer:     
@@ -2301,7 +2296,7 @@ class SmartQuestion(BasicCmd):
                 return True
                 
     def cmdloop(self, intro=None):
-        super(SmartQuestion,self).cmdloop(intro)
+        super().cmdloop(intro)
         return self.answer
     
 # a function helper
@@ -2468,7 +2463,7 @@ class ControlSwitch(SmartQuestion):
         #check all default for auto-completion
         allowed_args = [ repr(i)+';' for i in range(1, 1+len(self.to_control))] 
         for key in self.switch:
-            allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
+            allowed_args += ['{}={};'.format(key,s) for s in self.get_allowed(key)]
         # adding special mode
         allowed_args += [key[4:]+';' for key in dir(self) if key.startswith('ans_')]
         allowed_args += [arg[:-1] for arg in allowed_args if arg[-1] == ';']
@@ -2632,13 +2627,13 @@ class ControlSwitch(SmartQuestion):
                         
                         
         elif line in ['', 'done', 'EOF', 'eof','0']:
-            super(ControlSwitch, self).default(line)
+            super().default(line)
             return self.answer
         elif line in 'auto':
             self.switch['dynamical'] = True
-            return super(ControlSwitch, self).default(line)
+            return super().default(line)
         elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
-            raise NotValidInput('unknow command: %s. Did you mean \"%s\"' % (line, line[4:]))
+            raise NotValidInput('unknow command: {}. Did you mean \"{}\"'.format(line, line[4:]))
         elif raise_error:
             raise NotValidInput('unknow command: %s' % line)
         else:
@@ -2655,7 +2650,7 @@ class ControlSwitch(SmartQuestion):
         elif base in self.switch:
             self.set_switch(base, value)
         elif line.startswith('set ') and not hasattr(self.__class__, 'do_set'):
-            raise NotValidInput('Not valid command: %s. Did you mean \"%s\"' % (line, line[4:]))
+            raise NotValidInput('Not valid command: {}. Did you mean \"{}\"'.format(line, line[4:]))
         elif raise_error:
             raise NotValidInput('Not valid command: %s' % line)                
         else:
@@ -2671,7 +2666,7 @@ class ControlSwitch(SmartQuestion):
     
     def onecmd(self, line, **opt):
         """ensure to rewrite the function if a call is done directly"""
-        out = super(ControlSwitch, self).onecmd(line, **opt)
+        out = super().onecmd(line, **opt)
         self.create_question()
         return out
 
@@ -2695,7 +2690,7 @@ class ControlSwitch(SmartQuestion):
         # for diamond class arch where both branch defines the postcmd
         # set it up to be in coop mode
         try:
-            out = super(ControlSwitch,self).postcmd(stop, line)
+            out = super().postcmd(stop, line)
         except AttributeError:
             pass
         if out:
@@ -2778,13 +2773,13 @@ class ControlSwitch(SmartQuestion):
         # rules is a dict: {keys:None} if the value for that key is consistent.
         #                  {keys:value_to_replace} if that key is inconsistent
         if hasattr(self, 'consistency_%s' % key):
-            rules = dict([(key2, None) for key2 in self.switch])
+            rules = {key2: None for key2 in self.switch}
             rules.update(getattr(self, 'consistency_%s' % key)(value, self.switch))
         else:
             rules = {}
             for key2,value2 in self.switch.items():
-                if hasattr(self, 'consistency_%s_%s' % (key,key2)):
-                    rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+                if hasattr(self, 'consistency_{}_{}'.format(key,key2)):
+                    rules[key2] = getattr(self, 'consistency_{}_{}'.format(key,key2))(value, value2)
                     # check that the suggested value is allowed. 
                     # can happen that it is not if some program are not installed
                     if rules[key2] is not None and not self.check_value(key2, rules[key2]):
@@ -2850,7 +2845,7 @@ class ControlSwitch(SmartQuestion):
             nstep +=1
             key2, value2 = to_check.pop(0)
             if hasattr(self, 'consistency_%s' % key2):
-                rules = dict([(k, None) for k in self.switch])
+                rules = {k: None for k in self.switch}
                 rules.update(getattr(self, 'consistency_%s' % key2)(value, tmp_switch))
             else:
                 rules = self.check_consistency_with_all(key2, value2)
@@ -2887,8 +2882,8 @@ class ControlSwitch(SmartQuestion):
     def check_consistency_with_all(self, key, value):
         rules = {}
         for key2,value2 in self.switch.items():
-            if hasattr(self, 'consistency_%s_%s' % (key,key2)):
-                rules[key2] = getattr(self, 'consistency_%s_%s' % (key,key2))(value, value2)
+            if hasattr(self, 'consistency_{}_{}'.format(key,key2)):
+                rules[key2] = getattr(self, 'consistency_{}_{}'.format(key,key2))(value, value2)
             else:
                 rules[key2] = None
         return rules
@@ -2903,7 +2898,7 @@ class ControlSwitch(SmartQuestion):
         
         if consistency and key in self.inconsistent_keys:
             return self.color_for_value(key, self.inconsistent_keys[key], consistency=False) +\
-                                u' \u21d0 '+ self.yellow % switch_value
+                                ' \u21d0 '+ self.yellow % switch_value
         
         if self.check_value(key, switch_value):
             if  hasattr(self, 'color_for_%s' % key):
@@ -2957,7 +2952,7 @@ class ControlSwitch(SmartQuestion):
         logger.info("    %s" % '\t'.join([p[4:] for p in dir(self) if p.startswith('ans_')]) )
         logger.info("    type 'help  XXX' for more information")
         if list_command:
-            super(ControlSwitch, self).do_help(line)
+            super().do_help(line)
 
         
     def print_help_for_switch(self, line):
@@ -2991,7 +2986,7 @@ class ControlSwitch(SmartQuestion):
                                   lpotential_switch=0,
                                   lnb_key=0,
                                   key=None):
-        """should return four lines:
+        r"""should return four lines:
         1. The upper band (typically /========\ 
         2. The lower band (typically \========/
         3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
@@ -3056,7 +3051,7 @@ class ControlSwitch(SmartQuestion):
         lower = "\\%s/" % ("=" * (size-2))        
         
         if selected==0:
-            f1= '%(nb){0}d \x1b[1m%(name){1}s\x1b[0m=%(switch)-{2}s'.format(lnb_key,
+            f1= '%(nb){}d \x1b[1m%(name){}s\x1b[0m=%(switch)-{}s'.format(lnb_key,
                                                                   lname,lswitch)
             f2= f1
         # | 1. KEY = VALUE |
@@ -3064,10 +3059,10 @@ class ControlSwitch(SmartQuestion):
             upper = "/%s\\" % ("=" * (nb_col-2))
             lower = "\\%s/" % ("=" * (nb_col-2))
             to_add = nb_col -size
-            f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
+            f1 = '| %(nb){}d. \x1b[1m%(name){}s\x1b[0m = %(switch)-{}s |'.format(lnb_key,
                                                                   lname,lswitch+9+to_add)
             
-            f = u'| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
+            f = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
             f2 =f.format(lnb_key, lname, len_cswitch+9, lswitch-len_cswitch+len_switch+to_add-1)
         #1. DESCRIP KEY = VALUE
         elif selected == 2:
@@ -3080,14 +3075,14 @@ class ControlSwitch(SmartQuestion):
             f1 = f.format(lnb_key, ldescription,lname,max(lpotential_switch, lswitch))
             l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
             if l_conflict_line <= nb_col:
-                f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
             elif l_conflict_line -4 <= nb_col:
-                f = u'%(nb){0}d.%(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f = '%(nb){0}d.%(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
             else:
                 ldescription -= (l_conflict_line - nb_col)
-                f = u'%(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
+                f = '%(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
         #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
         elif selected == 4:
@@ -3098,48 +3093,48 @@ class ControlSwitch(SmartQuestion):
             f1 = f.format(lnb_key,ldescription,lname,max(lpotential_switch, lswitch)+9+to_add)
             l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
             if l_conflict_line <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+                f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
             elif l_conflict_line -1 <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
             elif l_conflict_line -3 <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
                         
             else:
                 ldescription -= (l_conflict_line - nb_col)
-                f=u'| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f='| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
                 
         # 1. DESCRIP KEY = VALUE_MAXSIZE
         elif selected == 5:
             f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch))
-            f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+            f = '%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, max(2*lpotential_switch+3, lswitch)-lpotential_switch+len_switch)
         #| 1. DESCRIP KEY = VALUE_MAXSIZE |
         elif selected == 6: 
             f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9)
-            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+            f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch)
         #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
-            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4,
+            upper = "/{{0:=^{}}}|{{1:=^{}}}|{{2:=^{}}}\\".format(lnb_key+ldescription+4,
                                                     lname+max(2*lpotential_switch+3, lswitch)+5,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-4)
-            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
+            f= '| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
-            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4+5,
+            upper = "/{{0:=^{}}}|{{1:=^{}}}|{{2:=^{}}}\\".format(lnb_key+ldescription+4+5,
                                                     lname+max(3+2*lpotential_switch,lswitch)+10,
                                                     ladd_info)
             upper = upper.format(' Description ', ' values ', ' other options ') 
@@ -3147,7 +3142,7 @@ class ControlSwitch(SmartQuestion):
             
             f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
             f1 = f.format(lnb_key,ldescription+5,5+lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-5)
-            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
+            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
             f2 = f.format(lnb_key,ldescription+5,5+lname,
                           lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
@@ -3181,7 +3176,7 @@ class ControlSwitch(SmartQuestion):
             if len(descrip) > max_len_description: max_len_description = len(descrip)
             if len(key) >  max_len_name: max_len_name = len(key)
             if key in self.inconsistent_keys:
-                to_display = '%s < %s' % (self.switch[key], self.inconsistent_keys[key])
+                to_display = '{} < {}'.format(self.switch[key], self.inconsistent_keys[key])
             else:
                 to_display = self.switch[key]
             if len(to_display) > max_len_switch: max_len_switch=len(to_display)
@@ -3218,7 +3213,7 @@ class ControlSwitch(SmartQuestion):
                            'switch': self.color_for_value(key,self.switch[key]),
                            'add_info': self.print_options(key),
                            'switch_nc': self.switch[key],
-                           'strike_switch': u'\u0336'.join(' %s ' %self.switch[key].upper()) + u'\u0336',
+                           'strike_switch': '\u0336'.join(' %s ' %self.switch[key].upper()) + '\u0336',
                            }
             
             hidden_line = False
@@ -3239,13 +3234,13 @@ class ControlSwitch(SmartQuestion):
                 data_to_format['conflict_switch'] = self.color_for_value(key,self.inconsistent_keys[key], consistency=False)
                 
                 if hidden_line: 
-                    f2 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f2 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f2)
                 text.append(f2 % data_to_format)
             elif hidden_line:
                 if not f3:
-                    f3 = re.sub('%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
+                    f3 = re.sub(r'%(\((?:name|descrip|add_info)\)-?)(\d+)s', 
                                 lambda x: '%%%s%ds' % (x.group(1),int(x.group(2))+9),
                                  f1)
                 text.append(f3 % data_to_format)

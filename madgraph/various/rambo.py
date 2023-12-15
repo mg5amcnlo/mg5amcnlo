@@ -1,8 +1,5 @@
-from __future__ import division
-from __future__ import absolute_import
 import math
 import random
-from six.moves import range
 
 class FortranList(list):
     
@@ -17,7 +14,7 @@ class FortranList(list):
 
         
     def __getitem__(self, index):
-        assert self.min <= index < self.max, 'outside range %s <= %s < %s' % (self.min, index, self.max)
+        assert self.min <= index < self.max, 'outside range {} <= {} < {}'.format(self.min, index, self.max)
         return list.__getitem__(self, index - self.min)
     
     def __setitem__(self, index, value):

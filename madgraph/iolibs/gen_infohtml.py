@@ -14,14 +14,12 @@
 #
 ################################################################################
 
-from __future__ import absolute_import
 import string
 import os
 import re
 import sys
 
 import madgraph.various.misc as misc
-from six.moves import range
 
 template_text= string.Template("""
 <HTML> 
@@ -216,7 +214,7 @@ class make_info_html:
                     
                     line_dict = {'processdir': proc,
                                  'class': 'first'}
-                    line_dict['first']= '<TD class=$class rowspan=%s> %s </TD>' % (len(idnames), proc)
+                    line_dict['first']= '<TD class=$class rowspan={}> {} </TD>'.format(len(idnames), proc)
                 else:
                     line_dict = {'processdir': proc,
                                  'class': 'second'}
@@ -369,7 +367,7 @@ class make_info_html_nlo(make_info_html):
                         if type == 'born':
                             line_dict = {'processdir': proc,
                                          'class': 'first'}
-                            line_dict['first']= '<TD class=$class rowspan=%s> %s </TD>' % (len(idnames), proc)
+                            line_dict['first']= '<TD class=$class rowspan={}> {} </TD>'.format(len(idnames), proc)
                         else:
                             line_dict = {'processdir': 'proc',
                                          'class': 'second'}

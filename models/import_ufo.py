@@ -14,7 +14,6 @@
 ################################################################################
 """ How to import a UFO model to the MG5 format """
 
-from __future__ import absolute_import
 import collections
 import fractions
 import logging
@@ -43,8 +42,6 @@ import aloha.aloha_fct as aloha_fct
 import models as ufomodels
 import models.model_reader as model_reader
 import six
-from six.moves import range
-from six.moves import zip
 logger = logging.getLogger('madgraph.model')
 logger_mod = logging.getLogger('madgraph.model')
 
@@ -187,7 +184,7 @@ def import_model_from_db(model_name, local_dir=False):
         except:
             proc = misc.call('tar -xpvf tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
     # .zip
-    if link.endswith(('.zip')):
+    if link.endswith('.zip'):
         try:
             proc = misc.call('unzip tmp.tgz', shell=True, cwd=target)#, stdout=devnull, stderr=devnull)
             if proc: raise Exception
@@ -261,10 +258,10 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
     #restrict it if needed       
     if restrict_file:
         try:
-            logger.info('Restrict model %s with file %s .' % (model_name, os.path.relpath(restrict_file)))
+            logger.info('Restrict model {} with file {} .'.format(model_name, os.path.relpath(restrict_file)))
         except OSError:
             # sometimes has trouble with relative path
-            logger.info('Restrict model %s with file %s .' % (model_name, restrict_file))
+            logger.info('Restrict model {} with file {} .'.format(model_name, restrict_file))
             
         if logger_mod.getEffectiveLevel() > 10:
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
@@ -356,7 +353,6 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'model_Feynman.pkl'
     if decay:
         pickle_name = 'dec_%s' % pickle_name
-    if six.PY3:
         pickle_name = 'py3_%s' % pickle_name
     
     allow_reload = False
@@ -455,7 +451,7 @@ def import_full_model(model_path, decay=False, prefix=''):
 
     return model
 
-class UFOMG5Converter(object):
+class UFOMG5Converter:
     """Convert a UFO model to the MG5 format"""
 
     def __init__(self, model, auto=False):
@@ -507,7 +503,7 @@ class UFOMG5Converter(object):
             self.model = base_objects.Model()                        
         self.model.set('particles', self.particles)
         self.model.set('interactions', self.interactions)
-        self.conservecharge = set(['charge'])
+        self.conservecharge = {'charge'}
         
         self.ufomodel = model
         self.checked_lor = set()
@@ -528,7 +524,7 @@ class UFOMG5Converter(object):
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
                     raise InvalidModel('''LHABlock should be single word which is not the case for
-    \'%s\' parameter with lhablock \'%s\' ''' % (param.name, param.lhablock))
+    \'{}\' parameter with lhablock \'{}\' '''.format(param.name, param.lhablock))
             if param.name in def_name:
                 raise InvalidModel("name %s define multiple time. Please correct the UFO model!" \
                                                                   % (param.name))
@@ -936,8 +932,8 @@ class UFOMG5Converter(object):
                         newParticleCountertermKey[0]=order.name
                 newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
-                  dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
-                        for key in counterterm])
+                  {key:newCouplingName+('' if key==0 else '_'+str(-key)+'eps')\
+                        for key in counterterm}
                 # We want to create the new coupling for this wavefunction
                 # renormalization.
                 self.ufomodel.object_library.Coupling(\
@@ -986,8 +982,8 @@ class UFOMG5Converter(object):
                                                            for pole in range(3)]
             CTparameter_patterns[CTparam.name] = (pattern_finder,sub_functions)
         
-        times_zero = re.compile('\*\s*-?ZERO')
-        zero_times = re.compile('ZERO\s*(\*|\/)')
+        times_zero = re.compile(r'\*\s*-?ZERO')
+        zero_times = re.compile(r'ZERO\s*(\*|\/)')
         def is_expr_zero(expresson):
             """ Checks whether a single term (involving only the operations
             * or / is zero. """
@@ -1362,7 +1358,7 @@ class UFOMG5Converter(object):
                 [aloha_fct.check_flow_validity(helas.structure, nb_fermion) \
                                           for helas in interaction_info.lorentz
                                           if helas.name not in self.checked_lor]
-                self.checked_lor.update(set([helas.name for helas in interaction_info.lorentz]))
+                self.checked_lor.update({helas.name for helas in interaction_info.lorentz})
             elif nb_fermion:
                 if any(p.selfconjugate for p in interaction_info.particles if p.spin % 2 == 0):
                     text = "Majorana can not be dealt in 4/6/... fermion interactions"
@@ -1551,11 +1547,11 @@ class UFOMG5Converter(object):
                 
                 
                 if particle.color == 6:
-                    output.append(self._pat_id.sub('color.T6(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<first>,\g<second>)', term))
                 elif particle.color == -6 :
-                    output.append(self._pat_id.sub('color.T6(\g<second>,\g<first>)', term))
+                    output.append(self._pat_id.sub(r'color.T6(\g<second>,\g<first>)', term))
                 elif particle.color == 8:
-                    output.append(self._pat_id.sub('color.Tr(\g<first>,\g<second>)', term))
+                    output.append(self._pat_id.sub(r'color.Tr(\g<first>,\g<second>)', term))
                     factor *= 2
                 elif particle.color in [-3,3]:
                     if particle.pdg_code not in color_info:
@@ -1578,9 +1574,9 @@ class UFOMG5Converter(object):
                             logger.debug('succeed')
                 
                     if color_info[particle.pdg_code] == 3 :
-                        output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<second>,\g<first>)', term))
                     elif color_info[particle.pdg_code] == -3:
-                        output.append(self._pat_id.sub('color.T(\g<first>,\g<second>)', term))
+                        output.append(self._pat_id.sub(r'color.T(\g<first>,\g<second>)', term))
                 else:
                     raise MadGraph5Error("Unknown use of Identity for particle with color %d" \
                           % particle.color)
@@ -1590,13 +1586,13 @@ class UFOMG5Converter(object):
 
         # Change convention for summed indices
         p = re.compile(r'\'\w(?P<number>\d+)\'')
-        data_string = p.sub('-\g<number>', data_string)
+        data_string = p.sub(r'-\g<number>', data_string)
          
         # Shift indices by -1
         new_indices = {}
-        new_indices = dict([(j,i) for (i,j) in \
+        new_indices = {j:i for (i,j) in \
                            enumerate(range(1,
-                                    len(interaction_info.particles)+1))])
+                                    len(interaction_info.particles)+1))}
 
                         
         output = data_string.split('*')
@@ -1715,11 +1711,11 @@ class OrganizeModelExpression:
             self.track_dependant = list(set(self.track_dependant))
         p = self.model.all_parameters[0]
 
-        mu_eff = list(set([param.name for param in self.model.all_parameters 
+        mu_eff = list({param.name for param in self.model.all_parameters 
                     if (param.nature == 'external' and
                         param.lhablock.lower() == 'loop' and
                         param.name != 'MU_R'
-                        )]))
+                        )})
         self.track_dependant += mu_eff
 
 
@@ -1864,7 +1860,7 @@ class OrganizeModelExpression:
             self.add_parameter(new_param)
             return 'complexi'
         else:
-            return 'complex(%s, %s)' % (matchobj.group('real'), matchobj.group('imag'))
+            return 'complex({}, {})'.format(matchobj.group('real'), matchobj.group('imag'))
         
         
     def shorten_expo(self, matchobj):
@@ -1873,8 +1869,8 @@ class OrganizeModelExpression:
         expr = matchobj.group('expr')
         exponent = matchobj.group('expo')
         new_exponent = exponent.replace('.','_').replace('+','').replace('-','_m_')
-        output = '%s__exp__%s' % (expr, new_exponent)
-        old_expr = '%s**%s' % (expr,exponent)
+        output = '{}__exp__{}'.format(expr, new_exponent)
+        old_expr = '{}**{}'.format(expr,exponent)
 
         if expr.startswith('cmath'):
             return old_expr
@@ -1894,7 +1890,7 @@ class OrganizeModelExpression:
         
         expr = matchobj.group('expr')
         operation = matchobj.group('operation')
-        output = '%s__%s' % (operation, expr)
+        output = '{}__{}'.format(operation, expr)
         old_expr = ' cmath.%s(%s) ' %  (operation, expr)
         if expr.isdigit():
             new_param = base_objects.ModelVariable(output, old_expr , 'real')
@@ -1944,7 +1940,7 @@ class RestrictModel(model_reader.ModelReader):
     def default_setup(self):
         """define default value"""
         self.del_coup = []
-        super(RestrictModel, self).default_setup()
+        super().default_setup()
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
         self.coupling_order_dict ={}
@@ -2199,7 +2195,7 @@ class RestrictModel(model_reader.ModelReader):
                 for block in running_param:
                     block = ['mdl_%s' % c for c in block]
                     if p in block:
-                        if any((p2 not in tocheck for p2 in block)):
+                        if any(p2 not in tocheck for p2 in block):
                             not_restricted = [p2 for p2 in block if p2 not in tocheck]
                             raise Exception("Model restriction not compatible with the running of some parameters. \n %s is restricted to zero/one but mix with %s which is/are not."
                                             %(p, not_restricted))
@@ -2282,7 +2278,7 @@ class RestrictModel(model_reader.ModelReader):
         
         # define usefull variable to detect identical input
         block_value_to_var={} #(lhablok, value): list_of_var
-        mult_param = set([])  # key of the previous dict with more than one
+        mult_param = set()  # key of the previous dict with more than one
                               #parameter.
                               
         #detect identical parameter and remove the duplicate parameter
@@ -2386,7 +2382,7 @@ class RestrictModel(model_reader.ModelReader):
     def get_param_block(self):
         """return the list of block defined in the param_card"""
         
-        blocks = set([p.lhablock for p in self['parameters'][('external',)]])
+        blocks = {p.lhablock for p in self['parameters'][('external',)]}
         return blocks
          
     def merge_iden_parameters(self, parameters, keep_external=False):
@@ -2394,7 +2390,7 @@ class RestrictModel(model_reader.ModelReader):
         keep external force to keep the param_card untouched (up to comment)"""
             
         logger_mod.log(self.log_level, 'Parameters set to identical values: %s '% \
-                 ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
+                 ', '.join(['{}*{}'.format(f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
 
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
@@ -2486,7 +2482,7 @@ class RestrictModel(model_reader.ModelReader):
         # print useful log and clean the empty interaction
         for vertex in mod_vertex:
             part_name = [part['name'] for part in vertex['particles']]
-            orders = ['%s=%s' % (order,value) for order,value in vertex['orders'].items()]
+            orders = ['{}={}'.format(order,value) for order,value in vertex['orders'].items()]
                                         
             if not vertex['couplings']:
                 logger_mod.log(self.log_level, 'remove interactions: %s at order: %s' % \
@@ -2587,7 +2583,7 @@ class RestrictModel(model_reader.ModelReader):
                             for use in  re_pat.findall(ff.value):
                                 used.add(use)
         else:
-            used = set([i for i in special_parameters if i])
+            used = {i for i in special_parameters if i}
         
         # simplify the regular expression
         re_str = '|'.join([param for param in special_parameters if param not in used])

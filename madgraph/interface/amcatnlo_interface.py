@@ -16,7 +16,6 @@
    Uses the cmd package for command interpretation and tab completion.
 """
 
-from __future__ import absolute_import
 import os
 import logging
 import pydoc
@@ -56,7 +55,6 @@ import madgraph.core.helas_objects as helas_objects
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
-from six.moves import range
 
 #usefull shortcut
 pjoin = os.path.join
@@ -96,10 +94,7 @@ def generate_directories_fks_async(i):
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
-    if six.PY2:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes, max_n_matched_jets, splitting_types, splitorders]
-    else:
-        return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, None,max_n_matched_jets, splitting_types, splitorders]
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -120,7 +115,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
 
     def check_add(self, args):
         
-        super(CheckFKS, self).check_add(args)        
+        super().check_add(args)        
         if '$' in args:
             raise self.InvalidCmd('$ syntax not valid for aMC@NLO. $$ syntax is on the other hand a valid syntax.')
 
@@ -542,7 +537,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 # warn the user of what happened
                 logger.info(('Setting the born squared orders automatically in the process definition to %s.\n' + \
                                 'If this is not what you need, please regenerate with the correct orders.'), 
-                                ' '.join(['%s^2<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['squared_orders'].items()]), 
+                                ' '.join(['%s^2<=%s' %(k,v) if v else '{}={}'.format(k,v) for k,v in myprocdef['squared_orders'].items()]), 
                                 '$MG:BOLD')
             else:
                 orders = {'QED': qed, 'QCD': qcd}
@@ -558,7 +553,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 # warn the user of what happened
                 logger.info(('Setting the born orders automatically in the process definition to %s.\n' + \
                                 'If this is not what you need, please regenerate with the correct orders.'), 
-                                ' '.join(['%s<=%s' %(k,v) if v else '%s=%s' % (k,v) for k,v in myprocdef['orders'].items()]), 
+                                ' '.join(['%s<=%s' %(k,v) if v else '{}={}'.format(k,v) for k,v in myprocdef['orders'].items()]), 
                                 '$MG:BOLD')                
 
         # now check that all couplings that are there in orders also appear
@@ -799,20 +794,20 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                             uid += 1 # update the identification number
                             me.get('processes')[0].set('uid', uid)
                             try:
-                                initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
-                                                                      p in me.born_me.get('processes')))))
+                                initial_states.append(sorted(list({(p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                                      p in me.born_me.get('processes')})))
                             except IndexError:
-                                initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
-                                                                      p in me.born_me.get('processes')))))
+                                initial_states.append(sorted(list({(p.get_initial_pdg(1)) for \
+                                                                      p in me.born_me.get('processes')})))
                         
                             for fksreal in me.real_processes:
                             # Pick out all initial state particles for the two beams
                                 try:
-                                    initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
-                                                                 p in fksreal.matrix_element.get('processes')))))
+                                    initial_states.append(sorted(list({(p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                                 p in fksreal.matrix_element.get('processes')})))
                                 except IndexError:
-                                    initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
-                                                                 p in fksreal.matrix_element.get('processes')))))
+                                    initial_states.append(sorted(list({(p.get_initial_pdg(1)) for \
+                                                                 p in fksreal.matrix_element.get('processes')})))
                                     
                             
                         # remove doubles from the list
@@ -882,10 +877,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             if self.options['low_mem_multicore_nlo_generation']:
                 # start the pool instance with a signal instance to catch ctr+c
                 logger.info('Writing directories...')
-                if six.PY3:
-                    ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
-                else:
-                    ctx = multiprocessing
+                ctx = multiprocessing.get_context('fork') # spawn is default for 3.8 and does not work
                 original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
                 if self.ncores_for_proc_gen < 0: # use all cores
                     pool = ctx.Pool(maxtasksperchild=1)
@@ -914,13 +906,13 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
                 
                 proc_charac['nexternal'] = max([diroutput[4] for diroutput in diroutputmap])
-                ninitial_set = set([diroutput[3] for diroutput in diroutputmap])
+                ninitial_set = {diroutput[3] for diroutput in diroutputmap}
                 if len(ninitial_set) != 1:
                     raise MadGraph5Error("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
                 
                 #  max_n_matched_jets
-                njet_set = set([int(diroutput[6]) for diroutput in diroutputmap])
+                njet_set = {int(diroutput[6]) for diroutput in diroutputmap}
                 proc_charac['max_n_matched_jets'] = max(njet_set)
 
                 self.born_processes = []

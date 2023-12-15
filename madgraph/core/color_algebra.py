@@ -16,15 +16,11 @@
 """Classes and methods required for all calculations related to SU(N) color 
 algebra."""
 
-from __future__ import absolute_import
 import array
 import copy
 import fractions
 import itertools
 import madgraph.various.misc as misc
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 
 import madgraph
 if madgraph.ordering:
@@ -40,10 +36,10 @@ class ColorObject(array.array):
     def __new__(cls, *args):
         """Create a new ColorObject, assuming an integer array"""
         try:
-            return super(ColorObject, cls).__new__(cls, 'i', args)
+            return super().__new__(cls, 'i', args)
         except TypeError:
             assert args[0] == 'i' #happens when unpacking pickle with py3
-            return super(ColorObject, cls).__new__(cls, 'i', args[1])
+            return super().__new__(cls, 'i', args[1])
     def __reduce__(self):
         """Special method needed to pickle color objects correctly"""
         return (self.__class__, tuple([i for i in self]))
@@ -51,7 +47,7 @@ class ColorObject(array.array):
     def __str__(self):
         """Returns a standard string representation."""
 
-        return '%s(%s)' % (self.__class__.__name__,
+        return '{}({})'.format(self.__class__.__name__,
                            ','.join([str(i) for i in self]))
 
     __repr__ = __str__
@@ -187,11 +183,11 @@ class ColorOne(ColorObject):
         
         if len(args) ==2 and args[0] == 'i' and not args[1]:
             # py3 pickle wierd output some time...
-            return super(ColorOne, self).__init__()
+            return super().__init__()
             
         assert len(args) == 0 , "ColorOne objects must have no index!"
         
-        super(ColorOne, self).__init__()
+        super().__init__()
 
     def simplify(self):
         """"""
@@ -221,7 +217,7 @@ class T(ColorObject):
         
         assert len(args) > 1 , "T objects must have at least two indices!"
         
-        super(T, self).__init__()
+        super().__init__()
         
     def simplify(self):
         """Implement T(a,b,c,...,i,i) = Tr(a,b,c,...) and
@@ -316,7 +312,7 @@ class f(ColorObject):
             args = args[1]
         assert len(args) == 3, "f and d objects must have three indices!"
         
-        super(f, self).__init__()
+        super().__init__()
                 
 
     def simplify(self):
@@ -366,12 +362,12 @@ class Epsilon(ColorObject):
     def __init__(self, *args):
         """Ensure e_ijk objects have strictly 3 indices"""
 
-        super(Epsilon, self).__init__()
+        super().__init__()
         assert len(args) == 3, "Epsilon objects must have three indices!"
 
     @staticmethod
     def perm_parity(lst, order=None):
-        '''\                                                                                                                                                                                                 
+        r'''\                                                                                                                                                                                                 
         Given a permutation of the digits 0..N in order as a list,                                                                                                                                           
         returns its parity (or sign): +1 for even parity; -1 for odd.                                                                                                                                        
         '''
@@ -453,7 +449,7 @@ class EpsilonBar(ColorObject):
     def __init__(self, *args):
         """Ensure e_ijk objects have strictly 3 indices"""
 
-        super(EpsilonBar, self).__init__()
+        super().__init__()
         assert len(args) == 3, "EpsilonBar objects must have three indices!"
 
     def pair_simplify(self, col_obj):
@@ -500,7 +496,7 @@ class K6(ColorObject):
     def __init__(self, *args):
         """Ensure sextet color objects have strictly 3 indices"""
 
-        super(K6, self).__init__()
+        super().__init__()
         assert len(args) == 3, "sextet color objects must have three indices!"
 
     def pair_simplify(self, col_obj):
@@ -564,7 +560,7 @@ class K6Bar(ColorObject):
     def __init__(self, *args):
         """Ensure sextet color objects have strictly 3 indices"""
 
-        super(K6Bar, self).__init__()
+        super().__init__()
         assert len(args) == 3, "sextet color objects must have three indices!"
 
     def pair_simplify(self, col_obj):
@@ -595,7 +591,7 @@ class T6(ColorObject):
     def __init__(self, *args):
         """Check for exactly three indices"""
 
-        super(T6, self).__init__()
+        super().__init__()
         assert len(args) >= 2 and len(args) <= 3, \
                "T6 objects must have two or three indices!"
 
@@ -703,7 +699,7 @@ class ColorString(list):
             coeff_str += ' Nc^%i' % self.Nc_power
         elif self.Nc_power < 0:
             coeff_str += ' 1/Nc^%i' % abs(self.Nc_power)
-        return '%s %s' % (coeff_str,
+        return '{} {}'.format(coeff_str,
                          ' '.join([str(col_obj) for col_obj in self]))
 
     __repr__ = __str__

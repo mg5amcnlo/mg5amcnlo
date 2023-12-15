@@ -14,7 +14,6 @@
 ################################################################################
 """All models for MG5, in particular UFO models (by FeynRules)"""
 
-from __future__ import absolute_import
 import os
 import sys
 import madgraph.various.misc as misc

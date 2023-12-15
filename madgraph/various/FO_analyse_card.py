@@ -14,7 +14,6 @@
 ################################################################################
 """A File for splitting"""
 
-from __future__ import absolute_import
 import sys
 import re
 import os
@@ -70,7 +69,7 @@ class FOAnalyseCard(dict):
                 else:
                     self[key] = value
             else:
-                raise FOAnalyseCardError('Unknown entry: %s = %s' % (key, value))
+                raise FOAnalyseCardError('Unknown entry: {} = {}'.format(key, value))
             self.keylist.append(key)
 
 
@@ -108,15 +107,15 @@ class FOAnalyseCard(dict):
             if key in self.string_vars:
                 if key == 'fo_extrapaths':
                     # add the -L flag
-                    line = '%s=%s' % (key.upper(), 
+                    line = '{}={}'.format(key.upper(), 
                             ' '.join(['-Wl,-rpath,' + path for path in value.split()])+' '+' '.join(['-L' + path for path in value.split()]))
                 elif key == 'fo_includepaths':
                     # add the -I flag
-                    line = '%s=%s' % (key.upper(), 
+                    line = '{}={}'.format(key.upper(), 
                             ' '.join(['-I' + path for path in value.split()]))
                 elif key == 'fo_extralibs':
                     # add the -l flag
-                    line = '%s=%s' % (key.upper(), 
+                    line = '{}={}'.format(key.upper(), 
                             ' '.join(['-l' + lib for lib in value.split()]))
                 elif key == 'fo_analyse':
                     line = '%s=%s '% (key.upper(), value)
@@ -125,12 +124,12 @@ class FOAnalyseCard(dict):
                     line = ''
                 lines.append(line)
             else:
-                raise FOAnalyseCardError('Unknown key: %s = %s' % (key, value))
+                raise FOAnalyseCardError('Unknown key: {} = {}'.format(key, value))
 
         if self.testing:
             return ('\n'.join(lines) + '\n')
         else:
-            open(card_path, 'w').write(('\n'.join(lines) + '\n'))
+            open(card_path, 'w').write('\n'.join(lines) + '\n')
 
 
 

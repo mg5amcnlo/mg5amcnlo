@@ -1,10 +1,6 @@
-from __future__ import absolute_import
 import array
 import copy
 import math
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 import madgraph.various.misc as misc
@@ -17,7 +13,7 @@ def get_number_of_coefs_for_rank(r):
     import madgraph.various.misc as misc 
     return sum([((3+ri)*(2+ri)*(1+ri))//6 for ri in range(0,r+1)])
 
-class Polynomial(object):
+class Polynomial:
     """ A class to represent a polynomial in the loop momentum (4-vector) q 
     and how the symmetrized coefficients are ordered. The ordering rule 
     correspond to what is presented in Eq. C.15 of arxiv:hep-ph/1405.0301"""
@@ -70,7 +66,7 @@ class Polynomial(object):
         vector """
         return list(self.coef_list[pos])
 
-class Polynomial_naive_ordering(object):
+class Polynomial_naive_ordering:
     """ A class to represent a polynomial in the loop momentum (4-vector) q"""
     
     def __init__(self, rank):
@@ -122,7 +118,7 @@ class Polynomial_naive_ordering(object):
         vector """
         return list(self.coef_list[pos])
 
-class PolynomialRoutines(object):
+class PolynomialRoutines:
     """ The mother class to output the polynomial subroutines """
     
     def __init__(self, max_rank, updater_max_rank=None, 
@@ -809,7 +805,7 @@ class FromGolem95FortranCodeGenerator():
 
     @classmethod
     def generate_mapping(cls, R, k):
-        """
+        r"""
             Generates a mapping from tensor components \hat{C}(a_1, ..., a_k)
             into a one dimensional array.
     

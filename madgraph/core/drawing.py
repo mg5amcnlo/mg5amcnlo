@@ -40,21 +40,18 @@ This file contains 4 class:
         S-channel is going from level to the next, then this S-channel should be
         horizontal."""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import math
 
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
 import madgraph.various.misc as misc
 import six
-from six.moves import range
 
 #===============================================================================
 # FeynmanLine
 #===============================================================================
-class FeynmanLine(object):
+class FeynmanLine:
     """All the information about a line in a Feynman diagram
     i.e. begin-end/type/tag."""
 
@@ -74,7 +71,7 @@ class FeynmanLine(object):
         self.end = 0
 
     def __str__(self):
-        return 'FeynmanLine((%s,%s), (%s,%s), id=%s, number=%s)' % (self.begin.pos_x, self.begin.pos_y, self.end.pos_x, self.end.pos_y, self.id, self.number)
+        return 'FeynmanLine(({},{}), ({},{}), id={}, number={})'.format(self.begin.pos_x, self.begin.pos_y, self.end.pos_x, self.end.pos_y, self.id, self.number)
 
 #    def is_valid_prop(self, name):
 #        """Check if a given property name is valid."""
@@ -360,7 +357,7 @@ class FeynmanLine(object):
         At current status this is use for test/debugging only."""
 
         assert isinstance(line, FeynmanLine), ' domain intersection are between ' + \
-                'Feynman_line object only and not {0} object'.format(type(line))
+                f'Feynman_line object only and not {type(line)} object'
 
         # Check consistency
         self.check_position_exist()
@@ -453,7 +450,7 @@ class FeynmanLine(object):
                 raise self.FeynmanLineError('Vertical line: no unique solution')
             if(not(min <= x <= max)):
                 raise self.FeynmanLineError('point outside interval invalid ' + \
-                    'invalid order {0:3}<={1:3}<={2:3}'.format(min, x, max))
+                    f'invalid order {min:3}<={x:3}<={max:3}')
 
         return self._has_ordinate(x)
 
@@ -480,7 +477,7 @@ class FeynmanLine(object):
 #===============================================================================
 # VertexPoint
 #===============================================================================
-class VertexPoint(object):
+class VertexPoint:
     """Extension of the class Vertex in order to store the information 
     linked to the display of a FeynmanDiagram, as position
     """
@@ -510,7 +507,7 @@ class VertexPoint(object):
 
         # Coordinate should b
         assert  0 <= x <= 1 and 0 <= y <= 1 ,  'vertex coordinate should be' + \
-                    ' in  0,1 interval introduce value ({0},{1})'.format(x, y)
+                    f' in  0,1 interval introduce value ({x},{y})'
 
         self.pos_x = x
         self.pos_y = y
@@ -642,7 +639,7 @@ class VertexPoint(object):
 #===============================================================================
 # FeynmanDiagram
 #===============================================================================
-class FeynmanDiagram(object):
+class FeynmanDiagram:
     """Object to compute the position of the different Vertex and Line associate
     to a diagram object.
     
@@ -1371,8 +1368,8 @@ class FeynmanDiagram(object):
                 external = line.is_external()
             except Exception:
                 external = '?'
-            text += 'pos, %s ,id: %s, number: %s, external: %s, S-channel: %s, loop : %s \
-                    begin at %s, end at %s \n' % (i, line.id, \
+            text += 'pos, {} ,id: {}, number: {}, external: {}, S-channel: {}, loop : {} \
+                    begin at {}, end at {} \n'.format(i, line.id, \
                     line.number, external, line.state, line.loop_line, begin, end)
         text += 'vertex content : \n'
         for i in range(0, len(self.vertexList)):
@@ -1436,9 +1433,9 @@ class FeynmanDiagram(object):
                 elif line.has_intersection(line2):
                     import logging
                     logger = logging.getLogger('test')
-                    logger.info('intersection for %s %s' % (i, j))
-                    logger.info('line %s (%s,%s),(%s,%s)' % (i, line.begin.pos_x, line.begin.pos_y,line.end.pos_x, line.end.pos_y))
-                    logger.info('line %s (%s,%s),(%s,%s)' % (j, line2.begin.pos_x, line2.begin.pos_y,line2.end.pos_x, line2.end.pos_y))
+                    logger.info('intersection for {} {}'.format(i, j))
+                    logger.info('line {} ({},{}),({},{})'.format(i, line.begin.pos_x, line.begin.pos_y,line.end.pos_x, line.end.pos_y))
+                    logger.info('line {} ({},{}),({},{})'.format(j, line2.begin.pos_x, line2.begin.pos_y,line2.end.pos_x, line2.end.pos_y))
                     
                     return True
         return False
@@ -1606,7 +1603,7 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
 #===============================================================================
 # DiagramDrawer
 #===============================================================================
-class DiagramDrawer(object):
+class DiagramDrawer:
     """In principle ALL routines representing diagram in ANY format SHOULD 
     derive from this class.
      
@@ -1660,7 +1657,7 @@ class DiagramDrawer(object):
         #No need to test Diagram class, it will be tested before using it anyway
         try:
             assert(not model or isinstance(model, base_objects.Model))
-            assert(not filename or isinstance(filename, six.string_types))
+            assert(not filename or isinstance(filename, str))
         except AssertionError:
             raise self.DrawDiagramError('No valid model provide to convert ' + \
                                         'diagram in appropriate format')
@@ -1972,7 +1969,7 @@ class DiagramDrawer(object):
         associate to the particle. The default routine doesn't do anything"""
         pass
     
-class DrawOption(object):
+class DrawOption:
     """Dealing with the different option of the drawing method.
      This is the list of recognize attributes:
            horizontal [False]: force S-channel to be horizontal
@@ -2016,8 +2013,8 @@ class DrawOption(object):
             try:
                 value = self.pass_to_number(value)
             except Exception:
-                raise self.DrawingOptionError('%s is not a numerical when %s \
-                                requires one' % (value, key))
+                raise self.DrawingOptionError('{} is not a numerical when {} \
+                                requires one'.format(value, key))
             setattr(self, key, value)
                 
         else:
@@ -2089,7 +2086,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         """
         
         # call the mother initialization
-        super(LoopFeynmanDiagram, self).__init__(diagram, model, opt)
+        super().__init__(diagram, model, opt)
         self.fdstructures = fdstructures
 
 
@@ -2105,9 +2102,9 @@ class LoopFeynmanDiagram(FeynmanDiagram):
                 for structure_id in list_struct_id:
                     for vertex in self.fdstructures[structure_id]['vertices']:
                         self.load_vertex(vertex)                        
-            super(LoopFeynmanDiagram, self).load_diagram(contract)
+            super().load_diagram(contract)
         else:
-            super(LoopFeynmanDiagram, self).load_diagram(contract)
+            super().load_diagram(contract)
         
         # select the lines present in the loop
         loop_line = [line for line in self.lineList if line.loop_line]
@@ -2174,7 +2171,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         if level == 2:
             self.find_vertex_position_at_level(vertexlist, 0, -1)
         
-        super(LoopFeynmanDiagram, self).find_vertex_position_at_level( \
+        super().find_vertex_position_at_level( \
                                                    vertexlist, level, direction)
  
     def find_all_loop_vertex(self, init_loop):
@@ -2227,7 +2224,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         #add special attribute
         self.start_level_loop = None
                 
-        super(LoopFeynmanDiagram, self).define_level()
+        super().define_level()
     
     def need_to_flip(self):
         """check if the T-channel of a loop diagram need to be flipped.

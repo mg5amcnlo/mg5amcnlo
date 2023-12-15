@@ -15,7 +15,6 @@
 
 """Methods and classes to export matrix elements to Python format."""
 
-from __future__ import absolute_import
 import fractions
 import glob
 import itertools
@@ -49,7 +48,7 @@ logger = logging.getLogger('madgraph.export_python')
 #===============================================================================
 # ProcessExporterPython
 #===============================================================================
-class ProcessExporterPython(object):
+class ProcessExporterPython:
     """Class to take care of exporting a set of matrix elements to
     Python format."""
 

@@ -16,9 +16,7 @@
 """Module for calculation of symmetries between diagrams, by
 evaluating amp2 values for permutations of momenta."""
 
-from __future__ import division
 
-from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -57,8 +55,6 @@ import models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx
-from six.moves import range
-from six.moves import zip
 
 #===============================================================================
 # Logger for process_checks
@@ -465,9 +461,9 @@ def old_find_symmetry_subproc_group(subproc_group):
     all_perms = {}
 
     for me_number in contributing_mes:
-        diagram_config_map = dict([(i,n) for i,n in \
+        diagram_config_map = {i:n for i,n in \
                        enumerate(subproc_group.get('diagram_maps')[me_number]) \
-                                   if n > 0])
+                                   if n > 0}
         symmetry, perms, ident_perms = find_symmetry(matrix_elements[me_number])
 
         # Go through symmetries and remove those for any diagrams
@@ -527,7 +523,7 @@ def find_matrix_elements_for_configs(subproc_group):
     for iconf, diagram_list in \
                            enumerate(subproc_group.get('diagrams_for_configs')):
         # Check if any diagrams contribute to config
-        if set(diagram_list) == set([0]):
+        if set(diagram_list) == {0}:
             continue
         # Add list of MEs with maximum ident factor contributing to this config
         max_ident = max([matrix_elements[i].get('identical_particle_factor') \

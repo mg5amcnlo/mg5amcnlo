@@ -15,7 +15,6 @@
 
 """Definitions of the objects needed for the implementation of MadFKS"""
 
-from __future__ import absolute_import
 import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
@@ -29,7 +28,6 @@ import logging
 import array
 import madgraph.various.misc as misc
 from madgraph import InvalidCmd
-from six.moves import range
 
 logger = logging.getLogger('madgraph.fks_base')
 
@@ -50,7 +48,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
     def default_setup(self):
         """Default values for all properties"""
-        super(FKSMultiProcess, self).default_setup()
+        super().default_setup()
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
@@ -63,7 +61,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSMultiProcess, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 
                  'has_fsr', 'spltting_types', 'OLP', 'ncores_for_proc_gen', 
                  'loop_filter']
@@ -92,7 +90,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             if not isinstance(value,int):
                 raise self.PhysicsObjectError("%s is not a valid value for ncores_for_proc_gen " % str(value))
                                                      
-        return super(FKSMultiProcess,self).filter(name, value)
+        return super().filter(name, value)
 
 
     def check_ij_confs(self):
@@ -169,7 +167,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         try:
             # Now generating the borns for the first time.
-            super(FKSMultiProcess, self).__init__(procdef, **options)
+            super().__init__(procdef, **options)
 
         except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
@@ -371,7 +369,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 pass
 
 
-class FKSRealProcess(object): 
+class FKSRealProcess: 
     """Contains information about a real process:
     -- fks_infos (list containing the possible fks configs for a given process
     -- amplitude 
@@ -497,7 +495,7 @@ class FKSProcessList(MG.PhysicsObjectList):
         return isinstance(obj, FKSProcess)
 
             
-class FKSProcess(object):
+class FKSProcess:
     """The class for a FKS process. Starts from the born process and finds
     all the possible splittings."""  
 

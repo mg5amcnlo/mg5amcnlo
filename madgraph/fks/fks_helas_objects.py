@@ -17,7 +17,6 @@
 from born"""
 
 
-from __future__ import absolute_import
 import madgraph
 import madgraph.core.base_objects as MG
 import madgraph.core.helas_objects as helas_objects
@@ -37,11 +36,10 @@ import multiprocessing
 import signal
 import tempfile
 import six
-import six.moves.cPickle as cPickle
+import pickle as cPickle
 import itertools
 import os
 import sys
-from six.moves import zip
 from madgraph import MG5DIR
 pjoin = os.path.join
 logger = logging.getLogger('madgraph.fks_helas_objects')
@@ -217,8 +215,8 @@ def async_finalize_matrix_elements(args):
     initial_states=[]
     for fksreal in me.real_processes:
         # Pick out all initial state particles for the two beams
-            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
-                                              p in fksreal.matrix_element.get('processes')))))
+            initial_states.append(sorted(list({(p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                              p in fksreal.matrix_element.get('processes')})))
     
     if me.virt_matrix_element:
         has_virtual = True
@@ -241,7 +239,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
-        keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'],  
                  'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
@@ -317,10 +315,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # start the pool instance with a signal instance to catch ctr+c
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            if six.PY3:
-                ctx = multiprocessing.get_context('fork')
-            else:
-                ctx = multiprocessing
+            ctx = multiprocessing.get_context('fork')
             if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
                 pool = ctx.Pool(maxtasksperchild=1)
             else:
@@ -675,7 +670,7 @@ class FKSHelasProcessList(MG.PhysicsObjectList):
         return isinstance(obj, FKSHelasProcess)
     
     
-class FKSHelasProcess(object):
+class FKSHelasProcess:
     """class to generate the Helas calls for a FKSProcess. Contains:
     -- born ME
     -- list of FKSHelasRealProcesses
@@ -899,7 +894,7 @@ class FKSHelasProcess(object):
 
             
     
-class FKSHelasRealProcess(object): #test written
+class FKSHelasRealProcess: #test written
     """class to generate the Helas calls for a FKSRealProcess
     contains:
     -- colors

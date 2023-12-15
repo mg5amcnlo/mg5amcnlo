@@ -12,11 +12,9 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import models.model_reader as model_reader
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from six.moves import range
 
 class ParamCardWriterError(Exception):
     """ a error class for this file """
@@ -43,7 +41,7 @@ def cmp_to_key(mycmp):
     return K
 
 
-class ParamCardWriter(object):
+class ParamCardWriter:
     """ A class for writting an update param_card for a given model """
 
     header = \
@@ -234,7 +232,7 @@ class ParamCardWriter(object):
          )
         if name!='DECAY':
             if scale:
-                self.fsock.write("""Block %s Q= %s \n""" % (name.lower(), scale))
+                self.fsock.write("""Block {} Q= {} \n""".format(name.lower(), scale))
             else:
                 self.fsock.write("""Block %s \n""" % name.lower())
             
@@ -266,11 +264,11 @@ class ParamCardWriter(object):
     
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, param.value.real, info) 
+            text = """  {} {:e} # {} \n""".format(lhacode, param.value.real, info) 
         elif param.value == 'auto':
-            text = '''DECAY %s auto # %s \n''' % (lhacode, info)
+            text = '''DECAY {} auto # {} \n'''.format(lhacode, info)
         else:
-            text = '''DECAY %s %e # %s \n''' % (lhacode, param.value.real, info)
+            text = '''DECAY {} {:e} # {} \n'''.format(lhacode, param.value.real, info)
         self.fsock.write(text)             
       
         

@@ -122,7 +122,7 @@ class MathsObject:
     def get_deps(line, graph):
         old_args = get_arguments(line)
         old_name = old_args[-1].replace(' ','')
-        matches = graph.old_names() & set([old.replace(' ','') for old in old_args])
+        matches = graph.old_names() & {old.replace(' ','') for old in old_args}
         try:
             matches.remove(old_name)
         except KeyError:
@@ -145,7 +145,7 @@ class MathsObject:
             
         if diag_number and this_comb_good and cls.ext_deps:
 
-            helicity = dict([(a.get_id(), a.hel) for a in cls.ext_deps])
+            helicity = {a.get_id(): a.hel for a in cls.ext_deps}
             this_hel = [helicity[i] for i in range(1, len(helicity)+1)] 
             hel_number = 1 + all_hel.index(tuple(this_hel))
             
@@ -571,7 +571,7 @@ class HelicityRecycler():
                 obj.line = apply_args(line, [obj.args])
         else:
             deps = Amplitude.get_deps(line, self.dag)
-            name2dep = dict([(d.name,d) for d in sum(deps,[])])
+            name2dep = {d.name:d for d in sum(deps,[])}
             
             
         if nature == 'internal':
@@ -640,7 +640,7 @@ class HelicityRecycler():
             else:
                 External.good_hel = self.all_hel
 
-            External.map_hel=dict([(hel,i) for i,hel in  enumerate(External.good_hel)])
+            External.map_hel={hel:i for i,hel in  enumerate(External.good_hel)}
             External.hel_ranges = [set() for hel in External.good_hel[0]]
             for comb in External.good_hel:
                 for i, hel in enumerate(comb):
@@ -662,7 +662,7 @@ class HelicityRecycler():
 
     def read_orig(self):
 
-        with open(self.input_file, 'r') as input_file:
+        with open(self.input_file) as input_file:
 
             self.prepare_bools()
 
@@ -713,7 +713,7 @@ class HelicityRecycler():
 
     def read_template(self):
         out_file = open(self.output_file, 'w+')
-        with open(self.template_file, 'r') as file:
+        with open(self.template_file) as file:
             for line in file:
                 s = Template(line)
                 line = s.safe_substitute(self.template_dict)
@@ -835,9 +835,9 @@ def split_amps(line, new_amps):
                 # Call the original fct with P1N_...
                 # Final arg is replaced with TMP(1)
                 spin = fct.split(None,1)[1][to_remove]
-                lines.append('%sP1N_%s(%s)' % (fct, to_remove+1, ', '.join(args)))
+                lines.append('{}P1N_{}({})'.format(fct, to_remove+1, ', '.join(args)))
 
-            hel, iamp = re.findall('AMP\((\d+),(\d+)\)', amp_result)[0]
+            hel, iamp = re.findall(r'AMP\((\d+),(\d+)\)', amp_result)[0]
             hel_calculated.append(hel)
             #lines.append(' %(result)s = TMP(3) * W(3,%(w)s) + TMP(4) * W(4,%(w)s)+'
             #             % {'result': amp_result, 'w':  windex}) 
@@ -924,7 +924,7 @@ def main():
 
     args = parser.parse_args()
 
-    with open(args.hel_file, 'r') as file:
+    with open(args.hel_file) as file:
         good_elements = file.readline().split()
 
     recycler = HelicityRecycler(good_elements)

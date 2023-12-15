@@ -15,7 +15,6 @@
 
 """Function to save any Python object to file."""
 
-from __future__ import absolute_import
 import pickle
 import six.moves.cPickle
 
@@ -31,7 +30,7 @@ class SaveObjectError(Exception):
 def save_to_file(filename, object, log=True, allow_fail=True):
     """Save any Python object to file filename"""
 
-    if not isinstance(filename, six.string_types):
+    if not isinstance(filename, str):
         raise SaveObjectError("filename must be a string")
 
     files.write_to_file(filename, pickle_object, object, log=log, binary=True,

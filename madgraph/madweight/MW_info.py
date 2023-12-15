@@ -55,12 +55,10 @@
 ##
 ## BEGIN INCLUDE
 ##
-from __future__ import absolute_import
 import sys
 import os
 import re
 import stat
-from six.moves import range
 try: 
     import madgraph.madweight.Cards as Cards
 except ImportError as error:
@@ -503,7 +501,7 @@ def detect_SubProcess(P_mode=0):
         for name in list_dir:
             try:           
                 st = os.lstat(os.path.join("./SubProcesses/", name))
-            except os.error:
+            except OSError:
                 continue
             if stat.S_ISDIR(st.st_mode):
                 if name[0]=='P':

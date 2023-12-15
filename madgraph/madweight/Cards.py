@@ -32,14 +32,11 @@
 ##      |    |    +   pass_in_type                                      ##
 ##                                                                      ##
 ##########################################################################
-from __future__ import absolute_import
 import re
 import os
 import math
 import sys
 import logging
-from six.moves import map
-from six.moves import range
 
 logger = logging.getLogger('madgraph.madweight')
 pjoin = os.path.join
@@ -120,12 +117,12 @@ class Card(dict):
             get_comment = True
 
         try:
-            card=open("./Cards/"+name_card,'r')
+            card=open("./Cards/"+name_card)
         except:
             try:
-                card=open(name_card,'r')
+                card=open(name_card)
             except:
-                card=open("./Events/"+name_card,'r')  #->read banner
+                card=open("./Events/"+name_card)  #->read banner
 
         #init output
         info = self
@@ -219,7 +216,7 @@ class Card(dict):
         
         self.charged=1
         try:
-            ff=open(self.file,'r')
+            ff=open(self.file)
         except:
             sys.exit('FATAL ERROR: no file ./Cards/ident_mw_card.dat\n This File is created during the definition of the transfer function\n\
             either newprocess was not perform after ./bin/PassToMadWeight, either your transfer function is not correctly set up. launch\n\
@@ -421,7 +418,7 @@ class Card(dict):
                 if not isinstance(value, list):
                     value = [value]
                 for value in value:
-                    output.write('    %s   %s    #%s\n' % (key2,value,comment))
+                    output.write('    {}   {}    #{}\n'.format(key2,value,comment))
         
         
         
@@ -461,7 +458,7 @@ class Particles_file(Card):
                                             (?P<color>[STO])\s+
                                             (?P<label>[\w+-~]{1,5})\s+
                                             (?P<pid>[\d-]*)\s*$''',re.VERBOSE)
-            ff=open(self.file,'r')
+            ff=open(self.file)
     
             particle=[]
             while 1:
@@ -580,7 +577,7 @@ def read_leshouches_file(filepos):
 #    mass_pat=re.compile(r'''^\s*pmass\(\s*(?P<MG_id>\d+)\s*\)\s*=\s*(?P<mass>\w+)''',re.I)   
     
     dict_pid={}
-    ff=open(filepos,'r')
+    ff=open(filepos)
     while 1:
         line=ff.readline()
         #print line, [line[4],line[5], line[6]]

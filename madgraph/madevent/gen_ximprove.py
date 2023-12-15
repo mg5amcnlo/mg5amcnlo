@@ -16,9 +16,7 @@
     This script analyses the result of the survey/ previous refine and 
     creates the jobs for the following script.
 """
-from __future__ import division
 
-from __future__ import absolute_import
 import collections
 import os
 import glob
@@ -30,8 +28,6 @@ import shutil
 import stat
 import sys
 import six
-from six.moves import range
-from six.moves import zip
 
 try:
     import madgraph
@@ -45,8 +41,7 @@ except ImportError:
     import internal.combine_grid as combine_grid
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    if six.PY3:
-        import internal.hel_recycle as hel_recycle
+    import internal.hel_recycle as hel_recycle
 else:
     MADEVENT= False
     import madgraph.madevent.sum_html as sum_html
@@ -57,13 +52,12 @@ else:
     import madgraph.madevent.combine_grid as combine_grid
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    if six.PY3:
-        import madgraph.madevent.hel_recycle as hel_recycle
+    import madgraph.madevent.hel_recycle as hel_recycle
 
 logger = logging.getLogger('madgraph.madevent.gen_ximprove')
 pjoin = os.path.join
 
-class gensym(object):
+class gensym:
     """a class to call the fortran gensym executable and handle it's output
     in order to create the various job that are needed for the survey"""
     
@@ -81,7 +75,7 @@ class gensym(object):
     def __init__(self, cmd, opt=None):
         
         try:
-            super(gensym, self).__init__(cmd, opt)
+            super().__init__(cmd, opt)
         except TypeError:
             pass
         
@@ -155,7 +149,7 @@ class gensym(object):
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             
-            (stdout, _) = p.communicate(''.encode())
+            (stdout, _) = p.communicate(b'')
             stdout = stdout.decode('ascii',errors='ignore')
             if stdout:
                 nb_channel = max([math.floor(float(d)) for d in stdout.split()])
@@ -185,7 +179,7 @@ class gensym(object):
             p = misc.Popen(['../madevent_forhel < input_app.txt'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=pjoin(Pdir,'Hel'), shell=True)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, _) = p.communicate(" ".encode())
+            (stdout, _) = p.communicate(b" ")
             stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir, 'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
@@ -297,7 +291,7 @@ class gensym(object):
                     bad_amps_perhel = []
                 if __debug__:
                     mtext = open(matrix_file).read()
-                    nb_amp = int(re.findall('PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
+                    nb_amp = int(re.findall(r'PARAMETER \(NGRAPHS=(\d+)\)', mtext)[0])
                     logger.debug('nb_hel: %s zero amp: %s bad_amps_hel: %s/%s', len(good_hels),len(bad_amps),len(bad_amps_perhel), len(good_hels)*nb_amp )
                 if len(good_hels) == 1:
                     files.cp(matrix_file, matrix_file.replace('orig','optim'))
@@ -362,7 +356,7 @@ class gensym(object):
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
-            (stdout, _) = p.communicate(''.encode())
+            (stdout, _) = p.communicate(b'')
             stdout = stdout.decode('ascii',errors='ignore')
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
@@ -553,7 +547,7 @@ class gensym(object):
         
         # resubmit the new jobs            
         for i in range(int(nb_job)):
-            name = "G%s_%s" % (G,i+1)
+            name = "G{}_{}".format(G,i+1)
             self.lastoffset[(Pdir, G)] += 1
             offset = self.lastoffset[(Pdir, G)]            
             self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'refine_splitted.sh'),
@@ -595,7 +589,7 @@ class gensym(object):
 
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            path = pjoin(Pdir, "G{}_{}".format(G, i+1))
             Gdirs.append(path)
         
         # 4. make the submission of the next iteration
@@ -699,7 +693,7 @@ class gensym(object):
         for i in range(self.splitted_for_dir(Pdir, G)):
             if i in exclude_sub_jobs:
                     continue
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1)) 
+            path = pjoin(Pdir, "G{}_{}".format(G, i+1)) 
             fsock  = misc.mult_try_open(pjoin(path, 'results.dat'))
             one_result = grid_calculator.add_results_information(fsock)
             fsock.close()
@@ -760,7 +754,7 @@ For offline investigation, the problematic discarded events are stored in:
                 grid_calculator.results.run_statistics['skipped_subchannel'] += 1
                 
                 # Add some monitoring of the problematic events
-                gPath = pjoin(Pdir, "G%s_%s" % (G, th_maxwgt[-1][1]+1)) 
+                gPath = pjoin(Pdir, "G{}_{}".format(G, th_maxwgt[-1][1]+1)) 
                 if os.path.isfile(pjoin(gPath,'events.lhe')):
                     lhe_file = lhe_parser.EventFile(pjoin(gPath,'events.lhe'))
                     discardedPath = pjoin(Pdir,'DiscardedUnstableEvents')
@@ -823,7 +817,7 @@ For offline investigation, the problematic discarded events are stored in:
 
         # Clean up grid_information to avoid border effects in case of a crash
         for i in range(self.splitted_for_dir(Pdir, G)):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            path = pjoin(Pdir, "G{}_{}".format(G, i+1))
             try: 
                 os.remove(pjoin(path, 'grid_information'))
             except OSError as oneerror:
@@ -925,7 +919,7 @@ For offline investigation, the problematic discarded events are stored in:
             subdir = int(subdir)
             offset = nb_step+i+1
             offset=str(offset)
-            tag = "%s.%s" % (subdir, offset)
+            tag = "{}.{}".format(subdir, offset)
             
             self.cmd.launch_job(pjoin(self.me_dir, 'SubProcesses', 'survey.sh'),
                                 argument=[tag, G],
@@ -982,7 +976,7 @@ For offline investigation, the problematic discarded events are stored in:
 
         
         
-class gen_ximprove(object):  
+class gen_ximprove:  
     
     
     # some hardcoded value which impact the generation
@@ -1007,24 +1001,24 @@ class gen_ximprove(object):
 
         if hasattr(cls, 'force_class'):
             if cls.force_class == 'gridpack':
-                return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
+                return super().__new__(gen_ximprove_gridpack)
             elif cls.force_class == 'loop_induced':
-                return super(gen_ximprove, cls).__new__(gen_ximprove_share)
+                return super().__new__(gen_ximprove_share)
         
         if cmd.proc_characteristics['loop_induced']:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
+            return super().__new__(gen_ximprove_share)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-            return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack)
+            return super().__new__(gen_ximprove_gridpack)
         elif cmd.run_card["job_strategy"] == 2:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_share)
+            return super().__new__(gen_ximprove_share)
         else:
-            return super(gen_ximprove, cls).__new__(gen_ximprove_v4)
+            return super().__new__(gen_ximprove_v4)
             
             
     def __init__(self, cmd, opt=None):
         
         try:
-            super(gen_ximprove, self).__init__(cmd, opt)
+            super().__init__(cmd, opt)
         except TypeError:
             pass
         
@@ -1182,7 +1176,7 @@ class gen_ximprove_v4(gen_ximprove):
 
     def __init__(self, cmd, opt=None):     
               
-        super(gen_ximprove_v4, self).__init__(cmd, opt)
+        super().__init__(cmd, opt)
         
         if cmd.opts['accuracy'] < cmd._survey_options['accuracy'][1]:
             self.increase_precision(cmd._survey_options['accuracy'][1]/cmd.opts['accuracy'])
@@ -1252,7 +1246,7 @@ class gen_ximprove_v4(gen_ximprove):
                 elif len(to_refine) % 3 == 2:
                     new_order.append(to_refine[i+2])  
             #ensure that the reordering is done nicely
-            assert set([id(C) for C in to_refine]) == set([id(C) for C in new_order])
+            assert {id(C) for C in to_refine} == {id(C) for C in new_order}
             to_refine = new_order      
             
                                                 
@@ -1348,7 +1342,7 @@ class gen_ximprove_v4(gen_ximprove):
         #Here we can assume that all job are for the same directory.
         path = pjoin(write_dir, jobs[0]['P_dir'])
         
-        template_text = open(template, 'r').read()
+        template_text = open(template).read()
         # special treatment if needed to combine the script
         # computes how many submition miss one job
         if self.combining_job > 1:
@@ -1559,7 +1553,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
 
     def __init__(self, *args, **opts):
         
-        super(gen_ximprove_share, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
         self.generated_events = {}
         self.splitted_for_dir = lambda x,y : self.splitted_Pdir[(x,y)]
         
@@ -1645,7 +1639,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         # collect all the generated_event
         Gdirs = [] #build the the list of directory
         for i in range(self.splitted_for_dir(Pdir, G)):
-            path = pjoin(Pdir, "G%s_%s" % (G, i+1))
+            path = pjoin(Pdir, "G{}_{}".format(G, i+1))
             Gdirs.append(path)
         assert len(grid_calculator.results) == len(Gdirs) == self.splitted_for_dir(Pdir, G)
         
@@ -1696,9 +1690,9 @@ class gen_ximprove_share(gen_ximprove, gensym):
             
         try:
             if drop_previous_iteration:
-                raise IOError
+                raise OSError
             output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'a')
-        except IOError:
+        except OSError:
             output_file = open(pjoin(Pdir,"G%s" % G, "events.lhe"), 'w')
                 
         misc.call(["cat"] + [pjoin(d, "events.lhe") for d in Gdirs],
@@ -1718,7 +1712,7 @@ class gen_ximprove_share(gen_ximprove, gensym):
         # check what to do
         if nunwgt >= int(0.96*needed_event)+1: # 0.96*1.15=1.10 =real security
             # We did it.
-            logger.info("found enough event for %s/G%s" % (os.path.basename(Pdir), G))
+            logger.info("found enough event for {}/G{}".format(os.path.basename(Pdir), G))
             self.write_results(grid_calculator, cross, error, Pdir, G, step, efficiency)
             return 0
         elif step >= self.max_iter:
@@ -1829,7 +1823,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     def __new__(cls, *args, **opts):
 
         cls.force_class = 'gridpack'
-        return super(gen_ximprove_gridpack, cls).__new__(cls, *args, **opts)
+        return super().__new__(cls, *args, **opts)
 
     def __init__(self, *args, **opts):
         
@@ -1841,7 +1835,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 #            del opts['ngran']
         if 'readonly' in opts:
             self.readonly = opts['readonly']
-        super(gen_ximprove_gridpack,self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
         if self.ngran == -1:
             self.ngran = 1 
      

@@ -14,8 +14,6 @@
 ################################################################################
 """Methods and classes to export matrix elements to fks format."""
 
-from __future__ import absolute_import
-from __future__ import division
 import glob
 import logging
 import os
@@ -51,8 +49,6 @@ import models.write_param_card as write_param_card
 import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
-from six.moves import range
-from six.moves import zip
 
 pjoin = os.path.join
 
@@ -121,7 +117,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                     try:
                         shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
                                    pjoin(self.dir_path, 'Cards', card + '_default.dat'))
-                    except IOError:
+                    except OSError:
                         logger.warning("Failed to move " + card + ".dat to default")
             
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
@@ -129,7 +125,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
         try:
             shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
-        except IOError:
+        except OSError:
             MG5_version = misc.get_pkg_info()
             open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
                 "5." + MG5_version['version'])
@@ -174,14 +170,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                          card + '.dat'),
                            pjoin(self.dir_path, 'Cards',
                                         card + '_default.dat'))
-            except IOError:
+            except OSError:
                 logger.warning("Failed to copy " + card + ".dat to default")
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
@@ -225,7 +221,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         # Finally make sure to turn off MC over Hel for the default mode.
         FKS_card_path = pjoin(self.dir_path,'Cards','FKS_params.dat')
-        FKS_card_file = open(FKS_card_path,'r')
+        FKS_card_file = open(FKS_card_path)
         FKS_card = FKS_card_file.read()
         FKS_card_file.close()
         FKS_card = re.sub(r"#NHelForMCoverHels\n-?\d+",
@@ -325,7 +321,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
 
-        super(ProcessExporterFortranFKS,self).convert_model(model, 
+        super().convert_model(model, 
                                                wanted_lorentz, wanted_couplings)
         
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
@@ -841,7 +837,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # determine perturbation order
         perturbation_order = []
         firstprocess = history.get('generate')
-        order = re.findall("\[(.*)\]", firstprocess)
+        order = re.findall(r"\[(.*)\]", firstprocess)
         if 'QED' in order[0]:
             perturbation_order.append('QED')
         if 'QCD' in order[0]:
@@ -916,7 +912,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                          card + '.dat'),
                            pjoin(self.dir_path, 'Cards',
                                         card + '_default.dat'))
-            except IOError:
+            except OSError:
                 logger.warning("Failed to copy " + card + ".dat to default")
 
 
@@ -1169,14 +1165,14 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             to_check = ['mdl_aewgmu', 'mdl_aew']
             base = 'mdl_aewgmu/mdl_aew'
             exp = 'qed_pow/2d0-ntag'
-            expr = '(%s)**(%s)' % (base, exp)
+            expr = '({})**({})'.format(base, exp)
             conv_fin = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
             conv_pol = '(qed_pow - ntagph * 2d0) * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
         else:
             to_check = ['mdl_aew', 'mdl_aew0']
             base = 'mdl_aew0/mdl_aew'
             exp = 'ntag'
-            expr = '(%s)**(%s)' % (base, exp)
+            expr = '({})**({})'.format(base, exp)
             conv_fin = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_FIN_ * born_wgt'
             conv_pol = '- ntagph * 2d0 * MDL_ECOUP_DGMUA0_UV_EW_1EPS_ * born_wgt'
 
@@ -1320,7 +1316,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                 data = ', '.join(['"%3s"' % o for o in split_orders[start-1: stop]])
                 if stop > len(split_orders):
                     stop = len(split_orders)
-                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
+                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX={},{})  / {} /\n'.format(start, stop, data)
 
 
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
@@ -2339,7 +2335,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         dirpath = os.path.join(dir_name, 'MadLoop5_resources')
         try:
             os.mkdir(dirpath)
-        except os.error as error:
+        except OSError as error:
             logger.warning(error.strerror + " " + dirpath)
 
         # Create the directory PN_xx_xxxxx in the specified path
@@ -2348,12 +2344,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         try:
             os.mkdir(dirpath)
-        except os.error as error:
+        except OSError as error:
             logger.warning(error.strerror + " " + dirpath)
 
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
@@ -3670,14 +3666,14 @@ Parameters              %(params)s\n\
                 pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
             # Pick out all initial state particles for the two beams
-            initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
-                                               p in processes]))),
-                              sorted(list(set([p.get_initial_pdg(2) for \
-                                               p in processes])))]
+            initial_states = [sorted(list({p.get_initial_pdg(1) for \
+                                               p in processes})),
+                              sorted(list({p.get_initial_pdg(2) for \
+                                               p in processes}))]
 
             # Prepare all variable names
-            pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
-                              sum(initial_states,[])])
+            pdf_codes = {p: model.get_particle(p).get_name() for p in \
+                              sum(initial_states,[])}
             for key,val in pdf_codes.items():
                 pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
 
@@ -4046,7 +4042,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     try:
                         shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
                                    pjoin(self.dir_path, 'Cards', card + '_default.dat'))
-                    except IOError:
+                    except OSError:
                         logger.warning("Failed to copy " + card + ".dat to default")
 
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
@@ -4054,7 +4050,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                 raise MadGraph5Error("No valid MG_ME path given for MG4 run directory creation.")
         try:
             shutil.copy(os.path.join(mgme_dir, 'MGMEVersion.txt'), dir_path)
-        except IOError:
+        except OSError:
             MG5_version = misc.get_pkg_info()
             open(os.path.join(dir_path, 'MGMEVersion.txt'), 'w').write( \
                 "5." + MG5_version['version'])
@@ -4117,7 +4113,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
-'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
+'Could not find the include directory for {}, looking in {}.\n'.format(tir ,str(trg_path))+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
                             to_include = '<Not_found_define_it_yourself>'
                         tir_include.append('-I %s'%to_include)
@@ -4130,7 +4126,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
         filename = 'makefile_loop'
@@ -4140,7 +4136,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         dirpath = os.path.join(self.dir_path, 'Source')
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
         filename = 'make_opts'
@@ -4153,7 +4149,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 
@@ -4231,7 +4227,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         dirpath = os.path.join(dir_name, 'MadLoop5_resources')
         try:
             os.mkdir(dirpath)
-        except os.error as error:
+        except OSError as error:
             logger.warning(error.strerror + " " + dirpath)
 
         # Create the directory PN_xx_xxxxx in the specified path
@@ -4240,12 +4236,12 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         try:
             os.mkdir(dirpath)
-        except os.error as error:
+        except OSError as error:
             logger.warning(error.strerror + " " + dirpath)
 
         try:
             os.chdir(dirpath)
-        except os.error:
+        except OSError:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
 

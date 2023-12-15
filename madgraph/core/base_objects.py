@@ -15,7 +15,6 @@
 """Definitions of all basic objects used in the core code: particle, 
 interaction, model, leg, vertex, process, ..."""
 
-from __future__ import absolute_import
 import copy
 import itertools
 import logging
@@ -31,8 +30,6 @@ import madgraph.core.color_algebra as color
 import collections
 from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 import madgraph.various.misc as misc 
-from six.moves import range
-from six.moves import zip
 from functools import reduce
 
 
@@ -92,8 +89,8 @@ class PhysicsObject(dict):
                                  "Property name %s is not a string" % repr(name)
 
         if name not in list(self.keys()):
-            raise self.PhysicsObjectError("""%s is not a valid property for this object: %s\n
-    Valid property are %s""" % (name,self.__class__.__name__, list(self.keys())))
+            raise self.PhysicsObjectError("""{} is not a valid property for this object: {}\n
+    Valid property are {}""".format(name,self.__class__.__name__, list(self.keys())))
         return True
 
     def get(self, name):
@@ -249,7 +246,7 @@ class Particle(PhysicsObject):
         elif name == 'propagating':
             return self['line'] not in ['None',None] 
         else:
-            return super(Particle, self).get(name)
+            return super().get(name)
 
     def set(self, name, value, force=False):
         
@@ -272,7 +269,7 @@ class Particle(PhysicsObject):
                     return self.set('type', name, force=force)
                 else:
                     return True
-        return super(Particle, self).set(name, value,force=force)
+        return super().set(name, value,force=force)
         
 
     def filter(self, name, value):
@@ -280,7 +277,7 @@ class Particle(PhysicsObject):
 
         if name in ['name', 'antiname']:
             # Forbid special character but +-~_
-            p=re.compile('''^[\w\-\+~_]+$''')
+            p=re.compile(r'''^[\w\-\+~_]+$''')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid particle name" % value)
 
@@ -327,7 +324,7 @@ class Particle(PhysicsObject):
 
         if name in ['mass', 'width']:
             # Must start with a letter, followed by letters, digits or _
-            p = re.compile('\A[a-zA-Z]+[\w\_]*\Z')
+            p = re.compile(r'\A[a-zA-Z]+[\w\_]*\Z')
             if not p.match(value):
                 raise self.PhysicsObjectError("%s is not a valid name for mass/width variable" % \
                         value)
@@ -352,7 +349,7 @@ class Particle(PhysicsObject):
 
         if name in ['is_part', 'self_antipart']:
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError("%s tag %s is not a boolean" % (name, repr(value)))
+                raise self.PhysicsObjectError("{} tag {} is not a boolean".format(name, repr(value)))
 
         return True
 
@@ -1207,7 +1204,7 @@ class Model(PhysicsObject):
         if (name == 'expansion_order') and self[name] == None:
             if self['interactions']:
                 self['expansion_order'] = \
-                   dict([(order, -1) for order in self.get('coupling_orders')])
+                   {order: -1 for order in self.get('coupling_orders')}
                    
         if (name == 'name2pdg') and 'name2pdg' not in self:
             self['name2pdg'] = {}
@@ -1348,9 +1345,9 @@ class Model(PhysicsObject):
     def get_order_hierarchy(self):
         """Set a default order hierarchy for the model if not set by the UFO."""
         # Set coupling hierachy
-        hierarchy = dict([(order, 1) for order in self.get('coupling_orders')])
+        hierarchy = {order: 1 for order in self.get('coupling_orders')}
         # Special case for only QCD and QED couplings, unless already set
-        if set(self.get('coupling_orders')) == set(['QCD', 'QED']):
+        if set(self.get('coupling_orders')) == {'QCD', 'QED'}:
             hierarchy['QED'] = 2
         return hierarchy
 
@@ -1414,8 +1411,8 @@ class Model(PhysicsObject):
         coupling_orders = self.get('coupling_orders')
         # Loop through the different coupling hierarchy values, so we
         # start with the most dominant and proceed to the least dominant
-        hierarchy = sorted(list(set([self.get('order_hierarchy')[k] for \
-                                     k in coupling_orders])))
+        hierarchy = sorted(list({self.get('order_hierarchy')[k] for \
+                                     k in coupling_orders}))
 
         # orders is a rising list of the lists of orders with a given hierarchy
         orders = []
@@ -1610,14 +1607,14 @@ class Model(PhysicsObject):
                 elif value in duplicate:
                     continue # handle later
                 elif value:
-                    change[param.name] = '%s%s' % (prefix,param.name)
+                    change[param.name] = '{}{}'.format(prefix,param.name)
                     to_change.append(param.name)
                     param.name = change[param.name]
             
         for value in duplicate:
             for i, var in enumerate(lower_dict[value]):
                 to_change.append(var.name)
-                new_name = '%s%s%s' % (prefix, var.name.lower(), 
+                new_name = '{}{}{}'.format(prefix, var.name.lower(), 
                                                   ('__%d'%(i+1) if i>0 else ''))
                 change[var.name] = new_name
                 var.name = new_name
@@ -1629,17 +1626,17 @@ class Model(PhysicsObject):
             return
         
         if 'parameter_dict' in self:
-            new_dict = dict( (change[name] if (name in change) else name, value) for
-                             name, value in self['parameter_dict'].items())
+            new_dict = { change[name] if (name in change) else name: value for
+                             name, value in self['parameter_dict'].items()}
             self['parameter_dict'] = new_dict
     
         if hasattr(self,'map_CTcoup_CTparam'):
             # If the map for the dependence of couplings to CTParameters has
             # been defined, we must apply the renaming there as well. 
 
-            self.map_CTcoup_CTparam = dict( (coup_name, 
-            [change[name] if (name in change) else name for name in params]) 
-                  for coup_name, params in self.map_CTcoup_CTparam.items() )
+            self.map_CTcoup_CTparam = { coup_name: 
+            [change[name] if (name in change) else name for name in params] 
+                  for coup_name, params in self.map_CTcoup_CTparam.items() }
         
         i=0
         while i*1000 <= len(to_change): 
@@ -1729,9 +1726,9 @@ class Model(PhysicsObject):
         Where in top of the default MW and sw2 are external parameters."""
 
         if isinstance(mode, str) and "_" in mode:
-            mode = set([s.lower() for s in mode.split('_')])
+            mode = {s.lower() for s in mode.split('_')}
 
-        assert mode in ["external",set(['mz','mw','alpha'])]
+        assert mode in ["external",{'mz','mw','alpha'}]
         
         try:
             W = self.get('particle_dict')[24]
@@ -1771,7 +1768,7 @@ class Model(PhysicsObject):
             self.parameters_dict = None
             return True
 
-        elif mode==set(['mz','mw','alpha']):
+        elif mode=={'mz','mw','alpha'}:
             # For now, all we support is to go from mz, Gf, alpha to mz, mw, alpha
             W = self.get('particle_dict')[24]
             mass = self.get_parameter(W.get('mass'))
@@ -1865,7 +1862,7 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24 and isinstance(mass, 
                                                                  ModelVariable):
                     status = self.change_electroweak_mode(
-                                                   set(['mz','mw','alpha']), bypass_check=bypass_check)
+                                                   {'mz','mw','alpha'}, bypass_check=bypass_check)
                     # Use the newly defined parameter for the W mass
                     mass = self.get_parameter(particle.get('mass'))
                     if not status:
@@ -1894,11 +1891,11 @@ class Model(PhysicsObject):
                         mass.expr, 'complex', depend)
                     # Modify the treatment of the width in this case
                     if not isinstance(width, ParamCardVariable):
-                        width.expr = '- im(%s**2) / cmath.sqrt(re(%s**2))' % (mass.expr, mass.expr)
+                        width.expr = '- im({}**2) / cmath.sqrt(re({}**2))'.format(mass.expr, mass.expr)
                     else:
                         # Remove external parameter from the param_card
                         New_width = ModelVariable(width.name,
-                        '-1 * im(CMASS_%s**2) / %s' % (mass.name, mass.name), 'real', mass.depend)
+                        '-1 * im(CMASS_{}**2) / {}'.format(mass.name, mass.name), 'real', mass.depend)
                         self.get('parameters')[('external',)].remove(width)
                         self.add_param(New_param, (mass,))
                         self.add_param(New_width, (New_param,))
@@ -1986,7 +1983,7 @@ class Model(PhysicsObject):
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################
-class ModelVariable(object):
+class ModelVariable:
     """A Class for storing the information about coupling/ parameter"""
     
     def __init__(self, name, expression, type, depend=()):
@@ -2243,7 +2240,7 @@ class LegList(PhysicsObjectList):
         Opts=copy.copy(opts)
         if 'pert' in list(Opts.keys()):
             del Opts['pert']
-        return super(LegList,self).sort(*args, **Opts)
+        return super().sort(*args, **Opts)
 
 
 #===============================================================================
@@ -2370,7 +2367,7 @@ class Vertex(PhysicsObject):
         mystr = []
         for leg in self['legs']:
             mystr.append( str(leg['number']) + '(%s)' % str(leg['id']))
-        mystr = '(%s,id=%s ,obj_id:%s)' % (', '.join(mystr), self['id'], id(self))
+        mystr = '({},id={} ,obj_id:{})'.format(', '.join(mystr), self['id'], id(self))
         
         return(mystr)
 
@@ -2463,7 +2460,7 @@ class ContractedVertex(Vertex):
         self['PDGs'] = []
         self['loop_tag'] = tuple()
         self['loop_orders'] = {}
-        super(ContractedVertex, self).default_setup()
+        super().default_setup()
 
     def filter(self, name, value):
         """Filter for valid vertex property values."""
@@ -2485,14 +2482,14 @@ class ContractedVertex(Vertex):
         if name == 'loop_orders':
             Interaction.filter(Interaction(), 'orders', value)
         else:
-            return super(ContractedVertex, self).filter(name, value)
+            return super().filter(name, value)
 
         return True
 
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
-        return super(ContractedVertex, self).get_sorted_keys()+['PDGs']
+        return super().get_sorted_keys()+['PDGs']
 
 #===============================================================================
 # Diagram
@@ -2537,7 +2534,7 @@ class Diagram(PhysicsObject):
                 mystr = mystr + '('
                 for leg in vert['legs'][:-1]:
                     if leg.get('polarization'):
-                        mystr = mystr + str(leg['number']) + '(%s{%s})' % (str(leg['id']),leg['polarization']) + ','
+                        mystr = mystr + str(leg['number']) + '({}{{{}}})'.format(str(leg['id']),leg['polarization']) + ','
                     else:
                         mystr = mystr + str(leg['number']) + '(%s)' % str(leg['id']) + ','
                         
@@ -2562,7 +2559,7 @@ class Diagram(PhysicsObject):
 
                 lastleg = vert['legs'][-1]
                 if lastleg['polarization']:
-                    mystr = mystr + str(lastleg['number']) + '(%s{%s})' % (str(lastleg['id']), lastleg['polarization']) + ','
+                    mystr = mystr + str(lastleg['number']) + '({}{{{}}})'.format(str(lastleg['id']), lastleg['polarization']) + ','
                 else:
                     mystr = mystr + str(lastleg['number']) + '(%s)' % str(lastleg['id']) + ','
                 mystr = mystr + 'id:' + str(vert['id']) + '),'
@@ -2572,7 +2569,7 @@ class Diagram(PhysicsObject):
                                      for key in sorted(self['orders'].keys())]))
             
             if not pass_sanity:
-                raise Exception("invalid diagram: %s. vert_id: %s" % (mystr, responsible)) 
+                raise Exception("invalid diagram: {}. vert_id: {}".format(mystr, responsible)) 
                 
             return mystr
         else:
@@ -2583,7 +2580,7 @@ class Diagram(PhysicsObject):
         that the special order WEIGTHED corresponds to the sum of
         hierarchys for the couplings."""
 
-        coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
+        coupling_orders = {c: 0 for c in model.get('coupling_orders')}
         weight = 0
         for vertex in self['vertices']:
             if vertex.get('id') in [0,-1]: continue
@@ -2649,7 +2646,7 @@ class Diagram(PhysicsObject):
         vertices = VertexList()
         min_dict = copy.copy(perm_map)
         # Dictionary from leg number to state
-        state_dict = dict([(l.get('number'), l.get('state')) for l in leg_list])
+        state_dict = {l.get('number'): l.get('state') for l in leg_list}
         # First renumber all legs in the n-1->1 vertices
         for vertex in self.get('vertices')[:-1]:
             vertex = copy.copy(vertex)
@@ -2870,7 +2867,7 @@ class DiagramList(PhysicsObjectList):
         """ Return the list of possible values appearing in the diagrams of this
         list for the order given in argument """
 
-        values=set([])
+        values=set()
         for diag in self:
             if order in list(diag['orders'].keys()):
                 values.add(diag['orders'][order])
@@ -2980,7 +2977,7 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError("%s is not a valid Model object" % str(value))
         if name in ['id', 'uid']:
             if not isinstance(value, int):
-                raise self.PhysicsObjectError("Process %s %s is not an integer" % (name, repr(value)))
+                raise self.PhysicsObjectError("Process {} {} is not an integer".format(name, repr(value)))
 
         if name == 'required_s_channels':
             if not isinstance(value, list):
@@ -3058,7 +3055,7 @@ class Process(PhysicsObject):
                not isinstance(value[0], list):
                 value = [value]
 
-        return super(Process, self).set(name, value) # call the mother routine
+        return super().set(name, value) # call the mother routine
 
     def get_squared_order_type(self, order):
         """ Return what kind of squared order constraint was specified for the
@@ -3083,7 +3080,7 @@ class Process(PhysicsObject):
                     # Then assign its type to the default '='
                     self['sqorders_types'][order]='='
                     
-        return super(Process, self).get(name) # call the mother routine
+        return super().get(name) # call the mother routine
 
     
 
@@ -3161,7 +3158,7 @@ class Process(PhysicsObject):
                 if value == 0:
                     to_add.append('%s=0' % key)
                 else:
-                    to_add.append('%s<=%s' % (key,value))
+                    to_add.append('{}<={}'.format(key,value))
                  
             if to_add:
                 mystr = mystr + " ".join(to_add) + ' '
@@ -3720,9 +3717,9 @@ for that coupling to be this maximal one. '''%(k,self.get('sqorders_types')[k],
                                              self.get('squared_orders')[k],k,v))
                     else:
                         logger.warning(
-'''The coupling order (%s=%s) specified is larger than the one allowed 
-             by the model builder. The maximal value allowed is %s. 
-             We set the %s order to this value''' % (k,orders[k],v,k))
+'''The coupling order ({}={}) specified is larger than the one allowed 
+             by the model builder. The maximal value allowed is {}. 
+             We set the {} order to this value'''.format(k,orders[k],v,k))
                     orders[k] = v
             else:
                 orders[k] = v
@@ -3773,7 +3770,7 @@ class ProcessDefinition(Process):
     def default_setup(self):
         """Default values for all properties"""
 
-        super(ProcessDefinition, self).default_setup()
+        super().default_setup()
 
         self['legs'] = MultiLegList()
         # Decay chain processes associated with this process
@@ -3791,7 +3788,7 @@ class ProcessDefinition(Process):
                 raise self.PhysicsObjectError("%s is not a valid ProcessDefinitionList" % str(value))
 
         else:
-            return super(ProcessDefinition, self).filter(name, value)
+            return super().filter(name, value)
 
         return True
 
@@ -3845,7 +3842,7 @@ class ProcessDefinition(Process):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        keys = super(ProcessDefinition, self).get_sorted_keys()
+        keys = super().get_sorted_keys()
         keys.remove('legs_with_decays')                                  
 
         return keys

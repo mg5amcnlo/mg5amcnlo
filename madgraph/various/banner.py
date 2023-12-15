@@ -13,8 +13,6 @@
 #
 ################################################################################
 
-from __future__ import division
-from __future__ import absolute_import
 import ast
 import collections
 import copy
@@ -27,10 +25,8 @@ import re
 import math
 import six
 StringIO = six
-from six.moves import range
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+file = io.IOBase
 import itertools
 import time
 
@@ -116,8 +112,8 @@ class Banner(dict):
     ############################################################################
     #  READ BANNER
     ############################################################################
-    pat_begin=re.compile('<(?P<name>\w*)>')
-    pat_end=re.compile('</(?P<name>\w*)>')
+    pat_begin=re.compile(r'<(?P<name>\w*)>')
+    pat_end=re.compile(r'</(?P<name>\w*)>')
 
     tag_to_file={'slha':'param_card.dat',
       'mgruncard':'run_card.dat',
@@ -169,7 +165,7 @@ class Banner(dict):
                 if line.endswith('\n'):
                     text += line
                 else:
-                    text += '%s%s' % (line, '\n')
+                    text += '{}{}'.format(line, '\n')
                 
             #reaching end of the banner in a event file avoid to read full file 
             if "</init>" in line:
@@ -180,7 +176,7 @@ class Banner(dict):
     def __getattribute__(self, attr):
         """allow auto-build for the run_card/param_card/... """
         try:
-            return super(Banner, self).__getattribute__(attr)
+            return super().__getattribute__(attr)
         except:
             if attr not in ['run_card', 'param_card', 'slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse']:
                 raise
@@ -273,9 +269,9 @@ class Banner(dict):
         """add info on MGGeneration"""
         
         text = """
-#  Number of Events        :       %s
-#  Integrated weight (pb)  :       %s
-""" % (nb_event, cross)
+#  Number of Events        :       {}
+#  Integrated weight (pb)  :       {}
+""".format(nb_event, cross)
         self['MGGenerationInfo'] = text
     
     ############################################################################
@@ -332,7 +328,7 @@ class Banner(dict):
         """set the lha_strategy: how the weight have to be handle by the shower"""
         
         if not (-4 <= int(value) <= 4):
-            six.reraise(Exception, "wrong value for lha_strategy", value)
+            raise "wrong value for lha_strategy".with_traceback(value)
         if not self["init"]:
             raise Exception("No init block define")
         
@@ -732,7 +728,7 @@ def recover_banner(results_object, level, run=None, tag=None):
 
     path = results_object.path    
     if tag:        
-        banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
+        banner_path = pjoin(path,'Events',run,'{}_{}_banner.txt'.format(run, tag))
     else:
         banner_path = pjoin(results_object.path,'Events','%s_banner.txt' % (run))
       
@@ -815,7 +811,7 @@ class ProcCard(list):
         """read the proc_card and save the information"""
         
         if isinstance(init, str): #path to file
-            init = open(init, 'r')
+            init = open(init)
         
         store_line = ''
         for line in init:
@@ -1038,7 +1034,7 @@ class ConfigFile(dict):
 
     def __iter__(self):
         
-        for name in super(ConfigFile, self).__iter__():
+        for name in super().__iter__():
             yield self.lower_to_case[name.lower()]
         
         
@@ -1098,7 +1094,7 @@ class ConfigFile(dict):
         
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
-            text='%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name])
+            text='{} is a private entry which can not be modify by the user. Keep value at {}'.format(name,self[name])
             self.warn(text, 'critical', raiseerror)
             return
         
@@ -1247,7 +1243,7 @@ class ConfigFile(dict):
         elif name in self:            
             targettype = type(self[name])
         else:
-            logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
+            logger.debug('Trying to add argument {} in {}. '.format(name, self.__class__.__name__) +\
               'This argument is not defined by default. Please consider adding it.')
             suggestions = [k for k in self.keys() if k.startswith(name[0].lower())]
             if len(suggestions)>0:
@@ -1298,7 +1294,7 @@ class ConfigFile(dict):
         lower_name = name.lower()
         if __debug__:
             if lower_name in self:
-                raise Exception("Duplicate case for %s in %s" % (name,self.__class__))
+                raise Exception("Duplicate case for {} in {}".format(name,self.__class__))
         
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
@@ -1339,9 +1335,9 @@ class ConfigFile(dict):
     def do_help(self, name):
         """return a minimal help for the parameter"""
         
-        out = "## Information on parameter %s from class %s\n" % (name, self.__class__.__name__)
+        out = "## Information on parameter {} from class {}\n".format(name, self.__class__.__name__)
         if name.lower() in self:
-            out += "## current value: %s (parameter should be of type %s)\n" % (self[name], type(self[name]))
+            out += "## current value: {} (parameter should be of type {})\n".format(self[name], type(self[name]))
             if name.lower() in self.comments:
                 out += '## %s\n' % self.comments[name.lower()].replace('\n', '\n## ')
         else:
@@ -1389,7 +1385,7 @@ class ConfigFile(dict):
             if targettype in ['str', 'int', 'float', 'bool']:
                 targettype = eval(targettype)
 
-        if (six.PY2 and not isinstance(value, (str,six.text_type)) or (six.PY3 and  not isinstance(value, str))):
+        if (six.PY2 and not isinstance(value, (str,str)) or (six.PY3 and  not isinstance(value, str))):
             # just have to check that we have the correct format
             if isinstance(value, targettype):
                 pass # assignement at the end
@@ -1424,7 +1420,7 @@ class ConfigFile(dict):
                 elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
                     value = True
                 else:
-                    raise InvalidCmd("%s can not be mapped to True/False for %s" % (repr(value),name))
+                    raise InvalidCmd("{} can not be mapped to True/False for {}".format(repr(value),name))
             elif targettype == str:
                 if value.startswith('\'') and value.endswith('\''):
                     value = value[1:-1]
@@ -1440,9 +1436,9 @@ class ConfigFile(dict):
                     value =int(value[:-1]) * convert[value[-1]] 
                 elif '/' in value or '*' in value:               
                     try:
-                        split = re.split('(\*|/)',value)
+                        split = re.split(r'(\*|/)',value)
                         v = float(split[0])
-                        for i in range((len(split)//2)):
+                        for i in range(len(split)//2):
                             if split[2*i+1] == '*':
                                 v *=  float(split[2*i+2])
                             else:
@@ -1466,7 +1462,7 @@ class ConfigFile(dict):
                         if value == new_value:
                             value = new_value
                         else:
-                            raise InvalidCmd("incorect input: %s need an integer for %s" % (value,name))
+                            raise InvalidCmd("incorect input: {} need an integer for {}".format(value,name))
                      
             elif targettype == float:
                 if value.endswith(('k', 'M')) and value[:-1].isdigit():
@@ -1478,9 +1474,9 @@ class ConfigFile(dict):
                         value = float(value)
                     except ValueError:
                         try:
-                            split = re.split('(\*|/)',value)
+                            split = re.split(r'(\*|/)',value)
                             v = float(split[0])
-                            for i in range((len(split)//2)):
+                            for i in range(len(split)//2):
                                 if split[2*i+1] == '*':
                                     v *=  float(split[2*i+2])
                                 else:
@@ -1595,7 +1591,7 @@ class RivetCard(ConfigFile):
                 template = pjoin(MEDIR, 'Cards', 'rivet_card_default.dat')
 
         text = ""
-        for line in open(template,'r'):
+        for line in open(template):
             nline = line.split('#')[0]
             nline = nline.split('!')[0]
             comment = line[len(nline):]
@@ -1603,7 +1599,7 @@ class RivetCard(ConfigFile):
             if len(nline) != 2:
                 text += line
             elif nline[0].strip() in list(self.keys()):
-                text += '%s\t= %s %s\n' % (nline[0], self[nline[0].strip()], comment)
+                text += '{}\t= {} {}\n'.format(nline[0], self[nline[0].strip()], comment)
             else:
                 logger.info('Adding missing parameter %s to current rivet_card (with default value)' % nline[1].strip())
                 text += line
@@ -1645,13 +1641,13 @@ class RivetCard(ConfigFile):
 
                     if ((int(runcard['ebeam1']) in ebeamsLHC) and (int(runcard['ebeam2']) in ebeamsLHC)):
                         if int(runcard['ebeam1']) == int(runcard['ebeam2']):
-                            analysis_list.append("$CONTUR_RA{0}TeV".format(int(rivet_sqrts/1000)))
-                            self["contur_ra"] = "{0}TeV".format(int(rivet_sqrts/1000))
+                            analysis_list.append(f"$CONTUR_RA{int(rivet_sqrts/1000)}TeV")
+                            self["contur_ra"] = f"{int(rivet_sqrts/1000)}TeV"
                         else:
                             raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be equal but\n\
-                                                 ebeam1 = {0} and ebeam2 = {1}".format(runcard['ebeam1'], runcard['ebeam2']))
+                                                 ebeam1 = {} and ebeam2 = {}".format(runcard['ebeam1'], runcard['ebeam2']))
                     else:
-                        raise MadGraph5Error("Incorrect beam energy, ebeam1 and ebeam2 should be {0}".format(ebeamsLHC))
+                        raise MadGraph5Error(f"Incorrect beam energy, ebeam1 and ebeam2 should be {ebeamsLHC}")
 
             else:
                 analysis_list.append(this_analysis)
@@ -1693,7 +1689,7 @@ class RivetCard(ConfigFile):
             exec(xexec_line, locals(), xexec_dict)
             if self['xaxis_label'] == "":
                 self['xaxis_label'] = "xaxis_relvar"
-            f_relparams.write("{0} = {1}\n".format(self['xaxis_label'], xexec_dict['xaxis_relvar']))
+            f_relparams.write("{} = {}\n".format(self['xaxis_label'], xexec_dict['xaxis_relvar']))
         else:
             if self['xaxis_label'] == "":
                 self['xaxis_label'] = self['xaxis_var']
@@ -1704,7 +1700,7 @@ class RivetCard(ConfigFile):
             exec(yexec_line, locals(), yexec_dict)
             if self['yaxis_label'] == "": 
                 self['yaxis_label'] = "yaxis_relvar"
-            f_relparams.write("{0} = {1}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
+            f_relparams.write("{} = {}\n".format(self['yaxis_label'], yexec_dict['yaxis_relvar']))
         else:
             if self['yaxis_label'] == "":
                 self['yaxis_label'] = self['yaxis_var']
@@ -1769,7 +1765,7 @@ class ProcCharacteristic(ConfigFile):
         fsock.write(template)
         
         for key, value in self.items():
-            fsock.write(" %s = %s \n" % (key, value))
+            fsock.write(" {} = {} \n".format(key, value))
         
         fsock.close()   
  
@@ -1820,7 +1816,7 @@ class GridpackCard(ConfigFile):
 
                 
         text = ""
-        for line in open(template,'r'):                  
+        for line in open(template):                  
             nline = line.split('#')[0]
             nline = nline.split('!')[0]
             comment = line[len(nline):]
@@ -1828,7 +1824,7 @@ class GridpackCard(ConfigFile):
             if len(nline) != 2:
                 text += line
             elif nline[1].strip() in self:
-                text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+                text += '  {}\t= {} {}'.format(self[nline[1].strip()],nline[1], comment)        
             else:
                 logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                 text += line 
@@ -1991,7 +1987,7 @@ class PY8Card(ConfigFile):
         self.add_default_subruns('attributes')
         
         # Parameters which have been set by the 
-        super(PY8Card, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
 
 
 
@@ -2005,7 +2001,7 @@ class PY8Card(ConfigFile):
         The option 'comment' can be used to specify a comment to write above
         hidden parameters.
         """
-        super(PY8Card, self).add_param(name, value, comment=comment)
+        super().add_param(name, value, comment=comment)
         name = name.lower()
         if hidden:
             self.hidden_param.append(name)
@@ -2191,7 +2187,7 @@ class PY8Card(ConfigFile):
         # Setup template from which to read
         if isinstance(template, str):
             if os.path.isfile(template):
-                tmpl = open(template, 'r')
+                tmpl = open(template)
             elif '\n' in template:
                 tmpl = StringIO.StringIO(template)
             else:
@@ -2480,14 +2476,14 @@ class PY8SubRun(PY8Card):
         if 'subrun_id' in opts:
             subrunID = opts.pop('subrun_id')
 
-        super(PY8SubRun, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
         self['Main:subrun']=subrunID
 
     def default_setup(self):
         """Sets up the list of available PY8SubRun parameters."""
         
         # Add all default PY8Card parameters
-        super(PY8SubRun, self).default_setup()
+        super().default_setup()
         # Make sure they are all hidden
         self.hidden_param = [k.lower() for k in self.keys()]
         self.hidden_params_to_always_write = set()
@@ -2498,7 +2494,7 @@ class PY8SubRun(PY8Card):
         self.add_param("Beams:LHEF", "events.lhe.gz")
 
         
-class RunBlock(object):
+class RunBlock:
     """ Class for a series of parameter in the run_card that can be either
         visible or hidden.
         name: allow to set in the default run_card $name to set where that 
@@ -2659,9 +2655,9 @@ class RunCard(ConfigFile):
 
             target_class.fill_post_set_from_blocks()
 
-            return super(RunCard, cls).__new__(target_class, finput, **opt)
+            return super().__new__(target_class, finput, **opt)
         else:
-            return super(RunCard, cls).__new__(cls, finput, **opt)
+            return super().__new__(cls, finput, **opt)
 
     def __init__(self, *args, **opts):
         
@@ -2693,7 +2689,7 @@ class RunCard(ConfigFile):
         self.warned=False
 
 
-        super(RunCard, self).__init__(*args, **opts)
+        super().__init__(*args, **opts)
 
     @classmethod
     def get_lepton_densities(cls):
@@ -2745,7 +2741,7 @@ class RunCard(ConfigFile):
         - typelist: type of the list if default is empty
         """
 
-        super(RunCard, self).add_param(name, value, system=system,**opts)
+        super().add_param(name, value, system=system,**opts)
         name = name.lower()
         if fortran_name:
             self.fortran_name[name] = fortran_name
@@ -2889,7 +2885,7 @@ class RunCard(ConfigFile):
             template_options = collections.defaultdict(str)
             
         if python_template:
-            text = open(template,'r').read()
+            text = open(template).read()
             text = text.split('\n')             
             # remove if templating
             text = [l if not l.startswith('#IF') else l[l.find(')# ')+2:] 
@@ -2908,7 +2904,7 @@ class RunCard(ConfigFile):
             if not self.list_parameter:
                 text = text % self
             else:
-                data = dict((key.lower(),value) for key, value in self.items())              
+                data = {key.lower():value for key, value in self.items()}              
                 for name in self.list_parameter:
                     if self.list_parameter[name] != str:
                         data[name] = ', '.join(str(v) for v in data[name])
@@ -2917,7 +2913,7 @@ class RunCard(ConfigFile):
                 text = text % data
         else:  
             text = ""
-            for line in open(template,'r'):
+            for line in open(template):
                 nline = line.split('#')[0]
                 nline = nline.split('!')[0]
                 comment = line[len(nline):]
@@ -2952,7 +2948,7 @@ class RunCard(ConfigFile):
                             endline = '\n'
                         else:
                             endline = ''
-                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)
+                        text += '  {}\t= {} {}{}'.format(value, name, comment, endline)
                         written.add(name)                        
 
                     if name in to_write:
@@ -3031,7 +3027,7 @@ class RunCard(ConfigFile):
                 # do not write hidden parameter not hidden for this template 
                 #
                 if python_template:
-                    written = written.union(set(re.findall('\%\((\w*)\)s', open(template,'r').read(), re.M)))
+                    written = written.union(set(re.findall(r'\%\((\w*)\)s', open(template).read(), re.M)))
                 to_write = to_write.union(set(self.hidden_param))
                 to_write = to_write.difference(written)
 
@@ -3040,7 +3036,7 @@ class RunCard(ConfigFile):
                     continue
 
                 comment = self.comments.get(key,'hidden_parameter').replace('\n','\n#')
-                text += '  %s\t= %s # %s\n' % (self[key], key, comment)
+                text += '  {}\t= {} # {}\n'.format(self[key], key, comment)
 
         if isinstance(output_file, str):
             fsock = open(output_file,'w')
@@ -3116,16 +3112,16 @@ class RunCard(ConfigFile):
             to_mod = {}
             for path in filelist:
                 tmp = pjoin(tmpdir, os.path.basename(path))
-                text = open(path,'r').read()
+                text = open(path).read()
                 #misc.sprint(text)
                 f77_type = ['real*8', 'integer', 'double precision', 'logical']
-                pattern = re.compile('^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
+                pattern = re.compile(r'^\s+(?:SUBROUTINE|(?:%(type)s)\s+function)\s+([a-zA-Z]\w*)' \
                                 % {'type':'|'.join(f77_type)}, re.I+re.M)
                 for fct in pattern.findall(text):
                     fsock = file_writers.FortranWriter(tmp,'w')
                     function_text = fsock.remove_routine(text, fct)
                     fsock.close()
-                    test = open(tmp,'r').read()                        
+                    test = open(tmp).read()                        
                     if fct not in self.dummy_fct_file:
                         if fct.startswith('user_'):
                             self.dummy_fct_file[fct] = self.dummy_fct_file['user_']
@@ -3206,7 +3202,7 @@ class RunCard(ConfigFile):
         #handle metadata
         opts = {}
         forced_opts = []
-        for key,val in re.findall("\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
+        for key,val in re.findall(r"\<(?P<key>[_\-\w]+)\=(?P<value>[^>]*)\>", str(name)):
             forced_opts.append(key)
             if val in ['True', 'False']:
                 opts[key] = eval(val)
@@ -3377,24 +3373,24 @@ class RunCard(ConfigFile):
                     if targettype is bool:
                         pass
                     elif targettype is int:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+                        line = '{}({}) = {} \n'.format(fortran_name, 0, self.f77_formatting(len(value)))
                         fsock.writelines(line)
                     elif targettype is float:
-                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
+                        line = '{}({}) = {} \n'.format(fortran_name, 0, self.f77_formatting(float(len(value))))
                         fsock.writelines(line)
                     # output the rest of the list in fortran
                     for i,v in enumerate(value):
-                        line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
+                        line = '{}({}) = {} \n'.format(fortran_name, i+1, self.f77_formatting(v))
                         fsock.writelines(line)
                 elif isinstance(value, dict):
                     for fortran_name, onevalue in value.items():
-                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
+                        line = '{} = {} \n'.format(fortran_name, self.f77_formatting(onevalue))
                         fsock.writelines(line)                       
                 elif isinstance(incname,str) and 'compile' in incname:
-                    line = '%s = %s \n' % (fortran_name, value)
+                    line = '{} = {} \n'.format(fortran_name, value)
                     fsock.write(line)
                 else:
-                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
+                    line = '{} = {} \n'.format(fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
             if not output_file:
                 fsock.close()
@@ -3434,7 +3430,7 @@ class RunCard(ConfigFile):
                 input = fsock.getvalue()
                 
             else:
-                input = open(pjoin(output_dir,pathinc),'r').read()
+                input = open(pjoin(output_dir,pathinc)).read()
                 # do not define fsock here since we might not need to overwrite it
 
             # first get the name/type of line that are already added
@@ -3803,7 +3799,7 @@ class PDLabelBlock(RunBlock):
         if card['pdlabel'] == 'mixed':
             return True
 
-        return super(PDLabelBlock, self).status(card)
+        return super().status(card)
 
     @staticmethod
     def post_set_pdlabel(card, value, change_userdefine, raiseerror, **opt):
@@ -4171,7 +4167,7 @@ class RunCardLO(RunCard):
     def check_validity(self):
         """ """
         
-        super(RunCardLO, self).check_validity()
+        super().check_validity()
         
         #Make sure that nhel is only either 0 (i.e. no MC over hel) or
         #1 (MC over hel with importance sampling). In particular, it can
@@ -4260,15 +4256,15 @@ class RunCardLO(RunCard):
                     mod = True
             elif abs(self[lpp]) == 1: # PDF from PDF library
                 if self[pdlabelX] in ['eva', 'iww', 'edff','chff','none']:
-                    raise InvalidRunCard("%s \'%s\' not compatible with %s \'%s\'" % (lpp, self[lpp], pdlabelX, self[pdlabelX]))
+                    raise InvalidRunCard("{} \'{}\' not compatible with {} \'{}\'".format(lpp, self[lpp], pdlabelX, self[pdlabelX]))
             elif abs(self[lpp]) in [3,4]: # PDF from PDF library
                 if self[pdlabelX] not in ['none','eva', 'iww'] + sum(self.allowed_lep_densities.values(),[]):
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to eva" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    logger.warning("{} \'{}\' not compatible with {} \'{}\'. Change {} to eva".format(lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'eva')
                     mod = True
             elif abs(self[lpp]) == 2:
                 if self[pdlabelX] not in ['none','chff','edff', 'iww']:
-                    logger.warning("%s \'%s\' not compatible with %s \'%s\'. Change %s to edff" % (lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
+                    logger.warning("{} \'{}\' not compatible with {} \'{}\'. Change {} to edff".format(lpp, self[lpp], pdlabelX, self[pdlabelX], pdlabelX))
                     self.set(pdlabelX, 'edff')
                     mod = True
 
@@ -4277,7 +4273,7 @@ class RunCardLO(RunCard):
                 self.user_set.remove('pdlabel')
             self.user_set.add('pdlabel1')
             #force rerun of consistency of lhapdf block
-            super(RunCardLO, self).check_validity()
+            super().check_validity()
 
         # if heavy ion mode use for one beam, forbid lpp!=1
         if self['lpp1'] not in [1,2]:
@@ -4409,8 +4405,8 @@ class RunCardLO(RunCard):
                     for minmax in ['min', 'max']:
                         if var in ['Mxx'] and minmax =='max':
                             continue
-                        new_var = '%s%s4pdg' % (var, minmax)
-                        old_var = '%s_%s_pdg' % (var, minmax)
+                        new_var = '{}{}4pdg'.format(var, minmax)
+                        old_var = '{}_{}_pdg'.format(var, minmax)
                         default = 0. if minmax=='min' else -1.
                         self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
                 #special for mxx_part_antipart
@@ -4421,7 +4417,7 @@ class RunCardLO(RunCard):
                     self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
                 else:
                     if str(pdg) not in self[old_var]:
-                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                        raise Exception("no default value defined for {} and no value defined for pdg {}".format(old_var, pdg)) 
                     self[new_var].append(self[old_var][str(pdg)])
         else:
             self['pdg_cut'] = [0]
@@ -4510,7 +4506,7 @@ class RunCardLO(RunCard):
                 self['ebeam1'] = 500
                 self['ebeam2'] = 500
                 self['use_syst'] = False
-                if set([ abs(i) for i in beam_id_split[0]]) == set([ abs(i) for i in beam_id_split[1]]):
+                if { abs(i) for i in beam_id_split[0]} == { abs(i) for i in beam_id_split[1]}:
                     self.display_block.append('ecut')
                 self.display_block.append('beam_pol')
 
@@ -4800,7 +4796,7 @@ class RunCardLO(RunCard):
                         if self.cut_class.get(k1) and self.cut_class.get(k2):
                             hid_lines[k1+k2] = True
 
-        super(RunCardLO, self).write(output_file, template=template,
+        super().write(output_file, template=template,
                                     python_template=python_template, 
                                     template_options=hid_lines,
                                     **opt)            
@@ -4901,7 +4897,7 @@ class MadAnalysis5Card(dict):
                                                     "File '%s' not found."%input)
             if mode is None and 'hadron' in input:
                 card_mode = 'hadron'
-            input_stream = open(input,'r')
+            input_stream = open(input)
         else:
             raise MadGraph5Error('Incorrect input for the read function of'+\
               ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(input)))
@@ -5403,7 +5399,7 @@ class RunCardNLO(RunCard):
     def check_validity(self):
         """check the validity of the various input"""
         
-        super(RunCardNLO, self).check_validity()
+        super().check_validity()
 
         # for lepton-lepton collisions, ignore 'pdlabel' and 'lhaid'
         if abs(self['lpp1'])!=1 or abs(self['lpp2'])!=1:
@@ -5604,8 +5600,8 @@ class RunCardNLO(RunCard):
                     for minmax in ['min', 'max']:
                         if var == 'mxx' and minmax == 'max':
                             continue
-                        new_var = '%s%s4pdg' % (var, minmax)
-                        old_var = '%s_%s_pdg' % (var, minmax)
+                        new_var = '{}{}4pdg'.format(var, minmax)
+                        old_var = '{}_{}_pdg'.format(var, minmax)
                         default = 0. if minmax=='min' else -1.
                         self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
                 #special for mxx_part_antipart
@@ -5616,7 +5612,7 @@ class RunCardNLO(RunCard):
                     self[new_var].append(self[old_var][str(pdg)] if str(pdg) in self[old_var] else default)
                 else:
                     if str(pdg) not in self[old_var]:
-                        raise Exception("no default value defined for %s and no value defined for pdg %s" % (old_var, pdg)) 
+                        raise Exception("no default value defined for {} and no value defined for pdg {}".format(old_var, pdg)) 
                     self[new_var].append(self[old_var][str(pdg)])
         else:
             self['pdg_cut'] = [0]
@@ -5638,7 +5634,7 @@ class RunCardNLO(RunCard):
                 template = pjoin(MEDIR, 'Cards', 'run_card_default.dat')
                 python_template = False
 
-        super(RunCardNLO, self).write(output_file, template=template,
+        super().write(output_file, template=template,
                                     python_template=python_template, **opt)
 
 
@@ -5821,7 +5817,7 @@ class MadLoopParam(ConfigFile):
                                                    'Cards', 'MadLoopParams.dat')
             else:
                 template = pjoin(MEDIR, 'Cards', 'MadLoopParams_default.dat')
-        fsock = open(template, 'r')
+        fsock = open(template)
         template = fsock.readlines()
         fsock.close()
         
@@ -5875,7 +5871,7 @@ class eMELA_info(ConfigFile):
         me_dir is stored to update the cards
         """
         self.me_dir = me_dir
-        super(eMELA_info, self).__init__(finput)
+        super().__init__(finput)
 
 
     def read(self, finput):
@@ -6009,7 +6005,7 @@ class eMELA_info(ConfigFile):
         """update the card parameter par to value v
         and print a log on the screen
         """
-        logger.info(' Setting %s = %s in the %s' % (par, str(v), card))
+        logger.info(' Setting {} = {} in the {}'.format(par, str(v), card))
         if card != 'param_card':
             banner.set(card,par,v)
         else:

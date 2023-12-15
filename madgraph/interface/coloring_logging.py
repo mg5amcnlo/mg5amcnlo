@@ -1,6 +1,4 @@
-from __future__ import absolute_import
 import logging
-from six.moves import range
 # method to add color to a logging.info add a second argument:
 # '$MG:BOLD'
 # '$MG:color:RED'

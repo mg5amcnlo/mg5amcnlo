@@ -17,7 +17,6 @@
 for a loop diagram and build a color basis, and to square a QCD color string for
 squared diagrams and interference terms."""
 
-from __future__ import absolute_import
 import copy
 import fractions
 import operator

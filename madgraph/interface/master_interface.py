@@ -17,7 +17,6 @@
 """
 
 
-from __future__ import absolute_import
 import atexit
 import logging
 import optparse
@@ -53,7 +52,7 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 logger = logging.getLogger('cmdprint') # -> stdout
 
 
-class Switcher(object):
+class Switcher:
     """ Helping class containing all the switching routine """
 
     def __init__(self, main='MadGraph', *args, **opt):
@@ -104,10 +103,10 @@ class Switcher(object):
                key in overwritable):
                 continue
             text = """\
-    def %(key)s(self, *args, **opts):
-        return self.cmd.%(key)s(self, *args, **opts)
+    def {key}(self, *args, **opts):
+        return self.cmd.{key}(self, *args, **opts)
         
-""" % {'key': key}
+""".format(key=key)
             logger.warning("""Command %s not define in the Master. 
             The line to add to the master_interface.py are written in 'additional_command' file""" % key)
             ff.write(text)
@@ -132,7 +131,7 @@ class Switcher(object):
                 if data not in define:
                     define[data] = mother.__name__
                 else:
-                    logger.warning('%s define in %s and in %s but not in Switcher.' % (data, define[data], mother.__name__))
+                    logger.warning('{} define in {} and in {} but not in Switcher.'.format(data, define[data], mother.__name__))
                     correct = False
                     
         # Do the same for the WEb MasterClass
@@ -150,7 +149,7 @@ class Switcher(object):
                 if data not in define:
                     define[data] = mother.__name__
                 else:
-                    logger.warning('%s define in %s and in %s but not in Switcher.' % (data, define[data], mother.__name__))
+                    logger.warning('{} define in {} and in {} but not in Switcher.'.format(data, define[data], mother.__name__))
                     correct = False                    
                     
         if not correct:
@@ -174,7 +173,7 @@ class Switcher(object):
         # [ loop_orders ] which implicitly select the 'all' option.
         loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
         # Make sure that the content of options following '--' are not considered.
-        res=loopRE.search(re.split('%s\-\-', line,1)[0])
+        res=loopRE.search(re.split(r'%s\-\-', line,1)[0])
         if res:
             orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:

@@ -2,7 +2,6 @@
 # Mathematica version: 7.0 for Mac OS X x86 (64-bit) (November 11, 2008)
 # Date: Fri 18 Mar 2011 18:40:51
 
-from __future__ import absolute_import
 from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
 from . import particles as P
 from . import couplings as C

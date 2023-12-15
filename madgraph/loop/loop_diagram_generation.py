@@ -15,7 +15,6 @@
 """Classes for diagram generation with loop features.
 """
 
-from __future__ import absolute_import
 import array
 import copy
 import itertools
@@ -28,8 +27,6 @@ import madgraph.various.misc as misc
 
 from madgraph import MadGraph5Error
 from madgraph import InvalidCmd
-from six.moves import range
-from six.moves import zip
 logger = logging.getLogger('madgraph.loop_diagram_generation')
 
 def ldg_debug_info(msg,val, force=False):
@@ -59,7 +56,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # The 'diagrams' entry from the mother class is inherited but will not
         # be used in NLOAmplitude, because it is split into the four following
         # different categories of diagrams.
-        super(LoopAmplitude, self).default_setup()
+        super().default_setup()
         self['born_diagrams'] = None        
         self['loop_diagrams'] = None
         self['loop_UVCT_diagrams'] = base_objects.DiagramList()
@@ -85,15 +82,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
         self.loop_filter = loop_filter
         
         if isinstance(argument, base_objects.Process):
-            super(LoopAmplitude, self).__init__()
+            super().__init__()
             self.set('process', argument)
             self.generate_diagrams()
         elif argument != None:
             # call the mother routine
-            super(LoopAmplitude, self).__init__(argument)
+            super().__init__(argument)
         else:
             # call the mother routine
-            super(LoopAmplitude, self).__init__()
+            super().__init__()
 
     def get_sorted_keys(self):
         """Return diagram property names as a nicely sorted list."""
@@ -132,7 +129,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise self.PhysicsObjectError("%s is not a valid bool" % str(value))
 
         else:
-            super(LoopAmplitude, self).filter(name, value)
+            super().filter(name, value)
 
         return True
 
@@ -149,7 +146,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                   isinstance(diag,loop_base_objects.LoopUVCTDiagram)])
                 
         else:
-            return super(LoopAmplitude, self).set(name, value)
+            return super().set(name, value)
 
         return True
 
@@ -525,7 +522,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # of the perturbed order.
             valid_diag=True
             if (diag.get_loop_line_types()-set(allowedpart))!=set() or \
-                                                       pert_loop_order==set([]):
+                                                       pert_loop_order==set():
                 valid_diag=False
                 if not warned:
                     logger.warning(warning_msg)
@@ -580,9 +577,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
     def get_non_pert_order_config(self, diagram):
         """ Return a dictionary of all the coupling orders of this diagram which
         are not the perturbed ones."""
-        return dict([(order, diagram.get_order(order)) for \
+        return {order: diagram.get_order(order) for \
                       order in self['process']['model']['coupling_orders'] if \
-                       not order in self['process']['perturbation_couplings'] ])
+                       not order in self['process']['perturbation_couplings'] }
 
     def print_config(self,config):
         """Return a string describing the coupling order configuration"""
@@ -815,10 +812,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # remaining is stable.
         # We first apply the selection rules without the negative constraint.
         # (i.e. QCD=1 for LO contributions only)
-        regular_constraints = dict([(key,val) for (key,val) in 
-                           self['process']['squared_orders'].items() if val>=0])
-        negative_constraints = dict([(key,val) for (key,val) in 
-                            self['process']['squared_orders'].items() if val<0])
+        regular_constraints = {key:val for (key,val) in 
+                           self['process']['squared_orders'].items() if val>=0}
+        negative_constraints = {key:val for (key,val) in 
+                            self['process']['squared_orders'].items() if val<0}
         while True:
             ndiag_remaining=len(self['loop_diagrams']+self['born_diagrams'])
             self.check_squared_orders(regular_constraints)
@@ -1003,23 +1000,23 @@ class LoopAmplitude(diagram_generation.Amplitude):
         sorted_hierarchy = [order[0] for order in \
                                 sorted(list(hierarchy.items()), key=lambda el: el[1])]
         
-        loop_SOs = set(tuple([d.get_order(order) for order in sorted_hierarchy]) 
-                      for d in self['loop_diagrams']+self['loop_UVCT_diagrams'])
+        loop_SOs = {tuple([d.get_order(order) for order in sorted_hierarchy]) 
+                      for d in self['loop_diagrams']+self['loop_UVCT_diagrams']}
         
         if self['process']['has_born']:
-            born_SOs = set(tuple([d.get_order(order) for order in \
-                              sorted_hierarchy]) for d in self['born_diagrams'])
+            born_SOs = {tuple([d.get_order(order) for order in \
+                              sorted_hierarchy]) for d in self['born_diagrams']}
         else:
-            born_SOs = set([])
+            born_SOs = set()
         
-        born_sqSOs = set(tuple([x + y for x, y in zip(b1_SO, b2_SO)]) for b1_SO 
-                                              in born_SOs for b2_SO in born_SOs)
+        born_sqSOs = {tuple([x + y for x, y in zip(b1_SO, b2_SO)]) for b1_SO 
+                                              in born_SOs for b2_SO in born_SOs}
         if self['process']['has_born']:
             ref_amps = born_SOs
         else:
             ref_amps = loop_SOs
-        loop_sqSOs = set(tuple([x + y for x, y in zip(b_SO, l_SO)]) for b_SO in 
-                                                  ref_amps for l_SO in loop_SOs)
+        loop_sqSOs = {tuple([x + y for x, y in zip(b_SO, l_SO)]) for b_SO in 
+                                                  ref_amps for l_SO in loop_SOs}
         
         # Append the corresponding WEIGHT of each contribution
         sorted_hierarchy.append('WEIGHTED')
@@ -1176,7 +1173,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                 
                 # We generate the diagrams now
                 loopsuccessful, lcutdiaglist = \
-                          super(LoopAmplitude, self).generate_diagrams(True)
+                          super().generate_diagrams(True)
 
                 # Now get rid of all the previously defined l-cut particles.
                 leg_to_remove=[leg for leg in self['process']['legs'] \
@@ -1227,9 +1224,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if inter.is_UVtree() and len(inter['particles'])>1 and \
               inter.is_perturbating(self['process']['perturbation_couplings']) \
               and (set(inter['orders'].keys()).intersection(\
-               set(self['process']['perturbation_couplings'])))!=set([]) and \
+               set(self['process']['perturbation_couplings'])))!=set() and \
               (any([set(loop_parts).intersection(set(self['process']\
-                   ['forbidden_particles']))==set([]) for loop_parts in \
+                   ['forbidden_particles']))==set() for loop_parts in \
                    inter.get('loop_particles')]) or \
                    inter.get('loop_particles')==[[]]):
                 UVCTvertex_interactions.append(inter)
@@ -1250,7 +1247,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         self['process']['orders']['UVCT_SPECIAL']=1      
         
         UVCTsuccessful, UVCTdiagrams = \
-          super(LoopAmplitude, self).generate_diagrams(True)
+          super().generate_diagrams(True)
 
         for UVCTdiag in UVCTdiagrams:
             if UVCTdiag.get_order('UVCT_SPECIAL')==1:
@@ -1263,7 +1260,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 # the process.
                 newUVCTDiag.get('UVCT_couplings').append((len([1 for loop_parts \
                   in UVCTinter.get('loop_particles') if set(loop_parts).intersection(\
-                  set(self['process']['forbidden_particles']))==set([])])) if
+                  set(self['process']['forbidden_particles']))==set()])) if
                   UVCTinter.get('loop_particles')[-1]!=[[]] else  1)
                 self['loop_UVCT_diagrams'].append(newUVCTDiag)
 
@@ -1312,7 +1309,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                             orderKey.append(('EpsilonOrder',-laurentOrder))
                             CTCouplings=[CTCoupling for loop_parts in key[1] if
                               set(loop_parts).intersection(set(self['process']\
-                              ['forbidden_particles']))==set([])]
+                              ['forbidden_particles']))==set()]
                             if CTCouplings!=[]:
                                 try:
                                     LoopUVCTDiagramsAdded[tuple(orderKey)].get(\
@@ -1360,7 +1357,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         # specified as loop particles are not forbidden before
                         # adding this CT to CT_interactions 
                         if (set(self['process']['forbidden_particles']) & \
-                                                        set(lparts)) != set([]):
+                                                        set(lparts)) != set():
                             continue
                         else:
                             keya=[]        

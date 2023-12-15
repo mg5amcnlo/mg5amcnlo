@@ -1,12 +1,9 @@
-
-from __future__ import absolute_import
-from six.moves import range
 __date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from .function_library import *
 
-class ParamCardWriter(object):
+class ParamCardWriter:
     
     header = \
     """######################################################################\n""" + \
@@ -69,7 +66,7 @@ class ParamCardWriter(object):
         """ """
         
         # list all lhablock
-        all_lhablock = set([param.lhablock for param in all_ext_param])
+        all_lhablock = {param.lhablock for param in all_ext_param}
         
         # ordonate lhablock alphabeticaly
         all_lhablock = list(all_lhablock)
@@ -109,9 +106,9 @@ class ParamCardWriter(object):
         
         lhacode=' '.join(['%3s' % key for key in param.lhacode])
         if lhablock != 'DECAY':
-            text = """  %s %e # %s \n""" % (lhacode, complex(param.value).real, param.name ) 
+            text = """  {} {:e} # {} \n""".format(lhacode, complex(param.value).real, param.name ) 
         else:
-            text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
+            text = '''DECAY {} {:e} \n'''.format(lhacode, complex(param.value).real)
         self.fsock.write(text) 
                     
 
@@ -121,7 +118,7 @@ class ParamCardWriter(object):
         import cmath
         from .parameters import all_parameters
         for parameter in all_parameters:
-            exec("%s = %s" % (parameter.name, parameter.value))
+            exec("{} = {}".format(parameter.name, parameter.value))
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"

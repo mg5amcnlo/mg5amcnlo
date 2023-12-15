@@ -15,7 +15,6 @@
 """ Create gen_crossxhtml """
 
 
-from __future__ import absolute_import
 import os
 import math
 import re
@@ -24,7 +23,6 @@ import re
 import glob
 import logging
 import six
-from six.moves import range
 
 try:
     import madgraph
@@ -405,8 +403,8 @@ class AllResults(dict):
                         s[0] = nevent - int(s[1]) -int(s[2])
                     else:
                         s[0] = ''
-                status ='''<td> %s </td> <td> %s </td> <td> %s </td>
-                </tr><tr><td colspan=3><center> %s </center></td>''' % (s[0],s[1], s[2], s[3])
+                status ='''<td> {} </td> <td> {} </td> <td> {} </td>
+                </tr><tr><td colspan=3><center> {} </center></td>'''.format(s[0],s[1], s[2], s[3])
                 
             
             status_dict = {'status': status,
@@ -463,11 +461,11 @@ class AllResults(dict):
             if self.web:
                 status_dict['stop_form'] = """
                  <TR ALIGN=CENTER><TD COLSPAN=7 text-align=center>
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<FORM ACTION="http://{web}/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="{me_dir}">
 <INPUT TYPE=HIDDEN NAME=whattodo VALUE="stop_job">
 <INPUT TYPE=SUBMIT VALUE="Stop Current Job">
-</FORM></TD></TR>""" % {'me_dir': self.path, 'web': self.web}
+</FORM></TD></TR>""".format(me_dir=self.path, web=self.web)
             else:
                 status_dict['stop_form'] = ""
             
@@ -648,7 +646,7 @@ class RunResults(list):
             if run_card['ickkw'] != 0:
                 #parse the file to have back the information
                 pythia_log = misc.BackRead(pjoin(path, '%s_pythia.log' % tag))
-                pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+                pythiare = re.compile(r"\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
                 for line in pythia_log:
                     info = pythiare.search(line)
                     if not info:
@@ -1014,7 +1012,7 @@ class OneTagResults(dict):
     
     def special_link(self, link, level, name):
         
-        id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
+        id = '{}_{}_{}_{}'.format(self['run_name'],self['tag'], level, name)
         return " <a  id='%(id)s' href='%(link)s.gz'>%(name)s</a>" \
               % {'link': link, 'id': id, 'name':name}
         #return " <a  id='%(id)s' href='%(link)s.gz' onClick=\"check_link('%(link)s.gz','%(link)s','%(id)s')\">%(name)s</a>" \
@@ -1059,7 +1057,7 @@ class OneTagResults(dict):
             # fixed order plots
                     for f in \
                         misc.glob('*.' + kind, pjoin(self.me_dir, 'Events', self['run_name'])):
-                        out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
+                        out += " <a href=\"{}\">{}</a> ".format(f, '%s' % kind.upper())
             
             if 'ma5_html' in self.parton:
                 for result in misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag']),
@@ -1072,7 +1070,7 @@ class OneTagResults(dict):
             # fixed order plots
                 for f in \
                   misc.glob('*.HwU', pjoin(self.me_dir, 'Events', self['run_name'])):
-                    out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
+                    out += " <a href=\"{}\">{}</a> ".format(f, 'HwU data')
                     out += " <a href=\"%s\">%s</a> " % \
                                            (f.replace('.HwU','.gnuplot'), 'GnuPlot')
             if 'summary.txt' in self.parton:
@@ -1205,10 +1203,10 @@ class OneTagResults(dict):
                       misc.glob('*.' + kind, pjoin(self.me_dir, 'Events', self['run_name'])) + \
                       misc.glob('*.%s.gz' % kind, pjoin(self.me_dir, 'Events', self['run_name'])):
                         if kind == 'HwU':
-                            out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
-                            out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+                            out += " <a href=\"{}\">{}</a> ".format(f, 'HwU data')
+                            out += " <a href=\"{}\">{}</a> ".format(f.replace('.HwU','.gnuplot'), 'GnuPlot')
                         else:
-                            out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+                            out += " <a href=\"{}\">{}</a> ".format(f, kind.upper())
 
             if 'plot' in self.shower:
                 out += """ <a href="./HTML/%(run_name)s/plots_shower_%(tag)s.html">plots</a>"""
@@ -1613,7 +1611,7 @@ class OneTagResults(dict):
                                   
         if self.debug is KeyboardInterrupt:
             debug = '<br><font color=red>Interrupted</font>'
-        elif isinstance(self.debug, six.string_types):
+        elif isinstance(self.debug, str):
             if not os.path.isabs(self.debug) and not self.debug.startswith('./'):
                 self.debug = './' + self.debug
             elif os.path.isabs(self.debug):
@@ -1623,7 +1621,7 @@ class OneTagResults(dict):
         elif self.debug:
             text = str(self.debug).replace('. ','.<br>')
             if 'http' in text:
-                pat = re.compile('(http[\S]*)')
+                pat = re.compile(r'(http[\S]*)')
                 text = pat.sub(r'<a href=\1> here </a>', text)
             debug = '<br><font color=red>%s<BR>%s</font>' % \
                                            (self.debug.__class__.__name__, text)
@@ -1657,7 +1655,7 @@ class OneTagResults(dict):
         else:
             header = 'Launch ./bin/aMCatNLO in a shell, and run the following command: '
 
-        return "<INPUT TYPE=SUBMIT VALUE='%s' onClick=\"alert('%s')\">" % (button, header + command)
+        return "<INPUT TYPE=SUBMIT VALUE='{}' onClick=\"alert('{}')\">".format(button, header + command)
 
 
         return  + '<br>'

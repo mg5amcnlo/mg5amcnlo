@@ -14,7 +14,7 @@
 ################################################################################
 
 
-class Rule(object):
+class Rule:
     """ """
     
     def __init__(self, name, default, data,first=True, inverted_display=False):

@@ -13,8 +13,6 @@
 #
 ################################################################################
 """ Command interface for Re-Weighting """
-from __future__ import division
-from __future__ import absolute_import
 import difflib
 import logging
 import math
@@ -26,9 +24,6 @@ import tempfile
 import time
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
-from six.moves import map
-from six.moves import range
-from six.moves import zip
 import six
 
 
@@ -225,13 +220,13 @@ class ReweightInterface(extended_cmd.Cmd):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
-        process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+        process, order, final = re.split(r'\[\s*(.*)\s*\]', proc)
         if process.strip().startswith(('generate', 'add process')):
             process = process.replace('generate', '')
             process = process.replace('add process','')
         
         # add the part without any additional jet.
-        commandline="add process %s %s --no_warning=duplicate;" % (process, final)
+        commandline="add process {} {} --no_warning=duplicate;".format(process, final)
         if not order:
             #NO NLO tag => nothing to do actually return input
             return proc
@@ -247,7 +242,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(model,
                                            pert_order = order)['soft_particles']
-            commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
+            commandline += "define pert_{} = {};".format(order.replace(' ',''), ' '.join(map(str,pert)) )
             
             # check if we have to increase by one the born order
             
@@ -263,24 +258,24 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
+            result = re.split(r'([/$@]|\w+(?:^2)?(?:=|<=|>)+\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
-                commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
+                commandline+="add process {} pert_{} {}{} {} --no_warning=duplicate;".format(process, order.replace(' ','') ,split, rest, final)
             else:
-                commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
-        elif order.startswith(('noborn')):
+                commandline +='add process {} pert_{} {} --no_warning=duplicate;'.format(process,order.replace(' ',''), final)
+        elif order.startswith('noborn'):
             # pass in sqrvirt=
-            return "add process %s [%s] %s;" % (process, order.replace('noborn', 'sqrvirt'), final)
+            return "add process {} [{}] {};".format(process, order.replace('noborn', 'sqrvirt'), final)
         elif order.startswith('LOonly'):
             #remove [LOonly] flag
-            return "add process %s %s;" % (process, final)
+            return "add process {} {};".format(process, final)
         else:
             #just return the input. since this Madloop.
             if order:
-                return "add process %s [%s] %s ;" % (process, order,final)
+                return "add process {} [{}] {} ;".format(process, order,final)
             else:
-                return "add process %s %s ;" % (process, final)
+                return "add process {} {} ;".format(process, final)
         return commandline
 
 
@@ -297,7 +292,7 @@ class ReweightInterface(extended_cmd.Cmd):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
                     running_time = misc.format_timer(time.time()-start)
-                    logger.info('Event nb %s %s' % (event_nb, running_time))
+                    logger.info('Event nb {} {}'.format(event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
             try:
@@ -557,7 +552,7 @@ class ReweightInterface(extended_cmd.Cmd):
             #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
                     running_time = misc.format_timer(time.time()-start)
-                    logger.info('Event nb %s %s' % (event_nb, running_time))
+                    logger.info('Event nb {} {}'.format(event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
             if (event_nb==100001): logger.info('reducing number of print status. Next status update in 100000 events')
 
@@ -580,12 +575,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 except ValueError:
                     continue
             
-            event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
+            event.reweight_order += ['{}{}'.format(tag_name,name) for name in type_rwgt]  
             if self.output_type == "default":
                 for name in weight:
                     if 'orig' in name:
                         continue             
-                    event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
+                    event.reweight_data['{}{}'.format(tag_name,name)] = weight[name]
                     #write this event with weight
                 output.write(str(event))
             else:
@@ -607,7 +602,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
+        logger.info('All event done  (nb_event: {}) {}'.format(event_nb+1, running_time))        
         
         
         if self.output_type == "default":
@@ -652,7 +647,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.lhe_input.close()
         if not self.mother:
             name, ext = self.lhe_input.name.rsplit('.',1)
-            target = '%s_out.%s' % (name, ext)            
+            target = '{}_out.{}'.format(name, ext)            
         elif self.output_type != "default" :
             target = pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe')
         else:
@@ -671,7 +666,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     results = self.mother.results
                     results.add_detail('nb_event', nb_event)
                     results.current.parton.append('lhe')
-                logger.info('Event %s is now unweighted under the new theory: %s(%s)' % (lhe.name, target, nb_event))                
+                logger.info('Event {} is now unweighted under the new theory: {}({})'.format(lhe.name, target, nb_event))                
         else:
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
@@ -701,7 +696,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 reweight_name = None
             for i,card in enumerate(param_card_iterator):
                 if reweight_name:
-                    self.options['rwgt_name'] = '%s_%s' % (reweight_name, i+1)
+                    self.options['rwgt_name'] = '{}_{}'.format(reweight_name, i+1)
                 self.new_param_card = card
                 #card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
@@ -784,7 +779,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w\-\.]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\\d+)|(?P<id2>[_\\w\\-\\.]+))(?P<rwgttype>\\s*|_\\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
@@ -802,7 +797,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     for (i, nlotype, diff) in mg_rwgt_info[:]:
                         for flag in type_rwgt:
                             if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
-                                i == '%s%s' % (self.options['rwgt_name'], flag):
+                                i == '{}{}'.format(self.options['rwgt_name'], flag):
                                     logger.warning("tag %s%s already defines, will replace it", self.options['rwgt_name'],flag)
                                     mg_rwgt_info.remove((i, nlotype, diff))
                                                 
@@ -861,7 +856,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 str_info += "\n change process  ".join([""]+self.second_process)
             if self.dedicated_path:
                 for k,v in self.dedicated_path.items():
-                    str_info += "\n change %s %s" % (k,v)
+                    str_info += "\n change {} {}".format(k,v)
             card_diff = str_info
             str_info += '\n' + s_new
             for name in type_rwgt:
@@ -912,7 +907,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         for param   in param_card[block]:
                             lhacode = param.lhacode
                             value = param.value
-                            name = '%s_%s' % (block.upper(), '_'.join([str(i) for i in lhacode]))
+                            name = '{}_{}'.format(block.upper(), '_'.join([str(i) for i in lhacode]))
                             module.change_para(name, value)
                         if param_card[block].scale:
                             name = "mdl__%s__scale" % block.upper()
@@ -965,7 +960,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.stored_line =  line
             return self.exec_cmd("launch")
         else:
-            return super(ReweightInterface,self).default(line, log=log)
+            return super().default(line, log=log)
     
     def write_reweighted_event(self, event, tag_name, **opt):
         """a function for running in multicore"""
@@ -1409,16 +1404,16 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.multicore == 'create':
             # No print of results for the multicore mode for the one printed on screen
             if 'orig' not in self.all_cross_section:
-                logger.info('Original cross-section: %s +- %s pb' % (cross, error))
+                logger.info('Original cross-section: {} +- {} pb'.format(cross, error))
             else: 
-                logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
+                logger.info('Original cross-section: {} +- {} pb (cross-section from sum of weights: {})'.format(cross, error, self.all_cross_section['orig'][0]))
             logger.info('Computed cross-section:')
             keys = list(self.all_cross_section.keys())
             keys.sort(key=lambda x: str(x))
             for key in keys:
                 if key == 'orig':
                     continue
-                logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
+                logger.info('{} : {} +- {} pb'.format(key[0] if not key[1] else '%s%s' % key,
                     self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
     
@@ -1485,7 +1480,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     nlo_order = 'virt=%s' % nlo_order
                 elif 'noborn' in nlo_order:
                     nlo_order = nlo_order.replace('noborn', 'virt')
-                commandline += "add process %s [%s] %s;" % (base,nlo_order,post)
+                commandline += "add process {} [{}] {};".format(base,nlo_order,post)
             commandline = commandline.replace('add process', 'generate',1)
             if commandline:
                 logger.info("RETRY with %s", commandline)
@@ -1543,7 +1538,7 @@ class ReweightInterface(extended_cmd.Cmd):
      
             for tag in to_check:
                 if tag not in self.id_to_path:
-                    logger.warning("no valid path for %s" % (tag,))
+                    logger.warning("no valid path for {}".format(tag))
                     #raise self.InvalidCmd, "no valid path for %s" % (tag,)
         
         # 4. Check MadLoopParam for Loop induced
@@ -1589,7 +1584,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 proc = proc.replace('[', '[ virt=')
                 commandline += "add process %s ;" % proc
-        commandline = re.sub('@\s*\d+', '', commandline)
+        commandline = re.sub(r'@\s*\d+', '', commandline)
         # deactivate golem since it creates troubles
         old_options = dict(mgcmd.options)
         if mgcmd.options['golem']:
@@ -1666,7 +1661,7 @@ class ReweightInterface(extended_cmd.Cmd):
             data['processes'] = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
             data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]  
+                      if re.search(r'^\s*add\s+process', line)]  
             #object_collector
             #self.id_to_path = {}
             #data['id2path'] = self.id_to_path
@@ -1699,7 +1694,7 @@ class ReweightInterface(extended_cmd.Cmd):
                                  if line.startswith('generate')]
                 data['processes'] += [' '.join(line.split()[2:]) 
                                       for line in self.banner.proc_card
-                                      if re.search('^\s*add\s+process', line)]
+                                      if re.search(r'^\s*add\s+process', line)]
             #object_collector
             #self.id_to_path_second = {}   
             #data['id2path'] = self.id_to_path_second 
@@ -1754,7 +1749,7 @@ class ReweightInterface(extended_cmd.Cmd):
             #multiparticles
             for name, content in self.banner.get('proc_card', 'multiparticles'):
                 try:
-                    mgcmd.exec_cmd("define %s = %s" % (name, content))
+                    mgcmd.exec_cmd("define {} = {}".format(name, content))
                 except madgraph.InvalidCmd:
                     pass
                     
@@ -1861,7 +1856,7 @@ class ReweightInterface(extended_cmd.Cmd):
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
                 with misc.TMP_variable(sys, 'path', [pjoin(path_me), pjoin(path_me,'onedir', 'SubProcesses')]+sys.path):      
-                    mod_name = '%s.SubProcesses.allmatrix%spy' % (onedir, tag)
+                    mod_name = '{}.SubProcesses.allmatrix{}py'.format(onedir, tag)
                     #mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
                     if mod_name in list(sys.modules.keys()):
                         del sys.modules[mod_name]
@@ -1869,25 +1864,14 @@ class ReweightInterface(extended_cmd.Cmd):
                         while '.' in tmp_mod_name:
                             tmp_mod_name = tmp_mod_name.rsplit('.',1)[0]
                             del sys.modules[tmp_mod_name]
-                        if six.PY3:
-                            import importlib
-                            mymod = importlib.import_module(mod_name,)
-                            mymod = importlib.reload(mymod)
-                            #mymod = __import__(mod_name, globals(), locals(), [])
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1) 
-                            S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag)
-                            reload(mymod) 
+                        import importlib
+                        mymod = importlib.import_module(mod_name,)
+                        mymod = importlib.reload(mymod)
+                        #mymod = __import__(mod_name, globals(), locals(), [])
                     else:
-                        if six.PY3:
-                            import importlib
-                            mymod = importlib.import_module(mod_name,)
-                            #mymod = __import__(mod_name, globals(), locals(), [])    
-                        else:
-                            mymod = __import__(mod_name, globals(), locals(), [],-1)
-                            S = mymod.SubProcesses
-                            mymod = getattr(S, 'allmatrix%spy' % tag) 
+                        import importlib
+                        mymod = importlib.import_module(mod_name,)
+                        #mymod = __import__(mod_name, globals(), locals(), [])    
                     
                 
                 # Param card not available -> no initialisation

@@ -13,18 +13,15 @@
 ##     - Class BackRead
 ##
 ##########################################################################
-from __future__ import absolute_import
 import sys
 import os
 import string
 import collections
 import itertools
 import copy
-from six.moves import range
 import six
-if six.PY3:
-    import io
-    file = io.IOBase
+import io
+file = io.IOBase
 
 class Multi_list(list):
     """ a list of list """
@@ -238,7 +235,7 @@ cases are handled, but never can be sure..."""
       try:
         self.seek(-self.blksize * self.blkcount, 2) # read from end of file
         self.data = string.split(self.read(self.blksize) + line, '\n')
-      except IOError:  # can't seek before the beginning of the file
+      except OSError:  # can't seek before the beginning of the file
         self.seek(0)
         self.data = string.split(self.read(self.size - (self.blksize * (self.blkcount-1))) + line, '\n')
 
@@ -296,7 +293,7 @@ def get_perms_from_id(pid_list, bjet_is_jet):
             else:
                 list_id.append('b')
         elif abs(pid) in [12,14,16,18,1000022,1000023,1000025,1000035]:
-            list_id.append('%s_%s' % (i, pid))
+            list_id.append('{}_{}'.format(i, pid))
         else:
             list_id.append(pid)
     
@@ -312,13 +309,13 @@ def get_all_permutations(cat_list):
         nb_cat[cat].append(i+1) #+1 in order to be in Fortan convention
     cat_names = list(nb_cat.keys())
     # build an iterator for each category
-    iterator = dict([(cat, itertools.permutations(value)) 
-                                               for cat,value in nb_cat.items()])
+    iterator = {cat: itertools.permutations(value) 
+                                               for cat,value in nb_cat.items()}
         
     permutations = [] # all possibility
     current = 0       # position of the last modify category
     #initialize all iterator to have starting point value
-    current_value = dict([(cat, list(next(it))) for cat,it in iterator.items()])
+    current_value = {cat: list(next(it)) for cat,it in iterator.items()}
 
     while current < len(iterator):
         #store the current value

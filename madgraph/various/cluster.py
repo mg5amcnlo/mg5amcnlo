@@ -11,7 +11,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch            
 #                                                                               
 ################################################################################
-from __future__ import absolute_import
 import subprocess
 import logging
 import os
@@ -21,8 +20,6 @@ import glob
 import inspect
 import sys
 import six
-from six.moves import range
-from six.moves import input
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -76,7 +73,7 @@ def store_input(arg=''):
                 input_files=[], output_files=[], required_output=[], nb_submit=0):
             frame = inspect.currentframe()
             args, _, _, values = inspect.getargvalues(frame)
-            args = dict([(i, values[i]) for i in args if i != 'self'])
+            args = {i: values[i] for i in args if i != 'self'}
             id = f(self, **args)
             if self.nb_retry > 0:
                 self.retry_args[id] = args
@@ -93,7 +90,7 @@ def need_transfer(options):
     else:
         return True
 
-class Cluster(object):
+class Cluster:
     """Basic Class for all cluster type submission"""
     name = 'mother class'
     identifier_length = 14
@@ -429,7 +426,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             return 'done'
         
         if time_check == 0:
-            logger.debug('''Job %s: missing output:%s''' % (job_id,path))
+            logger.debug('''Job {}: missing output:{}'''.format(job_id,path))
             args['time_check'] = time.time()
             return 'wait'
         elif self.cluster_retry_wait > time.time() - time_check:    
@@ -437,22 +434,22 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
 
         #jobs failed to be completed even after waiting time!!
         if self.nb_retry < 0:
-            logger.critical('''Fail to run correctly job %s.
-            with option: %s
-            file missing: %s''' % (job_id, args, path))
+            logger.critical('''Fail to run correctly job {}.
+            with option: {}
+            file missing: {}'''.format(job_id, args, path))
             input('press enter to continue.')
         elif self.nb_retry == 0:
-            logger.critical('''Fail to run correctly job %s.
-            with option: %s
-            file missing: %s.
-            Stopping all runs.''' % (job_id, args, path))
+            logger.critical('''Fail to run correctly job {}.
+            with option: {}
+            file missing: {}.
+            Stopping all runs.'''.format(job_id, args, path))
             self.remove()
         elif args['nb_submit'] >= self.nb_retry:
-            logger.critical('''Fail to run correctly job %s.
-            with option: %s
-            file missing: %s
-            Fails %s times
-            No resubmition. ''' % (job_id, args, path, args['nb_submit']))
+            logger.critical('''Fail to run correctly job {}.
+            with option: {}
+            file missing: {}
+            Fails {} times
+            No resubmition. '''.format(job_id, args, path, args['nb_submit']))
             self.remove()
         else:
             args['nb_submit'] += 1            
@@ -493,7 +490,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
 
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
-        args = dict([(i, values[i]) for i in args if i != 'self'])        
+        args = {i: values[i] for i in args if i != 'self'}        
         self.retry_args[id] = args
         
         nb_wait=0
@@ -559,7 +556,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         #run_card = run_interface.run_card
         return 
 
-class Packet(object):
+class Packet:
     """ an object for handling packet of job, it is designed to be thread safe
     """
 
@@ -592,7 +589,7 @@ class MultiCore(Cluster):
         """Init the cluster """
         
         
-        super(MultiCore, self).__init__(self, *args, **opt)
+        super().__init__(self, *args, **opt)
         
         import six.moves.queue
         import threading
@@ -675,7 +672,7 @@ class MultiCore(Cluster):
                         if returncode != 0:
                             logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
-                            self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
+                            self.remove("fct {} does not return 0:\n {}".format(exe, returncode))
                 except Exception as error:
                     self.fail_msg = sys.exc_info()
                     logger.warning(str(error))
@@ -683,7 +680,7 @@ class MultiCore(Cluster):
                     self.remove(error)
                     
                     if __debug__:
-                        six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                        raise self.fail_msg[1].with_traceback(self.fail_msg[2])
 
                 self.queue.task_done()
                 self.done.put(tag)
@@ -843,7 +840,7 @@ class MultiCore(Cluster):
                     raise Exception(self.fail_msg)
                 elif self.fail_msg:
                     # can happend that stoprequest is set bu not fail if no job have been resubmitted
-                    six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                    raise self.fail_msg[1].with_traceback(self.fail_msg[2])
                 # self.fail_msg is None can happen when no job was submitted -> ignore
 
             # reset variable for next submission
@@ -868,7 +865,7 @@ class MultiCore(Cluster):
             elif isinstance(self.fail_msg, str):
                 raise Exception(self.fail_msg)
             elif self.fail_msg:
-                six.reraise(self.fail_msg[0], self.fail_msg[1], self.fail_msg[2])
+                raise self.fail_msg[1].with_traceback(self.fail_msg[2])
             # else return orignal error
             raise 
 
@@ -935,7 +932,7 @@ class CondorCluster(Cluster):
         #Submitting job(s).
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         output = output.decode(errors='ignore')
         try:
             id = pat.search(output).groups()[0]
@@ -1024,7 +1021,7 @@ class CondorCluster(Cluster):
         #Logging submit event(s).
         #1 job(s) submitted to cluster 2253622.
         output = output.decode(errors='ignore')
-        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        pat = re.compile(r"submitted to cluster (\d*)",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1135,7 +1132,7 @@ class PBSCluster(Cluster):
         me_dir = self.get_jobs_identifier(cwd, prog)
 
         if len(self.submitted_ids) > self.maximum_submited_jobs:
-            fct = lambda idle, run, finish: logger.info('Waiting for free slot: %s %s %s' % (idle, run, finish))
+            fct = lambda idle, run, finish: logger.info('Waiting for free slot: {} {} {}'.format(idle, run, finish))
             self.wait(me_dir, fct, self.maximum_submited_jobs)
 
         
@@ -1587,7 +1584,7 @@ class GECluster(Cluster):
 
         output = a.communicate()[0].decode(errors='ignore')
         #Your job 874511 ("test.sh") has been submitted
-        pat = re.compile("Your job (\d*) \(",re.MULTILINE)
+        pat = re.compile(r"Your job (\d*) \(",re.MULTILINE)
         try:
             id = pat.search(output).groups()[0]
         except:
@@ -1605,7 +1602,7 @@ class GECluster(Cluster):
         if not status:
             return 'F'
         #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-        pat = re.compile("^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
+        pat = re.compile(r"^(\d+)\s+[\d\.]+\s+[\w\d\.]+\s+[\w\d\.]+\s+(\w+)\s")
         stat = ''
         for line in status.stdout.read().decode(errors='ignore').split('\n'):
             if not line:
@@ -1635,7 +1632,7 @@ class GECluster(Cluster):
             cmd = 'qstat -s %s' % statusflag
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE)
             #874516 0.00000 test.sh    alwall       qw    03/04/2012 22:30:35                                    1
-            pat = re.compile("^(\d+)")
+            pat = re.compile(r"^(\d+)")
             for line in status.stdout.read().decode(errors='ignore').split('\n'):
                 line = line.strip()
                 try:
@@ -1735,7 +1732,7 @@ class SLURMCluster(Cluster):
         id = output_arr[3].rstrip()
 
         if not id.isdigit():
-            id = re.findall('Submitted batch job ([\d\.]+)', ' '.join(output_arr))
+            id = re.findall(r'Submitted batch job ([\d\.]+)', ' '.join(output_arr))
             
             if not id or len(id)>1:
                 raise ClusterManagmentError( 'fail to submit to the cluster: \n%s' \

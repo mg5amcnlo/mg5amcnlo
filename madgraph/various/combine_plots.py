@@ -13,7 +13,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __future__ import absolute_import
 import glob
 import os
 import re
@@ -80,7 +79,7 @@ class load_data:
     def import_data(self, file_name, file_nb, pretag=""):
         """ Read the file with the name file_name, and import the data for all the plots"""
 
-        trappe = open(file_name, 'r')
+        trappe = open(file_name)
         while 1:
             line = trappe.readline()
             if line == "": break

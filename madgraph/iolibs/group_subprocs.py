@@ -15,7 +15,6 @@
 """Methods and classes to group subprocesses according to initial
 states, and produce the corresponding grouped subprocess directories."""
 
-from __future__ import absolute_import
 import array
 import copy
 import fractions
@@ -46,8 +45,6 @@ import aloha.create_aloha as create_aloha
 import models.write_param_card as write_param_card
 from madgraph import MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
-from six.moves import range
-from six.moves import zip
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.group_subprocs')
 
@@ -189,7 +186,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         if name in ['diagrams_for_configs'] and not self[name]:
             self.set_diagrams_for_configs()
         
-        return super(SubProcessGroup, self).get(name)
+        return super().get(name)
 
     def set_mapping_diagrams(self):
         """Set mapping_diagrams and diagram_maps, to prepare for
