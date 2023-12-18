@@ -515,7 +515,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # raise a warning if squared-orders constraints are not of the '<=' kind
         if myprocdef['sqorders_types'] and any([v != '<=' for v in  myprocdef['sqorders_types'].values()]):
-            logger.warning('Warning: The squared-order constraints passed are not \'<=\'.\n Other kind of squared-order constraints are not supported at NLO')
+            raise MadGraph5Error('The squared-order constraints passed are not \'<=\'.\n Other kind of squared-order constraints are not supported at NLO')
 
         # this is in case no orders have been passed
         if not myprocdef['squared_orders'] and not myprocdef['orders']:
