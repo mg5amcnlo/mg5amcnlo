@@ -1212,7 +1212,7 @@ class ConfigFile(dict):
                     for pair in value[1:-1].split(','):
                         if not pair.strip():
                             break
-                        x, y = pair.split(':')
+                        x, y = pair.rsplit(':',1)
                         x, y = x.strip(), y.strip()
                         if x.startswith(('"',"'")) and x.endswith(x[0]):
                             x = x[1:-1] 
