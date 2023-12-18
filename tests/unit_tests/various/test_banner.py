@@ -219,6 +219,9 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertRaises(Exception, self.config.__setitem__, 'dict', {'test':'test'})
         self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")
 
+        self.config['dict'] = " {'TimeShower:QEDshowerByQ':0, 'TimeShower:QEDshowerByL':1.0}"
+        self.assertEqual(self.config['dict'],{'TimeShower:QEDshowerByQ':0.0, 'TimeShower:QEDshowerByL': 1.0})
+        
     def test_integer_handling(self):
 
         self.config.add_param("int", 1)

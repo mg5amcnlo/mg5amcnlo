@@ -70,8 +70,10 @@ class TestEditCardCmd(unittest.TestCase):
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         card = 'shower_card'
-        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
-        files.cp(pjoin(template_path, 'NLO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
+        import madgraph.various.shower_card as shower_mod
+        card = shower_mod.ShowerCard()
+        card.write("/tmp/edit_card/Cards/shower_card.dat", template=pjoin(template_path, 'NLO/Cards/shower_card.dat'))
+        card.write("/tmp/edit_card/Cards/shower_card_default.dat", template=pjoin(template_path, 'NLO/Cards/shower_card.dat'))
         
         #MadLoop Card
         files.cp(pjoin(template_path, 'loop_material/StandAlone/Cards/MadLoopParams.dat'), '/tmp/edit_card/Cards')
@@ -514,6 +516,8 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(shower['includepaths'], 'extra/1 ex/t/ra2 EXtra3')
         self.cmd.do_set('extralibs lib1 liB2 lIB3')
         self.assertEqual(shower['extralibs'], 'lib1 liB2 lIB3')
+        self.cmd.do_set('pythia8_options {"tune_ee": 11, "tune_pp":4}')
+        self.assertEqual(shower['pythia8_options'], {'tune_ee': '11', 'tune_pp': '4'})
 
         # finally reload the default shower card
         # and check that, when any variable is set, the others correspond to the new shower_card
