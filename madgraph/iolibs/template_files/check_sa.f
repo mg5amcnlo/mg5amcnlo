@@ -14,6 +14,7 @@ C
 C     INCLUDE FILES
 C     
 C---  the include file with the values of the parameters and masses	
+      INCLUDE '../../Source/vector.inc'
       INCLUDE "coupl.inc"
 C---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 

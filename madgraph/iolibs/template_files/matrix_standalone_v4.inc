@@ -202,6 +202,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
+      include '../../Source/vector.inc'
       include 'coupl.inc'
 %(global_variable)s
 C  
@@ -245,6 +246,7 @@ CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 CF2PY INTENT(IN) :: ALPHAS
 C     ROUTINE FOR F2PY to read the benchmark point.    
 C     the include file with the values of the parameters and masses 
+      INCLUDE '../../Source/vector.inc'
       include "coupl.inc"
       
       pi = 3.141592653589793d0
