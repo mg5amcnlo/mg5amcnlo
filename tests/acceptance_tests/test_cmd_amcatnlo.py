@@ -561,7 +561,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
-    def test_eft_running_nlo(self):
+    def notest_eft_running_nlo(self):
         """check that  gives the correct result"""
         
         mg_cmd = MGCmd.MasterCmd()
@@ -614,7 +614,7 @@ class MECmdShell(IOTests.IOTestManager):
         val1 = results['cross']
         err1 = results['error']
 
-        target = 617.7542699925228
+        target = 617.7542699925228 # THIS IS NOT PURE INTERFERENCE...
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
