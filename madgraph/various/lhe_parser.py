@@ -3173,7 +3173,7 @@ class NLO_PARTIALWEIGHT(object):
            failing to scale correctly.
         """
         for cevt in self.cevents:
-            if not len({w.orderflag for w in cevt.wgts})==1:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
                 return False
                 nb_wgt_check += len(cevt.wgts)
 
