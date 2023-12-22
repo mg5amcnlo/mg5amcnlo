@@ -41,7 +41,7 @@ class TestMadSpin(unittest.TestCase):
 
     def setUp(self):
         
-        self.debuging = False 
+        self.debuging = unittest.debug
         if self.debuging:
             self.path = pjoin(MG5DIR, 'MS_TEST')
             if os.path.exists(self.path):
@@ -226,6 +226,6 @@ class TestMadSpin(unittest.TestCase):
         self.assertEqual(nb_dec, 89)
         self.assertEqual(nb_muon, 0)
         import math
-        self.assertTrue(abs(pol[1]-pol[-1]) < 2 * math.sqrt(pol[1]))
-        self.assertTrue(pol[0] < pol[-1])
+        self.assertLess(abs(pol[1]-pol[-1]), 2 * math.sqrt(pol[1]))
+        self.assertLess(pol[0], pol[-1])
          

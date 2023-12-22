@@ -41,50 +41,62 @@ if 0:
 
         for dummy in self.testmodule:
             break
-        self.assert_(len(self.testmodule) > 1)
+        self.assertGreater(len(self.testmodule), 1)
 
     def test_collect_dir(self):
         """ TestFinder.collect_dir should detect subdirectory and file """
 
         self.testmodule = test_manager.TestFinder(package=\
                          './tests/unit_tests')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                         'TestTestFinder.test_collect_dir'\
-                         in self.testmodule)
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                         'TestTestFinder.test_collect_dir',
+            self.testmodule
+        )
 
     def test_collect_dir_with_restriction_file(self):
         " TestFinder.collect_dir pass corectly restriction rule on file "
         self.testmodule.restrict_to('test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                     'TestTestFinder.test_collect_dir'  \
-                     in self.testmodule)
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                     'TestTestFinder.test_collect_dir',
+            self.testmodule
+        )
 
     def test_collect_dir_with_restriction_file2(self):
         " TestFinder.collect_dir pass corectly restriction rule on file "
         self.testmodule.restrict_to('./tests/unit_tests/various/' + 
                                     'test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                         'TestTestFinder.test_collect_dir'
-                     in self.testmodule)
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                         'TestTestFinder.test_collect_dir',
+            self.testmodule
+        )
 
     def test_collect_dir_with_restriction_class(self):
         " TestFinder.collect_dir pass corectly restriction rule on class "
 
         self.testmodule.restrict_to('TestTestFinder')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                     'TestTestFinder.test_collect_dir'
-                     in self.testmodule)
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                     'TestTestFinder.test_collect_dir',
+            self.testmodule
+        )
 
     def test_collect_dir_with_restriction_fct(self):
         " TestFinder.collect_dir pass corectly restriction rule on fct "
 
         self.testmodule.restrict_to('test_check_valid.*')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                     'TestTestFinder.test_collect_dir' \
-                     not in self.testmodule)
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                     'TestTestFinder.test_check_valid_on_file'
-                     in self.testmodule)
+        self.assertNotIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                     'TestTestFinder.test_collect_dir',
+            self.testmodule
+        )
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                     'TestTestFinder.test_check_valid_on_file',
+            self.testmodule
+        )
 
     def test_collect_file_wrong_arg(self):
         """ TestFinder.collect_file fails on wrong argument"""
@@ -98,9 +110,11 @@ if 0:
 
         self.testmodule.collect_file('./tests/unit_tests/various/' + \
                                      'test_test_finder.py')
-        self.assert_('tests.unit_tests.various.test_test_finder.' + \
-                     'TestTestFinder.test_collect_file' \
-                     in self.testmodule)
+        self.assertIn(
+            'tests.unit_tests.various.test_test_finder.' + \
+                     'TestTestFinder.test_collect_file',
+            self.testmodule
+        )
 
     def test_collect_function_wrong_arg(self):
         """ TestFinder.collect_function fails on wrong argument """
@@ -113,8 +127,10 @@ if 0:
         """ TestFinder.collect_function find the test function """
 
         self.testmodule.collect_function(TestTestFinder)
-        self.assert_('TestTestFinder.test_collect_function' in \
-                         self.testmodule)
+        self.assertIn(
+            'TestTestFinder.test_collect_function',
+            self.testmodule
+        )
 
         for name in self.testmodule:
             name = name.split('.')[-1]
@@ -317,12 +333,12 @@ if 0:
         output = self.testmodule.format_possibility('./various/test.py')
         for name in output:
             self.assertEqual(output.count(name), 1)
-        self.assert_(len(output) > 3)
+        self.assertGreater(len(output), 3)
 
         output = self.testmodule.format_possibility('various.test')
         for name in output:
             self.assertEqual(output.count(name), 1)
-        self.assert_(len(output) > 1)
+        self.assertGreater(len(output), 1)
 
     def test_status_file_on_file(self):
         """ TestFinder.status_file recognizes file """

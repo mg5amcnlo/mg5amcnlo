@@ -613,13 +613,12 @@ c better compute it again to set all the common blocks correctly.
       end
 
 
-      subroutine generate_tau_y_wrapper(one_body,ns_channel,nt_channel,
+      subroutine generate_tau_y_wrapper(
      $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
       ! generates tau and y, calling the functions that correpsond to the
       ! case at hand
       implicit none
-      logical one_body
-      integer ns_channel, nt_channel
+
       include 'nexternal.inc'
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
       double precision totmass, stot
@@ -641,6 +640,12 @@ c Conflicting BW stuff
 
       logical softtest,colltest
       common/sctests/softtest,colltest
+
+      include 'genps.inc'
+      integer itree_c(2,-max_branch:-1)
+      integer ns_channel, nt_channel, ionebody, nbranch
+      logical one_body
+      common/born_trees/itree_c,ns_channel,nt_channel,ionebody,nbranch,one_body
 
       ndim_dummy=-1 ! this is actually not used anymore
 
@@ -924,7 +929,7 @@ c parameters
       double precision zero
       parameter (zero=0d0)
 c saves
-      save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
+      save m,stot,totmassin,totmass
      &     ,ionebody,fksmass,nbranch
       common /c_isolsign/isolsign
       logical only_event_phsp,skip_event_phsp
@@ -970,7 +975,7 @@ c
       xpswgt0=1d0
 
       ! generate tau and y
-      call generate_tau_y_wrapper(one_body,ns_channel,nt_channel,
+      call generate_tau_y_wrapper(
      $ qmass,qwidth,totmass,stot,x(ndim-4:ndim-3),tau_born,ycm_born,ycmhat,xjac0)
       ! filter unphysical configurations
       if (xjac0.lt.0d0) goto 222
@@ -4277,6 +4282,7 @@ C dressed lepton stuff
 
       double precision get_ee_expo
       double precision tau_m, tau_w
+      double precision omtau_born
 
       ! these common blocks are never used
       ! we leave them here for the moment 
@@ -4374,10 +4380,12 @@ C dressed lepton stuff
         xjac0 = xjac0 * jac_ee
 
         tau_born = x1_ee * x2_ee
+        ! better numerical accuracy
+        omtau_born = omx_ee(1) + omx_ee(2) - omx_ee(1)*omx_ee(2)
         ! multiply the jacobian by a multichannel factor if the 
         ! generation with resonances is also possible
-        if (bw_exists) xjac0 = xjac0 * (1d0-tau_born)**(1d0-2*get_ee_expo()) / 
-     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (1d0-tau_born)**(1d0-2*get_ee_expo()))
+        if (bw_exists) xjac0 = xjac0 * (omtau_born)**(1d0-2*get_ee_expo()) / 
+     $       ( 1d0/((tau_born-tau_m)**2 + tau_m*tau_w) + (omtau_born)**(1d0-2*get_ee_expo()))
       endif
 
       ! Check here if the bjorken x's are physical (may not be so

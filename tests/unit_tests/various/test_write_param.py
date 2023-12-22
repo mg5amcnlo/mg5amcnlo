@@ -51,23 +51,23 @@ class TestParamWritting(unittest.TestCase):
         
         out = self.writter.param_dict
         for key, obj in out.items():
-            self.assertTrue(isinstance(key, str))
-            self.assertTrue(isinstance(obj,base_objects.ModelVariable))
+            self.assertIsInstance(key, str)
+            self.assertIsInstance(obj, base_objects.ModelVariable)
             self.assertEqual(key, obj.name)
             
     def test_define_not_dep_param(self):
         """Check that we found all mass-width which are not external."""
         
         for part, obj in self.writter.dep_mass:    
-            self.assertTrue(isinstance(part, base_objects.Particle))
-            self.assertTrue(isinstance(obj, base_objects.ModelVariable))
-            self.assertFalse(isinstance(obj, base_objects.ParamCardVariable))
+            self.assertIsInstance(part, base_objects.Particle)
+            self.assertIsInstance(obj, base_objects.ModelVariable)
+            self.assertNotIsInstance(obj, base_objects.ParamCardVariable)
             self.assertEqual(part['mass'], obj.name)
         
         for part, obj in self.writter.dep_width:    
-            self.assertTrue(isinstance(part, base_objects.Particle))
-            self.assertTrue(isinstance(obj, base_objects.ModelVariable))
-            self.assertFalse(isinstance(obj, base_objects.ParamCardVariable))
+            self.assertIsInstance(part, base_objects.Particle)
+            self.assertIsInstance(obj, base_objects.ModelVariable)
+            self.assertNotIsInstance(obj, base_objects.ParamCardVariable)
             self.assertEqual(part['width'], obj.name)
 
         
@@ -115,9 +115,9 @@ class TestParamWritting(unittest.TestCase):
         """Check that the writting of a block works"""
         
         self.writter.write_block('DECAY')
-        self.assertFalse('Block' in self.content.getvalue())
+        self.assertNotIn('Block', self.content.getvalue())
         self.writter.write_block('mass')
-        self.assertTrue('Block mass' in self.content.getvalue())
+        self.assertIn('Block mass', self.content.getvalue())
         
     def test_write_param(self):
         """Check that the writting of a parameter works"""
@@ -167,11 +167,11 @@ class TestParamWritting(unittest.TestCase):
         self.writter.write_qnumber()
         
         text = self.content.getvalue()
-        self.assertTrue('Block QNUMBERS 100' in text)
-        self.assertTrue('1 0' in text)
-        self.assertTrue('2 1' in text)
-        self.assertTrue('3 1' in text)
-        self.assertTrue('4 1' in text)
+        self.assertIn('Block QNUMBERS 100', text)
+        self.assertIn('1 0', text)
+        self.assertIn('2 1', text)
+        self.assertIn('3 1', text)
+        self.assertIn('4 1', text)
         
         # a second particle
         particle.set('pdg_code', 40)
@@ -183,11 +183,11 @@ class TestParamWritting(unittest.TestCase):
         self.writter.write_qnumber()
          
         text = self.content.getvalue()
-        self.assertTrue('Block QNUMBERS 40' in text)
-        self.assertTrue('1 1' in text)
-        self.assertTrue('2 3' in text)
-        self.assertTrue('3 3' in text)
-        self.assertTrue('4 0' in text)
+        self.assertIn('Block QNUMBERS 40', text)
+        self.assertIn('1 1', text)
+        self.assertIn('2 3', text)
+        self.assertIn('3 3', text)
+        self.assertIn('4 0', text)
  
         
 class TestParamWrittingWithRestrict(unittest.TestCase):
@@ -216,15 +216,15 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
         self.writter.define_not_dep_param()
         
         for part, obj in self.writter.dep_mass:    
-            self.assertTrue(isinstance(part, base_objects.Particle))
-            self.assertTrue(isinstance(obj, base_objects.ModelVariable))
-            self.assertFalse(isinstance(obj, base_objects.ParamCardVariable))
+            self.assertIsInstance(part, base_objects.Particle)
+            self.assertIsInstance(obj, base_objects.ModelVariable)
+            self.assertNotIsInstance(obj, base_objects.ParamCardVariable)
             self.assertEqual(part['mass'], obj.name)
         
         for part, obj in self.writter.dep_width:    
-            self.assertTrue(isinstance(part, base_objects.Particle))
-            self.assertTrue(isinstance(obj, base_objects.ModelVariable))
-            self.assertFalse(isinstance(obj, base_objects.ParamCardVariable))
+            self.assertIsInstance(part, base_objects.Particle)
+            self.assertIsInstance(obj, base_objects.ModelVariable)
+            self.assertNotIsInstance(obj, base_objects.ParamCardVariable)
             self.assertEqual(part['width'], obj.name)
 
         
@@ -234,8 +234,8 @@ class TestParamWrittingWithRestrict(unittest.TestCase):
             if part['pdg_code'] in checked_mass:
                 checked_mass.remove(part['pdg_code'])
         self.assertEqual(len(checked_mass), 2)
-        self.assertTrue(checked_mass[0] in [23,25])
-        self.assertTrue(checked_mass[1] in [23,25])
+        self.assertIn(checked_mass[0], [23,25])
+        self.assertIn(checked_mass[1], [23,25])
         
         # Check that 23/25 are in a duplicate state
         self.assertEqual(len(self.writter.duplicate_mass),1)

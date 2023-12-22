@@ -95,7 +95,7 @@ class HelasWavefunctionTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_wavefunction.set(test['prop'], x))
+                self.assertTrue(temp_wavefunction.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_wavefunction.set(test['prop'], x))
 
@@ -163,7 +163,7 @@ class HelasAmplitudeTest(unittest.TestCase):
 
         for test in test_values:
             for x in test['right_list']:
-                self.assert_(temp_amplitude.set(test['prop'], x))
+                self.assertTrue(temp_amplitude.set(test['prop'], x))
             for x in test['wrong_list']:
                 self.assertFalse(temp_amplitude.set(test['prop'], x))
 
@@ -3306,7 +3306,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         
         amplitude_tag2 = helas_objects.IdentifyMETag.create_tag(myamplitude2)
                          
-        self.assertFalse(amplitude_tag1 == amplitude_tag2)
+        self.assertNotEqual(amplitude_tag1, amplitude_tag2)
 
 
     def test_complete_decay_chain_process(self):
@@ -3622,9 +3622,9 @@ class HelasMultiProcessTest(unittest.TestCase):
         # correspond to a decaying particle
         for i, wf in enumerate(matrix_elements[0].get_all_wavefunctions()):
             if i in [6, 8, 13, 15, 18, 19, 21, 22, 24, 25, 27, 28]:
-                self.assert_(wf.get('onshell'))
+                self.assertTrue(wf.get('onshell'))
             else:
-                self.assert_(not wf.get('onshell'))
+                self.assertTrue(not wf.get('onshell'))
 
         # Test Process.get_legs_with_decays
         myleglist = base_objects.LegList()
@@ -3982,7 +3982,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                             get('wavefunctions') if w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers')])[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
-            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
+            self.assertNotEqual(wf.get_with_flow('state'), old_wf.get_with_flow('state'))
 
         myleglist = base_objects.LegList()
 
@@ -4047,7 +4047,7 @@ class HelasMultiProcessTest(unittest.TestCase):
                             get('wavefunctions') if w.get('number_external') == \
                             wf.get('number_external') and not w.get('mothers')])[0]
             self.assertEqual(wf.get('particle'), old_wf.get('particle'))
-            self.assert_(wf.get_with_flow('state') != old_wf.get_with_flow('state'))
+            self.assertNotEqual(wf.get_with_flow('state'), old_wf.get_with_flow('state'))
         
 
     def test_decay_chain_different_pdgs(self):
@@ -4840,9 +4840,11 @@ class HelasMultiProcessTest(unittest.TestCase):
         mymatrixelement2 = helas_objects.HelasMatrixElement(\
             myamplitude2, gen_color = False)
 
-        self.assert_(helas_objects.HelasMatrixElement.\
+        self.assertTrue(
+            helas_objects.HelasMatrixElement.\
                      check_equal_decay_processes(\
-                       mymatrixelement1, mymatrixelement2))
+                       mymatrixelement1, mymatrixelement2)
+        )
 
     def test_decay_processes_different_is_particles(self):
         """Test the HelasMultiProcess with the processes w+ > u d~ and w- > u~ d"""
@@ -5137,7 +5139,7 @@ class TestIdentifyMETag(unittest.TestCase):
         tags2 = sorted([helas_objects.IdentifyMETag(d, self.base_model) \
                         for d in myamplitude2.get('diagrams')])
 
-        self.assertFalse(tags1 == tags2)
+        self.assertNotEqual(tags1, tags2)
 
         tags1 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
                         for d in myamplitude1.get('diagrams')])
@@ -5145,7 +5147,7 @@ class TestIdentifyMETag(unittest.TestCase):
         tags2 = sorted([helas_objects.IdentifyMETagFKS(d, self.base_model) \
                         for d in myamplitude2.get('diagrams')])
 
-        self.assertFalse(tags1 == tags2)
+        self.assertNotEqual(tags1, tags2)
 #===============================================================================
 # TestIdentifyMETag
 #===============================================================================
