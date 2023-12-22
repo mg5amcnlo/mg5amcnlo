@@ -204,24 +204,16 @@ C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
 %(global_variable)s
-C  
 C COLOR DATA
 %(color_data_lines)s
+C  
 C  
 C ----------
 C BEGIN CODE
 C ----------
-%(helas_calls)s
-%(jamp_lines)s
-
-      %(proc_prefix)sMATRIX = 0.D0 
-      DO I = 1, NCOLOR
-        ZTEMP = (0.D0,0.D0)
-        DO J = 1, NCOLOR
-          ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-        ENDDO
-        %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))           
-      ENDDO
+      call %(proc_prefix)sGET_AMP(P,NHEL,IC,AMP)
+      call %(proc_prefix)sGET_JAMP(AMP,JAMP)
+      call %(proc_prefix)sGET_MATRIX(JAMP,CF,%(proc_prefix)sMATRIX)
 
 %(amp2_lines)s
 
@@ -312,7 +304,7 @@ C
 %(jamp_lines)s
       END
 
-      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,MATRIX) 
+      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,CF,MATRIX) 
 C  
 %(process_lines)s
 C  
@@ -342,7 +334,6 @@ C
 
 C COLOR DATA
 C  
-%(color_data_lines)s
 
       %(proc_prefix)sMATRIX = 0.D0 
       DO I = 1, NCOLOR
@@ -354,7 +345,9 @@ C
       ENDDO
       END
 
-      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2,INTER)
+
+
+      SUBROUTINE %(proc_prefix)sGET_INTER(JAMP_1,JAMP_2,CF, INTER)
 
 CF2PY INTENT(OUT) :: INTER   
 CF2PY INTENT(IN) :: JAMP_1
@@ -368,7 +361,6 @@ CF2PY INTENT(IN) :: JAMP_2
 
 C COLOR DATA
 C  
-%(color_data_lines)s
       
       INTER = (0.D0,0.D0)  
       DO I = 1, NCOLOR 
