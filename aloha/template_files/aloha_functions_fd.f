@@ -943,7 +943,7 @@ c#endif
             n(0) = sign(1.d0,dble(p(0)))
             n(1) = 0.d0
             n(2) = 0.d0
-            n(3) = sign(-1.d0,dble(p(0)))
+            n(3) = -sign(1.d0,dble(p(0)))
             
          endif
 
