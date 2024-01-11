@@ -15,7 +15,6 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import contextlib
 import itertools
@@ -31,7 +30,6 @@ import shutil
 import stat
 import traceback
 import gzip as ziplib
-from distutils.version import LooseVersion, StrictVersion
 import six
 from six.moves import zip_longest
 from six.moves import range
@@ -149,10 +147,14 @@ def get_pkg_info(info_str=None):
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-        PACKAGE_INFO = info_dict
-        
-    return info_dict
-
+        if info_dict:                                          
+           PACKAGE_INFO = info_dict
+        else:
+           info_dict ={}
+           info_dict['version'] = '3.x.x'
+           info_dict['date'] = '20xx-xx-xx'
+           PACKAGE_INFO = info_dict        
+        return PACKAGE_INFO
 #===============================================================================
 # get_time_info
 #===============================================================================
@@ -173,6 +175,42 @@ def get_time_info():
 def is_MA5_compatible_with_this_MG5(ma5path):
     """ Returns None if compatible or, it not compatible, a string explaining 
     why it is so."""
+
+    class version:
+        def __init__(input):
+            self.info = input.split('.')
+
+        def __lt__(input):
+            if isinstance(input, str):
+                input = version(input)
+            
+            for a,b in zip(self.info, input.info):
+                both_int = True
+                try:
+                    a = int(a)
+                except Exception:
+                     both_int = False
+                try:
+                    b = int(b)
+                except Exception:
+                    both_int = False
+                if both_int:
+                    if a !=b:
+                        return a<b
+                    continue
+                elif isinstance(a, int):
+                    return False
+                elif isinstance(a, False):
+                    return False
+                elif a == b:
+                    continue
+                else:
+                    return a < b
+            else:
+                return len(self.info) < len(input.info)                   
+
+    def LooseVersion(input):
+        return version(input)
 
     ma5_version = None
     try:
@@ -283,16 +321,11 @@ def has_f2py():
     has_f2py = False
     if which('f2py'):
         has_f2py = True
-    elif sys.version_info[1] == 6:
-        if which('f2py-2.6'):
-            has_f2py = True
-        elif which('f2py2.6'):
-            has_f2py = True                 
-    else:
-        if which('f2py-2.7'):
-            has_f2py = True 
-        elif which('f2py2.7'):
-            has_f2py = True  
+    elif which('f2py%d.%d' %(sys.version_info.major, sys.version_info.minor)):
+        has_f2py = True
+    elif which('f2py%d' %(sys.version_info.major)):
+        has_f2py = True
+
     return has_f2py       
         
 #===============================================================================
@@ -349,7 +382,7 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     if dependency=='ninja':
         if cmd.options['ninja'] in ['None',None,''] or\
          (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
-         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'lib','libninja.a')) is None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
@@ -436,7 +469,7 @@ def multiple_try(nb_try=5, sleep=20):
 
             if __debug__:
                 raise
-            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, error))
+            raise my_error.__class__('[Fail %i times] \n %s ' % (i+1, my_error))
         return deco_f_retry
     return deco_retry
 
@@ -1237,7 +1270,8 @@ def gzip(path, stdout=None, error=True, forceexternal=False):
         stdout = "%s.gz" % stdout
 
     try:
-        ziplib.open(stdout,"w").write(open(path).read().encode())
+        with ziplib.open(stdout, 'wb') as f:
+            f.write(open(path).read().encode())
     except OverflowError:
         gzip(path, stdout, error=error, forceexternal=True)
     except Exception:
@@ -2244,7 +2278,10 @@ def import_python_lhapdf(lhapdfconfig):
         
     if use_lhapdf:
         python_lhapdf = lhapdf
-        python_lhapdf.setVerbosity(0)
+        try:
+            python_lhapdf.setVerbosity(0)
+        except Exception:
+            pass
     else:
         python_lhapdf = None
     return python_lhapdf

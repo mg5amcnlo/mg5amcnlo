@@ -7,7 +7,6 @@
 
 #Extension
 from __future__ import absolute_import
-from __future__ import print_function
 import string
 import sys
 import os

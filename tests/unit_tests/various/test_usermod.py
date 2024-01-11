@@ -402,7 +402,7 @@ class TestModUFO(unittest.TestCase):
                 #        print 'different'
                 #else:
                 #    self.assertFalse(True)
-                self.assertTrue(element in data[i])
+                self.assertIn(element, data[i])
 
 
     def test_write_orders(self):
@@ -577,7 +577,7 @@ class Test_ADDON_UFO(unittest.TestCase):
              Y = 0)
         
         number_particles = len(self.base_model.particles)
-        
+        self.assertEqual( number_particles, len(self.sm.all_particles)) 
         #Add a particle which is exactly the Higgs like in the Standard Model
         self.base_model.add_particle(H)
         self.assertEqual( number_particles, len(self.base_model.particles))
@@ -1005,12 +1005,12 @@ class Test_ADDON_UFO(unittest.TestCase):
         # check that the original model still has the H particles
         model = ufomodels.load_model(self.sm_path)
         particles_name = [p.name for p in model.all_particles]
-        self.assertTrue('H' in particles_name)
-        self.assertFalse('B' in particles_name)
+        self.assertIn('H', particles_name)
+        self.assertNotIn('B', particles_name)
         # check the mass
         parameters_name = [p.name for p in model.all_parameters]
-        self.assertTrue('MH' in parameters_name)
-        self.assertFalse('M5' in parameters_name)        
+        self.assertIn('MH', parameters_name)
+        self.assertNotIn('M5', parameters_name)
         
         
         

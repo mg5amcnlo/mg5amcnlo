@@ -17,7 +17,6 @@
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import os
 import logging
 import pydoc
@@ -513,6 +512,10 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     myprocdef['orders'][o] = self.options['default_unset_couplings']
                     logger.warning(('%s order is missing in the process definition. It will be set to "default unser couplings": %s\n' + \
                                    'If this is not what you need, please regenerate with the correct orders.') % (o,myprocdef['orders'][o]))
+
+        # raise a warning if squared-orders constraints are not of the '<=' kind
+        if myprocdef['sqorders_types'] and any([v != '<=' for v in  myprocdef['sqorders_types'].values()]):
+            raise MadGraph5Error('The squared-order constraints passed are not \'<=\'.\n Other kind of squared-order constraints are not supported at NLO')
 
         # this is in case no orders have been passed
         if not myprocdef['squared_orders'] and not myprocdef['orders']:

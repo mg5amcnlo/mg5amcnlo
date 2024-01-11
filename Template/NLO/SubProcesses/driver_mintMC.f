@@ -29,7 +29,11 @@ c
 cc
       include 'run.inc'
       include 'coupl.inc'
-      
+c
+c     Properly initialize PY8 controls
+c
+      include 'pythia8_control.inc'
+      include 'pythia8_control_setup.inc'
 c Vegas stuff
       common/tosigint/nndim
 
@@ -74,7 +78,10 @@ c statistics for MadLoop
 c timing statistics
       include "timing_variables.inc"
       real*4 tOther, tTot
-
+c general MadFKS parameters
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
       integer ntot_granny,derntot,ncase(0:6)
@@ -82,7 +89,6 @@ c timing statistics
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       integer                     n_MC_subt_diverge
       common/counter_subt_diverge/n_MC_subt_diverge
-
 C-----
 C  BEGIN CODE
 C-----  
@@ -294,14 +300,15 @@ c fill the information for the write_header_init common block
                endif
             endif
 c Randomly pick the contribution that will be written in the event file
-            call pick_unweight_contr(iFKS_picked)
+            call pick_unweight_contr(iFKS_picked,ifold_picked)
             call update_fks_dir(iFKS_picked)
             call fill_rwgt_lines
             if (event_norm(1:4).eq.'bias') then
                call include_inverse_bias_wgt(inv_bias)
                weight=event_weight*inv_bias
             endif
-            call finalize_event(x,weight,lunlhe,putonshell)
+            call finalize_event(x_save(1,ifold_picked),weight,lunlhe
+     $           ,putonshell)
          enddo
          call deallocate_weight_lines
          vn=-1
@@ -604,9 +611,9 @@ c These should be ignored (but kept for 'historical reasons')
       endif
 
       write (*,'(a)') 'Set the three folding parameters for MINT'
-      write (*,'(a)') 'xi_i, phi_i, y_ij'
-      read (*,*) ixi_i,iphi_i,iy_ij
-      write (*,*)ixi_i,iphi_i,iy_ij
+      write (*,'(a)') 'xi_i, y_ij, phi_i'
+      read (*,*) ixi_i,iy_ij,iphi_i
+      write (*,*)ixi_i,iy_ij,iphi_i
 
 
       abrvinput='     '
@@ -664,10 +671,11 @@ c
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,iamp
+     $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      save vol1,proc_map
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
       external passcuts
@@ -675,11 +683,11 @@ c
       data firsttime/.true./
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      integer     fold
-      common /cfl/fold
+      integer     fold,ifold_counter
+      common /cfl/fold,ifold_counter
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
-      logical              MCcntcalled
+      integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
@@ -694,6 +702,12 @@ c
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      integer ifold_picked
+      double precision x_save(ndimmax,max_fold)
+      common /c_vegas_x_fold/x_save,ifold_picked
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal)
+      common /colour_connections/ icolup_s,icolup_h
+c
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -716,20 +730,31 @@ c "npNLO".
          call setup_event_attributes
       endif
 
-      fold=ifl
       if (ifl.eq.0) then
-         icontr=0
-         do iamp=0,amp_split_size
-            virt_wgt_mint(iamp)=0d0
-            born_wgt_mint(iamp)=0d0
-         enddo
-         virtual_over_born=0d0
-         MCcntcalled=.false.
+         ifold_counter=1
+      elseif(ifl.eq.1) then
+         ifold_counter=ifold_counter+1
+      endif
+
+      fold=ifl
+      if (ifl.eq.0 .or. ifl.eq.1) then
+         if (ifl.eq.0) then
+            icontr=0
+            virt_wgt_mint(0:amp_split_size)=0d0
+            born_wgt_mint(0:amp_split_size)=0d0
+            virtual_over_born=0d0
+         endif
+         MCcntcalled=0
          wgt_me_real=0d0
          wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+         do i=1,nndim
+            x_save(i,ifold_counter)=x(i)
+         enddo
+         if (ifl.eq.0)
+     &        call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+
 c The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
@@ -743,6 +768,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+         icolup_s(1,1)=-1 ! set colour connection to -1: i.e., complete_xmcsubt has not been called
          if (ini_fin_fks.eq.0) then
             jac=1d0
          else
@@ -750,7 +776,7 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
          endif
 c Also the Born needs to be included in the Importance Sampling over the
 c FKS configurations (for the shower scale) (multiply by
-c     1/proc_map(0,0)*vol1)
+c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
          call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
@@ -772,7 +798,9 @@ c     1/proc_map(0,0)*vol1)
          endif
 c Update the shower starting scale. This might be updated again below if
 c the nFKSprocess is the same.
-         call include_shape_in_shower_scale(p,nFKS_picked_nbody)
+         call include_shape_in_shower_scale(p,nFKS_picked_nbody
+     $        ,ifold_counter)
+         call set_colour_connections(nFKS_picked_nbody,ifold_counter)
             
          
  11      continue
@@ -792,12 +820,13 @@ c for different nFKSprocess.
             probne=1d0
             gfactsf=1.d0
             gfactcl=1.d0
-            MCcntcalled=.false.
+            MCcntcalled=0
+            icolup_s(1,1)=-1    ! set colour connection to -1: i.e., complete_xmcsubt has not been called
             call generate_momenta(nndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
-c     Set the shower scales            
+c Set the shower scales            
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p) ! reset the FxFx scales
             endif
@@ -831,13 +860,16 @@ c Include the MonteCarlo subtraction terms
                   if (ickkw.eq.3) call set_FxFx_scale(-3,p)
                   call set_alphaS(p)
                   call include_multichannel_enhance(4)
-                  call compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+                  call compute_MC_subt_term(p,passcuts_nbody,gfactsf
+     $                 ,gfactcl,probne)
                else
 c For UNLOPS all real-emission contributions need to be added to the
 c S-events. Do this by setting probne to 0. For UNLOPS, no MC counter
 c events are called, so this will remain 0.
                   probne=0d0
                endif
+            endif
+            if (passcuts_nbody .and. abrv.ne.'real') then
 c Include the FKS counter terms. When close to the soft or collinear
 c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
@@ -867,10 +899,26 @@ c Include the real-emission contribution.
             endif
 c Update the shower starting scale with the shape from the MC
 c subtraction terms.
-            call include_shape_in_shower_scale(p,iFKS)
+            call include_shape_in_shower_scale(p,iFKS,ifold_counter)
+            call set_colour_connections(iFKS,ifold_counter)
          enddo
  12      continue
-         
+      elseif(ifl.eq.2) then
+         if (ifold_counter .ne.
+     $       ifold(ifold_energy)*ifold(ifold_yij)*ifold(ifold_phi)) then
+            write (*,*) "ERROR in folding parameters (driver_mintMC.f)"
+     $           ,ifold_counter,ifold_energy,ifold_yij,ifold_phi
+            write (*,*) ifold(:)
+            stop 1
+         endif
+c Special check: in rare cases there can be S-event contributions,
+c without a single FKS configuration that contains a soft singularity
+c passing cuts (this only happens if n-body configuration does not pass
+c the cuts and DELTA (from complete_xmcsubt) is not equal to 1). Need to
+c add a bogus contribution corresponding to an FKS configuration that
+c contains a soft singularity to make sure that the code continues
+c correctly.
+         call special_check_SoftSing(proc_map(proc_map(0,1),1))
 c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
@@ -879,14 +927,9 @@ c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
 c Update the shower starting scale for the S-events after we have
 c determined which contributions are identical.
-         call update_shower_scale_Sevents
+         call update_shower_scale_Sevents(ifold_counter,ifold_picked)
          call fill_mint_function_NLOPS(f,n1body_wgt)
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
-      elseif(ifl.eq.1) then
-         write (*,*) 'Folding not implemented'
-         stop 1
-      elseif(ifl.eq.2) then
-         call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return
       end
@@ -1245,3 +1288,33 @@ c     if there are no soft singularities at all, just do something trivial
       endif
       return
       end
+
+
+      subroutine special_check_SoftSing(isoft)
+      use weight_lines
+      implicit none
+      include 'nexternal.inc'
+      include 'fks_info.inc'
+      integer i_soft,isoft,i
+      logical found_S
+      i_soft=0
+      found_S=.false.
+      do i=1,icontr
+         if (H_event(i)) then
+            cycle
+         else
+            found_S=.true.
+         endif
+         if (abs(pdg_type_d(nFKS(i),fks_i_d(nFKS(i)))).eq.21) then
+            i_soft=i
+            exit
+         endif
+      enddo
+      if (found_S .and. i_soft.eq.0) then
+         ! add an artificial contribution
+         call update_fks_dir(isoft)
+         call add_wgt(2,1d-199,0d0,0d0)
+      endif
+      return
+      end
+

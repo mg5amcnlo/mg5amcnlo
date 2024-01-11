@@ -18,7 +18,6 @@ formats (txt, tex, ...).
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import datetime
 import glob
 import itertools
@@ -123,9 +122,9 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
-            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
-            self.assertTrue(abs(error2)/abs(value2) < 0.02)
+            self.assertLess(abs(value-value2), 5* abs(error+error2))
+            self.assertLess(abs(value-value2)/abs(value+value2), 2*abs(value/error))
+            self.assertLess(abs(error2)/abs(value2), 0.02)
         #try:
         #    shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
         #except Exception, error:
@@ -193,9 +192,9 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
-            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
-            self.assertTrue(abs(error2)/abs(value2) < 0.02)
+            self.assertLess(abs(value-value2), 5* abs(error+error2))
+            self.assertLess(abs(value-value2)/abs(value+value2), 2*abs(value/error))
+            self.assertLess(abs(error2)/abs(value2), 0.02)
         #try:
         #    shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
         #except Exception, error:
@@ -265,9 +264,9 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
-            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
-            self.assertTrue(abs(error2)/abs(value2) < 0.02)
+            self.assertLess(abs(value-value2), 5* abs(error+error2))
+            self.assertLess(abs(value-value2)/abs(value+value2), 2*abs(value/error))
+            self.assertLess(abs(error2)/abs(value2), 0.02)
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_WA_prod'))
         except Exception as error:

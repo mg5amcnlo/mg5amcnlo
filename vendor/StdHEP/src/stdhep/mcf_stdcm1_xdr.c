@@ -46,7 +46,6 @@
 #define TRUE 1
 #endif
 
-struct stdver stdver_;
 struct stdcm1 stdcm1_;
 struct stdcm2 stdcm2_;
 

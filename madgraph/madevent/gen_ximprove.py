@@ -144,6 +144,28 @@ class gensym(object):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
+
+            #compile gensym
+            self.cmd.compile(['gensym'], cwd=Pdir)
+            if not os.path.exists(pjoin(Pdir, 'gensym')):
+                raise Exception('Error make gensym not successful')
+
+            # Launch gensym
+            p = misc.Popen(['./gensym'], stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, cwd=Pdir)
+            #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
+            
+            (stdout, _) = p.communicate(''.encode())
+            stdout = stdout.decode('ascii',errors='ignore')
+            if stdout:
+                nb_channel = max([math.floor(float(d)) for d in stdout.split()])
+            else:
+                for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                    files.cp(matrix_file, matrix_file.replace('orig','optim'))
+                P_zero_result.append(Pdir)
+                if os.path.exists(pjoin(self.me_dir, 'error')):
+                    os.remove(pjoin(self.me_dir, 'error'))
+                continue # bypass bad process
             
             self.cmd.compile(['madevent_forhel'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'madevent_forhel')):
@@ -152,7 +174,7 @@ class gensym(object):
             if not os.path.exists(pjoin(Pdir, 'Hel')):
                 os.mkdir(pjoin(Pdir, 'Hel'))
                 ff = open(pjoin(Pdir, 'Hel', 'input_app.txt'),'w')
-                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n 1\n')
+                ff.write('1000 1 1 \n 0.1 \n 2\n 0\n -1\n -%s\n' % nb_channel)
                 ff.close()
             else:
                 try:
@@ -165,11 +187,13 @@ class gensym(object):
             #sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, _) = p.communicate(" ".encode())
             stdout = stdout.decode('ascii',errors='ignore')
-            if os.path.exists(pjoin(self.me_dir,'error')):
+            if os.path.exists(pjoin(self.me_dir, 'error')):
                 raise Exception(pjoin(self.me_dir,'error')) 
                 # note a continue is not enough here, we have in top to link
                 # the matrixX_optim.f to matrixX_orig.f to let the code to work
                 # after this error.
+                #                for matrix_file in misc.glob('matrix*orig.f', Pdir):
+                #    files.cp(matrix_file, matrix_file.replace('orig','optim'))
 
             if 'no events passed cuts' in stdout:
                 raise Exception
@@ -1275,7 +1299,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    #'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
@@ -1432,7 +1456,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    #'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'offset': 1,            # need to be change for splitted job
                     'nevents': nevents,
                     'maxiter': self.max_iter,
@@ -1892,7 +1916,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
+                    #'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'nevents': nevents, #int(nevents*self.gen_events_security)+1,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,

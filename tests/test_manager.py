@@ -28,13 +28,7 @@
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
-
-if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
-               Please upgrate your version of python.')
-
 import inspect
 import tarfile
 import logging
@@ -184,7 +178,7 @@ class MyTextTestRunner(unittest.TextTestRunner):
 # run
 #===============================================================================
 def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
-        timelimit=[0,0], debug=False):
+        timelimit=[0,0], debug=False, options=None):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -198,7 +192,7 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
     TestSuiteModified.mintime_limit =  float(timelimit[0])
 
     for test_fct in TestFinder(package=package, expression=expression, \
-                                   re_opt=re_opt):
+                                   re_opt=re_opt, excluded=options.exclude):
         data = collect.loadTestsFromName(test_fct)        
         assert(isinstance(data,unittest.TestSuite))        
         data.__class__ = TestSuiteModified
@@ -611,7 +605,8 @@ class TestFinder(list):
         """Error associated to the TestFinder class."""
         pass
 
-    def __init__(self, package='tests/', expression='', re_opt=0):
+    def __init__(self, package='tests/', expression='', re_opt=0,
+                 excluded=None):
         """ initialize global variable for the test """
 
         list.__init__(self)
@@ -622,6 +617,10 @@ class TestFinder(list):
             self.package += '/'
         self.restrict_to(expression, re_opt)
         self.launch_pos = ''
+        if excluded is None:
+             self.excluded = []
+        else:
+            self.excluded = excluded
 
     def _check_if_obj_build(self):
         """ Check if a collect is already done 
@@ -718,7 +717,7 @@ class TestFinder(list):
                        and (inspect.ismethod(getattr(class_, name)) or 
                            inspect.isfunction(getattr(class_, name)))]
         if not checking:
-            self += candidate
+            self += [name for name in candidate if not self.check_invalid(name)]
         else:
             self += [name for name in candidate if self.check_valid(name)]
 
@@ -752,12 +751,25 @@ class TestFinder(list):
         if not isinstance(name, six.string_types):
             raise self.TestFinderError('check valid take a string argument')
 
+        if self.check_invalid(name):
+            return False
+
         for specific_format in self.format_possibility(name):
             for expr in self.rule:
                 if expr.search(specific_format):
                     return True
         return False
 
+    def check_invalid(self, name):
+        """ check if the name correspond to the rule """
+
+        if not isinstance(name, six.string_types):
+            raise self.TestFinderError('check valid take a string argument')
+
+        if any(forbid in name for forbid in self.excluded):
+            return True
+        return False
+       
     @staticmethod
     def status_file(name):
         """ check if a name is a module/a python file and return the status """
@@ -994,6 +1006,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     parser.add_option("-s", "--synchronize", action="store_true", default=False,
           help="Replace the IOTestsComparison.tar.bz2 tarball with the "+\
                                       "content of the folder IOTestsComparison")
+    parser.add_option("-e", "--exclude", action="append", type=str)
     parser.add_option("-t", "--timed", default="Auto",
           help="limit the duration of each test. Negative number re-writes the information file.")    
     parser.add_option("-T", "--mintime", default="0",
@@ -1095,7 +1108,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         if not options.border_effect:
             #logging.basicConfig(level=vars(logging)[options.logging])
             output = run(args, re_opt=options.reopt, verbosity=options.verbose, \
-                package=options.path, timelimit=[options.mintime,options.timed], debug=options.debug)
+                package=options.path, timelimit=[options.mintime,options.timed], debug=options.debug,
+                options=options)
         else:
             output = run_border_search(options.border_effect, args, re_opt=options.reopt, verbosity=options.verbose, \
                 package=options.path, timelimit=[options.mintime,options.timed], debug=options.debug)
@@ -1126,7 +1140,16 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                (output.failures, output.errors, output.skipped)))
             output = "run: %s, failed: %s error: %s, skipped: %s" % \
                                                  (run, failed, errored, skipped)
+        else:
+            failed, errored, skipped = 0, 0 ,0
         misc.system_notify("tests finished", str(output))
+        if failed or errored or skipped:
+            sys.exit(1)
+    elif isinstance(output, unittest.runner.TextTestResult):
+        failed, errored, skipped = list(map(len,
+                               (output.failures, output.errors, output.skipped)))
+        if failed or errored or skipped:
+            sys.exit(1)
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

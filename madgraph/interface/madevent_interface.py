@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -18,7 +18,6 @@
 from __future__ import division
 
 from __future__ import absolute_import
-from __future__ import print_function
 import collections
 import itertools
 import glob
@@ -2513,9 +2512,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     contur_add = " " + rivet_config["contur_add"]
 
                 if rivet_config["weight_name"] == "None":
-                    contur_cmd = 'contur -g scan >> contur.log 2>&1\n'
+                    contur_cmd = 'contur --nomultip -g scan >> contur.log 2>&1\n'
                 else:
-                    contur_cmd = 'contur -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
+                    contur_cmd = 'contur --nomultip -g scan --wn "{0}" >> contur.log 2>&1\n'.format(rivet_config["weight_name"] + contur_add)
 
                 if rivet_config["draw_contur_heatmap"]:
 
@@ -3664,7 +3663,7 @@ Beware that this can be dangerous for local multicore runs.""")
         devnull.close()
     
     ############################################################################ 
-    def do_combine_iteration(self, line):
+    def do_comine_iteration(self, line):
         """Not in help: Combine a given iteration combine_iteration Pdir Gdir S|R step
             S is for survey 
             R is for refine
@@ -3692,7 +3691,7 @@ Beware that this can be dangerous for local multicore runs.""")
     ############################################################################ 
     def do_combine_events(self, line):
         """Advanced commands: Launch combine events"""
-
+        start=time.time()
         args = self.split_arg(line)
         # Check argument's validity
         self.check_combine_events(args)
@@ -3768,7 +3767,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
             if nb_event < self.run_card['nevents']:
                 logger.warning("failed to generate enough events. Please follow one of the following suggestions to fix the issue:")
-                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", self.run_card['sde_strategy'] + 1 % 2)
+                logger.warning("  - set in the run_card.dat 'sde_strategy' to %s", 1 + self.run_card['sde_strategy'] % 2)
                 logger.warning("  - set in the run_card.dat  'hard_survey' to 1 or 2.")
                 logger.warning("  - reduce the number of requested events (if set too high)")
                 logger.warning("  - check that you do not have -integrable- singularity in your amplitude.")
@@ -3784,8 +3783,10 @@ Beware that this can be dangerous for local multicore runs.""")
     
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none'] and nb_event:
             self.correct_bias()
+        elif self.run_card['custom_fcts']:
+            self.correct_bias()
         
-        
+        logger.info("combination of events done in %s s ", time.time()-start)
         
         self.to_store.append('event')
     
@@ -7345,15 +7346,15 @@ if '__main__' == __name__:
     # Launch the interface without any check if one code is already running.
     # This can ONLY run a single command !!
     import sys
-    if not sys.version_info[0] in [2,3] or sys.version_info[1] < 6:
-        sys.exit('MadGraph/MadEvent 5 works only with python 2.6, 2.7 or python 3.7 or later).\n'+\
+    if sys.version_info < (3, 7):
+        sys.exit('MadGraph/MadEvent 5 works only with python 3.7 or later).\n'+\
                'Please upgrate your version of python.')
 
     import os
     import optparse
     # Get the directory of the script real path (bin)                                                                                                                                                           
     # and add it to the current PYTHONPATH                                                                                                                                                                      
-    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    #root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath( __file__ ))))
     sys.path.insert(0, root_path)
 
     class MyOptParser(optparse.OptionParser):    
@@ -7396,7 +7397,13 @@ if '__main__' == __name__:
     import logging.config
     # Set logging level according to the logging level given by options                                                                                                                                         
     #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal
     import internal.coloring_logging
+    # internal.file = XXX/bin/internal/__init__.py
+    # => need three dirname to get XXX
+    # we use internal to have any issue with pythonpath finding the wrong file
+    me_dir = os.path.dirname(os.path.dirname(os.path.dirname(internal.__file__)))
+    print("me_dir is", me_dir)
     try:
         if __debug__ and options.logging == 'INFO':
             options.logging = 'DEBUG'
@@ -7404,7 +7411,8 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        log_path = os.path.join(me_dir, 'bin', 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(log_path)
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)
     except:
@@ -7418,9 +7426,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line = MadEventCmd(os.path.dirname(root_path),force_run=True)
+                cmd_line = MadEventCmd(me_dir, force_run=True)
             else:
-                cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
+                cmd_line = MadEventCmdShell(me_dir, force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print(parser_error)

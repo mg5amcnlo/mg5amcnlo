@@ -16,7 +16,6 @@
 
 
 from __future__ import absolute_import
-from __future__ import print_function
 import logging
 import math
 import os
@@ -1109,9 +1108,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if alias:
             choices += list(alias.keys())
         
+
+
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
-        
+        if fct_timeout is None:
+            fct_timeout = lambda x: question_instance.postcmd(x, default) if x and default else False
         if first_cmd:
             if isinstance(first_cmd, str):
                 question_instance.onecmd(first_cmd)
@@ -1953,9 +1955,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if 'HOME' in os.environ and os.environ['HOME']  and \
-        os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
-            base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
+        legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
+
+        if os.path.exists(legacy_config_dir):
+            config_dir = legacy_config_dir
+        else:
+            config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+
+        config_file = os.path.join(config_dir, 'mg5_configuration.txt')
+
+        if 'HOME' in os.environ and os.environ['HOME'] and os.path.exists(config_file):
+            base = config_file
             if hasattr(self, 'me_dir'):
                 basedir = self.me_dir
             elif not MADEVENT:
@@ -2264,6 +2274,9 @@ class SmartQuestion(BasicCmd):
                 if n:
                     self.default(line)
                     return self.postcmd(stop, line)
+            elif self.value is None and line:
+                self.default(line)
+                return self.postcmd(stop, line) 
             if not self.casesensitive:
                 for ans in self.allow_arg:
                     if ans.lower() == self.value.lower():
@@ -2540,6 +2553,8 @@ class ControlSwitch(SmartQuestion):
         if hasattr(self, 'check_value_%s' % key):
             return getattr(self, 'check_value_%s' % key)(value)
         elif value in self.get_allowed(key):
+            return True
+        elif not self.get_allowed(key) and value == "OFF":
             return True
         else:
             return False

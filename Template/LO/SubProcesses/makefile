@@ -82,7 +82,7 @@ $(MATRIX): %.o: %.f
 # Dependencies
 
 driver.f: genps.inc
-symmetry.o: genps.inc nexternal.inc configs.inc run_config.inc
+symmetry.o: genps.inc nexternal.inc configs.inc run_config.inc ../../Source/run_card.inc
 genps.o: genps.inc nexternal.inc configs.inc
 dummy_fct.0: run.inc genps.inc
 cuts.o: genps.inc nexternal.inc pmass.inc

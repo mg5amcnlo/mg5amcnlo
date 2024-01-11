@@ -1,0 +1,106 @@
+==================================================
+  Sudakov grid pre-tabulation
+==================================================
+
+0. The MC@NLO-Delta short-distance cross sections feature the non-emission
+ probabilities (NEPs) as returned by the PSMC one matches to (in the
+ current  setup, this is Pythia8). Since such NEPs are too slow to be
+ computed on the fly, they are tabulated prior to any runs, with the
+ tables accessed at runtime; the returned NEPs are obtained by means
+ of a bi-linear interpolation of the tabulated nodal values. This is
+ performed by the CERNLIB routine dfint (also provided with the code).
+
+1. There is one NEP per type of parton (the gluon, and all quarks up 
+ to the top; charge-conjugation invariance is assumed), and per type
+ of dipole (II, IF, FI, and FF). Each of these depends on the parton
+ mass as defined by the PSMC, on the shower variable (st), and on the
+ dipole mass (xm). We construct a table for all possible parton type
+ and dipole type (thus, 28 tables in total). The parton masses are
+ fixed by means of the file MCmasses_PYTHIA8.inc. The nodal values of
+ any two-dimensional table are the NEP values at given (st,xm) points. 
+ There are nnst=100 st points and nnxm=50 xm points, distributed 
+ in a pre-determined manner, which is in turn controlled by the input
+ parameter inode, in the ranges stlow<st<stupp and xmlow<xm<xmupp.
+ The template pre-tabulated NEPs presently shipped with MG5_aMC
+ should be appropriate for any LHC simulations, and have been obtained
+ with inode=1, stlow=1 GeV, stupp=7 TeV, xmlow=1 GeV, xmupp=7 TeV.
+
+2. The code gridsudgen2.f is responsible for the construction of the
+ NEP tables. Its previous version gridsudgen.f gives the same results
+ as gridsudgen2.f when the latter is used with inode=1. It must be
+ linked to an MC@NLO-Delta-compatible Pythia8 version, which must
+ contain the function py_compute_sudakov(). The code gridsudgen2.f
+ has a number of hardwired parameters, the change of which is generally
+ possible but entails a recompilation of the code, plus a few other
+ parameters meant to be given in input at runtime. More in details:
+ + hardwired parameters:
+  - quark and gluon MC masses, obtained from MCmasses_PYTHIA8.inc.
+  - number of partons (npart).
+  - number of dipole types (ntype).
+  - number of st nodal values (nnst).
+  - number of xm nodal values (nnxm).
+ + input parameters:
+  - lower and upper bounds of st range (stlow, stupp).
+  - lower and upper bounds of xm range (xmlow, xmupp).
+  - threshold below which the NEP is set equal to zero (xlowthrs).
+  - type of distribution of the nodal values (inode).
+  - random seed (ifk88seed)
+ Among the input parameters, xlowthrs is a positive dimensionless number 
+ that must be set equal to a very small value (e.g. 10^(-4)), whereas
+ inode is an integer, whose possible values are 1, 2, and 3. In practice,
+ inode=1 is what has been used during the development phase; inode=2 is
+ not likely to have any practical advantages w.r.t. inode=1. Conversely,
+ inode=3 is expected to give one a better description of the NEP,
+ statistics-wide, in that it reduces the number of nodal values
+ equal to one. However, its use requires some care, because it
+ depends on the correct definition of the function stbound(), that
+ is meant to represent the upper bound (as a function of, among others,
+ the dipole mass) for the st variable above which the NEP is equal to one.
+ From the physical point of view, the definition of stbound() must be
+ compatible with what is done by Pythia8. From the technical point of
+ view, in gridsudgen2.f there are two copies of the body of stbound(),
+ one of which is meant to be written in output. The user must make sure
+ that these two copies are identical. Failure to do so will lead to
+ incorrect results, without any warnings being given.
+
+
+
+==================================================
+  Running pre-tabulation codes on lxplus
+==================================================
+
+0. Make sure that correct information about the PY8 path is stored in
+   input/mg5_configuration.txt, which will be used to fill makefile.inc.
+   It is possible to run pythia_path.py to retrieve information from
+   the input/mg5_configuration.txt.
+
+1. Run "make gridsudgen_clust".
+
+2. Edit "condor_submit_gridsudgen.sh" with the desired input parameters:
+  - lower and upper bounds of st range (stlow, stupp).
+  - lower and upper bounds of xm range (xmlow, xmupp).
+  - threshold below which the NEP is set equal to zero (xlowthrs).
+  - random seed (ifk88seed)
+
+3. Run "./condor_submit_gridsudgen.sh".
+   This script performs three operations:
+   - it writes "run_gridsudgen.sh" that will be executed on cluster nodes;
+   - it writes "gridsudcomb_input" that will be used locally to collect grids;
+   - it submits grid-tabulation jobs on lxplus.
+   At the end of the jobs, one gets files called grid_i_j_k.txt (with i =
+   dipole type, j = parton type, k = integer identifying xm nodal value).
+
+4. Run "./grid_combine.sh".
+   This step collects all files grid_i_j_k.txt into grid_i_j.txt. 
+
+5. Run "make gridsudcomb".
+
+6. Run "./gridsudcomb < gridsudcomb_input".
+   This step copies the content of the grid_i_j.txt files to the final
+   sudakov_template.f output file
+
+
+
+
+
+

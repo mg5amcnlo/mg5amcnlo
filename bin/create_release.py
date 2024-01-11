@@ -30,13 +30,12 @@ following actions:
 """
 
 from __future__ import absolute_import
-from __future__ import print_function
 import sys
 from six.moves import range
 from six.moves import input
 
-if sys.version_info[1] < 7:
-    sys.exit('MadGraph5_aMC@NLO works only with python 2.7/3.7 or later.\n\
+if sys.version_info < (3, 7):
+    sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
                Please upgrate your version of python.')
 
 import glob
@@ -95,7 +94,6 @@ if diff_result:
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
         exit()
-
         
 release_date = date.fromtimestamp(time.time())
 for line in open(os.path.join(MG5DIR,'VERSION')):
@@ -121,8 +119,8 @@ auto_update = True
 
 # check that we are in the correct branch (note this file does not handle LTS)
 p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
-branch = p.stdout.read().decode().strip()
-if branch != 'main':
+MG_branch = p.stdout.read().decode().strip()
+if MG_branch not in  ['3.x']:
     print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % branch)
     answer = input('Do you want to continue anyway? (y/n)')
     if answer != 'y':
@@ -134,7 +132,6 @@ if branch != 'main':
 if auto_update:
     p = subprocess.Popen(['git', 'tag', '-l', '-n','\'v%s\'' %version], stdout=subprocess.PIPE)
     old_tag = p.stdout.read().decode().strip()
-    print('vtag, old_tag')
     if old_tag:
         print("tag v%s is already existing. Those tags should be added by this script.")
         print("This will remove auto-update capabilities to this tarball")
@@ -142,7 +139,6 @@ if auto_update:
         if answer != 'y':
             exit()
         auto_update = False
-
     p = subprocess.Popen("git tag -l 'r*' ", stdout=subprocess.PIPE, shell=True)
     old_tag = p.stdout.read().decode().strip()
     print("detected release tag (bzr format)", old_tag)
@@ -176,26 +172,33 @@ elif auto_update:
     auto_update = False
 
 # checking that the rev_nb is in a reasonable range compare to the old one.
+<<<<<<< HEAD
 rev_nb = None
 if auto_update:
+||||||| merged common ancestors
+if rev_nb:
+=======
+if auto_update:
+>>>>>>> 3.x
     rev_nb_i = int(rev_nb)
     try:
-#        import ssl
-#        import urllib.request
-
-#        ctx = ssl.create_default_context()
-#        ctx.check_hostname = False
-#        ctx.verify_mode = ssl.CERT_NONE
-#        filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
-        filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
+        if MG_branch == 'LTS':
+            import ssl
+            import urllib.request
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            filetext = six.moves.urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
+        elif MG_branch == '3.x':
+            filetext = six.moves.urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
         text = filetext.read().decode().split('\n')
-        print(text)
         web_version = int(text[0].strip())
         if text[1]:
             last_message = int(text[1].strip())
         else:
             last_message = 99
-    except (ValueError, IOError):
+    except (ValueError, IOError) as error:
+        print(error)
         logging.warning("WARNING: impossible to detect the version number on the web")
         answer = input('Do you want to continue anyway? (y/n)')
         if answer != 'y':
@@ -236,6 +239,7 @@ if auto_update:
 
 filepath = "MG5_aMC_v" + misc.get_pkg_info()['version'].replace(".", "_")
 filename = "MG5_aMC_v" + misc.get_pkg_info()['version'] + ".tar.gz"
+    
 if path.exists(filepath):
     logging.info("Removing existing directory " + filepath)
     shutil.rmtree(filepath)
@@ -248,11 +252,10 @@ if status:
 
 # 1. Remove the .bzr directory and clean bin directory file,
 #    take care of README files.
-
 try:
     shutil.rmtree(path.join(filepath, '.bzr'))
 except:
-    pass 
+    pass
 shutil.rmtree(path.join(filepath, '.git'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
     if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
@@ -272,22 +275,25 @@ if rev_nb and auto_update:
     fsock.write("last_check   %s\n" % int(time.time()))
     fsock.write("last_message %s\n" % int(last_message))
     fsock.close()
-
     # tag handling
-    p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
+    if MG_branch == 'LTS':
+        p = subprocess.call("git tag  'L%s' " % int(rev_nb), shell=True)
+    elif MG_branch == '3.x':
+        p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
     p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
     print('new tag added')
     answer = input('Do you want to push commit and tag? (y/n)')
     if answer == 'y':
         p = subprocess.call("git push", shell=True)
         p = subprocess.call("git push --tags", shell=True)
-        
+
 # 1. Copy the .mg5_configuration_default.txt to it's default path
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
             path.join(filepath, 'input','mg5_configuration.txt'))
-shutil.copy(path.join(filepath, 'input','.default_run_card_lo.dat'),
+if os.path.exists(path.join(filepath, 'input','.default_run_card_lo.dat')):
+    shutil.copy(path.join(filepath, 'input','.default_run_card_lo.dat'),
             path.join(filepath, 'input','default_run_card_lo.dat'))
-shutil.copy(path.join(filepath, 'input','.default_run_card_nlo.dat'),
+    shutil.copy(path.join(filepath, 'input','.default_run_card_nlo.dat'),
             path.join(filepath, 'input','default_run_card_nlo.dat'))
 shutil.copy(path.join(filepath, 'input','proc_card_default.dat'), 
             path.join(filepath, 'proc_card.dat'))
