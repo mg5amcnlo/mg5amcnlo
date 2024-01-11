@@ -4712,7 +4712,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['wavefunctionsize'] = 18
         else:
             replace_dict['wavefunctionsize'] = 6
-            if self.model._curr_gauge == 'FD':
+            if hasattr(self.model, '_curr_gauge') and self.model._curr_gauge == 'FD':
                 replace_dict['wavefunctionsize'] = 7
 
         # Extract amp2 lines
