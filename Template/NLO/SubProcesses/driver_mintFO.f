@@ -379,6 +379,7 @@ c PineAPPL
 
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
+      double precision wgtdum
 
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -417,6 +418,22 @@ c PineAPPL
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
       nFKS_picked=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
+
+
+      ! MZ
+      ! real emission
+      call update_fks_dir(iran_picked) ! right? (nFKS_picked?)
+      call generate_momenta(nndim,iconfig,jac,x,p)
+      call set_alphaS(p)
+      call smatrix_real(p, wgtdum)
+      amp_split_store_r(:) = amp_split(:)
+      ! the born
+      call set_alphaS(p1_cnt(0,1,0))
+      call sborn(p1_cnt(0,1,0), wgtdum)
+      amp_split_store_b(:) = amp_split(:)
+      amp_split_store_cnt = amp_split_cnt
+      ! MZ
+      
       
 c The nbody contributions
       if (abrv.eq.'real') goto 11
