@@ -1,4 +1,5 @@
       subroutine set_mc_matrices
+      ! Fills ipartners, colorflow and isspecial (at the Born level)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -16,9 +17,7 @@ c is the number of color flows at Born level
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer fksfather
-      common/cfksfather/fksfather
       logical notagluon,found
-      common/cnotagluon/notagluon
       integer nglu,nsngl
       logical isspecial(max_bcol)
       common/cisspecial/isspecial
@@ -240,13 +239,13 @@ c by one unit, so decrease it
         ! (it is kinematics-dependent)
         continue
       endif
-      call check_mc_matrices
+      call check_mc_matrices(notagluon)
       return
       end
 
 
 
-      subroutine check_mc_matrices
+      subroutine check_mc_matrices(notagluon)
       implicit none
       include "nexternal.inc"
       include "born_nhel.inc"
@@ -257,10 +256,10 @@ c      include "fks.inc"
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
       integer i,j,ipart,iflow,ntot,ithere(1000)
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       integer fksfather
-      common/cfksfather/fksfather
       logical notagluon
-      common/cnotagluon/notagluon
       logical isspecial(max_bcol)
       common/cisspecial/isspecial
 
@@ -272,6 +271,7 @@ c      include "fks.inc"
       integer num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 c
+      fksfather=min(i_fks,j_fks)
       if(ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
         stop
@@ -972,11 +972,8 @@ c over colour partners
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
-      logical isspecial(max_bcol)
-      common/cisspecial/isspecial
 
       integer fksfather
-      common/cfksfather/fksfather
 
       logical softtest,colltest
       common/sctests/softtest,colltest
@@ -1175,6 +1172,7 @@ c Shower variables
       first_MCcnt_call=.false.
  222  continue
 c Main loop over colour partners used to begin here
+      fksfather=min(i_fks,j_fks)
       E0sq(npartner)=dot(p_born(0,fksfather),p_born(0,ipartners(npartner)))
       if(E0sq(npartner).lt.0d0)then
          write(*,*)'Error in xmcsubt: negative E0sq'
@@ -2546,8 +2544,6 @@ c
       logical lzone(nexternal)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer           fksfather
-      common/cfksfather/fksfather
       integer          ipartners(0:nexternal-1)
      &                          ,colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -2716,7 +2712,7 @@ c Additional information for LHE
       if(AddInfoLHE)then
          ifks_lhe(nFKSprocess)=i_fks
          jfks_lhe(nFKSprocess)=j_fks
-         fksfather_lhe(nFKSprocess)=fksfather
+         fksfather_lhe(nFKSprocess)=min(i_fks,j_fks)
          if(jpartner.ne.0)then
             ipartner_lhe(nFKSprocess)=jpartner
          else
@@ -3199,7 +3195,6 @@ c variable qMC
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer fksfather
-      common/cfksfather/fksfather
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision tiny
@@ -3244,6 +3239,7 @@ c ileg = 3 ==> emission from massive  outgoing parton
 c ileg = 4 ==> emission from massless outgoing parton
 c Instead of pmass(j_fks), one should use pmass(fksfather), but the
 c kernels where pmass(fksfather) != pmass(j_fks) are non-singular
+      fksfather=min(i_fks,j_fks)
       if(fksfather.le.2)then
         ileg=fksfather
       elseif(pmass(j_fks).ne.0d0)then
@@ -5198,8 +5194,6 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      integer fksfather
-      common/cfksfather/fksfather
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision tiny
