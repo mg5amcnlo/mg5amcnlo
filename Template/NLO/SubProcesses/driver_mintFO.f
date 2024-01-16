@@ -345,6 +345,9 @@ c timing statistics
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked
+      !ZW
+      integer index
+      !ZW
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
       data firsttime/.true./
@@ -419,50 +422,56 @@ c PineAPPL
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
       nFKS_picked=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
 
+      call get_born_nFKSprocess(nFKS_picked,nFKS_born)
 
       ! MZ
-      ! real emission
-      call update_fks_dir(iran_picked) ! right? (nFKS_picked?)
-      call generate_momenta(nndim,iconfig,jac,x,p)
-      call set_alphaS(p)
-      call smatrix_real(p, wgtdum)
-      amp_split_store_r(:) = amp_split(:)
-      ! the born
-      call set_alphaS(p1_cnt(0,1,0))
-      call sborn(p1_cnt(0,1,0), wgtdum)
-      amp_split_store_b(:) = amp_split(:)
-      amp_split_store_cnt = amp_split_cnt
+      ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
+      do index=1,vec_size
+         ! real emission
+         call update_fks_dir(iran_picked) ! right? (nFKS_picked?)
+         call generate_momenta(nndim,iconfig,jac,x,p)
+         call set_alphaS(p)
+         call smatrix_real(p, wgtdum)
+         amp_split_store_r(:,index) = amp_split(:)
+         ! the born
+         call update_fks_dir(nFKS_born)
+         call set_alphaS(p1_cnt(0,1,0))
+         call sborn(p1_cnt(0,1,0), wgtdum)
+         amp_split_store_b(:,index) = amp_split(:)
+         amp_split_store_cnt(:,:,:,index) = amp_split_cnt(:,:,:)
+      enddo
+      ! ZW
       ! MZ
       
       
 c The nbody contributions
       if (abrv.eq.'real') goto 11
       nbody=.true.
-      calculatedBorn=.false.
-      call get_born_nFKSprocess(nFKS_picked,nFKS_born)
-      call update_fks_dir(nFKS_born)
-      if (ini_fin_fks(ichan).eq.0) then
-         jac=1d0
-      else
-         jac=0.5d0
-      endif
-      call generate_momenta(nndim,iconfig,jac,x,p)
-      if (p_born(0,1).lt.0d0) goto 12
-      call compute_prefactors_nbody(vegas_wgt)
-      call set_cms_stuff(izero)
-      if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
-      passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
-      if (passcuts_nbody) then
-         pass_cuts_check=.true.
-         call set_alphaS(p1_cnt(0,1,0))
-         call include_multichannel_enhance(1)
-         if (abrv(1:2).ne.'vi') then
-            call compute_born
+      do index=1,vec_size
+         calculatedBorn=.false.
+         if (ini_fin_fks(ichan).eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
          endif
-         if (abrv.ne.'born') then
-            call compute_nbody_noborn
+         call generate_momenta(nndim,iconfig,jac,x,p)
+         if (p_born(0,1).lt.0d0) goto 12
+         call compute_prefactors_nbody(vegas_wgt)
+         call set_cms_stuff(izero)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
+         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if (passcuts_nbody) then
+            pass_cuts_check=.true.
+            call set_alphaS(p1_cnt(0,1,0))
+            call include_multichannel_enhance(1)
+            if (abrv(1:2).ne.'vi') then
+               call compute_born(index)
+            endif
+            if (abrv.ne.'born') then
+               call compute_nbody_noborn(index)
+            endif
          endif
-      endif
+      enddo
 
  11   continue
 c The n+1-body contributions (including counter terms)
@@ -470,59 +479,61 @@ c The n+1-body contributions (including counter terms)
      $     abrv(1:4).eq.'bovi' .or.
      $     abrv(1:2).eq.'vi' ) goto 12
       nbody=.false.
-      if (sum) then
-         nFKS_min=1
-         nFKS_max=ini_fin_fks_map(ini_fin_fks(ichan),0)
-         MC_int_wgt=1d0
-      else
-         nFKS_min=iran_picked
-         nFKS_max=iran_picked
-         MC_int_wgt=1d0/vol
-      endif
+      do index=1,vec_size
+         if (sum) then
+            nFKS_min=1
+            nFKS_max=ini_fin_fks_map(ini_fin_fks(ichan),0)
+            MC_int_wgt=1d0
+         else
+            nFKS_min=iran_picked
+            nFKS_max=iran_picked
+            MC_int_wgt=1d0/vol
+         endif
 
-      do i=nFKS_min,nFKS_max
-         iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
-         calculatedBorn=.false. 
-         ! MZ this is a temporary fix for processes without
-         ! soft singularities associated to the initial state
-         ! DO NOT extend this fix to event generation
-         wgt_me_born=0d0
-         wgt_me_real=0d0
-         jac=MC_int_wgt
-         call update_fks_dir(iFKS)
-         call generate_momenta(nndim,iconfig,jac,x,p)
-         if (p_born(0,1).lt.0d0) cycle
-         call compute_prefactors_n1body(vegas_wgt,jac)
-         call set_cms_stuff(izero)
-         if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
-         passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
-         ! needed for the mapping without event projection
-         call set_cms_stuff(ione)
-         passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
-         call set_cms_stuff(mohdr)
-         if (ickkw.eq.3) call set_FxFx_scale(3,p)
-         passcuts_n1body=passcuts(p,rwgt)
-         if (passcuts_nbody .and. abrv.ne.'real') then
-            pass_cuts_check=.true.
+         do i=nFKS_min,nFKS_max
+            iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
+            calculatedBorn=.false. 
+            ! MZ this is a temporary fix for processes without
+            ! soft singularities associated to the initial state
+            ! DO NOT extend this fix to event generation
+            wgt_me_born=0d0
+            wgt_me_real=0d0
+            jac=MC_int_wgt
+            call update_fks_dir(iFKS)
+            call generate_momenta(nndim,iconfig,jac,x,p)
+            if (p_born(0,1).lt.0d0) cycle
+            call compute_prefactors_n1body(vegas_wgt,jac)
             call set_cms_stuff(izero)
-            call set_alphaS(p1_cnt(0,1,0))
-            call include_multichannel_enhance(3)
-            call compute_soft_counter_term(0d0)
-            call set_cms_stuff(itwo)
-            call compute_soft_collinear_counter_term(0d0)
-         endif
-         if (passcuts_coll .and. abrv.ne.'real') then
-           call set_alphaS(p1_cnt(0,1,1))
-           call set_cms_stuff(ione)
-           call compute_collinear_counter_term(0d0)
-         endif
-         if (passcuts_n1body) then
-            pass_cuts_check=.true.
+            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
+            passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+            ! needed for the mapping without event projection
+            call set_cms_stuff(ione)
+            passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
             call set_cms_stuff(mohdr)
-            call set_alphaS(p)
-            call include_multichannel_enhance(2)
-            call compute_real_emission(p,1d0)
-         endif
+            if (ickkw.eq.3) call set_FxFx_scale(3,p)
+            passcuts_n1body=passcuts(p,rwgt)
+            if (passcuts_nbody .and. abrv.ne.'real') then
+               pass_cuts_check=.true.
+               call set_cms_stuff(izero)
+               call set_alphaS(p1_cnt(0,1,0))
+               call include_multichannel_enhance(3)
+               call compute_soft_counter_term(0d0,index)
+               call set_cms_stuff(itwo)
+               call compute_soft_collinear_counter_term(0d0,index)
+            endif
+            if (passcuts_coll .and. abrv.ne.'real') then
+            call set_alphaS(p1_cnt(0,1,1))
+            call set_cms_stuff(ione)
+            call compute_collinear_counter_term(0d0,index)
+            endif
+            if (passcuts_n1body) then
+               pass_cuts_check=.true.
+               call set_cms_stuff(mohdr)
+               call set_alphaS(p)
+               call include_multichannel_enhance(2)
+               call compute_real_emission(p,1d0,index)
+            endif
+         enddo
       enddo
       
  12   continue

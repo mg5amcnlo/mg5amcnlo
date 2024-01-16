@@ -1361,9 +1361,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
         text += '! the following is to store amps for vectorisation\n'
-        text += 'double precision amp_split_store_r(amp_split_size)\n'
-        text += 'double precision amp_split_store_b(amp_split_size)\n'
-        text += 'double complex amp_split_store_cnt(amp_split_size,2,nsplitorders)\n'
+        text += 'integer vec_size\n'
+        text += 'parameter (vec_size = 1)\n'
+        text += 'double precision amp_split_store_r(amp_split_size, vec_size)\n'
+        text += 'double precision amp_split_store_b(amp_split_size, vec_size)\n'
+        text += 'double complex amp_split_store_cnt(amp_split_size,2,nsplitorders, vec_size)\n'
         text += 'COMMON /TO_AMP_SPLIT_STORE/AMP_SPLIT_store_r, amp_split_store_b, amp_split_store_cnt\n'
         writer.line_length=132
         writer.writelines(text)
