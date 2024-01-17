@@ -406,16 +406,11 @@ c PineAPPL
          write (*,*) 'Switching to MC over FKS directories'
          sum=.false.
       endif
-      sigint=0d0
-      icontr=0
-      do iamp=0,amp_split_size
-         virt_wgt_mint(iamp)=0d0
-         born_wgt_mint(iamp)=0d0
-      enddo
+      !ZW move down to fill
       virtual_over_born=0d0
       wgt_me_born=0d0
       wgt_me_real=0d0
-      if (ickkw.eq.-1) H1_factor_virt=0d0
+      if (ickkw.eq.-1) H1_factor_virt=0d0      
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
       call get_MC_integer(max(ini_fin_fks(ichan),1)
@@ -435,6 +430,7 @@ c PineAPPL
          amp_split_store_r(:,index) = amp_split(:)
          ! the born
          call update_fks_dir(nFKS_born)
+         call generate_momenta(nndim,iconfig,jac,x,p)
          call set_alphaS(p1_cnt(0,1,0))
          call sborn(p1_cnt(0,1,0), wgtdum)
          amp_split_store_b(:,index) = amp_split(:)
@@ -445,15 +441,26 @@ c PineAPPL
       
       
 c The nbody contributions
-      if (abrv.eq.'real') goto 11
-      nbody=.true.
       do index=1,vec_size
+         sigint=0d0
+         icontr=0
+         do iamp=0,amp_split_size
+            virt_wgt_mint(iamp)=0d0
+            born_wgt_mint(iamp)=0d0
+         enddo
+         virtual_over_born=0d0
+         wgt_me_born=0d0
+         wgt_me_real=0d0
+         if (ickkw.eq.-1) H1_factor_virt=0d0
+         if (abrv.eq.'real') goto 11
+         nbody=.true.
          calculatedBorn=.false.
          if (ini_fin_fks(ichan).eq.0) then
             jac=1d0
          else
             jac=0.5d0
          endif
+         call update_fks_dir(nFKS_born)
          call generate_momenta(nndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
@@ -471,15 +478,13 @@ c The nbody contributions
                call compute_nbody_noborn(index)
             endif
          endif
-      enddo
 
- 11   continue
+   11   continue
 c The n+1-body contributions (including counter terms)
-      if ( abrv(1:4).eq.'born' .or.
+         if ( abrv(1:4).eq.'born' .or.
      $     abrv(1:4).eq.'bovi' .or.
      $     abrv(1:2).eq.'vi' ) goto 12
-      nbody=.false.
-      do index=1,vec_size
+         nbody=.false.
          if (sum) then
             nFKS_min=1
             nFKS_max=ini_fin_fks_map(ini_fin_fks(ichan),0)
@@ -534,45 +539,46 @@ c The n+1-body contributions (including counter terms)
                call compute_real_emission(p,1d0,index)
             endif
          enddo
-      enddo
-      
- 12   continue
+         
+   12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
-      if (ickkw.eq.-1) call include_veto_multiplier
-      call include_PDF_and_alphas
+         if (ickkw.eq.-1) call include_veto_multiplier
+         call include_PDF_and_alphas
 
 c Include the bias weight specified in the bias_weight_function
-      call include_bias_wgt
+         call include_bias_wgt
 
-      if (doreweight) then
-         if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
-         if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
-         if (do_rwgt_pdf) call reweight_pdf
-      endif
-      
-      if (pineappl) then
-         if (sum) then
-            write (*,*) 'ERROR: PineAPPL only possible '/
-     &           /'with MC over FKS directories',pineappl,sum
-            stop 1
+         if (doreweight) then
+            if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
+            if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
+            if (do_rwgt_pdf) call reweight_pdf
          endif
-         call fill_pineappl_weights(vegas_wgt)
-      endif
+         
+         if (pineappl) then
+            if (sum) then
+               write (*,*) 'ERROR: PineAPPL only possible '/
+     &           /'with MC over FKS directories',pineappl,sum
+               stop 1
+            endif
+            call fill_pineappl_weights(vegas_wgt)
+         endif
 
 c Importance sampling for FKS configurations
-      if (sum) then
-         call get_wgt_nbody(sig)
-         call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
+         if (sum) then
+            call get_wgt_nbody(sig)
+            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig))
-      else
-         call get_wgt_no_nbody(sig)
-         call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
+         else
+            call get_wgt_no_nbody(sig)
+            call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig)*vol)
-      endif
+         endif
 
 c Finalize PS point
-      call fill_plots
-      call fill_mint_function(f)
+         call fill_plots
+         call fill_mint_function(f)
+      enddo
+      !ZW end loop here
       return
       end
 
