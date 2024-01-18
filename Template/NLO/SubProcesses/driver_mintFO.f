@@ -340,9 +340,10 @@ c timing statistics
       include 'nFKSconfigs.inc'
       include 'run.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       include 'fks_info.inc'
-      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
+      double precision xx(ndimmax,vec_size),vegas_wgt,f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,x(99,vec_size),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
       !ZW
@@ -416,13 +417,15 @@ c PineAPPL
          write (*,*) 'Switching to MC over FKS directories'
          sum=.false.
       endif
-      !ZW move down to fill
+      !ZW setting zeros here as well as in accumulation loop
       virtual_over_born=0d0
       wgt_me_born=0d0
       wgt_me_real=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0      
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
-      call update_vegas_x(xx,x)
+      do index=1,vec_size
+         call update_vegas_x(xx(:,index),x(:,index))
+      enddo
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
       nFKS_picked=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
@@ -441,7 +444,7 @@ c PineAPPL
          amp_split_store_r(:,index) = amp_split(:)
          ! the born
          call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x(:,index),p)
          call set_alphaS(p1_cnt(0,1,0))
          call sborn(p1_cnt(0,1,0), wgtdum)
          amp_split_store_b(:,index) = amp_split(:)
@@ -463,8 +466,8 @@ c PineAPPL
       ! MZ
       
       
-c The nbody contributions
-      do index=1,vec_size
+      do index=1,vec_size      
+         !ZW set zeros for each amp_index
          sigint=0d0
          icontr=0
          do iamp=0,amp_split_size
@@ -475,6 +478,9 @@ c The nbody contributions
          wgt_me_born=0d0
          wgt_me_real=0d0
          if (ickkw.eq.-1) H1_factor_virt=0d0
+         if (ickkw.eq.3) call set_FxFx_scale(0,p)
+         !ZW
+c  The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
          calculatedBorn=.false.
@@ -484,7 +490,7 @@ c The nbody contributions
             jac=0.5d0
          endif
          call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x(:,index),p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
@@ -601,7 +607,7 @@ c Finalize PS point
          call fill_plots
          call fill_mint_function(f)
       enddo
-      !ZW end loop here
+      !ZW end accumulation loop here
       return
       end
 

@@ -625,6 +625,22 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 			   self.write_orders_file(
                             writers.FortranWriter(filename),
                             matrix_element)
+      
+        vector_size = 2
+      
+        filename = 'vectorize.inc'
+        self.write_vectorize_file(
+                            writers.FortranWriter(filename),
+                            matrix_element,
+                            amp_split_size,
+                            vector_size)
+        
+        filename = 'mint_vectorize.inc'
+        self.write_mint_vectorize_file(
+                            writers.FortranWriter(filename),
+                            matrix_element,
+                            amp_split_size,
+                            vector_size)
 
         filename = 'a0Gmuconv.inc'
         startfroma0 = self.write_a0gmuconv_file(
@@ -1363,19 +1379,65 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
         text += '! the following is to store amps for vectorisation\n'
-        text += 'integer vec_size\n'
-        text += 'parameter (vec_size = 1)\n'
-        text += 'double precision amp_split_store_r(amp_split_size, vec_size)\n'
-        text += 'double precision amp_split_store_b(amp_split_size, vec_size)\n'
-        text += 'double complex amp_split_store_cnt(amp_split_size,2,nsplitorders, vec_size)\n'
-        text += 'double precision amp_split_store_bsf(amp_split_size, %d, %d, vec_size)\n' % (nexternal, nexternal)
-        text += 'COMMON /TO_AMP_SPLIT_STORE/AMP_SPLIT_store_r, amp_split_store_b, amp_split_store_cnt, amp_split_store_bsf\n'
+#        text += 'integer vec_size\n'
+#        text += 'parameter (vec_size = 1)\n'
+#        text += 'double precision amp_split_store_r(amp_split_size, vec_size)\n'
+#        text += 'double precision amp_split_store_b(amp_split_size, vec_size)\n'
+#        text += 'double complex amp_split_store_cnt(amp_split_size,2,nsplitorders, vec_size)\n'
+#        text += 'double precision amp_split_store_bsf(amp_split_size, %d, %d, vec_size)\n' % (nexternal, nexternal)
+#        text += 'COMMON /TO_AMP_SPLIT_STORE/AMP_SPLIT_store_r, amp_split_store_b, amp_split_store_cnt, amp_split_store_bsf\n'
         writer.line_length=132
         writer.writelines(text)
 
         return amp_split_orders, amp_split_size, amp_split_size_born
 
 
+    def write_vectorize_file(self, writer, matrix_element, amp_split_size, vec_size):
+        """writes the include file with information for vectorization.
+        Just defines the vector_size and the  amp_split_store arrays"""
+        
+        split_orders = \
+                matrix_element.born_me['processes'][0]['split_orders']
+        
+        
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        
+        text = '  ! information to store amps for vectorisation\n'
+        text += 'integer vec_size\n'
+        text += 'parameter (vec_size = %i)\n' % vec_size
+        text += 'integer nsplitorders_store\n'
+        text += 'parameter (nsplitorders_store=%d)\n' % len(split_orders)
+        text += 'integer amp_split_size_store\n'
+        text += 'parameter (amp_split_size_store = %d)\n' % amp_split_size
+        text += 'double precision amp_split_store_r(amp_split_size_store, vec_size)\n'
+        text += 'double precision amp_split_store_b(amp_split_size_store, vec_size)\n'
+        text += 'double complex amp_split_store_cnt(amp_split_size_store,2,nsplitorders_store, vec_size)\n'
+        text += 'double precision amp_split_store_bsf(amp_split_size_store, %d, %d, vec_size)\n' % (nexternal, nexternal)
+        text += 'COMMON /TO_AMP_SPLIT_STORE/AMP_SPLIT_store_r, amp_split_store_b, amp_split_store_cnt, amp_split_store_bsf\n'
+        writer.line_length=132
+        writer.writelines(text)
+        
+        return
+    
+    def write_mint_vectorize_file(self, writer, matrix_element, amp_split_size, vec_size):
+        """writes the include file with information for vectorization.
+        Just defines the vector_size and the  amp_split_store arrays"""
+        
+        split_orders = \
+                matrix_element.born_me['processes'][0]['split_orders']
+        
+        text = '  ! information to store amps for vectorisation\n'
+        text += 'integer vec_size_mint\n'
+        text += 'parameter (vec_size_mint = %i)\n' % vec_size
+        text += 'integer nsplitorders_mint\n'
+        text += 'parameter (nsplitorders_mint=%d)\n' % len(split_orders)
+        text += 'integer amp_split_size_mint\n'
+        text += 'parameter (amp_split_size_mint = %d)\n' % amp_split_size
+        writer.line_length=132
+        writer.writelines(text)
+        
+        return
+        
     #===============================================================================
     # write_get_mass_width_file
     #===============================================================================

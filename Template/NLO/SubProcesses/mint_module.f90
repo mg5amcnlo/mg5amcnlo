@@ -129,7 +129,9 @@ module mint_module
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
-  integer, dimension(ndimmax), private :: icell,ncell
+  include 'mint_vectorize.inc'
+  integer, dimension(ndimmax,vec_size_mint), private :: icell
+  integer, dimension(ndimmax), private :: ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
   integer, dimension(maxchannels), private :: nhits_in_grids
@@ -188,9 +190,10 @@ contains
 
   subroutine mint(fun)
     implicit none
-    integer kpoint
+    include 'vectorize.inc'
+    integer kpoint, index
     double precision :: vol
-    double precision, dimension(ndimmax) :: x
+    double precision, dimension(ndimmax,vec_size) :: x
     integer, dimension(ndimmax) :: kfold
     double precision, external :: fun
     logical :: enough_points,channel_loop_done
@@ -200,9 +203,14 @@ contains
 2      kpoint_iter=kpoint_iter+1
        do kpoint=1,ncalls
           new_point=.true.
-          call get_random_x(x,vol,kfold)
+          call get_channel
+          do index=1,vec_size
+             call get_random_x(x(:,index),vol,kfold)
+          enddo
           call compute_integrand(fun,x,vol)
-          call accumulate_the_point(x)
+          do index=1,vec_size
+             call accumulate_the_point(x(:,index))
+          enddo
        enddo
        call get_amount_of_points(enough_points)
        if (.not.enough_points) goto 2
@@ -680,11 +688,14 @@ contains
   subroutine add_point_to_grids(x)
     implicit none
     integer :: kdim,k_ord_virt,ithree,isix
+    integer index
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
-       xacc(icell(kdim),kdim,ichan) = xacc(icell(kdim),kdim,ichan) + f(1)
+       do index=1,vec_size_mint
+          xacc(icell(kdim,index),kdim,ichan) = xacc(icell(kdim,index),kdim,ichan) + f(1)
+       enddo
     enddo
 ! Set the Born contribution (to compute the average_virtual) to zero if
 ! the virtual was not computed for this phase-space point. Compensate by
@@ -783,9 +794,10 @@ contains
     implicit none
     integer :: ifirst,iret
     integer, dimension(ndimmax) :: kfold
+    include 'vectorize.inc'
     double precision :: dummy,vol
     double precision, dimension(nintegrals) :: f1
-    double precision, dimension(ndimmax) :: x
+    double precision, dimension(ndimmax,vec_size) :: x
     double precision, external :: fun
     ! contribution to integral
     ifirst=0
@@ -815,10 +827,10 @@ contains
   subroutine get_random_x(x,vol,kfold)
     implicit none
     integer :: kdim,k_ord_virt,nintcurr
+    integer index
     integer, dimension(ndimmax) :: kfold
     double precision :: vol,dx
     double precision, dimension(ndimmax) :: x
-    call get_channel
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -837,11 +849,13 @@ contains
 ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
     do kdim=1,ndim
        nintcurr=nint_used/ifold(kdim)
-       icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
-       dx=xgrid(icell(kdim),kdim,ichan)-xgrid(icell(kdim)-1,kdim,ichan)
-       vol=vol*dx*nintcurr
-       x(kdim)=xgrid(icell(kdim)-1,kdim,ichan)+rand(kdim)*dx
-       if(imode.eq.0) nhits(icell(kdim),kdim,ichan)=nhits(icell(kdim),kdim,ichan)+1
+       do index=1,vec_size_mint
+         icell(kdim,index)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
+         dx=xgrid(icell(kdim,index),kdim,ichan)-xgrid(icell(kdim,index)-1,kdim,ichan)
+         vol=vol*dx*nintcurr
+         x(kdim)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
+         if(imode.eq.0) nhits(icell(kdim,index),kdim,ichan)=nhits(icell(kdim,index),kdim,ichan)+1
+       enddo
     enddo
     do k_ord_virt=0,n_ord_virt
        if (use_poly_virtual) then
@@ -1557,8 +1571,10 @@ contains
     implicit none
     integer :: vn,gen_mode
     logical :: found_point
+    include 'vectorize.inc'
+    integer index
     double precision, external :: fun
-    double precision, dimension(ndimmax) :: x
+    double precision, dimension(ndimmax,vec_size) :: x
     double precision :: vol
     if (gen_mode.eq.0) then
        call initialise_mint_gen
@@ -1569,9 +1585,13 @@ contains
 10     continue
        new_point=.true.
        if (vn.eq.1) then
-          call get_random_cell_flat(x,vol)
+          do index=1,vec_size
+            call get_random_cell_flat(x,vol)
+          enddo
        else
-          call get_weighted_cell(x,vol)
+          do index=1,vec_size
+            call get_weighted_cell(x,vol)
+          enddo
        endif
        call compute_integrand(fun,x,vol)
        call increase_gen_counters_middle(vn)
@@ -1647,6 +1667,7 @@ contains
     double precision :: vol
     double precision, dimension(ndimmax) :: x
     integer, dimension(ndimmax) :: kfold
+    call get_channel
     call get_random_x(x,vol,kfold)
     upper_bound=ymax_virt(ichan)
   end subroutine get_random_cell_flat

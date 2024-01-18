@@ -7,6 +7,7 @@ c to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
 
@@ -63,6 +64,7 @@ C in the LO cross section
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_6to5f(amp_split_size),
@@ -166,6 +168,7 @@ C in the LO cross section
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_alpha(amp_split_size),
@@ -314,6 +317,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'run.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, i
       !ZW
@@ -503,6 +507,7 @@ c its value to the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -554,6 +559,7 @@ c the list of weights using the add_wgt subroutine
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -628,6 +634,7 @@ c to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -732,6 +739,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -855,6 +863,7 @@ c respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       include 'orders.inc'
+      include 'vectorize.inc'
       include 'run.inc'
       include 'born_nhel.inc'
       integer nofpartners,i
@@ -4421,6 +4430,7 @@ c Born and multiplies with the AP splitting function or eikonal factors.
 
       double precision pmass(nexternal)
       include 'orders.inc'
+      include 'vectorize.inc'
 
       include "pmass.inc"
 
@@ -4530,6 +4540,7 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       parameter (ximag=(0.d0,1.d0))
 
       include 'orders.inc'
+      include 'vectorize.inc'
       double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
@@ -4711,6 +4722,7 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       parameter (ximag=(0.d0,1.d0))
 
       include 'orders.inc'
+      include 'vectorize.inc'
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
       integer iamp
@@ -5484,6 +5496,7 @@ c      include "fks.inc"
       common /c_need_links/need_color_links, need_charge_links
       integer ipos_ord
       include 'orders.inc'
+      include 'vectorize.inc'
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
 
@@ -5627,6 +5640,7 @@ c Calculate the eikonal factor
       include 'q_es.inc'
       include "run.inc"
       include "orders.inc"
+      include 'vectorize.inc'
 
       integer iord, iap
 
@@ -6586,6 +6600,7 @@ c For the MINT folding
       parameter (zero=0d0)
       parameter (tiny=1d-6)
       include 'orders.inc'
+      include 'vectorize.inc'
       logical firsttime
       data firsttime / .true. /
       logical need_color_links_used, need_charge_links_used
@@ -7392,6 +7407,7 @@ c      include "fks.inc"
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
       include 'orders.inc'
+      include 'vectorize.inc'
       double precision amp_split_poles_FKS(amp_split_size,2)
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
       double precision amp_split_soft(amp_split_size)
