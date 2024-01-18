@@ -5512,8 +5512,10 @@ C Reset the amp_split array
             if ((m.ne.n .or. (m.eq.n .and. pmass(m).ne.ZERO)) .and.
      &           n.ne.i_fks.and.m.ne.i_fks) then
 C wgt includes the gs/w^2 
-               call sborn_sf(p_born,m,n,wgt)
-               if (wgt.ne.0d0) then
+               !MZ
+               !!!call sborn_sf(p_born,m,n,wgt)
+               amp_split_soft(:) = amp_split_store_bsf(:,i,j,amp_index) 
+               !!if (wgt.ne.0d0) then
                   call eikonal_reduced(pp,m,n,i_fks,j_fks,
      #                                 xi_i_fks,y_ij_fks,eik)
                   softcontr=softcontr+wgt*eik*iden_comp
@@ -5522,7 +5524,7 @@ C wgt includes the gs/w^2
                   if (need_charge_links) ipos_ord = qed_pos
                   amp_split(1:amp_split_size) = amp_split(1:amp_split_size)
      $                - 2d0 * eik * amp_split_soft(1:amp_split_size)*iden_comp
-               endif
+               !!endif
             endif
          enddo
       enddo
@@ -6697,6 +6699,9 @@ c entering this function
       amp_split(:) = amp_split_store_b(:,amp_index)
       amp_split_cnt(:,:,:) = amp_split_store_cnt(:,:,:,amp_index)
       !MZ
+      do i = 1, amp_split_size
+        wgt1 = wgt1 + amp_split(i)
+      enddo
 
 c Born contribution:
       bsv_wgt=wgt1
@@ -6837,15 +6842,17 @@ c To be sure that color-correlated Borns work well, we need to have
 c *always* a call to sborn(p_born,wgt) just before. This is okay,
 c because there is a call above in this subroutine
 C wgt includes the gs/w^2 
-                  call sborn_sf(p_born,m,n,wgt)
-                  if (wgt.ne.0d0) then
+                  !!call sborn_sf(p_born,m,n,wgt)
+                  ! MZ
+                  amp_split_soft(:) = amp_split_store_bsf(:,i,j,amp_index) 
+                  !!!if (wgt.ne.0d0) then
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg
                      do k=1,amp_split_size
                         amp_split_bsv(k) = amp_split_bsv(k) - 2d0 *
      $                       eikIreg * oneo8pi2 * amp_split_soft(k)
                      enddo
-                  endif
+                  !!!endif
                endif
             enddo
          enddo

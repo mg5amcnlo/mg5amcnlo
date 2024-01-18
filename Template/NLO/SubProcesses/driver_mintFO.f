@@ -344,10 +344,14 @@ c timing statistics
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
-     $     ,nFKS_max,izero,ione,itwo,mohdr,i,iran_picked
+     $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
       !ZW
       integer index
       !ZW
+      ! MZ
+      double precision amp_split_soft(amp_split_size)
+      common /to_amp_split_soft/amp_split_soft
+      ! MZ 
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
       data firsttime/.true./
@@ -383,6 +387,12 @@ c PineAPPL
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
       double precision wgtdum
+      !MZ
+      integer            i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer           fks_j_from_i(nexternal,0:nexternal)
+     &                  ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -423,7 +433,8 @@ c PineAPPL
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
       do index=1,vec_size
          ! real emission
-         call update_fks_dir(iran_picked) ! right? (nFKS_picked?)
+         iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
+         call update_fks_dir(iFKS) ! right? (nFKS_picked?)
          call generate_momenta(nndim,iconfig,jac,x,p)
          call set_alphaS(p)
          call smatrix_real(p, wgtdum)
@@ -435,6 +446,18 @@ c PineAPPL
          call sborn(p1_cnt(0,1,0), wgtdum)
          amp_split_store_b(:,index) = amp_split(:)
          amp_split_store_cnt(:,:,:,index) = amp_split_cnt(:,:,:)
+         ! color-linked borns
+         do i=1,fks_j_from_i(i_fks,0)
+           do j=1,i
+             m=fks_j_from_i(i_fks,i)
+             n=fks_j_from_i(i_fks,j)
+             if (n.ne.i_fks.and.m.ne.i_fks) then
+              ! MZ don't skip the case m=n and massless, it won't be used
+               call sborn_sf(p1_cnt(0,1,0),m,n,wgtdum)
+               amp_split_store_bsf(:,i,j,index) = amp_split_soft(:)
+             endif
+           enddo
+         enddo
       enddo
       ! ZW
       ! MZ
