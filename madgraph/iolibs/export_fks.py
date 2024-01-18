@@ -626,7 +626,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
       
-        vector_size = 2
+        vector_size = 1
       
         filename = 'vectorize.inc'
         self.write_vectorize_file(
