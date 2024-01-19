@@ -5401,6 +5401,9 @@ class RunCardNLO(RunCard):
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
         self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
         self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
+
+        # for vectorisation
+        self.add_param('vec_size', 1, hidden=True)
         
     def check_validity(self):
         """check the validity of the various input"""

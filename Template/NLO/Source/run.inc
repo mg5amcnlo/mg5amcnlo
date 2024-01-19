@@ -102,3 +102,7 @@ C stuff for alpha running in lepton collisions
       common /to_afromee/ photons_from_lepton
 C  PDFs with beamstrahlung use specific initialisation/evaluation
       common /to_has_bs/ has_bstrahl
+
+C for vectorisation
+      integer vec_size
+      common /to_vec_size/vec_size
