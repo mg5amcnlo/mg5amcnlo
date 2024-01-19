@@ -342,12 +342,12 @@ c timing statistics
       include 'orders.inc'
       include 'vectorize.inc'
       include 'fks_info.inc'
-      double precision xx(ndimmax,vec_size),vegas_wgt,f(nintegrals),jac,p(0:3
+      double precision xx(ndimmax,vec_size),vegas_wgt(vec_size),f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99,vec_size),MC_int_wgt
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
       !ZW
-      integer index
+      integer index,index1
       !ZW
       ! MZ
       double precision amp_split_soft(amp_split_size)
@@ -492,7 +492,7 @@ c  The nbody contributions
          call update_fks_dir(nFKS_born)
          call generate_momenta(nndim,iconfig,jac,x(:,index),p)
          if (p_born(0,1).lt.0d0) goto 12
-         call compute_prefactors_nbody(vegas_wgt)
+         call compute_prefactors_nbody(vegas_wgt(index))
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
@@ -536,7 +536,7 @@ c The n+1-body contributions (including counter terms)
             call update_fks_dir(iFKS)
             call generate_momenta(nndim,iconfig,jac,x,p)
             if (p_born(0,1).lt.0d0) cycle
-            call compute_prefactors_n1body(vegas_wgt,jac)
+            call compute_prefactors_n1body(vegas_wgt(index),jac)
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
@@ -589,7 +589,7 @@ c Include the bias weight specified in the bias_weight_function
      &           /'with MC over FKS directories',pineappl,sum
                stop 1
             endif
-            call fill_pineappl_weights(vegas_wgt)
+            call fill_pineappl_weights(vegas_wgt(index))
          endif
 
 c Importance sampling for FKS configurations

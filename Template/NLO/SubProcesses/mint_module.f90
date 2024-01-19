@@ -192,7 +192,7 @@ contains
     implicit none
     include 'vectorize.inc'
     integer kpoint, index
-    double precision :: vol
+    double precision, dimension(vec_size) :: vol
     double precision, dimension(ndimmax,vec_size) :: x
     integer, dimension(ndimmax) :: kfold
     double precision, external :: fun
@@ -204,9 +204,7 @@ contains
        do kpoint=1,ncalls
           new_point=.true.
           call get_channel
-          do index=1,vec_size
-             call get_random_x(x(:,index),vol,kfold)
-          enddo
+          call get_random_x(x,vol,kfold)
           call compute_integrand(fun,x,vol)
           do index=1,vec_size
              call accumulate_the_point(x(:,index))
@@ -615,6 +613,7 @@ contains
     ! fill the ntotcalls() array with the total number of calls used
     ! and check if this is enough for this iteration.
     implicit none
+    include 'vectorize.inc'
     logical :: enough_points
     integer :: i
     do i=1,nintegrals
@@ -795,7 +794,9 @@ contains
     integer :: ifirst,iret
     integer, dimension(ndimmax) :: kfold
     include 'vectorize.inc'
-    double precision :: dummy,vol
+!    double precision :: dummy,vol
+    double precision, dimension(vec_size) :: vol
+    double precision :: dummy
     double precision, dimension(nintegrals) :: f1
     double precision, dimension(ndimmax,vec_size) :: x
     double precision, external :: fun
@@ -826,11 +827,14 @@ contains
   
   subroutine get_random_x(x,vol,kfold)
     implicit none
+    include 'vectorize.inc'
     integer :: kdim,k_ord_virt,nintcurr
     integer index
     integer, dimension(ndimmax) :: kfold
-    double precision :: vol,dx
-    double precision, dimension(ndimmax) :: x
+!    double precision :: vol,dx
+    double precision, dimension(vec_size) :: vol
+    double precision :: dx
+    double precision, dimension(ndimmax, vec_size) :: x
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -845,21 +849,27 @@ contains
     enddo
     kfold(1:ndim)=1
     entry get_random_x_next_fold(x,vol,kfold)
-    vol=1d0/vol_chan * wgt_mult
-! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
+    do index=1,vec_size
+      vol(index)=1d0/(vol_chan*vec_size) * wgt_mult
+    enddo
+!    vol=1d0/(vol_chan*vec_size) * wgt_mult
+    ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
     do kdim=1,ndim
        nintcurr=nint_used/ifold(kdim)
-       do index=1,vec_size_mint
+!      nintcurr=nint_used/(ifold(kdim)*vec_size)
+      do index=1,vec_size_mint
          icell(kdim,index)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
          dx=xgrid(icell(kdim,index),kdim,ichan)-xgrid(icell(kdim,index)-1,kdim,ichan)
-         vol=vol*dx*nintcurr
-         x(kdim)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
+         vol(index)=vol(index)*dx*nintcurr
+         x(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
          if(imode.eq.0) nhits(icell(kdim,index),kdim,ichan)=nhits(icell(kdim,index),kdim,ichan)+1
        enddo
     enddo
     do k_ord_virt=0,n_ord_virt
        if (use_poly_virtual) then
-          call get_polyfit(ichan,k_ord_virt,x(1:ndim-3),polyfit(k_ord_virt))
+          do index=1,vec_size
+            call get_polyfit(ichan,k_ord_virt,x(1:ndim-3,index),polyfit(k_ord_virt))
+          enddo
        else
           call get_ave_virt(x,k_ord_virt)
        endif
@@ -1575,7 +1585,7 @@ contains
     integer index
     double precision, external :: fun
     double precision, dimension(ndimmax,vec_size) :: x
-    double precision :: vol
+    double precision, dimension(vec_size) :: vol
     if (gen_mode.eq.0) then
        call initialise_mint_gen
     elseif(gen_mode.eq.3) then
@@ -1585,9 +1595,9 @@ contains
 10     continue
        new_point=.true.
        if (vn.eq.1) then
-          do index=1,vec_size
-            call get_random_cell_flat(x,vol)
-          enddo
+!          do index=1,vec_size
+         call get_random_cell_flat(x,vol)
+!          enddo
        else
           do index=1,vec_size
             call get_weighted_cell(x,vol)
@@ -1664,8 +1674,9 @@ contains
   
   subroutine get_random_cell_flat(x,vol)
     implicit none
-    double precision :: vol
-    double precision, dimension(ndimmax) :: x
+    include 'vectorize.inc'
+    double precision, dimension(vec_size) :: vol
+    double precision, dimension(ndimmax,vec_size) :: x
     integer, dimension(ndimmax) :: kfold
     call get_channel
     call get_random_x(x,vol,kfold)
@@ -1674,10 +1685,13 @@ contains
 
   subroutine get_weighted_cell(x,vol)
     implicit none
+    include 'vectorize.inc'
     integer :: kdim,nintcurr,kint
     integer, dimension(ndimmax) :: kfold
-    double precision :: vol,r
-    double precision, dimension(ndimmax) :: x
+!    double precision :: vol,r
+    double precision, dimension(vec_size) :: vol
+    double precision :: r
+    double precision, dimension(ndimmax,vec_size) :: x
     call get_channel
     do kdim=1,ndim
        nintcurr=nintervals/ifold(kdim)
