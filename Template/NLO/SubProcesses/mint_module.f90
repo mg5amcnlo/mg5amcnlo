@@ -64,6 +64,32 @@
 ! nintegrals>6 : virtual and born order by order
 !
 
+!ZW module to handle dynamic allocation of all the vectorisation
+module vectorize
+   implicit none
+   include 'orders.inc'
+
+   ! Declare allocatable arrays
+   double precision, allocatable :: AMP_SPLIT_STORE_R(:,:)
+   double precision, allocatable :: AMP_SPLIT_STORE_B(:,:)
+   double complex, allocatable :: AMP_SPLIT_STORE_CNT(:,:,:,:)
+   double precision, allocatable :: AMP_SPLIT_STORE_BSF(:,:,:,:)
+
+contains
+   ! Procedure to allocate arrays dynamically based on vec_size
+   subroutine allocate_storage(vector_size)
+       integer, intent(in) :: vector_size
+
+       ! Allocate arrays with runtime size
+       allocate(AMP_SPLIT_STORE_R(AMP_SPLIT_SIZE, vector_size))
+       allocate(AMP_SPLIT_STORE_B(AMP_SPLIT_SIZE, vector_size))
+       allocate(AMP_SPLIT_STORE_CNT(AMP_SPLIT_SIZE, 2, NSPLITORDERS, vector_size))
+       allocate(AMP_SPLIT_STORE_BSF(AMP_SPLIT_SIZE, 5, 5, vector_size))
+   end subroutine allocate_storage
+   ! Add other module procedures here if necessary
+end module vectorize
+!ZW
+
 module mint_module
   use FKSParams ! contains use_poly_virtual
   implicit none
@@ -97,6 +123,9 @@ module mint_module
   double precision, dimension(maxchannels), public :: virtual_fraction
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
   logical :: only_virt,new_point,pass_cuts_check
+  ! public variables for vectorisation
+  double precision, allocatable, public :: x_bjork(:,:), jacobian(:)
+
 
 ! private variables
   character(len=13), parameter, dimension(nintegrals), private :: title=(/ &
@@ -129,8 +158,9 @@ module mint_module
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
-  include 'mint_vectorize.inc'
-  integer, dimension(ndimmax,vec_size_mint), private :: icell
+!  include 'mint_vectorize.inc'
+!  integer, dimension(ndimmax,vec_size_mint), private :: icell
+  integer, allocatable, private :: icell(:,:)
   integer, dimension(ndimmax), private :: ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
@@ -188,15 +218,29 @@ module mint_module
        &,print_gen_counters
 contains
 
-  subroutine mint(fun)
+  subroutine allocate_mint(vector_size)
+      implicit none
+      integer, intent(in) :: vector_size
+      allocate(icell(ndimmax,vector_size))
+      allocate(x_bjork(ndimmax,vector_size))
+      allocate(jacobian(vector_size))
+   end subroutine allocate_mint
+
+  subroutine mint(fun,vector_size)
+    use vectorize
     implicit none
-    include 'vectorize.inc'
+    integer, intent(in) :: vector_size
     integer kpoint, index
-    double precision, dimension(vec_size) :: vol
-    double precision, dimension(ndimmax,vec_size) :: x
+!    double precision, dimension(vec_size) :: vol
+!    double precision, dimension(ndimmax,vec_size) :: x
+    double precision, allocatable :: vol(:), x(:,:)
     integer, dimension(ndimmax) :: kfold
     double precision, external :: fun
     logical :: enough_points,channel_loop_done
+    call allocate_mint(vector_size)
+    call allocate_storage(vector_size)
+    allocate(x(ndimmax,vector_size))
+    allocate(vol(vector_size))
     call initialise_mint
     do while (nit.lt.itmax)
        call start_iteration
@@ -204,10 +248,12 @@ contains
        do kpoint=1,ncalls
           new_point=.true.
           call get_channel
-          call get_random_x(x,vol,kfold)
-          call compute_integrand(fun,x,vol)
-          do index=1,vec_size
-             call accumulate_the_point(x(:,index))
+!          call get_random_x(x,vol,kfold,vector_size)
+          call get_random_x(kfold,vector_size)
+!          call compute_integrand(fun,x,vol,vector_size)
+          call compute_integrand(fun,vector_size)
+          do index=1,vector_size
+             call accumulate_the_point(x(:,index),vector_size)
           enddo
        enddo
        call get_amount_of_points(enough_points)
@@ -684,15 +730,16 @@ contains
   
   
 
-  subroutine add_point_to_grids(x)
+  subroutine add_point_to_grids(x,vector_size)
     implicit none
+    integer, intent(in) :: vector_size
     integer :: kdim,k_ord_virt,ithree,isix
     integer index
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
-       do index=1,vec_size_mint
+       do index=1,vector_size
           xacc(icell(kdim,index),kdim,ichan) = xacc(icell(kdim,index),kdim,ichan) + f(1)
        enddo
     enddo
@@ -768,12 +815,13 @@ contains
     enddo
   end subroutine add_point_to_bounding_envelope
      
-  subroutine accumulate_the_point(x)
+  subroutine accumulate_the_point(x,vector_size)
     implicit none
+    integer, intent(in) :: vector_size
     integer :: i
     double precision, dimension(ndimmax) :: x
     if(imode.eq.0) then
-       call add_point_to_grids(x)
+       call add_point_to_grids(x,vector_size)
     else
        call add_point_to_bounding_envelope
     endif
@@ -789,52 +837,57 @@ contains
   end subroutine accumulate_the_point
 
   
-  subroutine compute_integrand(fun,x,vol)
+!  subroutine compute_integrand(fun,x,vol,vector_size)
+  subroutine compute_integrand(fun,vector_size)
     implicit none
+    integer, intent(in) :: vector_size
     integer :: ifirst,iret
     integer, dimension(ndimmax) :: kfold
-    include 'vectorize.inc'
+!    include 'vectorize.inc'
 !    double precision :: dummy,vol
-    double precision, dimension(vec_size) :: vol
+!    double precision, allocatable, intent(inout) :: vol(:), x(:,:)
     double precision :: dummy
     double precision, dimension(nintegrals) :: f1
-    double precision, dimension(ndimmax,vec_size) :: x
+!    double precision, allocatable :: x
     double precision, external :: fun
     ! contribution to integral
     ifirst=0
     if(imode.eq.0) then
-       dummy=fun(x,vol,ifirst,f1)
-       if (.not. fixed_order) dummy=fun(x,vol,2,f1)
+       dummy=fun(ifirst,f1)
+       if (.not. fixed_order) dummy=fun(2,f1)
        f(1:nintegrals)=f1(1:nintegrals)
     else
        f(1:nintegrals)=0d0
        kfold(1:ndim)=1
 1      continue
        ! this accumulated value will not be used
-       dummy=fun(x,vol,ifirst,f1)
+       dummy=fun(ifirst,f1)
        ifirst=1
        call nextlexi(ifold,kfold,iret)
        if(iret.eq.0) then
-          call get_random_x_next_fold(x,vol,kfold)
+!          call get_random_x_next_fold(x,vol,kfold,vector_size)
+          call get_random_x_next_fold(kfold,vector_size)
           goto 1
        endif
        !closing call: accumulated value with correct sign
        ifirst=2
-       dummy=fun(x,vol,ifirst,f1)
+       dummy=fun(ifirst,f1)
        f(1:nintegrals)=f1(1:nintegrals)
     endif
   end subroutine compute_integrand
   
-  subroutine get_random_x(x,vol,kfold)
+!  subroutine get_random_x(x,vol,kfold,vector_size)
+  subroutine get_random_x(kfold,vector_size)
     implicit none
-    include 'vectorize.inc'
+    integer, intent(in) :: vector_size
+!    include 'vectorize.inc'
     integer :: kdim,k_ord_virt,nintcurr
     integer index
     integer, dimension(ndimmax) :: kfold
 !    double precision :: vol,dx
-    double precision, dimension(vec_size) :: vol
+!    double precision, allocatable :: vol(:)
     double precision :: dx
-    double precision, dimension(ndimmax, vec_size) :: x
+!    double precision, allocatable :: x(:,:)
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -848,30 +901,31 @@ contains
        endif
     enddo
     kfold(1:ndim)=1
-    entry get_random_x_next_fold(x,vol,kfold)
-    do index=1,vec_size
-      vol(index)=1d0/(vol_chan*vec_size) * wgt_mult
+!    entry get_random_x_next_fold(x,vol,kfold,vector_size)
+    entry get_random_x_next_fold(kfold,vector_size)
+    do index=1,vector_size
+      jacobian(index)=1d0/(vol_chan*vector_size) * wgt_mult
     enddo
 !    vol=1d0/(vol_chan*vec_size) * wgt_mult
     ! convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
     do kdim=1,ndim
        nintcurr=nint_used/ifold(kdim)
 !      nintcurr=nint_used/(ifold(kdim)*vec_size)
-      do index=1,vec_size_mint
+      do index=1,vector_size
          icell(kdim,index)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
          dx=xgrid(icell(kdim,index),kdim,ichan)-xgrid(icell(kdim,index)-1,kdim,ichan)
-         vol(index)=vol(index)*dx*nintcurr
-         x(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
+         jacobian(index)=jacobian(index)*dx*nintcurr
+         x_bjork(kdim,index)=xgrid(icell(kdim,index)-1,kdim,ichan)+rand(kdim)*dx
          if(imode.eq.0) nhits(icell(kdim,index),kdim,ichan)=nhits(icell(kdim,index),kdim,ichan)+1
        enddo
     enddo
     do k_ord_virt=0,n_ord_virt
        if (use_poly_virtual) then
-          do index=1,vec_size
-            call get_polyfit(ichan,k_ord_virt,x(1:ndim-3,index),polyfit(k_ord_virt))
+          do index=1,vector_size
+            call get_polyfit(ichan,k_ord_virt,x_bjork(1:ndim-3,index),polyfit(k_ord_virt))
           enddo
        else
-          call get_ave_virt(x,k_ord_virt)
+          call get_ave_virt(x_bjork,k_ord_virt)
        endif
     enddo
   end subroutine get_random_x
@@ -1577,15 +1631,16 @@ contains
 
 
 
-  subroutine gen(fun,gen_mode,vn,x)
+  subroutine gen(fun,gen_mode,vn,x,vector_size)
     implicit none
+    integer, intent(in) :: vector_size
     integer :: vn,gen_mode
     logical :: found_point
-    include 'vectorize.inc'
+!    include 'vectorize.inc'
     integer index
     double precision, external :: fun
-    double precision, dimension(ndimmax,vec_size) :: x
-    double precision, dimension(vec_size) :: vol
+    double precision, allocatable :: x(:,:)
+    double precision, allocatable :: vol(:)
     if (gen_mode.eq.0) then
        call initialise_mint_gen
     elseif(gen_mode.eq.3) then
@@ -1596,14 +1651,14 @@ contains
        new_point=.true.
        if (vn.eq.1) then
 !          do index=1,vec_size
-         call get_random_cell_flat(x,vol)
+         call get_random_cell_flat(vector_size)
 !          enddo
        else
-          do index=1,vec_size
-            call get_weighted_cell(x,vol)
-          enddo
+!          do index=1,vec_size
+            call get_weighted_cell(vector_size)
+!          enddo
        endif
-       call compute_integrand(fun,x,vol)
+       call compute_integrand(fun,vector_size)
        call increase_gen_counters_middle(vn)
        call check_upper_bound(vn,found_point)
        if (.not.found_point) goto 10
@@ -1672,26 +1727,29 @@ contains
     endif
   end subroutine check_upper_bound
   
-  subroutine get_random_cell_flat(x,vol)
+  subroutine get_random_cell_flat(vector_size)
     implicit none
-    include 'vectorize.inc'
-    double precision, dimension(vec_size) :: vol
-    double precision, dimension(ndimmax,vec_size) :: x
+    integer, intent(in) :: vector_size
+!    include 'vectorize.inc'
+!    double precision, allocatable :: vol(:)
+!    double precision, allocatable :: x(:,:)
     integer, dimension(ndimmax) :: kfold
     call get_channel
-    call get_random_x(x,vol,kfold)
+!    call get_random_x(x,vol,kfold,vector_size)
+    call get_random_x_next_fold(kfold,vector_size)
     upper_bound=ymax_virt(ichan)
   end subroutine get_random_cell_flat
 
-  subroutine get_weighted_cell(x,vol)
+  subroutine get_weighted_cell(vector_size)
     implicit none
-    include 'vectorize.inc'
+    integer, intent(in) :: vector_size
+!    include 'vectorize.inc'
     integer :: kdim,nintcurr,kint
     integer, dimension(ndimmax) :: kfold
 !    double precision :: vol,r
-    double precision, dimension(vec_size) :: vol
+!    double precision, allocatable :: vol(:)
     double precision :: r
-    double precision, dimension(ndimmax,vec_size) :: x
+!    double precision, allocatable :: x(:,:)
     call get_channel
     do kdim=1,ndim
        nintcurr=nintervals/ifold(kdim)
@@ -1705,7 +1763,7 @@ contains
        rand(kdim)=ran3(.false.)
     enddo
     kfold(1:ndim)=1
-    call get_random_x_next_fold(x,vol,kfold)
+    call get_random_x_next_fold(kfold,vector_size)
     upper_bound=1d0
     do kdim=1,ndim
        upper_bound=upper_bound*ymax(ncell(kdim),kdim,ichan)

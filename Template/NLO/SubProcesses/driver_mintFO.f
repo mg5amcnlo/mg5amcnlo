@@ -5,6 +5,7 @@ c**************************************************************************
       use extra_weights
       use mint_module
       use FKSParams
+      use vectorize
       implicit none
 C
 C     CONSTANTS
@@ -61,7 +62,7 @@ c statistics for MadLoop
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      include 'orders.inc'
+!      include 'orders.inc'
 
 c timing statistics
       include "timing_variables.inc"
@@ -210,7 +211,7 @@ c
                virtual_fraction(kchan)=1d0
             enddo
          endif
-         call mint(sigint)
+         call mint(sigint,vec_size)
          call topout
          call deallocate_weight_lines
 c
@@ -331,23 +332,28 @@ c timing statistics
       end
 
       
-      double precision function sigint(xx,vegas_wgt,ifl,f)
+      double precision function sigint(ifl,f)
       use weight_lines
       use extra_weights
       use mint_module
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'run.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       include 'fks_info.inc'
-      double precision xx(ndimmax,vec_size),vegas_wgt(vec_size),f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x(99,vec_size),MC_int_wgt
+!      double precision xx(ndimmax,vec_size),vegas_wgt(vec_size),f(nintegrals),jac,p(0:3
+!     $     ,nexternal),rwgt,vol,sig,x(99,vec_size),MC_int_wgt
+      double precision f(nintegrals),jac,p(0:3
+     $     ,nexternal),rwgt,vol,sig,MC_int_wgt
+!      double precision, allocatable, intent(inout) :: xx(:,:), vegas_wgt(:)
+      double precision, allocatable :: x_local(:,:)
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
       !ZW
-      integer index,index1
+      integer index
       !ZW
       ! MZ
       double precision amp_split_soft(amp_split_size)
@@ -395,6 +401,8 @@ c PineAPPL
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
+      allocate(x_local(99,vec_size))
+
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -424,7 +432,7 @@ c PineAPPL
       if (ickkw.eq.-1) H1_factor_virt=0d0      
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       do index=1,vec_size
-         call update_vegas_x(xx(:,index),x(:,index))
+         call update_vegas_x(x_bjork(:,index),x_local(:,index))
       enddo
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
@@ -438,13 +446,13 @@ c PineAPPL
          ! real emission
          iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
          call update_fks_dir(iFKS) ! right? (nFKS_picked?)
-         call generate_momenta(nndim,iconfig,jac,x,p)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
          call set_alphaS(p)
          call smatrix_real(p, wgtdum)
          amp_split_store_r(:,index) = amp_split(:)
          ! the born
          call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x(:,index),p)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
          call set_alphaS(p1_cnt(0,1,0))
          call sborn(p1_cnt(0,1,0), wgtdum)
          amp_split_store_b(:,index) = amp_split(:)
@@ -490,9 +498,9 @@ c  The nbody contributions
             jac=0.5d0
          endif
          call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x(:,index),p)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
          if (p_born(0,1).lt.0d0) goto 12
-         call compute_prefactors_nbody(vegas_wgt(index))
+         call compute_prefactors_nbody(jacobian(index))
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
@@ -534,9 +542,9 @@ c The n+1-body contributions (including counter terms)
             wgt_me_real=0d0
             jac=MC_int_wgt
             call update_fks_dir(iFKS)
-            call generate_momenta(nndim,iconfig,jac,x,p)
+            call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
             if (p_born(0,1).lt.0d0) cycle
-            call compute_prefactors_n1body(vegas_wgt(index),jac)
+            call compute_prefactors_n1body(jacobian(index),jac)
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
             passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
@@ -589,7 +597,7 @@ c Include the bias weight specified in the bias_weight_function
      &           /'with MC over FKS directories',pineappl,sum
                stop 1
             endif
-            call fill_pineappl_weights(vegas_wgt(index))
+            call fill_pineappl_weights(jacobian(index))
          endif
 
 c Importance sampling for FKS configurations
@@ -607,6 +615,7 @@ c Finalize PS point
          call fill_plots
          call fill_mint_function(f)
       enddo
+      deallocate(x_local)
       !ZW end accumulation loop here
       return
       end
@@ -731,11 +740,15 @@ c     if there are no soft singularities at all, just do something trivial
       return
       end
 
+!      subroutine update_vegas_x(xx,x)
       subroutine update_vegas_x(xx,x)
       use mint_module
+      use vectorize
       implicit none
       integer i
-      double precision xx(ndimmax),x(99),ran2
+!      double precision xx(ndimmax),x(99),ran2
+      double precision :: xx(ndimmax), x(99)
+      double precision ran2
       external ran2
       integer         nndim
       common/tosigint/nndim

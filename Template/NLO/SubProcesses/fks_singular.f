@@ -2,12 +2,13 @@
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
 
@@ -51,6 +52,7 @@ c to the list of weights using the add_wgt subroutine
 
 
       subroutine compute_6to5flav_cnt(amp_index)
+      use vectorize
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
 C It is called in this function such that if is included
@@ -63,8 +65,8 @@ C in the LO cross section
       include 'genps.inc'
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_6to5f(amp_split_size),
@@ -154,6 +156,7 @@ C      gluon in the initial state
 
 
       subroutine compute_alpha_cnt(amp_index)
+      use vectorize
 C This is the counterterm for the change of scheme
 C in the UV renormalisation for alpha in (leptonic) PDFs
 C wrt the hard matrix element. Relevant for lepton collisions. 
@@ -167,8 +170,8 @@ C in the LO cross section
       include 'genps.inc'
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, amp_index
       double precision amp_split_alpha(amp_split_size),
@@ -311,13 +314,14 @@ c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
       use mint_module
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp, i
       !ZW
@@ -502,12 +506,13 @@ C wrt the hard matrix element. Relevant for lepton collisions.
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -554,12 +559,13 @@ c its value to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -628,13 +634,14 @@ c the list of weights using the add_wgt subroutine
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'fks_powers.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -733,13 +740,14 @@ c to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'fks_powers.inc'
       include 'timing_variables.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       integer orders(nsplitorders)
       integer iamp
       !ZW
@@ -851,6 +859,7 @@ c value to the list of weights using the add_wgt subroutine
 
       subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne)
       use extra_weights
+      use vectorize
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
 c their values to the list of weights using the add_wgt subroutine. It
@@ -862,8 +871,8 @@ c respectively.
       include 'madfks_mcatnlo.inc'
       include 'timing_variables.inc'
       include 'coupl.inc'
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       include 'run.inc'
       include 'born_nhel.inc'
       integer nofpartners,i
@@ -4395,6 +4404,7 @@ c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
 
 
       subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+      use vectorize
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
 c squared reduced by the FKS damping factor xi**2*(1-y).
 c Close to the soft or collinear limits it calls the corresponding
@@ -4429,8 +4439,8 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       common /c_need_links/need_color_links, need_charge_links
 
       double precision pmass(nexternal)
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
 
       include "pmass.inc"
 
@@ -4489,6 +4499,7 @@ c has soft singularities
 
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt,amp_index)
+      use vectorize
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4539,8 +4550,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       double precision amp_split_local(amp_split_size)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
@@ -4669,6 +4680,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 
       subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt,amp_index)
+      use vectorize
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4721,8 +4733,8 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       double precision amp_split_local(amp_split_size)
       double complex amp_split_cnt_local(amp_split_size,2,nsplitorders)
       integer iamp
@@ -5463,6 +5475,7 @@ c q->gq splitting
 
 
       subroutine sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
+      use vectorize
       implicit none
 
       include "nexternal.inc"
@@ -5495,8 +5508,8 @@ c      include "fks.inc"
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       integer ipos_ord
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
 
@@ -5552,6 +5565,7 @@ c Factor two to fix the limits.
 
       subroutine eikonal_reduced(pp,m,n,i_fks,j_fks,xi_i_fks,y_ij_fks,eik)
 c     Returns the eikonal factor
+      use vectorize
       implicit none
 
       include "nexternal.inc"
@@ -5633,14 +5647,15 @@ c Calculate the eikonal factor
      #                     collrem_xi,collrem_lxi,
      #                     amp_index)
       use extra_weights
+      use vectorize
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
       include 'q_es.inc'
       include "run.inc"
-      include "orders.inc"
-      include 'vectorize.inc'
+!      include "orders.inc"
+!      include 'vectorize.inc'
 
       integer iord, iap
 
@@ -6507,6 +6522,7 @@ c
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt,amp_index)
       use extra_weights
       use mint_module
+      use vectorize
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -6599,8 +6615,8 @@ c For the MINT folding
       double precision pmass(nexternal),zero,tiny
       parameter (zero=0d0)
       parameter (tiny=1d-6)
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       logical firsttime
       data firsttime / .true. /
       logical need_color_links_used, need_charge_links_used
@@ -7370,6 +7386,7 @@ c
 
 
       subroutine getpoles(p,xmu2,double,single,fksprefact,amp_index)
+      use vectorize
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -7406,8 +7423,8 @@ c      include "fks.inc"
       double precision pmass(nexternal),zero,pi
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
-      include 'orders.inc'
-      include 'vectorize.inc'
+!      include 'orders.inc'
+!      include 'vectorize.inc'
       double precision amp_split_poles_FKS(amp_split_size,2)
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
       double precision amp_split_soft(amp_split_size)

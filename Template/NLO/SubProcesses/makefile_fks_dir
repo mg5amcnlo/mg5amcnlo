@@ -98,31 +98,36 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o recmom.o 		\
 	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
-	$(FC) $(LDFLAGS) -o gensym $(SYM) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
+	$(FC) $(FFLAGS) $(LDFLAGS) -o gensym $(SYM) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm fks_singular.o
 	strip gensym
 
 test_soft_col_limits: $(TEST) mint_module.o
 	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
+#	$(FC) $(FFLAGS) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm test_soft_col_limits.o
 	strip test_soft_col_limits
 
 check_poles: $(POLES) $(libmadloop) 
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+#	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	strip check_poles
 
 madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintMC $(MINTMC) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
+#	$(FC) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
 	rm handling_lhe_events.o
 	strip madevent_mintMC
 
 madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+#	$(FC) $(FFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
 	strip madevent_mintFO
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+#	$(FC) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
 	strip reweight_xsec_events
 
