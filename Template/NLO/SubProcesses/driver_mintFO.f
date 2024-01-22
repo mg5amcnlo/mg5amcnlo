@@ -442,6 +442,8 @@ c PineAPPL
 
       ! MZ
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
+!$OMP PARALLEL
+!$OMP DO
       do index=1,vec_size
          ! real emission
          iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
@@ -470,6 +472,8 @@ c PineAPPL
            enddo
          enddo
       enddo
+!$OMP END DO
+!$OMP END PARALLEL
       ! ZW
       ! MZ
       

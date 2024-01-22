@@ -9,8 +9,8 @@ DEFAULT_CPP_COMPILER = g++
 # Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
-  FFLAGS = -O -fno-automatic -fno-align-commons
-  #FFLAGS = -O0 -g -fbounds-check -fno-automatic -fno-align-commons
+  FFLAGS = -O -fopenmp -fno-align-commons
+  #FFLAGS = -O0 -fopenmp -g -fbounds-check -fno-automatic -fno-align-commons
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
