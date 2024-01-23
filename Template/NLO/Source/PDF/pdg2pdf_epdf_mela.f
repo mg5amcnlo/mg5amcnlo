@@ -61,6 +61,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
 
       double precision omx_ee(2)
       common /to_ee_omx1/ omx_ee
+!$OMP THREADPRIVATE (/to_ee_omx1/)
 
       if (ih.eq.0) then
 c     Lepton collisions (no PDF). 

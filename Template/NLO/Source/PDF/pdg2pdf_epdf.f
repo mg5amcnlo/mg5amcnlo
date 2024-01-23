@@ -214,6 +214,7 @@ C ePDF specific parameters
 
       double precision omx1_ee, omx2_ee
       common /to_ee_omx1/ omx1_ee, omx2_ee
+!$OMP THREADPRIVATE (/to_ee_omx1/)
 
       double precision omx_ee
       common /to_ee_omx/omx_ee

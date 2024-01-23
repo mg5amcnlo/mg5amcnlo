@@ -58,7 +58,7 @@ C dressed lepton stuff
       include '../eepdf.inc'
       double precision omx_ee(2)
       common /to_ee_omx1/ omx_ee
-
+!$OMP THREADPRIVATE (/to_ee_omx1/)
 
       integer i_ee, ih_local
       double precision compute_eepdf

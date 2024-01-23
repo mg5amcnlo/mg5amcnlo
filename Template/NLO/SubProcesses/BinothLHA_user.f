@@ -115,6 +115,7 @@ c======================================================================
       external sumdot
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       character*13 filename
       common /LH_procnum /procnum
 
