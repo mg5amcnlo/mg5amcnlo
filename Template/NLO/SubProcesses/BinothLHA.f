@@ -24,8 +24,7 @@ c
       data firsttime,firsttime_conversion /.true.,.true./
       logical firsttime_run
       data firsttime_run /.true./
-      double precision qes2
-      common /coupl_es/ qes2
+      include 'q_es.inc'
       logical fksprefact
       parameter (fksprefact=.true.)
       integer ret_code
@@ -564,6 +563,7 @@ c weight, screwing up the complete integration afterward.
       external sumdot
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       character*13 filename
       common /LH_procnum /procnum
 

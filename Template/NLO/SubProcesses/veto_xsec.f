@@ -98,6 +98,7 @@ c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       integer izero
       parameter (izero=0)
       double precision pi
@@ -140,11 +141,13 @@ c 2nd line of eq.(20) of arXiv:1412.8408
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer izero
       parameter (izero=0)
       double precision pi

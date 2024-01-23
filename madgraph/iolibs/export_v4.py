@@ -6862,12 +6862,14 @@ class UFO_model_to_mg4(object):
         # Write header
         header = """double precision G
                 common/strong/ G
+          !$omp threadprivate (/strong/)
                  
                 double complex gal(2)
                 common/weak/ gal
                 
                 double precision MU_R
                 common/rscale/ MU_R
+          !$omp threadprivate (/rscale/)
 
                 """        
         # Nf is the number of light quark flavours
@@ -6954,6 +6956,7 @@ class UFO_model_to_mg4(object):
         coupling_list = [coupl.name for coupl in self.coups_dep + self.coups_indep]       
         fsock.writelines('double complex '+', '.join(coupling_list)+'\n')
         fsock.writelines('common/couplings/ '+', '.join(coupling_list)+'\n')
+        fsock.writelines('!$OMP THREADPRIVATE (/COUPLINGS/)\n')
         if self.opt['mp']:
             mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                    ','.join(coupling_list)+'\n')

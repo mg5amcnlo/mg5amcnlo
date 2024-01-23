@@ -350,6 +350,17 @@ c timing statistics
      $     ,nexternal),rwgt,vol,sig,MC_int_wgt
 !      double precision, allocatable, intent(inout) :: xx(:,:), vegas_wgt(:)
       double precision, allocatable :: x_local(:,:)
+      double precision, allocatable :: p_local(:,:,:)
+      double precision, allocatable :: wgtdum(:)
+      double precision, allocatable :: amp2_store(:,:)
+      double precision, allocatable :: jamp2_store(:,:)
+
+      ! common blocks for passing amp2/jamp2
+      include 'genps.inc'
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
+      common/to_amps/  amp2,          jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
+
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
       !ZW
@@ -358,6 +369,7 @@ c timing statistics
       ! MZ
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
+!$OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
       ! MZ 
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
@@ -370,15 +382,20 @@ c timing statistics
       common/tosigint/nndim
       logical       nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision virtual_over_born
       common/c_vob/virtual_over_born
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       character*4      abrv
       common /to_abrv/ abrv
 c PineAPPL
@@ -393,7 +410,6 @@ c PineAPPL
 
       logical use_evpr, passcuts_coll
       common /to_use_evpr/use_evpr
-      double precision wgtdum
       !MZ
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -402,6 +418,10 @@ c PineAPPL
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
       allocate(x_local(99,vec_size))
+      allocate(p_local(0:3,nexternal,vec_size))
+      allocate(wgtdum(vec_size))
+      allocate(amp2_store(ngraphs,vec_size))
+      allocate(jamp2_store(0:ncolor,vec_size))
 
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
@@ -442,23 +462,33 @@ c PineAPPL
 
       ! MZ
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
+      iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
+      call update_fks_dir(iFKS) ! right? (nFKS_picked?)
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
          ! real emission
-         iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
-         call update_fks_dir(iFKS) ! right? (nFKS_picked?)
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
-         call set_alphaS(p)
-         call smatrix_real(p, wgtdum)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
+         call set_alphaS(p_local(0,1,index))
+         call smatrix_real(p_local(0,1,index), wgtdum(index))
          amp_split_store_r(:,index) = amp_split(:)
+      enddo
+!$OMP END DO
+!$OMP END PARALLEL
+
+      call update_fks_dir(nFKS_born)
+!$OMP PARALLEL
+!$OMP DO
+      do index=1,vec_size
          ! the born
-         call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
          call set_alphaS(p1_cnt(0,1,0))
-         call sborn(p1_cnt(0,1,0), wgtdum)
+         calculatedBorn=.false.
+         call sborn(p1_cnt(0,1,0), wgtdum(index))
          amp_split_store_b(:,index) = amp_split(:)
          amp_split_store_cnt(:,:,:,index) = amp_split_cnt(:,:,:)
+         amp2_store(:,index) = amp2(:)
+         jamp2_store(:,index) = jamp2(:)
          ! color-linked borns
          do i=1,fks_j_from_i(i_fks,0)
            do j=1,i
@@ -466,7 +496,7 @@ c PineAPPL
              n=fks_j_from_i(i_fks,j)
              if (n.ne.i_fks.and.m.ne.i_fks) then
               ! MZ don't skip the case m=n and massless, it won't be used
-               call sborn_sf(p1_cnt(0,1,0),m,n,wgtdum)
+               call sborn_sf(p1_cnt(0,1,0),m,n,wgtdum(index))
                amp_split_store_bsf(:,i,j,index) = amp_split_soft(:)
              endif
            enddo
@@ -492,6 +522,11 @@ c PineAPPL
          if (ickkw.eq.-1) H1_factor_virt=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          !ZW
+
+         ! recover amp2 and jamp2 for multichanneling
+         amp2(:) = amp2_store(:,index) 
+         jamp2(:) = jamp2_store(:,index) 
+
 c  The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
@@ -620,6 +655,10 @@ c Finalize PS point
          call fill_mint_function(f)
       enddo
       deallocate(x_local)
+      deallocate(p_local)
+      deallocate(wgtdum)
+      deallocate(amp2_store)
+      deallocate(jamp2_store)
       !ZW end accumulation loop here
       return
       end
@@ -823,6 +862,7 @@ c
 
       logical nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
 
 c
 c To convert diagram number to configuration

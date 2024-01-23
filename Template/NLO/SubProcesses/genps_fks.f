@@ -25,6 +25,7 @@
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer iconfig0
       common/ciconfig0/iconfig0
       double precision qmass_common(-nexternal:0),qwidth_common(
@@ -32,6 +33,7 @@
       common /c_qmass_qwidth/qmass_common,qwidth_common
       double precision xvar(99)
       common /c_vegas_x/xvar
+!$OMP THREADPRIVATE (/C_VEGAS_X/)
       integer            this_config
       common/to_mconfigs/this_config
 c     
@@ -80,8 +82,10 @@ c
       external dot
       double precision rat_xi_orig
       common /c_rat_xi/ rat_xi_orig
+!$OMP THREADPRIVATE (/C_RAT_XI/)
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
+!$OMP THREADPRIVATE (/TO_VIRTGRANNY/)
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -89,6 +93,7 @@ c common block that is filled by this subroutine
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
+!$OMP THREADPRIVATE (/C_GRANNY_RES/)
 c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
@@ -100,6 +105,7 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       common /c_qmass_qwidth/qmass_common,qwidth_common
       double precision xvar(99)
       common /c_vegas_x/xvar
+!$OMP THREADPRIVATE (/C_VEGAS_X/)
 c      
       granny_m2_red(0)=virtgrannybar
       if (virtgrannybar.le.granny_m2_red(-1) .or.
@@ -137,8 +143,10 @@ c
       external dot,rho
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
+!$OMP THREADPRIVATE (/TO_VIRTGRANNY/)
       double precision rat_xi_orig
       common /c_rat_xi/ rat_xi_orig
+!$OMP THREADPRIVATE (/C_RAT_XI/)
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -146,6 +154,7 @@ c common block that is filled by this subroutine
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
+!$OMP THREADPRIVATE (/C_GRANNY_RES/)
 c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
@@ -159,14 +168,18 @@ c
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      &                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
+!$OMP THREADPRIVATE (/PBORN_L/)
       double precision shybst,chybst,chybstmo
       common /virtgranny_boost/shybst,chybst,chybstmo
+!$OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
       double precision xvar(99)
       common /c_vegas_x/xvar
+!$OMP THREADPRIVATE (/C_VEGAS_X/)
 c      
       granny_m2_red(0)=virtgrannybar
       if (virtgrannybar.le.granny_m2_red(-1) .or.
@@ -212,8 +225,10 @@ c Any call to this function must be preceded by a call to fillcblk
       parameter (mode=2)
       real*8 xmbemin2,xmbemax2
       common/cgrannyrange/xmbemin2,xmbemax2
+!$OMP THREADPRIVATE (/CGRANNYRANGE/)
       real*8 offset
       common/coffset/offset
+!$OMP THREADPRIVATE (/COFFSET/)
       real*8 dzerox,off_virtgranny
       external off_virtgranny
 c
@@ -237,8 +252,10 @@ c Any call to this function must be preceded by a call to fillcblk
       parameter (mode=2)
       real*8 xmbemin2,xmbemax2
       common/cgrannyrange/xmbemin2,xmbemax2
+!$OMP THREADPRIVATE (/CGRANNYRANGE/)
       real*8 offset
       common/coffset/offset
+!$OMP THREADPRIVATE (/COFFSET/)
       real*8 dzerox,off_redvirtgranny
       external off_redvirtgranny
 c
@@ -257,6 +274,7 @@ c Any call to this function must be preceded by a call to fillcblk
       real*8 off_virtgranny,virtgrannybar
       real*8 tmp,virtgranny,offset
       common/coffset/offset
+!$OMP THREADPRIVATE (/COFFSET/)
       external virtgranny
 c
       tmp=virtgranny(virtgrannybar)-offset
@@ -271,6 +289,7 @@ c Any call to this function must be preceded by a call to fillcblk
       real*8 off_redvirtgranny,virtgrannybar
       real*8 tmp,virtgranny_red,offset
       common/coffset/offset
+!$OMP THREADPRIVATE (/COFFSET/)
       external virtgranny_red
 c
       tmp=virtgranny_red(virtgrannybar)+virtgrannybar-offset
@@ -301,8 +320,10 @@ c     granny stuff
      &     -1:1)
       double precision granny_m2_red(-1:1)
       common /to_virtgranny/granny_m2_red
+!$OMP THREADPRIVATE (/TO_VIRTGRANNY/)
       real*8 xmbemin2,xmbemax2,xmbemin2_0,xmbemax2_0
       common/cgrannyrange/xmbemin2,xmbemax2
+!$OMP THREADPRIVATE (/CGRANNYRANGE/)
       logical input_granny_m2,compute_mapped,compute_non_shifted
       parameter (tiny=1d-3)
       integer irange,idir
@@ -315,15 +336,19 @@ c common block that is filled by this subroutine
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
+!$OMP THREADPRIVATE (/C_GRANNY_RES/)
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+!$OMP THREADPRIVATE (/C_SKIP_ONLY_EVENT_PHSP/)
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision rat_xi,rat_xi_orig
       common /c_rat_xi/ rat_xi_orig
+!$OMP THREADPRIVATE (/C_RAT_XI/)
 c     debug stuff
       double precision temp
       logical debug_granny
@@ -335,11 +360,14 @@ c     debug stuff
      &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
       logical nocntevents
       common/cnocntevents/nocntevents
+!$OMP THREADPRIVATE (/CNOCNTEVENTS/)
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+!$OMP THREADPRIVATE (/CXIIFKSCNT/)
       logical do_mapping_granny
       logical softtest,colltest
       common/sctests/softtest,colltest
@@ -350,8 +378,10 @@ c possible resonance.
       logical write_granny(fks_configs)
       integer which_is_granny(fks_configs)
       common/write_granny_resonance/which_is_granny,write_granny
+!$OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
       integer isolsign
       common /c_isolsign/isolsign
+!$OMP THREADPRIVATE (/C_ISOLSIGN/)
       double precision border,border_massive,border_massless,fborder
       parameter (border_massive=2d0,border_massless=0.1d0,fborder=0.02d0)
       logical firsttime
@@ -634,6 +664,7 @@ c Conflicting BW stuff
      &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+!$OMP THREADPRIVATE (/C_CONFLICTINGBW/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -736,16 +767,20 @@ c No PDFs (also use fixed energy when performing tests)
 C
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
+!$OMP THREADPRIVATE (/PBORN_L/)
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/p_born_ev
+!$OMP THREADPRIVATE (/PBORN_EV/)
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
      &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+!$OMP THREADPRIVATE (/C_CONFLICTINGBW/)
 c Common block with granny information
       logical granny_is_res
       integer igranny,iaunt
@@ -753,9 +788,11 @@ c Common block with granny information
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
+!$OMP THREADPRIVATE (/C_GRANNY_RES/)
 
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+!$OMP THREADPRIVATE (/C_SKIP_ONLY_EVENT_PHSP/)
 
       integer i,j
 
@@ -894,12 +931,15 @@ c     2 soft-collinear
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       logical nocntevents
       common/cnocntevents/nocntevents
+!$OMP THREADPRIVATE (/CNOCNTEVENTS/)
       integer iconfig0,iconfigsave
       common/ciconfig0/iconfig0
       save iconfigsave
@@ -932,8 +972,10 @@ c saves
       save m,stot,totmassin,totmass
      &     ,ionebody,fksmass,nbranch
       common /c_isolsign/isolsign
+!$OMP THREADPRIVATE (/C_ISOLSIGN/)
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+!$OMP THREADPRIVATE (/C_SKIP_ONLY_EVENT_PHSP/)
 
       pass=.true.
       do i=1,nexternal-1
@@ -1081,24 +1123,32 @@ c Set all to negative values and exit
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
+!$OMP THREADPRIVATE (/PBORN_L/)
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/p_born_ev
+!$OMP THREADPRIVATE (/PBORN_EV/)
 
       logical nocntevents
       common/cnocntevents/nocntevents
+!$OMP THREADPRIVATE (/CNOCNTEVENTS/)
 
       logical nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
 
       double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
       common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+!$OMP THREADPRIVATE (/CXI_I_HAT/)
 
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1106,21 +1156,27 @@ c Set all to negative values and exit
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      &                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+!$OMP THREADPRIVATE (/C_SKIP_ONLY_EVENT_PHSP/)
 
       integer isolsign
       common /c_isolsign/isolsign
+!$OMP THREADPRIVATE (/C_ISOLSIGN/)
 
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
+!$OMP THREADPRIVATE (/CXIIMAXEV/)
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
+!$OMP THREADPRIVATE (/CXIIMAXCNT/)
 
       logical fks_as_is
       parameter (fks_as_is=.false.)
@@ -1366,28 +1422,38 @@ c
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
+!$OMP THREADPRIVATE (/PBORN_L/)
       double precision p_born_ev(0:3,nexternal-1)
       common/pborn_ev/p_born_ev
+!$OMP THREADPRIVATE (/PBORN_EV/)
       double precision p_born_coll(0:3,nexternal-1)
       common/pborn_coll/p_born_coll
+!$OMP THREADPRIVATE (/PBORN_COLL/)
       double precision p_born_norad(0:3,nexternal-1)
       common/pborn_norad/p_born_norad
+!$OMP THREADPRIVATE (/PBORN_NORAD/)
 
       logical nocntevents
       common/cnocntevents/nocntevents
+!$OMP THREADPRIVATE (/CNOCNTEVENTS/)
 
       logical nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
 
       double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
       common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+!$OMP THREADPRIVATE (/CXI_I_HAT/)
 
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1395,21 +1461,27 @@ c
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      &                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
       logical only_event_phsp,skip_event_phsp
       common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+!$OMP THREADPRIVATE (/C_SKIP_ONLY_EVENT_PHSP/)
 
       integer isolsign
       common /c_isolsign/isolsign
+!$OMP THREADPRIVATE (/C_ISOLSIGN/)
 
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
+!$OMP THREADPRIVATE (/CXIIMAXEV/)
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
+!$OMP THREADPRIVATE (/CXIIMAXCNT/)
 
       integer skip
       double precision srec
@@ -1775,44 +1847,58 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+!$OMP THREADPRIVATE (/CXIIFKSCNT/)
 
       double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
       common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+!$OMP THREADPRIVATE (/CXI_I_HAT/)
 
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+!$OMP THREADPRIVATE (/CBJORKENX/)
 
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
+!$OMP THREADPRIVATE (/PARTON_CMS_EV/)
       double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
       common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+!$OMP THREADPRIVATE (/PARTON_CMS_CNT/)
 
       double precision tau_ev,ycm_ev
       common/cbjrk12_ev/tau_ev,ycm_ev
+!$OMP THREADPRIVATE (/CBJRK12_EV/)
       double precision tau_cnt(-2:2),ycm_cnt(-2:2)
       common/cbjrk12_cnt/tau_cnt,ycm_cnt
+!$OMP THREADPRIVATE (/CBJRK12_CNT/)
 
       double precision xiimax_ev
       common /cxiimaxev/xiimax_ev
+!$OMP THREADPRIVATE (/CXIIMAXEV/)
       double precision xiimax_cnt(-2:2)
       common /cxiimaxcnt/xiimax_cnt
+!$OMP THREADPRIVATE (/CXIIMAXCNT/)
 
       double precision xinorm_ev
       common /cxinormev/xinorm_ev
+!$OMP THREADPRIVATE (/CXINORMEV/)
       double precision xinorm_cnt(-2:2)
       common /cxinormcnt/xinorm_cnt
+!$OMP THREADPRIVATE (/CXINORMCNT/)
 
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
 
       double precision p_ev(0:3,nexternal)
       common/pev/p_ev
+!$OMP THREADPRIVATE (/PEV/)
 
 c Catch the points for which there is no viable phase-space generation
 c (still fill the common blocks with some information that is needed
@@ -1900,8 +1986,10 @@ c common blocks
      &     ,tau_lower_bound_resonance,tau_lower_bound
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2111,8 +2199,10 @@ c arguments
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2129,6 +2219,7 @@ c local
       save xiimax_save
       double complex resAoR0
       common /virtgranny_boost/shybst,chybst,chybstmo
+!$OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
 c external
       double precision rho
       external rho
@@ -2377,6 +2468,7 @@ c arguments
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2394,6 +2486,7 @@ c local
      $     ,sinth_mother_fks
       save xjactmp
       common /virtgranny_boost/shybst,chybst,chybstmo
+!$OMP THREADPRIVATE (/VIRTGRANNY_BOOST/)
 c external
       double precision rho
       external rho
@@ -2706,8 +2799,10 @@ c common blocks
      &     ,tau_lower_bound_resonance,tau_lower_bound
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
       logical softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -2724,6 +2819,7 @@ c local
       double precision omx1_ee, omx2_ee
       double precision omx_ee(2)
       common /to_ee_omx1/ omx_ee
+!$OMP THREADPRIVATE (/TO_EE_OMX1/)
       double precision omx1bar2, omx2bar2
       double precision ltau_born,e2ycm_born,em2ycm_born
 c external
@@ -3416,6 +3512,7 @@ c For e+e- collisions, set tau to one and y to zero
      $     -nexternal:-1)
       double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass
+!$OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
       pass=.true.
       totalmass=totmass
       do ii = -1,-ns_channel,-1
@@ -3490,6 +3587,7 @@ c next-to-last, with granny itself as the final one.
      &     cBW_width(-1:1,-nexternal:-1)
       double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass
+!$OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
 c Common block with granny information
       logical granny_is_res
       integer igranny,iaunt
@@ -3497,6 +3595,7 @@ c Common block with granny information
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
+!$OMP THREADPRIVATE (/C_GRANNY_RES/)
 c
       totalmass=0d0
       do i=nexternal-1,-ns_channel,-1
@@ -3722,6 +3821,7 @@ c
       external lambda,dot
       double precision s_mass(-nexternal:nexternal)
       common/to_phase_space_s_channel/s_mass
+!$OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
 c 
       pass=.true.
       totalmass=0d0
@@ -4274,6 +4374,7 @@ C dressed lepton stuff
       
       double precision omx_ee(2)
       common /to_ee_omx1/ omx_ee
+!$OMP THREADPRIVATE (/TO_EE_OMX1/)
 
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      $     ,tau_lower_bound

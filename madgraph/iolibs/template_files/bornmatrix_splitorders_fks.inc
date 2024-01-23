@@ -44,8 +44,10 @@ C
 
       double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
       common/to_amps_born/  amp2b,       jamp2b
+!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
       common/to_amps/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
 C
@@ -221,18 +223,24 @@ C GLOBAL VARIABLES
 C  
       Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
       common/to_amps_born/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
       DATA jamp2(0,0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
+!$OMP THREADPRIVATE (/C_GOODHEL/)
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+!$OMP THREADPRIVATE (/TO_SAVEAMP/)
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
+!$OMP THREADPRIVATE (/TO_SAVEMOM/)
       double precision hel_fac
       integer get_hel,skip(%(nconfs)d)
       common/cBorn/hel_fac,get_hel,skip
+!$OMP THREADPRIVATE (/CBORN/)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       logical cond_ij
@@ -364,13 +372,17 @@ C GLOBAL VARIABLES
 C  
       Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
       common/to_amps_born/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+!$OMP THREADPRIVATE (/TO_SAVEAMP/)
       double precision hel_fac
       integer get_hel,skip(%(nconfs)d)
       common/cBorn/hel_fac,get_hel,skip
+!$OMP THREADPRIVATE (/CBORN/)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       integer step_hel
@@ -494,6 +506,7 @@ C ----------
       PARAMETER (THEL=NCOMB*%(nconfs)d)
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/goodhel
+!$OMP THREADPRIVATE (/C_GOODHEL/)
       DATA GOODHEL/THEL*.FALSE./
       end
 

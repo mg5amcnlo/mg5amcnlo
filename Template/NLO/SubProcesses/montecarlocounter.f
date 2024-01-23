@@ -657,6 +657,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
      $                    ,p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
       double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
      $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
       common /to_amp_split_bornbars/amp_split_bornbars,
@@ -838,9 +839,11 @@ c     positivity check
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
 
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+!$OMP THREADPRIVATE (/CXIIFKSCNT/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -962,13 +965,16 @@ c over colour partners
       common/cscaleminmax/xm12,ileg
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -1567,6 +1573,7 @@ c For the boost to the lab frame
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision chy,shy,chymo,xdir(3),p_lab(0:3,nexternal)
       data (xdir(i),i=1,3) /0d0,0d0,1d0/
 
@@ -1646,6 +1653,7 @@ c               cstlow <= smallptupp
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
 cSF ARE noemProb AND mDipole USEFUL?
       double precision startingScale0,stoppingScale0
@@ -1662,6 +1670,7 @@ c
 
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+!$OMP THREADPRIVATE (/CBJORKENX/)
 
       double precision pdg2pdf,pdffnum(2),pdffden(2)
       external pdg2pdf
@@ -2553,9 +2562,11 @@ c
       common /MC_info/ ipartners,colorflow
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+!$OMP THREADPRIVATE (/PBORN/)
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/  amp2         ,jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
 c Stuff to be written (depending on AddInfoLHE) onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
@@ -2843,9 +2854,11 @@ c the same method
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -2856,6 +2869,7 @@ c the same method
 
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
 
       double precision sumborn
       integer i
@@ -2868,12 +2882,14 @@ c the same method
       double precision xi_i_fks_ev,y_ij_fks_ev,t
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       double precision iden_comp
       common /c_iden_comp/iden_comp
 
@@ -3198,6 +3214,7 @@ c variable qMC
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer fksfather
       common/cfksfather/fksfather
       integer i_fks,j_fks
@@ -4527,6 +4544,7 @@ c Shower scale
       integer ileg
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       logical emscasharp
       double precision emsca
@@ -4534,6 +4552,7 @@ c Shower scale
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
 c Consistency check
       shattmp=2d0*dot(pp(0,1),pp(0,2))
@@ -4581,6 +4600,7 @@ c Consistency check
       integer ileg,npartner,i,j
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
 
@@ -4595,6 +4615,7 @@ c Consistency check
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision Eem,qMC_a2(nexternal-1,nexternal-1),emscafun
       integer iBtoR(nexternal-1)
@@ -4690,6 +4711,7 @@ c     skip if not QCD dipole (safety)
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       call assign_ref_scale(p_born,xi,shat,ref_scale)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
@@ -4722,6 +4744,7 @@ c
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       xscalemax_a=-1d0
       xscalemin_a=-1d0
@@ -4919,6 +4942,7 @@ c Returns derivatives of Mandelstam invariants with respect to FKS variables
      &dq2qdy
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
+!$OMP THREADPRIVATE (/CGENPS_FKS/)
       double precision tiny
       parameter(tiny=1d-5)
 
@@ -5007,6 +5031,7 @@ c
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision pip(0:3),pifat(0:3),psum(0:3)
 
       INTEGER NFKSPROCESS
@@ -5198,6 +5223,7 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer fksfather
       common/cfksfather/fksfather
       integer i_fks,j_fks

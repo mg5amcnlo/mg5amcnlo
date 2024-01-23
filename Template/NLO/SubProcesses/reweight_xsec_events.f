@@ -345,21 +345,27 @@ c Dummy subroutine (normally used with vegas/mint when resuming plots)
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
+!$OMP THREADPRIVATE (/PARTON_CMS_EV/)
 
       double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
       common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+!$OMP THREADPRIVATE (/PARTON_CMS_CNT/)
 
       double precision tau_ev,ycm_ev
       common/cbjrk12_ev/tau_ev,ycm_ev
+!$OMP THREADPRIVATE (/CBJRK12_EV/)
 
       double precision tau_cnt(-2:2),ycm_cnt(-2:2)
       common/cbjrk12_cnt/tau_cnt,ycm_cnt
+!$OMP THREADPRIVATE (/CBJRK12_CNT/)
 
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+!$OMP THREADPRIVATE (/CBJORKENX/)
 
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c same for event and counterevents

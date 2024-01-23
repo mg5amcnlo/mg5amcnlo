@@ -23,6 +23,7 @@ C
       double precision p(0:3, nexternal), prambo(0:3,100)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision pswgt
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)
@@ -31,6 +32,7 @@ C
       double precision totmass
       logical calculatedborn
       common/ccalculatedborn/calculatedborn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       logical fksprefact
       parameter (fksprefact=.true.)
       integer nfksprocess

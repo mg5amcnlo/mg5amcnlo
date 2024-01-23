@@ -83,6 +83,7 @@ c     forbid unweighting close to the fks pole (should not happen but better saf
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       double precision xi_i_fks_ev,y_ij_fks_ev
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 c
 c Auxiliary quantities used when writing events
       integer kwgtinfo

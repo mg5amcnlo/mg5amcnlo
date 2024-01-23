@@ -20,8 +20,7 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
-      double precision qes2
-      common /coupl_es/ qes2
+      include 'q_es.inc'
       logical fksprefact
       parameter (fksprefact=.true.)
       double precision tolerance, madfks_single, madfks_double

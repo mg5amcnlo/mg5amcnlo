@@ -455,6 +455,7 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
      $                 FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
      $                     FxFx_fac_scale
+!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
       passcuts_fxfx=.true.
 c First apply a numerical stability cut
 c Define jet clustering parameters with a pTmin=1 GeV
@@ -769,6 +770,7 @@ c For boosts
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision chybst,shybst,chybstmo
       double precision xd(1:3)
       data (xd(i),i=1,3)/0,0,1/

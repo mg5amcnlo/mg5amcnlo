@@ -29,6 +29,7 @@ c Born momenta
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c cut

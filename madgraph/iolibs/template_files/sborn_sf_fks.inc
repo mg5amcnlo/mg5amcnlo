@@ -25,6 +25,7 @@ C the charge-linked if it is a color singlet
       parameter (zero=0d0)
       double precision amp_split_soft(amp_split_size)
       common /to_amp_split_soft/amp_split_soft
+!$OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
 
       chargeprod = 0d0
 

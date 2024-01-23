@@ -111,10 +111,13 @@ C GLOBAL VARIABLES
 C  
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
       common /c_goodhel/ goodhel
+!$OMP THREADPRIVATE (/C_GOODHEL/)
       double precision savemom(nexternal-1,2)
       common/to_savemom/savemom
+!$OMP THREADPRIVATE (/TO_SAVEMOM/)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 C ----------
@@ -192,8 +195,10 @@ C GLOBAL VARIABLES
 C  
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
+!$OMP THREADPRIVATE (/TO_SAVEAMP/)
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
 C
 C FUNCTION
 C

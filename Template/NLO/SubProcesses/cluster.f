@@ -25,8 +25,10 @@ C given by the to_mconfigs common block.
      $     ,mapconfig
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision p_ev(0:3,nexternal)
       common/pev/      p_ev
+!$OMP THREADPRIVATE (/PEV/)
       integer            this_config
       common/to_mconfigs/this_config
       integer nfks1,iproc

@@ -41,6 +41,7 @@ c Random numbers
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
 
 C iforest and other configuration info. Read once and saved.
       integer itree_S_t(2,-max_branch:-1),sprop_tree_S_t(-max_branch:-1)
@@ -105,6 +106,7 @@ c For shifting QCD partons from zero to their mass-shell
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
       integer mohdr,izero
@@ -756,6 +758,7 @@ c kept fixed between events and counter events:
       logical write_granny(fks_configs)
       integer which_is_granny(fks_configs)
       common/write_granny_resonance/which_is_granny,write_granny
+!$OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
 
 
 c-----
@@ -1375,6 +1378,7 @@ c
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
 c
@@ -1712,6 +1716,7 @@ c
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass

@@ -26,19 +26,23 @@ c
       common/tosigint/nndim
       Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer          isum_hel
       logical                    multi_channel
       common/to_matrix/isum_hel, multi_channel
       logical       nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       logical passcuts,check_swap

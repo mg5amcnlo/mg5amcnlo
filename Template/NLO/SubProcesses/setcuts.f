@@ -205,10 +205,12 @@ c BW stuff
      &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+!$OMP THREADPRIVATE (/C_CONFLICTINGBW/)
       double precision s_mass(-nexternal:nexternal)
      $     ,s_mass_FKS(fks_configs,-nexternal:nexternal,maxchannels)
       save s_mass_FKS
       common/to_phase_space_s_channel/s_mass
+!$OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
 c Les Houches common block
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs

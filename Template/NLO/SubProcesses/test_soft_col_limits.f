@@ -34,6 +34,7 @@ c*****************************************************************************
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
       logical                calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision p1_cnt(0:3,nexternal,-2:2)
@@ -41,13 +42,17 @@ c*****************************************************************************
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision xi_i_fks_ev,y_ij_fks_ev
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+!$OMP THREADPRIVATE (/CXIIFKSCNT/)
       logical        softtest,colltest
       common/sctests/softtest,colltest
       integer              nFKSprocess

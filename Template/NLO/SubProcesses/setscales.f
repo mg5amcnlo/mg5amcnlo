@@ -184,6 +184,7 @@ c this is to avoid too low dynamic scales
 c After recomputing alphaS, be sure to set 'calculatedBorn' to false
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -241,6 +242,7 @@ c FxFx
       double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
      $     ,FxFx_fac_scale
+!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
       integer bpower
 c
       tmp=0
@@ -420,6 +422,7 @@ c FxFx
       double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
       common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
      $     ,FxFx_fac_scale
+!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
 c
       tmp=0
       if(ickkw.eq.3)then

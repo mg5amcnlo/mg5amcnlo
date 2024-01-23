@@ -482,6 +482,7 @@ c
 
       logical nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
 c
 c To convert diagram number to configuration
 c
@@ -683,16 +684,19 @@ c
       data firsttime/.true./
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
       logical       nbody
       common/cnbody/nbody
+!$OMP THREADPRIVATE (/CNBODY/)
       integer         nndim
       common/tosigint/nndim
       character*4      abrv
@@ -700,6 +704,7 @@ c
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ifold_picked

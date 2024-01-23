@@ -503,9 +503,11 @@ c G-function matrix element, to recover the real soft limit
       double precision pswgt_cnt(-2:2)
       double precision jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!$OMP THREADPRIVATE (/COUNTEREVNTS/)
 
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+!$OMP THREADPRIVATE (/CXIIFKSCNT/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -623,11 +625,13 @@ c Main routine for MC counterterms
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
      #                        sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
@@ -1305,9 +1309,11 @@ c the same method
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
+!$OMP THREADPRIVATE (/TO_AMPS/)
 
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1318,6 +1324,7 @@ c the same method
 
       double complex xij_aor
       common/cxij_aor/xij_aor
+!$OMP THREADPRIVATE (/CXIJ_AOR/)
 
       double precision sumborn
       integer i
@@ -1330,6 +1337,7 @@ c the same method
       double precision xi_i_fks_ev,y_ij_fks_ev,t
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!$OMP THREADPRIVATE (/FKSVARIABLES/)
 
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
@@ -1636,6 +1644,7 @@ c variable qMC
       logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       integer fksfather
       common/cfksfather/fksfather
       integer i_fks,j_fks
@@ -2910,6 +2919,7 @@ c Shower scale
       integer ileg
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       logical emscasharp
       double precision emsca
@@ -2917,6 +2927,7 @@ c Shower scale
 
       double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
 c Consistency check
       shattmp=2d0*dot(pp(0,1),pp(0,2))
@@ -2963,6 +2974,7 @@ c Consistency check
       common/to_abrv/abrv
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
 
       call assign_ref_scale(p_born,xi,shat,ref_scale)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
@@ -3107,6 +3119,7 @@ c
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+!$OMP THREADPRIVATE (/PBORN/)
       double precision pip(0:3),pifat(0:3),psum(0:3)
 
       INTEGER NFKSPROCESS
