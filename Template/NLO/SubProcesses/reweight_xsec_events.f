@@ -15,7 +15,7 @@ c Compile with makefile_rwgt
      $     ,wgtmumax,wgtpdfmin,wgtpdfmax,saved_weight
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets),xsecScale_acc(maxscales
      $     ,maxscales,maxdynscales)
-      logical AddInfoLHE,unweighted
+      logical unweighted
       character*9 ch1
       character*10 MonteCarlo
       character*20 parm(20)
@@ -115,7 +115,6 @@ c start with central member of the first set
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
-      AddInfoLHE=.true.
       unweighted=.true.
       call read_lhef_header(ifile,maxevt,MonteCarlo)
       call read_lhef_init(ifile,

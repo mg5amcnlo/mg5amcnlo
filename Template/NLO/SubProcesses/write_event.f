@@ -234,29 +234,25 @@ c alpha_s to the one in the param_card.dat (without any running).
       endif
       ievent=66
 c
-      if(AddInfoLHE)then
-        if(.not.doreweight)then
-           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
+      if(.not.doreweight)then
+         write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
      &          ,zero,zero,zero
-        else
-          if(iwgtinfo.ne.-5)then
+      else
+         if(iwgtinfo.ne.-5)then
             write(*,*)'Error in write_events_lhe'
             write(*,*)'  Inconsistency in reweight parameters'
             write(*,*)doreweight,iwgtinfo
             stop
-          endif
-          kwgtinfo= iwgtinfo
-          write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
+         endif
+         kwgtinfo= iwgtinfo
+         write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &         ,scale2_lhe(nFKSprocess),kwgtinfo,nexternal,iwgtnumpartn
      &         ,zero,zero,zero,zero,zero
-        endif
-      else
-        buff=' '
       endif
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches

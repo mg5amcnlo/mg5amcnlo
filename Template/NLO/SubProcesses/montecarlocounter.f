@@ -1,4 +1,4 @@
-      subroutine set_mc_matrices
+      subroutine set_QCD_flows
       ! Fills ipartners, colorflow and isspecial (at the Born level)
       implicit none
       include "genps.inc"
@@ -239,13 +239,13 @@ c by one unit, so decrease it
         ! (it is kinematics-dependent)
         continue
       endif
-      call check_mc_matrices(notagluon)
+      call check_QCD_flows(notagluon)
       return
       end
 
 
 
-      subroutine check_mc_matrices(notagluon)
+      subroutine check_QCD_flows(notagluon)
       implicit none
       include "nexternal.inc"
       include "born_nhel.inc"
@@ -273,7 +273,7 @@ c      include "fks.inc"
 c
       fksfather=min(i_fks,j_fks)
       if(ipartners(0).gt.nexternal-1)then
-        write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
+        write(*,*)'Error #1 in check_QCD_flows',ipartners(0)
         stop
       endif
 c
@@ -285,7 +285,7 @@ c
      #        ipart.le.0 .or. ipart.gt.nexternal-1 .or.
      #        ( abs(particle_type(ipart)).ne.3 .and.
      #          particle_type(ipart).ne.8 ) )then
-            write(*,*)'Error #2 in check_mc_matrices',i,ipart,
+            write(*,*)'Error #2 in check_QCD_flows',i,ipart,
      #  particle_type(ipart)
             stop
           endif
@@ -298,7 +298,7 @@ c
           ipart=ipartners(i)
           ithere(ipart)=ithere(ipart)-1
           if(ithere(ipart).lt.0)then
-            write(*,*)'Error #3 in check_mc_matrices',i,ipart
+            write(*,*)'Error #3 in check_QCD_flows',i,ipart
             stop
           endif
         enddo
@@ -310,7 +310,7 @@ c ntot is the total number of colour plus anticolour partners of father
 c
           if( colorflow(i,0).le.0 .or.
      #        colorflow(i,0).gt.max_bcol )then
-            write(*,*)'Error #4 in check_mc_matrices',i,colorflow(i,0)
+            write(*,*)'Error #4 in check_QCD_flows',i,colorflow(i,0)
             stop
           endif
 c
@@ -321,7 +321,7 @@ c
             iflow=colorflow(i,j)
             ithere(iflow)=ithere(iflow)-1
             if(ithere(iflow).lt.0)then
-              write(*,*)'Error #5 in check_mc_matrices',i,j,iflow
+              write(*,*)'Error #5 in check_QCD_flows',i,j,iflow
               stop
             endif
           enddo
@@ -332,13 +332,13 @@ c
      #    ( (.not.notagluon).and.
      #      ( (.not.isspecial(1)).and.ntot.ne.(2*num_leading_cflows) .or.
      #        (isspecial(1).and.ntot.ne.num_leading_cflows) ) ) )then
-         write(*,*)'Error #6 in check_mc_matrices',
+         write(*,*)'Error #6 in check_QCD_flows',
      #     notagluon,ntot,num_leading_cflows,max_bcol
           stop
         endif
 c
         if(num_leading_cflows.gt.max_bcol)then
-          write(*,*)'Error #7 in check_mc_matrices',
+          write(*,*)'Error #7 in check_QCD_flows',
      #     num_leading_cflows,max_bcol
           stop
         endif
@@ -351,11 +351,10 @@ c
       end
 
 
-      subroutine find_ipartner_QED(pp, nofpartners)
+      subroutine set_QED_flows(pp)
       implicit none
       include 'nexternal.inc'
       double precision pp(0:3, nexternal)
-      integer nofpartners
 
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
@@ -452,18 +451,17 @@ c
 
       else
         ! other showers need to be implemented
-        write(*,*) 'ERROR in find_ipartner_QED, not implemented', shower_mc
+        write(*,*) 'ERROR in set_QED_flows, not implemented', shower_mc
         stop 1
       endif
 
       if (.not.found) then
-        write(*,*) 'ERROR in find_ipartner_QED, no parthern found'
+        write(*,*) 'ERROR in set_QED_flows, no parthern found'
         stop 1
       endif
 
       ! now, set ipartners
       ipartners(0) = 1
-      nofpartners = ipartners(0)
       ipartners(ipartners(0)) = partner
       ! all color flows have to be included here
       colorflow(ipartners(0),0)= max_bcol
@@ -473,7 +471,7 @@ c
       return
       end
 
-      subroutine xmcsubt_wrap(pp,xi_i_fks,y_ij_fks,wgt)
+      subroutine compute_xmcsubt_for_checks(pp,xi_i_fks,y_ij_fks,wgt)
       implicit none
       include "nexternal.inc"
       include 'madfks_mcatnlo.inc'
@@ -540,16 +538,7 @@ c
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_mc(1:amp_split_size)=0d0
-      do npartner=1,ipartners(0)
-         if (mcatnlo_delta) cur_part=ipartners(npartner)
-         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
-     $        ,bornbars,bornbarstilde,npartner)
-         if(is_pt_hard)exit
-         if(dampMCsubt) then
-            if (.not.mcatnlo_delta) then
-               factor=emscwgt(npartner)
-            else
+      if (mcatnlo_delta) then
 c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
 c define 'factor'.  This damping 'factor' is used only here, and not in
 c the following.  A subsequent call to assign_emsca_array, in
@@ -558,12 +547,21 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-               call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
-c min(i_fks,j_fks) is the mother of the FKS pair
-               factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
-            endif
+         call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+      endif         
+      do npartner=1,ipartners(0)
+         if (mcatnlo_delta) cur_part=ipartners(npartner)
+         call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
+     $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
+     $        ,bornbars,bornbarstilde,npartner)
+         if(is_pt_hard)exit
+
+         if (.not.mcatnlo_delta) then
+!!!! WE ARE HERE: ipartner(npartner)?????
+            factor=emscwgt(npartner)
          else
-            factor=1d0
+c min(i_fks,j_fks) is the mother of the FKS pair
+            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
          endif
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
@@ -604,7 +602,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
             enddo
             if (ione.ne.1) then
                write (*,*) 'Error: incompatible split orders in '/
-     $              /'xmcsubt_wrap',ione
+     $              /'compute_xmcsubt_for_checks',ione
                stop 1
             endif
             sumMCsec=sumMCsec+MCsec(npartner,colorflow(npartner
@@ -683,10 +681,9 @@ c -- call to MC counterterm functions
      $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
-         if(dampMCsubt) then
-            if (.not.mcatnlo_delta) then
-               factor=emscwgt(npartner)
-            else
+         if (.not.mcatnlo_delta) then
+            factor=emscwgt(npartner)
+         else
 c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
 c define 'factor'.  This damping 'factor' is used only here, and not in
 c the following.  A subsequent call to assign_emsca_array, in
@@ -695,12 +692,9 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-               call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
 c min(i_fks,j_fks) is the mother of the FKS pair
-               factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
-            endif
-         else
-            factor=1d0
+            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
          endif
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
@@ -995,7 +989,7 @@ c over colour partners
       external ran2
       logical extra
 
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
+c Stuff to be written  onto the LHE file
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
@@ -1057,7 +1051,7 @@ c Initialise if first time
       if(.not.first_MCcnt_call)goto 222
       if (split_type(QED_pos)) then
          ! QED partners are dynamically found
-         call find_ipartner_QED(pp,nofpartners)
+         call set_QED_flows(pp)
       endif
       flagmc   = .false.
       ztmp     = 0d0
@@ -1081,12 +1075,11 @@ c Discard if unphysical kinematics
       if(pp(0,1).le.0d0)return
 
 c Determine invariants, ileg, and MC hardness qMC
-      extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call kinematics_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                       xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+     &                       xm12,xm22,tk,uk,q1q,q2q,qMC)
       w1=-q1q+q2q-tk
       w2=-q2q+q1q-uk
-      if(extra.and.qMC.lt.0d0)then
+      if(qMC.lt.0d0)then
          write(*,*)'Error in xmcsubt: qMC=',qMC
          stop
       endif
@@ -1103,7 +1096,6 @@ c Check ileg, and special case for PYTHIA6PT
 
 c New or standard MC@NLO formulation
       probne=bogus_probne_fun(qMC)
-      if(.not.UseSudakov)probne=1.d0
 
 c Call barred Born and assign shower scale
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -1425,36 +1417,31 @@ c
       xkernazi(1:2)=xkernazi(1:2)*gfactazi*gfactsf*wcc
 
 c Emsca stuff
-      if(dampMCsubt)then
-         if(emscasharp)then
-            if(qMC.le.scalemax)then
-               emscwgt(npartner)=1d0
-               emscav(npartner)=emsca_bare
-            else
-               emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
-            endif
+      if(emscasharp)then
+         if(qMC.le.scalemax)then
+            emscwgt(npartner)=1d0
+            emscav(npartner)=emsca_bare
          else
-            ptresc=(qMC-scalemin)/(scalemax-scalemin)
-            if(ptresc.le.0d0)then
-               emscwgt(npartner)=1d0
-               emscav(npartner)=emsca_bare
-            elseif(ptresc.lt.1d0)then 
-               emscwgt(npartner)=1-emscafun(ptresc,one)
-               emscav(npartner)=emsca_bare
-            else
-               emscwgt(npartner)=0d0
-               emscav(npartner)=scalemax
-            endif
+            emscwgt(npartner)=0d0
+            emscav(npartner)=scalemax
          endif
-         emscav_tmp(npartner)=emscav(npartner)
       else
-         write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
-         stop
+         ptresc=(qMC-scalemin)/(scalemax-scalemin)
+         if(ptresc.le.0d0)then
+            emscwgt(npartner)=1d0
+            emscav(npartner)=emsca_bare
+         elseif(ptresc.lt.1d0)then 
+            emscwgt(npartner)=1-emscafun(ptresc,one)
+            emscav(npartner)=emsca_bare
+         else
+            emscwgt(npartner)=0d0
+            emscav(npartner)=scalemax
+         endif
       endif
+      emscav_tmp(npartner)=emscav(npartner)
 c
 c Emsca stuff for multiple scales
-      if(dampMCsubt .and. mcatnlo_delta)then
+      if(mcatnlo_delta)then
          call assign_qMC_array(xi_i_fks,y_ij_fks,shat,pp,qMC,qMC_a2)
          do i=1,nexternal-1
             do j=1,nexternal-1
@@ -1482,9 +1469,6 @@ c Emsca stuff for multiple scales
                emscav_tmp_a2(i,j)=emscav_a2(i,j)
             enddo
          enddo
-      elseif(.not. dampMCsubt) then
-         write(*,*)'dampMCsubt = .false. : reconsider scale assignment'
-         stop
       endif
 c Main loop over colour partners used to end here
       return
@@ -2552,7 +2536,7 @@ c
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
       double Precision amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/  amp2         ,jamp2
-c Stuff to be written (depending on AddInfoLHE) onto the LHE file
+c Stuff to be written onto the LHE file
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
@@ -2655,7 +2639,7 @@ c Assign flow on statistical basis
             enddo
          endif
 c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
-         if(dampMCsubt.and.wgt.gt.1d-30)then
+         if(wgt.gt.1d-30)then
             rrnd=ran2()
             wgt1=0d0
             jpartner=0
@@ -2674,8 +2658,9 @@ c Assign emsca (scalar) on statistical basis -- ensure backward compatibility
             else
                emsca=emscav_tmp(mpartner)
             endif
+         else
+            emsca=scalemax
          endif
-         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
 
       else                      ! mcatnlo-delta = .false.
 c Compute MC cross section
@@ -2684,7 +2669,7 @@ c Compute MC cross section
             wgt=wgt+xmcxsec(npartner)
          enddo
 c Assign emsca on statistical basis
-         if(dampMCsubt.and.wgt.gt.1d-30)then
+         if(wgt.gt.1d-30)then
             rrnd=ran2()
             wgt1=0d0
             jpartner=0
@@ -2703,33 +2688,30 @@ c Assign emsca on statistical basis
             else
                emsca=emscav_tmp(mpartner)
             endif
+         else
+            emsca=scalemax
          endif
-         if(dampMCsubt.and.wgt.lt.1d-30)emsca=scalemax
       endif
 
 
 c Additional information for LHE
-      if(AddInfoLHE)then
-         ifks_lhe(nFKSprocess)=i_fks
-         jfks_lhe(nFKSprocess)=j_fks
-         fksfather_lhe(nFKSprocess)=min(i_fks,j_fks)
-         if(jpartner.ne.0)then
-            ipartner_lhe(nFKSprocess)=jpartner
-         else
+      ifks_lhe(nFKSprocess)=i_fks
+      jfks_lhe(nFKSprocess)=j_fks
+      fksfather_lhe(nFKSprocess)=min(i_fks,j_fks)
+      if(jpartner.ne.0)then
+         ipartner_lhe(nFKSprocess)=jpartner
+      else
 c min() avoids troubles if ran2()=1
-            ipartner_lhe(nFKSprocess)=min(int(ran2()*ipartners(0))+1,
-     $           ipartners(0) )
-            ipartner_lhe(nFKSprocess)=
-     $           ipartners(ipartner_lhe(nFKSprocess))
-         endif
-         scale1_lhe(nFKSprocess)=qMC
+         ipartner_lhe(nFKSprocess)=min(int(ran2()*ipartners(0))+1,
+     $        ipartners(0) )
+         ipartner_lhe(nFKSprocess)=
+     $        ipartners(ipartner_lhe(nFKSprocess))
       endif
-      if(dampMCsubt)then
-         if(emsca.lt.scalemin)then
-            write(*,*)'Error in xmcsubt: emsca too small'
-            write(*,*)emsca,jpartner,lzone
-            stop
-         endif
+      scale1_lhe(nFKSprocess)=qMC
+      if(emsca.lt.scalemin)then
+         write(*,*)'Error in xmcsubt: emsca too small'
+         write(*,*)emsca,jpartner,lzone
+         stop
       endif
       return
       end
@@ -3176,7 +3158,7 @@ c
 
 
       subroutine kinematics_driver(xi_i_fks,y_ij_fks,sh,pp,ileg,xm12
-     $     ,xm22,xtk,xuk,xq1q,xq2q,qMC,extra)
+     $     ,xm22,xtk,xuk,xq1q,xq2q,qMC)
 c Determines Mandelstam invariants and assigns ileg and shower-damping
 c variable qMC
       implicit none
@@ -3191,7 +3173,6 @@ c variable qMC
       common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
       double precision qMC,zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
-      logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer fksfather
@@ -3340,23 +3321,19 @@ c azimuth = irrelevant (hence set = 0)
       if(ileg.eq.1)then
          xtk=-sh*xi_i_fks*(1-y_ij_fks)/2
          xuk=-sh*xi_i_fks*(1+y_ij_fks)/2
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'  .or.
-     &         shower_mc.eq.'HERWIGPP' )qMC=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-            if(shower_mc.eq.'PYTHIA6Q' )qMC=sqrt(-xtk)
-            if(shower_mc.eq.'PYTHIA6PT'.or.
-     &         shower_mc.eq.'PYTHIA8'  )qMC=sqrt(-xtk*xi_i_fks)
-         endif
+         if(shower_mc.eq.'HERWIG6'  .or.
+     &        shower_mc.eq.'HERWIGPP' )qMC=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+         if(shower_mc.eq.'PYTHIA6Q' )qMC=sqrt(-xtk)
+         if(shower_mc.eq.'PYTHIA6PT'.or.
+     &        shower_mc.eq.'PYTHIA8'  )qMC=sqrt(-xtk*xi_i_fks)
       elseif(ileg.eq.2)then
          xtk=-sh*xi_i_fks*(1+y_ij_fks)/2
          xuk=-sh*xi_i_fks*(1-y_ij_fks)/2
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'  .or.
-     &         shower_mc.eq.'HERWIGPP' )qMC=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-            if(shower_mc.eq.'PYTHIA6Q' )qMC=sqrt(-xuk)
-            if(shower_mc.eq.'PYTHIA6PT'.or.
-     &         shower_mc.eq.'PYTHIA8'  )qMC=sqrt(-xuk*xi_i_fks)
-         endif
+         if(shower_mc.eq.'HERWIG6'  .or.
+     &        shower_mc.eq.'HERWIGPP' )qMC=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+         if(shower_mc.eq.'PYTHIA6Q' )qMC=sqrt(-xuk)
+         if(shower_mc.eq.'PYTHIA6PT'.or.
+     &        shower_mc.eq.'PYTHIA8'  )qMC=sqrt(-xuk*xi_i_fks)
       elseif(ileg.eq.3)then
          xm12=pmass(j_fks)**2
          xm22=dot(pp_rec,pp_rec)
@@ -3366,29 +3343,27 @@ c azimuth = irrelevant (hence set = 0)
          xq2q=-2*dot(xp2,xk2)+xm22
          w1=-xq1q+xq2q-xtk
          w2=-xq2q+xq1q-xuk
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'.or.
-     &         shower_mc.eq.'HERWIGPP')then
-               zeta1=get_zeta(sh,w1,w2,xm12,xm22)
-               qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
-               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-               if(qMCarg.lt.-tiny) then
-                  isqrtneg=isqrtneg+1
-                  write(*,*)'Error 2 in kinematics_driver: negtive sqrt'
-                  write(*,*)qMCarg,isqrtneg
-                  if(isqrtneg.ge.100)stop
-               endif
-               qMC=sqrt(qMCarg)
-            elseif(shower_mc.eq.'PYTHIA6Q')then
-               qMC=sqrt(w1+xm12)
-            elseif(shower_mc.eq.'PYTHIA6PT')then
-               write(*,*)'PYTHIA6PT not available for FSR'
-               stop
-            elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $              ,xuk,xq1q,xq2q)
-               qMC=sqrt(z*(1-z)*w1)
+         if(shower_mc.eq.'HERWIG6'.or.
+     &        shower_mc.eq.'HERWIGPP')then
+            zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+            qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+            if(qMCarg.lt.-tiny) then
+               isqrtneg=isqrtneg+1
+               write(*,*)'Error 2 in kinematics_driver: negtive sqrt'
+               write(*,*)qMCarg,isqrtneg
+               if(isqrtneg.ge.100)stop
             endif
+            qMC=sqrt(qMCarg)
+         elseif(shower_mc.eq.'PYTHIA6Q')then
+            qMC=sqrt(w1+xm12)
+         elseif(shower_mc.eq.'PYTHIA6PT')then
+            write(*,*)'PYTHIA6PT not available for FSR'
+            stop
+         elseif(shower_mc.eq.'PYTHIA8')then
+            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $              ,xuk,xq1q,xq2q)
+            qMC=sqrt(z*(1-z)*w1)
          endif
       elseif(ileg.eq.4)then
          xm12=dot(pp_rec,pp_rec)
@@ -3400,29 +3375,27 @@ c azimuth = irrelevant (hence set = 0)
          xq2q=-sh*xij*(2-dot(xp1,xk2)*4d0/(sh*xij))/2d0
          xq1q=xuk+xq2q+w2
          w1=-xq1q+xq2q-xtk
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'.or.
-     &         shower_mc.eq.'HERWIGPP')then
-               zeta2=get_zeta(sh,w2,w1,xm22,xm12)
-               qMCarg=zeta2*(1-zeta2)*w2
-               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-               if(qMCarg.lt.-tiny)then
-                  isqrtneg=isqrtneg+1
-                  write(*,*)'Error 3 in kinematics_driver: negtive sqrt'
-                  write(*,*)qMCarg,isqrtneg
-                  if(isqrtneg.ge.100)stop
-               endif
-               qMC=sqrt(qMCarg)
-            elseif(shower_mc.eq.'PYTHIA6Q')then
-               qMC=sqrt(w2)
-            elseif(shower_mc.eq.'PYTHIA6PT')then
-               write(*,*)'PYTHIA6PT not available for FSR'
-               stop
-            elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $              ,xuk,xq1q,xq2q)
-               qMC=sqrt(z*(1-z)*w2)
+         if(shower_mc.eq.'HERWIG6'.or.
+     &        shower_mc.eq.'HERWIGPP')then
+            zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+            qMCarg=zeta2*(1-zeta2)*w2
+            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+            if(qMCarg.lt.-tiny)then
+               isqrtneg=isqrtneg+1
+               write(*,*)'Error 3 in kinematics_driver: negtive sqrt'
+               write(*,*)qMCarg,isqrtneg
+               if(isqrtneg.ge.100)stop
             endif
+            qMC=sqrt(qMCarg)
+         elseif(shower_mc.eq.'PYTHIA6Q')then
+            qMC=sqrt(w2)
+         elseif(shower_mc.eq.'PYTHIA6PT')then
+            write(*,*)'PYTHIA6PT not available for FSR'
+            stop
+         elseif(shower_mc.eq.'PYTHIA8')then
+            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $           ,xuk,xq1q,xq2q)
+            qMC=sqrt(z*(1-z)*w2)
          endif
       else
          write(*,*)'Error 4 in kinematics_driver: assigned wrong ileg'
@@ -4467,7 +4440,10 @@ c Smooth function
           tmp=1-emscafun(x,2d0)
         else
           tmp=1d0
-        endif
+       endif
+      elseif(itype.eq.3)
+c No (bogus) sudakov factor
+         tmp=1d0
       else
         write(*,*)'Error in bogus_probne_fun: unknown option',itype
         stop
@@ -4543,21 +4519,19 @@ c Consistency check
      $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      if(dampMCsubt)then
-         call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
+      call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg
      $        ,xm12)
-         emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
-         if(emscasharp)then
-            emsca_bare=scalemax
-            emsca=emsca_bare
-         else
-            rrnd=ran2()
-            rrnd=emscainv(rrnd,1d0)
-            emsca_bare=scalemin+rrnd*(scalemax-scalemin)
-            ptresc=(qMC-scalemin)/(scalemax-scalemin)
-            if(ptresc.lt.1d0)emsca=emsca_bare
-            if(ptresc.ge.1d0)emsca=scalemax
-         endif
+      emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
+      if(emscasharp)then
+         emsca_bare=scalemax
+         emsca=emsca_bare
+      else
+         rrnd=ran2()
+         rrnd=emscainv(rrnd,1d0)
+         emsca_bare=scalemin+rrnd*(scalemax-scalemin)
+         ptresc=(qMC-scalemin)/(scalemax-scalemin)
+         if(ptresc.lt.1d0)emsca=emsca_bare
+         if(ptresc.ge.1d0)emsca=scalemax
       endif
 
       return
@@ -4635,35 +4609,33 @@ c     skip if not QCD dipole (safety)
 c     skip if not QCD dipole (safety)
             if(.not.(pdg_type(iBtoR(j)).eq.21 .or.
      $               abs(pdg_type(iBtoR(j))).le.6))cycle
-            if(dampMCsubt)then
-               emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
+            emscasharp_a(i,j)=(scalemax_a(i,j)-scalemin_a(i,j)).lt.
      #                           (1d-3*scalemax_a(i,j))
-               if(emscasharp_a(i,j))then
-                  if(qMC_a2(i,j).le.scalemax_a(i,j))emscwgt_a(i,j)=1d0
-                  emsca_bare_a(i,j)=scalemax_a(i,j)
-                  emsca_bare_a2(i,j)=scalemax_a(i,j)
+            if(emscasharp_a(i,j))then
+               if(qMC_a2(i,j).le.scalemax_a(i,j))emscwgt_a(i,j)=1d0
+               emsca_bare_a(i,j)=scalemax_a(i,j)
+               emsca_bare_a2(i,j)=scalemax_a(i,j)
+               emsca_a(i,j)=emsca_bare_a(i,j)
+            else
+               rrnd=ran2()
+               rrnd=emscainv(rrnd,1d0)
+               emsca_bare_a(i,j)=scalemin_a(i,j)+
+     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+               rrnd=ran2()
+               rrnd=emscainv(rrnd,1d0)
+               emsca_bare_a2(i,j)=scalemin_a(i,j)+
+     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
+               ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
+     #                          (scalemax_a(i,j)-scalemin_a(i,j))
+               if(ptresc_a(i,j).le.0d0)then
+                  emscwgt_a(i,j)=1d0
+                  emsca_a(i,j)=emsca_bare_a(i,j)
+               elseif(ptresc_a(i,j).lt.1d0)then
+                  emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
                   emsca_a(i,j)=emsca_bare_a(i,j)
                else
-                  rrnd=ran2()
-                  rrnd=emscainv(rrnd,1d0)
-                  emsca_bare_a(i,j)=scalemin_a(i,j)+
-     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-                  rrnd=ran2()
-                  rrnd=emscainv(rrnd,1d0)
-                  emsca_bare_a2(i,j)=scalemin_a(i,j)+
-     #                               rrnd*(scalemax_a(i,j)-scalemin_a(i,j))
-                  ptresc_a(i,j)=(qMC_a2(i,j)-scalemin_a(i,j))/
-     #                          (scalemax_a(i,j)-scalemin_a(i,j))
-                  if(ptresc_a(i,j).le.0d0)then
-                     emscwgt_a(i,j)=1d0
-                     emsca_a(i,j)=emsca_bare_a(i,j)
-                  elseif(ptresc_a(i,j).lt.1d0)then
-                     emscwgt_a(i,j)=1-emscafun(ptresc_a(i,j),1d0)
-                     emsca_a(i,j)=emsca_bare_a(i,j)
-                  else
-                     emscwgt_a(i,j)=0d0
-                     emsca_a(i,j)=scalemax_a(i,j)
-                  endif
+                  emscwgt_a(i,j)=0d0
+                  emsca_a(i,j)=scalemax_a(i,j)
                endif
             endif
          enddo
@@ -5098,19 +5070,10 @@ c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
      &         max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/s.ge.theta2p)lzone=.false.
             if(z.gt.zp1.or.z.lt.zm1)lzone=.false.
          endif
-         if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
-            if(ileg.gt.2)upscale=max(upscale,sqrt(xmm2))
-            if(qMC.gt.upscale)lzone=.false.
-         endif
 c
       elseif(shower_mc.eq.'PYTHIA6PT')then
          if(mstp67.eq.1.and.yi.lt.ycc)lzone=.false.
          if(mstp67.eq.2)wcc=min(1d0,(1-ycc)/(1-yi))
-         if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
-            if(qMC.gt.upscale)lzone=.false.
-         endif
 c
       elseif(shower_mc.eq.'PYTHIA8')then
          if(ileg.le.2.and.z.gt.1-sqrt(xi/z/s)*
@@ -5120,10 +5083,6 @@ c
    ! in the global recoil scheme, constrains radiation to be softer than local
    ! dipole mass divided by two 
             if(z.gt.min(zp2,zp3).or.z.lt.max(zm2,zm3))lzone=.false.
-         endif
-         if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
-            if(qMC.gt.upscale)lzone=.false.
          endif
 
       endif
@@ -5191,7 +5150,6 @@ c      common/cpkmomenta/xp1,xp2,xk1,xk2,xk3
       double precision sh,xtk,xuk,w1,w2,xq1q,xq2q,xm12,xm22
       double precision qMC,qMC_a(nexternal),qMC_a2(nexternal-1,nexternal-1)
       double precision zPY8,zeta1,zeta2,get_zeta,z,qMCarg,dot
-      logical extra
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       integer i_fks,j_fks
@@ -5230,7 +5188,6 @@ c Initialise
       xq2q=0d0
       qMC_a=-1d0
       qMC_a2=-1d0
-      extra=.true.
 
 c Discard if unphysical FKS variables
       if(xi_i_fks.lt.0d0.or.xi_i_fks.gt.1d0.or.
@@ -5352,23 +5309,19 @@ c azimuth = irrelevant (hence set = 0)
       if(ileg.eq.1)then
          xtk=-2*dot(xp1,xk3)
          xuk=-2*dot(xp2,xk3)
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'  .or.
-     &         shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-            if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xtk)
-            if(shower_mc.eq.'PYTHIA6PT'.or.
-     &         shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xtk*xi_i_fks)
-         endif
+         if(shower_mc.eq.'HERWIG6'  .or.
+     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xtk)
+         if(shower_mc.eq.'PYTHIA6PT'.or.
+     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xtk*xi_i_fks)
       elseif(ileg.eq.2)then
          xtk=-2*dot(xp1,xk3)
          xuk=-2*dot(xp2,xk3)
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'  .or.
-     &         shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
-            if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xuk)
-            if(shower_mc.eq.'PYTHIA6PT'.or.
-     &         shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xuk*xi_i_fks)
-         endif
+         if(shower_mc.eq.'HERWIG6'  .or.
+     &        shower_mc.eq.'HERWIGPP' )qMC_a(ipart)=xi_i_fks/2*sqrt(sh*(1-y_ij_fks**2))
+         if(shower_mc.eq.'PYTHIA6Q' )qMC_a(ipart)=sqrt(-xuk)
+         if(shower_mc.eq.'PYTHIA6PT'.or.
+     &        shower_mc.eq.'PYTHIA8'  )qMC_a(ipart)=sqrt(-xuk*xi_i_fks)
       elseif(ileg.eq.3)then
          xm12=pmass(ipart)**2
          xm22=dot(pp_rec,pp_rec)
@@ -5378,29 +5331,27 @@ c azimuth = irrelevant (hence set = 0)
          xq2q=-2*dot(xp2,xk2)+xm22
          w1=-xq1q+xq2q-xtk
          w2=-xq2q+xq1q-xuk
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'.or.
-     &         shower_mc.eq.'HERWIGPP')then
-               zeta1=get_zeta(sh,w1,w2,xm12,xm22)
-               qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
-               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-               if(qMCarg.lt.-tiny) then
-                  isqrtneg=isqrtneg+1
-                  write(*,*)'Error 2 in assign_qMC_array: negtive sqrt'
-                  write(*,*)qMCarg,isqrtneg
-                  if(isqrtneg.ge.100)stop
-               endif
-               qMC_a(ipart)=sqrt(qMCarg)
-            elseif(shower_mc.eq.'PYTHIA6Q')then
-               qMC_a(ipart)=sqrt(w1+xm12)
-            elseif(shower_mc.eq.'PYTHIA6PT')then
-               write(*,*)'PYTHIA6PT not available for FSR'
-               stop
-            elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $              ,xuk,xq1q,xq2q)
-               qMC_a(ipart)=sqrt(z*(1-z)*w1)
+         if(shower_mc.eq.'HERWIG6'.or.
+     &        shower_mc.eq.'HERWIGPP')then
+            zeta1=get_zeta(sh,w1,w2,xm12,xm22)
+            qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
+            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+            if(qMCarg.lt.-tiny) then
+               isqrtneg=isqrtneg+1
+               write(*,*)'Error 2 in assign_qMC_array: negtive sqrt'
+               write(*,*)qMCarg,isqrtneg
+               if(isqrtneg.ge.100)stop
             endif
+            qMC_a(ipart)=sqrt(qMCarg)
+         elseif(shower_mc.eq.'PYTHIA6Q')then
+            qMC_a(ipart)=sqrt(w1+xm12)
+         elseif(shower_mc.eq.'PYTHIA6PT')then
+            write(*,*)'PYTHIA6PT not available for FSR'
+            stop
+         elseif(shower_mc.eq.'PYTHIA8')then
+            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $           ,xuk,xq1q,xq2q)
+            qMC_a(ipart)=sqrt(z*(1-z)*w1)
          endif
       elseif(ileg.eq.4)then
          xm12=dot(pp_rec,pp_rec)
@@ -5412,29 +5363,27 @@ c azimuth = irrelevant (hence set = 0)
          xq2q=-2*dot(xp2,xk2)+xm22
          xq1q=xuk+xq2q+w2
          w1=-xq1q+xq2q-xtk
-         if(extra)then
-            if(shower_mc.eq.'HERWIG6'.or.
-     &         shower_mc.eq.'HERWIGPP')then
-               zeta2=get_zeta(sh,w2,w1,xm22,xm12)
-               qMCarg=zeta2*(1-zeta2)*w2
-               if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
-               if(qMCarg.lt.-tiny)then
-                  isqrtneg=isqrtneg+1
-                  write(*,*)'Error 3 in assign_qMC_array: negtive sqrt'
-                  write(*,*)qMCarg,isqrtneg
-                  if(isqrtneg.ge.100)stop
-               endif
-               qMC_a(ipart)=sqrt(qMCarg)
-            elseif(shower_mc.eq.'PYTHIA6Q')then
-               qMC_a(ipart)=sqrt(w2)
-            elseif(shower_mc.eq.'PYTHIA6PT')then
-               write(*,*)'PYTHIA6PT not available for FSR'
-               stop
-            elseif(shower_mc.eq.'PYTHIA8')then
-               z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
-     $              ,xuk,xq1q,xq2q)
-               qMC_a(ipart)=sqrt(z*(1-z)*w2)
+         if(shower_mc.eq.'HERWIG6'.or.
+     &        shower_mc.eq.'HERWIGPP')then
+            zeta2=get_zeta(sh,w2,w1,xm22,xm12)
+            qMCarg=zeta2*(1-zeta2)*w2
+            if(qMCarg.lt.0d0.and.qMCarg.ge.-tiny)qMCarg=0d0
+            if(qMCarg.lt.-tiny)then
+               isqrtneg=isqrtneg+1
+               write(*,*)'Error 3 in assign_qMC_array: negtive sqrt'
+               write(*,*)qMCarg,isqrtneg
+               if(isqrtneg.ge.100)stop
             endif
+            qMC_a(ipart)=sqrt(qMCarg)
+         elseif(shower_mc.eq.'PYTHIA6Q')then
+            qMC_a(ipart)=sqrt(w2)
+         elseif(shower_mc.eq.'PYTHIA6PT')then
+            write(*,*)'PYTHIA6PT not available for FSR'
+            stop
+         elseif(shower_mc.eq.'PYTHIA8')then
+            z=zPY8(ileg,xm12,xm22,sh,1d0-xi_i_fks,0d0,y_ij_fks,xtk
+     $           ,xuk,xq1q,xq2q)
+            qMC_a(ipart)=sqrt(z*(1-z)*w2)
          endif
       else
          write(*,*)'Error 4 in assign_qMC_array: assigned wrong ileg'

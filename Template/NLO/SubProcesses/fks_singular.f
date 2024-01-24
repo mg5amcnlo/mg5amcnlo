@@ -4036,7 +4036,7 @@ c
       include "madfks_mcatnlo.inc"
       include 'run.inc'
       integer iFKS,i,j
-      logical Hevents,ldum
+      logical Hevents
       double precision xi_i_fks_ev,y_ij_fks_ev,p(0:3,nexternal),ddum(6)
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -4081,10 +4081,6 @@ c
       integer cur_part
       common /to_ref_scale/cur_part
 c
-      if (.not.dampMCsubt) then
-         write (*,*) 'ERROR: dampMCsubt should be true'
-         stop 1
-      endif
 ! 1st bit (1) of MCcntcalled: call to set_shower_scale_noshape for S-event (or Born) done
 ! 2nd bit (2) of MCcntcalled: call to set_shower_scale_noshape for H-event done
 ! 3rd bit (4) of MCcntcalled: call to xmcsubt done (and is_pt_hard == false)
@@ -4133,7 +4129,7 @@ c
      $           call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
             call kinematics_driver(xi_i_fks_ev,y_ij_fks_ev,shat_ev,p
      $           ,ileg,xm12,ddum(1),ddum(2),ddum(3),ddum(4),ddum(5)
-     $           ,ddum(6),ldum)
+     $           ,ddum(6))
             call assign_scaleminmax(shat_ev,xi_i_fks_ev,scalemin
      $           ,scalemax,ileg,xm12)
             if (mcatnlo_delta)
@@ -7780,7 +7776,7 @@ c (should be the one in the real instead).
 
       
 c Set matrices used by MC counterterms
-      if (match_to_shower) call set_mc_matrices
+      if (match_to_shower) call set_QCD_flows
 
       fac_i=fac_i_FKS(nFKSprocess)
       fac_j=fac_j_FKS(nFKSprocess)
