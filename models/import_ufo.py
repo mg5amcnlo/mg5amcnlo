@@ -1065,7 +1065,7 @@ class UFOMG5Converter(object):
            This is called only if the number of particle does not match (so no need to check)
         """
 
-        input_pos=[i for i,p in enumerate(gold_vertex.get('particles')) if p.get_pdg_code() == goldstone.get_pdg_code()]
+        #input_pos=[i for i,p in enumerate(gold_vertex.get('particles')) if p.get_pdg_code() == goldstone.get_pdg_code()]
         final_pos=[i for i,p in enumerate(v_vertex.get('particles')) if p.get_pdg_code() == vector.get_pdg_code()]  
         pdgs = [p.get_pdg_code() for p in gold_vertex.get('particles')]
         valid = []
@@ -1082,9 +1082,15 @@ class UFOMG5Converter(object):
         for v in valid:
             if tuple(v) == tuple(pdgs):
                 continue
-            print(v, pdgs)
+            input_pos=[i for i,p in enumerate(gold_vertex.get('particles')) if p.get_pdg_code() == goldstone.get_pdg_code()]
             new_pos = [i for i in range(len(v)) if v[i] == goldstone.get_pdg_code()]
             mydict = {}#{i:i for i in range(len(v))}
+            #check if they are overlap between input_pos and new_pos
+            for i in input_pos:
+                if i in new_pos:
+                    input_pos.remove(i)
+                    new_pos.remove(i)
+            # now that identity is correctly handle, takes permutation of particle to the mapping
             for i in range(len(v)):
                 if i in input_pos:
                     mydict[i] = new_pos.pop()
