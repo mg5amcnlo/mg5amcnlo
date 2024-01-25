@@ -766,7 +766,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'hep_event_streams.inc',
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
-                     'polfit.f']
+                     'polfit.f',
+                     'vectorize.f90']
 
         for file in linkfiles:
             ln('../' + file , '.')
