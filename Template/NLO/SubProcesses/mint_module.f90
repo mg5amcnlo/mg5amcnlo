@@ -124,7 +124,7 @@ module mint_module
   double precision, dimension(nintegrals,0:maxchannels), public :: ans,unc
   logical :: only_virt,new_point,pass_cuts_check
   ! public variables for vectorisation
-  double precision, allocatable, public :: x_bjork(:,:), jacobian(:)
+  double precision, allocatable, public :: x_bjork(:,:), jacobian(:), f_local(:,:), x_local(:,:)
 
 
 ! private variables
@@ -173,7 +173,9 @@ module mint_module
   double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
   double precision, dimension(nintegrals,3), private :: ans3,unc3
-  double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
+!  double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
+  double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3
+  double precision, allocatable, private :: f(:,:)
   double precision, dimension(0:maxchannels), private :: ymax_virt,ans_chan
   double precision, dimension(2), private :: HwU_values
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
@@ -224,6 +226,9 @@ contains
       allocate(icell(ndimmax,vector_size))
       allocate(x_bjork(ndimmax,vector_size))
       allocate(jacobian(vector_size))
+      allocate(f_local(nintegrals,vector_size))
+      allocate(f(nintegrals,vector_size))
+      allocate(x_local(99,vector_size))
    end subroutine allocate_mint
 
   subroutine mint(fun,vector_size)
@@ -253,7 +258,7 @@ contains
 !          call compute_integrand(fun,x,vol,vector_size)
           call compute_integrand(fun,vector_size)
           do index=1,vector_size
-             call accumulate_the_point(x(:,index),vector_size)
+             call accumulate_the_point(x_bjork(:,index),vector_size,index)
           enddo
        enddo
        call get_amount_of_points(enough_points)
@@ -730,18 +735,19 @@ contains
   
   
 
-  subroutine add_point_to_grids(x,vector_size)
+  subroutine add_point_to_grids(x,vector_size,amp_index)
     implicit none
-    integer, intent(in) :: vector_size
+    integer vector_size
+    integer amp_index
     integer :: kdim,k_ord_virt,ithree,isix
     integer index
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
-       do index=1,vector_size
-          xacc(icell(kdim,index),kdim,ichan) = xacc(icell(kdim,index),kdim,ichan) + f(1)
-       enddo
+!       do index=1,vector_size
+       xacc(icell(kdim,amp_index),kdim,ichan) = xacc(icell(kdim,amp_index),kdim,ichan) + f(1,amp_index)
+!       enddo
     enddo
 ! Set the Born contribution (to compute the average_virtual) to zero if
 ! the virtual was not computed for this phase-space point. Compensate by
@@ -754,35 +760,36 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).ne.0d0) then
-          born=f(isix)
+       if (f(ithree,amp_index).ne.0d0) then
+          born=f(isix,amp_index)
           ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
           if (use_poly_virtual) then
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  polyfit(k_ord_virt)*f(isix)
+             virtual=f(ithree,amp_index)*virtual_fraction(ichan)+ &
+                  polyfit(k_ord_virt)*f(isix,amp_index)
              call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
                   virtual/born,born/wgt_mult)
           else
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  average_virtual(k_ord_virt,ichan)*f(isix)
-             call fill_ave_virt(x,k_ord_virt,virtual,born)
+             virtual=f(ithree,amp_index)*virtual_fraction(ichan)+ &
+                  average_virtual(k_ord_virt,ichan)*f(isix,amp_index)
+             call fill_ave_virt(x_bjork(:,amp_index),k_ord_virt,virtual,born,amp_index)
           endif
        else
-          f(isix)=0d0
+          f(isix,amp_index)=0d0
        endif
     enddo
   end subroutine add_point_to_grids
 
-  subroutine add_point_to_bounding_envelope
+  subroutine add_point_to_bounding_envelope(amp_index)
     implicit none
     integer :: kdim,k_ord_virt,ithree,isix
+    integer amp_index
     double precision :: prod
 ! update the upper bounding envelope total rate
     prod=1d0
     do kdim=1,ndim
        prod=prod*ymax(ncell(kdim),kdim,ichan)
     enddo
-    prod=(f(1)/prod)
+    prod=(f(1,amp_index)/prod)
     if (prod.gt.1d0) then
 ! Weight for this PS point is larger than current upper bound. Increase
 ! the bound so that it is equal to the current max weight.  If the new
@@ -798,8 +805,8 @@ contains
 ! Update the upper bounding envelope virtual. Do not include the
 ! enhancement due to the virtual_fraction. (And again limit by factor 2
 ! at most).
-    if (f(5)*virtual_fraction(ichan).gt.ymax_virt(ichan)) &
-         ymax_virt(ichan) = min(f(5)*virtual_fraction(ichan),ymax_virt(ichan)*2d0)
+    if (f(5,amp_index)*virtual_fraction(ichan).gt.ymax_virt(ichan)) &
+         ymax_virt(ichan) = min(f(5,amp_index)*virtual_fraction(ichan),ymax_virt(ichan)*2d0)
 ! for consistent printing in the log files (in particular when doing LO
 ! runs), set also f(6) to zero when imode.eq.1 and the virtuals are not
 ! included.
@@ -811,29 +818,30 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).eq.0) f(isix)=0d0
+       if (f(ithree,amp_index).eq.0) f(isix,amp_index)=0d0
     enddo
   end subroutine add_point_to_bounding_envelope
      
-  subroutine accumulate_the_point(x,vector_size)
+  subroutine accumulate_the_point(x,vector_size,amp_index)
     implicit none
     integer, intent(in) :: vector_size
+    integer amp_index
     integer :: i
     double precision, dimension(ndimmax) :: x
     if(imode.eq.0) then
-       call add_point_to_grids(x,vector_size)
+       call add_point_to_grids(x_bjork,vector_size,amp_index)
     else
-       call add_point_to_bounding_envelope
+       call add_point_to_bounding_envelope(amp_index)
     endif
     do i=1,nintegrals
-       if (f(i).ne.0d0) non_zero_point(i)=non_zero_point(i)+1
+       if (f(i,amp_index).ne.0d0) non_zero_point(i)=non_zero_point(i)+1
     enddo
     if (pass_cuts_check) pass_cuts_point=pass_cuts_point+1
 ! Add the PS point to the result of this iteration
-    vtot(1:nintegrals,ichan)=vtot(1:nintegrals,ichan)+f(1:nintegrals)
-    etot(1:nintegrals,ichan)=etot(1:nintegrals,ichan)+f(1:nintegrals)**2
+    vtot(1:nintegrals,ichan)=vtot(1:nintegrals,ichan)+f(1:nintegrals,amp_index)
+    etot(1:nintegrals,ichan)=etot(1:nintegrals,ichan)+f(1:nintegrals,amp_index)**2
 ! Accumulate the points in the HwU histograms    
-    if (f(1).ne.0d0) call HwU_add_points
+    if (f(1,amp_index).ne.0d0) call HwU_add_points
   end subroutine accumulate_the_point
 
   
@@ -841,6 +849,7 @@ contains
   subroutine compute_integrand(fun,vector_size)
     implicit none
     integer, intent(in) :: vector_size
+    integer index
     integer :: ifirst,iret
     integer, dimension(ndimmax) :: kfold
 !    include 'vectorize.inc'
@@ -855,9 +864,9 @@ contains
     if(imode.eq.0) then
        dummy=fun(ifirst,f1)
        if (.not. fixed_order) dummy=fun(2,f1)
-       f(1:nintegrals)=f1(1:nintegrals)
+       f(1:nintegrals,1:vector_size)=f_local(1:nintegrals,1:vector_size)
     else
-       f(1:nintegrals)=0d0
+       f(1:nintegrals,1:vector_size)=0d0
        kfold(1:ndim)=1
 1      continue
        ! this accumulated value will not be used
@@ -872,7 +881,7 @@ contains
        !closing call: accumulated value with correct sign
        ifirst=2
        dummy=fun(ifirst,f1)
-       f(1:nintegrals)=f1(1:nintegrals)
+       f(1:nintegrals,1:vector_size)=f_local(1:nintegrals,1:vector_size)
     endif
   end subroutine compute_integrand
   
@@ -1429,13 +1438,14 @@ contains
     average_virtual(k_ord_virt,ichan)=average_virtual(k_ord_virt,ichan)/(ndim-3)
   end subroutine get_ave_virt
 
-  subroutine fill_ave_virt(x,k_ord_virt,virtual,born)
+  subroutine fill_ave_virt(x,k_ord_virt,virtual,born,amp_index)
     implicit none
     integer :: kdim,ncell,k_ord_virt
+    integer amp_index
     double precision,dimension(ndimmax) :: x(ndimmax)
     double precision :: virtual,born
     do kdim=1,ndim-3
-       ncell=min(int(x(kdim)*nint_used_virt)+1,nint_used_virt)
+       ncell=min(int(x_bjork(kdim,amp_index)*nint_used_virt)+1,nint_used_virt)
        nvirt_acc(ncell,kdim,k_ord_virt,ichan)=nvirt_acc(ncell,kdim,k_ord_virt,ichan)+1
        ave_virt_acc(ncell,kdim,k_ord_virt,ichan)=ave_virt_acc(ncell,kdim,k_ord_virt,ichan)+virtual
        ave_born_acc(ncell,kdim,k_ord_virt,ichan)=ave_born_acc(ncell,kdim,k_ord_virt,ichan)+born
@@ -1678,7 +1688,7 @@ contains
     else
        gen_counters(6)=gen_counters(6)+1
     endif
-    if (f(1).eq.0d0) then
+    if (f(1,1).eq.0d0) then
        gen_counters(4)=gen_counters(4)+1
     endif
   end subroutine increase_gen_counters_middle
@@ -1709,7 +1719,7 @@ contains
     implicit none
     logical :: found_point
     integer :: vn
-    if (f(1).gt.upper_bound) then
+    if (f(1,1).gt.upper_bound) then
        if (vn.eq.2) then
           gen_counters(7)=gen_counters(7)+1
        elseif (vn.eq.1) then
@@ -1719,7 +1729,7 @@ contains
        endif
     endif
     upper_bound=upper_bound*ran3(.false.)
-    if (upper_bound.gt.f(1)) then
+    if (upper_bound.gt.f(1,1)) then
        gen_counters(10)=gen_counters(10)+1
        found_point=.false.
     else

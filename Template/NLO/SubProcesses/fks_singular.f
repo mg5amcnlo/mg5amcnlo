@@ -2921,14 +2921,16 @@ c call the analysis/histogramming routines
       return
       end
 
-      subroutine fill_mint_function(f)
-c Fills the function that is returned to the MINT integrator
+!      subroutine fill_mint_function(f)
+      subroutine fill_mint_function(vec_index)
+      ! Fills the function that is returned to the MINT integrator
       use weight_lines
       use mint_module
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
       integer i,iamp,ithree,isix
+      integer vec_index
       double precision f(nintegrals),sigint
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
@@ -2936,26 +2938,27 @@ c Fills the function that is returned to the MINT integrator
       do i=1,icontr
          sigint=sigint+wgts(1,i)
       enddo
-      f(1)=abs(sigint)
-      f(2)=sigint
-      f(4)=virtual_over_born    ! not used for anything
+      f_local(1,vec_index)=abs(sigint)
+      f_local(2,vec_index)=sigint
+      f_local(4,vec_index)=virtual_over_born    ! not used for anything
       do iamp=0,amp_split_size
          if (iamp.eq.0) then
-            f(3)=0d0
-            f(6)=0d0
-            f(5)=0d0
+            f_local(3,vec_index)=0d0
+            f_local(6,vec_index)=0d0
+            f_local(5,vec_index)=0d0
             do i=1,amp_split_size
-               f(3)=f(3)+virt_wgt_mint(i)
-               f(6)=f(6)+born_wgt_mint(i)
-               f(5)=f(5)+abs(virt_wgt_mint(i))
+               f_local(3,vec_index)=f_local(3,vec_index)+virt_wgt_mint(i)
+               f_local(6,vec_index)=f_local(6,vec_index)+born_wgt_mint(i)
+               f_local(5,vec_index)=f_local(5,vec_index)+abs(virt_wgt_mint(i))
             enddo
          else
             ithree=2*iamp+5
             isix=2*iamp+6
-            f(ithree)=virt_wgt_mint(iamp)
-            f(isix)=born_wgt_mint(iamp)
+            f_local(ithree,vec_index)=virt_wgt_mint(iamp)
+            f_local(isix,vec_index)=born_wgt_mint(iamp)
          endif
       enddo
+      write(*,*) 'vec_index, f_local ', vec_index, f_local(:,vec_index)
       return
       end
       

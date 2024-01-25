@@ -349,7 +349,7 @@ c timing statistics
       double precision f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,MC_int_wgt
 !      double precision, allocatable, intent(inout) :: xx(:,:), vegas_wgt(:)
-      double precision, allocatable :: x_local(:,:)
+!      double precision, allocatable :: x_local(:,:)
       double precision, allocatable :: p_local(:,:,:)
       double precision, allocatable :: wgtdum(:)
       double precision, allocatable :: amp2_store(:,:)
@@ -417,7 +417,7 @@ c PineAPPL
      &                  ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
-      allocate(x_local(99,vec_size))
+!      allocate(x_local(99,vec_size))
       allocate(p_local(0:3,nexternal,vec_size))
       allocate(wgtdum(vec_size))
       allocate(amp2_store(ngraphs,vec_size))
@@ -452,7 +452,8 @@ c PineAPPL
       if (ickkw.eq.-1) H1_factor_virt=0d0      
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       do index=1,vec_size
-         call update_vegas_x(x_bjork(:,index),x_local(:,index))
+!         call update_vegas_x(x_local,index)
+         call update_vegas_x(index)
       enddo
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
@@ -506,7 +507,6 @@ c PineAPPL
 !$OMP END PARALLEL
       ! ZW
       ! MZ
-      
       
       do index=1,vec_size      
          !ZW set zeros for each amp_index
@@ -652,9 +652,10 @@ c Importance sampling for FKS configurations
 
 c Finalize PS point
          call fill_plots
-         call fill_mint_function(f)
+         call fill_mint_function(index)
+!         call fill_mint_function(f)
       enddo
-      deallocate(x_local)
+!      deallocate(x_local)
       deallocate(p_local)
       deallocate(wgtdum)
       deallocate(amp2_store)
@@ -784,13 +785,14 @@ c     if there are no soft singularities at all, just do something trivial
       end
 
 !      subroutine update_vegas_x(xx,x)
-      subroutine update_vegas_x(xx,x)
+      subroutine update_vegas_x(amp_index)
       use mint_module
       use vectorize
       implicit none
       integer i
+      integer amp_index
 !      double precision xx(ndimmax),x(99),ran2
-      double precision :: xx(ndimmax), x(99)
+!      double precision :: xx(ndimmax), x(99)
       double precision ran2
       external ran2
       integer         nndim
@@ -800,17 +802,17 @@ c     if there are no soft singularities at all, just do something trivial
       do i=1,99
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') then
             if(i.le.nndim-3)then
-               x(i)=xx(i)
+               x_local(i,amp_index)=x_bjork(i,amp_index)
             elseif(i.le.nndim) then
-               x(i)=ran2()      ! Choose them flat when not including real-emision
+               x_local(i,amp_index)=ran2()      ! Choose them flat when not including real-emision
             else
-               x(i)=0.d0
+               x_local(i,amp_index)=0.d0
             endif
          else
             if(i.le.nndim)then
-               x(i)=xx(i)
+               x_local(i,amp_index)=x_bjork(i,amp_index)
             else
-               x(i)=0.d0
+               x_local(i,amp_index)=0.d0
             endif
          endif
       enddo
