@@ -2958,7 +2958,6 @@ c call the analysis/histogramming routines
             f_local(isix,vec_index)=born_wgt_mint(iamp)
          endif
       enddo
-      write(*,*) 'vec_index, f_local ', vec_index, f_local(:,vec_index)
       return
       end
       
