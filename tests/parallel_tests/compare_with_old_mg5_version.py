@@ -600,7 +600,7 @@ class OLDMG5Comparator(unittest.TestCase):
                              model = "sm",
                              energy = 1000,
                              filename = "sm_22.log") 
-        self.assertTrue(len(my_proc_list) > 5000)  
+        self.assertGreater(len(my_proc_list), 5000)
             
     def test_mg5_sm_13(self):
         """Test a semi-complete list of sm 1->3 processes"""
@@ -862,7 +862,7 @@ class OLDMG5Comparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm.log")
 
-        self.assertTrue(len(proc_lists)==2)
+        self.assertEqual(len(proc_lists), 2)
 
 
 
