@@ -58,10 +58,10 @@ module vectorize
    double precision, allocatable :: xi_i_hat_ev(:),xi_i_hat_cnt(:,:)
 
    !ZW: cxinormev
-   double precision, allocatable :: xinorm_ev(:)
+   double precision, allocatable :: xi_norm_ev(:)
 
    !ZW: cximaxev
-   double precision, allocatable :: xiimax_ev(:)
+   double precision, allocatable :: xi_i_max_ev(:)
 
    !ZW: pborn_ev
    double precision, allocatable :: p_born_ev(:,:,:)
@@ -107,7 +107,7 @@ module vectorize
    double precision, allocatable :: granny_m2_red(:,:)
 
    !ZW: pborn_l
-   double precision, allocatable :: p_born_l(:,:)
+   double precision, allocatable :: p_born_l(:,:,:)
 
    !ZW: virtgranny_boost
    double precision, allocatable :: shybst(:),chybst(:),chybstmo(:)
