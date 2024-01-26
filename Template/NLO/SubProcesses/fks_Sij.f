@@ -26,7 +26,7 @@ c can be avoided with a suitable choice of f()
 c
 c 
       Double precision function fks_Sij(p,ii_fks,jj_fks,
-     #                                  xi_i_fks,y_ij_fks)
+     #                                  xi_i_fks,y_ij_fks,amp_index)
       implicit none
 
       include "nexternal.inc"
@@ -41,6 +41,8 @@ c      include "fks.inc"
       include "fks_powers.inc"
       include "coupl.inc"
 
+      integer amp_index
+
       real*8 p(0:3,nexternal)
       integer ii_fks,jj_fks
       real*8 xi_i_fks,y_ij_fks
@@ -50,15 +52,15 @@ c      include "fks.inc"
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-!$OMP THREADPRIVATE (/FKSVARIABLES/)
+!      double precision xi_i_fks_ev,y_ij_fks_ev
+!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+!      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+!OMP THREADPRIVATE (/FKSVARIABLES/)
 
       logical firsttime
       real*8 hfact,h_damp,z
@@ -101,9 +103,9 @@ c entering this function
       else
          shattmp=p(0,1)**2
       endif
-      if(abs(shattmp/shat-1.d0).gt.1.d-5)then
+      if(abs(shattmp/shat(amp_index)-1.d0).gt.1.d-5)then
         write(*,*)'Error in fks_Sij: inconsistent shat #1'
-        write(*,*)shattmp,shat
+        write(*,*)shattmp,shat(amp_index)
         stop
       endif
 
@@ -119,7 +121,7 @@ c entering this function
          isorsc=0
          if( 1d0-y_ij_fks.lt.tiny.and.jj_fks.eq.j_fks.and.
      #       pmass(j_fks).eq.0.d0 )isorsc=2
-         if(p_i_fks_cnt(0,isorsc).lt.0.d0)then
+         if(p_i_fks_cnt(0,isorsc,amp_index).lt.0.d0)then
            if(xi_i_fks.eq.0.d0)then
              write(*,*)'Error #7 in fks_Sij',isorsc,xi_i_fks,y_ij_fks
              stop
@@ -137,7 +139,7 @@ c entering this function
            endif
          else
            do i=0,3
-              phat_ii(i)=p_i_fks_cnt(i,isorsc)
+              phat_ii(i)=p_i_fks_cnt(i,isorsc,amp_index)
            enddo
            E_ii_resc=xi_i_fks
          endif
@@ -293,7 +295,8 @@ c         firsttime=.false.
       subroutine get_dkl_Sij(p1,p2,ka,kb,E1resc,
      #                       i1,itype1,i2,itype2,
      #                       ii_fks,jj_fks,ioneortwo,
-     #                       dkl_Sij,setsijzero)
+     #                       dkl_Sij,setsijzero,amp_index)
+      use vectorize  
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3),E1resc,dkl_Sij
       integer i1,itype1,i2,itype2,ii_fks,jj_fks,ioneortwo
@@ -303,13 +306,15 @@ c         firsttime=.false.
       include "fks_powers.inc"
       include "coupl.inc"
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       real*8 energy,E1,E2,beta,beta1,beta2,angle,costhfks,vtiny
       parameter (vtiny=1.d-8)
+
+      integer amp_index
 
       double precision get_cms_energy
 
@@ -330,9 +335,9 @@ c         firsttime=.false.
       if(ioneortwo.eq.2)then
         if(itype1.eq.8.or.(itype1.ne.8.and.useenergy))then
           E1=get_cms_energy(p1,ka,kb)
-          energy=energy*E1*E1resc/(sqrtshat/2d0)
+          energy=energy*E1*E1resc/(sqrtshat(amp_index)/2d0)
           setsijzero=setsijzero.or.
-     #               (E1*E1resc).lt.(vtiny*sqrtshat/2d0)
+     #               (E1*E1resc).lt.(vtiny*sqrtshat(amp_index)/2d0)
         elseif(itype1.ne.8.and.(.not.useenergy))then
           energy=energy
         else
@@ -347,9 +352,9 @@ c         firsttime=.false.
 
       if(itype2.eq.8.or.(itype2.ne.8.and.useenergy))then
         E2=get_cms_energy(p2,ka,kb)
-        energy=energy*E2/(sqrtshat/2.d0)
+        energy=energy*E2/(sqrtshat(amp_index)/2.d0)
         setsijzero=setsijzero.or.
-     #             E2.lt.(vtiny*sqrtshat/2d0)
+     #             E2.lt.(vtiny*sqrtshat(amp_index)/2d0)
       elseif(itype2.ne.8.and.(.not.useenergy))then
         energy=energy
       else
@@ -393,25 +398,29 @@ c         firsttime=.false.
 
 
 
-      double precision function get_cms_energy(p,ka,kb)
+      double precision function get_cms_energy(p,ka,kb,amp_index)
 c Given the momentum p in the \tilde{k}_1+\tilde{k}_2 c.m. frame, returns
 c the energy component of p in the k_1+k_2 c.m. frame. Here,
 c ka=\tilde{k}_1, ,kb=\tilde{k}_2
+      use vectorize
       implicit none
       real*8 p(0:3),ka(0:3),kb(0:3)
       double precision dot,xden,xnum,tmp
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       external dot
+
+      integer amp_index
+
 c
-      if(ybst_til_tocm.eq.0.d0)then
+      if(ybst_til_tocm(amp_index).eq.0.d0)then
         tmp=p(0)
       else
         xden=dot(p,ka)+dot(p,kb)
         xnum=2*dot(ka,kb)
-        if(abs(xnum/shat-1.d0).gt.1.d-6)then
+        if(abs(xnum/shat(amp_index)-1.d0).gt.1.d-6)then
           write(*,*)'Inconsistency in get_cms_energy'
           stop
         endif
@@ -424,23 +433,27 @@ c
 
 
       subroutine get_cms_costh_fks(p1,p2,ka,kb,E1,E2,xm1,xm2,
-     #                             beta1,beta2,costhfks)
+     #                             beta1,beta2,costhfks,amp_index)
 c Given the momenta p1 and p2 in the \tilde{k}_1+\tilde{k}_2 c.m. frame, 
 c returns the velocities beta1 and beta2, and the 3-angle between p1 and p2
 c in the k_1+k_2 c.m. frame. Here, ka=\tilde{k}_1, ,kb=\tilde{k}_2
+      use vectorize
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3)
       real*8 E1,E2,xm1,xm2,beta1,beta2,costhfks
       double precision tmp,costh_fks,get_cms_energy,dot
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       real*8 tiny
       parameter (tiny=1.d-6)
       external dot
+
+      integer amp_index
+
 c
-      if(ybst_til_tocm.eq.0.d0)then
+      if(ybst_til_tocm(amp_index).eq.0.d0)then
         tmp=costh_fks(p1,p2)
         beta1=sqrt(1-(xm1/p1(0))**2)
         beta2=sqrt(1-(xm2/p2(0))**2)
@@ -525,7 +538,8 @@ c
       end
 
 
-      Double precision function fks_Hij(p,ii_fks,jj_fks)
+      Double precision function fks_Hij(p,ii_fks,jj_fks, amp_index)
+      use vectorize
       implicit none
 
       include "nexternal.inc"
@@ -538,10 +552,12 @@ c      include "fks.inc"
       integer ii_fks,jj_fks
       double precision shattmp,dot,h_damp
       external h_damp
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+
+      integer amp_index
 
       if(particle_type(jj_fks).ne.8.or.particle_type(ii_fks).ne.8.or.
      &     jj_fks.le.nincoming)then
@@ -562,9 +578,9 @@ c entering this function
       else
          shattmp=p(0,1)**2
       endif
-      if(abs(shattmp/shat-1.d0).gt.1.d-5)then
+      if(abs(shattmp/shat(amp_index)-1.d0).gt.1.d-5)then
         write(*,*)'Error in fks_Hij: inconsistent shat'
-        write(*,*)shattmp,shat
+        write(*,*)shattmp,shat(amp_index)
         stop
       endif
       

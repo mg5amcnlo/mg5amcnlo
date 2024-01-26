@@ -336,64 +336,67 @@ c Dummy subroutine (normally used with vegas/mint when resuming plots)
       end
 
 
-      subroutine set_cms_stuff(icountevts)
+      subroutine set_cms_stuff(icountevts, amp_index)
+      use vectorize
       implicit none
       include "run.inc"
 
       integer icountevts
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+      integer amp_index
 
-      double precision sqrtshat_ev,shat_ev
-      common/parton_cms_ev/sqrtshat_ev,shat_ev
-!$OMP THREADPRIVATE (/PARTON_CMS_EV/)
+!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
+!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
+!     #                        sqrtshat(amp_index),shat(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
-      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
-      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
-!$OMP THREADPRIVATE (/PARTON_CMS_CNT/)
+!      double precision sqrtshat_ev(amp_index),shat_ev(amp_index)
+!      common/parton_cms_ev/sqrtshat_ev(amp_index),shat_ev(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_EV/)
 
-      double precision tau_ev,ycm_ev
-      common/cbjrk12_ev/tau_ev,ycm_ev
-!$OMP THREADPRIVATE (/CBJRK12_EV/)
+!      double precision sqrtshat_cnt(-2:2),shat_cnt(-2:2)
+!      common/parton_cms_cnt/sqrtshat_cnt,shat_cnt
+!OMP THREADPRIVATE (/PARTON_CMS_CNT/)
 
-      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
-      common/cbjrk12_cnt/tau_cnt,ycm_cnt
-!$OMP THREADPRIVATE (/CBJRK12_CNT/)
+!      double precision tau_ev,ycm_ev(amp_index)
+!      common/cbjrk12_ev/tau_ev,ycm_ev(amp_index)
+!OMP THREADPRIVATE (/CBJRK12_EV/)
 
-      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
-      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
-!$OMP THREADPRIVATE (/CBJORKENX/)
+!      double precision tau_cnt(-2:2),ycm_cnt(-2:2)
+!      common/cbjrk12_cnt/tau_cnt,ycm_cnt
+!OMP THREADPRIVATE (/CBJRK12_CNT/)
+!
+!      double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
+!      common/cbjorkenx/xbjrk_ev,xbjrk_cnt
+!OMP THREADPRIVATE (/CBJORKENX/)
 
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to lab frame --
 c same for event and counterevents
 c This is the rapidity that enters in the arguments of the sinh() and
 c cosh() of the boost, in such a way that
-c       y(k)_lab = y(k)_tilde - ybst_til_tolab
+c       y(k)_lab = y(k)_tilde - ybst_til_tolab(amp_index)
 c where y(k)_lab and y(k)_tilde are the rapidities computed with a generic
 c four-momentum k, in the lab frame and in the \tilde{k}_1+\tilde{k}_2 
 c c.m. frame respectively
-      ybst_til_tolab=-ycm_cnt(0)
+      ybst_til_tolab(amp_index)=-ycm_cnt(0,amp_index)
       if(icountevts.eq.-100)then
 c set Bjorken x's in run.inc for the computation of PDFs in auto_dsig
-        xbk(1)=xbjrk_ev(1)
-        xbk(2)=xbjrk_ev(2)
-c shat=2*k1.k2 -- consistency of this assignment with momenta checked
+        xbk(1)=xbjrk_ev(1,amp_index)
+        xbk(2)=xbjrk_ev(2,amp_index)
+c shat(amp_index)=2*k1.k2 -- consistency of this assignment with momenta checked
 c in phspncheck_nocms
-        shat=shat_ev
-        sqrtshat=sqrtshat_ev
+        shat(amp_index)=shat_ev(amp_index)
+        sqrtshat(amp_index)=sqrtshat_ev(amp_index)
 c rapidity of boost from \tilde{k}_1+\tilde{k}_2 c.m. frame to 
 c k_1+k_2 c.m. frame
-        ybst_til_tocm=ycm_ev-ycm_cnt(0)
+        ybst_til_tocm(amp_index)=ycm_ev(amp_index)-ycm_cnt(0,amp_index)
       else
 c do the same as above for the counterevents
-        xbk(1)=xbjrk_cnt(1,icountevts)
-        xbk(2)=xbjrk_cnt(2,icountevts)
-        shat=shat_cnt(icountevts)
-        sqrtshat=sqrtshat_cnt(icountevts)
-        ybst_til_tocm=ycm_cnt(icountevts)-ycm_cnt(0)
+        xbk(1)=xbjrk_cnt(1,icountevts,amp_index)
+        xbk(2)=xbjrk_cnt(2,icountevts,amp_index)
+        shat(amp_index)=shat_cnt(icountevts,amp_index)
+        sqrtshat(amp_index)=sqrtshat_cnt(icountevts,amp_index)
+        ybst_til_tocm(amp_index)=ycm_cnt(icountevts,amp_index)-ycm_cnt(0,amp_index)
       endif
       return
       end

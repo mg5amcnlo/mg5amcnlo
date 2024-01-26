@@ -480,9 +480,9 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbody
-      common/cnbody/nbody
-!$OMP THREADPRIVATE (/CNBODY/)
+!      logical nbody(index)
+!      common/cnbody(index)/nbody(index)
+!OMP THREADPRIVATE (/Cnbody(index)/)
 c
 c To convert diagram number to configuration
 c
@@ -625,9 +625,9 @@ c These should be ignored (but kept for 'historical reasons')
       if(abrvinput(5:5).eq.'0')then
          write (*,*) 'This option is no longer supported:',abrvinput
          stop
-        nbody=.true.
+        nbody(index)=.true.
       else
-        nbody=.false.
+        nbody(index)=.false.
       endif
       abrv=abrvinput(1:4)
       if (fks_configs.eq.1) then
@@ -642,14 +642,14 @@ c$$$               stop 1
 c$$$            endif
          endif
       endif
-      if(nbody.and.abrv.ne.'born'.and.abrv.ne.'virt'
+      if(nbody(index).and.abrv.ne.'born'.and.abrv.ne.'virt'
      &     .and. abrv.ne.'grid')then
         write(*,*)'Error in driver: inconsistent input',abrvinput
         stop
       endif
 
       write (*,*) "doing the ",abrv," of this channel"
-      if(nbody)then
+      if(nbody(index))then
         write (*,*) "integration Born/virtual with Sfunction=1"
       else
         write (*,*) "Normal integration (Sfunction != 1)"
@@ -663,6 +663,7 @@ c
       function sigintF(xx,vegas_wgt,ifl,f)
       use weight_lines
       use mint_module
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -682,29 +683,32 @@ c
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-!$OMP THREADPRIVATE (/PBORN/)
+
+      integer index
+
+!      double precision p_born(0:3,nexternal-1)
+!      common /pborn/   p_born
+!OMP THREADPRIVATE (/PBORN/)
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      logical calculatedBorn(index)
+!      common/ccalculatedBorn(index)/calculatedBorn(index)
+!OMP THREADPRIVATE (/CcalculatedBorn(index)/)
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
       common /c_vob/   virtual_over_born
-      logical       nbody
-      common/cnbody/nbody
-!$OMP THREADPRIVATE (/CNBODY/)
+!      logical       nbody(index)
+!      common/cnbody(index)/nbody(index)
+!OMP THREADPRIVATE (/Cnbody(index)/)
       integer         nndim
       common/tosigint/nndim
       character*4      abrv
       common /to_abrv/ abrv
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+!      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+!     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       integer ifold_picked
@@ -762,8 +766,8 @@ c "npNLO".
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
-         nbody=.true.
-         calculatedBorn=.false.
+         nbody(index)=.true.
+         calculatedBorn(index)=.false.
 c Pick the first one because that's the one with the soft singularity
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
@@ -784,15 +788,15 @@ c FKS configurations (for the shower scale) (multiply by
 c 1/proc_map(0,0)*vol1)
          jac=jac/(proc_map(0,0)*vol1)
          call generate_momenta(nndim,iconfig,jac,x,p)
-         if (p_born(0,1).lt.0d0) goto 12
+         if (p_born(0,1,index).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          call set_shower_scale_noshape(p,nFKS_picked_nbody*2-1)
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
-         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index))
+         passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt)
          if (passcuts_nbody) then
             pass_cuts_check=.true.
-            call set_alphaS(p1_cnt(0,1,0))
+            call set_alphaS(p1_cnt(0,1,0,index))
             call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
                call compute_born
@@ -814,8 +818,8 @@ c The n+1-body contributions (including counter terms)
 c Set calculated Born to zero to prevent numerical inaccuracies: not
 c always exactly the same momenta in computation of Born when computed
 c for different nFKSprocess.
-         if(sum.eq.0) calculatedBorn=.false.
-         nbody=.false.
+         if(sum.eq.0) calculatedBorn(index)=.false.
+         nbody(index)=.false.
          do i=1,proc_map(proc_map(0,1),0)
             wgt_me_real=0d0
             wgt_me_born=0d0
@@ -830,7 +834,7 @@ c for different nFKSprocess.
             call generate_momenta(nndim,iconfig,jac,x,p)
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
-            if (p_born(0,1).lt.0d0) cycle
+            if (p_born(0,1,index).lt.0d0) cycle
 c Set the shower scales            
             if (ickkw.eq.3) then
                call set_FxFx_scale(0,p) ! reset the FxFx scales
@@ -838,7 +842,7 @@ c Set the shower scales
             call set_cms_stuff(izero)
             call set_shower_scale_noshape(p,iFKS*2-1)
             if (ickkw.eq.3) then
-               call set_FxFx_scale(2,p1_cnt(0,1,0))
+               call set_FxFx_scale(2,p1_cnt(0,1,0,index))
             endif
             call set_cms_stuff(mohdr)
             call set_shower_scale_noshape(p,iFKS*2)
@@ -851,8 +855,8 @@ c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
-            passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0,index))
+            passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt)
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             passcuts_n1body=passcuts(p,rwgt)
@@ -880,8 +884,8 @@ c limits, the MC subtraction terms should be replaced by the FKS
 c ones. This is set via the gfactsf, gfactcl and probne functions (set
 c by the call to compute_MC_subt_term) through the 'replace_MC_subt'.
                call set_cms_stuff(izero)
-               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
-               call set_alphaS(p1_cnt(0,1,0))
+               if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0,index))
+               call set_alphaS(p1_cnt(0,1,0,index))
                call include_multichannel_enhance(3)
                replace_MC_subt=(1d0-gfactsf)*probne
                call compute_soft_counter_term(replace_MC_subt)

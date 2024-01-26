@@ -84,8 +84,9 @@ C-----
 
       
       subroutine compute_veto_compensating_factor(H1_factor_virt,
-     $     born_wgt,muSoft,muHard,veto_compensating_factor)
+     $     born_wgt,muSoft,muHard,veto_compensating_factor, amp_index)
 c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
+      use vectorize
       implicit none
       include 'q_es.inc'
       include 'coupl.inc'
@@ -95,17 +96,20 @@ c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
      $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+
+      integer amp_index
+
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat(amp_index),shat(amp_index)
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat(amp_index),shat(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       integer izero
       parameter (izero=0)
       double precision pi
       parameter (pi=3.1415926535897932385d0)
       call set_cms_stuff(izero)
-      Q=sqrtshat
-      Q2=shat
+      Q=sqrtshat(amp_index)
+      Q2=shat(amp_index)
       ptjmax=ptj
       mu=ptjmax*muSoft
       if (abs(QES2-ptjmax**2).gt.1d-7) then
@@ -127,8 +131,9 @@ c compensating factor for difference between muMad and the soft scale mu
       end
 
       subroutine compute_veto_multiplier(H1_factor_virt,muSoft,muHard
-     &     ,veto_multiplier)
+     &     ,veto_multiplier,amp_index)
 c 2nd line of eq.(20) of arXiv:1412.8408
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'q_es.inc'
@@ -138,27 +143,30 @@ c 2nd line of eq.(20) of arXiv:1412.8408
       double precision Q2,ptjmax,mu,alpha,E1,H1_factor,muMad,alphah
      $     ,Q,muh,Efull,H1_comp,alphas
       external alphas
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+
+      integer amp_index
+
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat(amp_index),shat(amp_index)
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat(amp_index),shat(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision p1_cnt(0:3,nexternal,-2:2)
+!      double precision wgt_cnt(-2:2)
+!      double precision pswgt_cnt(-2:2)
+!      double precision jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer izero
       parameter (izero=0)
       double precision pi
       parameter (pi=3.1415926535897932385d0)
 c     set sqrt(\hat(s)) correctly to be the one of the n-body kinematics
       call set_cms_stuff(izero)
-      Q=sqrtshat
-      Q2=shat
+      Q=sqrtshat(amp_index)
+      Q2=shat(amp_index)
       ptjmax=ptj
 c     set muMad to be the ren scale that was used in the virtual
-      call set_alphaS(p1_cnt(0,1,0))
+      call set_alphaS(p1_cnt(0,1,0,amp_index))
       if (abs(QES2-ptjmax**2).gt.1d-7) then
          write (*,*) 'ERROR in VETO XSec: Ellis-Sexton '/
      $        /'scale should be equal to the veto scale',QES2

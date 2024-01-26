@@ -1,5 +1,6 @@
-      subroutine finalize_event(xx,weight,lunlhe,putonshell)
+      subroutine finalize_event(xx,weight,lunlhe,putonshell,amp_index)
       use mint_module
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
@@ -9,6 +10,7 @@
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
+      integer amp_index
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
@@ -18,16 +20,16 @@
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+!      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       integer npart
       double precision shower_scale,shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-!$OMP THREADPRIVATE (/PBORN/)
+!      double precision p_born(0:3,nexternal-1)
+!      common/pborn/p_born
+!OMP THREADPRIVATE (/PBORN/)
       call cpu_time(tBefore)
 
       do i=1,99
@@ -58,7 +60,7 @@ c
             stop
          endif
          Hevents=.true.
-         call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
+         call add_write_info(p_born(:,:,amp_index),p,ybst_til_tolab(amp_index),iconfig,Hevents,
      &        .false.,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 c Put the Hevent info in a common block
          NUP_H=npart
@@ -80,7 +82,7 @@ c Put the Hevent info in a common block
          Hevents=.false.
       endif
       
-      call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
+      call add_write_info(p_born(:,:,amp_index),p,ybst_til_tolab(amp_index),iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
 
 c Write-out the events

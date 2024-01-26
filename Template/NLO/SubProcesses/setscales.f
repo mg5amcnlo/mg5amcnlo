@@ -160,10 +160,11 @@ cc         call setpara('param_card.dat')
       end
 
 
-      subroutine set_ren_scale(pp,muR)
+      subroutine set_ren_scale(pp,muR, amp_index)
 c Sets the value of the renormalization scale, returned as muR.
 c For backward compatibility, computes the value of alpha_S, and sets 
 c the value of variable scale in common block /to_scale/
+      use vectorize
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -181,10 +182,13 @@ c the value of variable scale in common block /to_scale/
 c this is to avoid too low dynamic scales      
       double precision minscaleR
       parameter (minscaleR=2d0)
-c After recomputing alphaS, be sure to set 'calculatedBorn' to false
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+
+      integer amp_index
+
+c After recomputing alphaS, be sure to set 'calculatedBorn(amp_index)' to false
+!      logical calculatedBorn(amp_index)
+!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
+!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -201,20 +205,21 @@ c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
       call update_as_param()
-c Reset calculatedBorn, because the couplings might have been changed.
+c Reset calculatedBorn(amp_index), because the couplings might have been changed.
 c This is needed in particular for the MC events, because there the
 c coupling should be set according to the real-emission kinematics,
 c even when computing the Born matrix elements.
-      calculatedBorn=.false.
+      calculatedBorn(amp_index)=.false.
 c
       return
       end
 
 
-      function muR_ref_dynamic(pp)
+      function muR_ref_dynamic(pp, amp_index)
 c This is a function of the kinematic configuration pp, which returns
 c a scale to be used as a reference for renormalization scale
       use extra_weights
+      use vectorize
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -237,12 +242,15 @@ c for 'geometric mean'
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
      &     ,tmp1,tmp2,xm2
+
+      integer amp_index
+
 c FxFx
-      integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
-     $     ,FxFx_fac_scale
-!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
+!      integer nFxFx_ren_scales(amp_index)
+!      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+!      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales(amp_index)
+!     $     ,FxFx_fac_scale
+!OMP THREADPRIVATE (/C_FXFX_SCALES/)
       integer bpower
 c
       tmp=0
@@ -252,21 +260,21 @@ c
       elseif(ickkw.eq.3)then
 c FxFx merging scale:
          bpower=born_orders(qcd_pos)/2
-         if (bpower.gt.nFxFx_ren_scales) then
+         if (bpower.gt.nFxFx_ren_scales(amp_index)) then
 c For processes that have alpha_S to some (non-zero) power at the lowest
 c multiplicity Born, use the transverse mass of that system for those
 c alpha_S
-            tmp=FxFx_ren_scales(0)**
-     &           (bpower-(nFxFx_ren_scales))
+            tmp=FxFx_ren_scales(0,amp_index)**
+     &           (bpower-(nFxFx_ren_scales(amp_index)))
          elseif(bpower.eq.0) then
 c lowest multiplicity for processes without QCD use the transverse mass
 c of the colorless system (as returned by clustering)
-            tmp=FxFx_ren_scales(0)
+            tmp=FxFx_ren_scales(0,amp_index)
          else
             tmp=1d0
          endif
-         do i=1,nFxFx_ren_scales
-            tmp=tmp*FxFx_ren_scales(i)
+         do i=1,nFxFx_ren_scales(amp_index)
+            tmp=tmp*FxFx_ren_scales(i,amp_index)
          enddo
          tmp=tmp**(1d0/max(dble(bpower),1d0))
          temp_scale_id='FxFx merging scale'
@@ -403,9 +411,10 @@ c
       end
 
 
-      function muF_ref_dynamic(pp)
+      function muF_ref_dynamic(pp, amp_index)
 c This is a function of the kinematic configuration pp, which returns
 c a scale to be used as a reference for factorizations scales
+      use vectorize
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -417,17 +426,20 @@ c a scale to be used as a reference for factorizations scales
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
       parameter (imuftype=1)
+
+      integer amp_index
+
 c FxFx
-      integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
-     $     ,FxFx_fac_scale
-!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
+!      integer nFxFx_ren_scales(amp_index)
+!      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+!      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales(amp_index)
+!     $     ,FxFx_fac_scale
+!OMP THREADPRIVATE (/C_FXFX_SCALES/)
 c
       tmp=0
       if(ickkw.eq.3)then
 c FxFx merging scale:
-        tmp=(FxFx_fac_scale(1)+FxFx_fac_scale(2))/2d0
+        tmp=(FxFx_fac_scale(1,amp_index)+FxFx_fac_scale(2,amp_index))/2d0
         temp_scale_id='FxFx merging scale'
       elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)

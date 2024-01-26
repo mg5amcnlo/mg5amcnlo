@@ -47,7 +47,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 cluster.o splitorders_stuff.o 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
-	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o
+	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o	\
+	 vectorize.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
@@ -103,15 +104,15 @@ gensym: $(SYM)
 	strip gensym
 
 test_soft_col_limits: $(TEST) mint_module.o
-	$(FC) -fopenmp $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
-#	$(FC) $(FFLAGS) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
+#	$(FC) -fopenmp $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
+	$(FC) $(FFLAGS) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
 	rm test_soft_col_limits.o
-	strip test_soft_col_limits
+#	strip test_soft_col_limits
 
 check_poles: $(POLES) $(libmadloop) 
-	$(FC) -fopenmp -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
-#	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
-	strip check_poles
+#	$(FC) -fopenmp -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+#	strip check_poles
 
 madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
 	$(FC) -fopenmp -o madevent_mintMC $(MINTMC) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
@@ -134,23 +135,23 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
-mint_module.o : FKSParams.o
+mint_module.o : FKSParams.o vectorize.o
 BinothLHA_OLP.o: FKSParams.o
-BinothLHA.o: FKSParams.o
-reweight_xsec_events.o: weight_lines.o
-fks_singular.o: weight_lines.o mint_module.o
-driver_mintMC.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc
-driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
+BinothLHA.o: FKSParams.o vectorize.o
+reweight_xsec_events.o: weight_lines.o vectorize.o
+fks_singular.o: weight_lines.o mint_module.o vectorize.o
+driver_mintMC.o: weight_lines.o mint_module.o pythia8_control.inc pythia8_control_setup.inc vectorize.o
+driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o vectorize.o
 pythia8_wrapper.o: pythia8_fortran.o LHAFortran_aMCatNLO.h
 chooser_functions.o: weight_lines.o
-cluster.o: weight_lines.o
-setcuts.o: mint_module.o
-genps_fks.o: mint_module.o FKSParams.o
-symmetry_fks_v3.o: mint_module.o
-test_soft_col_limits.o: mint_module.o
+cluster.o: weight_lines.o vectorize.o
+setcuts.o: mint_module.o vectorize.o
+genps_fks.o: mint_module.o FKSParams.o vectorize.o
+symmetry_fks_v3.o: mint_module.o vectorize.o
+test_soft_col_limits.o: mint_module.o vectorize.o
 madfks_plot.o: mint_module.o
-write_event.o: mint_module.o
-check_poles.o: mint_module.o
+write_event.o: mint_module.o vectorize.o
+check_poles.o: mint_module.o vectorize.o
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym

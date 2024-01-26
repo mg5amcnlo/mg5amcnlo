@@ -357,9 +357,9 @@ c timing statistics
 
       ! common blocks for passing amp2/jamp2
       include 'genps.inc'
-      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,          jamp2
-!$OMP THREADPRIVATE (/TO_AMPS/)
+!      Double Precision amp2(ngraphs), jamp2(0:ncolor)
+!      common/to_amps/  amp2,          jamp2
+!OMP THREADPRIVATE (/TO_AMPS/)
 
       integer ifl,nFKS_born,nFKS_picked,iFKS,nFKS_min,iamp
      $     ,nFKS_max,izero,ione,itwo,mohdr,i,j,m,n,iran_picked
@@ -367,9 +367,9 @@ c timing statistics
       integer index
       !ZW
       ! MZ
-      double precision amp_split_soft(amp_split_size)
-      common /to_amp_split_soft/amp_split_soft
-!$OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
+!      double precision amp_split_soft(amp_split_size)
+!      common /to_amp_split_soft/amp_split_soft
+!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
       ! MZ 
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum,firsttime
@@ -380,22 +380,22 @@ c timing statistics
       data sum /.false./
       integer         nndim
       common/tosigint/nndim
-      logical       nbody
-      common/cnbody/nbody
-!$OMP THREADPRIVATE (/CNBODY/)
-      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
-     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+!      logical       nbody
+!      common/cnbody/nbody
+!OMP THREADPRIVATE (/CNBODY/)
+!      double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
+!     $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
 
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-!$OMP THREADPRIVATE (/PBORN/)
+!      double precision p_born(0:3,nexternal-1)
+!      common /pborn/   p_born
+!OMP THREADPRIVATE (/PBORN/)
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      logical                calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       character*4      abrv
       common /to_abrv/ abrv
 c PineAPPL
@@ -473,6 +473,9 @@ c PineAPPL
          call set_alphaS(p_local(0,1,index))
          call smatrix_real(p_local(0,1,index), wgtdum(index))
          amp_split_store_r(:,index) = amp_split(:)
+!         write(*,*) 'index', index
+!         write(*,*) 'p_local', p_local(:,:,index)
+!         write(*,*) 'amp_split', amp_split(:)
       enddo
 !$OMP END DO
 !$OMP END PARALLEL
@@ -483,13 +486,13 @@ c PineAPPL
       do index=1,vec_size
          ! the born
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
-         call set_alphaS(p1_cnt(0,1,0))
-         calculatedBorn=.false.
-         call sborn(p1_cnt(0,1,0), wgtdum(index))
+         call set_alphaS(p1_cnt(0,1,0,index))
+         calculatedBorn(index)=.false.
+         call sborn(p1_cnt(0,1,0,index), wgtdum(index))
          amp_split_store_b(:,index) = amp_split(:)
          amp_split_store_cnt(:,:,:,index) = amp_split_cnt(:,:,:)
-         amp2_store(:,index) = amp2(:)
-         jamp2_store(:,index) = jamp2(:)
+         amp2_store(:,index) = amp2(:,index)
+         jamp2_store(:,index) = jamp2(:,index)
          ! color-linked borns
          do i=1,fks_j_from_i(i_fks,0)
            do j=1,i
@@ -497,8 +500,8 @@ c PineAPPL
              n=fks_j_from_i(i_fks,j)
              if (n.ne.i_fks.and.m.ne.i_fks) then
               ! MZ don't skip the case m=n and massless, it won't be used
-               call sborn_sf(p1_cnt(0,1,0),m,n,wgtdum(index))
-               amp_split_store_bsf(:,i,j,index) = amp_split_soft(:)
+               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index))
+               amp_split_store_bsf(:,i,j,index) = amp_split_soft(:,index)
              endif
            enddo
          enddo
@@ -524,13 +527,13 @@ c PineAPPL
          !ZW
 
          ! recover amp2 and jamp2 for multichanneling
-         amp2(:) = amp2_store(:,index) 
-         jamp2(:) = jamp2_store(:,index) 
+         amp2(:,index) = amp2_store(:,index) 
+         jamp2(:,index) = jamp2_store(:,index) 
 
 c  The nbody contributions
          if (abrv.eq.'real') goto 11
-         nbody=.true.
-         calculatedBorn=.false.
+         nbody(index)=.true.
+         calculatedBorn(index)=.false.
          if (ini_fin_fks(ichan).eq.0) then
             jac=1d0
          else
@@ -538,14 +541,14 @@ c  The nbody contributions
          endif
          call update_fks_dir(nFKS_born)
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
-         if (p_born(0,1).lt.0d0) goto 12
+         if (p_born(0,1,index).lt.0d0) goto 12
          call compute_prefactors_nbody(jacobian(index))
          call set_cms_stuff(izero)
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
-         passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index))
+         passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt)
          if (passcuts_nbody) then
             pass_cuts_check=.true.
-            call set_alphaS(p1_cnt(0,1,0))
+            call set_alphaS(p1_cnt(0,1,0,index))
             call include_multichannel_enhance(1)
             if (abrv(1:2).ne.'vi') then
                call compute_born(index)
@@ -560,7 +563,7 @@ c The n+1-body contributions (including counter terms)
          if ( abrv(1:4).eq.'born' .or.
      $     abrv(1:4).eq.'bovi' .or.
      $     abrv(1:2).eq.'vi' ) goto 12
-         nbody=.false.
+         nbody(index)=.false.
          if (sum) then
             nFKS_min=1
             nFKS_max=ini_fin_fks_map(ini_fin_fks(ichan),0)
@@ -573,7 +576,7 @@ c The n+1-body contributions (including counter terms)
 
          do i=nFKS_min,nFKS_max
             iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
-            calculatedBorn=.false. 
+            calculatedBorn(index)=.false. 
             ! MZ this is a temporary fix for processes without
             ! soft singularities associated to the initial state
             ! DO NOT extend this fix to event generation
@@ -582,28 +585,28 @@ c The n+1-body contributions (including counter terms)
             jac=MC_int_wgt
             call update_fks_dir(iFKS)
             call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
-            if (p_born(0,1).lt.0d0) cycle
+            if (p_born(0,1,index).lt.0d0) cycle
             call compute_prefactors_n1body(jacobian(index),jac)
             call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0))
-            passcuts_nbody =passcuts(p1_cnt(0,1,0),rwgt)
+            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0,index))
+            passcuts_nbody =passcuts(p1_cnt(0,1,0,index),rwgt)
             ! needed for the mapping without event projection
             call set_cms_stuff(ione)
-            passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1),rwgt)
+            passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1,index),rwgt)
             call set_cms_stuff(mohdr)
             if (ickkw.eq.3) call set_FxFx_scale(3,p)
             passcuts_n1body=passcuts(p,rwgt)
             if (passcuts_nbody .and. abrv.ne.'real') then
                pass_cuts_check=.true.
                call set_cms_stuff(izero)
-               call set_alphaS(p1_cnt(0,1,0))
+               call set_alphaS(p1_cnt(0,1,0,index))
                call include_multichannel_enhance(3)
                call compute_soft_counter_term(0d0,index)
                call set_cms_stuff(itwo)
                call compute_soft_collinear_counter_term(0d0,index)
             endif
             if (passcuts_coll .and. abrv.ne.'real') then
-            call set_alphaS(p1_cnt(0,1,1))
+            call set_alphaS(p1_cnt(0,1,1,index))
             call set_cms_stuff(ione)
             call compute_collinear_counter_term(0d0,index)
             endif
@@ -820,11 +823,12 @@ c     if there are no soft singularities at all, just do something trivial
       end
 
 c
-      subroutine get_user_params(ncall,nitmax,irestart)
+      subroutine get_user_params(ncall,nitmax,irestart, index)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
       use mint_module
+      use vectorize
       implicit none
 c
 c     Constants
@@ -862,9 +866,11 @@ c
       character*4 abrv
       common /to_abrv/ abrv
 
-      logical nbody
-      common/cnbody/nbody
-!$OMP THREADPRIVATE (/CNBODY/)
+      integer index
+
+!      logical nbody
+!      common/cnbody/nbody
+!OMP THREADPRIVATE (/CNBODY/)
 
 c
 c To convert diagram number to configuration
@@ -992,13 +998,13 @@ c-----
          elseif(buffer(1:8).eq.'RUN_MODE') then
             read(buffer(11:),*) abrvinput
             if(abrvinput(5:5).eq.'0')then
-               nbody=.true.
+               nbody(index)=.true.
             else
-               nbody=.false.
+               nbody(index)=.false.
             endif
             abrv=abrvinput(1:4)
             write (*,*) "doing the ",abrv," of this channel"
-            if(nbody)then
+            if(nbody(index))then
                write (*,*) "integration Born/virtual with Sfunction=1"
             else
                write (*,*) "Normal integration (Sfunction != 1)"

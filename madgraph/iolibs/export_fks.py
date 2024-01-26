@@ -626,21 +626,21 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
       
-        vector_size = 1
+        # vector_size = 1
       
-        filename = 'vectorize.inc'
-        self.write_vectorize_file(
-                            writers.FortranWriter(filename),
-                            matrix_element,
-                            amp_split_size,
-                            vector_size)
+        # filename = 'vectorize.inc'
+        # self.write_vectorize_file(
+        #                     writers.FortranWriter(filename),
+        #                     matrix_element,
+        #                     amp_split_size,
+        #                     vector_size)
         
-        filename = 'mint_vectorize.inc'
-        self.write_mint_vectorize_file(
-                            writers.FortranWriter(filename),
-                            matrix_element,
-                            amp_split_size,
-                            vector_size)
+        # filename = 'mint_vectorize.inc'
+        # self.write_mint_vectorize_file(
+        #                     writers.FortranWriter(filename),
+        #                     matrix_element,
+        #                     amp_split_size,
+        #                     vector_size)
 
         filename = 'a0Gmuconv.inc'
         startfroma0 = self.write_a0gmuconv_file(

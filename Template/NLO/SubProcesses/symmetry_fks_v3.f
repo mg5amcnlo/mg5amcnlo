@@ -4,6 +4,7 @@ c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
       use mint_module
+      use vectorize
       implicit none
 c
 c     Constants
@@ -24,25 +25,28 @@ c
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       integer         nndim
       common/tosigint/nndim
-      Double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,          jamp2
-!$OMP THREADPRIVATE (/TO_AMPS/)
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-!$OMP THREADPRIVATE (/PBORN/)
+
+      integer amp_index
+
+!      Double Precision amp2(ngraphs), jamp2(0:ncolor)
+!      common/to_amps/  amp2,          jamp2
+!OMP THREADPRIVATE (/TO_AMPS/)
+!      double precision p_born(0:3,nexternal-1)
+!      common /pborn/   p_born
+!OMP THREADPRIVATE (/PBORN/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      logical                calculatedBorn(amp_index)
+!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
+!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
       integer          isum_hel
       logical                    multi_channel
       common/to_matrix/isum_hel, multi_channel
-      logical       nbody
-      common/cnbody/nbody
-!$OMP THREADPRIVATE (/CNBODY/)
+!      logical       nbody(amp_index)
+!      common/cnbody(amp_index)/nbody(amp_index)
+!OMP THREADPRIVATE (/Cnbody(amp_index)/)
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
       logical passcuts,check_swap
@@ -88,7 +92,7 @@ c other things-- in a wrong shower starting scale.
       endif
       
       multi_channel=.true.
-      nbody=.true.
+      nbody(amp_index)=.true.
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
@@ -132,7 +136,7 @@ c
       call generate_momenta(ndim,iconfig,wgt,x,p)
       call set_cms_stuff(-100)
       do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
-     $     .or. p_born(0,1).le.0d0) .and. ntry.lt.10000)
+     $     .or. p_born(0,1,amp_index).le.0d0) .and. ntry.lt.10000)
          do j=1,ndim
             x(j)=ran2()
          enddo
@@ -147,19 +151,19 @@ c
 c
 c     Get and save base amplitudes
 c
-      calculatedBorn=.false.
+      calculatedBorn(amp_index)=.false.
 c Call the Born twice to make sure that all common blocks are correctly filled.
-      call sborn(p_born,wgt1)
-      call sborn(p_born,wgt1)
+      call sborn(p_born(:,:,amp_index),wgt1)
+      call sborn(p_born(:,:,amp_index),wgt1)
       do j=1, mapconfig(0)
-         saveamp(mapconfig(j)) = amp2(mapconfig(j))
+         saveamp(mapconfig(j)) = amp2(mapconfig(j),amp_index)
       enddo
       write (*,*) 'born momenta'
       do j=1,nexternal-1
          do i=0,3
-            p_born_save(i,j)=p_born(i,j)
+            p_born_save(i,j)=p_born(i,j,amp_index)
          enddo
-         write(*,'(i4,4e15.5)') j,(p_born(i,j),i=0,3)
+         write(*,'(i4,4e15.5)') j,(p_born(i,j,amp_index),i=0,3)
       enddo
 c
 c     Swap amplitudes looking for matches
@@ -181,16 +185,16 @@ c nexternal is the number for the real configuration. Subtract 1 for the Born.
             CALL SWITCHMOM(P_born_save,P_born1,ICB(1),JC,NEXTERNAL-1)
             do j=1,nexternal-1
                do k=0,3
-                  p_born(k,j)=p_born1(k,j)
+                  p_born(k,j,amp_index)=p_born1(k,j)
                enddo
             enddo
-            calculatedBorn=.false.
-            call sborn(p_born,wgt1)
+            calculatedBorn(amp_index)=.false.
+            call sborn(p_born(:,:,amp_index),wgt1)
 c        Look for matches
             do j=2,mapconfig(0)
                do k=1,j-1
-                  diff=abs((amp2(mapconfig(j))-saveamp(mapconfig(k)))
-     &                 /(amp2(mapconfig(j))+1d-99))
+                  diff=abs((amp2(mapconfig(j),amp_index)-saveamp(mapconfig(k)))
+     &                 /(amp2(mapconfig(j),amp_index)+1d-99))
                   if (diff .gt. 1d-8 ) cycle
                   if (use_config(j) .lt. 0 ) exit ! already found
                   nmatch=nmatch+1

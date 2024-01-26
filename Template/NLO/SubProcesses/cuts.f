@@ -439,8 +439,9 @@ c more than the Born).
       end
 
 
-      logical function passcuts_fxfx(p,pQCD,nQCD)
+      logical function passcuts_fxfx(p,pQCD,nQCD,amp_index)
 c In case of FxFx merging, use the lowest clustering scale to apply the cut
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'cuts.inc'
@@ -450,12 +451,15 @@ c In case of FxFx merging, use the lowest clustering scale to apply the cut
       integer NJET,JET(nexternal)
       double precision rfj,sycut,palg,amcatnlo_fastjetdmerge,etaj_max
       double precision PJET(0:3,nexternal)
-      integer nFxFx_ren_scales
-      double precision FxFx_ren_scales(0:nexternal),
-     $                 FxFx_fac_scale(2)
-      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
-     $                     FxFx_fac_scale
-!$OMP THREADPRIVATE (/C_FXFX_SCALES/)
+
+      integer amp_index
+
+!      integer nFxFx_ren_scales
+!      double precision FxFx_ren_scales(0:nexternal),
+!     $                 FxFx_fac_scale(2)
+!      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales,
+!     $                     FxFx_fac_scale
+!OMP THREADPRIVATE (/C_FXFX_SCALES/)
       passcuts_fxfx=.true.
 c First apply a numerical stability cut
 c Define jet clustering parameters with a pTmin=1 GeV
@@ -472,7 +476,7 @@ c Apply the jet cut
          return
       endif
 c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
-      if (minval(FxFx_ren_scales(0:nFxFx_ren_scales)).lt.ptj) then
+      if (minval(FxFx_ren_scales(0:nFxFx_ren_scales(amp_index),amp_index)).lt.ptj) then
          passcuts_fxfx=.false.
          return
       endif
@@ -757,7 +761,8 @@ C***************************************************************
 C NO NEED TO CHANGE ANY OF THE FUNCTIONS BELOW
 C***************************************************************
 C***************************************************************
-      logical function passcuts(p,rwgt)
+      logical function passcuts(p,rwgt,amp_index)
+      use vectorize
       implicit none
       include "nexternal.inc"
       include 'run.inc'
@@ -767,10 +772,13 @@ C***************************************************************
       REAL*8 P(0:3,nexternal),rwgt
       integer i,j,istatus(nexternal),iPDG(nexternal)
 c For boosts
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+
+      integer amp_index
+
+!      double precision ybst_til_tolab(amp_index),ybst_til_tocm,sqrtshat,shat
+!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm,
+!     #                        sqrtshat,shat
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision chybst,shybst,chybstmo
       double precision xd(1:3)
       data (xd(i),i=1,3)/0,0,1/
@@ -803,8 +811,8 @@ c Also make sure there's no INF or NAN
 
       rwgt=1d0
 c Boost the momenta p(0:3,nexternal) to the lab frame plab(0:3,nexternal)
-      chybst=cosh(ybst_til_tolab)
-      shybst=sinh(ybst_til_tolab)
+      chybst=cosh(ybst_til_tolab(amp_index))
+      shybst=sinh(ybst_til_tolab(amp_index))
       chybstmo=chybst-1.d0
       do i=1,nexternal
          call boostwdir2(chybst,shybst,chybstmo,xd,

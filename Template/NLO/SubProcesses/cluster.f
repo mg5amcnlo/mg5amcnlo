@@ -1,5 +1,6 @@
       subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching)
+     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
+     $     ,amp_index
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C renormalisation scale setting (to be used to somewhere else to
 C reweight alphaS). Should be called with iproc=0 for n-body
@@ -9,6 +10,7 @@ C filled with the iforest etc. information, the momenta are given in the
 C pborn and pev common blocks and the current integration channel is
 C given by the to_mconfigs common block.
       use weight_lines
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'maxconfigs.inc'
@@ -23,12 +25,15 @@ C given by the to_mconfigs common block.
       integer mapconfig(0:lmaxconfigs,0:fks_configs)
       common /c_configurations/pmass,pwidth,iforest,sprop,tprid
      $     ,mapconfig
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-!$OMP THREADPRIVATE (/PBORN/)
-      double precision p_ev(0:3,nexternal)
-      common/pev/      p_ev
-!$OMP THREADPRIVATE (/PEV/)
+
+      integer amp_index
+
+!      double precision p_born(0:3,nexternal-1)
+!      common/pborn/p_born
+!OMP THREADPRIVATE (/PBORN/)
+!      double precision p_ev(0:3,nexternal)
+!      common/pev/      p_ev
+!OMP THREADPRIVATE (/PEV/)
       integer            this_config
       common/to_mconfigs/this_config
       integer nfks1,iproc
@@ -49,14 +54,14 @@ C given by the to_mconfigs common block.
          next=nexternal-1
          do i=1,next
             do j=0,3
-               pcl(j,i)=p_born(j,i)
+               pcl(j,i)=p_born(j,i,amp_index)
             enddo
          enddo
       else                      ! n+1-body contribution
          next=nexternal
          do i=1,next
             do j=0,3
-               pcl(j,i)=p_ev(j,i)
+               pcl(j,i)=p_ev(j,i,amp_index)
             enddo
          enddo
       endif

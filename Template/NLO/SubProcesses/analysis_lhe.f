@@ -45,8 +45,9 @@ c event (event with lower weights will be un-weighted)
       endif
       end
 
-      subroutine analysis_fill(p,istatus,ipdg,wgts,ibody)
+      subroutine analysis_fill(p,istatus,ipdg,wgts,ibody, amp_index)
       use extra_weights
+      use vectorize
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -80,10 +81,13 @@ c
       common/cto_LHE2/scale1_lhe,scale2_lhe
 c
 c     forbid unweighting close to the fks pole (should not happen but better safe than sorry)
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-!$OMP THREADPRIVATE (/FKSVARIABLES/)
+
+      integer amp_index
+
+!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
+!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
+!OMP THREADPRIVATE (/FKSVARIABLES/)
 c
 c Auxiliary quantities used when writing events
       integer kwgtinfo
@@ -108,8 +112,8 @@ c --- region)
       endif
       passed_unwgt=.true.
       twgt=abs(cross_section)*FO_LHE_weight_ratio !/npoints
-      if(abs(wgts(1)).lt.abs(twgt) .and. xi_i_fks_ev.gt.1d-3 .and.
-     $     1d0-y_ij_fks_ev.gt.1d-2)then
+      if(abs(wgts(1)).lt.abs(twgt) .and. xi_i_fks_ev(amp_index).gt.1d-3 .and.
+     $     1d0-y_ij_fks_ev(amp_index).gt.1d-2)then
          R = ran2()*abs(twgt)
          if (R.gt.abs(wgts(1)))then
             passed_unwgt=.false.

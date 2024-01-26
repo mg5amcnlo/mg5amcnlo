@@ -4,6 +4,7 @@ c     This is the driver for the whole calulation
 c**************************************************************************
       use mint_module
       use FKSParams
+      use vectorize
       implicit none
 C
 C     CONSTANTS
@@ -21,18 +22,18 @@ C
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3,100)
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-!$OMP THREADPRIVATE (/PBORN/)
+!      double precision p_born(0:3,nexternal-1)
+!      common/pborn/p_born
+!OMP THREADPRIVATE (/PBORN/)
       double precision pswgt
       double precision fks_double, fks_single
       double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
       double precision born, virt_wgt
       double precision totmass
-      logical calculatedborn
-      common/ccalculatedborn/calculatedborn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      logical calculatedborn
+!      common/ccalculatedborn/calculatedborn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       logical fksprefact
       parameter (fksprefact=.true.)
       integer nfksprocess
@@ -160,30 +161,30 @@ c initialization
           finite=0d0
           single=0d0
           double=0d0
-          calculatedborn = .false.
+          calculatedborn(amp_index) = .false.
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
      1         pmass_rambo, prambo)
-              p_born(0,1) = pmass(1)
-              p_born(1,1) = 0d0
-              p_born(2,1) = 0d0
-              p_born(3,1) = 0d0
+              p_born(0,1,amp_index) = pmass(1)
+              p_born(1,1,amp_index) = 0d0
+              p_born(2,1,amp_index) = 0d0
+              p_born(3,1,amp_index) = 0d0
           elseif (nincoming.eq.2) then
               if (nexternal - nincoming - 1 .eq.1) then
                   ! deal with the case of only one particle in the final
                   ! state
-                  p_born(0,1) = pmass(3)/2d0
-                  p_born(1,1) = 0d0
-                  p_born(2,1) = 0d0
-                  p_born(3,1) = pmass(3)/2d0
+                  p_born(0,1,amp_index) = pmass(3)/2d0
+                  p_born(1,1,amp_index) = 0d0
+                  p_born(2,1,amp_index) = 0d0
+                  p_born(3,1,amp_index) = pmass(3)/2d0
                   if (pmass(1) > 0d0) 
-     1               p_born(3,1) = dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
-                  p_born(0,2) = pmass(3)/2d0
-                  p_born(1,2) = 0d0
-                  p_born(2,2) = 0d0
-                  p_born(3,2) = -pmass(3)/2d0
+     1               p_born(3,1,amp_index) = dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+                  p_born(0,2,amp_index) = pmass(3)/2d0
+                  p_born(1,2,amp_index) = 0d0
+                  p_born(2,2,amp_index) = 0d0
+                  p_born(3,2,amp_index) = -pmass(3)/2d0
                   if (pmass(2) > 0d0) 
-     1               p_born(3,2) = -dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+     1               p_born(3,2,amp_index) = -dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
 
                   prambo(0,1) = pmass(3)
                   prambo(1,1) = 0d0
@@ -194,18 +195,18 @@ c initialization
                     
                   call rambo(0, nexternal-nincoming-1, energy, 
      1             pmass_rambo, prambo)
-                  p_born(0,1) = energy/2d0
-                  p_born(1,1) = 0d0
-                  p_born(2,1) = 0d0
-                  p_born(3,1) = energy/2d0
+                  p_born(0,1,amp_index) = energy/2d0
+                  p_born(1,1,amp_index) = 0d0
+                  p_born(2,1,amp_index) = 0d0
+                  p_born(3,1,amp_index) = energy/2d0
                   if (pmass(1) > 0d0) 
-     1               p_born(3,1) = dsqrt(energy**2/4d0 - pmass(1)**2)
-                  p_born(0,2) = energy/2
-                  p_born(1,2) = 0d0
-                  p_born(2,2) = 0d0
-                  p_born(3,2) = -energy/2d0
+     1               p_born(3,1,amp_index) = dsqrt(energy**2/4d0 - pmass(1)**2)
+                  p_born(0,2,amp_index) = energy/2
+                  p_born(1,2,amp_index) = 0d0
+                  p_born(2,2,amp_index) = 0d0
+                  p_born(3,2,amp_index) = -energy/2d0
                   if (pmass(2) > 0d0) 
-     1               p_born(3,2) = -dsqrt(energy**2/4d0 - pmass(1)**2)
+     1               p_born(3,2,amp_index) = -dsqrt(energy**2/4d0 - pmass(1)**2)
               endif
           else
               write(*,*) 'INVALID NUMBER OF INCOMING PARTICLES', 
@@ -215,16 +216,16 @@ c initialization
 
           do j = 0, 3
             do k = nincoming+1, nexternal-1
-              p_born(j,k) = prambo(j,k-nincoming)
+              p_born(j,k,amp_index) = prambo(j,k-nincoming)
             enddo
           enddo
 
           CALL UPDATE_AS_PARAM()
-          call sborn(p_born, born)
+          call sborn(p_born(:,:,amp_index), born)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
-          call BinothLHA(p_born, born, virt_wgt)
+          call BinothLHA(p_born(:,:,amp_index), born, virt_wgt)
           if (npointsChecked.eq.0) then
              if (mod(ret_code_ml,100)/10.eq.3 .or.
      &            mod(ret_code_ml,100)/10.eq.4) then
@@ -243,7 +244,7 @@ C         Otherwise, perform the check
 
           do j = 0, 3
             do k = 1, nexternal - 1
-              p(j,k) = p_born(j,k)
+              p(j,k) = p_born(j,k,amp_index)
             enddo
             p(j, nexternal) = 0d0
           enddo

@@ -113,9 +113,9 @@ c======================================================================
       integer status,procnum
       double precision s,mu,sumdot
       external sumdot
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-!$OMP THREADPRIVATE (/PBORN/)
+!      double precision p_born(0:3,nexternal-1)
+!      common/pborn/p_born
+!OMP THREADPRIVATE (/PBORN/)
       character*13 filename
       common /LH_procnum /procnum
 

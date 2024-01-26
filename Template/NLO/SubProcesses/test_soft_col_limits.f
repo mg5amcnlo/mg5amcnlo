@@ -4,6 +4,7 @@ c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
       use mint_module
+      use vectorize
       implicit none
       include 'genps.inc'      
       include 'nexternal.inc'
@@ -32,27 +33,30 @@ c*****************************************************************************
       common/tosigint/nndim
       double precision xi_i_fks_fix,y_ij_fks_fix
       common /cxiyfix/ xi_i_fks_fix,y_ij_fks_fix
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+
+      integer amp_index
+
+!      logical                calculatedBorn(amp_index)
+!      common/ccalculatedBorn(amp_index)/calculatedBorn(amp_index)
+!OMP THREADPRIVATE (/CcalculatedBorn(amp_index)/)
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
-!$OMP THREADPRIVATE (/PBORN/)
-      double precision xi_i_fks_ev,y_ij_fks_ev
-      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
-!$OMP THREADPRIVATE (/FKSVARIABLES/)
-      double precision   xi_i_fks_cnt(-2:2)
-      common /cxiifkscnt/xi_i_fks_cnt
-!$OMP THREADPRIVATE (/CXIIFKSCNT/)
+!      double precision p1_cnt(0:3,nexternal,-2:2)
+!      double precision wgt_cnt(-2:2)
+!      double precision pswgt_cnt(-2:2)
+!      double precision jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
+!      double precision p_born(0:3,nexternal-1)
+!      common /pborn/   p_born
+!OMP THREADPRIVATE (/PBORN/)
+!      double precision xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index)
+!      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+!      common/fksvariables/xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),p_i_fks_ev,p_i_fks_cnt
+!OMP THREADPRIVATE (/FKSVARIABLES/)
+!      double precision   xi_i_fks_cnt(-2:2)
+!      common /cxiifkscnt/xi_i_fks_cnt
+!OMP THREADPRIVATE (/CXIIFKSCNT/)
       logical        softtest,colltest
       common/sctests/softtest,colltest
       integer              nFKSprocess
@@ -260,8 +264,8 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
          new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
-         calculatedBorn=.false.
-         do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
+         calculatedBorn(amp_index)=.false.
+         do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1,amp_index).le.0d0
      &        ) .and. ntry .lt. 1000)
             do jj=1,ndim
                x(jj)=ran2()
@@ -269,7 +273,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             new_point=.true.
             wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
-            calculatedBorn=.false.
+            calculatedBorn(amp_index)=.false.
             ntry=ntry+1
          enddo
          if (ntry.ge.1000) then
@@ -278,7 +282,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
      $           /' Cannot perform ME tests properly for config',iconfig
             cycle
          endif
-         call sborn(p_born,wgt1)
+         call sborn(p_born(:,:,amp_index),wgt1)
       
          write (*,*) ''
          write (*,*) ''
@@ -324,9 +328,9 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             enddo
             if(nsofttests.le.10)write (*,*) 'ntry',ntry
             if (ilim.eq.2) then
-               calculatedBorn=.false.
+               calculatedBorn(amp_index)=.false.
                call set_cms_stuff(0)
-               call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+               call sreal(p1_cnt(0,1,0,amp_index),zero,y_ij_fks_ev(amp_index),fx)
             else
 c Set xi_i_fks to zero, to correctly generate the collinear momenta for the
 c configurations close to the soft-collinear limit
@@ -334,30 +338,30 @@ c configurations close to the soft-collinear limit
                wgt=1d0
                MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
+               calculatedBorn(amp_index)=.false.
                call set_cms_stuff(0)
-               calculatedBorn=.false.
+               calculatedBorn(amp_index)=.false.
 c Initialise shower_S_scale to a large value, not to get spurious dead zones
                shower_S_scale=1d10*ebeam(1)
                if(ilim.eq.0)then
-                  call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+                  call xmcsubt_wrap(p1_cnt(0,1,0,amp_index),zero,y_ij_fks_ev(amp_index),fx)
                else
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+                  call sreal(p1_cnt(0,1,0,amp_index),zero,y_ij_fks_ev(amp_index),fx)
                endif
             endif
             fxl(1)=fx*wgt
-            wfxl(1)=jac_cnt(0)
+            wfxl(1)=jac_cnt(0,amp_index)
             do iamp=1,amp_split_size
                if(ilim.eq.0)then
-                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0)
+                 fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(0,amp_index)
                else
-                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0)
+                 fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(0,amp_index)
                endif
-               wfxl_split(1,iamp)=jac_cnt(0)
+               wfxl_split(1,iamp)=jac_cnt(0,amp_index)
             enddo
             if (ilim.eq.2) then
                call set_cms_stuff(-100)
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+               call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
             else
 c Now generate the momenta for the original xi_i_fks=0.1, slightly shifted,
 c because otherwise fresh random will be used...
@@ -365,9 +369,9 @@ c because otherwise fresh random will be used...
                wgt=1d0
                MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
-               calculatedBorn=.false.
+               calculatedBorn(amp_index)=.false.
                call set_cms_stuff(-100)
-               call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+               call xmcsubt_wrap(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
@@ -382,13 +386,13 @@ c because otherwise fresh random will be used...
 
             do k=1,nexternal
                do l=0,3
-                  lxp(l,k)=p1_cnt(l,k,0)
+                  lxp(l,k)=p1_cnt(l,k,0,amp_index)
                   xp(1,l,k)=p(l,k)
                enddo
             enddo
             do l=0,3
-               lxp(l,nexternal+1)=p_i_fks_cnt(l,0)
-               xp(1,l,nexternal+1)=p_i_fks_ev(l)
+               lxp(l,nexternal+1)=p_i_fks_cnt(l,0,amp_index)
+               xp(1,l,nexternal+1)=p_i_fks_ev(l,amp_index)
             enddo
 
             do i=2,imax
@@ -397,27 +401,27 @@ c because otherwise fresh random will be used...
                MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                if (ilim.eq.2) then
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(0)
-                  call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+                  call sreal(p1_cnt(0,1,0,amp_index),zero,y_ij_fks_ev(amp_index),fx)
                   fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
+                  wfxl(i)=jac_cnt(0,amp_index)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0)
-                     wfxl_split(i,iamp)=jac_cnt(0)
+                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0,amp_index)
+                     wfxl_split(i,iamp)=jac_cnt(0,amp_index)
                   enddo
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
               else
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(-100)
-                  call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  call xmcsubt_wrap(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
                   fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
+                  wfxl(i)=jac_cnt(0,amp_index)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(0)
-                     wfxl_split(i,iamp)=jac_cnt(0)
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(0,amp_index)
+                     wfxl_split(i,iamp)=jac_cnt(0,amp_index)
                   enddo
                endif
                limit(i)=fx*wgt
@@ -436,7 +440,7 @@ c because otherwise fresh random will be used...
                   enddo
                enddo
                do l=0,3
-                  xp(i,l,nexternal+1)=p_i_fks_ev(l)
+                  xp(i,l,nexternal+1)=p_i_fks_ev(l,amp_index)
                enddo
             enddo
 
@@ -570,29 +574,29 @@ c
                ntry=ntry+1
             enddo
             if(ncolltests.le.10)write (*,*) 'ntry',ntry
-            calculatedBorn=.false.
+            calculatedBorn(amp_index)=.false.
             call set_cms_stuff(1)
             if(ilim.eq.0)then
-               call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx)
+               call xmcsubt_wrap(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx)
             else
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
+               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1,amp_index),one,fx) 
             endif
-            fxl(1)=fx*jac_cnt(1)
-            wfxl(1)=jac_cnt(1)
+            fxl(1)=fx*jac_cnt(1,amp_index)
+            wfxl(1)=jac_cnt(1,amp_index)
             do iamp=1,amp_split_size
               if(ilim.eq.0)then
-                fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1)
+                fxl_split(1,iamp) = amp_split_mc(iamp)*jac_cnt(1,amp_index)
               else
-                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1)
+                fxl_split(1,iamp) = amp_split(iamp)*jac_cnt(1,amp_index)
               endif
-               wfxl_split(1,iamp) = jac_cnt(1)
+               wfxl_split(1,iamp) = jac_cnt(1,amp_index)
             enddo
 
             call set_cms_stuff(-100)
             if (ilim.eq.2) then
-               call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+               call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
             else
-               call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+               call xmcsubt_wrap(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
             endif
             limit(1)=fx*wgt
             wlimit(1)=wgt
@@ -607,13 +611,13 @@ c
 
             do k=1,nexternal
                do l=0,3
-                  lxp(l,k)=p1_cnt(l,k,1)
-                  xp(1,l,k)=p(l,k)
+                  lxp(l,k)=p1_cnt(l,k,1,amp_index)
+                  xp(1,l,k)=p(l,k,amp_index)
                enddo
             enddo
             do l=0,3
-               lxp(l,nexternal+1)=p_i_fks_cnt(l,1)
-               xp(1,l,nexternal+1)=p_i_fks_ev(l)
+               lxp(l,nexternal+1)=p_i_fks_cnt(l,1,amp_index)
+               xp(1,l,nexternal+1)=p_i_fks_ev(l,amp_index)
             enddo
             
             do i=2,imax
@@ -622,27 +626,27 @@ c
                MCcntcalled=0
                call generate_momenta(ndim,iconfig,wgt,x,p)
                if (ilim.eq.2) then
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(1)
-                  call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
-                  fxl(i)=fx*jac_cnt(1)
-                  wfxl(i)=jac_cnt(1)
+                  call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx) 
+                  fxl(i)=fx*jac_cnt(1,amp_index)
+                  wfxl(i)=jac_cnt(1,amp_index)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1)
-                     wfxl_split(i,iamp) = jac_cnt(1)
+                     fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1,amp_index)
+                     wfxl_split(i,iamp) = jac_cnt(1,amp_index)
                   enddo
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(-100)
-                  call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
                else
-                  calculatedBorn=.false.
+                  calculatedBorn(amp_index)=.false.
                   call set_cms_stuff(-100)
-                  call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
+                  call xmcsubt_wrap(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx)
                   fxl(i)=fx*wgt
-                  wfxl(i)=jac_cnt(0)
+                  wfxl(i)=jac_cnt(0,amp_index)
                   do iamp=1,amp_split_size
-                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(1)
-                     wfxl_split(i,iamp) = jac_cnt(1)
+                     fxl_split(i,iamp) = amp_split_mc(iamp)*jac_cnt(1,amp_index)
+                     wfxl_split(i,iamp) = jac_cnt(1,amp_index)
                   enddo
                endif
                limit(i)=fx*wgt
@@ -661,7 +665,7 @@ c
                   enddo
                enddo
                do l=0,3
-                  xp(i,l,nexternal+1)=p_i_fks_ev(l)
+                  xp(i,l,nexternal+1)=p_i_fks_ev(l,amp_index)
                enddo
             enddo
             if(ncolltests.le.10)then

@@ -1,7 +1,9 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
-     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a)
+     &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale,shower_scale_a
+     &     ,amp_index)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use vectorize
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -38,10 +40,12 @@ c Random numbers
       double precision ran2
       external ran2
 
+      integer amp_index
+
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(ngraphs), jamp2(0:ncolor)
-      common/to_amps/  amp2,       jamp2
-!$OMP THREADPRIVATE (/TO_AMPS/)
+!      double Precision amp2(ngraphs), jamp2(0:ncolor)
+!      common/to_amps/  amp2,       jamp2
+!OMP THREADPRIVATE (/TO_AMPS/)
 
 C iforest and other configuration info. Read once and saved.
       integer itree_S_t(2,-max_branch:-1),sprop_tree_S_t(-max_branch:-1)
@@ -101,12 +105,12 @@ c For shifting QCD partons from zero to their mass-shell
       double precision x(99),p(0:3,99)
       integer mfail
       double precision xmi,xmj,xm1,xm2,emsum,tmpecm,dot,wgt
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+!      double precision p1_cnt(0:3,nexternal,-2:2)
+!      double precision wgt_cnt(-2:2)
+!      double precision pswgt_cnt(-2:2)
+!      double precision jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
       integer mohdr,izero
@@ -281,7 +285,7 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
          sumborn=0.d0
          do i=1,max_bcol
             if (icolamp(i,iBornGraph,1)) then
-               sumborn=sumborn+jamp2(i)
+               sumborn=sumborn+jamp2(i,amp_index)
             endif
          enddo
          if (sumborn.eq.0d0) then
@@ -290,7 +294,7 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
      $           ' than zero, because always QCD partons around',sumborn
      $           ,max_bcol
             do i=1,max_bcol
-               write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i)
+               write (*,*) i,iBornGraph,icolamp(i,iBornGraph,1),jamp2(i,amp_index)
             enddo
             stop
          endif
@@ -298,14 +302,14 @@ c$$$   read(hel_buf,'(15i5)') (jpart(7,i),i=1,nexternal)
 
          iflow=1
          if (icolamp(1,iBornGraph,1)) then
-            jampsum=jamp2(1)
+            jampsum=jamp2(1,amp_index)
          else
             jampsum=0d0
          endif
          do while (jampsum .lt. xtarget)
             iflow=iflow+1
             if (icolamp(iflow,iBornGraph,1)) then
-               jampsum=jampsum+jamp2(iflow)
+               jampsum=jampsum+jamp2(iflow,amp_index)
             endif
          enddo
          if (iflow.gt.max_bcol) then
@@ -359,7 +363,7 @@ c include initial state masses
          else
 c include initial state masses
             call set_cms_stuff(izero)
-            call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
+            call put_on_MC_mshell_in(p1_cnt(0,1,0,amp_index),xm1,xm2,mfail)
          endif
  888     continue
 c restore the common block for the masses to the original MG masses
@@ -371,9 +375,9 @@ c all went fine and we can copy the new momenta onto the old ones.
                   if(Hevents) then
                      pp(j,i)=p(j,i)
                   elseif(.not.Hevents .and. i.lt.max(i_fks,j_fks)) then
-                     p_born(j,i)=p1_cnt(j,i,0)
+                     p_born(j,i)=p1_cnt(j,i,0,amp_index)
                   elseif(.not.Hevents .and. i.gt.max(i_fks,j_fks)) then
-                     p_born(j,i-1)=p1_cnt(j,i,0)
+                     p_born(j,i-1)=p1_cnt(j,i,0,amp_index)
                   endif
                enddo
             enddo
@@ -716,10 +720,11 @@ c t-channels around
 
 
       subroutine OnBreitWigner(p,p_born,Hevents,itree,sprop_tree,
-     &     pmass,pwidth,OnBW)
+     &     pmass,pwidth,OnBW, amp_index)
 c*****************************************************************************
 c Decides if internal s-channel propagator is on-shell
 c*****************************************************************************
+      use vectorize
       implicit none
 c
 c     Constants
@@ -755,10 +760,13 @@ c kept fixed between events and counter events:
       integer igranny
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      logical write_granny(fks_configs)
-      integer which_is_granny(fks_configs)
-      common/write_granny_resonance/which_is_granny,write_granny
-!$OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
+
+      integer amp_index
+
+!      logical write_granny(fks_configs)
+!      integer which_is_granny(fks_configs)
+!      common/write_granny_resonance/which_is_granny,write_granny
+!OMP THREADPRIVATE (/WRITE_GRANNY_RESONANCE/)
 
 
 c-----
@@ -785,7 +793,7 @@ c-----
          enddo
       enddo
 
-      igranny=which_is_granny(nFKSprocess)
+      igranny=which_is_granny(nFKSprocess,amp_index)
       if (Hevents .and. igranny.ne.0 )igranny=igranny-1
 c
       do i=-1,-iloop,-1                      !Loop over propagators
@@ -801,9 +809,9 @@ c If s-channel is the grandmother, check if we need to write this
 c resonance. In that case, ignore the bwcutoff parameter. In this case,
 c also ignore the special case where both mother and daughter could be
 c resonant.
-            if (i.eq.igranny .and. .not. write_granny(nFKSprocess))then
+            if (i.eq.igranny .and. .not. write_granny(nFKSprocess,amp_index))then
                cycle
-            elseif(i.eq.igranny .and. write_granny(nFKSprocess))then
+            elseif(i.eq.igranny .and. write_granny(nFKSprocess,amp_index))then
                xmass = sqrt(dot(xp(0,i),xp(0,i)))
                onshell=.true.
             else
@@ -1368,17 +1376,20 @@ c
       end
 
 
-      subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail)
+      subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail, amp_index)
+      use vectorize
       implicit none
       include 'nexternal.inc'
       double precision p(0:3,nexternal),xm1,xm2
       integer mfail
       double precision xm1_r,xm2_r
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+      integer amp_index
+
+!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
+!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
+!     #                        sqrtshat(amp_index),shat(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
 c
@@ -1392,15 +1403,15 @@ c
         write(*,*)'Error #1 in put_on_MC_mshell_in',p(3,1),p(3,2)
         stop
       endif
-      if(shat.le.(xm1+xm2)**2)then
+      if(shat(amp_index).le.(xm1+xm2)**2)then
         mfail=1
         return
       endif
       xm1_r=xm1
       xm2_r=xm2
-c$$$CHECK AGAIN USE OF ybst_til_tolab IN getxmss.
+c$$$CHECK AGAIN USE OF ybst_til_tolab(amp_index) IN getxmss.
 c$$$MUST BE THE SAME BOOST AS WHEN WRITING EVENTS
-      call getxmss_madfks(shat,ybst_til_tolab,
+      call getxmss_madfks(shat(amp_index),ybst_til_tolab(amp_index),
      #                    p(3,1),xm1_r,p(3,2),xm2_r,
      #                    p(3,1),p(3,2),mfail)
       if(mfail.eq.0)then
@@ -1699,7 +1710,8 @@ c
       end
 
 
-      subroutine put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail)
+      subroutine put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail, amp_index)
+      use vectorize
       implicit none
       double precision p(0:3,99),xmi,xm1,xm2
       integer mfail
@@ -1713,10 +1725,12 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 
-      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
-      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
-     #                        sqrtshat,shat
-!$OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
+      integer amp_index
+
+!      double precision ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),sqrtshat(amp_index),shat(amp_index)
+!      common/parton_cms_stuff/ybst_til_tolab(amp_index),ybst_til_tocm(amp_index),
+!     #                        sqrtshat(amp_index),shat(amp_index)
+!OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
       double precision xmcmass(nexternal)
       common/cxmcmass/xmcmass
@@ -1733,8 +1747,8 @@ c
       endif
 c
       stot=4d0*ebeam(1)*ebeam(2)
-      chy=cosh(ybst_til_tocm)
-      shy=sinh(ybst_til_tocm)
+      chy=cosh(ybst_til_tocm(amp_index))
+      shy=sinh(ybst_til_tocm(amp_index))
       chymo=chy-1.d0
       do i=0,3
         p1(i)=p(i,1)
@@ -1757,17 +1771,17 @@ c        write(*,*) 'xk:',(xk(i),i=0,3)
       q0=p1(0)+p2(0)-xk(0)
       xk(0)=sqrt(xmi**2+rho(xk)**2)
       shatp=(q0+xk(0))**2
-      if(shatp.lt.shat*0.9999d0)then
-        write(*,*)'Error #2 in put_on_MC_mshell_Hevin',shat,shatp
+      if(shatp.lt.shat(amp_index)*0.9999d0)then
+        write(*,*)'Error #2 in put_on_MC_mshell_Hevin',shat(amp_index),shatp
         stop
-      elseif(shatp.le.shat)then
-        shatp=shat
+      elseif(shatp.le.shat(amp_index))then
+        shatp=shat(amp_index)
       endif
       if(shatp.ge.stot)then
         mfail=1
         return
       endif
-      ybst_cm_tolab=ybst_til_tolab-ybst_til_tocm
+      ybst_cm_tolab=ybst_til_tolab(amp_index)-ybst_til_tocm(amp_index)
       xm1_r=xm1
       xm2_r=xm2
       call getxmss_madfks(shatp,ybst_cm_tolab,

@@ -149,11 +149,12 @@ c     fully ensure that this is not a jet/lepton/photon
       END
 
 
-      subroutine set_tau_min()
+      subroutine set_tau_min(amp_index)
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
       use mint_module
+      use vectorize
       implicit none
       double precision zero,vtiny
       parameter (zero=0.d0,vtiny=1d-8)
@@ -200,17 +201,21 @@ c BW stuff
      $     ,maxchannels)
       save cBW_FKS_level_max,cBW_FKS,cBW_FKS_level,cBW_FKS_mass
      $     ,cBW_FKS_width
-      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-1:1,-nexternal:-1),
-     &     cBW_width(-1:1,-nexternal:-1)
-      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
-     $     ,cBW_level
-!$OMP THREADPRIVATE (/C_CONFLICTINGBW/)
-      double precision s_mass(-nexternal:nexternal)
-     $     ,s_mass_FKS(fks_configs,-nexternal:nexternal,maxchannels)
+
+      integer amp_index
+
+!      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+!      double precision cBW_mass(-1:1,-nexternal:-1),
+!     &     cBW_width(-1:1,-nexternal:-1)
+!      common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
+!     $     ,cBW_level
+!OMP THREADPRIVATE (/C_CONFLICTINGBW/)
+!      double precision s_mass(-nexternal:nexternal)
+!     $     ,s_mass_FKS(fks_configs,-nexternal:nexternal,maxchannels)
+      double precision s_mass_FKS(fks_configs,-nexternal:nexternal,maxchannels)
       save s_mass_FKS
-      common/to_phase_space_s_channel/s_mass
-!$OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
+!      common/to_phase_space_s_channel/s_mass
+!OMP THREADPRIVATE (/TO_PHASE_SPACE_S_CHANNEL/)
 c Les Houches common block
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
@@ -614,17 +619,17 @@ c
       tau_lower_bound=taumin_j(nFKSprocess,ichan)**2/stot
       tau_lower_bound_resonance=taumin_s(nFKSprocess,ichan)**2/stot
       do i=-nexternal,-1
-         cBW(i)=cBW_FKS(nFKSprocess,i,ichan)
-         cBW_level(i)=cBW_FKS_level(nFKSprocess,i,ichan)
+         cBW(i,amp_index)=cBW_FKS(nFKSprocess,i,ichan)
+         cBW_level(i,amp_index)=cBW_FKS_level(nFKSprocess,i,ichan)
          do j=-1,1,2
-            cBW_mass(j,i)=cBW_FKS_mass(nFKSprocess,j,i,ichan)
-            cBW_width(j,i)=cBW_FKS_width(nFKSprocess,j,i,ichan)
+            cBW_mass(j,i,amp_index)=cBW_FKS_mass(nFKSprocess,j,i,ichan)
+            cBW_width(j,i,amp_index)=cBW_FKS_width(nFKSprocess,j,i,ichan)
          enddo
       enddo
       do i=-nexternal,nexternal
-         s_mass(i)=s_mass_FKS(nFKSprocess,i,ichan)
+         s_mass(i,amp_index)=s_mass_FKS(nFKSprocess,i,ichan)
       enddo
-      cBW_level_max=cBW_FKS_level_max(nFKSprocess,ichan)
+      cBW_level_max(amp_index)=cBW_FKS_level_max(nFKSprocess,ichan)
       call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
       return
       end

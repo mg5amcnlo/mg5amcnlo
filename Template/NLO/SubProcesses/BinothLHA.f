@@ -554,16 +554,20 @@ c weight, screwing up the complete integration afterward.
       end
 
 
-      subroutine BinothLHAInit(filename)
+      subroutine BinothLHAInit(filename, amp_index)
+      use vectorize
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       integer status,procnum
       double precision s,mu,sumdot
       external sumdot
-      double precision p_born(0:3,nexternal-1)
-      common/pborn/p_born
-!$OMP THREADPRIVATE (/PBORN/)
+
+      integer amp_index
+
+!      double precision p_born(0:3,nexternal-1)
+!      common/pborn/p_born
+!OMP THREADPRIVATE (/PBORN/)
       character*13 filename
       common /LH_procnum /procnum
 

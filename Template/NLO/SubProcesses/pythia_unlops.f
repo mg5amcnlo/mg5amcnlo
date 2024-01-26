@@ -1,5 +1,5 @@
 
-      subroutine pythia_UNLOPS(p,passUNLOPScuts)
+      subroutine pythia_UNLOPS(p,passUNLOPScuts,amp_index)
 c Cut to apply are the following theta functions:
 c    [ B + V + int R \theta(ptj - d(\phi_R)) ] \theta(d(\phi_B)-ptj)
 c where ptj is the input merging scale and d(\phi) is the scale of the
@@ -7,6 +7,7 @@ c first cluster in the \phi phase-space. This means that for the
 c real-emission momentum, we also have to apply a cut on the Born
 c momentum at the same time. Hence, the Born momenta need to be passed
 c here as well (via a common block)
+      use vectorize
       implicit none
       include "nexternal.inc"
       include "genps.inc"
@@ -24,12 +25,13 @@ c arguments
       double precision pin(5,nexternal)
       integer id(nexternal),ist(nexternal)
 c Born momenta
-      double precision p1_cnt(0:3,nexternal,-2:2)
-      double precision wgt_cnt(-2:2)
-      double precision pswgt_cnt(-2:2)
-      double precision jac_cnt(-2:2)
-      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
-!$OMP THREADPRIVATE (/COUNTEREVNTS/)
+!      double precision p1_cnt(0:3,nexternal,-2:2)
+!      double precision wgt_cnt(-2:2)
+!      double precision pswgt_cnt(-2:2)
+!      double precision jac_cnt(-2:2)
+!      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      integer amp_index
+!OMP THREADPRIVATE (/COUNTEREVNTS/)
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c cut
@@ -94,7 +96,7 @@ c or counter-event, we only need one scale.
             if (i.eq.i_fks) cycle
             npart=npart+1
             do j=1,4
-               pin(j,npart)=p1_cnt(mod(j,4),i,0)
+               pin(j,npart)=p1_cnt(mod(j,4),i,0,amp_index)
             enddo
             pin(5,npart)=pmass(i)
             if (i.le.nincoming) then
