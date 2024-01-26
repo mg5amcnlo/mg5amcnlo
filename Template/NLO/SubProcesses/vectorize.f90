@@ -267,6 +267,176 @@ contains
          !ZW: Ellis-Sexton scale
          allocate(QES2(vector_size))
    end subroutine allocate_storage
-   ! Add other module procedures here if necessary
+
+   subroutine deallocate_storage
+        ! Deallocate dynamic arrays allocated in allocate_storage
+
+        ! Deallocating AMP arrays
+        if (allocated(AMP_SPLIT_STORE_R)) deallocate(AMP_SPLIT_STORE_R)
+        if (allocated(AMP_SPLIT_STORE_B)) deallocate(AMP_SPLIT_STORE_B)
+        if (allocated(AMP_SPLIT_STORE_CNT)) deallocate(AMP_SPLIT_STORE_CNT)
+        if (allocated(AMP_SPLIT_STORE_BSF)) deallocate(AMP_SPLIT_STORE_BSF)
+
+        ! Deallocating parton_cms_stuff arrays
+        if (allocated(ybst_til_tolab)) deallocate(ybst_til_tolab)
+        if (allocated(ybst_til_tocm)) deallocate(ybst_til_tocm)
+        if (allocated(sqrtshat)) deallocate(sqrtshat)
+        if (allocated(shat)) deallocate(shat)
+
+        ! Deallocating p_born array
+        if (allocated(p_born)) deallocate(p_born)
+
+        ! Deallocating FKSvariables arrays
+        if (allocated(xi_i_fks_ev)) deallocate(xi_i_fks_ev)
+        if (allocated(y_ij_fks_ev)) deallocate(y_ij_fks_ev)
+        if (allocated(p_i_fks_ev)) deallocate(p_i_fks_ev)
+        if (allocated(p_i_fks_cnt)) deallocate(p_i_fks_cnt)
+
+        ! Deallocating calculatedBorn array
+        if (allocated(calculatedBorn)) deallocate(calculatedBorn)
+
+        ! Deallocating c_FxFx_scales arrays
+        if (allocated(nFxFx_ren_scales)) deallocate(nFxFx_ren_scales)
+        if (allocated(FxFx_ren_scales)) deallocate(FxFx_ren_scales)
+        if (allocated(FxFx_fac_scale)) deallocate(FxFx_fac_scale)
+
+        ! Deallocating counterevents arrays
+        if (allocated(p1_cnt)) deallocate(p1_cnt)
+        if (allocated(wgt_cnt)) deallocate(wgt_cnt)
+        if (allocated(pswgt_cnt)) deallocate(pswgt_cnt)
+        if (allocated(jac_cnt)) deallocate(jac_cnt)
+
+        ! Deallocating cxiifkscnt array
+        if (allocated(xi_i_fks_cnt)) deallocate(xi_i_fks_cnt)
+
+        ! Deallocating cgenps_fks arrays
+        if (allocated(veckn_ev)) deallocate(veckn_ev)
+        if (allocated(veckbarn_ev)) deallocate(veckbarn_ev)
+        if (allocated(xp0jfks)) deallocate(xp0jfks)
+
+        ! Deallocating cbjorkenx arrays
+        if (allocated(xbjrk_ev)) deallocate(xbjrk_ev)
+        if (allocated(xbjrk_cnt)) deallocate(xbjrk_cnt)
+
+        ! Deallocating to_amps arrays
+        if (allocated(amp2)) deallocate(amp2)
+        if (allocated(jamp2)) deallocate(jamp2)
+
+        ! Deallocating cxij_aor array
+        if (allocated(xij_aor)) deallocate(xij_aor)
+
+        ! Deallocating cnbody array
+        if (allocated(nbody)) deallocate(nbody)
+
+        ! Deallocating cxiimaxcnt array
+        if (allocated(xi_i_max_cnt)) deallocate(xi_i_max_cnt)
+
+        ! Deallocating cxi_i_hat arrays
+        if (allocated(xi_i_hat_ev)) deallocate(xi_i_hat_ev)
+        if (allocated(xi_i_hat_cnt)) deallocate(xi_i_hat_cnt)
+
+        ! Deallocating cxinormev array
+        if (allocated(xi_norm_ev)) deallocate(xi_norm_ev)
+
+        ! Deallocating cximaxev array
+        if (allocated(xi_i_max_ev)) deallocate(xi_i_max_ev)
+
+        ! Deallocating pborn_ev array
+        if (allocated(p_born_ev)) deallocate(p_born_ev)
+
+        ! Deallocating pborn_coll array
+        if (allocated(p_born_coll)) deallocate(p_born_coll)
+
+        ! Deallocating pborn_norad array
+        if (allocated(p_born_norad)) deallocate(p_born_norad)
+
+        ! Deallocating pev array
+        if (allocated(p_ev)) deallocate(p_ev)
+
+        ! Deallocating c_granny_res arrays
+        if (allocated(igranny)) deallocate(igranny)
+        if (allocated(iaunt)) deallocate(iaunt)
+        if (allocated(granny_chain)) deallocate(granny_chain)
+        if (allocated(granny_is_res)) deallocate(granny_is_res)
+        if (allocated(granny_chain_real_final)) deallocate(granny_chain_real_final)
+
+        ! Deallocating cnocntevents array
+        if (allocated(nocntevents)) deallocate(nocntevents)
+
+        ! Deallocating parton_cms_ev arrays
+        if (allocated(sqrtshat_ev)) deallocate(sqrtshat_ev)
+        if (allocated(shat_ev)) deallocate(shat_ev)
+
+        ! Deallocating parton_cms_cnt arrays
+        if (allocated(sqrtshat_cnt)) deallocate(sqrtshat_cnt)
+        if (allocated(shat_cnt)) deallocate(shat_cnt)
+
+        ! Deallocating cbjrk12_ev arrays
+        if (allocated(tau_ev)) deallocate(tau_ev)
+        if (allocated(ycm_ev)) deallocate(ycm_ev)
+
+        ! Deallocating cbrjk12_cnt arrays
+        if (allocated(tau_cnt)) deallocate(tau_cnt)
+        if (allocated(ycm_cnt)) deallocate(ycm_cnt)
+
+        ! Deallocating to_amp_split_soft array
+        if (allocated(amp_split_soft)) deallocate(amp_split_soft)
+
+        ! Deallocating c_vegas_x array
+        if (allocated(xvar)) deallocate(xvar)
+
+        ! Deallocating c_rat_xi array
+        if (allocated(rat_xi_orig)) deallocate(rat_xi_orig)
+
+        ! Deallocating to_virtgranny array
+        if (allocated(granny_m2_red)) deallocate(granny_m2_red)
+
+        ! Deallocating pborn_l array
+        if (allocated(p_born_l)) deallocate(p_born_l)
+
+        ! Deallocating virtgranny_boost arrays
+        if (allocated(shybst)) deallocate(shybst)
+        if (allocated(chybst)) deallocate(chybst)
+        if (allocated(chybstmo)) deallocate(chybstmo)
+
+        ! Deallocating cgrannyrange arrays
+        if (allocated(xmbemin2)) deallocate(xmbemin2)
+        if (allocated(xmbemax2)) deallocate(xmbemax2)
+
+        ! Deallocating coffset array
+        if (allocated(offset)) deallocate(offset)
+
+        ! Deallocating c_skip_only_event_phsp arrays
+        if (allocated(only_event_phsp)) deallocate(only_event_phsp)
+        if (allocated(skip_event_phsp)) deallocate(skip_event_phsp)
+
+        ! Deallocating write_granny_resonance arrays
+        if (allocated(which_is_granny)) deallocate(which_is_granny)
+        if (allocated(write_granny)) deallocate(write_granny)
+
+        ! Deallocating c_isolsign array
+        if (allocated(isolsign)) deallocate(isolsign)
+
+        ! Deallocating conflicting BW stuff arrays
+        if (allocated(cBW_mass)) deallocate(cBW_mass)
+        if (allocated(cBW_width)) deallocate(cBW_width)
+        if (allocated(cBW_level_max)) deallocate(cBW_level_max)
+        if (allocated(cBW)) deallocate(cBW)
+        if (allocated(cBW_level)) deallocate(cBW_level)
+
+        ! Deallocating to_phase_space_s_channel array
+        if (allocated(s_mass)) deallocate(s_mass)
+
+        ! Deallocating Ellis-Sexton scale array
+        if (allocated(QES2)) deallocate(QES2)
+
+        ! Deallocating OMX_EE
+        ! if (allocated(omx_ee)) deallocate(omx_ee)
+
+   end subroutine deallocate_storage
+
+         
+
+   
 end module vectorize
 !ZW
