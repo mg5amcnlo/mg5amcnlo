@@ -638,7 +638,7 @@ contains
     ! fill the ntotcalls() array with the total number of calls used
     ! and check if this is enough for this iteration.
     implicit none
-    include 'vectorize.inc'
+!    include 'vectorize.inc'
     logical :: enough_points
     integer :: i
     do i=1,nintegrals
