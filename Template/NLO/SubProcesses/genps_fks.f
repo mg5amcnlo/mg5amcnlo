@@ -1445,7 +1445,7 @@ c
  112  continue
 
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat(amp_index),sqrtshat(amp_index),xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,amp_index)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
@@ -1774,7 +1774,7 @@ c
  112  continue
 
       call fill_FKS_commons(icountevts,tau,ycm,ycm_born,shat(amp_index),sqrtshat(amp_index),xbjrk,
-     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac)
+     $      xiimax,xinorm,xi_i_fks,xi_i_hat,p_i_fks,y_ij_fks,xp,p,xjac,jac,amp_index)
 c
       if(icountevts.eq.-100)then
          if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
@@ -2051,8 +2051,8 @@ c Fill common blocks
       if (icountevts.eq.-100) then
          tau_ev(amp_index)=tau
          ycm_ev(amp_index)=ycm
-         shat_ev(amp_index)=shat(amp_index)
-         sqrtshat_ev(amp_index)=sqrtshat(amp_index)
+         shat_ev(amp_index)=shat
+         sqrtshat_ev(amp_index)=sqrtshat
          xbjrk_ev(1,amp_index)=xbjrk(1)
          xbjrk_ev(2,amp_index)=xbjrk(2)
          xiimax_ev(amp_index)=xiimax
@@ -2079,8 +2079,8 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
             ycm=ycm_born
          endif
          ycm_cnt(icountevts,amp_index)=ycm
-         shat_cnt(icountevts,amp_index)=shat(amp_index)
-         sqrtshat_cnt(icountevts,amp_index)=sqrtshat(amp_index)
+         shat_cnt(icountevts,amp_index)=shat
+         sqrtshat_cnt(icountevts,amp_index)=sqrtshat
          xbjrk_cnt(1,icountevts,amp_index)=xbjrk(1)
          xbjrk_cnt(2,icountevts,amp_index)=xbjrk(2)
          xiimax_cnt(icountevts,amp_index)=xiimax
