@@ -536,6 +536,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                     matrix_element, 
                                     fortran_model)
 
+        filename = 'nFKSconfigs.f90'
+        self.write_nfksconfigs_mod_file(writers.FortranWriter(filename), 
+                                    matrix_element, 
+                                    fortran_model)
+
         filename = 'iproc.dat'
         self.write_iproc_file(writers.FortranWriter(filename),
                               me_number)
@@ -619,6 +624,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
+
+        filename = 'nexternal.f90'
+        self.write_nexternal_mod_file(writers.FortranWriter(filename),
+                             nexternal, ninitial)
+
 
         filename = 'orders.inc'
         amp_split_orders, amp_split_size, amp_split_size_born = \
@@ -3012,6 +3022,45 @@ Parameters              %(params)s\n\
       PARAMETER (FKS_CONFIGS=%(nconfs)d)
       
 """   % replace_dict
+
+        writer.writelines(content)
+
+    #===============================================================================
+    # write_nfksconfigs_mod_file
+    #===============================================================================
+    def write_nfksconfigs_mod_file(self, writer, fksborn, fortran_model):
+        """Writes the content of nFKSconfigs.f90, which just gives the
+        total FKS dirs as a parameter.
+        nFKSconfigs is always >=1 (use a fake configuration for LOonly)"""
+        replace_dict = {}
+        replace_dict['nconfs'] = max(len(fksborn.get_fks_info_list()), 1)
+        content = \
+"""module mod_nfksconfigs
+    implicit none
+    INTEGER,parameter:: FKS_CONFIGS_mod=%(nconfs)d
+end module mod_nfksconfigs
+"""   % replace_dict
+
+        writer.writelines(content)
+
+
+    #===============================================================================
+    # write_nexternal_mod_file
+    #===============================================================================
+    def write_nexternal_mod_file(self, writer, nexternal, ninitial):
+        """Write the nexternal.f90 file for MG4"""
+
+        replace_dict = {}
+
+        replace_dict['nexternal'] = nexternal
+        replace_dict['ninitial'] = ninitial
+
+        content = """ \
+module mod_nexternal
+    implicit none
+    integer,parameter ::  nexternal_mod=%(nexternal)d
+    integer,parameter ::  nincoming_mod=%(ninitial)d
+end module mod_nexternal\n""" % replace_dict
 
         writer.writelines(content)
 

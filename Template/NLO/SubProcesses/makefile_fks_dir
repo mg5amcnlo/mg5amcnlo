@@ -48,7 +48,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 get_color.o iproc_map.o sudakov.o				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o polfit.o	\
-	 vectorize.o
+	 nFKSconfigs.o nexternal.o vectorize.o
 
 # Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
@@ -135,6 +135,7 @@ reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
 
+vectorize.o : nexternal.o nFKSconfigs.o
 mint_module.o : FKSParams.o vectorize.o
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o vectorize.o
