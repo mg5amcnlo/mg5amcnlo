@@ -58,6 +58,7 @@ c     effective w/z/a approximation (leading log fixed order, not resummed)
       integer ppid
       integer ievo,ievo_eva
       common/to_eva/ievo_eva
+      common/to_eva/ievo_evaNLP
       integer hel,helMulti,hel_picked
       double precision hel_jacobian
       common/hel_picked/hel_picked,hel_jacobian
