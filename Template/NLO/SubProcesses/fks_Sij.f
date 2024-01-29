@@ -27,6 +27,8 @@ c
 c 
       Double precision function fks_Sij(p,ii_fks,jj_fks,
      #                                  xi_i_fks,y_ij_fks,amp_index)
+      use parton_cms_stuff
+      use fksvariables
       implicit none
 
       include "nexternal.inc"
@@ -222,13 +224,13 @@ c         firsttime=.false.
      &                ii_fks,particle_type(ii_fks),
      &                jj_fks,particle_type(jj_fks),
      &                ii_fks,jj_fks,ione,
-     &                xnum,setsijzero)
+     &                xnum,setsijzero,amp_index)
             call get_dkl_Sij(phat_ii,p(0,ll),
      &                p(0,ione),p(0,itwo),one,
      &                ii_fks,particle_type(ii_fks),
      &                ll,particle_type(ll),
      &                ii_fks,jj_fks,ione,
-     &                xden,setsijzero)
+     &                xden,setsijzero,amp_index)
             if(setsijzero)then
               fks_Sij=0d0
               return
@@ -240,13 +242,13 @@ c         firsttime=.false.
      &                ii_fks,particle_type(ii_fks),
      &                jj_fks,particle_type(jj_fks),
      &                ii_fks,jj_fks,ione,
-     &                xnum,setsijzero)
+     &                xnum,setsijzero,amp_index)
             call get_dkl_Sij(phat_ii,p(0,kk),
      &                p(0,ione),p(0,itwo),one,
      &                ii_fks,particle_type(ii_fks),
      &                kk,particle_type(kk),
      &                ii_fks,jj_fks,ione,
-     &                xden,setsijzero)
+     &                xden,setsijzero,amp_index)
             if(setsijzero)then
               fks_Sij=0d0
               return
@@ -258,13 +260,13 @@ c         firsttime=.false.
      &                ii_fks,particle_type(ii_fks),
      &                jj_fks,particle_type(jj_fks),
      &                ii_fks,jj_fks,itwo,
-     &                xnum,setsijzero)
+     &                xnum,setsijzero,amp_index)
             call get_dkl_Sij(p(0,kk),p(0,ll),
      &                p(0,ione),p(0,itwo),one,
      &                kk,particle_type(kk),
      &                ll,particle_type(ll),
      &                ii_fks,jj_fks,itwo,
-     &                xden,setsijzero)
+     &                xden,setsijzero,amp_index)
             if(setsijzero)then
               fks_Sij=0d0
               return
@@ -296,7 +298,8 @@ c         firsttime=.false.
      #                       i1,itype1,i2,itype2,
      #                       ii_fks,jj_fks,ioneortwo,
      #                       dkl_Sij,setsijzero,amp_index)
-      use vectorize  
+      !use vectorize  
+      use parton_cms_stuff
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3),E1resc,dkl_Sij
       integer i1,itype1,i2,itype2,ii_fks,jj_fks,ioneortwo
@@ -334,7 +337,7 @@ c         firsttime=.false.
       E2=-1.d0
       if(ioneortwo.eq.2)then
         if(itype1.eq.8.or.(itype1.ne.8.and.useenergy))then
-          E1=get_cms_energy(p1,ka,kb)
+          E1=get_cms_energy(p1,ka,kb,amp_index)
           energy=energy*E1*E1resc/(sqrtshat(amp_index)/2d0)
           setsijzero=setsijzero.or.
      #               (E1*E1resc).lt.(vtiny*sqrtshat(amp_index)/2d0)
@@ -351,7 +354,7 @@ c         firsttime=.false.
       if(setsijzero)return
 
       if(itype2.eq.8.or.(itype2.ne.8.and.useenergy))then
-        E2=get_cms_energy(p2,ka,kb)
+        E2=get_cms_energy(p2,ka,kb,amp_index)
         energy=energy*E2/(sqrtshat(amp_index)/2.d0)
         setsijzero=setsijzero.or.
      #             E2.lt.(vtiny*sqrtshat(amp_index)/2d0)
@@ -372,7 +375,7 @@ c         firsttime=.false.
 
       beta=1.d0
       call get_cms_costh_fks(p1,p2,ka,kb,E1,E2,pmass(i1),pmass(i2),
-     #                       beta1,beta2,costhfks)
+     #                       beta1,beta2,costhfks,amp_index)
       if(itype1.ne.8.and.pmass(i1).ne.zero .and. usebeta)
      #  beta=beta*beta1
       if(itype2.ne.8.and.pmass(i2).ne.zero .and. usebeta)
@@ -402,7 +405,8 @@ c         firsttime=.false.
 c Given the momentum p in the \tilde{k}_1+\tilde{k}_2 c.m. frame, returns
 c the energy component of p in the k_1+k_2 c.m. frame. Here,
 c ka=\tilde{k}_1, ,kb=\tilde{k}_2
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       real*8 p(0:3),ka(0:3),kb(0:3)
       double precision dot,xden,xnum,tmp
@@ -437,7 +441,8 @@ c
 c Given the momenta p1 and p2 in the \tilde{k}_1+\tilde{k}_2 c.m. frame, 
 c returns the velocities beta1 and beta2, and the 3-angle between p1 and p2
 c in the k_1+k_2 c.m. frame. Here, ka=\tilde{k}_1, ,kb=\tilde{k}_2
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3)
       real*8 E1,E2,xm1,xm2,beta1,beta2,costhfks
@@ -458,9 +463,9 @@ c
         beta1=sqrt(1-(xm1/p1(0))**2)
         beta2=sqrt(1-(xm2/p2(0))**2)
       else
-        if(E1.lt.0.d0)E1=get_cms_energy(p1,ka,kb)
+        if(E1.lt.0.d0)E1=get_cms_energy(p1,ka,kb,amp_index)
         beta1=sqrt(1-(xm1/E1)**2)
-        if(E2.lt.0.d0)E2=get_cms_energy(p2,ka,kb)
+        if(E2.lt.0.d0)E2=get_cms_energy(p2,ka,kb,amp_index)
         beta2=sqrt(1-(xm2/E2)**2)
         tmp=(1-dot(p1,p2)/(E1*E2))/(beta1*beta2)
         if((abs(tmp)-1.d0).gt.tiny)then
@@ -539,7 +544,8 @@ c
 
 
       Double precision function fks_Hij(p,ii_fks,jj_fks, amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
 
       include "nexternal.inc"

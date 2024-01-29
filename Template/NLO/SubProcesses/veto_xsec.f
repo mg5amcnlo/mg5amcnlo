@@ -86,7 +86,8 @@ C-----
       subroutine compute_veto_compensating_factor(H1_factor_virt,
      $     born_wgt,muSoft,muHard,veto_compensating_factor, amp_index)
 c 2nd term on 3rd line of eq.(20) of arXiv:1412.8408
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       include 'q_es.inc'
       include 'coupl.inc'
@@ -133,7 +134,9 @@ c compensating factor for difference between muMad and the soft scale mu
       subroutine compute_veto_multiplier(H1_factor_virt,muSoft,muHard
      &     ,veto_multiplier,amp_index)
 c 2nd line of eq.(20) of arXiv:1412.8408
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+      use counterevnts
       implicit none
       include 'nexternal.inc'
       include 'q_es.inc'

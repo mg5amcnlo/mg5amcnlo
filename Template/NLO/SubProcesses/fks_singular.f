@@ -2,7 +2,10 @@
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
-      use vectorize
+      !use vectorize
+      use pborn
+      use cxiimaxcnt
+      use cxi_i_hat
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -55,7 +58,8 @@ c to the list of weights using the add_wgt subroutine
 
 
       subroutine compute_6to5flav_cnt(amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
 C This is the counterterm for the 6f->5f scheme change 
 C of parton distributions (e.g. NNPDF2.3). 
 C It is called in this function such that if is included
@@ -160,7 +164,8 @@ C      gluon in the initial state
 
 
       subroutine compute_alpha_cnt(amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
 C This is the counterterm for the change of scheme
 C in the UV renormalisation for alpha in (leptonic) PDFs
 C wrt the hard matrix element. Relevant for lepton collisions. 
@@ -319,7 +324,10 @@ c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
       use mint_module
-      use vectorize
+      !use vectorize
+      use counterevnts 
+      use cxiimaxcnt
+      use cxi_i_hat
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -514,7 +522,8 @@ C wrt the hard matrix element. Relevant for lepton collisions.
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
-      use vectorize
+      !use vectorize
+      use fksvariables
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -568,7 +577,11 @@ c its value to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use cxiimaxcnt
+      use cxi_i_hat
+      use fksvariables
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -647,7 +660,10 @@ c the list of weights using the add_wgt subroutine
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
       use extra_weights
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use fksvariables
+      use cxiifkscnt
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -756,7 +772,13 @@ c to the list of weights using the add_wgt subroutine
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
       use extra_weights
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use fksvariables
+      use cxiifkscnt
+      use cxiimaxcnt
+      use cxi_i_hat
+
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
@@ -880,7 +902,8 @@ c value to the list of weights using the add_wgt subroutine
 
       subroutine compute_MC_subt_term(p,passcuts,gfactsf,gfactcl,probne,amp_index)
       use extra_weights
-      use vectorize
+      ! use vectorize
+      use fksvariables
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
 c their values to the list of weights using the add_wgt subroutine. It
@@ -1086,7 +1109,9 @@ c     iterm=  2 : Sudakov for n-body kinematics (all but f_b and f_nb)
 c     iterm=  3 : Sudakov for n+1-body kinematics
 c     iterm= -1 or -2 : only restore scales for n-body w/o recomputing
 c     iterm= -3 : only restore scales for n+1-body w/o recomputing
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use c_fxfx_scales
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1294,7 +1319,11 @@ c i.e. all the nbody contributions. Also initialises the plots and
 c bpower.
       use extra_weights
       use mint_module
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use cxinormev
+      use cxiimaxev
+      use parton_cms_stuff
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1375,7 +1404,17 @@ c f_* multiplication factors for Born and nbody
 
 
       subroutine include_multichannel_enhance(imode,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use pborn_ev
+      use pborn_coll
+      use pborn_norad
+      use pev
+      use counterevnts
+      use c_granny_res
+      use ccalculatedborn
+      use to_amps
+
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1574,7 +1613,17 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
       subroutine compute_prefactors_n1body(vegas_wgt,jac_ev,amp_index)
 c Compute all relevant prefactors for the real emission and counter
 c terms.
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use fksvariables
+      use cxiifkscnt
+      use cxinormev
+      use cxinormcnt
+      use cxiimaxev
+      use cxiimaxcnt
+      use parton_cms_stuff
+      use cnocntevents
+
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1840,7 +1889,11 @@ c        contribution
       use weight_lines
       use extra_weights
       use FKSParams
-      use vectorize
+      !use vectorize
+      use pborn
+      use pev
+      use parton_cms_stuff
+      use counterevnts
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -3586,7 +3639,8 @@ c n1body_wgt is used for the importance sampling over FKS directories
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
       use weight_lines
-      use vectorize
+      !use vectorize
+      use write_granny_resonance
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
@@ -4151,7 +4205,9 @@ c
 
 
       subroutine set_shower_scale(p,iFKS,Hevents,amp_index)
-      use vectorize
+      !use vectorize
+      use fksvariables
+      use parton_cms_ev
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
@@ -4356,7 +4412,10 @@ c Safety measure
 
 
       subroutine set_shower_scale_noshape(pp,iFKS,amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_ev
+      use parton_cms_cnt
+      use pborn
       implicit none
       integer iFKS,j,i,iSH,nmax
       include "nexternal.inc"
@@ -4492,7 +4551,9 @@ c$$$                  shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
 
 
       subroutine sreal(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+
 c Wrapper for the n+1 contribution. Returns the n+1 matrix element
 c squared reduced by the FKS damping factor xi**2*(1-y).
 c Close to the soft or collinear limits it calls the corresponding
@@ -4588,7 +4649,12 @@ c has soft singularities
 
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use parton_cms_stuff
+      use fksvariables
+      use cxij_aor
+      use ccalculatedborn
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -4777,7 +4843,13 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 
       subroutine sborncol_isr(p,xi_i_fks,y_ij_fks,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn_coll
+      use pborn
+      use parton_cms_stuff
+      use fksvariables
+      use cxij_aor
+      use ccalculatedborn
       implicit none
       include "nexternal.inc"
       double precision p(0:3,nexternal),wgt
@@ -5578,7 +5650,9 @@ c q->gq splitting
 
 
       subroutine sbornsoft(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use to_amp_split_soft
       implicit none
 
       include "nexternal.inc"
@@ -5670,7 +5744,9 @@ c Factor two to fix the limits.
 
       subroutine eikonal_reduced(pp,m,n,i_fks,j_fks,xi_i_fks,y_ij_fks,eik,amp_index)
 c     Returns the eikonal factor
-      use vectorize
+      !use vectorize
+      use fksvariables
+      use parton_cms_stuff
       implicit none
 
       include "nexternal.inc"
@@ -5757,7 +5833,11 @@ c Calculate the eikonal factor
      #                     collrem_xi,collrem_lxi,
      #                     amp_index)
       use extra_weights
-      use vectorize
+      !use vectorize
+      use pborn
+      use pborn_coll
+      use parton_cms_stuff
+      use ccalculatedborn
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -6016,7 +6096,14 @@ c has to be inserted here
 
 
       subroutine set_cms_stuff(icountevts,amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+      use parton_cms_ev
+      use parton_cms_cnt
+      use cbjrk12_ev
+      use cbjrk12_cnt
+      use cbjorkenx
+      
       implicit none
       include "run.inc"
 
@@ -6081,7 +6168,8 @@ c do the same as above for the counterevents
       end
 
       subroutine get_mc_lum(j_fks,zhw_used,xi_i_fks,xlum_mc_fact,amp_index)
-      use vectorize
+      !use vectorize
+      use cbjorkenx
       implicit none
       include "run.inc"
       include "nexternal.inc"
@@ -6154,7 +6242,8 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
 
 
       subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass, amp_index)
-      use vectorize
+      !use vectorize
+      use fksvariables
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -6655,7 +6744,11 @@ c
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt,amp_index)
       use extra_weights
       use mint_module
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+      use pborn
+      use ccalculatedborn
+      use to_amp_split_soft
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -7285,7 +7378,8 @@ c         stop
 
 
       subroutine eikonal_Ireg(p,m,n,xicut_used,eikIreg,amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       double precision zero,pi,pi2
       parameter (zero=0.d0)
@@ -7528,7 +7622,9 @@ c
 
 
       subroutine getpoles(p,xmu2,double,single,fksprefact,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use to_amp_split_soft
 c Returns the residues of double and single poles according to 
 c eq.(B.1) and eq.(B.2) if fksprefact=.true.. When fksprefact=.false.,
 c the prefactor (mu2/Q2)^ep in eq.(B.1) is expanded, and giving an
@@ -7763,7 +7859,8 @@ c
       use weight_lines
       use extra_weights
       use mint_module
-      use vectorize
+      !use vectorize
+      use cnbody
       implicit none
       
       double precision CA,CF, PI
@@ -8176,7 +8273,8 @@ c the grandmother corresponds (igranny) as well as the aunt (iaunt).
 c This information can be used to improve the phase-space
 c parametrisation.
       use mint_module
-      use vectorize
+      !use vectorize
+      use c_granny_res
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'

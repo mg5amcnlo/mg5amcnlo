@@ -1,6 +1,8 @@
       subroutine finalize_event(xx,weight,lunlhe,putonshell,amp_index)
       use mint_module
-      use vectorize
+      !use vectorize
+      use pborn
+      use parton_cms_stuff
       implicit none
       include 'nexternal.inc'
       include "genps.inc"

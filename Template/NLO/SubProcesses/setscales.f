@@ -45,7 +45,7 @@ c   function scale_global_reference(pp)
 c
 
 
-      subroutine set_alphaS(xp)
+      subroutine set_alphaS(xp,amp_index)
 c This subroutine sets the values of the renormalization, factorization,
 c and Ellis-Sexton scales, and computes the value of alpha_S through the
 c call to set_ren_scale (for backward compatibility).
@@ -57,6 +57,7 @@ c (mostly in run.inc, and one  in coupl.inc)
       include "run.inc"
       include "coupl.inc"
       include "timing_variables.inc"
+      integer amp_index
       
       double precision xp(0:3,nexternal)
       double precision dummy,dummyQES,dummies(2)
@@ -79,20 +80,20 @@ c
         firsttime=.false.
 c Set scales and check that everything is all right
 c Renormalization
-        call set_ren_scale(xp,dummy)
+        call set_ren_scale(xp,dummy,amp_index)
         if(dummy.lt.0.2d0)then
           write(*,*)'Error in set_alphaS: muR too soft',dummy
           stop
         endif
 c Factorization
-        call set_fac_scale(xp,dummies)
+        call set_fac_scale(xp,dummies,amp_index)
         if(dummies(1).lt.0.2d0.or.dummies(2).lt.0.2d0)then
           write(*,*)'Error in set_alphaS: muF too soft',
      #              dummies(1),dummies(2)
           stop
         endif
 c Ellis-Sexton
-        call set_QES_scale(xp,dummyQES)
+        call set_QES_scale(xp,dummyQES,amp_index)
         if(scale.lt.0.2d0)then
           write(*,*)'Error in set_alphaS: QES too soft',dummyQES
           stop
@@ -132,9 +133,9 @@ c Put momenta in the common block to zero to start
 c
 c Recompute scales
 c
-      call set_QES_scale(xp,dummyQES)
-      call set_fac_scale(xp,dummies)
-      call set_ren_scale(xp,dummy)
+      call set_QES_scale(xp,dummyQES,amp_index)
+      call set_fac_scale(xp,dummies,amp_index)
+      call set_ren_scale(xp,dummy,amp_index)
 c
 
 c Pass momenta to couplings.f
@@ -164,7 +165,8 @@ cc         call setpara('param_card.dat')
 c Sets the value of the renormalization scale, returned as muR.
 c For backward compatibility, computes the value of alpha_S, and sets 
 c the value of variable scale in common block /to_scale/
-      use vectorize
+      ! use vectorize
+      use ccalculatedborn 
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -195,7 +197,7 @@ c
         mur_temp=muR_ref_fixed
         temp_scale_id='fixed'
       else
-        mur_temp=max(minscaleR,muR_ref_dynamic(pp))
+        mur_temp=max(minscaleR,muR_ref_dynamic(pp,amp_index))
       endif
       muR=muR_over_ref*mur_temp
       muR2_current=muR**2
@@ -219,7 +221,8 @@ c
 c This is a function of the kinematic configuration pp, which returns
 c a scale to be used as a reference for renormalization scale
       use extra_weights
-      use vectorize
+      !use vectorize
+      use c_fxfx_scales
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -360,7 +363,7 @@ c
       end
 
 
-      subroutine set_fac_scale(pp,muF)
+      subroutine set_fac_scale(pp,muF,amp_index)
 c Sets the values of the factorization scales, returned as muF().
 c For backward compatibility, sets the values of variables q2fact()
 c in common block /to_collider/
@@ -371,6 +374,7 @@ c Note: the old version returned the factorization scales squared
       include 'run.inc'
       include 'coupl.inc'
       double precision pp(0:3,nexternal),muF(2)
+      integer amp_index
       double precision muf_temp(2),muF_ref_dynamic
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
@@ -389,7 +393,7 @@ c
         temp_scale_id='fixed'
         temp_scale_id2='fixed'
       else
-        muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp))
+        muf_temp(1)=max(minscaleF,muF_ref_dynamic(pp,amp_index))
         muf_temp(2)=muf_temp(1)
         temp_scale_id2=temp_scale_id
       endif
@@ -414,7 +418,8 @@ c
       function muF_ref_dynamic(pp, amp_index)
 c This is a function of the kinematic configuration pp, which returns
 c a scale to be used as a reference for factorizations scales
-      use vectorize
+      !use vectorize
+      use c_fxfx_scales
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -459,7 +464,7 @@ c
       end
 
 
-      subroutine set_QES_scale(pp,QES)
+      subroutine set_QES_scale(pp,QES,amp_index)
 c Sets the value of the Ellis-Sexton scale, returned as QES.
 c For backward compatibility, sets the value of variable QES2 
 c (Ellis-Sexton scale squared) in common block /COUPL_ES/
@@ -470,6 +475,7 @@ c (Ellis-Sexton scale squared) in common block /COUPL_ES/
       include 'coupl.inc'
       include 'q_es.inc'
       double precision pp(0:3,nexternal),QES
+      integer amp_index
       double precision QES_temp,QES_ref_dynamic
       double precision pi
       parameter (pi=3.14159265358979323846d0)

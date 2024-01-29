@@ -622,7 +622,8 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       
       subroutine compute_xmcsubt_complete(p,probne,gfactsf,gfactcl
      $     ,flagmc,lzone,zhw,nofpartners,xmcxsec,amp_index)
-      use vectorize
+      !use vectorize
+      use fksvariables
       implicit none
       include 'nexternal.inc'
       include 'madfks_mcatnlo.inc'
@@ -823,7 +824,9 @@ c     positivity check
       
 
       subroutine xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use counterevnts
+      use cxiifkscnt
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -918,7 +921,10 @@ c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &     nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt,
      &     bornbars,bornbarstilde,npartner,amp_index)
-      use vectorize
+      !use vectorize
+      use cgenps_fks
+      use pborn
+      use parton_cms_stuff
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -956,7 +962,7 @@ c over colour partners
       common/cemscav_tmp/emscav_tmp
       common/cemscav_tmp_a/emscav_tmp_a,emscav_tmp_a2
 
-      double precision shat(amp_index)tmp,dot,xkern(2),xkernazi(2)
+      double precision shattmp,dot,xkern(2),xkernazi(2)
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
 
@@ -1513,7 +1519,11 @@ c Finalises the MC counterterm computations performed in xmcsubt(),
 c fills arrays relevant to shower scales, and computes Delta
       subroutine complete_xmcsubt(p,lzone,xmcxsec,xmcxsec2,MCsec
      $     ,probne,amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+      use cbjorkenx
+      use fksvariables
+
       implicit none
       include "born_nhel.inc"
       include 'nFKSconfigs.inc'
@@ -2552,7 +2562,9 @@ c
       
       subroutine assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2
      $     ,MCsec,lzone,jflow,wgt,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use to_amps
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -2850,7 +2862,12 @@ c Computes barred amplitudes (bornbars) squared according
 c to Odagiri's prescription (hep-ph/9806531).
 c Computes barred azimuthal amplitudes (bornbarstilde) with
 c the same method 
-      use vectorize
+      !use vectorize
+      use pborn
+      use cxij_aor
+      use fksvariables
+      use ccalculatedborn
+      use to_amps
       implicit none
 
       include "genps.inc"
@@ -3219,6 +3236,7 @@ c
      $     ,xm22,xtk,xuk,xq1q,xq2q,qMC,extra)
 c Determines Mandelstam invariants and assigns ileg and shower-damping
 c variable qMC
+      use pborn
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -4556,14 +4574,16 @@ c
 c Shower scale
 
       subroutine assign_emsca(pp,xi_i_fks,y_ij_fks,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
+      use parton_cms_stuff
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       include "run.inc"
 
       double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks
-      double precision shat(amp_index)tmp,dot,emsca_bare,ref_scale,scalemin,
+      double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
      &scalemax,rrnd,ran2,emscainv,dum(5),xm12,qMC,ptresc
       integer ileg
 
@@ -4582,10 +4602,10 @@ c Shower scale
 !OMP THREADPRIVATE (/PARTON_CMS_STUFF/)
 
 c Consistency check
-      shat(amp_index)tmp=2d0*dot(pp(0,1),pp(0,2))
-      if(abs(shat(amp_index)tmp/shat(amp_index)-1d0).gt.1d-5)then
+      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if(abs(shattmp/shat(amp_index)-1d0).gt.1d-5)then
          write(*,*)'Error in assign_emsca: inconsistent shat(amp_index)'
-         write(*,*)shat(amp_index)tmp,shat(amp_index)
+         write(*,*)shattmp,shat(amp_index)
          stop
       endif
 
@@ -4615,13 +4635,15 @@ c Consistency check
 
 
       subroutine assign_emsca_array(pp,xi_i_fks,y_ij_fks,amp_index)
-      use vectorize
+      !ouse vectorize
+      use pborn
+      use parton_cms_stuff
       implicit none
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
       include "run.inc"
       include "born_nhel.inc"
-      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shat(amp_index)tmp,dot
+      double precision pp(0:3,nexternal),xi_i_fks,y_ij_fks,shattmp,dot
       double precision rrnd,ran2,emscainv, dum(5),xm12,qMC
      $     ,ptresc_a(nexternal,nexternal),ref_scale_a(nexternal
      $     ,nexternal)
@@ -4657,10 +4679,10 @@ c Consistency check
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
 
 c Consistency check
-      shat(amp_index)tmp=2d0*dot(pp(0,1),pp(0,2))
-      if(abs(shat(amp_index)tmp/shat(amp_index)-1d0).gt.1d-5)then
+      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if(abs(shattmp/shat(amp_index)-1d0).gt.1d-5)then
          write(*,*)'Error in assign_emsca_array: inconsistent shat(amp_index)'
-         write(*,*)shat(amp_index)tmp,shat(amp_index)
+         write(*,*)shattmp,shat(amp_index)
          stop
       endif
 
@@ -4732,7 +4754,8 @@ c     skip if not QCD dipole (safety)
 
       subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg
      $     ,xm12,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
       implicit none
       include "nexternal.inc"
       include "run.inc"
@@ -4767,7 +4790,8 @@ c
 
       subroutine assign_scaleminmax_array(shat,xi,xscalemin_a
      $     ,xscalemax_a,ileg,xm12,amp_index)
-      use vectorize
+      !use vectorize
+      use pborn
       implicit none
       include "nexternal.inc"
       include "run.inc"
@@ -4972,7 +4996,8 @@ c
 
       subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy,amp_index)
 c Returns derivatives of Mandelstam invariants with respect to FKS variables
-      use vectorize
+      !use vectorize
+      use cgenps_fks
       implicit none
       integer ileg
       double precision s,x,yi,yj,xm12,xm22,dw1dx,dw2dx,dw1dy,dw2dy
@@ -5058,6 +5083,7 @@ c
 
       subroutine get_dead_zone(ileg,z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,
      &                         scalemax,ip,ifat,lzone,wcc,amp_index)
+      use pborn
       implicit none
       include "run.inc"
       include "nexternal.inc"
@@ -5247,6 +5273,7 @@ c
 
 
       subroutine assign_qMC_array(xi_i_fks,y_ij_fks,sh,pp,qMC,qMC_a2)
+      use pborn
       implicit none
       include "nexternal.inc"
       include "coupl.inc"

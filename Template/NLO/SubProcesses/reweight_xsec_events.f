@@ -337,7 +337,14 @@ c Dummy subroutine (normally used with vegas/mint when resuming plots)
 
 
       subroutine set_cms_stuff(icountevts, amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
+      use parton_cms_ev
+      use parton_cms_cnt
+      use cbjrk12_ev
+      use cbjrk12_cnt
+      use cbjorkenx
+
       implicit none
       include "run.inc"
 

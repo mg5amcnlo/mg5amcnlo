@@ -4,7 +4,13 @@ c     Given identical particles, and the configurations. This program identifies
 c     identical configurations and specifies which ones can be skipped
 c*****************************************************************************
       use mint_module
-      use vectorize
+      !use vectorize
+      use ccalculatedborn
+      use counterevnts
+      use pborn
+      use fksvariables
+      use cxiifkscnt
+
       implicit none
       include 'genps.inc'      
       include 'nexternal.inc'

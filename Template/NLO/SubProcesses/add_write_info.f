@@ -3,7 +3,9 @@
      &     ,amp_index)
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
-      use vectorize
+      !use vectorize
+      use to_amps
+      use counterevnts
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -724,7 +726,8 @@ c t-channels around
 c*****************************************************************************
 c Decides if internal s-channel propagator is on-shell
 c*****************************************************************************
-      use vectorize
+      !use vectorize
+      use write_granny_resonance
       implicit none
 c
 c     Constants
@@ -1377,7 +1380,8 @@ c
 
 
       subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail, amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       include 'nexternal.inc'
       double precision p(0:3,nexternal),xm1,xm2
@@ -1711,7 +1715,8 @@ c
 
 
       subroutine put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail, amp_index)
-      use vectorize
+      !use vectorize
+      use parton_cms_stuff
       implicit none
       double precision p(0:3,99),xmi,xm1,xm2
       integer mfail

@@ -154,7 +154,9 @@ c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
       use mint_module
-      use vectorize
+!      use vectorize
+      use c_conflictingbw
+      use to_phase_space_s_channel
       implicit none
       double precision zero,vtiny
       parameter (zero=0.d0,vtiny=1d-8)

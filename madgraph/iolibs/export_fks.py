@@ -578,6 +578,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
                          ncolor,maxflow,fortran_model)
 
+        filename = 'genps.f90'
+        self.write_genps_mod(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
+
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number=self.write_configs_and_props_info_file(
                               filename, 
@@ -1809,6 +1813,20 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append("integer maxproc,ngraphs,ncolor,maxflow")
         lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
                      (maxproc,ngraphs,ncolor,maxflow))
+        writer.writelines(lines)
+
+
+    def write_genps_mod(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
+        """writes the genps.f90 file
+        """
+        lines = []
+        lines.append("module mod_nexternal")
+        lines.append("implicit none")
+        lines.append("integer,parameter ::  maxproc_mod=%d" % maxproc)
+        lines.append("integer,parameter ::  ngraphs_mod=%d" % nhraphs)
+        lines.append("integer,parameter ::  ncolor_mod=%d" % ncolor)
+        lines.append("integer,parameter ::  maxflow_mod=%d" % maxflow)
+        lines.append("end module mod_nexternal")
         writer.writelines(lines)
 
 

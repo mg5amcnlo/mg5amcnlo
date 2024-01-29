@@ -7,7 +7,8 @@ c first cluster in the \phi phase-space. This means that for the
 c real-emission momentum, we also have to apply a cut on the Born
 c momentum at the same time. Hence, the Born momenta need to be passed
 c here as well (via a common block)
-      use vectorize
+      !use vectorize
+      use counterevnts
       implicit none
       include "nexternal.inc"
       include "genps.inc"

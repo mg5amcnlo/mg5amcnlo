@@ -47,7 +47,8 @@ c event (event with lower weights will be un-weighted)
 
       subroutine analysis_fill(p,istatus,ipdg,wgts,ibody, amp_index)
       use extra_weights
-      use vectorize
+      !use vectorize
+      use fksvariables
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
