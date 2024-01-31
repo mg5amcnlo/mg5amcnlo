@@ -96,7 +96,7 @@ class TestDrawingOption(unittest.TestCase):
                         self.assertFalse(\
                                     plot.diagram._debug_has_intersection())
                         for line in plot.diagram.lineList:
-                            self.assertNotAlmostEquals(line.get_length(), 0)
+                            self.assertNotAlmostEqual(line.get_length(), 0)
                             
     def test_option_6g(self):
         """Test that gg>6g is fine with all options"""

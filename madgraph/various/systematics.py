@@ -227,8 +227,10 @@ class Systematics(object):
         if not lhapdf and not isEVA:
             log('fail to load lhapdf: doe not perform systematics')
             return
-        elif lhapdf:
+        try:
             lhapdf.setVerbosity(0)
+        except Exception:
+            pass
         self.pdfsets = {}  
         if isinstance(pdf, str):
             pdf = pdf.split(',')

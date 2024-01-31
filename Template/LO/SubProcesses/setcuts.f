@@ -407,7 +407,31 @@ c
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
             endif
          enddo
-      enddo      
+      enddo 
+c     detect if mmnl is used for exactly 2 lepton      
+      if (mmnl.ne.0.or.mmnlmax.ne.-1)then
+          ncheck = 0
+          do i=nincoming+1,nexternal
+            if (is_a_l(i).or.is_a_nu(i)) ncheck = ncheck +1
+          enddo 
+          ! exactly two lepton/neutrino put constrain on the invariant
+          ! mass of the associated particles
+          if (ncheck.eq.2) then
+              do i =nincoming+1, nexternal-1
+                 if (is_a_l(i).or.is_a_nu(i)) then
+                     do j = i+1, nexternal
+                        if (is_a_l(j).or.is_a_nu(j)) then
+                             s_min(j,i) = max(s_min(j,i), mmnl*dabs(mmnl))
+                             s_max(j,i) = min(s_max(j,i), mmnlmax*dabs(mmnlmax))
+                             exit
+                        endif
+                     enddo
+                     exit
+                 endif  
+              enddo  
+          endif
+      endif 
+
 c
 c     smin cut from PDG cut 
 c

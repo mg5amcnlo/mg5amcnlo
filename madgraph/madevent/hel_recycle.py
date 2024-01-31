@@ -200,6 +200,7 @@ class External(MathsObject):
     # Could get this from dag but I'm worried about preserving order
     wavs_same_leg = {}
     good_wav_combs = []
+    max_wav_num = 0 
 
     def __init__(self, arguments, old_name):
         super().__init__(arguments, old_name, 'external')
@@ -246,6 +247,7 @@ class External(MathsObject):
         else:
             cls.wavs_same_leg[ext_num] = new_wavfuncs
         
+        cls.max_wav_num = max( cls.max_wav_num, len(graph.external_wavs) + len(graph.internal_wavs))
         return new_wavfuncs
 
     @classmethod
@@ -698,7 +700,7 @@ class HelicityRecycler():
                     self.template_dict['helas_calls'] += self.unfold_helicities(
                         line, call_type)
 
-        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num)
+        self.template_dict['nwavefuncs'] = max(External.num_externals, Internal.max_wav_num, External.max_wav_num)
         # filter out uselless call
         for i in range(len(self.template_dict['helas_calls'])-1,-1,-1):
             obj = self.template_dict['helas_calls'][i]

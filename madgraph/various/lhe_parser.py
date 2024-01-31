@@ -3196,6 +3196,19 @@ class NLO_PARTIALWEIGHT(object):
             self.parse(input)
         
             
+    def ispureqcd(self):
+        """return True if the born does not correspond to a unique power of alphas
+           This allows to prevent to use re-weighting in mode where it is known to be 
+           failing to scale correctly.
+        """
+        for cevt in self.cevents:
+            if not len({int(w.orderflag/10) for w in cevt.wgts})==1:
+                return False
+                nb_wgt_check += len(cevt.wgts)
+
+        return True
+
+       
         
     def parse(self, text):
         """create the object from the string information (see example below)"""

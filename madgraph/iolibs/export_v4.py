@@ -1632,14 +1632,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             and recall itself (this is add to the X size)
         """
         self.myjamp_count +=1
-        
+
         if not nb_line:
             for i,j in all_element:
                 if i+1 > nb_line:
                     nb_line = i+1
                 if j+1> nb_col:
                     nb_col = j+1  
-
             if nb_col > 600 and added==0:
                 all_element1, all_element2 = {}, {}
                 for (k1,k2) in all_element:
@@ -1669,9 +1668,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     else:
                         k1 = j1-nb_added1
                     newdef1.append((k+nb_added1, k1, k2, R, c))
-
-                all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
-                newdef1 = newdef1 + new_def
+                if newdef1:
+                    all_element, new_def = self.optimise_jamp(all_element1, nb_line=0, nb_col=0, added=len(newdef1))
+                    newdef1 = newdef1 + new_def
                 return all_element, newdef1
 
         max_count = 0
@@ -3333,13 +3332,13 @@ class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
                     to_add.append( (coefficient, amp_number) )
             LC_col_amps.append(to_add)
            
-        text2, nb = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
+        text2, nb2 = super(ProcessExporterFortranMatchBox, self).get_JAMP_lines(LC_col_amps,
                                             JAMP_format=JAMP_formatLC,
                                             AMP_format=AMP_format,
                                             split=-1)
         text += text2 
         
-        return text, 0
+        return text, max(nb,nb2)
 
 
 
@@ -8254,7 +8253,7 @@ C
                 # already handle by default
                 if str(fct.name) not in ["complexconjugate", "re", "im", "sec", 
                        "csc", "asec", "acsc", "theta_function", "cond", 
-                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot",
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg",
                                     "grreglog","regsqrt","B0F","b0f","sqrt_trajectory",
                                     "log_trajectory"]:
                     additional_fct.append(fct.name)

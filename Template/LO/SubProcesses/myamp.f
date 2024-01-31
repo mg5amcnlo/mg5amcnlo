@@ -473,7 +473,9 @@ c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
               endif
               if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
 c              if (prwidth_tmp(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
-              call setgrid(-i,xo,a,1)
+              if (tsgn .ne. 1d0.or.i .ne. -(nexternal-(nincoming+1))) then !s channel for shat
+                  call setgrid(-i,xo,a,1)
+              endif
 c              else 
 c                 write(*,*) 'Using flat grid for BW',i,nbw,
 c     $                prmass(i,iconfig)
@@ -551,7 +553,11 @@ c-----------------------
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
             write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
-         else
+        else if(smin/stot.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
+            swidth(i) = smin/stot
+            spole(i) = -2d0
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
+        else    
             write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
          endif
       endif
