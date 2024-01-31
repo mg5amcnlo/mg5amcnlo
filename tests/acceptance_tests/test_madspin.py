@@ -226,6 +226,6 @@ class TestMadSpin(unittest.TestCase):
         self.assertEqual(nb_dec, 89)
         self.assertEqual(nb_muon, 0)
         import math
-        self.assertTrue(abs(pol[1]-pol[-1]) < 2 * math.sqrt(pol[1]))
-        self.assertTrue(pol[0] < pol[-1])
+        self.assertLess(abs(pol[1]-pol[-1]), 2 * math.sqrt(pol[1]))
+        self.assertLess(pol[0], pol[-1])
          

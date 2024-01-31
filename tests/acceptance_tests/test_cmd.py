@@ -835,7 +835,7 @@ C
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV1P0_3.f')).read()
         
-        self.assertFalse('OM3' in text)
+        self.assertNotIn('OM3', text)
         ffv1p0 = [l.strip() for l in ffv1p0.strip().split('\n')]
         text = [l.strip() for l in text.strip().split('\n')]
         self.assertEqual(ffv1p0, text)
@@ -908,7 +908,7 @@ C
 
 """
         text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV2_3.f')).read()
-        self.assertTrue('OM3' in text)
+        self.assertIn('OM3', text)
         ffv2 = [l.strip() for l in ffv2.strip().split('\n')]
         text = [l.strip() for l in text.strip().split('\n')]
         self.assertEqual(ffv2, text) 
@@ -1581,7 +1581,7 @@ P1_qq_wp_wp_lvl
         
         # check that the Cards have been modified
         run_card = open(pjoin(self.out_dir,'Cards','run_card.dat')).read()
-        self.assertTrue("'tt'     = run_tag" in run_card)
-        self.assertTrue("200       = nevents" in run_card)
+        self.assertIn("'tt'     = run_tag", run_card)
+        self.assertIn("200       = nevents", run_card)
         os.chdir(cwd)
         
