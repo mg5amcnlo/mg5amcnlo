@@ -507,7 +507,7 @@ c
       double precision xkern(2),xkernazi(2),factor,N_p
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
-      double precision emscwgt(nexternal)
+      double precision emscwgt
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
      $     ,emsca_bare_a(nexternal,nexternal),emsca_bare_a2(nexternal
@@ -519,7 +519,7 @@ c
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision evnt_wgt
-      integer i, j
+      integer i, j,iord_val
       double precision mu_r
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
       double precision p_read(0:4,2*nexternal-3), wgt_read
@@ -555,10 +555,8 @@ c call to assign_emsca_array), which however is fine statistically
      $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
      $        ,bornbars,bornbarstilde,npartner)
          if(is_pt_hard)exit
-
          if (.not.mcatnlo_delta) then
-!!!! WE ARE HERE: ipartner(npartner)?????
-            factor=emscwgt(npartner)
+            factor=emscwgt
          else
 c min(i_fks,j_fks) is the mother of the FKS pair
             factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
@@ -575,30 +573,22 @@ c min(i_fks,j_fks) is the mother of the FKS pair
                if (.not.split_type(iord) .or.
      $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
                if (iord.eq.qcd_pos) then
-                  ione=ione+1
-                  MCsec(npartner,colorflow(npartner,cflows))=factor
-     $                 *(xkern(1)*N_p*bornbars(colorflow(npartner
-     $                 ,cflows),iord)+xkernazi(1)*N_p
-     $                 *bornbarstilde(colorflow(npartner,cflows),iord))
-                  amp_split_mc(1:amp_split_size) =
-     $                 amp_split_mc(1:amp_split_size)+factor *(xkern(1)
-     $                 *N_p*amp_split_bornbars(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord)+xkernazi(1)*N_p
-     $                 *amp_split_bornbarstilde(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord))
-               else if(iord.eq.qed_pos) then
-                  ione=ione+1
-                  MCsec(npartner,colorflow(npartner,cflows))=factor
-     $                 *(xkern(2)*N_p*bornbars(colorflow(npartner
-     $                 ,cflows),iord)+xkernazi(2)*N_p
-     $                 *bornbarstilde(colorflow(npartner,cflows),iord))
-                  amp_split_mc(1:amp_split_size) =
-     $                 amp_split_mc(1:amp_split_size)+factor *(xkern(2)
-     $                 *N_p *amp_split_bornbars(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord)+xkernazi(2)
-     $                 *N_p*amp_split_bornbarstilde(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord))
+                  iord_val=1
+               elseif(iord.eq.qed_pos) then
+                  iord_val=2
                endif
+               ione=ione+1
+               MCsec(npartner,colorflow(npartner,cflows))=factor
+     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
+     $              ,cflows),iord)+xkernazi(iord_val)*N_p
+     $              *bornbarstilde(colorflow(npartner,cflows),iord))
+               amp_split_mc(1:amp_split_size) =
+     $              amp_split_mc(1:amp_split_size)+factor
+     $              *(xkern(iord_val)*N_p
+     $              *amp_split_bornbars(1:amp_split_size
+     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
+     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
+     $              ,colorflow(npartner,cflows),iord))
             enddo
             if (ione.ne.1) then
                write (*,*) 'Error: incompatible split orders in '/
@@ -626,13 +616,13 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       include 'born_nhel.inc'
       include 'run.inc'
       include 'orders.inc'
-      integer npartner,nofpartners,cflows,idum,ione,iord
+      integer npartner,nofpartners,cflows,idum,ione,iord,iord_val
       logical lzone(nexternal),flagmc
       double precision bornbars(max_bcol,nsplitorders),
      $     bornbarstilde(max_bcol,nsplitorders)
       double precision p(0:3,nexternal),probne,zhw(nexternal)
      $     ,xmcxsec(nexternal),xkern(2),xkernazi(2),factor,N_p
-     $     ,emscwgt(nexternal),MCsec(nexternal,max_bcol),sumMCsec
+     $     ,emscwgt,MCsec(nexternal,max_bcol),sumMCsec
      $     ,xmcxsec2(max_bcol),gfactsf,gfactcl,ddum
       logical emscasharp_a(nexternal,nexternal)
       double precision emsca_a(nexternal,nexternal)
@@ -675,15 +665,7 @@ c -- call to MC counterterm functions
       MCsec(1:nexternal,1:max_bcol)=0d0
       sumMCsec=0d0
       amp_split_xmcxsec(1:amp_split_size,1:nexternal)=0d0
-      do npartner=1,ipartners(0)
-         if (mcatnlo_delta) cur_part=ipartners(npartner)
-         call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
-     $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
-     $        ,bornbars,bornbarstilde,npartner)
-         if(is_pt_hard)exit
-         if (.not.mcatnlo_delta) then
-            factor=emscwgt(npartner)
-         else
+      if (mcatnlo_delta) then
 c Call assign_emsca_array uniquely to fill emscwgt_a, to be used to
 c define 'factor'.  This damping 'factor' is used only here, and not in
 c the following.  A subsequent call to assign_emsca_array, in
@@ -692,9 +674,19 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-            call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+         call assign_emsca_array(p,xi_i_fks_ev,y_ij_fks_ev)
+      endif
+      do npartner=1,ipartners(0)
+         if (mcatnlo_delta) cur_part=ipartners(npartner)
+         call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne
+     $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
+     $        ,bornbars,bornbarstilde,npartner)
+         if(is_pt_hard)exit
+         if (.not.mcatnlo_delta) then
+            factor=emscwgt
+         else
 c min(i_fks,j_fks) is the mother of the FKS pair
-            factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
+            factor=emscwgt_a(min(i_fks,j_fks),cur_part)
          endif
          do cflows=1,max_bcol
             if (colorflow(npartner,cflows).eq.0) cycle
@@ -703,38 +695,27 @@ c min(i_fks,j_fks) is the mother of the FKS pair
             else
                N_p=1d0
             endif
-
             ione=0
             do iord = 1, nsplitorders
                if (.not.split_type(iord) .or.
      $              (iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
                if (iord.eq.qcd_pos) then
-                  ione=ione+1
-                  MCsec(npartner,colorflow(npartner,cflows))=factor
-     $                 *(xkern(1)*N_p*bornbars(colorflow(npartner
-     $                 ,cflows),iord)+xkernazi(1)*N_p
-     $                 *bornbarstilde(colorflow(npartner,cflows),iord))
-                  amp_split_xmcxsec(1:amp_split_size,npartner) =
-     $                 amp_split_xmcxsec(1:amp_split_size,npartner) +
-     $                 factor *(xkern(1)*N_p
-     $                 *amp_split_bornbars(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord)+xkernazi(1)
-     $                 *N_p*amp_split_bornbarstilde(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord))
-               else if(iord.eq.qed_pos) then
-                  ione=ione+1
-                  MCsec(npartner,colorflow(npartner,cflows))=factor
-     $                 *(xkern(2)*N_p*bornbars(colorflow(npartner
-     $                 ,cflows),iord)+xkernazi(2)*N_p
-     $                 *bornbarstilde(colorflow(npartner,cflows),iord))
-                  amp_split_xmcxsec(1:amp_split_size,npartner) =
-     $                 amp_split_xmcxsec(1:amp_split_size,npartner) +
-     $                 factor *(xkern(2)*N_p
-     $                 *amp_split_bornbars(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord)+xkernazi(2)
-     $                 *N_p*amp_split_bornbarstilde(1:amp_split_size
-     $                 ,colorflow(npartner,cflows),iord))
+                  iord_val=1
+               elseif(iord.eq.qed_pos) then
+                  iord_val=2
                endif
+               ione=ione+1
+               MCsec(npartner,colorflow(npartner,cflows))=factor
+     $              *(xkern(iord_val)*N_p*bornbars(colorflow(npartner
+     $              ,cflows),iord)+xkernazi(iord_val)*N_p
+     $              *bornbarstilde(colorflow(npartner,cflows),iord))
+               amp_split_mc(1:amp_split_size) =
+     $              amp_split_mc(1:amp_split_size)+factor
+     $              *(xkern(iord_val)*N_p
+     $              *amp_split_bornbars(1:amp_split_size
+     $              ,colorflow(npartner,cflows),iord)+xkernazi(iord_val)
+     $              *N_p *amp_split_bornbarstilde(1:amp_split_size
+     $              ,colorflow(npartner,cflows),iord))
             enddo
             if (ione.ne.1) then
                write (*,*) 'Error: incompatible split orders in '/
@@ -773,7 +754,6 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       if (is_pt_hard) MCcntcalled=MCcntcalled+16
       return
       end
-
 
       subroutine check_positivity_MCxsec(sumMCsec,xmcxsec,xmcxsec2)
       implicit none
@@ -897,6 +877,11 @@ c
 
 
 
+
+!!!! WE ARE HERE !!!!
+
+      
+
 c Main routine for MC counterterms. Now to be called inside a loop
 c over colour partners
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
@@ -928,7 +913,7 @@ c over colour partners
 
       double precision emsca_bare,ptresc,rrnd,ref_scale,
      & scalemin,scalemax,qMC,emscainv,emscafun
-      double precision emscwgt(nexternal),emscav(nexternal)
+      double precision emscwgt,emscav(nexternal)
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer jpartner
@@ -1419,22 +1404,22 @@ c
 c Emsca stuff
       if(emscasharp)then
          if(qMC.le.scalemax)then
-            emscwgt(npartner)=1d0
+            emscwgt=1d0
             emscav(npartner)=emsca_bare
          else
-            emscwgt(npartner)=0d0
+            emscwgt=0d0
             emscav(npartner)=scalemax
          endif
       else
          ptresc=(qMC-scalemin)/(scalemax-scalemin)
          if(ptresc.le.0d0)then
-            emscwgt(npartner)=1d0
+            emscwgt=1d0
             emscav(npartner)=emsca_bare
          elseif(ptresc.lt.1d0)then 
-            emscwgt(npartner)=1-emscafun(ptresc,one)
+            emscwgt=1-emscafun(ptresc,one)
             emscav(npartner)=emsca_bare
          else
-            emscwgt(npartner)=0d0
+            emscwgt=0d0
             emscav(npartner)=scalemax
          endif
       endif
@@ -1492,7 +1477,7 @@ c fills arrays relevant to shower scales, and computes Delta
 
       double precision emsca_bare,ptresc,ref_scale,
      & scalemin,scalemax,emscainv
-      double precision emscwgt(nexternal),emscav(nexternal)
+      double precision emscav(nexternal)
       double precision emscav_a(nexternal,nexternal)
       double precision emscav_a2(nexternal,nexternal)
       integer cflows,jflow
@@ -4441,7 +4426,7 @@ c Smooth function
         else
           tmp=1d0
        endif
-      elseif(itype.eq.3)
+      elseif(itype.eq.3) then
 c No (bogus) sudakov factor
          tmp=1d0
       else
