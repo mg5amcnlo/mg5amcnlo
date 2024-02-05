@@ -1823,7 +1823,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append("module mod_nexternal")
         lines.append("implicit none")
         lines.append("integer,parameter ::  maxproc_mod=%d" % maxproc)
-        lines.append("integer,parameter ::  ngraphs_mod=%d" % nhraphs)
+        lines.append("integer,parameter ::  ngraphs_mod=%d" % ngraphs)
         lines.append("integer,parameter ::  ncolor_mod=%d" % ncolor)
         lines.append("integer,parameter ::  maxflow_mod=%d" % maxflow)
         lines.append("end module mod_nexternal")
