@@ -230,7 +230,7 @@ end module c_fxfx_scales
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module to_amp_split_soft
     implicit none
-    include 'orders.inc'
+    include 'mod_orders.inc'
    double precision, allocatable :: amp_split_soft(:,:)
  contains
    subroutine allocate_to_amp_split_soft(vector_size)
@@ -400,7 +400,8 @@ module parton_cms_cnt
 end module parton_cms_cnt
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module camp_split_store
-    implicit none
+   implicit none
+   include 'mod_orders.inc'
    double precision, allocatable :: AMP_SPLIT_STORE_R(:,:)
    double precision, allocatable :: AMP_SPLIT_STORE_B(:,:)
    double complex, allocatable :: AMP_SPLIT_STORE_CNT(:,:,:,:)
@@ -410,6 +411,10 @@ module camp_split_store
        integer, intent(in) :: vector_size
        ! ALLOCATE 
        ! ALLOCATE 
+       allocate(AMP_SPLIT_STORE_R(AMP_SPLIT_SIZE, vector_size))
+       allocate(AMP_SPLIT_STORE_B(AMP_SPLIT_SIZE, vector_size))
+       allocate(AMP_SPLIT_STORE_CNT(AMP_SPLIT_SIZE, 2, NSPLITORDERS, vector_size))
+       allocate(AMP_SPLIT_STORE_BSF(AMP_SPLIT_SIZE, 5, 5, vector_size))
    end subroutine allocate_camp_split_store
 
    subroutine deallocate_camp_split_store

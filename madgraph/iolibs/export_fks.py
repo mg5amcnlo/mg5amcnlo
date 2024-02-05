@@ -640,6 +640,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
       
+        filename = 'mod_orders.inc'
+        amp_split_orders, amp_split_size, amp_split_size_born = \
+			   self.write_mod_orders(
+                            writers.FortranWriter(filename),
+                            matrix_element)
+      
         # vector_size = 1
       
         # filename = 'vectorize.inc'
@@ -1394,6 +1400,151 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'double complex amp_split_cnt(amp_split_size,2,nsplitorders)\n'
         text += 'common /to_amp_split/amp_split, amp_split_cnt\n'
         text += '!$omp threadprivate (/to_amp_split/)\n'
+        writer.line_length=132
+        writer.writelines(text)
+
+        return amp_split_orders, amp_split_size, amp_split_size_born
+    
+    def write_mod_orders(self, writer, matrix_element):
+        """writes the include file with the informations about coupling orders.
+        In particular this file should contain the constraints requested by the user
+        for all the orders which are split"""
+
+        born_orders = {}
+        for ordd, val in matrix_element.born_me['processes'][0]['born_sq_orders'].items():
+            born_orders[ordd] = val 
+
+        nlo_orders = {}
+        for ordd, val in matrix_element.born_me['processes'][0]['squared_orders'].items():
+            nlo_orders[ordd] = val
+        
+        split_orders = \
+                matrix_element.born_me['processes'][0]['split_orders']
+
+        pert_orders = \
+                matrix_element.born_me['processes'][0]['perturbation_couplings']
+
+        max_born_orders = {}
+        max_nlo_orders = {}
+
+        model = matrix_element.born_me['processes'][0]['model']
+
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+
+        # first get the max_born_orders
+        if list(born_orders.keys()) == ['WEIGHTED']:
+            # if user has not specified born_orders, check the 'weighted' for each
+            # of the split_orders contributions
+            wgt_ord_max = born_orders['WEIGHTED']
+            squared_orders, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+            for sq_order in squared_orders:
+                # put the numbers in sq_order in a dictionary, with as keys
+                # the corresponding order name
+                ord_dict = {}
+                assert len(sq_order) == len(split_orders) 
+                for o, v in zip(split_orders, list(sq_order)):
+                    ord_dict[o] = v
+
+                wgt = sum([v * model.get('order_hierarchy')[o] for \
+                        o, v in ord_dict.items()])
+                if wgt > wgt_ord_max:
+                    continue
+
+                for o, v in ord_dict.items():
+                    try:
+                        max_born_orders[o] = max(max_born_orders[o], v)
+                    except KeyError:
+                        max_born_orders[o] = v
+
+        else:
+            for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
+                try:
+                    max_born_orders[o] = born_orders[o]
+                except KeyError:
+                    # if the order is not in born_orders set it to 1000
+                    max_born_orders[o] = 1000
+                try:
+                    max_nlo_orders[o] = nlo_orders[o]
+                except KeyError:
+                    # if the order is not in born_orders set it to 1000
+                    max_nlo_orders[o] = 1000
+
+        # keep track also of the position of QED, QCD in the order array
+        # might be useful in the fortran code
+        qcd_pos = -1
+        qed_pos = -1
+        if 'QCD' in split_orders:
+            qcd_pos = split_orders.index('QCD') + 1
+        if 'QED' in split_orders:
+            qed_pos = split_orders.index('QED') + 1
+
+        # determine the size of the array that keeps track
+        # of the different split orders, and the position 
+        # of the different split order combinations in this array
+        # to be written in orders_to_amp_split_pos.inc and
+        #                  amp_split_pos_to_orders.inc
+                          
+        # the number of squared orders of the born ME
+        amp_split_orders = []
+        squared_orders, amp_orders = matrix_element.born_me.get_split_orders_mapping()
+        amp_split_size_born =  len(squared_orders)
+        amp_split_orders += squared_orders
+        
+        #then check the real emissions
+        for realme in matrix_element.real_processes:
+            squared_orders, amp_orders = realme.matrix_element.get_split_orders_mapping()
+            for order in squared_orders:
+                if not order in amp_split_orders:
+                    amp_split_orders.append(order)
+
+        # check also the virtual 
+        #  may be needed for processes without real emissions, e.g. z > v v 
+        #  Note that for a loop_matrix_element squared_orders has a different format
+        #  (see the description of the get_split_orders_mapping function in loop_helas_objects)
+        try:
+            squared_orders, amp_orders = matrix_element.virt_matrix_element.get_split_orders_mapping()
+            squared_orders = [so[0] for so in squared_orders]
+            for order in squared_orders:
+                if not order in amp_split_orders:
+                    amp_split_orders.append(order)
+        except AttributeError:
+            pass
+
+        amp_split_size=len(amp_split_orders)
+        text = '! The orders to be integrated for the Born and at NLO\n'
+        text += 'integer nsplitorders\n'
+        text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
+        text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
+        step = 5
+        if len(split_orders) < step:
+            text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
+        else:
+            # this file is linked from f77 and f90 so need to be smart about line splitting
+            text += "INTEGER ORDERNAMEINDEX\n"
+            for i in range(1,len(split_orders),step):
+                start = i
+                stop = i+step -1
+                data = ', '.join(['"%3s"' % o for o in split_orders[start-1: stop]])
+                if stop > len(split_orders):
+                    stop = len(split_orders)
+                text += 'data (ordernames(ORDERNAMEINDEX), ORDERNAMEINDEX=%s,%s)  / %s /\n' % (start, stop, data)
+
+
+        text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
+        text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
+        text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
+        text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
+        text += '! The position of the QCD /QED orders in the array\n'
+        text += 'integer qcd_pos, qed_pos\n'
+        text += '! if = -1, then it is not in the split_orders\n'
+        text += 'parameter (qcd_pos = %d)\n' % qcd_pos
+        text += 'parameter (qed_pos = %d)\n' % qed_pos
+        text += '! this is to keep track of the various \n'
+        text += '! coupling combinations entering each ME\n'
+        text += 'integer amp_split_size, amp_split_size_born\n'
+        text += 'parameter (amp_split_size = %d)\n' % amp_split_size
+        text += '! the first entries in the next line in amp_split are for the born \n'
+        text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
         writer.line_length=132
         writer.writelines(text)
 
