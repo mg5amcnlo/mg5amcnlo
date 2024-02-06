@@ -7,7 +7,7 @@ c
 c NOTE THAT ONLY IRC-SAFE CUTS CAN BE APPLIED OTHERWISE THE INTEGRATION
 c MIGHT NOT CONVERGE
 c
-      logical function passcuts_user(p,istatus,ipdg)
+      logical function passcuts_user(p,istatus,ipdg,amp_index)
       implicit none
 c This includes the 'nexternal' parameter that labels the number of
 c particles in the (n+1)-body process
@@ -33,6 +33,8 @@ c momenta equal to all zero's (this is not necessarily the last particle
 c in the list). If one uses IR-safe obserables only, there should be no
 c difficulty in using this.
       double precision p(0:4,nexternal)
+c
+      integer amp_index
 c
 C     external functions that can be used. Some are defined in this
 C     file, others are in ./Source/kin_functions.f
@@ -106,7 +108,7 @@ C***************************************************************
          if (.not.passcuts_user) return
       else
          passcuts_user=passcuts_user .and.
-     $                  passcuts_fxfx(p_reco,pQCD,nQCD)
+     $                  passcuts_fxfx(p_reco,pQCD,nQCD,amp_index)
          if (.not.passcuts_user) return
       endif
 
@@ -441,7 +443,7 @@ c more than the Born).
 
       logical function passcuts_fxfx(p,pQCD,nQCD,amp_index)
 c In case of FxFx merging, use the lowest clustering scale to apply the cut
-      use vectorize
+      use c_fxfx_scales
       implicit none
       include 'nexternal.inc'
       include 'cuts.inc'
@@ -476,7 +478,8 @@ c Apply the jet cut
          return
       endif
 c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
-      if (minval(FxFx_ren_scales(0:nFxFx_ren_scales(amp_index),amp_index)).lt.ptj) then
+      if (minval(FxFx_ren_scales
+     &(0:nFxFx_ren_scales(amp_index),amp_index)).lt.ptj) then
          passcuts_fxfx=.false.
          return
       endif
@@ -762,7 +765,8 @@ C NO NEED TO CHANGE ANY OF THE FUNCTIONS BELOW
 C***************************************************************
 C***************************************************************
       logical function passcuts(p,rwgt,amp_index)
-      use vectorize
+      use parton_cms_stuff
+!      use vectorize
       implicit none
       include "nexternal.inc"
       include 'run.inc'
@@ -833,7 +837,7 @@ c Fill the arrays (momenta, status and PDG):
          if (ipdg(i).eq.-21) ipdg(i)=21
       enddo
 c Call the actual cuts function  
-      passcuts = passcuts_user(pp,istatus,ipdg)
+      passcuts = passcuts_user(pp,istatus,ipdg,amp_index)
       call cpu_time(tAfter)
       t_cuts=t_cuts+(tAfter-tBefore)
       RETURN
