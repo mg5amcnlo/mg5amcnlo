@@ -9083,8 +9083,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             #print process
             self._generate_info = process[9:]
             #print self._generate_info
+        elif skip_2body:
+            logger.info("No three body-decay (or higher) is found for %s", pids) 
         else:
-            logger.info("No decay is found")
+            logger.info("No decay is found for %s", pids)
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""
