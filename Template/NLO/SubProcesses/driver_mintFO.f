@@ -13,7 +13,7 @@ C
       double precision zero
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
-      include 'genps.inc'
+!      include 'genps.inc'
 C
 C     LOCAL
 C
@@ -140,7 +140,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncalls0,itmax,imode)
+      call get_user_params(ncalls0,itmax,imode,0)
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -354,9 +354,11 @@ c timing statistics
       double precision, allocatable :: wgtdum(:)
       double precision, allocatable :: amp2_store(:,:)
       double precision, allocatable :: jamp2_store(:,:)
+      double precision amp_split(amp_split_size)
+      complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
 
       ! common blocks for passing amp2/jamp2
-      include 'genps.inc'
+!      include 'genps.inc'
 !      Double Precision amp2(ngraphs), jamp2(0:ncolor)
 !      common/to_amps/  amp2,          jamp2
 !OMP THREADPRIVATE (/TO_AMPS/)
@@ -472,7 +474,7 @@ c PineAPPL
          call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
          call set_alphaS(p_local(0,1,index))
          call smatrix_real(p_local(0,1,index), wgtdum(index))
-         amp_split_store_r(:,index) = amp_split(:)
+         amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
 !         write(*,*) 'p_local', p_local(:,:,index)
 !         write(*,*) 'amp_split', amp_split(:)
@@ -489,10 +491,11 @@ c PineAPPL
          call set_alphaS(p1_cnt(0,1,0,index))
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index))
-         amp_split_store_b(:,index) = amp_split(:)
-         amp_split_store_cnt(:,:,:,index) = amp_split_cnt(:,:,:)
-         amp2_store(:,index) = amp2(:,index)
-         jamp2_store(:,index) = jamp2(:,index)
+         amp_split_store_b(1:amp_split_size,index) = amp_split(1:amp_split_size)
+         amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
+     & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
+         amp2_store(1:ncolor,index) = amp2(:,index)
+         jamp2_store(1:ncolor,index) = jamp2(:,index)
          ! color-linked borns
          do i=1,fks_j_from_i(i_fks,0)
            do j=1,i
@@ -833,12 +836,12 @@ c**********************************************************************
 c
 c     Constants
 c
-      include 'genps.inc'
+!      include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
-      include 'orders.inc'
+c      include 'orders.inc'
 c
 c     Arguments
 c
