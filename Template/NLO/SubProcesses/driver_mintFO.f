@@ -453,9 +453,9 @@ c PineAPPL
       wgt_me_born=0d0
       wgt_me_real=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0      
-      if (ickkw.eq.3) call set_FxFx_scale(0,p)
       do index=1,vec_size
 !         call update_vegas_x(x_local,index)
+      if (ickkw.eq.3) call set_FxFx_scale(0,p,index)
          call update_vegas_x(index)
       enddo
       call get_MC_integer(max(ini_fin_fks(ichan),1)
@@ -467,14 +467,16 @@ c PineAPPL
       ! MZ
       ! ZW: run MEs in loop over vec_size, store results in arrays of arrays
       iFKS=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
-      call update_fks_dir(iFKS) ! right? (nFKS_picked?)
+      do index=1,vec_size
+         call update_fks_dir(iFKS,index) ! right? (nFKS_picked?)
+      enddo
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
          ! real emission
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
-         call set_alphaS(p_local(0,1,index))
-         call smatrix_real(p_local(0,1,index), wgtdum(index))
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+         call set_alphaS(p_local(0,1,index),index)
+         call smatrix_real(p_local(0,1,index), wgtdum(index),index)
          amp_split_store_r(1:amp_split_size,index) = amp_split(1:amp_split_size)
 !         write(*,*) 'index', index
 !         write(*,*) 'p_local', p_local(:,:,index)
@@ -483,15 +485,17 @@ c PineAPPL
 !$OMP END DO
 !$OMP END PARALLEL
 
-      call update_fks_dir(nFKS_born)
+      do index=1,vec_size
+         call update_fks_dir(nFKS_born,index) ! right? (nFKS_picked?)
+      enddo
 !$OMP PARALLEL
 !$OMP DO
       do index=1,vec_size
          ! the born
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index))
-         call set_alphaS(p1_cnt(0,1,0,index))
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p_local(0,1,index),index)
+         call set_alphaS(p1_cnt(0,1,0,index),index)
          calculatedBorn(index)=.false.
-         call sborn(p1_cnt(0,1,0,index), wgtdum(index))
+         call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
          amp_split_store_b(1:amp_split_size,index) = amp_split(1:amp_split_size)
          amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
      & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
@@ -504,7 +508,7 @@ c PineAPPL
              n=fks_j_from_i(i_fks,j)
              if (n.ne.i_fks.and.m.ne.i_fks) then
               ! MZ don't skip the case m=n and massless, it won't be used
-               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index))
+               call sborn_sf(p1_cnt(0,1,0,index),m,n,wgtdum(index),index)
                amp_split_store_bsf(:,i,j,index) = amp_split_soft(:,index)
              endif
            enddo
@@ -527,7 +531,7 @@ c PineAPPL
          wgt_me_born=0d0
          wgt_me_real=0d0
          if (ickkw.eq.-1) H1_factor_virt=0d0
-         if (ickkw.eq.3) call set_FxFx_scale(0,p)
+         if (ickkw.eq.3) call set_FxFx_scale(0,p,index)
          !ZW
 
          ! recover amp2 and jamp2 for multichanneling
@@ -543,17 +547,17 @@ c  The nbody contributions
          else
             jac=0.5d0
          endif
-         call update_fks_dir(nFKS_born)
-         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
+         call update_fks_dir(nFKS_born,index)
+         call generate_momenta(nndim,iconfig,jac,x_local(:,index),p,index)
          if (p_born(0,1,index).lt.0d0) goto 12
-         call compute_prefactors_nbody(jacobian(index))
-         call set_cms_stuff(izero)
-         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index))
-         passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt)
+         call compute_prefactors_nbody(jacobian(index),index)
+         call set_cms_stuff(izero,index)
+         if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0,index),index)
+         passcuts_nbody=passcuts(p1_cnt(0,1,0,index),rwgt,index)
          if (passcuts_nbody) then
             pass_cuts_check=.true.
-            call set_alphaS(p1_cnt(0,1,0,index))
-            call include_multichannel_enhance(1)
+            call set_alphaS(p1_cnt(0,1,0,index),index)
+            call include_multichannel_enhance(1,index)
             if (abrv(1:2).ne.'vi') then
                call compute_born(index)
             endif
@@ -587,38 +591,38 @@ c The n+1-body contributions (including counter terms)
             wgt_me_born=0d0
             wgt_me_real=0d0
             jac=MC_int_wgt
-            call update_fks_dir(iFKS)
-            call generate_momenta(nndim,iconfig,jac,x_local(:,index),p)
+            call update_fks_dir(iFKS,index)
+            call generate_momenta(nndim,iconfig,jac,x_local(:,index),p,index)
             if (p_born(0,1,index).lt.0d0) cycle
-            call compute_prefactors_n1body(jacobian(index),jac)
-            call set_cms_stuff(izero)
-            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0,index))
-            passcuts_nbody =passcuts(p1_cnt(0,1,0,index),rwgt)
+            call compute_prefactors_n1body(jacobian(index),jac,index)
+            call set_cms_stuff(izero,index)
+            if (ickkw.eq.3) call set_FxFx_scale(2,p1_cnt(0,1,0,index),index)
+            passcuts_nbody =passcuts(p1_cnt(0,1,0,index),rwgt,index)
             ! needed for the mapping without event projection
-            call set_cms_stuff(ione)
-            passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1,index),rwgt)
-            call set_cms_stuff(mohdr)
-            if (ickkw.eq.3) call set_FxFx_scale(3,p)
-            passcuts_n1body=passcuts(p,rwgt)
+            call set_cms_stuff(ione,index)
+            passcuts_coll =(use_evpr.and.passcuts_nbody).or.passcuts(p1_cnt(0,1,1,index),rwgt,index)
+            call set_cms_stuff(mohdr,index)
+            if (ickkw.eq.3) call set_FxFx_scale(3,p,index)
+            passcuts_n1body=passcuts(p,rwgt,index)
             if (passcuts_nbody .and. abrv.ne.'real') then
                pass_cuts_check=.true.
-               call set_cms_stuff(izero)
-               call set_alphaS(p1_cnt(0,1,0,index))
-               call include_multichannel_enhance(3)
+               call set_cms_stuff(izero,index)
+               call set_alphaS(p1_cnt(0,1,0,index),index)
+               call include_multichannel_enhance(3,index)
                call compute_soft_counter_term(0d0,index)
-               call set_cms_stuff(itwo)
+               call set_cms_stuff(itwo,index)
                call compute_soft_collinear_counter_term(0d0,index)
             endif
             if (passcuts_coll .and. abrv.ne.'real') then
-            call set_alphaS(p1_cnt(0,1,1,index))
-            call set_cms_stuff(ione)
+            call set_alphaS(p1_cnt(0,1,1,index),index)
+            call set_cms_stuff(ione,index)
             call compute_collinear_counter_term(0d0,index)
             endif
             if (passcuts_n1body) then
                pass_cuts_check=.true.
-               call set_cms_stuff(mohdr)
-               call set_alphaS(p)
-               call include_multichannel_enhance(2)
+               call set_cms_stuff(mohdr,index)
+               call set_alphaS(p,index)
+               call include_multichannel_enhance(2,index)
                call compute_real_emission(p,1d0,index)
             endif
          enddo
@@ -671,8 +675,9 @@ c Finalize PS point
       return
       end
 
-      subroutine update_fks_dir(nFKS)
+      subroutine update_fks_dir(nFKS,amp_index)
       implicit none
+      integer amp_index
       include 'run.inc'
       integer nFKS
       integer              nFKSprocess
@@ -681,7 +686,7 @@ c Finalize PS point
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(.false.)
+      call setfksfactor(.false.,amp_index)
       return
       end
       

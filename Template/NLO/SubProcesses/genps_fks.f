@@ -480,7 +480,7 @@ c granny phase-space mapping.
      &        do_mapping_granny=.false.
 
 c Set the minimal tau = x1*x2. This also checks if granny is a resonance
-      call set_tau_min()
+      call set_tau_min(amp_index)
 
       if (granny_is_res(amp_index)) then
          which_is_granny(nFKSprocess,amp_index)=igranny(amp_index)
