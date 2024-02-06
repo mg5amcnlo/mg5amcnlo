@@ -473,7 +473,7 @@ c
       return
       end
 
-      subroutine xmcsubt_wrap(pp,xi_i_fks,y_ij_fks,wgt)
+      subroutine xmcsubt_wrap(pp,xi_i_fks,y_ij_fks,wgt,amp_index)
       implicit none
       include "nexternal.inc"
       include 'madfks_mcatnlo.inc'
@@ -485,6 +485,8 @@ c
       double precision z(nexternal),ddum,dummy
       integer nofpartners,idum,ione,iord
       logical lzone(nexternal),flagmc
+
+      integer amp_index
 
       ! amp split stuff
       include 'orders.inc'
@@ -544,7 +546,7 @@ c
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,z,xkern,xkernazi,emscwgt
-     $        ,bornbars,bornbarstilde,npartner)
+     $        ,bornbars,bornbarstilde,npartner,amp_index)
          if(is_pt_hard)exit
          if(dampMCsubt) then
             if (.not.mcatnlo_delta) then
@@ -558,7 +560,7 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-               call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+               call assign_emsca_array(pp,xi_i_fks,y_ij_fks,amp_index)
 c min(i_fks,j_fks) is the mother of the FKS pair
                factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
             endif
@@ -611,7 +613,7 @@ c min(i_fks,j_fks) is the mother of the FKS pair
      $           ,cflows))
          enddo
       enddo
-      call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
+      call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme,amp_index)
       wgt=sumMCsec+xrealme
       do iamp=1, amp_split_size
         amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
@@ -687,7 +689,7 @@ c -- call to MC counterterm functions
          if (mcatnlo_delta) cur_part=ipartners(npartner)
          call xmcsubt(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),gfactsf,gfactcl,probne
      $        ,nofpartners,lzone,flagmc,zhw,xkern,xkernazi,emscwgt
-     $        ,bornbars,bornbarstilde,npartner)
+     $        ,bornbars,bornbarstilde,npartner,amp_index)
          if(is_pt_hard)exit
          if(dampMCsubt) then
             if (.not.mcatnlo_delta) then
@@ -701,7 +703,7 @@ c that, event by event, MC damping factors D(mu_ij) corresponding to the
 c emscwgt_a determined now, are not computed with the actual mu_ij
 c scales used as starting scales (which are determined in the subsequent
 c call to assign_emsca_array), which however is fine statistically
-               call assign_emsca_array(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index))
+               call assign_emsca_array(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
 c min(i_fks,j_fks) is the mother of the FKS pair
                factor=emscwgt_a(min(i_fks,j_fks),ipartners(npartner))
             endif
@@ -767,11 +769,11 @@ c min(i_fks,j_fks) is the mother of the FKS pair
       if (mcatnlo_delta) then
 ! compute and include the Delta Sudakov:
          if(.not.is_pt_hard) call complete_xmcsubt(p,lzone,xmcxsec
-     $        ,xmcxsec2,MCsec,probne)
+     $        ,xmcxsec2,MCsec,probne,amp_index)
       else
 ! assign emsca on statistical basis (don't need flow here): 
          if(.not.is_pt_hard) call assign_emsca_and_flow_statistical(
-     $        xmcxsec,xmcxsec2,MCsec,lzone,idum,ddum)
+     $        xmcxsec,xmcxsec2,MCsec,lzone,idum,ddum,amp_index)
 ! include the bogus no-emission probability:
          xmcxsec(1:ipartners(0))=xmcxsec(1:ipartners(0))*probne
          amp_split_xmcxsec(1:amp_split_size,1:ipartners(0))=
@@ -1131,9 +1133,9 @@ c New or standard MC@NLO formulation
       if(.not.UseSudakov)probne=1.d0
 
 c Call barred Born and assign shower scale
-      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
-      call assign_emsca(pp,xi_i_fks,y_ij_fks)
-      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks)
+      call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde,amp_index)
+      call assign_emsca(pp,xi_i_fks,y_ij_fks,amp_index)
+      if (mcatnlo_delta) call assign_emsca_array(pp,xi_i_fks,y_ij_fks,amp_index)
 
 c Distinguish ISR and FSR
       if(ileg.le.2)then
@@ -1179,11 +1181,11 @@ c Shower variables
       if(shower_mc.eq.'HERWIGPP')then
          ztmp=zHWPP(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
          xitmp=xiHWPP(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacHWPP_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacHWPP_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q,amp_index)
       elseif(shower_mc.eq.'PYTHIA6Q')then
          ztmp=zPY6Q(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
          xitmp=xiPY6Q(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY6Q_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY6Q_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q,amp_index)
       elseif(shower_mc.eq.'PYTHIA6PT')then
          ztmp=zPY6PT(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
          xitmp=xiPY6PT(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
@@ -1191,7 +1193,7 @@ c Shower variables
       elseif(shower_mc.eq.'PYTHIA8')then
          ztmp=zPY8(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
          xitmp=xiPY8(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
-         xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
+         xjactmp=xjacPY8_xiztoxy(ileg,xm12,xm22,shat(amp_index),x,yi,yj,tk,uk,q1q,q2q,amp_index)
       endif
       
       first_MCcnt_call=.false.
@@ -1212,12 +1214,12 @@ c Main loop over colour partners used to begin here
          xi(npartner)=xiHW6(ileg,E0sq(npartner),xm12,xm22,shat(amp_index),
      &                      x,yi,yj,tk,uk,q1q,q2q)
          xjac(npartner)=xjacHW6_xiztoxy(ileg,E0sq(npartner),xm12,xm22,
-     &                                  shat(amp_index),x,yi,yj,tk,uk,q1q,q2q)
+     &                                  shat(amp_index),x,yi,yj,tk,uk,q1q,q2q,amp_index)
       endif
 c Compute dead zones
       call get_dead_zone(ileg,z(npartner),xi(npartner),s,x,yi,
      &  xm12,xm22,w1,w2,qMC,scalemax,ipartners(npartner),fksfather,
-     &  lzone(npartner),wcc)
+     &  lzone(npartner),wcc,amp_index)
 
 c Compute MC subtraction terms
       if(lzone(npartner))then
@@ -1738,7 +1740,7 @@ c
       
 c Given xmcxec,etc., returns jflow, wgt and fills emsca in common block:
       call assign_emsca_and_flow_statistical(xmcxsec,xmcxsec2,MCsec
-     $     ,lzone,jflow,wgt)
+     $     ,lzone,jflow,wgt,amp_index)
       
 c S-event information:
 c id's and mothers read from born_leshouche.inc;
@@ -2570,7 +2572,7 @@ c
       include 'run.inc'
       include "born_nhel.inc"
       include 'madfks_mcatnlo.inc'
-      include "genps.inc"
+!      include "genps.inc"
       include 'nFKSconfigs.inc'
       double precision tiny
       parameter       (tiny=1d-7)
@@ -2870,7 +2872,7 @@ c the same method
       use to_amps
       implicit none
 
-      include "genps.inc"
+!      include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
       include "orders.inc"
@@ -3765,11 +3767,14 @@ c
 
 
       function xjacHW6_xiztoxy(ileg,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
-     $     ,xq1q,xq2q)
+     $     ,xq1q,xq2q,amp_index)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
       integer ileg
+
+      integer amp_index
+
       double precision xjacHW6_xiztoxy,e0sq,xm12,xm22,s,x,yi,yj,xtk,xuk
      $     ,xq1q,xq2q,tiny,tmp,z,zHW6,xi,xiHW6,w1,w2,tbeta1,zeta1,dw1dx
      $     ,dw2dx,dw1dy,dw2dy,tbeta2,get_zeta,beta,betae0,betad,betas
@@ -3817,7 +3822,7 @@ c
             beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
             tbeta1=sqrt(1-(w1+xm12)/e0sq)
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
+     $           ,dw2dx,dw2dy,amp_index)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta1/(2*e0sq*z*(1-z)*(s-w1)
      $           *beta2)
          endif
@@ -3834,7 +3839,7 @@ c
             beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
             tbeta2=sqrt(1-w2/e0sq)
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
+     $           ,dw2dx,dw2dy,amp_index)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)*tbeta2/(2*e0sq*z*(1-z)*(s-w2)
      $           *beta1)
          endif
@@ -3961,7 +3966,7 @@ c
 
 
       function xjacHWPP_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
-     $     ,xq2q)
+     $     ,xq2q,amp_index)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
@@ -3970,6 +3975,8 @@ c variables, and x and y are FKS variables
      &xq2q,tiny,tmp,z,zHWPP,w1,w2,zeta1,dw1dx,dw2dx,dw1dy,dw2dy,get_zeta,
      &betad,betas,eps1,eps2,beta1,beta2
       parameter (tiny=1d-5)
+
+      integer amp_index
 
       tmp=0d0
       z=zHWPP(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
@@ -3992,7 +3999,7 @@ c
             eps2=1-(xm12-xm22)/(s-w1)
             beta2=sqrt(eps2**2-4*s*xm22/(s-w1)**2)
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
+     $           ,dw2dx,dw2dy,amp_index)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w1)*beta2)
          endif
 c
@@ -4005,7 +4012,7 @@ c
             eps1=1+xm12/(s-w2)
             beta1=sqrt(eps1**2-4*s*xm12/(s-w2)**2)
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
+     $           ,dw2dx,dw2dy,amp_index)
             tmp=-(dw1dy*dw2dx-dw1dx*dw2dy)/(z*(1-z))/((s-w2)*beta1)
          endif
 c
@@ -4130,7 +4137,7 @@ c
 
 
       function xjacPY6Q_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q
-     $     ,xq2q)
+     $     ,xq2q,amp_index)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
@@ -4138,6 +4145,8 @@ c variables, and x and y are FKS variables
       double precision xjacPY6Q_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
      &xq2q,tiny,tmp,z,zPY6Q,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas
       parameter (tiny=1d-5)
+
+      integer amp_index
 
       tmp=0d0
       z=zPY6Q(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
@@ -4158,7 +4167,7 @@ c
             tmp=xm12*betad/betas/(betas-betad*yj)
          else
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy)
+     $           ,dw2dx,dw2dy,amp_index)
             tmp=s*(xm12+w1)/w1/(s+w1+xm12-xm22)*dw1dy
          endif
 c
@@ -4169,7 +4178,7 @@ c
             tmp=-s*(1-x)*(s*x-xm12)/( 2*(s-xm12) )
          else
             call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy
-     $           ,dw2dx,dw2dy) 
+     $           ,dw2dx,dw2dy,amp_index) 
             tmp=s/(s+w2-xm12)*dw2dy
          endif
 c
@@ -4407,7 +4416,7 @@ c
 
 
 
-      function xjacPY8_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
+      function xjacPY8_xiztoxy(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q,amp_index)
 c Returns the jacobian d(z,xi)/d(x,y), where z and xi are the shower 
 c variables, and x and y are FKS variables
       implicit none
@@ -4415,6 +4424,8 @@ c variables, and x and y are FKS variables
       double precision xjacPY8_xiztoxy,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,
      &xq2q,tiny,tmp,z,zPY8,w1,w2,dw1dx,dw1dy,dw2dx,dw2dy,betad,betas,z0
       parameter (tiny=1d-5)
+
+      integer amp_index
 
       tmp=0d0
       z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
@@ -4435,7 +4446,7 @@ c
             z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
             tmp=xm12*betad/betas/(betas-betad*yj)*z0*(1-z0)
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy,amp_index)
             tmp=s*(xm12+w1)/w1/(s+w1+xm12-xm22)*dw1dy*z*(1-z)
          endif
 c
@@ -4445,7 +4456,7 @@ c
          elseif(1-yj.le.tiny)then
             tmp=4*s**2*(1-x)**2*(s*x-xm12)**2/( 2*(s-xm12) )**3
          else
-            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
+            call dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy,amp_index)
             tmp=s/(s+w2-xm12)*dw2dy*z*(1-z)
          endif
 c
@@ -4615,7 +4626,7 @@ c Consistency check
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
       if(dampMCsubt)then
          call assign_scaleminmax(shat(amp_index),xi_i_fks,scalemin,scalemax,ileg
-     $        ,xm12)
+     $        ,xm12,amp_index)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
          if(emscasharp)then
             emsca_bare=scalemax
@@ -4689,7 +4700,7 @@ c Consistency check
       call kinematics_driver(xi_i_fks,y_ij_fks,shat(amp_index),pp,ileg,xm12,dum(1)
      $     ,dum(2),dum(3),dum(4),dum(5),qMC,.true.)
       call assign_scaleminmax_array(shat(amp_index),xi_i_fks,scalemin_a,scalemax_a
-     $     ,ileg,xm12)
+     $     ,ileg,xm12,amp_index)
       emsca_a=-1d0
       emscwgt_a=0d0
 c
@@ -5094,6 +5105,8 @@ c
       double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
       logical lzone
 
+      integer amp_index
+
       double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,Q2,
      &lambda,dot,e0sq,beta,dum,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3
       external dot
@@ -5197,7 +5210,7 @@ c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
             if(z.gt.zp1.or.z.lt.zm1)lzone=.false.
          endif
          if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
+            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2,amp_index)
             if(ileg.gt.2)upscale=max(upscale,sqrt(xmm2))
             if(qMC.gt.upscale)lzone=.false.
          endif
@@ -5206,7 +5219,7 @@ c
          if(mstp67.eq.1.and.yi.lt.ycc)lzone=.false.
          if(mstp67.eq.2)wcc=min(1d0,(1-ycc)/(1-yi))
          if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
+            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2,amp_index)
             if(qMC.gt.upscale)lzone=.false.
          endif
 c
@@ -5220,7 +5233,7 @@ c
             if(z.gt.min(zp2,zp3).or.z.lt.max(zm2,zm3))lzone=.false.
          endif
          if(.not.dampMCsubt)then
-            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2)
+            call assign_scaleminmax(s,1-x,dum,upscale,ileg,xmm2,amp_index)
             if(qMC.gt.upscale)lzone=.false.
          endif
 
