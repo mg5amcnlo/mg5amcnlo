@@ -695,6 +695,49 @@ module coupl_es
 end module coupl_es
 
 module vectorize
+  use pborn
+  use pborn_ev
+  use pborn_l
+  use pborn_coll
+  use pborn_norad
+  use to_amps
+  use counterevnts
+  use write_granny_resonance
+  use parton_cms_stuff
+  use fksvariables
+  use ccalculatedborn
+  use pev
+  use c_fxfx_scales
+  use to_amp_split_soft
+  use cnbody
+  use cxiimaxcnt
+  use cxi_i_hat
+  use cxiifkscnt
+  use cxinormev
+  use cxinormcnt
+  use cxiimaxev
+  use c_granny_res
+  use parton_cms_ev
+  use parton_cms_cnt
+  use camp_split_store
+  use cgenps_fks
+  use cbjorkenx
+  use cbjrk12_ev
+  use cbjrk12_cnt
+  use virtgranny_boost
+  use c_conflictingbw
+  use cxij_aor
+  use cnocntevents
+  use c_vegas_x
+  use c_rat_xi
+  use to_virtgranny
+  use cgrannyrange
+  use coffset
+  use c_skip_only_event_phsp
+  use c_isolsign
+  use to_phase_space_s_channel
+  use coupl_es
+  implicit none
     contains
     subroutine allocate_storage(vector_size)
        integer, intent(in) :: vector_size

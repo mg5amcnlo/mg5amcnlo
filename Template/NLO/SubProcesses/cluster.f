@@ -10,7 +10,7 @@ C filled with the iforest etc. information, the momenta are given in the
 C pborn and pev common blocks and the current integration channel is
 C given by the to_mconfigs common block.
       use weight_lines
-      use vectorize
+!      use vectorize
       use pborn
       use pev
       implicit none

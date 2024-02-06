@@ -585,7 +585,7 @@ c
             if(ilim.eq.0)then
                call xmcsubt_wrap(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx)
             else
-               call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1,amp_index),one,fx) 
+               call sreal(p1_cnt(0,1,1,amp_index),xi_i_fks_cnt(1,amp_index),one,fx) 
             endif
             fxl(1)=fx*jac_cnt(1,amp_index)
             wfxl(1)=jac_cnt(1,amp_index)
@@ -618,7 +618,7 @@ c
             do k=1,nexternal
                do l=0,3
                   lxp(l,k)=p1_cnt(l,k,1,amp_index)
-                  xp(1,l,k)=p(l,k,amp_index)
+                  xp(1,l,k)=p(l,k)
                enddo
             enddo
             do l=0,3
