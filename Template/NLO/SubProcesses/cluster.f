@@ -1,6 +1,6 @@
       subroutine cluster_and_reweight(iproc,sudakov,expanded_sudakov
      $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
-     $     ,amp_index
+     $     ,amp_index)
 C main wrapper routine for the FxFx clustering, Sudakov inclusion and
 C renormalisation scale setting (to be used to somewhere else to
 C reweight alphaS). Should be called with iproc=0 for n-body
@@ -11,6 +11,8 @@ C pborn and pev common blocks and the current integration channel is
 C given by the to_mconfigs common block.
       use weight_lines
       use vectorize
+      use pborn
+      use pev
       implicit none
       include 'nexternal.inc'
       include 'maxconfigs.inc'
