@@ -738,9 +738,12 @@ module vectorize
   use to_phase_space_s_channel
   use coupl_es
   implicit none
+  integer vec_size_store
     contains
     subroutine allocate_storage(vector_size)
+       implicit none
        integer, intent(in) :: vector_size
+       vec_size_store = vector_size
        call allocate_pborn(vector_size)
        call allocate_pborn_ev(vector_size)
        call allocate_pborn_l(vector_size)

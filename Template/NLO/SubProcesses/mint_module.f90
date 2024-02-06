@@ -217,7 +217,7 @@ contains
     double precision, external :: fun
     logical :: enough_points,channel_loop_done
     call allocate_mint(vector_size)
-    call allocate_storage(vector_size)
+!    call allocate_storage(vector_size)
     allocate(x(ndimmax,vector_size))
     allocate(vol(vector_size))
     call initialise_mint

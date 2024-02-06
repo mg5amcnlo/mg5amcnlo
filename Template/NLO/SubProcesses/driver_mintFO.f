@@ -140,7 +140,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncalls0,itmax,imode,0)
+      call get_user_params(ncalls0,itmax,imode)
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -194,6 +194,7 @@ c
       unwgt=.false.
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
+         call allocate_storage(vec_size)
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
@@ -826,7 +827,7 @@ c     if there are no soft singularities at all, just do something trivial
       end
 
 c
-      subroutine get_user_params(ncall,nitmax,irestart, index)
+      subroutine get_user_params(ncall,nitmax,irestart)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -1000,18 +1001,20 @@ c-----
             write (*,*) 'Weight multiplier:',wgt_mult
          elseif(buffer(1:8).eq.'RUN_MODE') then
             read(buffer(11:),*) abrvinput
-            if(abrvinput(5:5).eq.'0')then
-               nbody(index)=.true.
-            else
-               nbody(index)=.false.
-            endif
-            abrv=abrvinput(1:4)
-            write (*,*) "doing the ",abrv," of this channel"
-            if(nbody(index))then
-               write (*,*) "integration Born/virtual with Sfunction=1"
-            else
-               write (*,*) "Normal integration (Sfunction != 1)"
-            endif
+            do index=1,vec_size
+               if(abrvinput(5:5).eq.'0')then
+                  nbody(index)=.true.
+               else
+                  nbody(index)=.false.
+               endif
+               abrv=abrvinput(1:4)
+               write (*,*) "doing the ",abrv," of this channel"
+               if(nbody(index))then
+                  write (*,*) "integration Born/virtual with Sfunction=1"
+               else
+                  write (*,*) "Normal integration (Sfunction != 1)"
+               endif
+            enddo
          elseif(buffer(1:7).eq.'RESTART') then
             read(buffer(10:),*) irestart
             if (irestart.eq.0) then
