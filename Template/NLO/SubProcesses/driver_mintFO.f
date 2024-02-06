@@ -140,6 +140,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
+      call allocate_storage(vec_size)
       call get_user_params(ncalls0,itmax,imode)
       if(imode.eq.0)then
         flat_grid=.true.
@@ -194,7 +195,6 @@ c
       unwgt=.false.
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
-         call allocate_storage(vec_size)
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
