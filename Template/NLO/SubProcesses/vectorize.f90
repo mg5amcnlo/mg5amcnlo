@@ -229,8 +229,8 @@ module c_fxfx_scales
 end module c_fxfx_scales
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module to_amp_split_soft
-    implicit none
-    include 'mod_orders.inc'
+   use mod_orders
+   implicit none
    double precision, allocatable :: amp_split_soft(:,:)
  contains
    subroutine allocate_to_amp_split_soft(vector_size)
@@ -400,8 +400,8 @@ module parton_cms_cnt
 end module parton_cms_cnt
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module camp_split_store
+  use mod_orders
    implicit none
-   include 'mod_orders.inc'
    double precision, allocatable :: AMP_SPLIT_STORE_R(:,:)
    double precision, allocatable :: AMP_SPLIT_STORE_B(:,:)
    double complex, allocatable :: AMP_SPLIT_STORE_CNT(:,:,:,:)

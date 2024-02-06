@@ -640,7 +640,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             writers.FortranWriter(filename),
                             matrix_element)
       
-        filename = 'mod_orders.inc'
+        filename = 'orders.f90'
         amp_split_orders, amp_split_size, amp_split_size_born = \
 			   self.write_mod_orders(
                             writers.FortranWriter(filename),
@@ -1512,6 +1512,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         amp_split_size=len(amp_split_orders)
         text = '! The orders to be integrated for the Born and at NLO\n'
+        text += 'module mod_orders\n'
         text += 'integer nsplitorders\n'
         text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
         text += 'character*%d ordernames(nsplitorders)\n' % max([len(o) for o in split_orders])
@@ -1545,6 +1546,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         text += 'parameter (amp_split_size = %d)\n' % amp_split_size
         text += '! the first entries in the next line in amp_split are for the born \n'
         text += 'parameter (amp_split_size_born = %d)\n' % amp_split_size_born
+        text += 'end module mod_orders'
         writer.line_length=132
         writer.writelines(text)
 
