@@ -7,7 +7,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       use to_amps
       use counterevnts
       implicit none
-      include "genps.inc"
+!      include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
       include "born_coloramps.inc"
@@ -358,14 +358,14 @@ c generate a phase-space point with the MC masses
          if(Hevents)then
             call set_cms_stuff(mohdr)
 c special treament here for i_fks and j_fks masses
-            call put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail)
+            call put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail,amp_index)
 c include initial state masses
             if(j_fks.gt.nincoming.and.mfail.eq.0)
-     &           call put_on_MC_mshell_in(p,xm1,xm2,mfail)
+     &           call put_on_MC_mshell_in(p,xm1,xm2,mfail,amp_index)
          else
 c include initial state masses
             call set_cms_stuff(izero)
-            call put_on_MC_mshell_in(p1_cnt(0,1,0,amp_index),xm1,xm2,mfail)
+            call put_on_MC_mshell_in(p1_cnt(0,1,0,amp_index),xm1,xm2,mfail,amp_index)
          endif
  888     continue
 c restore the common block for the masses to the original MG masses
@@ -517,7 +517,7 @@ c
 c Fill the OnBW array to determine which resonances should be written
 c
       call OnBreitWigner(pp,p_born,Hevents,itree,sprop_tree,pmass_tree,
-     &     pwidth_tree,OnBW)
+     &     pwidth_tree,OnBW,amp_index)
 
 c     First check number of resonant s-channel propagators
       ns=0
@@ -1355,11 +1355,14 @@ c
       end
 
 
-      subroutine put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail)
+      subroutine put_on_MC_mshell_Hev(p,xmi,xmj,xm1,xm2,mfail,amp_index)
       implicit none
       include 'nexternal.inc'
       double precision p(0:3,99),xmi,xmj,xm1,xm2
       integer mfail
+      
+      integer amp_index
+
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
 c
@@ -1370,7 +1373,7 @@ c
       endif
 
       if(j_fks.le.nincoming)then
-        call put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail)
+        call put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail,amp_index)
       else
         call put_on_MC_mshell_Hevout(p,xmi,xmj,mfail)
       endif
