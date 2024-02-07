@@ -1,4 +1,6 @@
-subroutine sborn_sf(p_born,m,n,wgt)
+subroutine sborn_sf(p_born,m,n,wgt,amp_index)
+          use to_amp_split_soft
+          use camp_split_store
           implicit none
           include "nexternal.inc"
           include 'coupl.inc'        
@@ -6,13 +8,15 @@ subroutine sborn_sf(p_born,m,n,wgt)
           integer nsqampso
           parameter (nsqampso = %(nsqorders)d)
 
+          integer amp_index
+
 C return the color-linked borns if i_fks is a color octet, 
 C the charge-linked if it is a color singlet
           double complex wgt_born(2,0:nsqampso)
           double precision wgt_col
           double precision chargeprod
           integer i,m,n 
-      include 'orders.inc'
+!      include 'orders.inc'
       COMPLEX*16 ANS_CNT(2, NSPLITORDERS)
       common /c_born_cnt/ ans_cnt
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
@@ -23,9 +27,9 @@ C the charge-linked if it is a color singlet
       common /c_need_links/need_color_links, need_charge_links
       double precision pmass(nexternal), zero
       parameter (zero=0d0)
-      double precision amp_split_soft(amp_split_size)
-      common /to_amp_split_soft/amp_split_soft
-!$OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
+!      double precision amp_split_soft(amp_split_size)
+!      common /to_amp_split_soft/amp_split_soft
+!OMP THREADPRIVATE (/TO_AMP_SPLIT_SOFT/)
 
       chargeprod = 0d0
 
@@ -38,7 +42,7 @@ C check if need color or charge links, and include the gs/w**2 term here
 %(iflines_col)s
       wgt = wgt_col * g**2
 C update the amp_split_soft, which is summed in sbornsoft
-      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qcd_pos)) * g**2
+      amp_split_soft(1:amp_split_size,amp_index) = dble(amp_split_store_cnt(1:amp_split_size,1,qcd_pos,amp_index)) * g**2
 
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
@@ -47,7 +51,7 @@ C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
 C update the amp_split_soft, which is summed in sbornsoft
-      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qed_pos)) * chargeprod * dble(gal(1))**2
+      amp_split_soft(1:amp_split_size,amp_index) = dble(amp_split_store_cnt(1:amp_split_size,1,qed_pos,amp_index)) * chargeprod * dble(gal(1))**2
       endif
 
       return 

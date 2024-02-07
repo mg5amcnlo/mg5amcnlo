@@ -1,4 +1,4 @@
-      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED)
+      SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED,amp_index)
 C  
 %(info_lines)s
 C
@@ -10,6 +10,9 @@ C
 %(process_lines)s
 C
 C  
+C MODULES
+
+C
 C CONSTANTS
 C 
 implicit none
@@ -20,6 +23,7 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      INTEGER amp_index
 C
 C VARIABLES
 C
@@ -40,7 +44,7 @@ C
 C
 C BEGIN CODE
 C
-	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS)
+	  CALL SB_SF_%(ilink)3.3d_SPLITORDERS(P,ANS,amp_index)
 C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
       max_val = 0d0
@@ -73,7 +77,7 @@ return
 END
 
 
-    SUBROUTINE SB_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS)
+    SUBROUTINE SB_SF_%(ilink)3.3d_SPLITORDERS(P1,ANS,amp_index)
 C  
 %(info_lines)s
 C
@@ -82,6 +86,11 @@ C AND HELICITIES
 C FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
+C
+C MODULES
+      use c_goodhel
+      use to_savemom
+      use ccalculatedBorn
 C
       IMPLICIT NONE
 C  
@@ -100,6 +109,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P1(0:3,NEXTERNAL-1),ANS(0:NSQAMPSO)
+      integer amp_index
 C  
 C LOCAL VARIABLES 
 C  
@@ -109,25 +119,25 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
-      common /c_goodhel/ goodhel
-!$OMP THREADPRIVATE (/C_GOODHEL/)
-      double precision savemom(nexternal-1,2)
-      common/to_savemom/savemom
-!$OMP THREADPRIVATE (/TO_SAVEMOM/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+!      common /c_goodhel/ goodhel
+!OMP THREADPRIVATE (/C_GOODHEL/)
+!      double precision savemom(nexternal-1,2)
+!      common/to_savemom/savemom
+!OMP THREADPRIVATE (/TO_SAVEMOM/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
 C ----------
 C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
-      if (calculatedBorn) then
+      if (calculatedBorn(amp_index)) then
          do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
+            if (savemom(j,1,amp_index).ne.p1(0,j) .or. savemom(j,2,amp_index).ne.p1(3,j)) then
+               calculatedBorn(amp_index)=.false.
                write(*,*) 'Error in sb_sf: momenta not the same in the born'
                stop
             endif
@@ -140,8 +150,8 @@ C ----------
           ANS(I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
-         IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL B_SF_%(ilink)3.3d(IHEL,T)
+         IF (GOODHEL(IHEL,nFKSprocess,amp_index)) THEN
+           CALL B_SF_%(ilink)3.3d(IHEL,T,amp_index)
            DO I=1,NSQAMPSO
              ANS(I)=ANS(I)+T(I)
            ENDDO
@@ -154,7 +164,7 @@ C ----------
       END
        
        
-      SUBROUTINE B_SF_%(ilink)3.3d(HELL,ANS)
+      SUBROUTINE B_SF_%(ilink)3.3d(HELL,ANS,amp_index)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -162,6 +172,10 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+C MODULES
+      use to_saveamp
+      use ccalculatedBorn
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -183,6 +197,7 @@ C ARGUMENTS
 C  
       INTEGER HELL
       REAL*8 ANS(NSQAMPSO)
+      integer amp_index
 C  
 C LOCAL VARIABLES 
 C  
@@ -193,12 +208,12 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-!$OMP THREADPRIVATE (/TO_SAVEAMP/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      double complex saveamp(ngraphs,max_bhel)
+!      common/to_saveamp/saveamp
+!OMP THREADPRIVATE (/TO_SAVEAMP/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
 C
 C FUNCTION
 C
@@ -210,12 +225,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      if (.not. calculatedBorn) then
+      if (.not. calculatedBorn(amp_index)) then
         write(*,*) 'Error in b_sf: color_linked borns should be called only with calculatedborn = true'
         stop
-      elseif (calculatedBorn) then
+      elseif (calculatedBorn(amp_index)) then
       do i=1,ngraphs
-         amp(i)=saveamp(i,hell)
+         amp(i)=saveamp(i,hell,amp_index)
       enddo
       endif
 %(jamp1_lines)s

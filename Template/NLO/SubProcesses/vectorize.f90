@@ -79,15 +79,39 @@ module pborn_norad
    end subroutine deallocate_pborn_norad
 end module pborn_norad
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module to_amps_born
+  use mod_genps
+  use mod_orders
+  implicit none
+! include 'genps.inc'
+ double precision, allocatable :: amp2b(:,:),jamp2b(:,:,:)
+contains
+ subroutine allocate_to_amps_born(vector_size)
+     integer, intent(in) :: vector_size
+     integer index
+     allocate(amp2b(ngraphs_mod,vector_size)) !ZW: NGRAPHS MUST BE INCLUDED SOMEWHERE
+     allocate(jamp2b(0:ncolor_mod,0:nampso_mod,vector_size)) !ZW: NCOLOR MUST BE INCLUDED SOMEWHERE
+     do index=1,vector_size
+        jamp2b(0,0,index) = ncolor_mod
+     end do
+ end subroutine allocate_to_amps_born
+
+ subroutine deallocate_to_amps_born
+      if (allocated(amp2b)) deallocate(amp2b)
+      if (allocated(jamp2b)) deallocate(jamp2b)
+ end subroutine deallocate_to_amps_born
+end module to_amps_born
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module to_amps
+  use mod_genps 
     implicit none
-   include 'genps.inc'
+!   include 'genps.inc'
    double precision, allocatable :: amp2(:,:),jamp2(:,:)
  contains
    subroutine allocate_to_amps(vector_size)
        integer, intent(in) :: vector_size
-       allocate(amp2(ngraphs,vector_size)) !ZW: NGRAPHS MUST BE INCLUDED SOMEWHERE
-       allocate(jamp2(0:ncolor,vector_size)) !ZW: NCOLOR MUST BE INCLUDED SOMEWHERE
+       allocate(amp2(ngraphs_mod,vector_size)) !ZW: NGRAPHS MUST BE INCLUDED SOMEWHERE
+       allocate(jamp2(0:ncolor_mod,vector_size)) !ZW: NCOLOR MUST BE INCLUDED SOMEWHERE
    end subroutine allocate_to_amps
 
    subroutine deallocate_to_amps
@@ -693,7 +717,71 @@ module coupl_es
         if (allocated(qes2)) deallocate(qes2)
    end subroutine deallocate_coupl_es
 end module coupl_es
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module c_goodhel
+  use mod_nfksconfigs
+  use mod_born_nhel
+    implicit none
+    logical, allocatable :: goodhel(:,:,:)
+ contains
+   subroutine allocate_c_goodhel(vector_size)
+       integer, intent(in) :: vector_size
+         allocate(goodhel(max_bhel_mod,FKS_CONFIGS_mod,vector_size))
+   end subroutine allocate_c_goodhel
 
+   subroutine deallocate_c_goodhel
+        if (allocated(goodhel)) deallocate(goodhel)
+   end subroutine deallocate_c_goodhel
+end module c_goodhel
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module to_saveamp
+  use mod_genps
+  use mod_born_nhel
+  implicit none
+  double complex, allocatable :: saveamp(:,:,:)
+  contains
+  subroutine allocate_to_saveamp(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(saveamp(ngraphs_mod,max_bhel_mod,vector_size))
+  end subroutine allocate_to_saveamp
+
+  subroutine deallocate_to_saveamp
+    if (allocated(saveamp)) deallocate(saveamp)
+  end subroutine deallocate_to_saveamp
+end module to_saveamp
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module to_savemom
+  use MOD_NEXTERNAL
+  implicit none
+  double precision, allocatable :: savemom(:,:,:)
+  contains
+  subroutine allocate_to_savemom(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(savemom(nexternal_mod-1,2,vector_size))
+  end subroutine allocate_to_savemom
+  subroutine deallocate_to_savemom
+    if (allocated(savemom)) deallocate(savemom)
+  end subroutine deallocate_to_savemom
+end module to_savemom
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module cBorn
+  use mod_nfksconfigs
+  double precision, allocatable :: hel_fac(:)
+  integer, allocatable :: get_hel(:), skip(:,:)
+  contains
+  subroutine allocate_cBorn(vector_size)
+    integer, intent(in) :: vector_size
+    allocate(hel_fac(vector_size))
+    allocate(get_hel(vector_size))
+    allocate(skip(FKS_CONFIGS_mod, vector_size))
+  end subroutine allocate_cBorn
+  subroutine deallocate_cBorn
+    if (allocated(hel_fac)) deallocate(hel_fac)
+    if (allocated(get_hel)) deallocate(get_hel)
+    if (allocated(skip)) deallocate(skip)
+  end subroutine deallocate_cBorn
+end module cBorn
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module vectorize
   use pborn
   use pborn_ev
@@ -701,6 +789,7 @@ module vectorize
   use pborn_coll
   use pborn_norad
   use to_amps
+  use to_amps_born
   use counterevnts
   use write_granny_resonance
   use parton_cms_stuff
@@ -737,6 +826,10 @@ module vectorize
   use c_isolsign
   use to_phase_space_s_channel
   use coupl_es
+  use c_goodhel
+  use to_saveamp
+  use to_savemom
+  use cBorn
   implicit none
   integer vec_size_store
     contains
@@ -750,6 +843,7 @@ module vectorize
        call allocate_pborn_coll(vector_size)
        call allocate_pborn_norad(vector_size)
        call allocate_to_amps(vector_size)
+       call allocate_to_amps_born(vector_size)
        call allocate_counterevnts(vector_size)
        call allocate_write_granny_resonance(vector_size)
        call allocate_parton_cms_stuff(vector_size)
@@ -786,8 +880,11 @@ module vectorize
        call allocate_c_isolsign(vector_size)
        call allocate_to_phase_space_s_channel(vector_size)
        call allocate_coupl_es(vector_size)
+       call allocate_c_goodhel(vector_size)
+       call allocate_to_saveamp(vector_size)
+       call allocate_to_savemom(vector_size)
+       call allocate_cBorn(vector_size)
     end subroutine allocate_storage
-
 
     subroutine deallocate_storage
        call deallocate_pborn
@@ -796,6 +893,7 @@ module vectorize
        call deallocate_pborn_coll
        call deallocate_pborn_norad
        call deallocate_to_amps
+       call deallocate_to_amps_born
        call deallocate_counterevnts
        call deallocate_write_granny_resonance
        call deallocate_parton_cms_stuff
@@ -832,6 +930,10 @@ module vectorize
        call deallocate_c_isolsign
        call deallocate_to_phase_space_s_channel
        call deallocate_coupl_es
+       call deallocate_c_goodhel
+       call deallocate_to_saveamp
+       call deallocate_to_savemom
+       call deallocate_cBorn
     end subroutine deallocate_storage
 end module vectorize
          

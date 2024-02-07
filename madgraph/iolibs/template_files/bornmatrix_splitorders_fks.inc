@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN(P,ANS_SUMMED)
+      SUBROUTINE SBORN(P,ANS_SUMMED,amp_index)
 C  
 %(info_lines)s
 C
@@ -9,7 +9,11 @@ C
 C  
 %(process_lines)s
 C
-C  
+C 
+C MODULES
+      use to_amps
+      use to_amps_born
+      use camp_split_store
 C CONSTANTS
 C 
       implicit none
@@ -22,11 +26,12 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL-1)
+      INTEGER AMP_INDEX
 C
 C VARIABLES
 C
       INTEGER I,J,K
-      include 'orders.inc'
+!      include 'orders.inc'
       double precision ans_summed
       COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
       LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
@@ -42,12 +47,15 @@ C
       double precision       wgt_ME_born,wgt_ME_real
       common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 
-      double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
-      common/to_amps_born/  amp2b,       jamp2b
-!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
-      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
-      common/to_amps/  amp2,       jamp2
-!$OMP THREADPRIVATE (/TO_AMPS/)
+      double precision amp_split(amp_split_size)
+      complex*16 amp_split_cnt(amp_split_size,2,nsplitorders)
+
+!      double precision amp2b(%(ngraphs)d), jamp2b(0:%(ncolor)d,0:nampso)
+!      common/to_amps_born/  amp2b,       jamp2b
+!OMP THREADPRIVATE (/TO_AMPS_BORN/)
+!      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
+!      common/to_amps/  amp2,       jamp2
+!OMP THREADPRIVATE (/TO_AMPS/)
       logical split_type_used(nsplitorders)
       common/to_split_type_used/split_type_used
 C
@@ -105,7 +113,7 @@ C this is for the orders of the counterterms
  firsttime = .false.
 endif
 
-CALL SBORN_SPLITORDERS(P,ANS)
+CALL SBORN_SPLITORDERS(P,ANS,AMP_INDEX)
 
 C the born to be integrated
 ans_summed = 0d0
@@ -134,13 +142,13 @@ if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 wgt_me_born=ans_summed
 
 C fill the amp2 and jamp2 arrays
-amp2(1:ngraphs)=amp2b(1:ngraphs)! amp2 just needs to be copyed
+amp2(1:ngraphs,AMP_INDEX)=amp2b(1:ngraphs,AMP_INDEX)! amp2 just needs to be copyed
 
-do i = 0, int(jamp2b(0,0))
-jamp2(i)=0d0
+do i = 0, int(jamp2b(0,0,AMP_INDEX))
+jamp2(i,AMP_INDEX)=0d0
 do j = 1, nampso
 c here sum all, this may be refined later
-jamp2(i)=jamp2(i)+jamp2b(i,j)
+jamp2(i,AMP_INDEX)=jamp2(i,AMP_INDEX)+jamp2b(i,j,AMP_INDEX)
 enddo
 enddo
 
@@ -171,12 +179,14 @@ C this is to avoid fake non-zero contributions
 enddo
 
 
+AMP_SPLIT_STORE_B(1:amp_split_size,AMP_INDEX) = amp_split(1:amp_split_size)
+
  999   return
 END
 
 
 
-SUBROUTINE SBORN_SPLITORDERS(P1,ANS)
+SUBROUTINE SBORN_SPLITORDERS(P1,ANS,amp_index)
 C  
 %(info_lines)s
 C
@@ -185,6 +195,15 @@ C AND HELICITIES
 C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
+C
+C MODULES
+      use to_amps
+      use to_amps_born
+      use ccalculatedborn
+      use c_goodhel
+      use to_saveamp
+      use to_savemom
+      use cBorn
 C
       IMPLICIT NONE
 C  
@@ -205,6 +224,7 @@ C ARGUMENTS
 C  
       REAL*8 P1(0:3,NEXTERNAL-1)
       COMPLEX*16 ANS(2,0:NSQAMPSO)
+      INTEGER AMP_INDEX
 C  
 C LOCAL VARIABLES 
 C  
@@ -221,26 +241,26 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
-      common/to_amps_born/  amp2,       jamp2
-!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
-      DATA jamp2(0,0) /   %(ncolor)d/          
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
-      common /c_goodhel/goodhel
-!$OMP THREADPRIVATE (/C_GOODHEL/)
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-!$OMP THREADPRIVATE (/TO_SAVEAMP/)
-      double precision savemom(nexternal-1,2)
-      common/to_savemom/savemom
-!$OMP THREADPRIVATE (/TO_SAVEMOM/)
-      double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
-!$OMP THREADPRIVATE (/CBORN/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      Double Precision amp2(ngraphs), jamp2(0:%(ncolor)d,0:NAMPSO)
+!      common/to_amps_born/  amp2,       jamp2
+!OMP THREADPRIVATE (/TO_AMPS_BORN/)
+!      DATA jamp2b(0,0,amp_index) /   %(ncolor)d/          
+!      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+!      common /c_goodhel/goodhel
+!OMP THREADPRIVATE (/C_GOODHEL/)
+!      double complex saveamp(ngraphs,max_bhel)
+!      common/to_saveamp/saveamp
+!OMP THREADPRIVATE (/TO_SAVEAMP/)
+!      double precision savemom(nexternal-1,2)
+!      common/to_savemom/savemom
+!OMP THREADPRIVATE (/TO_SAVEMOM/)
+!      double precision hel_fac
+!      integer get_hel,skip(%(nconfs)d)
+!      common/cBorn/hel_fac,get_hel,skip
+!OMP THREADPRIVATE (/CBORN/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       logical cond_ij
@@ -252,40 +272,40 @@ C ----------
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
        if (glu_ij.eq.0) then
-         skip(nfksprocess)=0
+         skip(nfksprocess,AMP_INDEX)=0
        else
-         skip(nFKSprocess)=1			 
-         do while(nhel(glu_ij ,skip(nFKSprocess)).ne.-NHEL(GLU_IJ ,1))
-            skip(nFKSprocess)=skip(nFKSprocess)+1
+         skip(nFKSprocess,AMP_INDEX)=1			 
+         do while(nhel(glu_ij ,skip(nFKSprocess,AMP_INDEX)).ne.-NHEL(GLU_IJ ,1))
+            skip(nFKSprocess,AMP_INDEX)=skip(nFKSprocess,AMP_INDEX)+1
          enddo
-         skip(nFKSprocess)=skip(nFKSprocess)-1
+         skip(nFKSprocess,AMP_INDEX)=skip(nFKSprocess,AMP_INDEX)-1
        endif
       endif
       DO JJ=1,NGRAPHS
-          amp2(jj)=0d0
+          amp2b(jj,amp_index)=0d0
       ENDDO
       DO I=0,NAMPSO
-      DO JJ=1,int(jamp2(0,0))
-          jamp2(jj,I)=0d0
+      DO JJ=1,int(jamp2b(0,0,amp_index))
+          jamp2b(jj,I,amp_index)=0d0
       ENDDO
       ENDDO
-      if (calculatedBorn) then
+      if (calculatedBorn(AMP_INDEX)) then
          do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
+            if (savemom(j,1,AMP_INDEX).ne.p1(0,j) .or. savemom(j,2,AMP_INDEX).ne.p1(3,j)) then
+               calculatedBorn(AMP_INDEX)=.false.
                write (*,*) "momenta not the same in Born"
 	       stop
             endif
          enddo
       endif
-      if (.not.calculatedBorn) then
+      if (.not.calculatedBorn(AMP_INDEX)) then
          do j=1,nexternal-1
-            savemom(j,1)=p1(0,j)
-            savemom(j,2)=p1(3,j)
+            savemom(j,1,AMP_INDEX)=p1(0,j)
+            savemom(j,2,AMP_INDEX)=p1(3,j)
          enddo
          do j=1,max_bhel
             do jj=1,ngraphs
-               saveamp(jj,j)=(0d0,0d0)
+               saveamp(jj,j,AMP_INDEX)=(0d0,0d0)
             enddo
          enddo
       endif
@@ -293,25 +313,27 @@ C ----------
           ANS(1,I) = 0D0
           ANS(2,I) = 0D0
       ENDDO
-      hel_fac=1d0
+      hel_fac(AMP_INDEX)=1d0
       DO IHEL=1,NCOMB
         ! the following lines are to avoid segfaults when glu_ij=0
-        cond_ij=skip(nfksprocess).eq.0
+        cond_ij=skip(nfksprocess,AMP_INDEX).eq.0
         if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
-        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess,AMP_INDEX).eq.0) then
         if (cond_ij) then
-          IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
+          IF ((GOODHEL(IHEL,nFKSprocess,AMP_INDEX) .OR. 
+     & GOODHEL(IHEL+SKIP(nFKSprocess,AMP_INDEX),nFKSprocess,AMP_INDEX)
+     & .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
+            CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns,AMP_INDEX)
             DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
             ENDDO
-            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
-              GOODHEL(IHEL,nFKSprocess)=.TRUE.
+            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess,AMP_INDEX) ) then
+              GOODHEL(IHEL,nFKSprocess,AMP_INDEX)=.TRUE.
             endif
-            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
-              GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
+            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess,AMP_INDEX),nFKSprocess,AMP_INDEX) ) then
+              GOODHEL(IHEL+SKIP(nFKSprocess,AMP_INDEX),nFKSprocess,AMP_INDEX)=.TRUE.
             endif
 	  ENDIF
         ENDIF
@@ -322,11 +344,11 @@ C ----------
       ANS(1,0)=ANS(1,0)+ANS(1,I)
       ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
-      calculatedBorn=.true.
+      calculatedBorn(AMP_INDEX)=.true.
       END
        
        
-      SUBROUTINE BORN(P,NHEL,HELL,ANS,borns)
+      SUBROUTINE BORN(P,NHEL,HELL,ANS,borns,amp_index)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -334,6 +356,12 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+C MODULES
+      use to_amps_born
+      use ccalculatedborn
+      use to_saveamp
+      use cBorn
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -357,6 +385,7 @@ C
       REAL*8 P(0:3,NEXTERNAL-1),borns(2,0:NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1), HELL
       COMPLEX*16 ANS(2,NSQAMPSO)
+      integer amp_index
 C  
 C LOCAL VARIABLES 
 C  
@@ -370,19 +399,19 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
-      common/to_amps_born/  amp2,       jamp2
-!$OMP THREADPRIVATE (/TO_AMPS_BORN/)
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-!$OMP THREADPRIVATE (/TO_SAVEAMP/)
-      double precision hel_fac
-      integer get_hel,skip(%(nconfs)d)
-      common/cBorn/hel_fac,get_hel,skip
-!$OMP THREADPRIVATE (/CBORN/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d,0:nampso)
+!      common/to_amps_born/  amp2,       jamp2
+!OMP THREADPRIVATE (/TO_AMPS_BORN/)
+!      double complex saveamp(ngraphs,max_bhel)
+!      common/to_saveamp/saveamp
+!OMP THREADPRIVATE (/TO_SAVEAMP/)
+!      double precision hel_fac
+!      integer get_hel,skip(%(nconfs)d)
+!      common/cBorn/hel_fac,get_hel,skip
+!OMP THREADPRIVATE (/CBORN/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       integer step_hel
@@ -432,24 +461,24 @@ C ----------
         if (glu_ij.ne.0) then
           if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         endif
-        if (.not. calculatedBorn) then
+        if (.not. calculatedBorn(amp_index)) then
 %(helas_calls)s
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
-            saveamp(i,hell)=amp(i)
+            saveamp(i,hell,amp_index)=amp(i)
           elseif(ihel.eq.-back_hel)then
-            saveamp(i,hell+skip(nFKSprocess))=amp(i)
+            saveamp(i,hell+skip(nFKSprocess,amp_index),amp_index)=amp(i)
           else
             write(*,*) "ERROR #1 in born.f"
             stop
           endif
         enddo
-        elseif (calculatedBorn) then
+        elseif (calculatedBorn(amp_index)) then
         do i=1,ngraphs
           if(ihel.eq.back_hel)then
-            amp(i)=saveamp(i,hell)
+            amp(i)=saveamp(i,hell,amp_index)
           elseif(ihel.eq.-back_hel)then
-            amp(i)=saveamp(i,hell+skip(nFKSprocess))
+            amp(i)=saveamp(i,hell+skip(nFKSprocess,amp_index),amp_index)
           else
             write(*,*) "ERROR #1 in born.f"
             stop
@@ -469,11 +498,11 @@ C ----------
         ENDDO
         ENDDO
         Do I = 1, NGRAPHS
-          amp2(i)=amp2(i)+amp(i)*dconjg(amp(i))
+          amp2b(i,amp_index)=amp2b(i,amp_index)+amp(i)*dconjg(amp(i))
         Enddo
         do J = 1,NAMPSO
         Do I = 1, NCOLOR
-          Jamp2(i,J)=Jamp2(i,J)+Jamp(i,J)*dconjg(Jamp(i,J))
+          Jamp2b(i,J,amp_index)=Jamp2b(i,J,amp_index)+Jamp(i,J)*dconjg(Jamp(i,J))
           Jamph(2-(1+back_hel*ihel)/2,i,J)=Jamp(i,J)
         Enddo
         ENDDO

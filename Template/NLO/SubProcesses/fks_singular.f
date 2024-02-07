@@ -1465,7 +1465,7 @@ c f_* multiplication factors for Born and nbody
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-!      include 'genps.inc'
+      include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'timing_variables.inc'
       double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real

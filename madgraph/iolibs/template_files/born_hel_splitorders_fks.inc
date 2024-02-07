@@ -1,4 +1,4 @@
-      SUBROUTINE SBORN_HEL(P,ANS_SUMMED)
+      SUBROUTINE SBORN_HEL(P,ANS_SUMMED,amp_index)
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
@@ -14,6 +14,7 @@ C
 C ARGUMENTS 
 C 
       REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
+      integer amp_index
 C
 C VARIABLES
 C
@@ -37,7 +38,7 @@ C of the fact that they satisfy or not the squared-orders constraints
 
 
 C look for orders which match the born order constraint 
-	  CALL SBORN_HEL_SPLITORDERS(P,ANS)
+	  CALL SBORN_HEL_SPLITORDERS(P,ANS,amp_index)
 ans_summed = 0d0
   DO J = 1, MAX_BHEL
     WGT_HEL_SUMMED(J) = 0d0
@@ -53,7 +54,7 @@ return
 END
 
 
-    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS)
+    SUBROUTINE SBORN_HEL_SPLITORDERS(P1,ANS,amp_index)
 C  
 %(info_lines)s
 C
@@ -62,6 +63,11 @@ C AND HELICITIES
 C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
+C
+C MODULES
+      use c_goodhel
+      use to_savemom
+      use ccalculatedBorn
 C
       IMPLICIT NONE
 C  
@@ -81,6 +87,7 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P1(0:3,NEXTERNAL-1),ANS(0:NSQAMPSO)
+      INTEGER amp_index
 C  
 C LOCAL VARIABLES 
 C  
@@ -90,15 +97,15 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
-      common /c_goodhel/ goodhel
-!$OMP THREADPRIVATE (/C_GOODHEL/)
-      double precision savemom(nexternal-1,2)
-      common/to_savemom/savemom
-!$OMP THREADPRIVATE (/TO_SAVEMOM/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      LOGICAL GOODHEL(NCOMB,%(nconfs)d)
+!      common /c_goodhel/ goodhel
+!OMP THREADPRIVATE (/C_GOODHEL/)
+!      double precision savemom(nexternal-1,2)
+!      common/to_savemom/savemom
+!OMP THREADPRIVATE (/TO_SAVEMOM/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       double precision wgt_hel(NSQAMPSO, max_bhel)
@@ -107,10 +114,10 @@ C ----------
 C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
-      if (calculatedBorn) then
+      if (calculatedBorn(amp_index)) then
          do j=1,nexternal-1
-            if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
-               calculatedBorn=.false.
+            if (savemom(j,1,amp_index).ne.p1(0,j) .or. savemom(j,2,amp_index).ne.p1(3,j)) then
+               calculatedBorn(amp_index)=.false.
                write(*,*) 'Error in sborn_hel_splitorders: momenta not the same in the born'
                stop
             endif
@@ -123,8 +130,8 @@ C ----------
           ANS(I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
-         IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           CALL BORN_HEL_SPLITORDERS(P1,IHEL,T)
+         IF (GOODHEL(IHEL,nFKSprocess,amp_index)) THEN
+           CALL BORN_HEL_SPLITORDERS(P1,IHEL,T,amp_index)
            DO I=1,NSQAMPSO
              wgt_hel(i, ihel) = T(I) / DBLE(IDEN)
              ANS(I)=ANS(I)+T(I)
@@ -138,7 +145,7 @@ C ----------
       END
        
        
-      SUBROUTINE BORN_HEL_SPLITORDERS(P,HELL,ANS)
+      SUBROUTINE BORN_HEL_SPLITORDERS(P,HELL,ANS,amp_index)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -146,6 +153,10 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+C MODULES
+      use to_saveamp
+      use ccalculatedBorn
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -168,6 +179,7 @@ C
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
       REAL*8 ANS(NSQAMPSO)
+      integer amp_index
 C  
 C LOCAL VARIABLES 
 C  
@@ -178,12 +190,12 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
-!$OMP THREADPRIVATE (/TO_SAVEAMP/)
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-!$OMP THREADPRIVATE (/CCALCULATEDBORN/)
+!      double complex saveamp(ngraphs,max_bhel)
+!      common/to_saveamp/saveamp
+!OMP THREADPRIVATE (/TO_SAVEAMP/)
+!      logical calculatedBorn
+!      common/ccalculatedBorn/calculatedBorn
+!OMP THREADPRIVATE (/CCALCULATEDBORN/)
 
 C
 C FUNCTION
@@ -196,12 +208,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      if (.not. calculatedBorn) then
+      if (.not. calculatedBorn(amp_index)) then
         write(*,*) 'Error in b_sf: color_linked borns should be called only with calculatedborn = true'
         stop
-      elseif (calculatedBorn) then
+      elseif (calculatedBorn(amp_index)) then
       do i=1,ngraphs
-         amp(i)=saveamp(i,hell)
+         amp(i)=saveamp(i,hell,amp_index)
       enddo
       endif
 %(jamp_lines)s
@@ -222,7 +234,7 @@ C ----------
        
 
 
-subroutine PickHelicityMC(p,goodhel,hel,ihel_out,vol)
+subroutine PickHelicityMC(p,goodhel,hel,ihel_out,vol,amp_index)
 implicit none
 include 'nexternal.inc'
 INCLUDE 'born_nhel.inc'
@@ -230,6 +242,8 @@ double precision p(0:3, nexternal-1)
 integer goodhel(max_bhel),hel(0:max_bhel)
 integer ihel_out
 double precision vol
+
+integer amp_index
 
 INTEGER NSQAMPSO
 PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
@@ -245,7 +259,7 @@ double precision born_wgt_recomp_direct
 
 double precision ran2
 
-call sborn_hel(p,born_wgt_recomp_direct)
+call sborn_hel(p,born_wgt_recomp_direct,amp_index)
 
 C Loop over the various orders of squared Feynman diagrams and compute for each order the sum
 n_nonzero_ord = 0

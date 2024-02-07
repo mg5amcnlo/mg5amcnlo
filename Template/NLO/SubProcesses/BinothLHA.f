@@ -73,6 +73,8 @@ c statistics for MadLoop
       common /to_ret_code/ret_code_common
       double precision born_hel_from_virt
 
+      integer amp_index
+
       logical updateloop
       common /to_updateloop/updateloop
 
@@ -206,7 +208,7 @@ C          different coupling combinations
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
-            call PickHelicityMC(p,goodhel,hel,ihel,volh)
+            call PickHelicityMC(p,goodhel,hel,ihel,volh,amp_index)
             !
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel

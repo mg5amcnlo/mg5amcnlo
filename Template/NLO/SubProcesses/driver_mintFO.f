@@ -359,7 +359,7 @@ c timing statistics
       complex*16 amp_split_cnt(amp_split_size,1:2,1:nsplitorders)
 
       ! common blocks for passing amp2/jamp2
-!      include 'genps.inc'
+      include 'genps.inc'
 !      Double Precision amp2(ngraphs), jamp2(0:ncolor)
 !      common/to_amps/  amp2,          jamp2
 !OMP THREADPRIVATE (/TO_AMPS/)
@@ -842,7 +842,7 @@ c**********************************************************************
 c
 c     Constants
 c
-!      include 'genps.inc'
+      include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'

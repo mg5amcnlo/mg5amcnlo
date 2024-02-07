@@ -1489,6 +1489,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         squared_orders, amp_orders = matrix_element.born_me.get_split_orders_mapping()
         amp_split_size_born =  len(squared_orders)
         amp_split_orders += squared_orders
+        n_amp_split_size_born = len(amp_orders)
         
         #then check the real emissions
         for realme in matrix_element.real_processes:
@@ -1532,6 +1533,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
 
         text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
+        text += 'integer, parameter :: nampso_mod = %d\n' % n_amp_split_size_born
         text += '! the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
         text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
@@ -1973,13 +1975,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         """writes the genps.f90 file
         """
         lines = []
-        lines.append("module mod_nexternal")
+        lines.append("module mod_genps")
         lines.append("implicit none")
         lines.append("integer,parameter ::  maxproc_mod=%d" % maxproc)
         lines.append("integer,parameter ::  ngraphs_mod=%d" % ngraphs)
         lines.append("integer,parameter ::  ncolor_mod=%d" % ncolor)
         lines.append("integer,parameter ::  maxflow_mod=%d" % maxflow)
-        lines.append("end module mod_nexternal")
+        lines.append("end module mod_genps")
         writer.writelines(lines)
 
 
@@ -2374,6 +2376,10 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
 
         filename = 'born_nhel.inc'
         self.write_born_nhel_file(writers.FortranWriter(filename),
+                           born_me, nflows, fortran_model)
+        
+        filename = 'born_nhel.f90'
+        self.write_born_nhel_mod_file(writers.FortranWriter(filename),
                            born_me, nflows, fortran_model)
 
         filename = 'born_coloramps.inc'
@@ -3173,6 +3179,26 @@ Parameters              %(params)s\n\
         file = "integer    max_bhel, max_bcol \n"
         file += "parameter (max_bhel=%d)\nparameter(max_bcol=%d)" % \
                (ncomb, nflows)
+    
+        # Write the file
+        writer.writelines(file)
+    
+        return True
+    
+    #===============================================================================
+    # write_born_nhel_mod_file_list
+    #===============================================================================
+    def write_born_nhel_mod_file(self, writer, me, nflows, fortran_model):
+        """Write the born_nhel.inc file for MG4. Write the maximum as they are
+        typically used for setting array limits."""
+    
+        ncomb = me.get_helicity_combinations()
+        file = "module mod_born_nhel\n"
+        file += "implicit none\n"
+        file += "integer    max_bhel_mod, max_bcol_mod \n"
+        file += "parameter (max_bhel_mod=%d)\nparameter(max_bcol_mod=%d)\n" % \
+               (ncomb, nflows)
+        file += "end module mod_born_nhel\n"
     
         # Write the file
         writer.writelines(file)

@@ -7,7 +7,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       use to_amps
       use counterevnts
       implicit none
-!      include "genps.inc"
+      include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
       include "born_coloramps.inc"

@@ -13,7 +13,7 @@ c*****************************************************************************
 c
 c     Constants
 c
-!      include 'genps.inc'      
+      include 'genps.inc'      
       include 'nexternal.inc'
       include 'run.inc'
       include 'nFKSconfigs.inc'
