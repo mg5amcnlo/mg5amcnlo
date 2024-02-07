@@ -3749,15 +3749,16 @@ plot \\"""
 
 
         Reg=0
-        path_to_card = os.path.abspath('Cards/run_card.dat')
-        sub_string = 'True = asymm_choice'
-        with open(str(path_to_card)) as file:
-            lines = file.readlines()
-            for line in lines:
-                if sub_string in line:
-                    Reg=Reg+1
-                else:
-                    Reg=Reg+0
+        if os.path.exists('Cards/run_card.dat'):
+            path_to_card = os.path.abspath('Cards/run_card.dat')
+            sub_string = 'True = asymm_choice'
+            with open(str(path_to_card)) as file:
+                lines = file.readlines()
+                for line in lines:
+                    if sub_string in line:
+                        Reg=Reg+1
+                    else:
+                        Reg=Reg+0
 
         
         if (Reg!=1):        
@@ -3842,7 +3843,7 @@ plot \\"""
         
         
 
-        sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
+        #sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
         # Add a margin on upper and lower bound.
         #ymax = ymax# + 0.1# * (ymax - ymin)2
         #ymin = ymin# - 0.2# * (ymax - ymin)0.5
