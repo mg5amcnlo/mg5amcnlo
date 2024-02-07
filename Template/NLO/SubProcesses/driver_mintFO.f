@@ -499,8 +499,8 @@ c PineAPPL
          amp_split_store_b(1:amp_split_size,index) = amp_split(1:amp_split_size)
          amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
      & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
-         amp2_store(1:ncolor,index) = amp2(:,index)
-         jamp2_store(1:ncolor,index) = jamp2(:,index)
+         amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
+         jamp2_store(1:ncolor,index) = jamp2(1:ncolor,index)
          ! color-linked borns
          do i=1,fks_j_from_i(i_fks,0)
            do j=1,i

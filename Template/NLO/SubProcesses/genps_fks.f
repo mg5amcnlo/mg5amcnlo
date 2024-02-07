@@ -1479,7 +1479,7 @@ c must stay so for the computation of enhancement factors.
       nocntevents(amp_index)=(jac_cnt(0,amp_index).le.0.d0) .and.
      &            (jac_cnt(1,amp_index).le.0.d0) .and.
      &            (jac_cnt(2,amp_index).le.0.d0)
-      call xmom_compare(i_fks,j_fks,jac,jac_cnt(-2,amp_index),p,p1_cnt(-2,0,1,amp_index),pass)
+      call xmom_compare(i_fks,j_fks,jac,jac_cnt(-2,amp_index),p,p1_cnt(0,1,-2,amp_index),pass)
 c
       return
       end

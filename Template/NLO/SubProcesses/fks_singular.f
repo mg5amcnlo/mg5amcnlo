@@ -571,7 +571,7 @@ c its value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
-      s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index))
+      s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),fx_ev,amp_index)
 
@@ -654,7 +654,7 @@ c the list of weights using the add_wgt subroutine
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_hat_ev(amp_index)*xiimax_cnt(0,amp_index).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
      $     return
-      s_s = fks_Sij(p1_cnt(0,1,0,amp_index),i_fks,j_fks,zero,y_ij_fks_ev(amp_index))
+      s_s = fks_Sij(p1_cnt(0,1,0,amp_index),i_fks,j_fks,zero,y_ij_fks_ev(amp_index),amp_index)
       if (s_s.le.0d0) return
       call sreal(p1_cnt(0,1,0,amp_index),0d0,y_ij_fks_ev(amp_index),fx_s,amp_index)
 
@@ -756,7 +756,7 @@ c to the list of weights using the add_wgt subroutine
      $     f_c_MC_H.eq.0d0)return
       if ( (y_ij_fks_ev(amp_index).le.1d0-deltaS .and. replace_MC_subt.eq.0d0) .or.
      $     pmass(j_fks).ne.0.d0 ) return
-      s_c = fks_Sij(p1_cnt(0,1,1,amp_index),i_fks,j_fks,xi_i_fks_cnt(1,amp_index),one)
+      s_c = fks_Sij(p1_cnt(0,1,1,amp_index),i_fks,j_fks,xi_i_fks_cnt(1,amp_index),one,amp_index)
       if (s_c.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
@@ -892,7 +892,7 @@ c value to the list of weights using the add_wgt subroutine
       if ( ((xi_i_hat_ev(amp_index)*xiimax_cnt(1,amp_index).ge.xiScut_used .or. y_ij_fks_ev(amp_index).le.1d0
      $     -deltaS) .and. replace_MC_subt.eq.0d0).or.
      $     pmass(j_fks).ne.0.d0 ) return
-      s_sc = fks_Sij(p1_cnt(0,1,2,amp_index),i_fks,j_fks,zero,one)
+      s_sc = fks_Sij(p1_cnt(0,1,2,amp_index),i_fks,j_fks,zero,one,amp_index)
       if (s_sc.le.0d0) return
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
@@ -1000,7 +1000,7 @@ c respectively.
      $     ,lzone,zhw,nofpartners,xmcxsec)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
-         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index))
+         sevmc = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev(amp_index),y_ij_fks_ev(amp_index),amp_index)
       else
          sevmc = fks_Hij(p,i_fks,j_fks)
       endif

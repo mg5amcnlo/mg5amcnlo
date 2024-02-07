@@ -389,8 +389,8 @@ module parton_cms_cnt
  contains
    subroutine allocate_parton_cms_cnt(vector_size)
        integer, intent(in) :: vector_size
-         allocate(sqrtshat_cnt(vector_size,-2:2))
-         allocate(shat_cnt(vector_size,-2:2))
+         allocate(sqrtshat_cnt(-2:2,vector_size))
+         allocate(shat_cnt(-2:2,vector_size))
    end subroutine allocate_parton_cms_cnt
 
    subroutine deallocate_parton_cms_cnt
