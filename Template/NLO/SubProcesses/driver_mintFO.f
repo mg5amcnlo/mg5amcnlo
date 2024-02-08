@@ -496,7 +496,6 @@ c PineAPPL
          call set_alphaS(p1_cnt(0,1,0,index),index)
          calculatedBorn(index)=.false.
          call sborn(p1_cnt(0,1,0,index), wgtdum(index),index)
-         amp_split_store_b(1:amp_split_size,index) = amp_split(1:amp_split_size)
          amp_split_store_cnt(1:amp_split_size,1:2,1:nsplitorders,index)
      & = amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders)
          amp2_store(1:ncolor,index) = amp2(1:ncolor,index)
