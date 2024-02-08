@@ -15,6 +15,7 @@ C MODULES
 C
 C CONSTANTS
 C 
+      use to_amp_split_soft
 implicit none
       include 'nexternal.inc'
       INTEGER NSQAMPSO
@@ -28,7 +29,6 @@ C
 C VARIABLES
 C
       INTEGER I,j
-      include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
       LOGICAL KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO)
       common /c_keep_order_cnt/ keep_order_cnt 
@@ -49,8 +49,8 @@ C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
       max_val = 0d0
 
-C reset the amp_split_cnt array
-amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
+C reset the amp_split_softarray
+      AMP_SPLIT_SOFT(1:AMP_SPLIT_SIZE,:) = DCMPLX(0D0,0D0)
 
 
 do i = 1, nsqampso
@@ -66,7 +66,7 @@ C take into account the fact that this is for QCD
           if (j.eq.qcd_pos) amp_orders(j) = amp_orders(j) + 2
          enddo
          !amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(I)
-         if(abs(ans(i)).gt.max_val*tiny) amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos) = ans(i)
+         if(abs(ans(i)).gt.max_val*tiny) AMP_SPLIT_SOFT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),amp_index) = ANS(I)
         endif
       enddo
 
